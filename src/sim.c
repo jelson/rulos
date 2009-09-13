@@ -107,14 +107,17 @@ char scan_keyboard()
   if (c == 'q')
     terminate_sim();
 
-  if (c >= 'a' && c < 'd')
+  if (c >= 'a' && c <= 'd')
     return c;
 
   if (c >= '0' && c <= '9')
     return c;
 
-  if (c == '*' || c == '#')
-    return c;
+  if (c == '*' || c == 's')
+    return 's';
+
+  if (c == 'p' || c == '#')
+    return 'p';
 
   return 0;
 }
