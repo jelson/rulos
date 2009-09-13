@@ -68,14 +68,14 @@
 #define SEVSEG_O 0b1111110
 #define SEVSEG_P 0b1100111
 #define SEVSEG_Q 0b1110011
-#define SEVSEG_R 0
+#define SEVSEG_R 0b0000101
 #define SEVSEG_S 0b1011011
 #define SEVSEG_T 0b0001111
 #define SEVSEG_U 0b0111110
 #define SEVSEG_V 0
 #define SEVSEG_W 0
 #define SEVSEG_X 0
-#define SEVSEG_Y 0
+#define SEVSEG_Y 0b0111011
 #define SEVSEG_Z 0
 
 
