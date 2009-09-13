@@ -184,10 +184,10 @@ void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onof
 
 void program_digit(uint8_t board, uint8_t digit, uint8_t shape)
 {
+	/* must be signed! */
 	int segment;
-	int i;
 
-	for (i = 0, segment = 6; i <= 7; i++, segment--)
+	for (segment = 6; segment >= 0; segment--)
 	{
 		program_segment(board, digit, segment, shape & 0x1);
 		shape >>= 1;
