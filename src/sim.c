@@ -97,7 +97,7 @@ void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onof
       mvwprintw(mainwnd, y_origin, x_origin+i-1, " ");
   }
     
-  wrefresh(mainwnd);
+  //wrefresh(mainwnd);
 }
 
 char scan_keyboard()
