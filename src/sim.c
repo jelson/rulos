@@ -1,4 +1,4 @@
-#define NUM_BOARDS 4
+#define NUM_BOARDS 6
 #define NUM_DIGITS 8
 #define NUM_SEGMENTS 8
 
@@ -60,12 +60,10 @@ void init_sim()
   wrefresh(mainwnd);
   curs_set(0);
 
-#if 0
   for (board = 0; board < NUM_BOARDS; board++)
     for (digit = 0; digit < NUM_DIGITS; digit++)
       for (segment = 0; segment < NUM_SEGMENTS; segment++)
         program_segment(board, digit, segment, 1);
-#endif
 }
 
 
@@ -79,8 +77,6 @@ void _delay_ms(int ms)
 {
   usleep(ms * 1000);
 }
-
-int xx = 0;
 
 void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff)
 {
