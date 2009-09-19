@@ -1,0 +1,39 @@
+1	K clock:
+	real-time
+	mission-time
+
+2-3 A mission task guidance
+	primary launch countdown & activation
+	orbital readjustment guidance program
+	airlock cycle sequence
+	orbital reinsertion sequence
+
+2	B general-purpose calculation
+	E6B:	q1 q2
+			q3 q4 -- change a field, a right field updates.
+	calc:	o1 op
+			o2 out
+
+2	C navaid
+	compass ,,Z,,||,,E,,||,,S,,||,,3,,||
+
+	VOR
+	   ||=
+	116.8 360
+
+4	D decorative guages
+	16-bar horizontal graph
+	2-digit num + 12-bar graph
+
+	Inputs:
+	real:
+		voltage
+		air pressure
+		current draw
+	simulated:
+		primary thrust
+		oxidizer reservoir pressure
+		cabin pressure
+		cabin CO2
+		lunar distance
+		rocket ablation threshhold temperature
