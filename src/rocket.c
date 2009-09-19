@@ -2,6 +2,9 @@
 // #define SEGMENT_TEST
 // #define ALPHABET
 #define IDENTIFY_DIGITS
+//#define POT_TEST
+
+#define V1PCB
 
 #define F_CPU 1000000
 
@@ -155,6 +158,7 @@ PD7 SegmentSelect2  / Analog Comparator -
 
 void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff)
 {
+#if defined(PROTO_BOARD)
 	/* put board select on PortB[4..2]	*/
 	PORTB = (PORTB & ~(0b111 << 2)) | ((board & 0b111) << 2);
 
@@ -164,22 +168,36 @@ void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onof
 	/* put segment select on PortD[7..5] */
 	PORTD = (PORTD & ~(0b111 << 5)) | ((segment & 0b111) << 5);
 
-	/* put data on PortB[0] */
-#ifdef COMMON_ANODE
-	PORTB = (PORTB & (~0b1)) | onoff;
-#else
+	/* put data on PortB[0].  Sense reversed because cathode is common. */
 	PORTB = (PORTB & (~0b1)) | !onoff;
-#endif
 
 	/* strobe segment program enable on PortB[1] */
 	PORTB &= ~(0b10);
-#ifdef GO_SLOWLY
-	_delay_ms(500);
-#endif
 	_NOP();
 	PORTB |= 0b10;
+#elif defined(V1PCB)
+	/* put board select on PortB[4..2]	*/
+	PORTB = (PORTB & ~(0b111 << 2)) | ((board & 0b111) << 2);
+
+	/* put digit select on PortC[2..0] */
+	PORTC = (PORTC & ~(0b111)) | (digit & 0b111);
+
+	/*
+	 * put segment select on PortD[7..5], and Data on Portd[4].  Sense of onoff reversed
+	 * because cathode is common.
+	 */
+	PORTD = (PORTD & ~(0b1111 << 4)) | ((segment & 0b111) << 5) | ((!onoff) << 4);
+
+	/* strobe segment program enable on PortB[1] */
+	PORTB &= ~(0b10);
+	_NOP();
+	PORTB |= 0b10;
+#else
+# error  Board type not set!
+#endif /* board type */
+
 }
-#endif
+#endif /* sim */
 
 
 void program_digit(uint8_t board, uint8_t digit, uint8_t shape)
@@ -227,8 +245,8 @@ void program_matrix(uint8_t shape, uint8_t decimal)
 
 
 
-#define SET(port, pin) do { port = port | (1 << pin); } while (0)
-#define CLR(port, pin) do { port = port & ~(1 << pin); } while (0)
+#define SET(port, pin) do { port |= (unsigned char) (1 << pin); } while (0)
+#define CLR(port, pin) do { port &= (unsigned char) ~(1 << pin); } while (0)
 #define IS_SET(port, pin) ((port & (1 << pin)) == (1 << pin))
 #define IS_CLR(port, pin) ((port & (1 << pin)) == 0)
 
@@ -419,7 +437,7 @@ void timer_tick(model *m)
 		/* no key pressed and we're in identify mode; continue cycling digit identify sequence. */
 		if (m->major_mode == MODE_IDENTIFY)
 		{
-			if (++(m->t) == 10)
+			if (++(m->t) == 6)
 			{
 				m->minor_mode = (m->minor_mode + 1) % 4;
 				m->t = 0;
@@ -448,6 +466,31 @@ int main()
 {
 #ifdef SIM
         init_sim();
+#endif
+
+#ifdef POT_TEST
+	DDRB = 0xff;
+	DDRC = 0xff;
+	DDRD = 0xff;
+
+	CLR(DDRC, 4);
+	ADMUX = 0x4; /* Set voltage reference to external and select channel 6 */
+	SET(ADMUX, ADLAR); /* Make ADCH contain high 8 bits */
+	SET(ADCSRA, ADEN); /* set ADC Enable */
+	SET(ADCSRA, ADFR); /* Set to free running mode */
+	SET(ADCSRA, ADSC); /* Start conversion */
+
+	for (;;)
+	{
+		int val = ADCH;
+		int display = (val * 100) / 256;
+		int high = display / 10;
+		int low = display % 10;
+		program_digit(0, 0, sevseg_digits[low]);
+		program_digit(0, 1, sevseg_digits[high]);
+		_delay_ms(50);
+	}
+	
 #endif
 
 #ifdef IDENTIFY_DIGITS
@@ -507,7 +550,6 @@ int main()
 		program_digit(0, 0, last_shape);
 		last_shape = shape;
 		_delay_ms(250);
-
 		if (++i == 36)
 		{
 			i = 0;
@@ -541,7 +583,7 @@ int main()
 				program_decimal(board, digit, 1);
 			}
 		}
-		_delay_ms(500);
+		_delay_ms(250);
 	}
 #endif
 
