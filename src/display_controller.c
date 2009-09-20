@@ -43,6 +43,8 @@
 #define SEVSEG_SPACE 0
 #define SEVSEG_UNDERSCORE 0b0001000
 #define SEVSEG_HYPHEN 0b0000001
+#define SEVSEG_PERIOD 0b0010000
+#define SEVSEG_COMMA  0b0011000
 
 
 uint8_t sevseg_digits[] = {
@@ -177,6 +179,17 @@ void program_cell(uint8_t board, uint8_t digit, SSBitmap bitmap)
 	}
 }
 
+void program_string(uint8_t board, char *string)
+{
+	int i;
+	for (i=0; i<NUM_DIGITS; i++)
+	{
+		if (string[i]==0) { break; }
+		SSBitmap symbol = ascii_to_bitmap(string[i]);
+		program_cell(board, NUM_DIGITS - 1 - i, symbol);
+	}
+}
+
 void program_decimal(uint8_t board, uint8_t digit, uint8_t onoff)
 {
 	/*
@@ -249,6 +262,8 @@ SSBitmap ascii_to_bitmap(char a)
 		case 'z': case 'Z':	return SEVSEG_Z;
 		case '-':	return SEVSEG_HYPHEN;
 		case ' ':	return SEVSEG_SPACE;
+		case '.':	return SEVSEG_PERIOD;
+		case ',':	return SEVSEG_COMMA;
 		case '_':
 		default:	return SEVSEG_UNDERSCORE;
 	}

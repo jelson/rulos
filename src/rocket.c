@@ -22,6 +22,7 @@
 
 #include "rocket.h"
 #include "clock.h"
+#include "display_rtc.h"
 
 #ifdef SIM
 # define _NOP() do {} while(0)
@@ -167,25 +168,29 @@ void refresh_display(model *m)
 			switch (m->minor_mode)
 			{
 				case 0:
-					program_matrix(ascii_to_bitmap('B'));
+					//program_matrix(ascii_to_bitmap('B'));
 					break;
 				case 1:
-					for (board = 0; board < 8; board++)
+				/*
+					for (board = 2; board < 8; board++)
 					{
 						program_row(board, ascii_to_bitmap('0'+board) | SSB_DECIMAL);
 					}
+					*/
 					break;
 				case 2:
-					program_matrix(ascii_to_bitmap('D'));
+					//program_matrix(ascii_to_bitmap('D'));
 					break;
 				case 3:
-					for (board = 0; board < 8; board++)
+				/*
+					for (board = 2; board < 8; board++)
 					{
 						for (digit = 0; digit < 8; digit++)
 						{
 							program_cell(board, digit, ascii_to_bitmap('0'+digit) | SSB_DECIMAL);
 						}
 					}
+					*/
 					break;
 			}
 			break;
@@ -214,8 +219,10 @@ void refresh_display(model *m)
 
 void timer_tick(model *m)
 {
+	// NB jonh notes that SIM display won't update until getch() is called
 	char key = scan_keyboard();
 
+#if 0
 	if (!key)
 	{
 		/* no key pressed and we're in identify mode; continue cycling digit identify sequence. */
@@ -242,6 +249,7 @@ void timer_tick(model *m)
 		m->button_pressed = key;
 		m->t = 0;
 	}
+#endif
 	refresh_display(m);
 }
 
@@ -250,8 +258,9 @@ int main()
 #ifdef SIM
         init_sim();
 #endif
-	init_clock();
+	clock_init();
 	//install_handler(ADC, adc_handler);
+	drtc_init();
 
 #ifdef IDENTIFY_DIGITS
 	model m;

@@ -3,6 +3,7 @@
 
 #include <sys/timeb.h>
 #include "display_controller.h"
+#include "util.h"
 
 /*
    __
@@ -111,8 +112,11 @@ void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onof
   y_origin += segment_defs[segment].yoff;
 
   if (onoff)
+  {
     mvwprintw(mainwnd, y_origin, x_origin, segment_defs[segment].s);
-  else {
+  }
+  else
+  {
     for (i = strlen(segment_defs[segment].s); i; i--)
       mvwprintw(mainwnd, y_origin, x_origin+i-1, " ");
   }
