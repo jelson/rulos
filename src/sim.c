@@ -1,9 +1,13 @@
 #define DIGIT_WIDTH 5
 #define DIGIT_HEIGHT 4
 
+#include <sys/time.h>
 #include <sys/timeb.h>
-#include "display_controller.h"
+#include <signal.h>
+
+#include "rocket.h"
 #include "util.h"
+#include "display_controller.h"
 
 /*
    __
@@ -145,5 +149,18 @@ char scan_keyboard()
 
   return 0;
 }
+
+
+void start_clock_ms(int ms, Handler handler)
+{
+	struct itimerval ivalue, ovalue;
+	ivalue.it_interval.tv_sec = ms/1000;
+	ivalue.it_interval.tv_usec = (ms%1000)*1000;
+	ivalue.it_value = ivalue.it_interval;
+	setitimer(ITIMER_REAL, &ivalue, &ovalue);
+
+	signal(SIGALRM, handler);
+}
+
 
 
