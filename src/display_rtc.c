@@ -12,9 +12,9 @@ void drtc_init()
 void drtc_update()
 {
 	char buf[32];
-	snprintf(buf, 9, "t%7.1f        ", clock_time()/1000.0);
+	snprintf(buf, 9, "t%7.2f        ", clock_time()/1000.0);
 	program_string(0, " clock  ");
 	program_string(1, buf);
-	schedule(100, &drtc_activation);
+	schedule(150, &drtc_activation);
 	//say("drtc_update\n");
 }
