@@ -5,10 +5,11 @@
 
 typedef struct s_dscrollmsgact {
 	ActivationFunc func;
-	int board;
-	char *msg;
+	uint8_t board;
 	uint8_t len;
 	uint8_t speed_ms;
+	int index;
+	char *msg;
 } DScrollMsgAct;
 
 
