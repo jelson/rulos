@@ -26,17 +26,3 @@ void drtc_update()
 	schedule(50, &drtc_activation);
 }
 
-#if 0
-/* This doesn't work on the microcontroller ... perhaps snprintf is screwed? */
-void drtc_update()
-{
-	char buf[10];
-	double c = clock_time() / 1000.0;
-	snprintf(buf, 9, "t%7.2f", c);
-	program_string(0, " clock  ");
-	program_string(1, buf);
-	schedule(150, &drtc_activation);
-	//say("drtc_update\n");
-}
-#endif
-

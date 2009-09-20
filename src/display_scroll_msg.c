@@ -10,7 +10,7 @@ void dscrlmsg_update(struct s_dscrollmsgact *act);
 void dscrlmsg_init(struct s_dscrollmsgact *act,
 	uint8_t board, char *msg, uint8_t speed_ms)
 {
-	act->activation = (ActivationFunc) dscrlmsg_update;
+	act->func = (ActivationFunc) dscrlmsg_update;
 	act->board = board;
 	act->msg = msg;
 	act->len = strlen(act->msg);

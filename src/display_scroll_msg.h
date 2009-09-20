@@ -4,7 +4,7 @@
 #include "clock.h"
 
 typedef struct s_dscrollmsgact {
-	ActivationFunc activation;
+	ActivationFunc func;
 	int board;
 	char *msg;
 	uint8_t len;

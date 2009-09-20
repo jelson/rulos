@@ -6,6 +6,7 @@
 #include "display_controller.h"
 #include "display_rtc.h"
 #include "display_scroll_msg.h"
+#include "display_compass.h"
 
 
 
@@ -41,6 +42,9 @@ int main()
 		buf[i] = '\0';
 	}
 	dscrlmsg_init(&da2, 3, buf, 75);
+
+	DCompassAct dc;
+	dcompass_init(&dc, 4);
 
 #ifdef SIM
 	sim_run();
