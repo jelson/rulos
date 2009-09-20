@@ -7,7 +7,11 @@
 
 #define F_CPU 1000000
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include <util/delay.h>
+
+#include "rocket.h"
+#include "display_controller.h"
 
 #define SET(port, pin) do { port |= (unsigned char) (1 << pin); } while (0)
 #define CLR(port, pin) do { port &= (unsigned char) ~(1 << pin); } while (0)
@@ -16,7 +20,11 @@
 
 #define _NOP() do { __asm__ __volatile__ ("nop"); } while (0)
 
-void init_hardware()
+
+/*
+ * Set output directions on pins that are outputs 
+ */
+void init_output_pins()
 {
 #if defined(PROTO_BOARD)
 	/* board select outputs */
@@ -65,6 +73,7 @@ void init_hardware()
 #endif
 }
 
+
 void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff)
 {
 #if defined(PROTO_BOARD)
@@ -108,3 +117,67 @@ void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onof
 
 
 
+void hw_init()
+{
+	init_output_pins();
+}
+
+/*
+ * We run the timer event loop here, instead of directly from interrupt context,
+ * because we want the slow processing that comes from timers to run outside of
+ * interrupt context -- so that actual high priority interrupts (e.g., ADC reading)
+ * can happen in a timely manner.
+ */
+Handler timer_handler;
+volatile uint8_t start_timer_handler = 0;
+
+ISR(TIMER1_COMPA_vect)
+{
+	start_timer_handler += 1;
+}
+
+void hw_run()
+{
+	program_integer(0, 1234);
+	while (1)
+	{
+		if (start_timer_handler > 0)
+		{
+			start_timer_handler--;
+			timer_handler();
+		}
+	}
+}
+
+
+ /* 
+  * 
+  * Taken from http://sunge.awardspace.com/binary_clock/binary_clock.html
+  
+  * Use timer/counter1 to generate clock ticks for events.
+  *
+  * Using CTC mode (mode 4) with 1/1024 prescaler.  Assuming 1Mhz clock
+  * (TODO: adjust this based on actual clock frequency), each tick of the counter
+  * is 1ms.
+  *
+  */
+void start_clock_ms(int ms, Handler handler)
+{
+	timer_handler = handler;
+	cli();
+
+	OCR1A = ms;
+
+	/* CTC Mode 4 Prescaler 1024 */
+	TCCR1A = 0;
+  	TCCR1B = (1<<WGM12)|(1<<CS12)|(1<<CS10); 
+
+ 	/* enable output-compare int. */
+	TIMSK |= (1<<OCIE1A);
+
+	/* reset counter */
+	TCNT1 = 0; 
+
+	/* re-enable interrupts */
+	sei();
+}

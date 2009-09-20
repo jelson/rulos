@@ -1,6 +1,8 @@
 #define DIGIT_WIDTH 5
 #define DIGIT_HEIGHT 4
 
+#include <stdio.h>
+#include <unistd.h>
 #include <sys/time.h>
 #include <sys/timeb.h>
 #include <signal.h>
@@ -53,7 +55,7 @@ struct segment_def_s {
 };
 
   
-void init_sim()
+void sim_init()
 {
   int board, digit;
   mainwnd = initscr();
@@ -71,6 +73,15 @@ void init_sim()
 	{
 		program_cell(board, digit, value);
 	}
+  }
+}
+
+
+void sim_run()
+{
+  while (1)
+  {
+    sleep(1);
   }
 }
 

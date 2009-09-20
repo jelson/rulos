@@ -1,10 +1,5 @@
 #include <inttypes.h>
 
-#ifdef SIM
-#include <sys/time.h>
-#include <signal.h>
-#endif
-
 #include "clock.h"
 #include "util.h"
 #include "heap.h"
@@ -26,7 +21,7 @@ void clock_init()
 	heap_init();
 }
 
-int clock_time()
+uint32_t clock_time()
 {
 	return real_time_since_boot_ms;
 }
@@ -41,7 +36,7 @@ void scheduler_run()
 {
 	while (1)
 	{
-		int due_time;
+		uint32_t due_time;
 		Activation *act;
 		int rc;
 		rc = heap_peek(&due_time, &act);

@@ -1,10 +1,5 @@
 #include <inttypes.h>
 
-#ifdef SIM
-# include <stdio.h>
-# include <unistd.h>
-#endif
-
 #include "rocket.h"
 #include "clock.h"
 #include "util.h"
@@ -22,11 +17,12 @@ int main()
 {
 	init_util();
 #ifdef SIM
-	init_sim();
+	sim_init();
 #else
-	init_hardware();
+	hw_init();
 #endif
 
+	program_string(0, "init brd");
 	clock_init();
 	//install_handler(ADC, adc_handler);
 	drtc_init();
@@ -47,9 +43,9 @@ int main()
 	dscrlmsg_init(&da2, 3, buf, 75);
 
 #ifdef SIM
-	while (1) {
-		sleep(1);
-	}
+	sim_run();
+#else
+	hw_run();
 #endif
 
 	return 0;

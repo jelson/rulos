@@ -14,8 +14,17 @@ char scan_keyboard();
 void _delay_ms();
 void start_clock_ms(int ms, Handler handler);
 
-void init_sim();
-void init_hardware();
+/*
+ * sim only
+ */
+void sim_init();
+void sim_run();
+
+/*
+ * hardware only
+ */
+void hw_init();
+void hw_run();
 
 
 #endif /* __rocket_h__ */
