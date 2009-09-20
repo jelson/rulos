@@ -17,12 +17,12 @@ void drtc_update()
 	uint32_t c = clock_time();
 	char buf[16], *p = buf;
 	*p++ = 't';
-	p += int_to_string(p, 4, c/1000);
+	p += int_to_string(p, 5, FALSE, c/1000);
 	*p++ = '.';
-	p += int_to_string(p, 0, (c%1000)/10);
+	p += int_to_string(p, 2, TRUE, (c%1000)/10);
 	
 	program_string(0, " clock  ");
 	program_string(1, buf);
-	schedule(50, &drtc_activation);
+	schedule(30, &drtc_activation);
 }
 

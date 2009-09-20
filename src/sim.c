@@ -92,7 +92,7 @@ void terminate_sim(void)
   exit(0);
 }
 
-void _delay_ms(int ms)
+void delay_ms(int ms)
 {
 	// usleep() can be interrupted by signals, so I retry.
 	// this function should go away, being replaced by a non-simulated

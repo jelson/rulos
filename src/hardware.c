@@ -5,7 +5,8 @@
  */
 #define V1PCB
 
-#define F_CPU 1000000
+/* clock calibration by jelson: took 209 seconds to lose one second */
+#define F_CPU (4000000 * 209 / 210)
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
@@ -116,18 +117,16 @@ void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onof
 }
 
 
+void delay_ms(int ms)
+{
+	_delay_ms(ms);
+}
 
 void hw_init()
 {
 	init_output_pins();
 }
 
-/*
- * We run the timer event loop here, instead of directly from interrupt context,
- * because we want the slow processing that comes from timers to run outside of
- * interrupt context -- so that actual high priority interrupts (e.g., ADC reading)
- * can happen in a timely manner.
- */
 Handler timer_handler;
 volatile uint8_t start_timer_handler = 0;
 
@@ -136,9 +135,14 @@ ISR(TIMER1_COMPA_vect)
 	start_timer_handler += 1;
 }
 
+/*
+ * We run the timer event loop here, instead of directly from interrupt context,
+ * because we want the slow processing that comes from timers to run outside of
+ * interrupt context -- so that actual high priority interrupts (e.g., ADC reading)
+ * can happen in a timely manner.
+ */
 void hw_run()
 {
-	program_string(0, "1234");
 	while (1)
 	{
 		if (start_timer_handler > 0)
@@ -152,25 +156,32 @@ void hw_run()
 
  /* 
   * 
-  * Taken from http://sunge.awardspace.com/binary_clock/binary_clock.html
-  
+  * Based on http://sunge.awardspace.com/binary_clock/binary_clock.html
+  *   
   * Use timer/counter1 to generate clock ticks for events.
   *
-  * Using CTC mode (mode 4) with 1/1024 prescaler.  Assuming 1Mhz clock
-  * (TODO: adjust this based on actual clock frequency), each tick of the counter
-  * is 1ms.
+  * Using CTC mode (mode 4) with 1/64 prescaler.
   *
+  * 64 counter ticks takes 64/F_CPU seconds.  Therefore, to get an s-second
+  * interrupt, we need to take one every s / (64/F_CPU) ticks.
+  *
+  * To avoid floating point, do computation in msec rather than seconds:
+  * take an interrupt every ms / (64 / F_CPU / 1000) counter ticks, 
+  * or, (ms * F_CPU) / (64 * 1000).
   */
 void start_clock_ms(int ms, Handler handler)
 {
+	long ticks_tmp = ms * F_CPU;
+	ticks_tmp /= 64000;
+
 	timer_handler = handler;
 	cli();
 
-	OCR1A = ms;
+	OCR1A = (unsigned int) ticks_tmp;
 
-	/* CTC Mode 4 Prescaler 1024 */
+	/* CTC Mode 4 Prescaler 64 */
 	TCCR1A = 0;
-  	TCCR1B = (1<<WGM12)|(1<<CS12)|(1<<CS10); 
+  	TCCR1B = (1<<WGM12)|(1<<CS11)|(1<<CS10); 
 
  	/* enable output-compare int. */
 	TIMSK |= (1<<OCIE1A);

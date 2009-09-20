@@ -1,6 +1,9 @@
 #ifndef _util_h
 #define _util_h
 
+#define FALSE 0
+#define TRUE 1
+
 #ifdef SIM
 
 #include <stdio.h>

@@ -91,6 +91,6 @@ void program_matrix(SSBitmap bitmap);
 
 
 SSBitmap ascii_to_bitmap(char a);
-int int_to_string(char *strp, uint8_t min_width, uint32_t i);
+int int_to_string(char *strp, uint8_t min_width, int zero_padded, uint32_t i);
 
 #endif // display_controller_h

@@ -24,6 +24,12 @@ int main()
 #endif
 
 	program_string(0, "init brd");
+
+	/* display self-test */
+	program_matrix(0xff);
+	delay_ms(1000);
+	program_matrix(0);
+
 	clock_init();
 	//install_handler(ADC, adc_handler);
 	drtc_init();

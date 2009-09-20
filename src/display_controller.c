@@ -48,8 +48,7 @@ uint8_t sevseg_letters[] =
 
 void program_cell(uint8_t board, uint8_t digit, SSBitmap bitmap)
 {
-	/* must be signed! */
-	int segment;
+	int segment; 	/* must be signed! */
 	uint8_t shape = (uint8_t) bitmap;
 
 	for (segment = 6; segment >= 0; segment--)
@@ -57,20 +56,32 @@ void program_cell(uint8_t board, uint8_t digit, SSBitmap bitmap)
 		program_segment(board, digit, segment, shape & 0x1);
 		shape >>= 1;
 	}
+
+	/* consider the high bit to be the decimal */
+	program_segment(board, digit, 7, shape);
 }
 
 void program_string(uint8_t board, char *string)
 {
 	int i;
-	for (i=0; i<NUM_DIGITS; i++)
+	for (i = 0; i < NUM_DIGITS; i++)
 	{
-		if (string[i]==0) { break; }
-		SSBitmap symbol = ascii_to_bitmap(string[i]);
+		if (*string==0) { break; }
+		SSBitmap symbol = ascii_to_bitmap(*string);
+		if (string[1] == '.')
+		{
+			symbol |= SSB_DECIMAL;
+			string += 2;
+		}
+		else
+		{
+			string++;
+		}
 		program_cell(board, NUM_DIGITS - 1 - i, symbol);
 	}
 }
 
-int int_to_string(char *strp, uint8_t min_width, uint32_t i)
+int int_to_string(char *strp, uint8_t min_width, int zero_padded, uint32_t i)
 {
 	int c = 0;
 	int neg = 0;
@@ -78,7 +89,7 @@ int int_to_string(char *strp, uint8_t min_width, uint32_t i)
 	
 	if (strp!=0)
 	{
-		int ct = int_to_string(0, min_width, i);
+		int ct = int_to_string(0, min_width, zero_padded, i);
 		ptr = strp+ct-1;
 		ptr[1] = '\0';
 	}
@@ -116,7 +127,7 @@ int int_to_string(char *strp, uint8_t min_width, uint32_t i)
 	while (c<min_width)
 	{
 		if (strp!=0) {
-			ptr[-c] = ' ';
+			ptr[-c] = zero_padded ? '0' : ' ';
 		}
 		c+=1;
 	}
