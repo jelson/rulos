@@ -1,5 +1,5 @@
-HDRS = rocket.h display_controller.h clock.h heap.h util.h display_rtc.h
-SRCS = rocket.c sim.c display_controller.c clock.c heap.c display_rtc.c
+HDRS = rocket.h display_controller.h clock.h heap.h util.h display_rtc.h display_scroll_msg.h
+SRCS = rocket.c sim.c display_controller.c clock.c heap.c display_rtc.c display_scroll_msg.c util.c
 
 rocketsim: $(HDRS) $(SRCS)
-	gcc -Wall -o rocketsim -DSIM $(SRCS) -lncurses
+	gcc -Wall -g -o rocketsim -DSIM $(SRCS) -lncurses

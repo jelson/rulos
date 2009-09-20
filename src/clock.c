@@ -6,6 +6,7 @@
 #endif
 
 #include "clock.h"
+#include "util.h"
 #include "heap.h"
 #include "rocket.h"
 
@@ -32,6 +33,7 @@ int clock_time()
 
 void schedule(int offset_ms, Activation *act)
 {
+	//LOGF((logfp, "scheduling act %08x\n", (int) act));
 	heap_insert(real_time_since_boot_ms + offset_ms, act);
 }
 
@@ -50,6 +52,7 @@ void scheduler_run()
 		if (due_time > real_time_since_boot_ms) { return; }
 			// no work to do now
 
+		//LOGF((logfp, "popping act %08x\n", (int) act));
 		heap_pop();
 		act->func(act);
 	}

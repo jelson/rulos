@@ -23,9 +23,9 @@
 #define SEVSEG_H 0b0110111
 #define SEVSEG_I 0b0110000
 #define SEVSEG_J 0b0111100
-#define SEVSEG_K 0
+#define SEVSEG_K 0b0110110	/* UGLY */
 #define SEVSEG_L 0b0001110
-#define SEVSEG_M 0
+#define SEVSEG_M 0b1001111	/* also W */
 #define SEVSEG_N 0b0010101
 #define SEVSEG_O 0b1111110
 #define SEVSEG_P 0b1100111
@@ -34,11 +34,11 @@
 #define SEVSEG_S 0b1011011
 #define SEVSEG_T 0b0001111
 #define SEVSEG_U 0b0111110
-#define SEVSEG_V 0
-#define SEVSEG_W 0
-#define SEVSEG_X 0
+#define SEVSEG_V 0b0011100
+#define SEVSEG_W 0b1001111	/* also M */
+#define SEVSEG_X 0b0010100	/* UGLY */
 #define SEVSEG_Y 0b0111011
-#define SEVSEG_Z 0
+#define SEVSEG_Z 0b1101001	/* UGLY */
 
 #define SEVSEG_SPACE 0
 #define SEVSEG_UNDERSCORE 0b0001000

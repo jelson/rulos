@@ -1,8 +1,10 @@
 #ifndef heap_h
 #define heap_h
 
+struct s_activation;
+typedef void (*ActivationFunc)(struct s_activation *act);
 typedef struct s_activation {
-	void (*func)(struct s_activation *act);
+	ActivationFunc func;
 } Activation;
 
 typedef struct {
