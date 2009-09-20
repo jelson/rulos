@@ -5,24 +5,29 @@
 #include "display_rtc.h"
 #include "util.h"
 
-Activation drtc_activation = { drtc_update };
+void drtc_update(DRTCAct *act);
 
-void drtc_init()
+void drtc_init(DRTCAct *act, uint8_t board)
 {
-	schedule(0, &drtc_activation);
+	act->func = (ActivationFunc) drtc_update;
+	board_buffer_init(&act->bbuf);
+	board_buffer_push(&act->bbuf, board);
+	schedule(0, (Activation*) act);
 }
 
-void drtc_update()
+void drtc_update(DRTCAct *act)
 {
 	uint32_t c = clock_time();
 	char buf[16], *p = buf;
 	*p++ = 't';
 	p += int_to_string(p, 5, FALSE, c/1000);
-	*p++ = '.';
+	//*p++ = '.';
 	p += int_to_string(p, 2, TRUE, (c%1000)/10);
 	
-	program_string(0, " clock  ");
-	program_string(1, buf);
-	schedule(30, &drtc_activation);
+	ascii_to_bitmap_str(act->bbuf.buffer, buf);
+	// jonh hard-codes decimal point
+	act->bbuf.buffer[2] |= SSB_DECIMAL;
+	board_buffer_draw(&act->bbuf);
+	schedule(30, (Activation*) act);
 }
 

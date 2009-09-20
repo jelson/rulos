@@ -2,8 +2,13 @@
 #define display_rtc_h
 
 #include "clock.h"
+#include "board_buffer.h"
 
-void drtc_init();
-void drtc_update();
+typedef struct {
+	ActivationFunc func;
+	BoardBuffer bbuf;
+} DRTCAct;
+
+void drtc_init(DRTCAct *act, uint8_t board);
 
 #endif // display_rtc_h

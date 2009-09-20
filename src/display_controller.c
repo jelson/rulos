@@ -61,6 +61,16 @@ void program_cell(uint8_t board, uint8_t digit, SSBitmap bitmap)
 	program_segment(board, digit, 7, shape);
 }
 
+void program_board(uint8_t board, SSBitmap *bitmap)
+{
+	int i;
+	for (i=0; i<NUM_DIGITS; i++)
+	{
+		program_cell(board, i, bitmap[i]);
+	}
+}
+
+#if 0
 void program_string(uint8_t board, char *string)
 {
 	int i;
@@ -80,6 +90,7 @@ void program_string(uint8_t board, char *string)
 		program_cell(board, NUM_DIGITS - 1 - i, symbol);
 	}
 }
+#endif
 
 int int_to_string(char *strp, uint8_t min_width, int zero_padded, uint32_t i)
 {
@@ -211,5 +222,14 @@ SSBitmap ascii_to_bitmap(char a)
 		case ',':	return SEVSEG_COMMA;
 		case '_':
 		default:	return SEVSEG_UNDERSCORE;
+	}
+}
+
+void ascii_to_bitmap_str(SSBitmap *b, char *a)
+{
+	int i;
+	for (i=0; i<NUM_DIGITS && a[i]!='\0'; i++)
+	{
+		b[NUM_DIGITS-1-i] = ascii_to_bitmap(a[i]);
 	}
 }

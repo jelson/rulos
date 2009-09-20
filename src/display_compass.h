@@ -2,10 +2,11 @@
 #define display_compass_h
 
 #include "clock.h"
+#include "board_buffer.h"
 
 typedef struct {
 	ActivationFunc func;
-	int board;
+	BoardBuffer bbuf;
 	uint8_t offset;
 } DCompassAct;
 

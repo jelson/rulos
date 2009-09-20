@@ -10,7 +10,8 @@ void dcompass_update(DCompassAct *act);
 void dcompass_init(DCompassAct *act, uint8_t board)
 {
 	act->func = (ActivationFunc) dcompass_update;
-	act->board = board;
+	board_buffer_init(&act->bbuf);
+	board_buffer_push(&act->bbuf, board);
 	act->offset = 0;
 	schedule(0, (Activation*) act);
 }
@@ -21,7 +22,8 @@ void dcompass_update(DCompassAct *act)
 {
 	int8_t shift = ((int8_t)(deadbeef_rand() % 3)) - 1;
 	act->offset = (act->offset+shift) & 0x0f;
-	program_string(act->board, compass_display + act->offset);
+	ascii_to_bitmap_str(act->bbuf.buffer, compass_display + act->offset);
+	board_buffer_draw(&act->bbuf);
 	schedule(300+(deadbeef_rand() & 0x0ff), (Activation*) act);
 }
 

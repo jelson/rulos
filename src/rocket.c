@@ -7,8 +7,7 @@
 #include "display_rtc.h"
 #include "display_scroll_msg.h"
 #include "display_compass.h"
-
-
+#include "focus.h"
 
 /************************************************************************************/
 /************************************************************************************/
@@ -23,7 +22,7 @@ int main()
 	hw_init();
 #endif
 
-	program_string(0, "init brd");
+	//program_string(0, "init brd");
 
 	/* display self-test */
 	program_matrix(0xff);
@@ -32,7 +31,14 @@ int main()
 
 	clock_init();
 	//install_handler(ADC, adc_handler);
-	drtc_init();
+
+	board_buffer_module_init();
+
+	DScrollMsgAct da0;
+	dscrlmsg_init(&da0, 0, " clock  ", 0);
+
+	DRTCAct dra;
+	drtc_init(&dra, 1);
 
 	DScrollMsgAct da1;
 	dscrlmsg_init(&da1, 2, "Hi jelson. Can you dig it?  ", 130);
@@ -51,6 +57,9 @@ int main()
 
 	DCompassAct dc;
 	dcompass_init(&dc, 4);
+
+	FocusAct fa;
+	focus_init(&fa);
 
 #ifdef SIM
 	sim_run();
