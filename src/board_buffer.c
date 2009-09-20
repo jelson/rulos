@@ -1,6 +1,7 @@
-#include <stdio.h>
 #include "board_buffer.h"
 #include "util.h"
+
+#include <stdio.h>
 
 #if BBDEBUG && SIM
 void dump()

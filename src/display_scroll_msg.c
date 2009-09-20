@@ -16,26 +16,21 @@ void dscrlmsg_init(struct s_dscrollmsgact *act,
 	act->msg = msg;
 	act->len = strlen(act->msg);
 	act->speed_ms = speed_ms;
-        act->index = 0;
+	act->index = 0;
 	schedule(0, (Activation*) act);
 }
 
 void dscrlmsg_update(struct s_dscrollmsgact *act)
 {
-	int index;
 	if (act->speed_ms > 0)
 	{
 		schedule(act->speed_ms, (Activation*) act);
-		index = (clock_time() / act->speed_ms) % act->len;
-	}
-	else
-	{
-		index = 0;
+		act->index++;
 	}
 	uint8_t i;
 	for (i=0; i<NUM_DIGITS; i++)
 	{
-		act->bbuf.buffer[NUM_DIGITS-1-i] = ascii_to_bitmap(act->msg[(index+i)%act->len]);
+		act->bbuf.buffer[NUM_DIGITS-1-i] = ascii_to_bitmap(act->msg[(act->index+i)%act->len]);
 	}
 	board_buffer_draw(&act->bbuf);
 	act->index++;
