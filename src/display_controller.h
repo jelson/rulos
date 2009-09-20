@@ -84,12 +84,13 @@ typedef uint8_t SSBitmap;
 void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff);
 void program_cell(uint8_t board, uint8_t digit, SSBitmap bitmap);
 void program_string(uint8_t board, char *string);
-void program_integer(uint8_t board, uint32_t i);
 
 // debug routines: spray one character across a row or entire display
 void program_row(uint8_t board, SSBitmap bitmap);
 void program_matrix(SSBitmap bitmap);
 
+
 SSBitmap ascii_to_bitmap(char a);
+int int_to_string(char *strp, uint8_t min_width, uint32_t i);
 
 #endif // display_controller_h

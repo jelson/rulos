@@ -138,7 +138,7 @@ ISR(TIMER1_COMPA_vect)
 
 void hw_run()
 {
-	program_integer(0, 1234);
+	program_string(0, "1234");
 	while (1)
 	{
 		if (start_timer_handler > 0)

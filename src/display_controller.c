@@ -1,5 +1,5 @@
 #include "display_controller.h"
-
+#include "util.h"
 
 
 uint8_t sevseg_digits[] = {
@@ -70,39 +70,59 @@ void program_string(uint8_t board, char *string)
 	}
 }
 
-void program_integer(uint8_t board, uint32_t i)
+int int_to_string(char *strp, uint8_t min_width, uint32_t i)
 {
-	int digit;
+	int c = 0;
 	int neg = 0;
+	char *ptr;
+	
+	if (strp!=0)
+	{
+		int ct = int_to_string(0, min_width, i);
+		ptr = strp+ct-1;
+		ptr[1] = '\0';
+	}
 
 	if (i < 0)
 	{
 		i = -i;
 		neg = 1;
 	}
-
-	for (digit = 0; digit < NUM_DIGITS; digit++)
+	if (i==0)
 	{
-		if (i)
+		if (strp!=0) {
+			ptr[-c] = '0';
+		}
+		c+=1;
+	}
+	else
+	{
+		while (i>0)
 		{
-			program_cell(board, digit, sevseg_digits[i % 10]);
+			if (strp!=0) {
+				ptr[-c] = '0' + i%10;
+			}
+			c+=1;
 			i /= 10;
 		}
-		else
-		{
-			if (neg)
-			{
-				program_cell(board, digit, SEVSEG_HYPHEN);
-				neg = 0;
-			}
-			else
-			{
-				program_cell(board, digit, SEVSEG_BLANK);
-			}
-		}
 	}
+	if (neg)
+	{
+		if (strp!=0) {
+			ptr[-c] = '-';
+		}
+		c+=1;
+	}
+	while (c<min_width)
+	{
+		if (strp!=0) {
+			ptr[-c] = ' ';
+		}
+		c+=1;
+	}
+	//LOGF((logfp, "ct %d c0 %02x str %s\n", c, strp?strp[0]:"_", strp));
+	return c;
 }
-
 
 void program_decimal(uint8_t board, uint8_t digit, uint8_t onoff)
 {

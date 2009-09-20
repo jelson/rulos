@@ -14,10 +14,16 @@ void drtc_init()
 
 void drtc_update()
 {
-	uint32_t c = clock_time() / 100;
+	uint32_t c = clock_time();
+	char buf[16], *p = buf;
+	*p++ = 't';
+	p += int_to_string(p, 4, c/1000);
+	*p++ = '.';
+	p += int_to_string(p, 0, (c%1000)/10);
+	
 	program_string(0, " clock  ");
-	program_integer(1, c);
-	schedule(150, &drtc_activation);
+	program_string(1, buf);
+	schedule(50, &drtc_activation);
 }
 
 #if 0
