@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include "display_controller.h"
 #include "display_rtc.h"
 #include "util.h"

@@ -8,3 +8,4 @@
 #else	//!SIM
 #define assert(x)	{ if (!x) { /* TODO display assert on a rocket panel! :v) */ } }
 #endif //SIM
+
