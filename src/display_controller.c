@@ -1,8 +1,24 @@
 #include "display_controller.h"
 #include "util.h"
 
-
-uint8_t sevseg_digits[] = {
+// offset 32
+uint8_t sevseg_ascii[] = {
+	0b0,		// space
+	0b10110000,	//!
+	0b0100010,	//"
+	0b1100011,	//# (UGLY)
+	SEVSEG_S,	//$ (UGLY)
+	0b0100010,	//% (UGLY)
+	SEVSEG_6,	//& (UGLY)
+	0b0100000,	//'
+	SEVSEG_C,	//(
+	0b1111000,	//)
+	SEVSEG_H,	//* (UGLY)
+	0b0110001,	//+ (UGLY)
+	SEVSEG_COMMA,
+	SEVSEG_HYPHEN,
+	0b10000000,	//.
+	0b0100101,	// /
 	SEVSEG_0,
 	SEVSEG_1,
 	SEVSEG_2,
@@ -12,11 +28,14 @@ uint8_t sevseg_digits[] = {
 	SEVSEG_6,
 	SEVSEG_7,
 	SEVSEG_8,
-	SEVSEG_9
-};
-
-uint8_t sevseg_letters[] = 
-{
+	SEVSEG_9,
+	0b0010010,	// : (UGLY)
+	0b10010010,	// ; (UGLY)
+	0b1000011,	// < (UGLY)
+	0b0001001,	// =
+	0b1100001,	// > (UGLY)
+	0b1100101,	// ?
+	0b1111101,	// @
 	SEVSEG_A,
 	SEVSEG_B,
 	SEVSEG_C,
@@ -42,9 +61,47 @@ uint8_t sevseg_letters[] =
 	SEVSEG_W,
 	SEVSEG_X,
 	SEVSEG_Y,
-	SEVSEG_Z
+	SEVSEG_Z,
+	SEVSEG_C,	// [
+	0b0010011,	// \ (no, really, compiler -- just a backslash)
+	0b1111000,	// ]
+	0b1100010,	// ^ (UGLY)
+	0b0001000,	// _
+	0b1100000,	// `
+	SEVSEG_A,
+	SEVSEG_B,
+	SEVSEG_C,
+	SEVSEG_D,
+	SEVSEG_E,
+	SEVSEG_F,
+	SEVSEG_G,
+	SEVSEG_H,
+	SEVSEG_I,
+	SEVSEG_J,
+	SEVSEG_K,
+	SEVSEG_L,
+	SEVSEG_M,
+	SEVSEG_N,
+	SEVSEG_O,
+	SEVSEG_P,
+	SEVSEG_Q,
+	SEVSEG_R,
+	SEVSEG_S,
+	SEVSEG_T,
+	SEVSEG_U,
+	SEVSEG_V,
+	SEVSEG_W,
+	SEVSEG_X,
+	SEVSEG_Y,
+	SEVSEG_Z,
+	0b0110001,	// \{ (UGLY)
+	0b0000110,	// | (subtle)
+	0b0000111,	// \} (UGLY)
+	0b1000000,	// ~
 };
 
+uint8_t *sevseg_digits = &sevseg_ascii['0'];
+uint8_t *sevseg_letters = &sevseg_ascii['A'];
 
 void program_cell(uint8_t board, uint8_t digit, SSBitmap bitmap)
 {
@@ -175,54 +232,11 @@ void program_matrix(SSBitmap bitmap)
 
 SSBitmap ascii_to_bitmap(char a)
 {
-	// NB doing this translation here because
-	// (a) program memory is less scarce than RAM,
-	// and (b) it's not too slow, because a good
-	// compiler converts a switch into a static binary tree.
-	switch (a) {
-		case '0':	return SEVSEG_0;
-		case '1':	return SEVSEG_1;
-		case '2':	return SEVSEG_2;
-		case '3':	return SEVSEG_3;
-		case '4':	return SEVSEG_4;
-		case '5':	return SEVSEG_5;
-		case '6':	return SEVSEG_6;
-		case '7':	return SEVSEG_7;
-		case '8':	return SEVSEG_8;
-		case '9':	return SEVSEG_9;
-		case 'a': case 'A':	return SEVSEG_A;
-		case 'b': case 'B':	return SEVSEG_B;
-		case 'c': case 'C':	return SEVSEG_C;
-		case 'd': case 'D':	return SEVSEG_D;
-		case 'e': case 'E':	return SEVSEG_E;
-		case 'f': case 'F':	return SEVSEG_F;
-		case 'g': case 'G':	return SEVSEG_G;
-		case 'h': case 'H':	return SEVSEG_H;
-		case 'i': case 'I':	return SEVSEG_I;
-		case 'j': case 'J':	return SEVSEG_J;
-		case 'k': case 'K':	return SEVSEG_K;
-		case 'l': case 'L':	return SEVSEG_L;
-		case 'm': case 'M':	return SEVSEG_M;
-		case 'n': case 'N':	return SEVSEG_N;
-		case 'o': case 'O':	return SEVSEG_O;
-		case 'p': case 'P':	return SEVSEG_P;
-		case 'q': case 'Q':	return SEVSEG_Q;
-		case 'r': case 'R':	return SEVSEG_R;
-		case 's': case 'S':	return SEVSEG_S;
-		case 't': case 'T':	return SEVSEG_T;
-		case 'u': case 'U':	return SEVSEG_U;
-		case 'v': case 'V':	return SEVSEG_V;
-		case 'w': case 'W':	return SEVSEG_W;
-		case 'x': case 'X':	return SEVSEG_X;
-		case 'y': case 'Y':	return SEVSEG_Y;
-		case 'z': case 'Z':	return SEVSEG_Z;
-		case '-':	return SEVSEG_HYPHEN;
-		case ' ':	return SEVSEG_SPACE;
-		case '.':	return SEVSEG_PERIOD;
-		case ',':	return SEVSEG_COMMA;
-		case '_':
-		default:	return SEVSEG_UNDERSCORE;
+	if (a<' ' || a>=127)
+	{
+		return 0;
 	}
+	return sevseg_ascii[((uint8_t)a)-32];
 }
 
 void ascii_to_bitmap_str(SSBitmap *b, char *a)
