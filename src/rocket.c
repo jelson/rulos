@@ -64,6 +64,8 @@ int main()
 
 	DCompassAct dc;
 	dcompass_init(&dc, 4, &fa);
+	DCompassAct dc2;
+	dcompass_init(&dc2, 5, &fa);
 
 #ifdef SIM
 	sim_run();
