@@ -33,5 +33,4 @@ void dscrlmsg_update(struct s_dscrollmsgact *act)
 		act->bbuf.buffer[NUM_DIGITS-1-i] = ascii_to_bitmap(act->msg[(act->index+i)%act->len]);
 	}
 	board_buffer_draw(&act->bbuf);
-	act->index++;
 }

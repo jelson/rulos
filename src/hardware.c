@@ -119,7 +119,7 @@ void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onof
 
 void delay_ms(int ms)
 {
-	_delay_ms(ms);
+	//_delay_ms(ms);
 }
 
 void hw_init()
