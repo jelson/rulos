@@ -34,6 +34,13 @@ int main()
 
 	board_buffer_module_init();
 
+	FocusAct fa;
+	focus_init(&fa);
+
+	InputControllerAct ia;
+	input_controller_init(&ia, (InputHandler*) &fa.inputHandler);
+
+
 	DScrollMsgAct da0;
 	dscrlmsg_init(&da0, 0, " clock  ", 0);
 
@@ -56,13 +63,7 @@ int main()
 	dscrlmsg_init(&da2, 3, buf, 75);
 
 	DCompassAct dc;
-	dcompass_init(&dc, 4);
-
-	FocusAct fa;
-	focus_init(&fa);
-
-	InputControllerAct ia;
-	input_controller_init(&ia, (InputHandler*) &fa.inputHandler);
+	dcompass_init(&dc, 4, &fa);
 
 #ifdef SIM
 	sim_run();

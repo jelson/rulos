@@ -8,18 +8,27 @@ void focus_update(FocusAct *act);
 void focus_input_handler(InputHandler *handler, char key);
 void focus_update_once(FocusAct *act);
 
-#define FOCUS_OFF (0xff)
+#define NO_CHILD (0xff)
 
 void focus_init(FocusAct *act)
 {
 	act->func = (ActivationFunc) focus_update;
 	board_buffer_init(&act->board_buffer);
-	act->board = FOCUS_OFF;
 	act->inputHandler.func = focus_input_handler;
 	act->inputHandler.act = act;
-	act->childHandler = NULL;
-	act->selectUntilTime = 0;
+	act->selectedChild = NO_CHILD;
+	act->focusedChild = NO_CHILD;
+	act->children_size = 0;
 	focus_update(act);
+}
+
+void focus_register(FocusAct *act, UIEventHandler *handler, uint8_t board)
+{
+	uint8_t idx = act->children_size;
+	assert(idx<NUM_CHILDREN);
+	act->children[idx].handler = handler;
+	act->children[idx].board = board;
+	act->children_size += 1;
 }
 
 void focus_update(FocusAct *act)
@@ -34,11 +43,7 @@ void focus_update_once(FocusAct *act)
 {
 	uint32_t t = clock_time();
 	SSBitmap *buf = act->board_buffer.buffer;
-	if (t < act->selectUntilTime)
-	{
-		ascii_to_bitmap_str(buf, "{select}");
-	}
-	else if ((t >> 8) & 1)
+	if ((t >> 8) & 1)
 	{
 		buf[0] = 0b1111000;
 		buf[1] = 0b0000000;
@@ -66,45 +71,57 @@ void focus_update_once(FocusAct *act)
 void focus_input_handler(InputHandler *raw_handler, char key)
 {
 	FocusAct *act = ((FocusInputHandler *) raw_handler)->act;
-	act->selectUntilTime = 0;
-	if (act->childHandler != NULL)
+
+	uint8_t old_cursor_child = act->selectedChild;
+	if (act->focusedChild != NO_CHILD)
 	{
-		act->childHandler->func(act->childHandler, key);
-		return;
+		UIEventHandler *childHandler = act->children[act->focusedChild].handler;
+		if (key=='d') { // escape
+			childHandler->func(childHandler, uie_blur);
+			act->selectedChild = act->focusedChild;
+			act->focusedChild = NO_CHILD;
+		}
+		else // pass along key
+		{
+			childHandler->func(childHandler, key);
+		}
+	} else {
+		// nobody focused. Start selectin'!
+		switch (key)
+		{
+			case 'a':	// right
+				act->selectedChild = (act->selectedChild + 1 + act->children_size) % act->children_size;
+				break;
+			case 'b':	// left
+				act->selectedChild = (act->selectedChild - 1 + act->children_size) % act->children_size;
+				break;
+			case 'c':	// select
+				if (act->selectedChild!=NO_CHILD)
+				{
+					act->focusedChild = act->selectedChild;
+					act->selectedChild = NO_CHILD;
+					UIEventHandler *childHandler = act->children[act->focusedChild].handler;
+					childHandler->func(childHandler, uie_focus);
+				}
+				break;
+			case 'd':	// escape
+				act->selectedChild = NO_CHILD;
+		}
 	}
-	uint8_t new_board = act->board;
-	switch (key)
+	uint8_t new_cursor_child = act->selectedChild;
+	if (new_cursor_child != old_cursor_child)
 	{
-		case 'a':	// right
-			new_board = (act->board + 1 + NUM_BOARDS) % NUM_BOARDS;
-			break;
-		case 'b':	// left
-			new_board = (act->board - 1 + NUM_BOARDS) % NUM_BOARDS;
-			break;
-		case 'c':	// select
-			if (act->board < NUM_BOARDS)
-			{
-				// TODO pass off to child handler
-				// for now, temporarily change display text.
-				act->selectUntilTime = clock_time() + 1500;
-				focus_update_once(act);
-			}
-			break;
-		case 'd':	// escape
-			new_board = FOCUS_OFF;
-			break;
-	}
-	if (new_board != act->board)
-	{
-		if (act->board != FOCUS_OFF) {
+		if (old_cursor_child != NO_CHILD)
+		{
+			LOGF((logfp, "pop child %d\n", old_cursor_child));
 			board_buffer_pop(&act->board_buffer);
 		}
-		act->board = new_board;
-		if (act->board != FOCUS_OFF) {
-			board_buffer_push(&act->board_buffer, act->board);
+		if (new_cursor_child != NO_CHILD)
+		{
+			LOGF((logfp, "push child %d\n", new_cursor_child));
+			board_buffer_push(&act->board_buffer, act->children[new_cursor_child].board);
 		}
 		focus_update_once(act);
 	}
 }
-
 
