@@ -11,7 +11,6 @@
 
 typedef void (*Handler)();
 
-char scan_keyboard();
 void delay_ms(int ms);
 void start_clock_ms(int ms, Handler handler);
 

@@ -61,6 +61,9 @@ int main()
 	FocusAct fa;
 	focus_init(&fa);
 
+	InputControllerAct ia;
+	input_controller_init(&ia, (InputHandler*) &fa.inputHandler);
+
 #ifdef SIM
 	sim_run();
 #else
