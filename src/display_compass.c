@@ -58,6 +58,7 @@ void dcompass_update_once(DCompassAct *act)
 		}
 	}
 	ascii_to_bitmap_str(act->bbuf.buffer,
+		NUM_DIGITS,
 		compass_display + (da_read(&act->drift) & 0x0f));
 	if (act->focused && (clock_time()>>7)&1)
 	{

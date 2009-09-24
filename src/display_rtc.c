@@ -24,7 +24,7 @@ void drtc_update(DRTCAct *act)
 	//*p++ = '.';
 	p += int_to_string(p, 2, TRUE, (c%1000)/10);
 	
-	ascii_to_bitmap_str(act->bbuf.buffer, buf);
+	ascii_to_bitmap_str(act->bbuf.buffer, NUM_DIGITS, buf);
 	// jonh hard-codes decimal point
 	act->bbuf.buffer[2] |= SSB_DECIMAL;
 	board_buffer_draw(&act->bbuf);

@@ -10,6 +10,7 @@
 #include "focus.h"
 #include "labeled_display.h"
 #include "display_docking.h"
+#include "display_gratuitous_graph.h"
 
 /************************************************************************************/
 /************************************************************************************/
@@ -62,8 +63,9 @@ int main()
 
 	DCompassAct dc;
 	dcompass_init(&dc, 4, &fa);
-	DCompassAct dc2;
-	dcompass_init(&dc2, 5, &fa);
+
+	DGratuitousGraph dgg;
+	dgg_init(&dgg, 5, "pressure", 5000);
 
 /*
 	DDockAct ddock;

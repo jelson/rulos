@@ -239,11 +239,11 @@ SSBitmap ascii_to_bitmap(char a)
 	return sevseg_ascii[((uint8_t)a)-32];
 }
 
-void ascii_to_bitmap_str(SSBitmap *b, char *a)
+void ascii_to_bitmap_str(SSBitmap *b, int num_digits, char *a)
 {
 	int i;
-	for (i=0; i<NUM_DIGITS && a[i]!='\0'; i++)
+	for (i=0; i<num_digits && a[i]!='\0'; i++)
 	{
-		b[NUM_DIGITS-1-i] = ascii_to_bitmap(a[i]);
+		b[num_digits-1-i] = ascii_to_bitmap(a[i]);
 	}
 }
