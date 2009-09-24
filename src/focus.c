@@ -4,22 +4,22 @@
 #include "focus.h"
 #include "util.h"
 
-void focus_update(FocusAct *act);
 void focus_input_handler(InputHandler *handler, char key);
-void focus_update_once(FocusAct *act);
+//void focus_update(FocusAct *act);
+//void focus_update_once(FocusAct *act);
 
 #define NO_CHILD (0xff)
 
 void focus_init(FocusAct *act)
 {
-	act->func = (ActivationFunc) focus_update;
-	board_buffer_init(&act->board_buffer);
+	//act->func = (ActivationFunc) focus_update;
+	cursor_init(&act->cursor);
 	act->inputHandler.func = focus_input_handler;
 	act->inputHandler.act = act;
 	act->selectedChild = NO_CHILD;
 	act->focusedChild = NO_CHILD;
 	act->children_size = 0;
-	focus_update(act);
+	//focus_update(act);
 }
 
 void focus_register(FocusAct *act, UIEventHandler *handler, uint8_t board)
@@ -31,6 +31,7 @@ void focus_register(FocusAct *act, UIEventHandler *handler, uint8_t board)
 	act->children_size += 1;
 }
 
+/*
 void focus_update(FocusAct *act)
 {
 	focus_update_once(act);
@@ -67,10 +68,14 @@ void focus_update_once(FocusAct *act)
 	}
 	board_buffer_draw(&act->board_buffer);
 }
+*/
 
 void focus_input_handler(InputHandler *raw_handler, char key)
 {
 	FocusAct *act = ((FocusInputHandler *) raw_handler)->act;
+
+	// avoid mod-by-zero
+	if (act->children_size == 0) { return; }
 
 	uint8_t old_cursor_child = act->selectedChild;
 	if (act->focusedChild != NO_CHILD)
@@ -113,15 +118,19 @@ void focus_input_handler(InputHandler *raw_handler, char key)
 	{
 		if (old_cursor_child != NO_CHILD)
 		{
-			LOGF((logfp, "pop child %d\n", old_cursor_child));
-			board_buffer_pop(&act->board_buffer);
+			//LOGF((logfp, "pop child %d\n", old_cursor_child));
+			//board_buffer_pop(&act->board_buffer);
+			cursor_hide(&act->cursor);
 		}
 		if (new_cursor_child != NO_CHILD)
 		{
 			LOGF((logfp, "push child %d\n", new_cursor_child));
-			board_buffer_push(&act->board_buffer, act->children[new_cursor_child].board);
+			cursor_show(&act->cursor,
+				act->children[new_cursor_child].board,
+				act->children[new_cursor_child].board,
+				1, 7);
 		}
-		focus_update_once(act);
+		//focus_update_once(act);
 	}
 }
 

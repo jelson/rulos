@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 
+SSBitmap _board_buffer_getchar(BoardBuffer *buf, int idx);
+
 #if BBDEBUG && SIM
 void dump()
 {
@@ -40,6 +42,8 @@ void board_buffer_init(BoardBuffer *buf)
 	}
 	buf->next = NULL;
 	buf->board_index = 0xff;
+	buf->alpha = 0xff;
+	assert(sizeof(buf->alpha)*8 >= NUM_DIGITS);
 }
 
 void board_buffer_pop(BoardBuffer *buf)
@@ -89,6 +93,32 @@ void board_buffer_draw(BoardBuffer *buf)
 	if (board_buffer_is_foreground(buf))
 	{
 		program_board(buf->board_index, buf->buffer);
+		int board_index = buf->board_index;
+		int i;
+		for (i=0; i<NUM_DIGITS; i++)
+		{
+			program_cell(board_index, i, _board_buffer_getchar(buf, i));
+		}
+	}
+	// TODO instead of a board-wide if, we should compute the aggregate
+	// mask of the overlays above us, and draw through what's left.
+	// Without that, updates from below visible through the alpha mask
+	// are only shown when the guy on top draws.
+}
+
+SSBitmap _board_buffer_getchar(BoardBuffer *buf, int idx)
+{
+	if ((buf->alpha >> idx) & 1)
+	{
+		return buf->buffer[idx];
+	}
+	else if (buf->next != NULL)
+	{
+		return _board_buffer_getchar(buf->next, idx);
+	}
+	else
+	{
+		return 0;
 	}
 }
 

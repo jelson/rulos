@@ -6,6 +6,7 @@
 typedef struct s_board_buffer {
 	uint8_t board_index;
 	SSBitmap buffer[NUM_DIGITS];
+	uint8_t alpha;
 	struct s_board_buffer *next;
 #if BBDEBUG && SIM
 	char *label;

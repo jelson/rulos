@@ -2,7 +2,7 @@
 #define focus_h
 
 #include "clock.h"
-#include "board_buffer.h"
+#include "cursor.h"
 #include "input_controller.h"
 
 struct s_focus_handler;
@@ -43,8 +43,8 @@ typedef struct {
 #define NUM_CHILDREN 8
 
 typedef struct s_focus_act {
-	ActivationFunc func;
-	BoardBuffer board_buffer;
+	//ActivationFunc func;
+	CursorAct cursor;
 	FocusInputHandler inputHandler;
 	FocusChild children[NUM_CHILDREN];
 	uint8_t children_size;
