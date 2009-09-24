@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <inttypes.h>
 
 #define say(x)	{ fprintf(stderr, "say: %s\n", x); }
 extern FILE *logfp;
@@ -20,5 +21,6 @@ extern FILE *logfp;
 #endif //SIM
 
 void init_util();
+int32_t bound(int32_t v, int32_t l, int32_t h);
 
 #endif // _util_h

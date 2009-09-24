@@ -4,6 +4,7 @@
 #include "clock.h"
 #include "board_buffer.h"
 #include "focus.h"
+#include "drift_anim.h"
 
 #define DOCK_HEIGHT 4
 
@@ -19,7 +20,8 @@ typedef struct s_ddockact {
 	BoardBuffer bbuf[DOCK_HEIGHT];
 	DDockHandler handler;
 	uint8_t focused;
-	int xc, yc, r;
+	DriftAnim xd, yd, rd;
+	uint32_t last_impulse_time;
 } DDockAct;
 
 void ddock_init(DDockAct *act, uint8_t board0, FocusAct *focus);

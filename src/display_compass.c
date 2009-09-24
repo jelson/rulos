@@ -16,7 +16,8 @@ void dcompass_init(DCompassAct *act, uint8_t board, FocusAct *focus)
 	act->func = (ActivationFunc) dcompass_update;
 	board_buffer_init(&act->bbuf);
 	board_buffer_push(&act->bbuf, board);
-	act->offset = 0;
+	drift_anim_init(&act->drift, 10, 0, -(1<<20), 1<<20, 3);
+	act->last_impulse_time = 0;
 	act->handler.func = (UIEventHandlerFunc) dcompass_event_handler;
 	act->handler.act = act;
 	act->focused = FALSE;
@@ -46,10 +47,18 @@ void dcompass_update_once(DCompassAct *act)
 {
 	if (!act->focused)
 	{
-		int8_t shift = ((int8_t)(deadbeef_rand() % 3)) - 1;
-		act->offset = (act->offset+shift) & 0x0f;
+		uint32_t t = clock_time();
+		if (t - act->last_impulse_time > 3000)
+		{
+			da_random_impulse(&act->drift);
+			// drift is bounded, but compass rolls indefinitely.
+			// snap back near zero to avoid "caging" compass at max/min
+			da_set_value(&act->drift, da_read(&act->drift) & 0x0f);
+			act->last_impulse_time = t;
+		}
 	}
-	ascii_to_bitmap_str(act->bbuf.buffer, compass_display + act->offset);
+	ascii_to_bitmap_str(act->bbuf.buffer,
+		compass_display + (da_read(&act->drift) & 0x0f));
 	if (act->focused && (clock_time()>>7)&1)
 	{
 		act->bbuf.buffer[7] = 0b1001110;
@@ -67,15 +76,16 @@ UIEventDisposition dcompass_event_handler(
 	{
 		case uie_focus:
 			act->focused = TRUE;
+			da_set_velocity(&act->drift, 0);
 			break;
 		case uie_blur:
 			act->focused = FALSE;
 			break;
 		case 'a':
-			act->offset = (act->offset-1) & 0x0f;
+			da_set_value(&act->drift, da_read(&act->drift)-1);
 			break;
 		case 'b':
-			act->offset = (act->offset+1) & 0x0f;
+			da_set_value(&act->drift, da_read(&act->drift)+1);
 			break;
 	}
 	dcompass_update_once(act);

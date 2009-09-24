@@ -11,9 +11,8 @@ UIEventDisposition ddock_event_handler(
 
 void ddock_update_once(DDockAct *act);
 void ddock_update(DDockAct *act);
-int ddock_compute_dx(DDockAct *act, int y);
+int ddock_compute_dx(int yc, int r, int y);
 void ddock_paint_hrow(SSBitmap *bm, int y, int x0, int x1, SSBitmap mask);
-int bound(int v, int l, int h);
 
 void ddock_init(DDockAct *act, uint8_t b0, FocusAct *focus)
 {
@@ -31,12 +30,32 @@ void ddock_init(DDockAct *act, uint8_t b0, FocusAct *focus)
 	DisplayRect rect = {b0, b0+DOCK_HEIGHT-1, 0, 7};
 	focus_register(focus, (UIEventHandler*) &act->handler, rect);
 
+	drift_anim_init(&act->xd, 10, 0, -14, 14, 5);
+	drift_anim_init(&act->yd, 10, 0, -15, 15, 5);
+	drift_anim_init(&act->rd, 10, 7, 7, 13, 5);
+	act->last_impulse_time = 0;
+
 	schedule(0, (Activation*) act);
 }
+
+#define IMPULSE_FREQUENCY_MS 5000
 
 void ddock_update(DDockAct *act)
 {
 	ddock_update_once(act);
+
+	if (!act->focused)
+	{
+		// standard animation
+		uint32_t t = clock_time();
+		if (t - act->last_impulse_time > IMPULSE_FREQUENCY_MS)
+		{
+			da_random_impulse(&act->xd);
+			da_random_impulse(&act->yd);
+			da_random_impulse(&act->rd);
+			act->last_impulse_time = t;
+		}
+	}
 	schedule(256, (Activation*) act);
 }
 
@@ -44,58 +63,53 @@ void ddock_update(DDockAct *act)
 
 void ddock_update_once(DDockAct *act)
 {
-	if (!act->focused)
+	int xc = da_read(&act->xd);
+	int yc = da_read(&act->yd);
+	int rad = da_read(&act->rd);
+	int row;
+	for (row=0; row<DOCK_HEIGHT; row++)
 	{
-		// standard animation
-		act->r = bound(act->r + (deadbeef_rand() % 3) - 1, 7, 15);
-		act->xc = bound(act->xc + (deadbeef_rand() % 3) - 1, -14, 14);
-		act->yc = bound(act->yc + (deadbeef_rand() % 3) - 1, -15, 15);
-	}
-
-	int r;
-	for (r=0; r<DOCK_HEIGHT; r++)
-	{
-		SSBitmap *bm = act->bbuf[r].buffer;
+		SSBitmap *bm = act->bbuf[row].buffer;
 		int i;
 
 		// draw axes
-		SSBitmap bg = (r==(DOCK_HEIGHT/2)) ? 0b1000000 : 0;
+		SSBitmap bg = (row==(DOCK_HEIGHT/2)) ? 0b1000000 : 0;
 		for (i=0; i<NUM_DIGITS; i++)	// zero buffer
 		{
 			bm[i] = bg;
 		}
 		bm[NUM_DIGITS/2] |= 0b0110000;
 
-		int y = DOCK_HEIGHT*7/2 - (r*7);
+		int y = DOCK_HEIGHT*7/2 - (row*7);
 		int dx;
 
-		dx = ddock_compute_dx(act, y+0);
+		dx = ddock_compute_dx(yc, rad, y+0);
 		if (dx!=I_NAN)
-			ddock_paint_hrow(bm, y+0, act->xc-dx+1, act->xc+dx+1, 0b0001000);
+			ddock_paint_hrow(bm, y+0, xc-dx+1, xc+dx+1, 0b0001000);
 
-		dx = ddock_compute_dx(act, y+1);
-		if (dx!=I_NAN)
-		{
-			ddock_paint_hrow(bm, y+1, act->xc-dx+0, act->xc+dx+0, 0b0000100);
-			ddock_paint_hrow(bm, y+1, act->xc-dx+2, act->xc+dx+2, 0b0010000);
-		}
-		dx = ddock_compute_dx(act, y+2);
-		if (dx!=I_NAN)
-			ddock_paint_hrow(bm, y+2, act->xc-dx+1, act->xc+dx+1, 0b0000001);
-
-		dx = ddock_compute_dx(act, y+3);
+		dx = ddock_compute_dx(yc, rad, y+1);
 		if (dx!=I_NAN)
 		{
-			ddock_paint_hrow(bm, y+3, act->xc-dx+0, act->xc+dx+0, 0b0000010);
-			ddock_paint_hrow(bm, y+3, act->xc-dx+2, act->xc+dx+2, 0b0100000);
+			ddock_paint_hrow(bm, y+1, xc-dx+0, xc+dx+0, 0b0000100);
+			ddock_paint_hrow(bm, y+1, xc-dx+2, xc+dx+2, 0b0010000);
+		}
+		dx = ddock_compute_dx(yc, rad, y+2);
+		if (dx!=I_NAN)
+			ddock_paint_hrow(bm, y+2, xc-dx+1, xc+dx+1, 0b0000001);
+
+		dx = ddock_compute_dx(yc, rad, y+3);
+		if (dx!=I_NAN)
+		{
+			ddock_paint_hrow(bm, y+3, xc-dx+0, xc+dx+0, 0b0000010);
+			ddock_paint_hrow(bm, y+3, xc-dx+2, xc+dx+2, 0b0100000);
 		}
 
 
-		dx = ddock_compute_dx(act, y+4);
+		dx = ddock_compute_dx(yc, rad, y+4);
 		if (dx!=I_NAN)
-			ddock_paint_hrow(bm, y+4, act->xc-dx+1, act->xc+dx+1, 0b1000000);
+			ddock_paint_hrow(bm, y+4, xc-dx+1, xc+dx+1, 0b1000000);
 
-		board_buffer_draw(&act->bbuf[r]);
+		board_buffer_draw(&act->bbuf[row]);
 	}
 }
 
@@ -111,21 +125,13 @@ int isqrt(int v)
 	return root-1;
 }
 
-int ddock_compute_dx(DDockAct *act, int y)
+int ddock_compute_dx(int yc, int r, int y)
 {
-	int r = act->r;
-	int dy = (y - act->yc);
+	int dy = (y - yc);
 	int dx2 = r*r - dy*dy;
 	if (dx2 < 0)
 		return I_NAN;
 	return isqrt(dx2);
-}
-
-int bound(int v, int l, int h)
-{
-	if (v<l) { return l; }
-	if (v>h) { return h; }
-	return v;
 }
 
 void ddock_paint_hrow(SSBitmap *bm, int y, int x0, int x1, SSBitmap mask)
@@ -154,21 +160,24 @@ UIEventDisposition ddock_event_handler(
 	switch (evt)
 	{
 		case '2':
-			act->yc -= 1; break;
+			da_set_value(&act->yd, da_read(&act->yd)-1); break;
 		case '8':
-			act->yc += 1; break;
+			da_set_value(&act->yd, da_read(&act->yd)+1); break;
 		case '4':
-			act->xc -= 1; break;
+			da_set_value(&act->xd, da_read(&act->xd)-1); break;
 		case '6':
-			act->xc += 1; break;
+			da_set_value(&act->xd, da_read(&act->xd)+1); break;
 		case 'p':
 		case 'a':
-			act->r += 1; break;
+			da_set_value(&act->rd, da_read(&act->rd)+1); break;
 		case 's':
 		case 'b':
-			act->r -= 1; break;
+			da_set_value(&act->rd, da_read(&act->rd)-1); break;
 		case uie_focus:
 			act->focused = TRUE;
+			da_set_velocity(&act->xd, 0);
+			da_set_velocity(&act->yd, 0);
+			da_set_velocity(&act->rd, 0);
 			break;
 		case uie_blur:
 			act->focused = FALSE;

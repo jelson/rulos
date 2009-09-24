@@ -4,6 +4,7 @@
 #include "clock.h"
 #include "board_buffer.h"
 #include "focus.h"
+#include "drift_anim.h"
 
 struct s_dcompassact;
 
@@ -15,9 +16,10 @@ typedef struct {
 typedef struct s_dcompassact {
 	ActivationFunc func;
 	BoardBuffer bbuf;
-	uint8_t offset;
 	DCompassHandler handler;
 	uint8_t focused;
+	DriftAnim drift;
+	uint32_t last_impulse_time;
 } DCompassAct;
 
 void dcompass_init(DCompassAct *act, uint8_t board, FocusAct *focus);
