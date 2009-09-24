@@ -65,8 +65,10 @@ int main()
 	DCompassAct dc2;
 	dcompass_init(&dc2, 5, &fa);
 
+/*
 	DDockAct ddock;
 	ddock_init(&ddock, 1, &fa);
+*/
 
 #ifdef SIM
 	sim_run();
