@@ -9,6 +9,7 @@
 #include "display_compass.h"
 #include "focus.h"
 #include "labeled_display.h"
+#include "display_docking.h"
 
 /************************************************************************************/
 /************************************************************************************/
@@ -27,7 +28,7 @@ int main()
 
 	/* display self-test */
 	program_matrix(0xff);
-	delay_ms(1000);
+	delay_ms(100);
 	program_matrix(0);
 
 	clock_init();
@@ -63,6 +64,9 @@ int main()
 	dcompass_init(&dc, 4, &fa);
 	DCompassAct dc2;
 	dcompass_init(&dc2, 5, &fa);
+
+	DDockAct ddock;
+	ddock_init(&ddock, 1, &fa);
 
 #ifdef SIM
 	sim_run();

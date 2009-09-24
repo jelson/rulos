@@ -4,7 +4,7 @@
 #include "board_buffer.h"
 #include "clock.h"
 
-#define MAX_HEIGHT 2
+#define MAX_HEIGHT 5
 
 typedef struct {
 	uint8_t y0, y1, x0, x1;
