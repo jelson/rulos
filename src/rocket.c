@@ -8,6 +8,7 @@
 #include "display_scroll_msg.h"
 #include "display_compass.h"
 #include "focus.h"
+#include "labeled_display.h"
 
 /************************************************************************************/
 /************************************************************************************/
@@ -40,12 +41,8 @@ int main()
 	InputControllerAct ia;
 	input_controller_init(&ia, (InputHandler*) &fa.inputHandler);
 
-
-	DScrollMsgAct da0;
-	dscrlmsg_init(&da0, 0, " clock  ", 0);
-
-	DRTCAct dra;
-	drtc_init(&dra, 1);
+	LabeledDisplayHandler ldh;
+	labeled_display_init(&ldh, 0, &fa);
 
 	DScrollMsgAct da1;
 	dscrlmsg_init(&da1, 2, "Hi jelson. Can you dig it?  ", 130);
