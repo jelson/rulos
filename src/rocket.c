@@ -71,7 +71,7 @@ int main()
 	board_buffer_init(&bbuf);
 	board_buffer_push(&bbuf, 3);
 	RowRegion region = { &bbuf, 3, 4 };
-	numeric_input_init(&ni, region, &fa);
+	numeric_input_init(&ni, region, NULL, &fa);
 
 	Calculator calc;
 	calculator_init(&calc, 4, &fa);
@@ -86,8 +86,8 @@ int main()
 
 /*
 	DDockAct ddock;
-	ddock_init(&ddock, 1, &fa);
-*/
+	ddock_init(&ddock, 0, &fa);
+	*/
 
 #ifdef SIM
 	sim_run();

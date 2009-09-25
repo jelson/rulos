@@ -4,7 +4,7 @@
 UIEventDisposition knob_handler(UIEventHandler *raw_handler, UIEvent evt);
 void knob_update_once(Knob *knob);
 
-void knob_init(Knob *knob, RowRegion region, char **msgs, uint8_t len, FocusManager *fa)
+void knob_init(Knob *knob, RowRegion region, char **msgs, uint8_t len, NotifyIfc *notify, FocusManager *fa)
 {
 	knob->func = knob_handler;
 	knob->msgs = msgs;
@@ -13,6 +13,7 @@ void knob_init(Knob *knob, RowRegion region, char **msgs, uint8_t len, FocusMana
 	knob->region = region;
 	cursor_init(&knob->cursor);
 	cursor_set_shape_blank(&knob->cursor, TRUE);
+	knob->notify = notify;
 	RectRegion rr = {&knob->region.bbuf, 1, knob->region.x, knob->region.xlen};
 	focus_register(fa, (UIEventHandler*) knob, rr);
 	knob_update_once(knob);
@@ -34,6 +35,7 @@ UIEventDisposition knob_handler(UIEventHandler *raw_handler, UIEvent evt)
 		case uie_select:
 			cursor_hide(&knob->cursor);
 			result = uied_blur;
+			knob->notify->func(knob->notify);
 			break;
 		case uie_right:
 			knob->selected = (knob->selected+1) % knob->len;
@@ -54,4 +56,10 @@ void knob_update_once(Knob *knob)
 		knob->region.xlen, 
 		knob->msgs[knob->selected]);
 	board_buffer_draw(knob->region.bbuf);
+}
+
+void knob_set_value(Knob *knob, uint8_t value)
+{
+	knob->selected = value;
+	knob_update_once(knob);
 }

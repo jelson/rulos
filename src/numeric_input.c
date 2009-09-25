@@ -41,7 +41,7 @@ void ni_accept_input(NumericInputAct *act);
 void ni_cancel_input(NumericInputAct *act);
 void ni_add_digit(NumericInputAct *act, uint8_t digit);
 
-void numeric_input_init(NumericInputAct *act, RowRegion region, FocusManager *fa)
+void numeric_input_init(NumericInputAct *act, RowRegion region, NotifyIfc *notify, FocusManager *fa)
 {
 	act->region = region;
 	act->handler.func = numeric_input_handler;
@@ -53,6 +53,7 @@ void numeric_input_init(NumericInputAct *act, RowRegion region, FocusManager *fa
 	act->decimal_present = TRUE;
 	ni_update_once(act);
 	RectRegion rr = { &act->region.bbuf, 1, region.x, region.xlen };
+	act->notify = notify;
 	if (fa!=NULL)
 	{
 		focus_register(fa, (UIEventHandler*) &act->handler, rr);
@@ -84,6 +85,7 @@ void ni_accept_input(NumericInputAct *act)
 	cursor_hide(&act->cursor);
 	act->decimal_present = TRUE;
 	ni_update_once(act);
+	act->notify->func(act->notify);
 }
 
 void ni_cancel_input(NumericInputAct *act)
@@ -150,4 +152,10 @@ UIEventDisposition numeric_input_handler(UIEventHandler *raw_handler, UIEvent ev
 			break;
 	}
 	return result;
+}
+
+void numeric_input_set_value(NumericInputAct *act, DecimalFloatingPoint new_value)
+{
+	act->cur_value = new_value;
+	ni_update_once(act);
 }

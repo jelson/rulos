@@ -5,6 +5,7 @@
 #include "board_buffer.h"
 #include "focus.h"
 #include "region.h"
+#include "notifyifc.h"
 
 typedef struct {
 	uint16_t mantissa;
@@ -27,8 +28,10 @@ typedef struct s_numeric_input_act {
 	DecimalFloatingPoint old_value;
 	DecimalFloatingPoint cur_value;
 	uint8_t decimal_present;
+	NotifyIfc *notify;
 } NumericInputAct;
 
-void numeric_input_init(NumericInputAct *act, RowRegion region, FocusManager *fa);
+void numeric_input_init(NumericInputAct *act, RowRegion region, NotifyIfc *notify, FocusManager *fa);
+void numeric_input_set_value(NumericInputAct *act, DecimalFloatingPoint new_value);
 
 #endif // numeric_input_h
