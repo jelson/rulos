@@ -47,7 +47,7 @@ void dgg_update(DGratuitousGraph *dgg)
 			uint8_t b = 0;
 			if (d*2+1<v) b |= 0b0110000;
 			if (d*2  <v) b |= 0b0000110;
-			dgg->bbuf.buffer[NUM_DIGITS - 1 - d] = b;
+			dgg->bbuf.buffer[d] = b;
 		}
 	}
 	board_buffer_draw(&dgg->bbuf);

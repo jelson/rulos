@@ -62,8 +62,8 @@ void dcompass_update_once(DCompassAct *act)
 		compass_display + (da_read(&act->drift) & 0x0f));
 	if (act->focused && (clock_time()>>7)&1)
 	{
-		act->bbuf.buffer[7] = 0b1001110;
-		act->bbuf.buffer[0] = 0b1111000;
+		act->bbuf.buffer[7] = 0b1111000;
+		act->bbuf.buffer[0] = 0b1001110;
 	}
 	board_buffer_draw(&act->bbuf);
 }

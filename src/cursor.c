@@ -68,8 +68,8 @@ void cursor_update_once(CursorAct *act)
 			for (j=act->rect.x0; j<=act->rect.x1; j++)
 			{
 				act->bbuf[i-act->rect.y0].buffer[j] =
-					  ((j==act->rect.x0)?0b0110000:0)
-					| ((j==act->rect.x1)?0b0000110:0)
+					  ((j==act->rect.x0)?0b0000110:0)
+					| ((j==act->rect.x1)?0b0110000:0)
 					| ((i==act->rect.y0)?0b1000000:0)
 					| ((i==act->rect.y1)?0b0001000:0);
 			}

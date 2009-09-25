@@ -127,28 +127,6 @@ void program_board(uint8_t board, SSBitmap *bitmap)
 	}
 }
 
-#if 0
-void program_string(uint8_t board, char *string)
-{
-	int i;
-	for (i = 0; i < NUM_DIGITS; i++)
-	{
-		if (*string==0) { break; }
-		SSBitmap symbol = ascii_to_bitmap(*string);
-		if (string[1] == '.')
-		{
-			symbol |= SSB_DECIMAL;
-			string += 2;
-		}
-		else
-		{
-			string++;
-		}
-		program_cell(board, NUM_DIGITS - 1 - i, symbol);
-	}
-}
-#endif
-
 int int_to_string(char *strp, uint8_t min_width, int zero_padded, uint32_t i)
 {
 	int c = 0;
@@ -244,6 +222,6 @@ void ascii_to_bitmap_str(SSBitmap *b, int num_digits, char *a)
 	int i;
 	for (i=0; i<num_digits && a[i]!='\0'; i++)
 	{
-		b[num_digits-1-i] = ascii_to_bitmap(a[i]);
+		b[i] = ascii_to_bitmap(a[i]);
 	}
 }

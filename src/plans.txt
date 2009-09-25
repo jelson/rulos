@@ -1,3 +1,10 @@
+TODO
+	fix bitmap display end order
+	make focus show label of display
+	make circle thing really work, with x/y in corners
+	idle time calculator
+	assert displayer
+
 1	K clock:
 	real-time
 	mission-time

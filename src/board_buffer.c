@@ -46,15 +46,15 @@ void board_buffer_init(BoardBuffer *buf)
 
 void _board_buffer_compute_mask(BoardBuffer *buf, uint8_t redraw)
 {
-	uint8_t mask = 0xff;
+	uint8_t left = 0xff;
 	while (buf != NULL)
 	{
-		buf->mask = mask & buf->alpha;
+		buf->mask = left & buf->alpha;
+		left = left & (~buf->alpha);
 		if (redraw)
 		{
 			board_buffer_draw(buf);
 		}
-		mask = ~buf->mask;
 		buf = buf->next;
 	}
 }

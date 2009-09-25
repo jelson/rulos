@@ -90,8 +90,8 @@ void ddock_update_once(DDockAct *act)
 		dx = ddock_compute_dx(yc, rad, y+1);
 		if (dx!=I_NAN)
 		{
-			ddock_paint_hrow(bm, y+1, xc-dx+0, xc+dx+0, 0b0000100);
-			ddock_paint_hrow(bm, y+1, xc-dx+2, xc+dx+2, 0b0010000);
+			ddock_paint_hrow(bm, y+1, xc-dx+0, xc+dx+0, 0b0010000);
+			ddock_paint_hrow(bm, y+1, xc-dx+2, xc+dx+2, 0b0000100);
 		}
 		dx = ddock_compute_dx(yc, rad, y+2);
 		if (dx!=I_NAN)
@@ -100,8 +100,8 @@ void ddock_update_once(DDockAct *act)
 		dx = ddock_compute_dx(yc, rad, y+3);
 		if (dx!=I_NAN)
 		{
-			ddock_paint_hrow(bm, y+3, xc-dx+0, xc+dx+0, 0b0000010);
-			ddock_paint_hrow(bm, y+3, xc-dx+2, xc+dx+2, 0b0100000);
+			ddock_paint_hrow(bm, y+3, xc-dx+0, xc+dx+0, 0b0100000);
+			ddock_paint_hrow(bm, y+3, xc-dx+2, xc+dx+2, 0b0000010);
 		}
 
 

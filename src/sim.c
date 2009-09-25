@@ -119,7 +119,7 @@ void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onof
   if (board < 0 || board >= NUM_BOARDS || digit < 0 || digit >= NUM_DIGITS || segment < 0 || segment >= 8)
     return;
 
-  int x_origin = (NUM_DIGITS - digit - 1) * DIGIT_WIDTH;
+  int x_origin = (digit) * DIGIT_WIDTH;
   int y_origin = board * DIGIT_HEIGHT;
   int i;
 
