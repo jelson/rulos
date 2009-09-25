@@ -1,5 +1,38 @@
 #include "numeric_input.h"
 
+uint8_t dfp_draw(DecimalFloatingPoint *dfp, SSBitmap *bm, uint8_t len, uint8_t show_decimal)
+{
+	uint8_t width = dfp->neg_exponent + 1;
+	uint8_t mantissa_width = 0;
+	uint16_t mant_copy = dfp->mantissa;
+	while (mant_copy>0)
+	{
+		mantissa_width += 1;
+		mant_copy = mant_copy / 10;
+	}
+	if (mantissa_width > width) { width = mantissa_width; }
+	if (bm!=NULL) {
+		uint8_t d;
+		// paste in width zeros, so that any leading zeros are present
+		for (d=0; d<len; d++)
+		{
+			bm[len-1-d] = d < width ? SEVSEG_0 : 0;
+		}
+		// now draw in the mantissa digits
+		for (d=0, mant_copy=dfp->mantissa; mant_copy>0; d++, mant_copy=mant_copy/10)
+		{
+			bm[len-1-d] = ascii_to_bitmap('0'+(mant_copy%10));
+		}
+		assert(d<=width);
+		// draw in the decimal point
+		if (show_decimal)
+		{
+			bm[len-1-dfp->neg_exponent] |= SSB_DECIMAL;
+		}
+	}
+	return width;
+}
+
 void numeric_input_update(NumericInputAct *act);
 UIEventDisposition numeric_input_handler(UIEventHandler *raw_handler, UIEvent evt);
 void ni_update_once(NumericInputAct *act);
@@ -31,13 +64,7 @@ void numeric_input_update(NumericInputAct *act)
 
 void ni_update_once(NumericInputAct *act)
 {
-	char str[10];
-	int_to_string(str, act->region.xlen, FALSE, act->cur_value.mantissa);
-	ascii_to_bitmap_str(act->region.bmp+act->region.x, act->region.xlen, str);
-	if (act->decimal_present)
-	{
-		*(act->region.bmp+act->region.x+act->region.xlen-1-act->cur_value.neg_exponent) |= SSB_DECIMAL;
-	}
+	dfp_draw(&act->cur_value, act->region.bmp+act->region.x, act->region.xlen, act->decimal_present);
 	board_buffer_draw(act->bbuf);
 }
 
@@ -46,11 +73,13 @@ void ni_start_input(NumericInputAct *act)
 	act->old_value = act->cur_value;	// store in case we cancel
 	act->cur_value.mantissa = 0;
 	act->cur_value.neg_exponent = 0;
+
 	uint8_t y = act->bbuf->board_index;
 	uint8_t x = act->region.x+act->region.xlen-1;
 	DisplayRect drect = {y,y,x,x};
 	cursor_show(&act->cursor, drect);
 	act->decimal_present = FALSE;
+
 	ni_update_once(act);
 }
 
@@ -72,17 +101,22 @@ void ni_cancel_input(NumericInputAct *act)
 
 void ni_add_digit(NumericInputAct *act, uint8_t digit)
 {
-	if (act->cur_value.mantissa >= 10000)
-	{
-		// TODO hardcoded 4-wide field
-		// ignore
-		return;
-	}
-	act->cur_value.mantissa = (act->cur_value.mantissa*10) + digit;
+	DecimalFloatingPoint new_value;
+	new_value.mantissa = act->cur_value.mantissa*10+digit;
+	new_value.neg_exponent = act->cur_value.neg_exponent;
 	if (act->decimal_present)
 	{
-		act->cur_value.neg_exponent += 1;
+		new_value.neg_exponent += 1;
 	}
+	uint8_t len = dfp_draw(&new_value, NULL, act->region.xlen, FALSE);
+	if (len > act->region.xlen)
+	{
+		// number too big for display
+		return;
+	}
+
+	// number adequate; keep it.
+	act->cur_value = new_value;
 	ni_update_once(act);
 }
 
@@ -114,7 +148,7 @@ UIEventDisposition numeric_input_handler(UIEventHandler *raw_handler, UIEvent ev
 			ni_add_digit(act, evt-'0');
 			break;
 		case 's':	// star = decimal point
-			act->decimal_present = TRUE;
+			act->decimal_present = TRUE;	// never takes space
 			ni_update_once(act);
 			break;
 	}

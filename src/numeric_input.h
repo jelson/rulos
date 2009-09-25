@@ -11,6 +11,8 @@ typedef struct {
 	uint8_t neg_exponent;	// base 10
 } DecimalFloatingPoint;
 
+uint8_t dfp_draw(DecimalFloatingPoint *dfp, SSBitmap *bm, uint8_t len, uint8_t show_decimal);
+
 struct s_numeric_input_act;
 typedef struct {
 	UIEventHandlerFunc func;
