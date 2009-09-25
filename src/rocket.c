@@ -75,7 +75,7 @@ int main()
 	dcompass_init(&dc, 4, &fa);
 
 	DGratuitousGraph dgg;
-	dgg_init(&dgg, 5, "pressure", 5000);
+	dgg_init(&dgg, 5, "volts", 5000);
 
 /*
 	DDockAct ddock;
