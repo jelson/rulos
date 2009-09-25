@@ -47,7 +47,7 @@ void cursor_show(CursorAct *act, DisplayRect rect)
 		int bigmask = (1<<((int)rect.x1+1))-1;
 		int littlemask = rect.x0==0 ? 0 : (1<<(((int)rect.x0)-1));
 		act->alpha = bigmask ^ littlemask;
-		act->bbuf[i-rect.y0].alpha = act->alpha;
+		board_buffer_set_alpha(&act->bbuf[i-rect.y0], act->alpha);
 		//LOGF((logfp, "alpha %08x\n", act->alpha));
 		// TODO set up board buffer first, to avoid writing stale bytes
 		board_buffer_push(&act->bbuf[i-rect.y0], i);
@@ -74,7 +74,8 @@ void cursor_update_once(CursorAct *act)
 					| ((i==act->rect.y1)?0b0001000:0);
 			}
 			uint8_t on = ((clock_time() >> BLINK2)&1);
-			act->bbuf[i-act->rect.y0].alpha = on ? act->alpha : 0;
+			board_buffer_set_alpha(&act->bbuf[i-act->rect.y0],
+				on ? act->alpha : 0);
 			board_buffer_draw(&act->bbuf[i-act->rect.y0]);
 		}
 

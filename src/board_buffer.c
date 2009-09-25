@@ -3,8 +3,6 @@
 
 #include <stdio.h>
 
-SSBitmap _board_buffer_getchar(BoardBuffer *buf, int idx);
-
 #if BBDEBUG && SIM
 void dump()
 {
@@ -46,6 +44,21 @@ void board_buffer_init(BoardBuffer *buf)
 	assert(sizeof(buf->alpha)*8 >= NUM_DIGITS);
 }
 
+void _board_buffer_compute_mask(BoardBuffer *buf, uint8_t redraw)
+{
+	uint8_t mask = 0xff;
+	while (buf != NULL)
+	{
+		buf->mask = mask & buf->alpha;
+		if (redraw)
+		{
+			board_buffer_draw(buf);
+		}
+		mask = ~buf->mask;
+		buf = buf->next;
+	}
+}
+
 void board_buffer_pop(BoardBuffer *buf)
 {
 	if (!board_buffer_is_foreground(buf))
@@ -63,7 +76,7 @@ void board_buffer_pop(BoardBuffer *buf)
 	}
 	else
 	{
-		program_board(buf->board_index, buf->next->buffer);
+		_board_buffer_compute_mask(buf->next, TRUE);
 		foreground[buf->board_index] = buf->next;
 	}
 	buf->next = NULL;
@@ -82,43 +95,31 @@ dump();
 	buf->board_index = board;
 	buf->next = foreground[board];
 	foreground[board] = buf;
-	board_buffer_draw(buf);
+	_board_buffer_compute_mask(buf, FALSE);	// no redraw because...
+	board_buffer_draw(buf);	// ...this line will overwrite existing
 #if BBDEBUG && SIM
 dump();
 #endif // BBDEBUG && SIM
 }
 
-void board_buffer_draw(BoardBuffer *buf)
+void board_buffer_set_alpha(BoardBuffer *buf, uint8_t alpha)
 {
-	if (board_buffer_is_foreground(buf))
-	{
-		program_board(buf->board_index, buf->buffer);
-		int board_index = buf->board_index;
-		int i;
-		for (i=0; i<NUM_DIGITS; i++)
-		{
-			program_cell(board_index, i, _board_buffer_getchar(buf, i));
-		}
-	}
-	// TODO instead of a board-wide if, we should compute the aggregate
-	// mask of the overlays above us, and draw through what's left.
-	// Without that, updates from below visible through the alpha mask
-	// are only shown when the guy on top draws.
+	buf->alpha = alpha;
+	_board_buffer_compute_mask(buf, TRUE);
 }
 
-SSBitmap _board_buffer_getchar(BoardBuffer *buf, int idx)
+void board_buffer_draw(BoardBuffer *buf)
 {
-	if ((buf->alpha >> idx) & 1)
+	int board_index = buf->board_index;
+	uint8_t mask = buf->mask;
+	SSBitmap *bm = buf->buffer;
+	uint8_t idx;
+	for (idx=0; idx<NUM_DIGITS; idx++)
 	{
-		return buf->buffer[idx];
-	}
-	else if (buf->next != NULL)
-	{
-		return _board_buffer_getchar(buf->next, idx);
-	}
-	else
-	{
-		return 0;
+		if ((mask >> idx) & 1)
+		{
+			program_cell(board_index, idx, bm[idx]);
+		}
 	}
 }
 
