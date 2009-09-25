@@ -67,7 +67,6 @@ void ddock_update_once(DDockAct *act)
 	int yc = da_read(&act->yd);
 	int rad = da_read(&act->rd);
 	int row;
-	uint8_t crossed_x_axis = FALSE;
 	for (row=0; row<DOCK_HEIGHT; row++)
 	{
 		SSBitmap *bm = act->bbuf[row].buffer;

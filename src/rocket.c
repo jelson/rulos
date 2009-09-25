@@ -67,8 +67,10 @@ int main()
 	DGratuitousGraph dgg;
 	dgg_init(&dgg, 5, "pressure", 5000);
 
+/*
 	DDockAct ddock;
 	ddock_init(&ddock, 1, &fa);
+*/
 
 #ifdef SIM
 	sim_run();
