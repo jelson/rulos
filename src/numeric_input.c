@@ -1,3 +1,4 @@
+#include "util.h"
 #include "numeric_input.h"
 
 uint8_t dfp_draw(DecimalFloatingPoint *dfp, SSBitmap *bm, uint8_t len, uint8_t show_decimal)
@@ -33,7 +34,6 @@ uint8_t dfp_draw(DecimalFloatingPoint *dfp, SSBitmap *bm, uint8_t len, uint8_t s
 	return width;
 }
 
-void numeric_input_update(NumericInputAct *act);
 UIEventDisposition numeric_input_handler(UIEventHandler *raw_handler, UIEvent evt);
 void ni_update_once(NumericInputAct *act);
 void ni_start_input(NumericInputAct *act);
@@ -41,9 +41,8 @@ void ni_accept_input(NumericInputAct *act);
 void ni_cancel_input(NumericInputAct *act);
 void ni_add_digit(NumericInputAct *act, uint8_t digit);
 
-void numeric_input_init(NumericInputAct *act, RowRegion region, FocusAct *fa)
+void numeric_input_init(NumericInputAct *act, RowRegion region, FocusManager *fa)
 {
-	act->func = (ActivationFunc) numeric_input_update;
 	act->region = region;
 	act->handler.func = numeric_input_handler;
 	act->handler.act = act;
@@ -54,11 +53,10 @@ void numeric_input_init(NumericInputAct *act, RowRegion region, FocusAct *fa)
 	act->decimal_present = TRUE;
 	ni_update_once(act);
 	RectRegion rr = { &act->region.bbuf, 1, region.x, region.xlen };
-	focus_register(fa, (UIEventHandler*) &act->handler, rr);
-}
-
-void numeric_input_update(NumericInputAct *act)
-{
+	if (fa!=NULL)
+	{
+		focus_register(fa, (UIEventHandler*) &act->handler, rr);
+	}
 }
 
 void ni_update_once(NumericInputAct *act)
@@ -120,17 +118,19 @@ void ni_add_digit(NumericInputAct *act, uint8_t digit)
 UIEventDisposition numeric_input_handler(UIEventHandler *raw_handler, UIEvent evt)
 {
 	NumericInputAct *act = ((NumericInputHandler*) raw_handler)->act;
+	UIEventDisposition result = uied_accepted;
 	switch (evt)
 	{
 		case uie_focus:
 			ni_start_input(act);
 			break;
-		case 'c':	// select (TODO define symbol)
+		case uie_select:
 			ni_accept_input(act);
-			// TODO should cause a blur
+			result = uied_blur;
 			break;
-		case uie_blur:
+		case uie_escape:
 			ni_cancel_input(act);
+			result = uied_blur;
 			break;
 		case '0':
 		case '1':
@@ -149,5 +149,5 @@ UIEventDisposition numeric_input_handler(UIEventHandler *raw_handler, UIEvent ev
 			ni_update_once(act);
 			break;
 	}
-	return uied_ignore;
+	return result;
 }

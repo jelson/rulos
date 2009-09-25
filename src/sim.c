@@ -148,11 +148,14 @@ char scan_keyboard()
 
   if (c >= 'a' && c <= 'd')
     return c;
+  if (c == '\t') return 'a';
+  if (c == '\n') return 'c';
+  if (c == 27) return 'd';
 
   if (c >= '0' && c <= '9')
     return c;
 
-  if (c == '*' || c == 's')
+  if (c == '*' || c == 's' || c == '.')
     return 's';
 
   if (c == 'p' || c == '#')

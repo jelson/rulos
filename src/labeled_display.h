@@ -13,5 +13,5 @@ typedef struct {
 	BoardBuffer *bufs[2];
 } LabeledDisplayHandler;
 
-void labeled_display_init(LabeledDisplayHandler *ldh, int b0, FocusAct *focus);
+void labeled_display_init(LabeledDisplayHandler *ldh, int b0, FocusManager *focus);
 #endif // _labeled_display_h

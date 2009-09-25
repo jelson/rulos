@@ -3,20 +3,21 @@
 
 #include "clock.h"
 #include "cursor.h"
-#include "input_controller.h"
 
 struct s_focus_handler;
 typedef uint8_t UIEvent;
 
 enum {
 	uie_focus = 0x81,
-	uie_blur = 0x82,
 	uie_select = 'c',
-	uie_escape = 'd'
+	uie_escape = 'd',
+	uie_right = 'a',
+	uie_left = 'b',
 };
 
 typedef enum {
-	uied_ignore
+	uied_accepted,	// child consumed event
+	uied_blur		// child releases focus
 	}
 UIEventDisposition;
 
@@ -29,31 +30,22 @@ typedef struct s_focus_handler {
 struct s_focus_act;
 
 typedef struct {
-	InputHandlerFunc func;
-	struct s_focus_act *act;
-		// TODO if we're desperately starving for RAM, we could compute
-		// &FocusAct from &act->inputHandler by subtraction (shudder),
-		// saving this pointer.
-} FocusInputHandler;
-
-typedef struct {
 	RectRegion rr;
 	UIEventHandler *handler;
 } FocusChild;
 #define NUM_CHILDREN 8
 
 typedef struct s_focus_act {
-	//ActivationFunc func;
+	UIEventHandlerFunc func;
 	CursorAct cursor;
-	FocusInputHandler inputHandler;
 	FocusChild children[NUM_CHILDREN];
 	uint8_t children_size;
 	uint8_t selectedChild;
 	uint8_t focusedChild;
-} FocusAct;
+} FocusManager;
 
-void focus_init(FocusAct *act);
-void focus_register(FocusAct *act, UIEventHandler *handler, RectRegion rr);
+void focus_init(FocusManager *act);
+void focus_register(FocusManager *act, UIEventHandler *handler, RectRegion rr);
 
 #endif // focus_h
 

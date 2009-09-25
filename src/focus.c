@@ -4,21 +4,20 @@
 #include "focus.h"
 #include "util.h"
 
-void focus_input_handler(InputHandler *handler, char key);
+UIEventDisposition focus_input_handler(UIEventHandler *handler, UIEvent evt);
 
 #define NO_CHILD (0xff)
 
-void focus_init(FocusAct *act)
+void focus_init(FocusManager *act)
 {
+	act->func = focus_input_handler;
 	cursor_init(&act->cursor);
-	act->inputHandler.func = focus_input_handler;
-	act->inputHandler.act = act;
 	act->selectedChild = NO_CHILD;
 	act->focusedChild = NO_CHILD;
 	act->children_size = 0;
 }
 
-void focus_register(FocusAct *act, UIEventHandler *handler, RectRegion rr)
+void focus_register(FocusManager *act, UIEventHandler *handler, RectRegion rr)
 {
 	uint8_t idx = act->children_size;
 	assert(idx<NUM_CHILDREN);
@@ -27,68 +26,75 @@ void focus_register(FocusAct *act, UIEventHandler *handler, RectRegion rr)
 	act->children_size += 1;
 }
 
-void focus_input_handler(InputHandler *raw_handler, char key)
+UIEventDisposition focus_input_handler(UIEventHandler *raw_handler, UIEvent evt)
 {
-	FocusAct *act = ((FocusInputHandler *) raw_handler)->act;
+	FocusManager *fm = (FocusManager *) raw_handler;
 
 	// avoid mod-by-zero
-	if (act->children_size == 0) { return; }
+	if (fm->children_size == 0) { return uied_blur; }
 
-	uint8_t old_cursor_child = act->selectedChild;
-	if (act->focusedChild != NO_CHILD)
+	UIEventDisposition result = uied_accepted;
+	uint8_t old_cursor_child = fm->selectedChild;
+	if (fm->focusedChild != NO_CHILD)
 	{
-		UIEventHandler *childHandler = act->children[act->focusedChild].handler;
-		if (key=='d') { // escape
-			childHandler->func(childHandler, uie_blur);
-			act->selectedChild = act->focusedChild;
-			act->focusedChild = NO_CHILD;
-		}
-		else // pass along key
+		UIEventHandler *childHandler = fm->children[fm->focusedChild].handler;
+		UIEventDisposition uied = childHandler->func(childHandler, evt);
+		if (uied==uied_blur)
 		{
-			childHandler->func(childHandler, key);
+			fm->selectedChild = fm->focusedChild;
+			fm->focusedChild = NO_CHILD;
 		}
 	} else {
 		// nobody focused. Start selectin'!
-		switch (key)
+		switch (evt)
 		{
-			case 'a':	// right
-				act->selectedChild = (act->selectedChild + 1 + act->children_size) % act->children_size;
+			case uie_right:
+				fm->selectedChild = (fm->selectedChild + 1 + fm->children_size) % fm->children_size;
 				break;
-			case 'b':	// left
-				act->selectedChild = (act->selectedChild - 1 + act->children_size) % act->children_size;
+			case uie_left:
+				fm->selectedChild = (fm->selectedChild - 1 + fm->children_size) % fm->children_size;
 				break;
-			case 'c':	// select
-				if (act->selectedChild!=NO_CHILD)
+			case uie_select:
+				if (fm->selectedChild!=NO_CHILD)
 				{
-					// need to get cursor out of child's way
+					// need to get cursor out of child's way,
+					// before sending "focus" event to child,
+					// so child can push his own cursor onto
+					// the board_buffer stack.
 					if (old_cursor_child != NO_CHILD)
 					{
-						cursor_hide(&act->cursor);
+						cursor_hide(&fm->cursor);
 						old_cursor_child = NO_CHILD;
 					}
 
-					act->focusedChild = act->selectedChild;
-					act->selectedChild = NO_CHILD;
-					UIEventHandler *childHandler = act->children[act->focusedChild].handler;
+					fm->focusedChild = fm->selectedChild;
+					fm->selectedChild = NO_CHILD;
+					UIEventHandler *childHandler = fm->children[fm->focusedChild].handler;
 					childHandler->func(childHandler, uie_focus);
 				}
 				break;
-			case 'd':	// escape
-				act->selectedChild = NO_CHILD;
+			case uie_focus:
+				fm->selectedChild = 0;
+				break;
+			case uie_escape:	// escape -- yield focus to *my* parent
+				fm->selectedChild = NO_CHILD;
+				result = uied_blur;
+				break;
 		}
 	}
-	uint8_t new_cursor_child = act->selectedChild;
+	uint8_t new_cursor_child = fm->selectedChild;
 	if (new_cursor_child != old_cursor_child)
 	{
 		if (old_cursor_child != NO_CHILD)
 		{
-			cursor_hide(&act->cursor);
+			cursor_hide(&fm->cursor);
 		}
 		if (new_cursor_child != NO_CHILD)
 		{
-			cursor_show(&act->cursor,
-				act->children[new_cursor_child].rr);
+			cursor_show(&fm->cursor,
+				fm->children[new_cursor_child].rr);
 		}
 	}
+	return result;
 }
 

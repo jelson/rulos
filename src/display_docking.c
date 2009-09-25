@@ -14,7 +14,7 @@ void ddock_update(DDockAct *act);
 int ddock_compute_dx(int yc, int r, int y);
 void ddock_paint_hrow(SSBitmap *bm, int y, int x0, int x1, SSBitmap mask);
 
-void ddock_init(DDockAct *act, uint8_t b0, FocusAct *focus)
+void ddock_init(DDockAct *act, uint8_t b0, FocusManager *focus)
 {
 	act->func = (ActivationFunc) ddock_update;
 	int i;
@@ -147,6 +147,7 @@ UIEventDisposition ddock_event_handler(
 {
 	DDockAct *act = ((DDockHandler *) raw_handler)->act;
 
+	UIEventDisposition result = uied_accepted;
 	switch (evt)
 	{
 		case '2':
@@ -173,10 +174,11 @@ UIEventDisposition ddock_event_handler(
 			da_set_velocity(&act->yd, 0);
 			da_set_velocity(&act->rd, 0);
 			break;
-		case uie_blur:
+		case uie_escape:
 			act->focused = FALSE;
+			result = uied_blur;
 			break;
 	}
 
-	return uied_ignore;
+	return result;
 }

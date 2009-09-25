@@ -11,7 +11,7 @@ void dcompass_update(DCompassAct *act);
 UIEventDisposition dcompass_event_handler(
 	UIEventHandler *raw_handler, UIEvent evt);
 
-void dcompass_init(DCompassAct *act, uint8_t board, FocusAct *focus)
+void dcompass_init(DCompassAct *act, uint8_t board, FocusManager *focus)
 {
 	act->func = (ActivationFunc) dcompass_update;
 	board_buffer_init(&act->bbuf);
@@ -73,20 +73,21 @@ UIEventDisposition dcompass_event_handler(
 	UIEventHandler *raw_handler, UIEvent evt)
 {
 	DCompassAct *act = ((DCompassHandler *) raw_handler)->act;
-	UIEventDisposition result = uied_ignore;
+	UIEventDisposition result = uied_accepted;
 	switch (evt)
 	{
 		case uie_focus:
 			act->focused = TRUE;
 			da_set_velocity(&act->drift, 0);
 			break;
-		case uie_blur:
+		case uie_escape:
 			act->focused = FALSE;
+			result = uied_blur;
 			break;
-		case 'a':
+		case uie_right:
 			da_set_value(&act->drift, da_read(&act->drift)-1);
 			break;
-		case 'b':
+		case uie_left:
 			da_set_value(&act->drift, da_read(&act->drift)+1);
 			break;
 	}

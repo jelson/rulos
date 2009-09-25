@@ -3,19 +3,15 @@
 
 #include "clock.h"
 #include "queue.h"
-
-struct s_inputHandler;
-typedef void (*InputHandlerFunc)(struct s_inputHandler *handler, char key);
-typedef struct s_inputHandler {
-	InputHandlerFunc func;
-} InputHandler;
+#include "focus.h"
 
 typedef struct {
 	ActivationFunc func;
-	InputHandler *topHandler;
+	UIEventHandler *topHandler;
+	uint8_t topHandlerActive;
 } InputControllerAct;
 
-void input_controller_init(InputControllerAct *act, InputHandler *topHandler);
+void input_controller_init(InputControllerAct *act, UIEventHandler *topHandler);
 
 #endif // input_controller_h
 

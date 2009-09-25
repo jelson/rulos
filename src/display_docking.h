@@ -25,6 +25,6 @@ typedef struct s_ddockact {
 	uint32_t last_impulse_time;
 } DDockAct;
 
-void ddock_init(DDockAct *act, uint8_t board0, FocusAct *focus);
+void ddock_init(DDockAct *act, uint8_t board0, FocusManager *focus);
 
 #endif // display_docking_h

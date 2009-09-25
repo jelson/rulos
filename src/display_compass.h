@@ -23,6 +23,6 @@ typedef struct s_dcompassact {
 	uint32_t last_impulse_time;
 } DCompassAct;
 
-void dcompass_init(DCompassAct *act, uint8_t board, FocusAct *focus);
+void dcompass_init(DCompassAct *act, uint8_t board, FocusManager *focus);
 
 #endif // display_compass_h

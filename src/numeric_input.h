@@ -20,7 +20,7 @@ typedef struct {
 } NumericInputHandler;
 
 typedef struct s_numeric_input_act {
-	ActivationFunc func;
+	//ActivationFunc func;
 	RowRegion region;
 	NumericInputHandler handler;
 	CursorAct cursor;
@@ -29,6 +29,6 @@ typedef struct s_numeric_input_act {
 	uint8_t decimal_present;
 } NumericInputAct;
 
-void numeric_input_init(NumericInputAct *act, RowRegion region, FocusAct *fa);
+void numeric_input_init(NumericInputAct *act, RowRegion region, FocusManager *fa);
 
 #endif // numeric_input_h

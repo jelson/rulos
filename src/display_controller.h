@@ -92,7 +92,7 @@ void program_matrix(SSBitmap bitmap);
 
 
 SSBitmap ascii_to_bitmap(char a);
-void ascii_to_bitmap_str(SSBitmap *b, int num_digits, char *a);
+void ascii_to_bitmap_str(SSBitmap *b, int max_len, char *a);
 int int_to_string(char *strp, uint8_t min_width, int zero_padded, uint32_t i);
 
 #endif // display_controller_h

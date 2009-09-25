@@ -12,6 +12,8 @@
 #include "display_docking.h"
 #include "display_gratuitous_graph.h"
 #include "numeric_input.h"
+#include "input_controller.h"
+#include "calculator.h"
 
 /************************************************************************************/
 /************************************************************************************/
@@ -38,11 +40,11 @@ int main()
 
 	board_buffer_module_init();
 
-	FocusAct fa;
+	FocusManager fa;
 	focus_init(&fa);
 
 	InputControllerAct ia;
-	input_controller_init(&ia, (InputHandler*) &fa.inputHandler);
+	input_controller_init(&ia, (UIEventHandler*) &fa);
 
 	LabeledDisplayHandler ldh;
 	labeled_display_init(&ldh, 0, &fa);
@@ -70,6 +72,9 @@ int main()
 	board_buffer_push(&bbuf, 3);
 	RowRegion region = { &bbuf, 3, 4 };
 	numeric_input_init(&ni, region, &fa);
+
+	Calculator calc;
+	calculator_init(&calc, 4, &fa);
 
 /*
 	DCompassAct dc;

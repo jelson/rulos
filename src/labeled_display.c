@@ -3,7 +3,7 @@
 UIEventDisposition labeled_display_event_handler(
 	UIEventHandler *raw_handler, UIEvent evt);
 
-void labeled_display_init(LabeledDisplayHandler *ldh, int b0, FocusAct *focus)
+void labeled_display_init(LabeledDisplayHandler *ldh, int b0, FocusManager *focus)
 {
 	ldh->func = labeled_display_event_handler;
 
@@ -19,7 +19,13 @@ void labeled_display_init(LabeledDisplayHandler *ldh, int b0, FocusAct *focus)
 UIEventDisposition labeled_display_event_handler(
 	UIEventHandler *raw_handler, UIEvent evt)
 {
-	// do nothing for now.
-	return uied_ignore;
+	// most-trivial handler (note no cursor; sorry.)
+	switch (evt)
+	{
+		case uie_escape:
+			return uied_blur;
+		default:
+			return uied_accepted;
+	}
 }
 
