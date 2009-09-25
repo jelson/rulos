@@ -22,5 +22,6 @@ extern FILE *logfp;
 
 void init_util();
 int32_t bound(int32_t v, int32_t l, int32_t h);
+uint32_t isqrt(uint32_t v);
 
 #endif // _util_h

@@ -113,18 +113,6 @@ void ddock_update_once(DDockAct *act)
 	}
 }
 
-int isqrt(int v)
-{
-	// horrible algorithm, but eh
-	assert(v>=0);
-	int root = 0;
-	while (root*root < v)
-	{
-		root += 1;
-	}
-	return root-1;
-}
-
 int ddock_compute_dx(int yc, int r, int y)
 {
 	int dy = (y - yc);
