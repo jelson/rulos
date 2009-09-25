@@ -22,7 +22,7 @@ typedef struct s_numeric_input_act {
 	RowRegion region;	// draw into here,
 	BoardBuffer *bbuf;	// and then make draw calls here. Yuck.
 	NumericInputHandler handler;
-	uint8_t input_cursor;
+	CursorAct cursor;
 	DecimalFloatingPoint old_value;
 	DecimalFloatingPoint cur_value;
 	uint8_t decimal_present;

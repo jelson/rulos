@@ -16,6 +16,7 @@ typedef struct s_cursor_act {
 	uint8_t visible;
 	DisplayRect rect;
 	uint8_t alpha;
+	uint8_t shape_blank;
 } CursorAct;
 
 void cursor_init(CursorAct *act);
@@ -23,5 +24,8 @@ void cursor_init(CursorAct *act);
 void cursor_hide(CursorAct *act);
 void cursor_show(CursorAct *act, DisplayRect rect);
 	// addresses are inclusive
+void cursor_set_shape_blank(CursorAct *act, uint8_t value);
+	// true -> blank cursor (alternating with transparent);
+	// false -> box cursor
 
 #endif // _cursor_h

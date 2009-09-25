@@ -44,11 +44,13 @@ int main()
 	InputControllerAct ia;
 	input_controller_init(&ia, (InputHandler*) &fa.inputHandler);
 
+/*
 	LabeledDisplayHandler ldh;
 	labeled_display_init(&ldh, 0, &fa);
 
 	DScrollMsgAct da1;
 	dscrlmsg_init(&da1, 2, "Hi jelson. Can you dig it?  ", 130);
+*/
 
 /*
 	DScrollMsgAct da2;
@@ -68,14 +70,16 @@ int main()
 	BoardBuffer bbuf;
 	board_buffer_init(&bbuf);
 	board_buffer_push(&bbuf, 3);
-	RowRegion region = { bbuf.buffer, 2, 4 };
+	RowRegion region = { bbuf.buffer, 3, 4 };
 	numeric_input_init(&ni, region, &bbuf, &fa);
 
+/*
 	DCompassAct dc;
 	dcompass_init(&dc, 4, &fa);
 
 	DGratuitousGraph dgg;
 	dgg_init(&dgg, 5, "volts", 5000);
+*/
 
 /*
 	DDockAct ddock;

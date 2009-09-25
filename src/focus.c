@@ -60,6 +60,13 @@ void focus_input_handler(InputHandler *raw_handler, char key)
 			case 'c':	// select
 				if (act->selectedChild!=NO_CHILD)
 				{
+					// need to get cursor out of child's way
+					if (old_cursor_child != NO_CHILD)
+					{
+						cursor_hide(&act->cursor);
+						old_cursor_child = NO_CHILD;
+					}
+
 					act->focusedChild = act->selectedChild;
 					act->selectedChild = NO_CHILD;
 					UIEventHandler *childHandler = act->children[act->focusedChild].handler;
@@ -75,13 +82,10 @@ void focus_input_handler(InputHandler *raw_handler, char key)
 	{
 		if (old_cursor_child != NO_CHILD)
 		{
-			//LOGF((logfp, "pop child %d\n", old_cursor_child));
-			//board_buffer_pop(&act->board_buffer);
 			cursor_hide(&act->cursor);
 		}
 		if (new_cursor_child != NO_CHILD)
 		{
-			//LOGF((logfp, "push child %d\n", new_cursor_child));
 			cursor_show(&act->cursor,
 				act->children[new_cursor_child].rect);
 		}

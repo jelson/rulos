@@ -16,6 +16,7 @@ void cursor_init(CursorAct *act)
 		board_buffer_init(&act->bbuf[i]);
 	}
 	act->visible = FALSE;
+	act->shape_blank = FALSE;
 	schedule(0, (Activation*) act);
 }
 
@@ -44,11 +45,11 @@ void cursor_show(CursorAct *act, DisplayRect rect)
 	int i;
 	for (i=rect.y0; i<=rect.y1; i++)
 	{
-		int bigmask = (1<<((int)rect.x1+1))-1;
-		int littlemask = rect.x0==0 ? 0 : (1<<(((int)rect.x0)-1));
+		int bigmask =    (((int)1)<<(NUM_DIGITS-rect.x0))-1;
+		int littlemask = ((((int)1)<<(NUM_DIGITS-rect.x1))-1)>>1;
 		act->alpha = bigmask ^ littlemask;
 		board_buffer_set_alpha(&act->bbuf[i-rect.y0], act->alpha);
-		//LOGF((logfp, "alpha %08x\n", act->alpha));
+		//LOGF((logfp, "x0 %d x1 %d alpha %08x\n", rect.x0, rect.x1, act->alpha));
 		// TODO set up board buffer first, to avoid writing stale bytes
 		board_buffer_push(&act->bbuf[i-rect.y0], i);
 	}
@@ -65,18 +66,25 @@ void cursor_update_once(CursorAct *act)
 		int i,j;
 		for (i=act->rect.y0; i<=act->rect.y1; i++)
 		{
-			for (j=act->rect.x0; j<=act->rect.x1; j++)
+			BoardBuffer *bbp = &act->bbuf[i-act->rect.y0];
+			for (j=0; j<NUM_DIGITS; j++)
 			{
-				act->bbuf[i-act->rect.y0].buffer[j] =
-					  ((j==act->rect.x0)?0b0000110:0)
-					| ((j==act->rect.x1)?0b0110000:0)
-					| ((i==act->rect.y0)?0b1000000:0)
-					| ((i==act->rect.y1)?0b0001000:0);
+				if (act->shape_blank)
+				{
+					bbp->buffer[j] = 0;
+				}
+				else
+				{
+					bbp->buffer[j] =
+						  ((j==act->rect.x0)?0b0000110:0)
+						| ((j==act->rect.x1)?0b0110000:0)
+						| ((i==act->rect.y0)?0b1000000:0)
+						| ((i==act->rect.y1)?0b0001000:0);
+				}
 			}
 			uint8_t on = ((clock_time() >> BLINK2)&1);
-			board_buffer_set_alpha(&act->bbuf[i-act->rect.y0],
-				on ? act->alpha : 0);
-			board_buffer_draw(&act->bbuf[i-act->rect.y0]);
+			board_buffer_set_alpha(bbp, on ? act->alpha : 0);
+			board_buffer_draw(bbp);
 		}
 
 	}
@@ -86,4 +94,9 @@ void cursor_update(CursorAct *act)
 {
 	cursor_update_once(act);
 	schedule(1<<BLINK2, (Activation*) act);
+}
+
+void cursor_set_shape_blank(CursorAct *act, uint8_t value)
+{
+	act->shape_blank = value;
 }

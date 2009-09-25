@@ -36,7 +36,7 @@ void board_buffer_init(BoardBuffer *buf)
 	int i;
 	for (i=0; i<NUM_DIGITS; i++)
 	{
-		buf->buffer[i] = ' ';
+		buf->buffer[i] = 0;
 	}
 	buf->next = NULL;
 	buf->board_index = 0xff;
@@ -114,9 +114,9 @@ void board_buffer_draw(BoardBuffer *buf)
 	uint8_t mask = buf->mask;
 	SSBitmap *bm = buf->buffer;
 	uint8_t idx;
-	for (idx=0; idx<NUM_DIGITS; idx++)
+	for (idx=0; idx<NUM_DIGITS; idx++, mask<<=1)
 	{
-		if ((mask >> idx) & 1)
+		if (mask & 0x80)
 		{
 			program_cell(board_index, idx, bm[idx]);
 		}

@@ -15,7 +15,8 @@ void numeric_input_init(NumericInputAct *act, RowRegion region, BoardBuffer *bbu
 	act->bbuf = bbuf;
 	act->handler.func = numeric_input_handler;
 	act->handler.act = act;
-	act->input_cursor = FALSE;
+	cursor_init(&act->cursor);
+	cursor_set_shape_blank(&act->cursor, TRUE);
 	act->cur_value.mantissa = 314;
 	act->cur_value.neg_exponent = 2;
 	act->decimal_present = TRUE;
@@ -45,7 +46,10 @@ void ni_start_input(NumericInputAct *act)
 	act->old_value = act->cur_value;	// store in case we cancel
 	act->cur_value.mantissa = 0;
 	act->cur_value.neg_exponent = 0;
-	act->input_cursor = TRUE;
+	uint8_t y = act->bbuf->board_index;
+	uint8_t x = act->region.x+act->region.xlen-1;
+	DisplayRect drect = {y,y,x,x};
+	cursor_show(&act->cursor, drect);
 	act->decimal_present = FALSE;
 	ni_update_once(act);
 }
@@ -53,7 +57,7 @@ void ni_start_input(NumericInputAct *act)
 void ni_accept_input(NumericInputAct *act)
 {
 	act->old_value = act->cur_value;
-	act->input_cursor = FALSE;
+	cursor_hide(&act->cursor);
 	act->decimal_present = TRUE;
 	ni_update_once(act);
 }
@@ -61,14 +65,14 @@ void ni_accept_input(NumericInputAct *act)
 void ni_cancel_input(NumericInputAct *act)
 {
 	act->cur_value = act->old_value;
-	act->input_cursor = FALSE;
+	cursor_hide(&act->cursor);
 	act->decimal_present = TRUE;
 	ni_update_once(act);
 }
 
 void ni_add_digit(NumericInputAct *act, uint8_t digit)
 {
-	if (act->cur_value.mantissa > 10000)
+	if (act->cur_value.mantissa >= 10000)
 	{
 		// TODO hardcoded 4-wide field
 		// ignore
