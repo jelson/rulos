@@ -1,10 +1,10 @@
 TODO
-	integer sqrt
 	make focus show label of display
 	make circle thing really work, with x/y in corners
 	idle time calculator
 	assert displayer
 	calculator/E6b with tidy focus
+	fix bitmapiness of display_docking
 
 1	K clock:
 	real-time

@@ -67,20 +67,22 @@ void ddock_update_once(DDockAct *act)
 	int yc = da_read(&act->yd);
 	int rad = da_read(&act->rd);
 	int row;
+	uint8_t crossed_x_axis = FALSE;
 	for (row=0; row<DOCK_HEIGHT; row++)
 	{
 		SSBitmap *bm = act->bbuf[row].buffer;
-		int i;
+
+		int y = DOCK_HEIGHT*7/2 - (row*7);
 
 		// draw axes
+		int i;
 		SSBitmap bg = (row==(DOCK_HEIGHT/2)) ? 0b1000000 : 0;
 		for (i=0; i<NUM_DIGITS; i++)	// zero buffer
 		{
 			bm[i] = bg;
 		}
-		bm[NUM_DIGITS/2] |= 0b0110000;
+		bm[NUM_DIGITS/2-1] |= 0b0110000;
 
-		int y = DOCK_HEIGHT*7/2 - (row*7);
 		int dx;
 
 		dx = ddock_compute_dx(yc, rad, y+0);
@@ -124,7 +126,7 @@ int ddock_compute_dx(int yc, int r, int y)
 
 void ddock_paint_hrow(SSBitmap *bm, int y, int x0, int x1, SSBitmap mask)
 {
-#if 1 // fill
+#if 0 // fill
 	int d0 = bound((x0+NUM_DIGITS*4/2)/4, 0, NUM_DIGITS-1);
 	int d1 = bound((x1+NUM_DIGITS*4/2)/4, 0, NUM_DIGITS-1);
 	int c;
@@ -148,9 +150,9 @@ UIEventDisposition ddock_event_handler(
 	switch (evt)
 	{
 		case '2':
-			da_set_value(&act->yd, da_read(&act->yd)-1); break;
-		case '8':
 			da_set_value(&act->yd, da_read(&act->yd)+1); break;
+		case '8':
+			da_set_value(&act->yd, da_read(&act->yd)-1); break;
 		case '4':
 			da_set_value(&act->xd, da_read(&act->xd)-1); break;
 		case '6':
@@ -161,6 +163,10 @@ UIEventDisposition ddock_event_handler(
 		case 's':
 		case 'b':
 			da_set_value(&act->rd, da_read(&act->rd)-1); break;
+		case '0':
+			da_set_value(&act->xd, 0);
+			da_set_value(&act->yd, 0);
+			break;
 		case uie_focus:
 			act->focused = TRUE;
 			da_set_velocity(&act->xd, 0);
