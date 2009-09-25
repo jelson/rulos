@@ -21,8 +21,7 @@ typedef struct {
 
 typedef struct s_numeric_input_act {
 	ActivationFunc func;
-	RowRegion region;	// draw into here,
-	BoardBuffer *bbuf;	// and then make draw calls here. Yuck.
+	RowRegion region;
 	NumericInputHandler handler;
 	CursorAct cursor;
 	DecimalFloatingPoint old_value;
@@ -30,6 +29,6 @@ typedef struct s_numeric_input_act {
 	uint8_t decimal_present;
 } NumericInputAct;
 
-void numeric_input_init(NumericInputAct *act, RowRegion region, BoardBuffer *bbuf, FocusAct *fa);
+void numeric_input_init(NumericInputAct *act, RowRegion region, FocusAct *fa);
 
 #endif // numeric_input_h

@@ -22,13 +22,14 @@ void ddock_init(DDockAct *act, uint8_t b0, FocusAct *focus)
 	{
 		board_buffer_init(&act->bbuf[i]);
 		board_buffer_push(&act->bbuf[i], b0+i);
+		act->btable[i] = &act->bbuf[i];
 	}
 	act->handler.func = (UIEventHandlerFunc) ddock_event_handler;
 	act->handler.act = act;
 
 	act->focused = FALSE;
-	DisplayRect rect = {b0, b0+DOCK_HEIGHT-1, 0, 7};
-	focus_register(focus, (UIEventHandler*) &act->handler, rect);
+	RectRegion rr = {act->btable, DOCK_HEIGHT, 0, 7};
+	focus_register(focus, (UIEventHandler*) &act->handler, rr);
 
 	drift_anim_init(&act->xd, 10, 0, -14, 14, 5);
 	drift_anim_init(&act->yd, 10, 0, -15, 15, 5);

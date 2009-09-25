@@ -18,12 +18,12 @@ void focus_init(FocusAct *act)
 	act->children_size = 0;
 }
 
-void focus_register(FocusAct *act, UIEventHandler *handler, DisplayRect rect)
+void focus_register(FocusAct *act, UIEventHandler *handler, RectRegion rr)
 {
 	uint8_t idx = act->children_size;
 	assert(idx<NUM_CHILDREN);
 	act->children[idx].handler = handler;
-	act->children[idx].rect = rect;
+	act->children[idx].rr = rr;
 	act->children_size += 1;
 }
 
@@ -87,7 +87,7 @@ void focus_input_handler(InputHandler *raw_handler, char key)
 		if (new_cursor_child != NO_CHILD)
 		{
 			cursor_show(&act->cursor,
-				act->children[new_cursor_child].rect);
+				act->children[new_cursor_child].rr);
 		}
 	}
 }

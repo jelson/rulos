@@ -21,8 +21,9 @@ void dcompass_init(DCompassAct *act, uint8_t board, FocusAct *focus)
 	act->handler.func = (UIEventHandlerFunc) dcompass_event_handler;
 	act->handler.act = act;
 	act->focused = FALSE;
-	DisplayRect rect = {board, board, 0, 7};
-	focus_register(focus, (UIEventHandler*) &act->handler, rect);
+	act->btable = &act->bbuf;
+	RectRegion rr = { &act->btable, 1, 0, 7};
+	focus_register(focus, (UIEventHandler*) &act->handler, rr);
 	schedule(0, (Activation*) act);
 }
 

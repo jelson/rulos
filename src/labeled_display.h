@@ -10,6 +10,7 @@ typedef struct {
 	UIEventHandlerFunc func;
 	DScrollMsgAct msgAct;
 	DRTCAct rtcAct;
+	BoardBuffer *bufs[2];
 } LabeledDisplayHandler;
 
 void labeled_display_init(LabeledDisplayHandler *ldh, int b0, FocusAct *focus);

@@ -41,11 +41,10 @@ void ni_accept_input(NumericInputAct *act);
 void ni_cancel_input(NumericInputAct *act);
 void ni_add_digit(NumericInputAct *act, uint8_t digit);
 
-void numeric_input_init(NumericInputAct *act, RowRegion region, BoardBuffer *bbuf, FocusAct *fa)
+void numeric_input_init(NumericInputAct *act, RowRegion region, FocusAct *fa)
 {
 	act->func = (ActivationFunc) numeric_input_update;
 	act->region = region;
-	act->bbuf = bbuf;
 	act->handler.func = numeric_input_handler;
 	act->handler.act = act;
 	cursor_init(&act->cursor);
@@ -54,8 +53,8 @@ void numeric_input_init(NumericInputAct *act, RowRegion region, BoardBuffer *bbu
 	act->cur_value.neg_exponent = 2;
 	act->decimal_present = TRUE;
 	ni_update_once(act);
-	DisplayRect rect = { bbuf->board_index, bbuf->board_index, region.x, region.x+region.xlen-1 };
-	focus_register(fa, (UIEventHandler*) &act->handler, rect);
+	RectRegion rr = { &act->region.bbuf, 1, region.x, region.xlen };
+	focus_register(fa, (UIEventHandler*) &act->handler, rr);
 }
 
 void numeric_input_update(NumericInputAct *act)
@@ -64,8 +63,8 @@ void numeric_input_update(NumericInputAct *act)
 
 void ni_update_once(NumericInputAct *act)
 {
-	dfp_draw(&act->cur_value, act->region.bmp+act->region.x, act->region.xlen, act->decimal_present);
-	board_buffer_draw(act->bbuf);
+	dfp_draw(&act->cur_value, act->region.bbuf->buffer+act->region.x, act->region.xlen, act->decimal_present);
+	board_buffer_draw(act->region.bbuf);
 }
 
 void ni_start_input(NumericInputAct *act)
@@ -74,10 +73,8 @@ void ni_start_input(NumericInputAct *act)
 	act->cur_value.mantissa = 0;
 	act->cur_value.neg_exponent = 0;
 
-	uint8_t y = act->bbuf->board_index;
-	uint8_t x = act->region.x+act->region.xlen-1;
-	DisplayRect drect = {y,y,x,x};
-	cursor_show(&act->cursor, drect);
+	RectRegion rr = { &act->region.bbuf, 1, act->region.x, act->region.xlen };
+	cursor_show(&act->cursor, rr);
 	act->decimal_present = FALSE;
 
 	ni_update_once(act);

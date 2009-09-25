@@ -25,33 +25,34 @@ void cursor_hide(CursorAct *act)
 	if (act->visible)
 	{
 		int i;
-		for (i=act->rect.y0; i<=act->rect.y1; i++)
+		for (i=0; i<act->rr.ylen; i++)
 		{
-			board_buffer_pop(&act->bbuf[i-act->rect.y0]);
+			board_buffer_pop(&act->bbuf[i]);
 		}
 		act->visible = FALSE;
 	}
 }
 
-void cursor_show(CursorAct *act, DisplayRect rect)
+void cursor_show(CursorAct *act, RectRegion rr)
 {
 	if (act->visible)
 	{
 		cursor_hide(act);
 	}
-	act->rect = rect;
-	assert(rect.y1-rect.y0+1 <= MAX_HEIGHT);
+	act->rr = rr;
+	assert(rr.ylen <= MAX_HEIGHT);
 
 	int i;
-	for (i=rect.y0; i<=rect.y1; i++)
+	for (i=0; i<rr.ylen; i++)
 	{
-		int bigmask =    (((int)1)<<(NUM_DIGITS-rect.x0))-1;
-		int littlemask = ((((int)1)<<(NUM_DIGITS-rect.x1))-1)>>1;
+		int bigmask =     (((int)1)<<(NUM_DIGITS-rr.x))-1;
+		uint8_t x1 = rr.x+rr.xlen-1;
+		int littlemask = ((((int)1)<<(NUM_DIGITS-x1  ))-1)>>1;
 		act->alpha = bigmask ^ littlemask;
-		board_buffer_set_alpha(&act->bbuf[i-rect.y0], act->alpha);
+		board_buffer_set_alpha(&act->bbuf[i], act->alpha);
 		//LOGF((logfp, "x0 %d x1 %d alpha %08x\n", rect.x0, rect.x1, act->alpha));
 		// TODO set up board buffer first, to avoid writing stale bytes
-		board_buffer_push(&act->bbuf[i-rect.y0], i);
+		board_buffer_push(&act->bbuf[i], rr.bbuf[i]->board_index);
 	}
 	act->visible = TRUE;
 	cursor_update_once(act);
@@ -64,9 +65,11 @@ void cursor_update_once(CursorAct *act)
 	if (act->visible)
 	{
 		int i,j;
-		for (i=act->rect.y0; i<=act->rect.y1; i++)
+		uint8_t x0=act->rr.x;
+		uint8_t x1=act->rr.x+act->rr.xlen-1;
+		for (i=0; i<act->rr.ylen; i++)
 		{
-			BoardBuffer *bbp = &act->bbuf[i-act->rect.y0];
+			BoardBuffer *bbp = &act->bbuf[i];
 			for (j=0; j<NUM_DIGITS; j++)
 			{
 				if (act->shape_blank)
@@ -76,10 +79,10 @@ void cursor_update_once(CursorAct *act)
 				else
 				{
 					bbp->buffer[j] =
-						  ((j==act->rect.x0)?0b0000110:0)
-						| ((j==act->rect.x1)?0b0110000:0)
-						| ((i==act->rect.y0)?0b1000000:0)
-						| ((i==act->rect.y1)?0b0001000:0);
+						  ((j==x0)?0b0000110:0)
+						| ((j==x1)?0b0110000:0)
+						| ((i==0)?0b1000000:0)
+						| ((i==act->rr.ylen-1)?0b0001000:0);
 				}
 			}
 			uint8_t on = ((clock_time() >> BLINK2)&1);

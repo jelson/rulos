@@ -18,6 +18,7 @@ typedef struct {
 typedef struct s_ddockact {
 	ActivationFunc func;
 	BoardBuffer bbuf[DOCK_HEIGHT];
+	BoardBuffer *btable[DOCK_HEIGHT];
 	DDockHandler handler;
 	uint8_t focused;
 	DriftAnim xd, yd, rd;
