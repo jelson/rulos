@@ -11,6 +11,7 @@
 #include "labeled_display.h"
 #include "display_docking.h"
 #include "display_gratuitous_graph.h"
+#include "numeric_input.h"
 
 /************************************************************************************/
 /************************************************************************************/
@@ -49,6 +50,7 @@ int main()
 	DScrollMsgAct da1;
 	dscrlmsg_init(&da1, 2, "Hi jelson. Can you dig it?  ", 130);
 
+/*
 	DScrollMsgAct da2;
 	char buf[129-32];
 	{
@@ -60,6 +62,14 @@ int main()
 		buf[i] = '\0';
 	}
 	dscrlmsg_init(&da2, 3, buf, 75);
+*/
+
+	NumericInputAct ni;
+	BoardBuffer bbuf;
+	board_buffer_init(&bbuf);
+	board_buffer_push(&bbuf, 3);
+	RowRegion region = { bbuf.buffer, 2, 4 };
+	numeric_input_init(&ni, region, &bbuf, &fa);
 
 	DCompassAct dc;
 	dcompass_init(&dc, 4, &fa);

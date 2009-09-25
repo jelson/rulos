@@ -5,21 +5,17 @@
 #include "util.h"
 
 void focus_input_handler(InputHandler *handler, char key);
-//void focus_update(FocusAct *act);
-//void focus_update_once(FocusAct *act);
 
 #define NO_CHILD (0xff)
 
 void focus_init(FocusAct *act)
 {
-	//act->func = (ActivationFunc) focus_update;
 	cursor_init(&act->cursor);
 	act->inputHandler.func = focus_input_handler;
 	act->inputHandler.act = act;
 	act->selectedChild = NO_CHILD;
 	act->focusedChild = NO_CHILD;
 	act->children_size = 0;
-	//focus_update(act);
 }
 
 void focus_register(FocusAct *act, UIEventHandler *handler, DisplayRect rect)
@@ -30,45 +26,6 @@ void focus_register(FocusAct *act, UIEventHandler *handler, DisplayRect rect)
 	act->children[idx].rect = rect;
 	act->children_size += 1;
 }
-
-/*
-void focus_update(FocusAct *act)
-{
-	focus_update_once(act);
-	// I happen to "know" that 250ms is the next time anything "happens"
-	// (select disappears, or cursor blinks.)
-	schedule(250, (Activation*) act);
-}
-
-void focus_update_once(FocusAct *act)
-{
-	uint32_t t = clock_time();
-	SSBitmap *buf = act->board_buffer.buffer;
-	if ((t >> 8) & 1)
-	{
-		buf[0] = 0b1111000;
-		buf[1] = 0b0000000;
-		buf[2] = 0b0000000;
-		buf[3] = 0b0000000;
-		buf[4] = 0b0000000;
-		buf[5] = 0b0000000;
-		buf[6] = 0b0000000;
-		buf[7] = 0b1001110;
-	}
-	else
-	{
-		buf[0] = 0b1111001;
-		buf[1] = 0b0000001;
-		buf[2] = 0b0000001;
-		buf[3] = 0b0000001;
-		buf[4] = 0b0000001;
-		buf[5] = 0b0000001;
-		buf[6] = 0b0000001;
-		buf[7] = 0b1001111;
-	}
-	board_buffer_draw(&act->board_buffer);
-}
-*/
 
 void focus_input_handler(InputHandler *raw_handler, char key)
 {
@@ -128,7 +85,6 @@ void focus_input_handler(InputHandler *raw_handler, char key)
 			cursor_show(&act->cursor,
 				act->children[new_cursor_child].rect);
 		}
-		//focus_update_once(act);
 	}
 }
 
