@@ -2,7 +2,7 @@ TODO
 	make focus show label of display
 	idle time calculator
 	assert displayer
-	calculator/E6b with tidy focus
+	E6b
 
 	fix bitmapiness / zero axes of display_docking
 	make circle thing work with thrustiness, with x/y in corners
