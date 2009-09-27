@@ -1,6 +1,5 @@
 TODO
 	make focus show label of display
-	idle time calculator
 	assert displayer
 	E6b
 
