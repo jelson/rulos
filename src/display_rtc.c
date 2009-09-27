@@ -12,7 +12,7 @@ void drtc_init(DRTCAct *act, uint8_t board)
 	act->func = (ActivationFunc) drtc_update;
 	board_buffer_init(&act->bbuf);
 	board_buffer_push(&act->bbuf, board);
-	schedule(0, (Activation*) act);
+	schedule(1, (Activation*) act);
 }
 
 void drtc_update(DRTCAct *act)

@@ -4,8 +4,10 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #include <sys/timeb.h>
 #include <signal.h>
+#include <sched.h>
 
 #include "rocket.h"
 #include "util.h"
@@ -55,7 +57,9 @@ struct segment_def_s {
 };
 
   
-void sim_init()
+sigset_t alrm_set;
+
+void hal_init()
 {
   int board, digit;
   mainwnd = initscr();
@@ -74,17 +78,21 @@ void sim_init()
 		program_cell(board, digit, value);
 	}
   }
+
+	sigemptyset(&alrm_set);
+	sigaddset(&alrm_set, SIGALRM);
 }
 
-
+#if 0 // deprecated
 void sim_run()
 {
   while (1)
   {
     sleep(1);
+	scheduler_ru
   }
 }
-
+#endif
 
 void terminate_sim(void)
 {
@@ -176,5 +184,22 @@ void start_clock_ms(int ms, Handler handler)
 	signal(SIGALRM, handler);
 }
 
+void hal_start_atomic()
+{
+	sigprocmask(SIG_BLOCK, &alrm_set, NULL);
+}
 
+void hal_end_atomic()
+{
+	sigprocmask(SIG_UNBLOCK, &alrm_set, NULL);
+}
 
+void hal_idle()
+{
+	// turns out 'man sleep' says sleep & sigalrm don't mix. yield is what we want.
+	// No, sched_yield doesn't wait ANY time. libc suggests select()
+	static struct timeval tv;
+	tv.tv_sec = 0;
+	tv.tv_usec = 100;	// .1 ms
+	select(0, NULL, NULL, NULL, &tv);
+}

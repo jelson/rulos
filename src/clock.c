@@ -4,47 +4,72 @@
 #include "util.h"
 #include "heap.h"
 #include "rocket.h"
+#include "hal.h"
 
 #define RTC_INTERVAL_MS	10
-uint32_t real_time_since_boot_ms;
+Time _real_time_since_boot_ms;
+Time _stale_time_ms;	// current as of last scheduler execution; cheap to evaluate
+uint32_t _spin_counter;
 
 void clock_handler()
 {
-	real_time_since_boot_ms += RTC_INTERVAL_MS;
-	scheduler_run();
+	// NB we assume this runs in interrupt context and is hence
+	// automatically atomic.
+	_real_time_since_boot_ms += RTC_INTERVAL_MS;
 }
 
 void clock_init()
 {
-	real_time_since_boot_ms = 0;
+	_real_time_since_boot_ms = 0;
 	start_clock_ms(RTC_INTERVAL_MS, clock_handler);
 	heap_init();
-}
-
-uint32_t clock_time()
-{
-	return real_time_since_boot_ms;
+	_spin_counter = 0;
 }
 
 void schedule(int offset_ms, Activation *act)
 {
 	//LOGF((logfp, "scheduling act %08x\n", (int) act));
-	heap_insert(real_time_since_boot_ms + offset_ms, act);
+
+	// never schedule anything for "now", or we might stick the scheduler
+	// in a loop at "now".
+	assert(offset_ms > 0);
+
+	heap_insert(clock_time() + offset_ms, act);
 }
 
-void scheduler_run()
+Time _read_clock()	// this is the expensive one, with a lock
 {
-	while (1)
+	hal_start_atomic();
+	_stale_time_ms = _real_time_since_boot_ms;
+	hal_end_atomic();
+	return _stale_time_ms;
+}
+
+void spin_counter_increment()
+{
+	_spin_counter += 1;
+}
+
+uint32_t read_spin_counter()
+{
+	return _spin_counter;
+}
+
+void scheduler_run_once()
+{
+	Time now = _read_clock();
+
+	while (1)	// run until nothing to do for this time
 	{
 		uint32_t due_time;
 		Activation *act;
 		int rc;
 		rc = heap_peek(&due_time, &act);
 
-		if (rc!=0) { return; }
+		if (rc!=0) { break; }
 			// no work to do at all
 
-		if (due_time > real_time_since_boot_ms) { return; }
+		if (due_time > now) { break; }
 			// no work to do now
 
 		//LOGF((logfp, "popping act %08x\n", (int) act));

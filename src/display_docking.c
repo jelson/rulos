@@ -36,7 +36,7 @@ void ddock_init(DDockAct *act, uint8_t b0, FocusManager *focus)
 	drift_anim_init(&act->rd, 10, 7, 7, 13, 5);
 	act->last_impulse_time = 0;
 
-	schedule(0, (Activation*) act);
+	schedule(1, (Activation*) act);
 }
 
 #define IMPULSE_FREQUENCY_MS 5000

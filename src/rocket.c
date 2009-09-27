@@ -14,28 +14,27 @@
 #include "numeric_input.h"
 #include "input_controller.h"
 #include "calculator.h"
+#include "hal.h"
+#include "cpumon.h"
+#include "idle_display.h"
 
 /************************************************************************************/
 /************************************************************************************/
-
 
 int main()
 {
 	init_util();
-#ifdef SIM
-	sim_init();
-#else
-	hw_init();
-#endif
+	hal_init();
 
-	//program_string(0, "init brd");
+	clock_init();
+	CpumonAct cpumon;
+	cpumon_init(&cpumon);	// includes slow calibration phase
 
 	/* display self-test */
 	program_matrix(0xff);
 	delay_ms(100);
 	program_matrix(0);
 
-	clock_init();
 	//install_handler(ADC, adc_handler);
 
 	board_buffer_module_init();
@@ -50,7 +49,10 @@ int main()
 	labeled_display_init(&ldh, 0, &fa);
 
 	DScrollMsgAct da1;
-	dscrlmsg_init(&da1, 2, "Hi jelson. Can you dig it?  ", 130);
+	dscrlmsg_init(&da1, 5, " ", 0);
+	
+	IdleDisplayAct idisp;
+	idle_display_init(&idisp, &da1, &cpumon);
 
 /*
 	DScrollMsgAct da2;
@@ -73,8 +75,10 @@ int main()
 	RowRegion region = { &bbuf, 3, 4 };
 	numeric_input_init(&ni, region, NULL, &fa);
 
+/*
 	Calculator calc;
 	calculator_init(&calc, 4, &fa);
+*/
 
 /*
 	DCompassAct dc;
@@ -87,13 +91,9 @@ int main()
 /*
 	DDockAct ddock;
 	ddock_init(&ddock, 0, &fa);
-	*/
+*/
 
-#ifdef SIM
-	sim_run();
-#else
-	hw_run();
-#endif
+	cpumon_main_loop();
 
 	return 0;
 }

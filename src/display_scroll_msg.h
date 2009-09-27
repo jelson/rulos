@@ -18,4 +18,6 @@ void dscrlmsg_init(struct s_dscrollmsgact *act,
 	uint8_t board, char *msg, uint8_t speed_ms);
 	// speed_ms==0 produces non-scrolling display with no cpu overhead
 
+void dscrlmsg_set_msg(DScrollMsgAct *act, char *msg);
+
 #endif // display_scroll_msg_h

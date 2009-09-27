@@ -17,7 +17,7 @@ void cursor_init(CursorAct *act)
 	}
 	act->visible = FALSE;
 	act->shape_blank = FALSE;
-	schedule(0, (Activation*) act);
+	schedule(1, (Activation*) act);
 }
 
 void cursor_hide(CursorAct *act)

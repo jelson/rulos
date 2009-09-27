@@ -8,7 +8,7 @@ void input_controller_init(InputControllerAct *act, UIEventHandler *topHandler)
 	act->func = (ActivationFunc) input_controller_update;
 	act->topHandler = topHandler;
 	act->topHandlerActive = FALSE;
-	schedule(0, (Activation*) act);
+	schedule(1, (Activation*) act);
 }
 
 void input_controller_update(InputControllerAct *act)

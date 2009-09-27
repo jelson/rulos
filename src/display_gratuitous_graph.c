@@ -16,7 +16,7 @@ void dgg_init(DGratuitousGraph *dgg,
 	dgg->name = name;
 	dgg->impulse_frequency = impulse_frequency;
 	dgg->last_impulse = 0;
-	schedule(0, (Activation*) dgg);
+	schedule(1, (Activation*) dgg);
 }
 
 void dgg_update(DGratuitousGraph *dgg)

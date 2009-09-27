@@ -129,13 +129,22 @@ void hw_init()
 }
 
 Handler timer_handler;
-volatile uint8_t start_timer_handler = 0;
 
 ISR(TIMER1_COMPA_vect)
 {
-	start_timer_handler += 1;
+	timer_handler();
 }
 
+/*
+ * jonh changes this code around. Now the only thing timer_handler does
+ * is update the system clock "and signal the main loop to start scheduling
+ * again." On hw, there's no signal (the main loop is busy-waiting form
+ * the clock to change); on sim, the signal is implicit because SIGALRM
+ * interrupts its sleep().
+ *
+ * This keeps the big processing off the interrupt stack, where it
+ * doesn't belong.
+ */
 /*
  * We run the timer event loop here, instead of directly from interrupt context,
  * because we want the slow processing that comes from timers to run outside of
@@ -192,4 +201,19 @@ void start_clock_ms(int ms, Handler handler)
 
 	/* re-enable interrupts */
 	sei();
+}
+
+void hal_start_atomic()
+{
+	JER_PLEASE_IMPLEMENT();
+}
+
+void hal_end_atomic()
+{
+	JER_PLEASE_IMPLEMENT();
+}
+
+void hal_idle()
+{
+	// just busy-wait on microcontroller.
 }
