@@ -51,10 +51,10 @@ void numeric_input_init(NumericInputAct *act, RowRegion region, NotifyIfc *notif
 	act->cur_value.mantissa = 314;
 	act->cur_value.neg_exponent = 2;
 	act->decimal_present = TRUE;
-	ni_update_once(act);
 	RectRegion rr = { &act->region.bbuf, 1, region.x, region.xlen };
 	act->notify = notify;
 	act->msg = NULL;
+	ni_update_once(act);
 	if (fa!=NULL)
 	{
 		focus_register(fa, (UIEventHandler*) &act->handler, rr);
@@ -94,7 +94,10 @@ void ni_accept_input(NumericInputAct *act)
 	cursor_hide(&act->cursor);
 	act->decimal_present = TRUE;
 	ni_update_once(act);
-	act->notify->func(act->notify);
+	if (act->notify != NULL)
+	{
+		act->notify->func(act->notify);
+	}
 }
 
 void ni_cancel_input(NumericInputAct *act)
