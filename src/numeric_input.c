@@ -54,6 +54,7 @@ void numeric_input_init(NumericInputAct *act, RowRegion region, NotifyIfc *notif
 	ni_update_once(act);
 	RectRegion rr = { &act->region.bbuf, 1, region.x, region.xlen };
 	act->notify = notify;
+	act->msg = NULL;
 	if (fa!=NULL)
 	{
 		focus_register(fa, (UIEventHandler*) &act->handler, rr);
@@ -62,12 +63,20 @@ void numeric_input_init(NumericInputAct *act, RowRegion region, NotifyIfc *notif
 
 void ni_update_once(NumericInputAct *act)
 {
-	dfp_draw(&act->cur_value, act->region.bbuf->buffer+act->region.x, act->region.xlen, act->decimal_present);
+	if (act->msg != NULL)
+	{
+		ascii_to_bitmap_str(act->region.bbuf->buffer+act->region.x, 4, act->msg);
+	}
+	else
+	{
+		dfp_draw(&act->cur_value, act->region.bbuf->buffer+act->region.x, act->region.xlen, act->decimal_present);
+	}
 	board_buffer_draw(act->region.bbuf);
 }
 
 void ni_start_input(NumericInputAct *act)
 {
+	act->msg = NULL;
 	act->old_value = act->cur_value;	// store in case we cancel
 	act->cur_value.mantissa = 0;
 	act->cur_value.neg_exponent = 0;
@@ -156,6 +165,13 @@ UIEventDisposition numeric_input_handler(UIEventHandler *raw_handler, UIEvent ev
 
 void numeric_input_set_value(NumericInputAct *act, DecimalFloatingPoint new_value)
 {
+	act->msg = NULL;
 	act->cur_value = new_value;
+	ni_update_once(act);
+}
+
+void numeric_input_set_msg(NumericInputAct *act, char *msg)
+{
+	act->msg = msg;
 	ni_update_once(act);
 }

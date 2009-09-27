@@ -29,9 +29,11 @@ typedef struct s_numeric_input_act {
 	DecimalFloatingPoint cur_value;
 	uint8_t decimal_present;
 	NotifyIfc *notify;
+	char *msg;
 } NumericInputAct;
 
 void numeric_input_init(NumericInputAct *act, RowRegion region, NotifyIfc *notify, FocusManager *fa);
 void numeric_input_set_value(NumericInputAct *act, DecimalFloatingPoint new_value);
+void numeric_input_set_msg(NumericInputAct *act, char *msg);
 
 #endif // numeric_input_h

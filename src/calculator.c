@@ -45,11 +45,15 @@ void calculator_init(Calculator *calc, int board0, FocusManager *fa)
 	calculator_notify((NotifyIfc*) calc);
 }
 
+char *err_overflow = "Ovrf";
+char *err_divzero = "div0";
+char *err_negative = "Neg ";
+
 void calculator_notify(NotifyIfc *notify)
 {
 	DecimalFloatingPoint out;
 	Calculator *calc = (Calculator*) notify;
-	uint8_t overflow = FALSE;
+	char *error = NULL;
 	DecimalFloatingPoint op0 = calc->operands[0].cur_value;
 	DecimalFloatingPoint op1 = calc->operands[1].cur_value;
 	LOGF((logfp, "start  op0 %3de%d o1 %3de%d\n",
@@ -74,6 +78,11 @@ void calculator_notify(NotifyIfc *notify)
 			{
 				mantissa *= 10;
 				op1.neg_exponent -= 1;
+			}
+			if (op1.mantissa == 0)
+			{
+				error = err_divzero;
+				goto done;
 			}
 			mantissa /= ((uint32_t) op1.mantissa);
 			out.neg_exponent = op0.neg_exponent;
@@ -121,7 +130,7 @@ void calculator_notify(NotifyIfc *notify)
 				case op_sub:
 					if (m1 > m0)
 					{
-						overflow = TRUE;
+						error = err_negative;
 						goto done;
 					}
 					mantissa = m0 - m1;
@@ -137,7 +146,7 @@ void calculator_notify(NotifyIfc *notify)
 	{
 		if (out.neg_exponent==0)
 		{
-			overflow = TRUE;
+			error = err_overflow;
 			goto done;
 		}
 		mantissa /= 10;
@@ -154,7 +163,7 @@ void calculator_notify(NotifyIfc *notify)
 	{
 		if (out.neg_exponent==0)
 		{
-			overflow = TRUE;
+			error = err_overflow;
 			goto done;
 		}
 		out.mantissa /= 10;
@@ -164,10 +173,15 @@ void calculator_notify(NotifyIfc *notify)
 	}
 
 done:
-	if (overflow)
+	if (error)
 	{
 		out.mantissa = 0;
 		out.neg_exponent = 2;
+		numeric_input_set_value(&calc->result, out);
+		numeric_input_set_msg(&calc->result, error);
 	}
-	numeric_input_set_value(&calc->result, out);
+	else
+	{
+		numeric_input_set_value(&calc->result, out);
+	}
 }
