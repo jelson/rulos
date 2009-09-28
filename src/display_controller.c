@@ -100,8 +100,8 @@ uint8_t sevseg_ascii[] = {
 	0b1000000,	// ~
 };
 
-uint8_t *sevseg_digits = &sevseg_ascii['0'];
-uint8_t *sevseg_letters = &sevseg_ascii['A'];
+uint8_t *sevseg_digits = &sevseg_ascii['0'-32];
+uint8_t *sevseg_letters = &sevseg_ascii['A'-32];
 
 void program_cell(uint8_t board, uint8_t digit, SSBitmap bitmap)
 {
