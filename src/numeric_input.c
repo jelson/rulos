@@ -1,6 +1,8 @@
 #include "util.h"
 #include "numeric_input.h"
 
+#include <stdio.h>
+
 uint8_t dfp_draw(DecimalFloatingPoint *dfp, SSBitmap *bm, uint8_t len, uint8_t show_decimal)
 {
 	uint8_t width = dfp->neg_exponent + 1;

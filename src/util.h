@@ -4,11 +4,12 @@
 #define FALSE 0
 #define TRUE 1
 
+#include <inttypes.h>
+
 #ifdef SIM
 
 #include <stdio.h>
 #include <assert.h>
-#include <inttypes.h>
 
 #define say(x)	{ fprintf(stderr, "say: %s\n", x); }
 extern FILE *logfp;

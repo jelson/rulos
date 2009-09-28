@@ -1,4 +1,5 @@
 #include <inttypes.h>
+#include <stdio.h>
 
 #include "rocket.h"
 #include "clock.h"
@@ -49,12 +50,12 @@ int main()
 	labeled_display_init(&ldh, 0, &fa);
 
 	DScrollMsgAct da1;
-	dscrlmsg_init(&da1, 5, " ", 0);
+	dscrlmsg_init(&da1, 2, "This is a test ", 0);
 	
 	IdleDisplayAct idisp;
 	idle_display_init(&idisp, &da1, &cpumon);
 
-/*
+
 	DScrollMsgAct da2;
 	char buf[129-32];
 	{
@@ -66,14 +67,15 @@ int main()
 		buf[i] = '\0';
 	}
 	dscrlmsg_init(&da2, 3, buf, 75);
-*/
 
-	NumericInputAct ni;
-	BoardBuffer bbuf;
-	board_buffer_init(&bbuf);
-	board_buffer_push(&bbuf, 3);
-	RowRegion region = { &bbuf, 3, 4 };
-	numeric_input_init(&ni, region, NULL, &fa);
+
+	//NumericInputAct ni;
+	//BoardBuffer bbuf;
+	//board_buffer_init(&bbuf);
+	//board_buffer_push(&bbuf, 4);
+	//RowRegion region = { &bbuf, 3, 4 };
+
+//	numeric_input_init(&ni, region, NULL, &fa);
 
 /*
 	Calculator calc;

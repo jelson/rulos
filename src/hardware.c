@@ -77,8 +77,8 @@ void init_output_pins()
 
 void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff)
 {
-#if defined(PROTO_BOARD)
 	uint8_t rdigit = NUM_DIGITS - 1 - digit;
+#if defined(PROTO_BOARD)
 	/* put board select on PortB[4..2]	*/
 	PORTB = (PORTB & ~(0b111 << 2)) | ((board & 0b111) << 2);
 
@@ -123,7 +123,7 @@ void delay_ms(int ms)
 	//_delay_ms(ms);
 }
 
-void hw_init()
+void hal_init()
 {
 	init_output_pins();
 }
@@ -135,33 +135,6 @@ ISR(TIMER1_COMPA_vect)
 	timer_handler();
 }
 
-/*
- * jonh changes this code around. Now the only thing timer_handler does
- * is update the system clock "and signal the main loop to start scheduling
- * again." On hw, there's no signal (the main loop is busy-waiting form
- * the clock to change); on sim, the signal is implicit because SIGALRM
- * interrupts its sleep().
- *
- * This keeps the big processing off the interrupt stack, where it
- * doesn't belong.
- */
-/*
- * We run the timer event loop here, instead of directly from interrupt context,
- * because we want the slow processing that comes from timers to run outside of
- * interrupt context -- so that actual high priority interrupts (e.g., ADC reading)
- * can happen in a timely manner.
- */
-void hw_run()
-{
-	while (1)
-	{
-		if (start_timer_handler > 0)
-		{
-			start_timer_handler--;
-			timer_handler();
-		}
-	}
-}
 
 
  /* 
@@ -203,17 +176,101 @@ void start_clock_ms(int ms, Handler handler)
 	sei();
 }
 
+#if defined(V1PCB)
+uint8_t scan_row()
+{
+        /*
+         * Scan PD0..3.  Return 1..4 if any of them are low.
+         * Return 0 if they're all high.
+         */
+        _NOP();
+        if (IS_CLR(PIND, PORTD0))               return 1;
+        if (IS_CLR(PIND, PORTD1))               return 2;
+        if (IS_CLR(PIND, PORTD2))               return 3;
+        if (IS_CLR(PIND, PORTD3))               return 4;
+        return 0;
+}
+
+
+char scan_keyboard()
+{
+        /*
+         * (0 asserted on these)
+         * Row 1: PC3
+         * Row 2: PB0
+         * Row 3: PB2
+         * Row 4: PB3
+         *
+         * (inputs with pull-ups are checked)
+         * Col 1: PB4
+         * Col 2: PC0
+         * Col 3: PC1
+         * Col 4: PC2
+         */
+
+        uint8_t row;
+
+        /* Scan first row */
+        CLR(PORTD, PORTD4);
+        SET(PORTB, PORTB2);
+        SET(PORTB, PORTB3);
+        SET(PORTB, PORTB4);
+        row = scan_row();
+        if (row == 1)           return '1';
+        if (row == 2)           return '2';
+        if (row == 3)           return '3';
+        if (row == 4)           return 'a';
+
+        /* Scan second row */
+        SET(PORTD, PORTD4);
+        CLR(PORTB, PORTB2);
+        SET(PORTB, PORTB3);
+        SET(PORTB, PORTB4);
+        row = scan_row();
+        if (row == 1)           return '4';
+        if (row == 2)           return '5';
+        if (row == 3)           return '6';
+        if (row == 4)           return 'b';
+
+        /* Scan third row */
+        SET(PORTD, PORTD4);
+        SET(PORTB, PORTB2);
+        CLR(PORTB, PORTB3);
+        SET(PORTB, PORTB4);
+        row = scan_row();
+        if (row == 1)           return '7';
+        if (row == 2)           return '8';
+        if (row == 3)           return '9';
+        if (row == 4)           return 'c';
+
+        /* Scan fourth row */
+        SET(PORTD, PORTD4);
+        SET(PORTB, PORTB2);
+        SET(PORTB, PORTB3);
+        CLR(PORTB, PORTB4);
+        row = scan_row();
+        if (row == 1)           return 's';
+        if (row == 2)           return '0';
+        if (row == 3)           return 'p';
+        if (row == 4)           return 'd';
+
+        return 0;
+}
+#endif //V1PCB
+
+
 void hal_start_atomic()
 {
-	JER_PLEASE_IMPLEMENT();
+	cli();
 }
 
 void hal_end_atomic()
 {
-	JER_PLEASE_IMPLEMENT();
+	sei();
 }
 
 void hal_idle()
 {
 	// just busy-wait on microcontroller.
 }
+

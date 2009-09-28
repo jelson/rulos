@@ -1,6 +1,8 @@
 #include "util.h"
 #include "calculator.h"
 
+#include <stdio.h>
+
 enum {
 	op_add = 0,
 	op_sub = 1,

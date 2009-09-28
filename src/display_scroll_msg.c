@@ -25,7 +25,7 @@ void dscrlmsg_update_once(DScrollMsgAct *act)
 	uint8_t i;
 	for (i=0; i<NUM_DIGITS; i++)
 	{
-		act->bbuf.buffer[i] = ascii_to_bitmap(act->msg[(act->index+i)%act->len]);
+		act->bbuf.buffer[i] = ascii_to_bitmap(act->msg[(act->index+i)%(act->len)]);
 	}
 	board_buffer_draw(&act->bbuf);
 }
