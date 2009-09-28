@@ -32,6 +32,7 @@ struct s_focus_act;
 typedef struct {
 	RectRegion rr;
 	UIEventHandler *handler;
+	char *label;
 } FocusChild;
 #define NUM_CHILDREN 8
 
@@ -45,7 +46,7 @@ typedef struct s_focus_act {
 } FocusManager;
 
 void focus_init(FocusManager *act);
-void focus_register(FocusManager *act, UIEventHandler *handler, RectRegion rr);
+void focus_register(FocusManager *act, UIEventHandler *handler, RectRegion rr, char *label);
 
 #endif // focus_h
 

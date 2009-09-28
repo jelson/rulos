@@ -43,13 +43,13 @@ void ni_accept_input(NumericInputAct *act);
 void ni_cancel_input(NumericInputAct *act);
 void ni_add_digit(NumericInputAct *act, uint8_t digit);
 
-void numeric_input_init(NumericInputAct *act, RowRegion region, NotifyIfc *notify, FocusManager *fa)
+void numeric_input_init(NumericInputAct *act, RowRegion region, NotifyIfc *notify, FocusManager *fa, char *label)
 {
 	act->region = region;
 	act->handler.func = numeric_input_handler;
 	act->handler.act = act;
 	cursor_init(&act->cursor);
-	cursor_set_shape_blank(&act->cursor, TRUE);
+	cursor_set_label(&act->cursor, cursor_label_white);
 	act->cur_value.mantissa = 314;
 	act->cur_value.neg_exponent = 2;
 	act->decimal_present = TRUE;
@@ -59,7 +59,7 @@ void numeric_input_init(NumericInputAct *act, RowRegion region, NotifyIfc *notif
 	ni_update_once(act);
 	if (fa!=NULL)
 	{
-		focus_register(fa, (UIEventHandler*) &act->handler, rr);
+		focus_register(fa, (UIEventHandler*) &act->handler, rr, label);
 	}
 }
 

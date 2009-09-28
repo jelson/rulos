@@ -4,6 +4,7 @@
 
 #define BLINK2	(8)	// blink every 2^BLINK2 ms
 
+char cursor_label_white[0];
 void cursor_update_once(CursorAct *act);
 void cursor_update(CursorAct *act);
 
@@ -16,7 +17,7 @@ void cursor_init(CursorAct *act)
 		board_buffer_init(&act->bbuf[i]);
 	}
 	act->visible = FALSE;
-	act->shape_blank = FALSE;
+	act->label = NULL;
 	schedule(1, (Activation*) act);
 }
 
@@ -72,7 +73,7 @@ void cursor_update_once(CursorAct *act)
 			BoardBuffer *bbp = &act->bbuf[i];
 			for (j=0; j<NUM_DIGITS; j++)
 			{
-				if (act->shape_blank)
+				if (act->label == cursor_label_white)
 				{
 					bbp->buffer[j] = 0;
 				}
@@ -85,11 +86,20 @@ void cursor_update_once(CursorAct *act)
 						| ((i==act->rr.ylen-1)?0b0001000:0);
 				}
 			}
+
+			// apply label to last line
+			if (i==act->rr.ylen-1 && act->label != cursor_label_white && act->label!=NULL)
+			{
+				ascii_to_bitmap_str(
+					act->bbuf[act->rr.ylen-1].buffer+act->rr.x+1, act->rr.xlen-2, act->label);
+			}
+
+			// hide cursor half the time
 			uint8_t on = ((clock_time() >> BLINK2)&1);
 			board_buffer_set_alpha(bbp, on ? act->alpha : 0);
+
 			board_buffer_draw(bbp);
 		}
-
 	}
 }
 
@@ -99,7 +109,8 @@ void cursor_update(CursorAct *act)
 	schedule(1<<BLINK2, (Activation*) act);
 }
 
-void cursor_set_shape_blank(CursorAct *act, uint8_t value)
+void cursor_set_label(CursorAct *act, char *label)
 {
-	act->shape_blank = value;
+	act->label = label;
+	cursor_update_once(act);
 }

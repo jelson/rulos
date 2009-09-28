@@ -4,7 +4,7 @@
 UIEventDisposition knob_handler(UIEventHandler *raw_handler, UIEvent evt);
 void knob_update_once(Knob *knob);
 
-void knob_init(Knob *knob, RowRegion region, char **msgs, uint8_t len, NotifyIfc *notify, FocusManager *fa)
+void knob_init(Knob *knob, RowRegion region, char **msgs, uint8_t len, NotifyIfc *notify, FocusManager *fa, char *label)
 {
 	knob->func = knob_handler;
 	knob->msgs = msgs;
@@ -12,10 +12,10 @@ void knob_init(Knob *knob, RowRegion region, char **msgs, uint8_t len, NotifyIfc
 	knob->selected = 0;
 	knob->region = region;
 	cursor_init(&knob->cursor);
-	cursor_set_shape_blank(&knob->cursor, TRUE);
+	cursor_set_label(&knob->cursor, cursor_label_white);
 	knob->notify = notify;
 	RectRegion rr = {&knob->region.bbuf, 1, knob->region.x, knob->region.xlen};
-	focus_register(fa, (UIEventHandler*) knob, rr);
+	focus_register(fa, (UIEventHandler*) knob, rr, label);
 	knob_update_once(knob);
 }
 

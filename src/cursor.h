@@ -7,13 +7,15 @@
 
 #define MAX_HEIGHT 5
 
+extern char cursor_label_white[0];
+
 typedef struct s_cursor_act {
 	ActivationFunc func;
 	BoardBuffer bbuf[MAX_HEIGHT];
 	uint8_t visible;
 	RectRegion rr;
 	uint8_t alpha;
-	uint8_t shape_blank;
+	char *label;
 } CursorAct;
 
 void cursor_init(CursorAct *act);
@@ -21,8 +23,6 @@ void cursor_init(CursorAct *act);
 void cursor_hide(CursorAct *act);
 void cursor_show(CursorAct *act, RectRegion rr);
 	// addresses are inclusive
-void cursor_set_shape_blank(CursorAct *act, uint8_t value);
-	// true -> blank cursor (alternating with transparent);
-	// false -> box cursor
+void cursor_set_label(CursorAct *act, char *label);
 
 #endif // _cursor_h

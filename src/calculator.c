@@ -28,16 +28,16 @@ void calculator_init(Calculator *calc, int board0, FocusManager *fa)
 	}
 
 	RectRegion calc_region = { calc->btable, 2, 1, 6 };
-	focus_register(fa, (UIEventHandler*) &calc->focus, calc_region);
+	focus_register(fa, (UIEventHandler*) &calc->focus, calc_region, "calculator");
 
 	RowRegion region0 = { &calc->bbuf[0], 0, 4 };
-	numeric_input_init(&calc->operands[0], region0, (NotifyIfc*) calc, &calc->focus);
+	numeric_input_init(&calc->operands[0], region0, (NotifyIfc*) calc, &calc->focus, "o1");
 	RowRegion region1 = { &calc->bbuf[0], 4, 4 };
-	numeric_input_init(&calc->operands[1], region1, (NotifyIfc*) calc, &calc->focus);
+	numeric_input_init(&calc->operands[1], region1, (NotifyIfc*) calc, &calc->focus, "o2");
 	RowRegion region2 = { &calc->bbuf[1], 0, 4 };
-	knob_init(&calc->operator, region2, operator_strs, 4, (NotifyIfc*) calc, &calc->focus);
+	knob_init(&calc->operator, region2, operator_strs, 4, (NotifyIfc*) calc, &calc->focus, "op");
 	RowRegion region3 = { &calc->bbuf[1], 4, 4 };
-	numeric_input_init(&calc->result, region3, NULL /*unfocusable*/, NULL /* no notify */);
+	numeric_input_init(&calc->result, region3, NULL /*unfocusable*/, NULL /* no notify */, NULL /* label */);
 
 	DecimalFloatingPoint op0 = { 220, 0 };
 	DecimalFloatingPoint op1 = { 659, 2 };

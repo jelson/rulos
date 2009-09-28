@@ -14,7 +14,7 @@ void labeled_display_init(LabeledDisplayHandler *ldh, int b0, FocusManager *focu
 	ldh->bufs[0] = &ldh->msgAct.bbuf;
 	ldh->bufs[1] = &ldh->rtcAct.bbuf;
 	RectRegion rr = {ldh->bufs, 2, 1, 6};
-	focus_register(focus, (UIEventHandler*) ldh, rr);
+	focus_register(focus, (UIEventHandler*) ldh, rr, "clock");
 }
 
 UIEventDisposition labeled_display_event_handler(

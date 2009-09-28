@@ -32,7 +32,7 @@ typedef struct s_numeric_input_act {
 	char *msg;
 } NumericInputAct;
 
-void numeric_input_init(NumericInputAct *act, RowRegion region, NotifyIfc *notify, FocusManager *fa);
+void numeric_input_init(NumericInputAct *act, RowRegion region, NotifyIfc *notify, FocusManager *fa, char *label);
 void numeric_input_set_value(NumericInputAct *act, DecimalFloatingPoint new_value);
 void numeric_input_set_msg(NumericInputAct *act, char *msg);
 

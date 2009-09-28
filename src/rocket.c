@@ -77,10 +77,8 @@ int main()
 
 //	numeric_input_init(&ni, region, NULL, &fa);
 
-/*
 	Calculator calc;
 	calculator_init(&calc, 4, &fa);
-*/
 
 /*
 	DCompassAct dc;

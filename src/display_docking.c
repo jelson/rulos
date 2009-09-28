@@ -29,7 +29,7 @@ void ddock_init(DDockAct *act, uint8_t b0, FocusManager *focus)
 
 	act->focused = FALSE;
 	RectRegion rr = {act->btable, DOCK_HEIGHT, 0, 7};
-	focus_register(focus, (UIEventHandler*) &act->handler, rr);
+	focus_register(focus, (UIEventHandler*) &act->handler, rr, "docking");
 
 	drift_anim_init(&act->xd, 10, 0, -14, 14, 5);
 	drift_anim_init(&act->yd, 10, 0, -15, 15, 5);
