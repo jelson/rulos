@@ -74,7 +74,7 @@ size: ${AVR_TARGET}
 
 ## Clean target
 avr-clean:
-	-rm -rf $(AVR_OBJECTS) Rocket.elf $(OBJDIR)/*.d Rocket.hex Rocket.eep Rocket.lss Rocket.map
+	-rm -rf $(AVR_OBJECTS) Rocket.elf $(AVR_OBJDIR)/*.d Rocket.hex Rocket.eep Rocket.lss Rocket.map
 
 
 ## Other dependencies
