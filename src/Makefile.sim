@@ -13,12 +13,7 @@ SIM_OBJECTS_M := $(COMMON_OBJECTS) \
 
 SIM_OBJECTS := $(patsubst %.o,$(SIM_OBJDIR)/%.o,$(SIM_OBJECTS_M))
 
-
-$(SIM_OBJDIR)/.exists:
-	mkdir -p $(SIM_OBJDIR)
-	touch $@
-
-$(SIM_OBJDIR)/%.o: %.c $(SIM_OBJDIR)/.exists
+$(SIM_OBJDIR)/%.o: %.c
 	gcc $(CFLAGS) -c $< -o $@
 
 #librocket.a: $(OBJS)
@@ -34,4 +29,4 @@ sim-clean:
 	rm -f $(SIM_OBJECTS) $(TARGET) $(SIM_OBJDIR)/*.d
 
 ## Other dependencies
--include $(shell mkdir dep 2>/dev/null) $(wildcard $(SIM_OBJDIR)/*.dep)
+-include $(shell mkdir -p $(SIM_OBJDIR)) $(wildcard $(SIM_OBJDIR)/*.dep)
