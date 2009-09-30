@@ -131,7 +131,7 @@ int int_to_string(char *strp, uint8_t min_width, int zero_padded, uint32_t i)
 {
 	int c = 0;
 	int neg = 0;
-	char *ptr;
+	char *ptr = 0;
 	
 	if (strp!=0)
 	{

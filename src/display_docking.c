@@ -11,7 +11,7 @@ UIEventDisposition ddock_event_handler(
 
 void ddock_update_once(DDockAct *act);
 void ddock_update(DDockAct *act);
-int ddock_compute_dx(int yc, int r, int y);
+uint32_t ddock_compute_dx(int yc, int r, int y);
 void ddock_paint_hrow(SSBitmap *bm, int y, int x0, int x1, SSBitmap mask);
 
 void ddock_init(DDockAct *act, uint8_t b0, FocusManager *focus)
@@ -115,7 +115,7 @@ void ddock_update_once(DDockAct *act)
 	}
 }
 
-int ddock_compute_dx(int yc, int r, int y)
+uint32_t ddock_compute_dx(int yc, int r, int y)
 {
 	int dy = (y - yc);
 	int dx2 = r*r - dy*dy;

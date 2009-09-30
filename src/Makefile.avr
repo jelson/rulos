@@ -1,0 +1,82 @@
+###############################################################################
+# Makefile for the project Rocket
+###############################################################################
+
+## General Flags
+PROJECT = Rocket
+MCU = atmega8
+AVR_TARGET = Rocket.elf
+CC = avr-gcc
+AVR_OBJDIR = obj.avr
+
+## Options common to compile, link and assembly rules
+COMMON = -Wall -Werror -mmcu=$(MCU)
+
+## Compile options common for all C compilation units.
+AVR_CFLAGS = $(COMMON)
+AVR_CFLAGS += -Wall -gdwarf-2 -std=gnu99 -Os -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
+AVR_CFLAGS += -MD -MP -MT $(AVR_OBJDIR)/$(*F).o -MF $(AVR_OBJDIR)/$(@F).d 
+
+## Assembly specific flags
+ASMFLAGS = $(COMMON)
+ASMFLAGS += $(AVR_CFLAGS)
+ASMFLAGS += -x assembler-with-cpp -Wa,-gdwarf2
+
+## Linker flags
+AVR_LDFLAGS = $(COMMON)
+AVR_LDFLAGS +=  -Wl,-Map=Rocket.map
+
+
+## Intel Hex file production flags
+HEX_FLASH_FLAGS = -R .eeprom -R .fuse -R .lock -R .signature
+
+HEX_EEPROM_FLAGS = -j .eeprom
+HEX_EEPROM_FLAGS += --set-section-flags=.eeprom="alloc,load"
+HEX_EEPROM_FLAGS += --change-section-lma .eeprom=0 --no-change-warnings
+
+
+## Objects that must be built in order to link
+AVR_OBJECTS_M := $(COMMON_OBJECTS) \
+	hardware.o \
+
+AVR_OBJECTS := $(patsubst %.o,$(AVR_OBJDIR)/%.o,$(AVR_OBJECTS_M))
+
+## Objects explicitly added by the user
+LINKONLYAVR_OBJECTS = 
+
+## Build
+avr-all: $(AVR_TARGET) Rocket.hex Rocket.eep Rocket.lss size
+
+## Compile
+$(AVR_OBJDIR)/.exists:
+	mkdir -p $(AVR_OBJDIR)
+	touch $@
+
+$(AVR_OBJDIR)/%.o: %.c $(AVR_OBJDIR)/.exists
+	$(CC) $(INCLUDES) $(AVR_CFLAGS) -c $< -o $@
+
+##Link
+$(AVR_TARGET): $(AVR_OBJECTS)
+	$(CC) $(AVR_LDFLAGS) $(AVR_OBJECTS) $(LINKONLYAVR_OBJECTS) $(LIBDIRS) $(LIBS) -o $(AVR_TARGET)
+
+%.hex: $(AVR_TARGET)
+	avr-objcopy -O ihex $(HEX_FLASH_FLAGS)  $< $@
+
+%.eep: $(AVR_TARGET)
+	-avr-objcopy $(HEX_EEPROM_FLAGS) -O ihex $< $@ || exit 0
+
+%.lss: $(AVR_TARGET)
+	avr-objdump -h -S $< > $@
+
+size: ${AVR_TARGET}
+	@echo
+	@avr-size -C --mcu=${MCU} ${AVR_TARGET}
+
+## Clean target
+avr-clean:
+	-rm -rf $(AVR_OBJECTS) Rocket.elf $(OBJDIR)/*.d Rocket.hex Rocket.eep Rocket.lss Rocket.map
+
+
+## Other dependencies
+-include $(shell mkdir dep 2>/dev/null) $(wildcard $(AVR_OBJDIR)/*.dep)
+

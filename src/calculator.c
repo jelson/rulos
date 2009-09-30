@@ -60,7 +60,7 @@ void calculator_notify(NotifyIfc *notify)
 	DecimalFloatingPoint op1 = calc->operands[1].cur_value;
 	LOGF((logfp, "start  op0 %3de%d o1 %3de%d\n",
 		op0.mantissa, op0.neg_exponent, op1.mantissa, op1.neg_exponent));
-	uint32_t mantissa;
+	uint32_t mantissa = 0;
 	switch (calc->operator.selected)
 	{
 		case op_mul:

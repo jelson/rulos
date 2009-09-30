@@ -1,18 +1,33 @@
-all: rocketsim
+COMMON_OBJECTS = \
+	board_buffer.o \
+	calculator.o \
+	clock.o \
+	cpumon.o \
+	cursor.o \
+	display_compass.o \
+	display_controller.o \
+	display_docking.o \
+	display_gratuitous_graph.o \
+	display_rtc.o \
+	display_scroll_msg.o \
+	drift_anim.o \
+	focus.o \
+	heap.o \
+	idle_display.o \
+	input_controller.o \
+	knob.o \
+	labeled_display.o \
+	numeric_input.o \
+	queue.o \
+	random.o \
+	rocket.o \
+	util.o
 
-HDRS = rocket.h display_controller.h clock.h heap.h util.h display_rtc.h display_scroll_msg.h random.h display_compass.h board_buffer.h focus.h queue.h input_controller.h cursor.h labeled_display.h display_docking.h drift_anim.h display_gratuitous_graph.h region.h numeric_input.h calculator.h knob.h notifyifc.h hal.h cpumon.h idle_display.h
-SRCS = sim.c display_controller.c clock.c heap.c display_rtc.c display_scroll_msg.c util.c random.c display_compass.c board_buffer.c focus.c queue.c input_controller.c cursor.c labeled_display.c display_docking.c drift_anim.c display_gratuitous_graph.c numeric_input.c calculator.c knob.c cpumon.c idle_display.c
+.PHONY: all
+all: sim-all avr-all
 
-%.o: %.c $(HDRS)
-	gcc -Werror -Wall -c -g -o $@ -DSIM $<
+clean: sim-clean avr-clean
 
-OBJS = $(patsubst %.c,%.o,$(SRCS))
-librocket.a: $(OBJS)
-	rm -f $@
-	ar -r $@ $^
+include Makefile.sim
+include Makefile.avr
 
-rocketsim: rocket.c librocket.a
-	gcc -Werror -Wall -g -o rocketsim -DSIM $< -L. -lrocket -lncurses
-
-clean:
-	rm -f $(OBJS) rocketsim.a rocketsim
