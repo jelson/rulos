@@ -18,7 +18,7 @@ $(SIM_OBJDIR)/.exists:
 	mkdir -p $(SIM_OBJDIR)
 	touch $@
 
-$(SIM_OBJDIR)/%.o: %.c
+$(SIM_OBJDIR)/%.o: %.c $(SIM_OBJDIR)/.exists
 	gcc $(CFLAGS) -c $< -o $@
 
 #librocket.a: $(OBJS)
