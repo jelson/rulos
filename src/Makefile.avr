@@ -84,5 +84,5 @@ avr-clean:
 
 
 ## Other dependencies
--include $(shell mkdir -p $(AVR_OBJDIR)) $(wildcard $(AVR_OBJDIR)/*.dep)
+-include $(shell mkdir -p $(AVR_OBJDIR)) $(wildcard $(AVR_OBJDIR)/*.d)
 

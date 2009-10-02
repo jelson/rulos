@@ -31,4 +31,4 @@ sim-clean:
 	rm -f $(SIM_OBJECTS) $(TARGET) $(SIM_OBJDIR)/*.d
 
 ## Other dependencies
--include $(shell mkdir -p $(SIM_OBJDIR)) $(wildcard $(SIM_OBJDIR)/*.dep)
+-include $(shell mkdir -p $(SIM_OBJDIR)) $(wildcard $(SIM_OBJDIR)/*.d)
