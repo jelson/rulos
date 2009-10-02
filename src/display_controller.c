@@ -3,7 +3,7 @@
 
 // offset 32
 uint8_t sevseg_ascii[] = {
-#include "seven_segment_ascii.ch"
+#include "sevseg_bitmaps.ch"
 };
 
 uint8_t *sevseg_digits = &sevseg_ascii['0'-32];

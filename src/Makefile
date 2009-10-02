@@ -33,10 +33,11 @@ clean: sim-clean avr-clean
 include Makefile.sim
 include Makefile.avr
 
-$(SIM_OBJDIR)/display_controller.o: seven_segment_ascii.ch
+$(SIM_OBJDIR)/display_controller.o: sevseg_bitmaps.ch
 
-$(AVR_OBJDIR)/display_controller.o: seven_segment_ascii.ch
+$(AVR_OBJDIR)/display_controller.o: sevseg_bitmaps.ch
 
-seven_segment_ascii.ch: seven_segment_ascii.py
-	./seven_segment_ascii.py
+sevseg_bitmaps.ch: sevseg_convert.py sevseg_artwork.txt
+	./sevseg_convert.py > $@
+
 

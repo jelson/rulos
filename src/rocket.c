@@ -68,7 +68,7 @@ int main()
 		}
 		buf[i] = '\0';
 	}
-	//strcpy(buf, " LAUNCH  COMPLETE. Orbit attained.   ");
+	strcpy(buf, " LAUNCH  COMPLETE. Orbit attained.   ");
 	dscrlmsg_init(&da2, 3, buf, 200);
 
 	NumericInputAct ni;
