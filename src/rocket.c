@@ -76,10 +76,9 @@ int main()
 
 	numeric_input_init(&ni, region, NULL, &fa, "numeric");
 
-#if 0
+#if !MCUatmega8
 	Calculator calc;
 	calculator_init(&calc, 4, &fa);
-#endif
 
 /*
 	DCompassAct dc;
@@ -87,12 +86,11 @@ int main()
 
 	DGratuitousGraph dgg;
 	dgg_init(&dgg, 5, "volts", 5000);
-
 */
-/*
+
 	DDockAct ddock;
 	ddock_init(&ddock, 0, &fa);
-*/
+#endif
 
 
 	cpumon_main_loop();

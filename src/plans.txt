@@ -5,6 +5,10 @@ TODO
 	fix bitmapiness / zero axes of display_docking
 	make circle thing work with thrustiness, with x/y in corners
 
+BUGS
+	calculator should shift in precision for div, when available.
+	(3 div 2 = 1, right now, rather than 0.500.)
+
 1	K clock:
 	real-time
 	mission-time

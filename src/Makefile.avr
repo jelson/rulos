@@ -18,6 +18,7 @@ COMMON = -Wall -Werror -mmcu=$(MCU)
 AVR_CFLAGS = $(COMMON)
 AVR_CFLAGS += -Wall -gdwarf-2 -std=gnu99 -Os -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 AVR_CFLAGS += -MD -MP -MT $(AVR_OBJDIR)/$(*F).o -MF $(AVR_OBJDIR)/$(@F).d 
+AVR_CFLAGS += -DMCU$(MCU)=1
 
 ## Assembly specific flags
 ASMFLAGS = $(COMMON)
