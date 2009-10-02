@@ -1,5 +1,6 @@
 #include <inttypes.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "rocket.h"
 #include "clock.h"
@@ -56,6 +57,7 @@ int main()
 	idle_display_init(&idisp, &da1, &cpumon);
 
 
+	// scroll our ascii set.
 	DScrollMsgAct da2;
 	char buf[129-32];
 	{
@@ -66,7 +68,8 @@ int main()
 		}
 		buf[i] = '\0';
 	}
-	dscrlmsg_init(&da2, 3, buf, 75);
+	//strcpy(buf, " LAUNCH  COMPLETE. Orbit attained.   ");
+	dscrlmsg_init(&da2, 3, buf, 200);
 
 	NumericInputAct ni;
 	BoardBuffer bbuf;
@@ -88,8 +91,10 @@ int main()
 	dgg_init(&dgg, 5, "volts", 5000);
 */
 
+/*
 	DDockAct ddock;
 	ddock_init(&ddock, 0, &fa);
+*/
 #endif
 
 
