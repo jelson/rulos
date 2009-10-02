@@ -17,7 +17,7 @@ class LineReader:
         retval = self.lines[self.line_num]
         return retval.strip()
 
-    def get_line(self, eofOK = False):
+    def get_line(self, eofOK = False, skipBlanks = True):
         line = None
 
         while not line:
@@ -28,6 +28,9 @@ class LineReader:
                     return None
                 else:
                     self.error("Unexpected EOF")
+
+            if not skipBlanks:
+                return line
 
         return line
     
@@ -55,17 +58,17 @@ def get_bit(lr, line, position, truechar):
 def get_bitmap(lr):
     bitmap = [0] * 8
 
-    l1 = lr.get_line()
+    l1 = lr.get_line(skipBlanks = False)
     check_bit(lr, l1, 0, ".")
     bitmap[0] = get_bit(lr, l1, 2, "_")
     
-    l2 = lr.get_line()
+    l2 = lr.get_line(skipBlanks = False)
     check_bit(lr, l2, 0, ".")
     bitmap[5] = get_bit(lr, l2, 1, "|")
     bitmap[6] = get_bit(lr, l2, 2, "_")
     bitmap[1] = get_bit(lr, l2, 3, "|")
 
-    l3 = lr.get_line()
+    l3 = lr.get_line(skipBlanks = False)
     check_bit(lr, l3, 0, ".")
     bitmap[4] = get_bit(lr, l3, 1, "|")
     bitmap[3] = get_bit(lr, l3, 2, "_")
