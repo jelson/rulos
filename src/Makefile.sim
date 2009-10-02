@@ -9,7 +9,9 @@ CFLAGS += -MD -MP -MT $(SIM_OBJDIR)/$(*F).o -MF $(SIM_OBJDIR)/$(@F).d
 ############
 
 SIM_OBJECTS_M := $(COMMON_OBJECTS) \
-	sim.o
+	$(MAIN_OBJECT) \
+	sim.o \
+
 
 SIM_OBJECTS := $(patsubst %.o,$(SIM_OBJDIR)/%.o,$(SIM_OBJECTS_M))
 

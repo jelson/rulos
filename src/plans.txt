@@ -1,5 +1,4 @@
 TODO
-	make focus show label of display
 	assert displayer
 	E6b
 

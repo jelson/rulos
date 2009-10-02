@@ -68,17 +68,18 @@ int main()
 	}
 	dscrlmsg_init(&da2, 3, buf, 75);
 
+	NumericInputAct ni;
+	BoardBuffer bbuf;
+	board_buffer_init(&bbuf);
+	board_buffer_push(&bbuf, 4);
+	RowRegion region = { &bbuf, 3, 4 };
 
-	//NumericInputAct ni;
-	//BoardBuffer bbuf;
-	//board_buffer_init(&bbuf);
-	//board_buffer_push(&bbuf, 4);
-	//RowRegion region = { &bbuf, 3, 4 };
+	numeric_input_init(&ni, region, NULL, &fa, "numeric");
 
-//	numeric_input_init(&ni, region, NULL, &fa);
-
+#if 0
 	Calculator calc;
 	calculator_init(&calc, 4, &fa);
+#endif
 
 /*
 	DCompassAct dc;
@@ -86,12 +87,13 @@ int main()
 
 	DGratuitousGraph dgg;
 	dgg_init(&dgg, 5, "volts", 5000);
-*/
 
+*/
 /*
 	DDockAct ddock;
 	ddock_init(&ddock, 0, &fa);
 */
+
 
 	cpumon_main_loop();
 

@@ -5,9 +5,11 @@
 ## General Flags
 PROJECT = Rocket
 MCU = atmega8
+AVR_LIBNAME = rocketavr
 AVR_TARGET = Rocket.elf
 CC = avr-gcc
 AVR_OBJDIR = obj.avr
+AVR_LIB_FILE = $(AVR_OBJDIR)/lib$(AVR_LIBNAME).a
 
 ## Options common to compile, link and assembly rules
 COMMON = -Wall -Werror -mmcu=$(MCU)
@@ -24,7 +26,7 @@ ASMFLAGS += -x assembler-with-cpp -Wa,-gdwarf2
 
 ## Linker flags
 AVR_LDFLAGS = $(COMMON)
-AVR_LDFLAGS +=  -Wl,-Map=Rocket.map
+AVR_LDFLAGS +=  -Wl,-Map=Rocket.map -L$(AVR_OBJDIR) -l$(AVR_LIBNAME) 
 
 
 ## Intel Hex file production flags
@@ -39,7 +41,9 @@ HEX_EEPROM_FLAGS += --change-section-lma .eeprom=0 --no-change-warnings
 AVR_OBJECTS_M := $(COMMON_OBJECTS) \
 	hardware.o \
 
+
 AVR_OBJECTS := $(patsubst %.o,$(AVR_OBJDIR)/%.o,$(AVR_OBJECTS_M))
+AVR_MAIN_OBJECT := $(patsubst %.o,$(AVR_OBJDIR)/%.o,$(MAIN_OBJECT))
 
 ## Objects explicitly added by the user
 LINKONLYAVR_OBJECTS = 
@@ -51,9 +55,14 @@ avr-all: $(AVR_TARGET) Rocket.hex Rocket.eep Rocket.lss size
 $(AVR_OBJDIR)/%.o: %.c
 	$(CC) $(INCLUDES) $(AVR_CFLAGS) -c $< -o $@
 
+##Build library (to avoid linking dead objects)
+$(AVR_LIB_FILE): $(AVR_OBJECTS)
+	rm -f $@
+	ar r $@ $(AVR_OBJECTS)
+
 ##Link
-$(AVR_TARGET): $(AVR_OBJECTS)
-	$(CC) $(AVR_LDFLAGS) $(AVR_OBJECTS) $(LINKONLYAVR_OBJECTS) $(LIBDIRS) $(LIBS) -o $(AVR_TARGET)
+$(AVR_TARGET): $(AVR_LIB_FILE) $(AVR_MAIN_OBJECT)
+	$(CC) $(AVR_MAIN_OBJECT) $(AVR_LDFLAGS) $(LINKONLYAVR_OBJECTS) $(LIBDIRS) $(LIBS) -o $(AVR_TARGET)
 
 %.hex: $(AVR_TARGET)
 	avr-objcopy -O ihex $(HEX_FLASH_FLAGS)  $< $@

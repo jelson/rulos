@@ -1,3 +1,6 @@
+MAIN_OBJECT = \
+	rocket.o
+
 COMMON_OBJECTS = \
 	board_buffer.o \
 	calculator.o \
@@ -20,7 +23,6 @@ COMMON_OBJECTS = \
 	numeric_input.o \
 	queue.o \
 	random.o \
-	rocket.o \
 	util.o
 
 .PHONY: all

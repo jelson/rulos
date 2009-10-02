@@ -1,0 +1,3 @@
+gcc-avr
+avr-libc
+avrdude
