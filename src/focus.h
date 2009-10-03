@@ -13,7 +13,8 @@ enum {
 	uie_escape = 'd',
 	uie_right = 'a',
 	uie_left = 'b',
-};
+	evt_notify = 0x80,
+} EventName;
 
 typedef enum {
 	uied_accepted,	// child consumed event

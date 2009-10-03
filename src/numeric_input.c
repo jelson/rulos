@@ -43,7 +43,7 @@ void ni_accept_input(NumericInputAct *act);
 void ni_cancel_input(NumericInputAct *act);
 void ni_add_digit(NumericInputAct *act, uint8_t digit);
 
-void numeric_input_init(NumericInputAct *act, RowRegion region, NotifyIfc *notify, FocusManager *fa, char *label)
+void numeric_input_init(NumericInputAct *act, RowRegion region, UIEventHandler *notify, FocusManager *fa, char *label)
 {
 	act->region = region;
 	act->handler.func = numeric_input_handler;
@@ -98,7 +98,7 @@ void ni_accept_input(NumericInputAct *act)
 	ni_update_once(act);
 	if (act->notify != NULL)
 	{
-		act->notify->func(act->notify);
+		act->notify->func(act->notify, evt_notify);
 	}
 }
 

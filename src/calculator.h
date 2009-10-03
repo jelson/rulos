@@ -7,10 +7,9 @@
 #include "cursor.h"
 #include "board_buffer.h"
 #include "display_scroll_msg.h"
-#include "notifyifc.h"
 
 typedef struct {
-	NotifyFunc func;
+	UIEventHandlerFunc func;
 	BoardBuffer bbuf[2];
 	BoardBuffer *btable[2];
 	NumericInputAct operands[2];

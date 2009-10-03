@@ -72,8 +72,9 @@ void scheduler_run_once()
 		if (due_time > now) { break; }
 			// no work to do now
 
-		//LOGF((logfp, "popping act %08x\n", (int) act));
+		//LOGF((logfp, "popping act %08x func %08x\n", (uint32_t) act, (uint32_t) act->func));
 		heap_pop();
 		act->func(act);
+		//LOGF((logfp, "returned act %08x func %08x\n", (uint32_t) act, (uint32_t) act->func));
 	}
 }

@@ -12,7 +12,7 @@ enum {
 char *operator_strs[] = {
 	"add", "sub", "mul", "div" };
 
-void calculator_notify(NotifyIfc *notify);
+UIEventDisposition calculator_notify(UIEventHandler *notify, UIEvent evt);
 
 void calculator_init(Calculator *calc, int board0, FocusManager *fa)
 {
@@ -31,11 +31,11 @@ void calculator_init(Calculator *calc, int board0, FocusManager *fa)
 	focus_register(fa, (UIEventHandler*) &calc->focus, calc_region, "calculator");
 
 	RowRegion region0 = { &calc->bbuf[0], 0, 4 };
-	numeric_input_init(&calc->operands[0], region0, (NotifyIfc*) calc, &calc->focus, "o1");
+	numeric_input_init(&calc->operands[0], region0, (UIEventHandler*) calc, &calc->focus, "o1");
 	RowRegion region1 = { &calc->bbuf[0], 4, 4 };
-	numeric_input_init(&calc->operands[1], region1, (NotifyIfc*) calc, &calc->focus, "o2");
+	numeric_input_init(&calc->operands[1], region1, (UIEventHandler*) calc, &calc->focus, "o2");
 	RowRegion region2 = { &calc->bbuf[1], 0, 4 };
-	knob_init(&calc->operator, region2, operator_strs, 4, (NotifyIfc*) calc, &calc->focus, "op");
+	knob_init(&calc->operator, region2, operator_strs, 4, (UIEventHandler*) calc, &calc->focus, "op");
 	RowRegion region3 = { &calc->bbuf[1], 4, 4 };
 	numeric_input_init(&calc->result, region3, NULL /*unfocusable*/, NULL /* no notify */, NULL /* label */);
 
@@ -44,15 +44,16 @@ void calculator_init(Calculator *calc, int board0, FocusManager *fa)
 	numeric_input_set_value(&calc->operands[0], op0);
 	numeric_input_set_value(&calc->operands[1], op1);
 	knob_set_value(&calc->operator, op_div);
-	calculator_notify((NotifyIfc*) calc);
+	calculator_notify((UIEventHandler*) calc, evt_notify);
 }
 
 char *err_overflow = "Ovrf";
 char *err_divzero = "div0";
 char *err_negative = "Neg ";
 
-void calculator_notify(NotifyIfc *notify)
+UIEventDisposition calculator_notify(UIEventHandler *notify, UIEvent evt)
 {
+	assert(evt==evt_notify);
 	DecimalFloatingPoint out;
 	Calculator *calc = (Calculator*) notify;
 	char *error = NULL;
@@ -186,4 +187,5 @@ done:
 	{
 		numeric_input_set_value(&calc->result, out);
 	}
+	return uied_accepted;
 }

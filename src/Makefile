@@ -23,7 +23,10 @@ COMMON_OBJECTS = \
 	numeric_input.o \
 	queue.o \
 	random.o \
-	util.o
+	util.o \
+	sequencer.o \
+	display_blinker.o \
+
 
 .PHONY: all
 all: sim-all avr-all

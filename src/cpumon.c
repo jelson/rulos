@@ -51,8 +51,8 @@ void cpumon_act(CpumonAct *act)
 			act->calibration_interval = time - act->last_time;
 			act->phase = cpumon_phase_periodic_sample;
 				// we won't get run again until real main loop starts.
-			LOGF((logfp, "calib %d/%dms\n",
-				act->calibration_spin_counts, act->calibration_interval));
+//			LOGF((logfp, "calib %d/%dms\n",
+//				act->calibration_spin_counts, act->calibration_interval));
 			act->num_calibrations--;
 			if (act->num_calibrations>0)
 			{
@@ -73,10 +73,12 @@ void cpumon_act(CpumonAct *act)
 		{
 			act->sample_spin_counts = spins - act->last_spin_counter;
 			act->sample_interval = time - act->last_time;
+			/*
 			LOGF((logfp, "calib %d/%dms sample %d/%dms idle %d%%\n",
 				act->calibration_spin_counts, act->calibration_interval,
 				act->sample_spin_counts, act->sample_interval,
 				cpumon_get_idle_percentage(act)));
+			*/
 			schedule(1000, (Activation *) act);
 			break;
 		}

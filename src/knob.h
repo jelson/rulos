@@ -3,7 +3,6 @@
 
 #include "region.h"
 #include "focus.h"
-#include "notifyifc.h"
 
 typedef struct {
 	UIEventHandlerFunc func;
@@ -12,10 +11,10 @@ typedef struct {
 	uint8_t selected;
 	RowRegion region;
 	CursorAct cursor;
-	NotifyIfc *notify;
+	UIEventHandler *notify;
 } Knob;
 
-void knob_init(Knob *knob, RowRegion region, char **msgs, uint8_t len, NotifyIfc *notify, FocusManager *fa, char *label);
+void knob_init(Knob *knob, RowRegion region, char **msgs, uint8_t len, UIEventHandler *notify, FocusManager *fa, char *label);
 
 void knob_set_value(Knob *knob, uint8_t value);
 

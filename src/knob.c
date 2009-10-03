@@ -4,7 +4,7 @@
 UIEventDisposition knob_handler(UIEventHandler *raw_handler, UIEvent evt);
 void knob_update_once(Knob *knob);
 
-void knob_init(Knob *knob, RowRegion region, char **msgs, uint8_t len, NotifyIfc *notify, FocusManager *fa, char *label)
+void knob_init(Knob *knob, RowRegion region, char **msgs, uint8_t len, UIEventHandler *notify, FocusManager *fa, char *label)
 {
 	knob->func = knob_handler;
 	knob->msgs = msgs;
@@ -35,7 +35,7 @@ UIEventDisposition knob_handler(UIEventHandler *raw_handler, UIEvent evt)
 		case uie_select:
 			cursor_hide(&knob->cursor);
 			result = uied_blur;
-			knob->notify->func(knob->notify);
+			knob->notify->func(knob->notify, evt_notify);
 			break;
 		case uie_right:
 			knob->selected = (knob->selected+1) % knob->len;

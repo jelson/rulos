@@ -123,7 +123,7 @@ SSBitmap ascii_to_bitmap(char a)
 	return sevseg_ascii[((uint8_t)a)-32];
 }
 
-void ascii_to_bitmap_str(SSBitmap *b, int max_len, char *a)
+void ascii_to_bitmap_str(SSBitmap *b, int max_len, const char *a)
 {
 	int i;
 	for (i=0; i<max_len && a[i]!='\0'; i++)
