@@ -5,11 +5,10 @@
  */
 #define V1PCB
 
-/* clock calibration by jelson: took 209 seconds to lose one second */
-#define F_CPU (4000000 * 209 / 210)
+#include <avr/boot.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <util/delay.h>
+//#include <util/delay.h>	// don't use this; subsumed by awesome OS code, and demands constant F_CPU value.
 
 #include "rocket.h"
 #include "display_controller.h"
@@ -135,7 +134,13 @@ ISR(TIMER1_COMPA_vect)
 	timer_handler();
 }
 
-
+/* clock calibration by jelson: took 209 seconds to lose one second */
+uint32_t f_cpu[] = {
+	(1000000 * 209 / 210),
+	(2000000 * 209 / 210),
+	(4000000 * 209 / 210),
+	(8000000 * 209 / 210),
+	};
 
  /* 
   * 
@@ -154,7 +159,9 @@ ISR(TIMER1_COMPA_vect)
   */
 void start_clock_ms(int ms, Handler handler)
 {
-	long ticks_tmp = ms * F_CPU;
+	uint8_t cksel = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS) & 0x0f;
+
+	long ticks_tmp = ms * f_cpu[cksel-1];
 	ticks_tmp /= 64000;
 
 	timer_handler = handler;
