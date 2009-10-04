@@ -8,123 +8,100 @@
 #include <avr/boot.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
-//#include <util/delay.h>	// don't use this; subsumed by awesome OS code, and demands constant F_CPU value.
 
 #include "rocket.h"
 #include "display_controller.h"
+#include "hardware.h"
 
-#define SET(port, pin) do { port |= (unsigned char) (1 << pin); } while (0)
-#define CLR(port, pin) do { port &= (unsigned char) ~(1 << pin); } while (0)
-#define IS_SET(port, pin) ((port & (1 << pin)) == (1 << pin))
-#define IS_CLR(port, pin) ((port & (1 << pin)) == 0)
-
-#define _NOP() do { __asm__ __volatile__ ("nop"); } while (0)
-
-
-/*
- * Set output directions on pins that are outputs 
- */
-void init_output_pins()
-{
 #if defined(PROTO_BOARD)
-	/* board select outputs */
-	SET(DDRB, PORTB2);
-	SET(DDRB, PORTB3);
-	SET(DDRB, PORTB4);
-
-	/* digit select */
-	SET(DDRC, PORTC0);
-	SET(DDRC, PORTC1);
-	SET(DDRC, PORTC2);
-
-	/* segment select */
-	SET(DDRD, PORTD5);
-	SET(DDRD, PORTD6);
-	SET(DDRD, PORTD7);
-
-	/* data */
-	SET(DDRB, PORTB0);
-
-	/* strobe */
-	SET(DDRB, PORTB1);
+#define BOARDSEL0	GPIO_B2
+#define BOARDSEL1	GPIO_B3
+#define BOARDSEL2	GPIO_B4
+#define DIGSEL0		GPIO_C0
+#define DIGSEL1		GPIO_C1
+#define DIGSEL2		GPIO_C2
+#define SEGSEL0		GPIO_D5
+#define SEGSEL1		GPIO_D6
+#define SEGSEL2		GPIO_D7
+#define DATA		GPIO_B0
+#define STROBE		GPIO_B1
+fasdf
 #elif defined(V1PCB)
-	/* board select outputs */
-	SET(DDRB, PORTB2);
-	SET(DDRB, PORTB3);
-	SET(DDRB, PORTB4);
+#define BOARDSEL0	GPIO_B2
+#define BOARDSEL1	GPIO_B3
+#define BOARDSEL2	GPIO_B4
+#define DIGSEL0		GPIO_C0
+#define DIGSEL1		GPIO_C1
+#define DIGSEL2		GPIO_C2
+#define SEGSEL0		GPIO_D5
+#define SEGSEL1		GPIO_D6
+#define SEGSEL2		GPIO_D7
+#define DATA		GPIO_D4
+#define STROBE		GPIO_B1
 
-	/* digit select */
-	SET(DDRC, PORTC0);
-	SET(DDRC, PORTC1);
-	SET(DDRC, PORTC2);
-
-	/* segment select */
-	SET(DDRD, PORTD5);
-	SET(DDRD, PORTD6);
-	SET(DDRD, PORTD7);
-
-	/* data */
-	SET(DDRD, PORTD4);
-
-	/* strobe */
-	SET(DDRB, PORTB1);
-#else
-# error Board type not defined!
+#define KEYPAD_ROW0 GPIO_D4
+#define KEYPAD_ROW1 GPIO_B2
+#define KEYPAD_ROW2 GPIO_B3
+#define KEYPAD_ROW3 GPIO_B4
+#define KEYPAD_COL0 GPIO_D0
+#define KEYPAD_COL1 GPIO_D1
+#define KEYPAD_COL2 GPIO_D2
+#define KEYPAD_COL3 GPIO_D3
 #endif
+
+
+void init_pins()
+{
+	gpio_make_output(BOARDSEL0);
+	gpio_make_output(BOARDSEL1);
+	gpio_make_output(BOARDSEL2);
+	gpio_make_output(DIGSEL0);
+	gpio_make_output(DIGSEL1);
+	gpio_make_output(DIGSEL2);
+	gpio_make_output(SEGSEL0);
+	gpio_make_output(SEGSEL1);
+	gpio_make_output(SEGSEL2);
+	gpio_make_output(DATA);
+	gpio_make_output(STROBE);
+
+	gpio_make_input(KEYPAD_COL0);
+	gpio_make_input(KEYPAD_COL1);
+	gpio_make_input(KEYPAD_COL2);
+	gpio_make_input(KEYPAD_COL3);
 }
 
-
+/*
+ * 0x1738 - 0x16ca new
+ * 0x1708 - 0x16c8 old
+ */
 void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff)
 {
 	uint8_t rdigit = NUM_DIGITS - 1 - digit;
-#if defined(PROTO_BOARD)
-	/* put board select on PortB[4..2]	*/
-	PORTB = (PORTB & ~(0b111 << 2)) | ((board & 0b111) << 2);
 
-	/* put digit select on PortC[2..0] */
-	PORTC = (PORTC & ~(0b111)) | (rdigit & 0b111);
+	gpio_set_or_clr(BOARDSEL0, board & (1 << 0));
+	gpio_set_or_clr(BOARDSEL1, board & (1 << 1));
+	gpio_set_or_clr(BOARDSEL2, board & (1 << 2));
 
-	/* put segment select on PortD[7..5] */
-	PORTD = (PORTD & ~(0b111 << 5)) | ((segment & 0b111) << 5);
+	gpio_set_or_clr(DIGSEL0, rdigit & (1 << 0));	
+	gpio_set_or_clr(DIGSEL1, rdigit & (1 << 1));	
+	gpio_set_or_clr(DIGSEL2, rdigit & (1 << 2));	
+	
+	gpio_set_or_clr(SEGSEL0, segment & (1 << 0));
+	gpio_set_or_clr(SEGSEL1, segment & (1 << 1));
+	gpio_set_or_clr(SEGSEL2, segment & (1 << 2));
 
-	/* put data on PortB[0].  Sense reversed because cathode is common. */
-	PORTB = (PORTB & (~0b1)) | !onoff;
+	/* sense reversed because cathode is common */
+	gpio_set_or_clr(DATA, !onoff);
 
-	/* strobe segment program enable on PortB[1] */
-	PORTB &= ~(0b10);
+	gpio_clr(STROBE);
 	_NOP();
-	PORTB |= 0b10;
-#elif defined(V1PCB)
-	/* put board select on PortB[4..2]	*/
-	PORTB = (PORTB & ~(0b111 << 2)) | ((board & 0b111) << 2);
-
-	/* put digit select on PortC[2..0] */
-	PORTC = (PORTC & ~(0b111)) | (rdigit & 0b111);
-
-	/*
-	 * put segment select on PortD[7..5], and Data on Portd[4].  Sense of onoff reversed
-	 * because cathode is common.
-	 */
-	PORTD = (PORTD & ~(0b1111 << 4)) | ((segment & 0b111) << 5) | ((!onoff) << 4);
-
-	/* strobe segment program enable on PortB[1] */
-	PORTB &= ~(0b10);
-	_NOP();
-	PORTB |= 0b10;
-#else
-# error  Board type not set!
-#endif /* board type */
+	gpio_set(STROBE);
 }
 
-
-void delay_ms(int ms)
-{
-	//_delay_ms(ms);
-}
 
 void hal_init()
 {
-	init_output_pins();
+	init_pins();
 }
 
 Handler timer_handler;
@@ -145,7 +122,7 @@ uint32_t f_cpu[] = {
  /* 
   * 
   * Based on http://sunge.awardspace.com/binary_clock/binary_clock.html
-  *   
+  *	  
   * Use timer/counter1 to generate clock ticks for events.
   *
   * Using CTC mode (mode 4) with 1/64 prescaler.
@@ -171,9 +148,9 @@ void start_clock_ms(int ms, Handler handler)
 
 	/* CTC Mode 4 Prescaler 64 */
 	TCCR1A = 0;
-  	TCCR1B = (1<<WGM12)|(1<<CS11)|(1<<CS10); 
+	TCCR1B = (1<<WGM12)|(1<<CS11)|(1<<CS10); 
 
- 	/* enable output-compare int. */
+	/* enable output-compare int. */
 	TIMSK |= (1<<OCIE1A);
 
 	/* reset counter */
@@ -183,87 +160,76 @@ void start_clock_ms(int ms, Handler handler)
 	sei();
 }
 
-#if defined(V1PCB)
+/**************************************************************/
+/*			 Keyboard input									  */
+/**************************************************************/
+
 uint8_t scan_row()
 {
-        /*
-         * Scan PD0..3.  Return 1..4 if any of them are low.
-         * Return 0 if they're all high.
-         */
-        _NOP();
-        if (IS_CLR(PIND, PORTD0))               return 1;
-        if (IS_CLR(PIND, PORTD1))               return 2;
-        if (IS_CLR(PIND, PORTD2))               return 3;
-        if (IS_CLR(PIND, PORTD3))               return 4;
-        return 0;
+		/*
+		 * Scan the four columns in of the row.  Return 1..4 if any of
+		 * them are low.  Return 0 if they're all high.
+		 */
+		_NOP();
+		if (gpio_is_clr(KEYPAD_COL0)) return 1;
+		if (gpio_is_clr(KEYPAD_COL1)) return 2;
+		if (gpio_is_clr(KEYPAD_COL2)) return 3;
+		if (gpio_is_clr(KEYPAD_COL3)) return 4;
+
+		return 0;
 }
 
 
 char scan_keyboard()
 {
-        /*
-         * (0 asserted on these)
-         * Row 1: PC3
-         * Row 2: PB0
-         * Row 3: PB2
-         * Row 4: PB3
-         *
-         * (inputs with pull-ups are checked)
-         * Col 1: PB4
-         * Col 2: PC0
-         * Col 3: PC1
-         * Col 4: PC2
-         */
+		uint8_t row;
 
-        uint8_t row;
+		/* Scan first row */
+		gpio_clr(KEYPAD_ROW0);
+		gpio_set(KEYPAD_ROW1);
+		gpio_set(KEYPAD_ROW2);
+		gpio_set(KEYPAD_ROW3);
+		row = scan_row();
+		if (row == 1)			return '1';
+		if (row == 2)			return '2';
+		if (row == 3)			return '3';
+		if (row == 4)			return 'a';
 
-        /* Scan first row */
-        CLR(PORTD, PORTD4);
-        SET(PORTB, PORTB2);
-        SET(PORTB, PORTB3);
-        SET(PORTB, PORTB4);
-        row = scan_row();
-        if (row == 1)           return '1';
-        if (row == 2)           return '2';
-        if (row == 3)           return '3';
-        if (row == 4)           return 'a';
+		/* Scan second row */
+		gpio_set(KEYPAD_ROW0);
+		gpio_clr(KEYPAD_ROW1);
+		gpio_set(KEYPAD_ROW2);
+		gpio_set(KEYPAD_ROW3);
+		row = scan_row();
+		if (row == 1)			return '4';
+		if (row == 2)			return '5';
+		if (row == 3)			return '6';
+		if (row == 4)			return 'b';
 
-        /* Scan second row */
-        SET(PORTD, PORTD4);
-        CLR(PORTB, PORTB2);
-        SET(PORTB, PORTB3);
-        SET(PORTB, PORTB4);
-        row = scan_row();
-        if (row == 1)           return '4';
-        if (row == 2)           return '5';
-        if (row == 3)           return '6';
-        if (row == 4)           return 'b';
+		/* Scan third row */
+		gpio_set(KEYPAD_ROW0);
+		gpio_set(KEYPAD_ROW1);
+		gpio_clr(KEYPAD_ROW2);
+		gpio_set(KEYPAD_ROW3);
+		row = scan_row();
+		if (row == 1)			return '7';
+		if (row == 2)			return '8';
+		if (row == 3)			return '9';
+		if (row == 4)			return 'c';
 
-        /* Scan third row */
-        SET(PORTD, PORTD4);
-        SET(PORTB, PORTB2);
-        CLR(PORTB, PORTB3);
-        SET(PORTB, PORTB4);
-        row = scan_row();
-        if (row == 1)           return '7';
-        if (row == 2)           return '8';
-        if (row == 3)           return '9';
-        if (row == 4)           return 'c';
+		/* Scan fourth row */
+		gpio_set(KEYPAD_ROW0);
+		gpio_set(KEYPAD_ROW1);
+		gpio_set(KEYPAD_ROW2);
+		gpio_clr(KEYPAD_ROW3);
+		row = scan_row();
+		if (row == 1)			return 's';
+		if (row == 2)			return '0';
+		if (row == 3)			return 'p';
+		if (row == 4)			return 'd';
 
-        /* Scan fourth row */
-        SET(PORTD, PORTD4);
-        SET(PORTB, PORTB2);
-        SET(PORTB, PORTB3);
-        CLR(PORTB, PORTB4);
-        row = scan_row();
-        if (row == 1)           return 's';
-        if (row == 2)           return '0';
-        if (row == 3)           return 'p';
-        if (row == 4)           return 'd';
-
-        return 0;
+		return 0;
 }
-#endif //V1PCB
 
 
 void hal_start_atomic()

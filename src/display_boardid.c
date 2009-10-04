@@ -1,0 +1,61 @@
+#include <stdio.h>
+#include <string.h>
+#include "board_buffer.h"
+#include "display_controller.h"
+#include "clock.h"
+#include "util.h"
+
+typedef struct {
+	ActivationFunc f;
+	int stage;
+	BoardBuffer b[8];
+} BoardActivation_t;
+
+
+void update(BoardActivation_t *ba)
+{
+	SSBitmap b_bitmap = ascii_to_bitmap('b');
+	SSBitmap d_bitmap = ascii_to_bitmap('d');
+
+	uint8_t board, digit;
+	LOGF((logfp, "hi in update\n"))
+
+	for (board = 0; board < NUM_BOARDS; board++) {
+		if (ba->stage == 0)
+			for (digit = 0; digit < NUM_DIGITS; digit++)
+				ba->b[board].buffer[digit] = b_bitmap;
+		else if (ba->stage == 1)
+			for (digit = 0; digit < NUM_DIGITS; digit++)
+				ba->b[board].buffer[digit] = ascii_to_bitmap(board + '0');
+		else if (ba->stage == 2)
+			for (digit = 0; digit < NUM_DIGITS; digit++)
+				ba->b[board].buffer[digit] = d_bitmap;
+		else if (ba->stage == 3)
+			for (digit = 0; digit < NUM_DIGITS; digit++)
+				ba->b[board].buffer[digit] = ascii_to_bitmap(digit + '0');
+		board_buffer_draw(&ba->b[board]);
+	}
+	if (++(ba->stage) == 4)
+		ba->stage = 0;
+
+	schedule(1500, (Activation *)ba);
+	return;
+}
+
+BoardActivation_t ba = {
+	.f = (ActivationFunc) update,
+	.stage = 0
+};
+
+void boardid_init()
+{
+	LOGF((logfp, "hello\n"))
+	int board;
+	for (board = 0; board < NUM_BOARDS; board++) {
+		board_buffer_init(&ba.b[board]);
+		board_buffer_push(&ba.b[board], board);
+	}
+
+	schedule(500, (Activation *)&ba);
+}
+

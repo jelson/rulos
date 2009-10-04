@@ -7,6 +7,7 @@ COMMON_OBJECTS = \
 	clock.o \
 	cpumon.o \
 	cursor.o \
+	display_boardid.o \
 	display_compass.o \
 	display_controller.o \
 	display_docking.o \

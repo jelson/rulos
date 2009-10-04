@@ -1,0 +1,1 @@
+void boardid_init();

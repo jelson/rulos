@@ -109,3 +109,6 @@ setclock4mhz:
 setclock8mhz:
 	sudo avrdude -c usbtiny -p m8 -u -U lfuse:w:0xe4:m
 
+
+.PHONY: Rocket
+Rocket: avr-all

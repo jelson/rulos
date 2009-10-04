@@ -5,6 +5,7 @@
 #include "rocket.h"
 #include "clock.h"
 #include "util.h"
+#include "display_boardid.h"
 #include "display_controller.h"
 #include "display_rtc.h"
 #include "display_scroll_msg.h"
@@ -21,8 +22,40 @@
 #include "idle_display.h"
 #include "sequencer.h"
 
+
 /************************************************************************************/
 /************************************************************************************/
+
+#if BOARDID
+int main()
+{
+	init_util();
+	hal_init();
+
+#if 0
+	int i;
+
+	while (1){
+		for (i = 0; i < 8; i++) {
+			program_segment(0, 0, i, 0);
+			_delay_ms(1000);
+		}
+		for (i = 0; i < 8; i++) {
+			program_segment(0, 0, i, 1);
+			_delay_ms(1000);
+		}
+	}
+#endif
+
+	clock_init();
+	board_buffer_module_init();
+
+	boardid_init();
+	cpumon_main_loop();
+	return 0;
+}
+#endif
+
 
 int main()
 {
@@ -32,11 +65,6 @@ int main()
 	clock_init();
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);	// includes slow calibration phase
-
-	/* display self-test */
-	program_matrix(0xff);
-	delay_ms(100);
-	program_matrix(0);
 
 	//install_handler(ADC, adc_handler);
 
@@ -83,6 +111,7 @@ int main()
 	}
 	dscrlmsg_init(&da2, 3, buf, 200);
 
+#if !MCUatmega8
 	NumericInputAct ni;
 	BoardBuffer bbuf;
 	board_buffer_init(&bbuf);

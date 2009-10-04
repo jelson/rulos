@@ -3,7 +3,7 @@
 
 #include <inttypes.h>
 
-#define NUM_BOARDS 6
+#define NUM_BOARDS 8
 #define NUM_DIGITS 8
 
 /*
