@@ -1,7 +1,5 @@
+#include "rocket.h"
 #include "cpumon.h"
-#include "util.h"
-#include "clock.h"
-#include "hal.h"
 
 uint8_t _run_main_loop;
 

@@ -1,8 +1,5 @@
-#ifndef _knob_h
-#define _knob_h
-
-#include "region.h"
-#include "focus.h"
+#ifndef __knob_h__
+#define __knob_h__
 
 typedef struct {
 	UIEventHandlerFunc func;

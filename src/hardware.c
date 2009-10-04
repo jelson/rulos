@@ -10,7 +10,6 @@
 #include <avr/interrupt.h>
 
 #include "rocket.h"
-#include "display_controller.h"
 #include "hardware.h"
 
 #if defined(PROTO_BOARD)
@@ -49,7 +48,28 @@
 #endif
 
 
-void init_pins()
+typedef struct {
+	ActivationFunc f;
+
+	/* keypad */
+	char keypad_q[20];
+	char keypad_last;
+	uint32_t keypad_next_allowed_key_time;
+} InputBufferAct_t;
+
+static void scan_inputs(InputBufferAct_t *iba);
+
+/*
+ * Global instance of the input scanner state struct
+ */
+static InputBufferAct_t iba = {
+	.f = (ActivationFunc) scan_inputs,
+	.keypad_last = 0,
+	.keypad_next_allowed_key_time = 0
+};
+	 
+
+static void init_pins()
 {
 	gpio_make_output(BOARDSEL0);
 	gpio_make_output(BOARDSEL1);
@@ -69,17 +89,12 @@ void init_pins()
 	gpio_make_input(KEYPAD_COL3);
 }
 
-void hal_init()
-{
-	init_pins();
-}
-
 
 /*
  * 0x1738 - 0x16ca new
  * 0x1708 - 0x16c8 old
  */
-void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff)
+void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff)
 {
 	uint8_t rdigit = NUM_DIGITS - 1 - digit;
 
@@ -134,7 +149,7 @@ uint32_t f_cpu[] = {
   * take an interrupt every ms / (64 / F_CPU / 1000) counter ticks, 
   * or, (ms * F_CPU) / (64 * 1000).
   */
-void start_clock_ms(int ms, Handler handler)
+void hal_start_clock_ms(int ms, Handler handler)
 {
 	uint8_t cksel = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS) & 0x0f;
 
@@ -180,7 +195,7 @@ static uint8_t scan_row()
 }
 
 
-char hal_scan_keyboard()
+static char scan_keypad()
 {
 		uint8_t row;
 
@@ -232,6 +247,56 @@ char hal_scan_keyboard()
 }
 
 
+#define KEY_REFRACTORY_TIME_MS 30
+
+/*
+ * This is called periodically to scan the keypad, debounce the keys,
+ * and enqueue any characters that survive.
+ */
+static void debounce_keypad(InputBufferAct_t *iba)
+{
+	char k = scan_keypad();
+
+	// if the same key is down, or up, ignore it
+	if (k == iba->keypad_last)
+		return;
+
+	iba->keypad_last = k;
+
+	// key was just released.  Set refactory time.
+	if (k == 0) {
+		iba->keypad_next_allowed_key_time = clock_time() + KEY_REFRACTORY_TIME_MS;
+		return;
+	}
+
+	// key was just pushed.  if refrac time has arrived, queue it
+	if (clock_time() >= iba->keypad_next_allowed_key_time) {
+		ByteQueue_append((ByteQueue *)iba->keypad_q, k);
+	}
+	
+}
+
+static void scan_inputs(InputBufferAct_t *iba)
+{
+	schedule(RTC_INTERVAL_MS, (Activation *) iba);
+	debounce_keypad(iba);
+}
+
+
+char hal_read_keybuf()
+{
+	uint8_t k;
+
+	if (ByteQueue_pop((ByteQueue *) iba.keypad_q, &k))
+		return k;
+	else
+		return 0;
+}
+
+
+
+/*************************************************************************************/
+
 void hal_start_atomic()
 {
 	cli();
@@ -247,3 +312,10 @@ void hal_idle()
 	// just busy-wait on microcontroller.
 }
 
+void hal_init()
+{
+	init_pins();
+
+	ByteQueue_init((ByteQueue *) iba.keypad_q, sizeof(iba.keypad_q));
+	schedule(RTC_INTERVAL_MS, (Activation *) &iba);
+}

@@ -1,7 +1,5 @@
+#include "rocket.h"
 #include "drift_anim.h"
-#include "clock.h"
-#include "random.h"
-#include "util.h"
 
 void drift_anim_init(DriftAnim *da, uint8_t expscale, int32_t initValue, int32_t min, int32_t max, uint32_t maxSpeed)
 {

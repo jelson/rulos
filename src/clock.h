@@ -1,8 +1,13 @@
-#ifndef clock_h
-#define clock_h
+#ifndef __clock_h__
+#define __clock_h__
 
-#include <inttypes.h>
-#include "heap.h"
+#ifndef __rocket_h__
+# error Please include rocket.h instead of this file
+#endif
+
+
+#define RTC_INTERVAL_MS	10
+
 void clock_init();
 
 typedef uint32_t Time;

@@ -100,6 +100,7 @@ void terminate_sim(void)
   exit(0);
 }
 
+#if 0
 void delay_ms(int ms)
 {
 	// usleep() can be interrupted by signals, so I retry.
@@ -121,8 +122,9 @@ void delay_ms(int ms)
 		usleep((ms - elapsed_ms) * 1000);
 	}
 }
+#endif
 
-void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff)
+void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff)
 {
   if (board < 0 || board >= NUM_BOARDS || digit < 0 || digit >= NUM_DIGITS || segment < 0 || segment >= 8)
     return;
@@ -147,7 +149,7 @@ void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onof
   wrefresh(mainwnd);
 }
 
-char hal_scan_keyboard()
+char hal_read_keybuf()
 {
   char c = getch();
 
@@ -173,7 +175,7 @@ char hal_scan_keyboard()
 }
 
 
-void start_clock_ms(int ms, Handler handler)
+void hal_start_clock_ms(int ms, Handler handler)
 {
 	struct itimerval ivalue, ovalue;
 	ivalue.it_interval.tv_sec = ms/1000;

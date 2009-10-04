@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include "rocket.h"
 #include "labeled_display.h"
 
 UIEventDisposition labeled_display_event_handler(

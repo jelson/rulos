@@ -1,5 +1,5 @@
-#ifndef display_scroll_msg_h
-#define display_scroll_msg_h
+#ifndef __display_scroll_msg_h__
+#define __display_scroll_msg_h__
 
 #include "clock.h"
 #include "board_buffer.h"

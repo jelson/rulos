@@ -32,7 +32,8 @@
 #ifdef BOARDID
 int main()
 {
-	init_util();
+	heap_init();
+	util_init();
 	hal_init();
 
 #if 0
@@ -68,10 +69,11 @@ int main()
 
 int main()
 {
-	init_util();
+	heap_init();
+	util_init();
 	hal_init();
-
 	clock_init();
+
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);	// includes slow calibration phase
 

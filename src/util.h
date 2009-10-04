@@ -1,5 +1,9 @@
-#ifndef _util_h
-#define _util_h
+#ifndef __util_h__
+#define __util_h__
+
+#ifndef __rocket_h__
+# error Please include rocket.h instead of this file
+#endif
 
 #define FALSE 0
 #define TRUE 1
@@ -21,7 +25,7 @@ extern FILE *logfp;
 #define LOGF(x)	{}
 #endif //SIM
 
-void init_util();
+void util_init();
 int32_t bound(int32_t v, int32_t l, int32_t h);
 uint32_t isqrt(uint32_t v);
 

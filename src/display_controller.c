@@ -1,5 +1,4 @@
-#include "display_controller.h"
-#include "util.h"
+#include "rocket.h"
 
 // offset 32
 uint8_t sevseg_ascii[] = {
@@ -16,12 +15,12 @@ void program_cell(uint8_t board, uint8_t digit, SSBitmap bitmap)
 
 	for (segment = 6; segment >= 0; segment--)
 	{
-		program_segment(board, digit, segment, shape & 0x1);
+		hal_program_segment(board, digit, segment, shape & 0x1);
 		shape >>= 1;
 	}
 
 	/* consider the high bit to be the decimal */
-	program_segment(board, digit, 7, shape);
+	hal_program_segment(board, digit, 7, shape);
 }
 
 void program_board(uint8_t board, SSBitmap *bitmap)
@@ -92,7 +91,7 @@ void program_decimal(uint8_t board, uint8_t digit, uint8_t onoff)
 	/*
 	 * The decimal point is segment number 7
 	 */
-	program_segment(board, digit, 7, onoff);
+	hal_program_segment(board, digit, 7, onoff);
 }
 
 

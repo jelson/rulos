@@ -1,12 +1,7 @@
 #include <inttypes.h>
 
-#include "clock.h"
-#include "util.h"
-#include "heap.h"
 #include "rocket.h"
-#include "hal.h"
 
-#define RTC_INTERVAL_MS	10
 Time _real_time_since_boot_ms;
 Time _stale_time_ms;	// current as of last scheduler execution; cheap to evaluate
 uint32_t _spin_counter;
@@ -21,8 +16,7 @@ void clock_handler()
 void clock_init()
 {
 	_real_time_since_boot_ms = 0;
-	start_clock_ms(RTC_INTERVAL_MS, clock_handler);
-	heap_init();
+	hal_start_clock_ms(RTC_INTERVAL_MS, clock_handler);
 	_spin_counter = 0;
 }
 

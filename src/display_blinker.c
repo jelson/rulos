@@ -1,5 +1,4 @@
-#include <stdio.h>
-#include <string.h>
+#include "rocket.h"
 #include "display_blinker.h"
 
 void blinker_update(DBlinker *blinker);

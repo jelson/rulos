@@ -1,9 +1,5 @@
-#ifndef input_controller_h
-#define input_controller_h
-
-#include "clock.h"
-#include "queue.h"
-#include "focus.h"
+#ifndef __input_controller_h__
+#define __input_controller_h__
 
 typedef struct {
 	ActivationFunc func;

@@ -1,5 +1,4 @@
-#include "queue.h"
-#include "string.h"
+#include "rocket.h"
 
 void ByteQueue_init(ByteQueue *bq, uint8_t buf_size)
 {
@@ -37,7 +36,7 @@ uint8_t ByteQueue_pop(ByteQueue *bq, /*OUT*/ uint8_t *elt)
 	// Linear-time pop. Yay! (Yes, I could have written a circular
 	// queue, but then I'd have to test it, and debug it, and you
 	// can see the bind I'm in!)
-	memcpy(&bq->elts[0], &bq->elts[1], bq->size-1);
+	memmove(&bq->elts[0], &bq->elts[1], bq->size-1);
 	bq->size -= 1;
 	return TRUE;
 }

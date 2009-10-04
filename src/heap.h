@@ -1,7 +1,9 @@
-#ifndef heap_h
-#define heap_h
+#ifndef __heap_h__
+#define __heap_h__
 
-#include <inttypes.h>
+#ifndef __rocket_h__
+# error Please include rocket.h instead of this file
+#endif
 
 struct s_activation;
 typedef void (*ActivationFunc)(struct s_activation *act);

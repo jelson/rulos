@@ -1,9 +1,5 @@
-#include <inttypes.h>
-
-#include "display_controller.h"
+#include "rocket.h"
 #include "display_compass.h"
-#include "util.h"
-#include "random.h"
 #include "focus.h"
 
 void dcompass_update_once(DCompassAct *act);

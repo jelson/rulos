@@ -1,8 +1,6 @@
-#include <stdio.h>
-#include <string.h>
-
+#include "rocket.h"
 #include "display_gratuitous_graph.h"
-#include "util.h"
+
 
 void dgg_update(DGratuitousGraph *act);
 

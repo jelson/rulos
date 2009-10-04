@@ -1,8 +1,9 @@
-#ifndef focus_h
-#define focus_h
+#ifndef __focus_h__
+#define __focus_h__
 
-#include "clock.h"
-#include "cursor.h"
+#ifndef __rocket_h__
+# error Please include rocket.h instead of this file
+#endif
 
 struct s_focus_handler;
 typedef uint8_t UIEvent;

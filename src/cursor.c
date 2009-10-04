@@ -1,5 +1,4 @@
-#include <stdio.h>
-#include "util.h"
+#include "rocket.h"
 #include "cursor.h"
 
 #define BLINK2	(8)	// blink every 2^BLINK2 ms

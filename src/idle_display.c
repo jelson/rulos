@@ -1,6 +1,4 @@
-#include <stdio.h>
-#include <string.h>
-#include "util.h"
+#include "rocket.h"
 #include "idle_display.h"
 #include "display_scroll_msg.h"
 

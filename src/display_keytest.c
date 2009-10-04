@@ -1,17 +1,11 @@
 
-#include <string.h>
-
-#include "board_buffer.h"
-#include "clock.h"
-#include "hal.h"
-#include "heap.h"
+#include "rocket.h"
 #include "display_keytest.h"
-#include "util.h"
 
 static void update(KeyTestActivation_t *kta)
 {
 	schedule(50, (Activation *) kta);
-	char k = hal_scan_keyboard();
+	char k = hal_read_keybuf();
 
 	LOGF((logfp, "in update for keytest\n"))
 	if (!k)

@@ -1,7 +1,5 @@
-#include "util.h"
+#include "rocket.h"
 #include "numeric_input.h"
-
-#include <stdio.h>
 
 uint8_t dfp_draw(DecimalFloatingPoint *dfp, SSBitmap *bm, uint8_t len, uint8_t show_decimal)
 {

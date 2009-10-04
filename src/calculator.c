@@ -1,7 +1,8 @@
-#include "util.h"
+#include <stdio.h>
+
+#include "rocket.h"
 #include "calculator.h"
 
-#include <stdio.h>
 
 enum {
 	op_add = 0,

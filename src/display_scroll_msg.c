@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "display_controller.h"
+#include "rocket.h"
 #include "display_scroll_msg.h"
-#include "util.h"
 
 void dscrlmsg_update(struct s_dscrollmsgact *act);
 

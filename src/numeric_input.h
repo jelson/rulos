@@ -1,10 +1,7 @@
-#ifndef numeric_input_h
-#define numeric_input_h
+#ifndef __numeric_input_h__
+#define __numeric_input_h__
 
-#include "clock.h"
-#include "board_buffer.h"
-#include "focus.h"
-#include "region.h"
+#include "rocket.h"
 
 typedef struct {
 	uint16_t mantissa;

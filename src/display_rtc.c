@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-#include "display_controller.h"
+#include "rocket.h"
 #include "display_rtc.h"
-#include "util.h"
 
 void drtc_update(DRTCAct *act);
 

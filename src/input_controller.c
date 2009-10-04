@@ -1,4 +1,4 @@
-#include "hal.h"
+#include "rocket.h"
 #include "input_controller.h"
 
 void input_controller_update(InputControllerAct *act);
@@ -13,7 +13,7 @@ void input_controller_init(InputControllerAct *act, UIEventHandler *topHandler)
 
 void input_controller_update(InputControllerAct *act)
 {
-	char k = hal_scan_keyboard();
+	char k = hal_read_keybuf();
 	if (k!=0)
 	{
 		UIEventDisposition uied = uied_blur;

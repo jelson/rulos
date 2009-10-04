@@ -1,17 +1,15 @@
-#include "util.h"
+#include "rocket.h"
 
 #if SIM
 
-#include <stdio.h>
-
 FILE *logfp = NULL;
 
-void init_util()
+void util_init()
 {
 	logfp = fopen("log", "w");
 }
 #else //!SIM
-void init_util()
+void util_init()
 {
 }
 #endif

@@ -1,5 +1,5 @@
-#ifndef _sequencer_h
-#define _sequencer_h
+#ifndef __sequencer_h__
+#define __sequencer_h__
 
 /*
  * play a scripted storyboard.

@@ -1,7 +1,9 @@
-#ifndef board_buffer_h
-#define board_buffer_h
+#ifndef __board_buffer_h__
+#define __board_buffer_h__
 
-#include "display_controller.h"
+#ifndef __rocket_h__
+# error Please include rocket.h instead of this file
+#endif
 
 typedef struct s_board_buffer {
 	uint8_t board_index;
@@ -25,4 +27,4 @@ void board_buffer_set_alpha(BoardBuffer *buf, uint8_t alpha);
 void board_buffer_draw(BoardBuffer *buf);
 uint8_t board_buffer_is_foreground(BoardBuffer *buf);
 
-#endif // board_buffer_h
+#endif // __board_buffer_h__

@@ -1,9 +1,9 @@
-#ifndef _cursor_h
-#define _cursor_h
+#ifndef __cursor_h__
+#define __cursor_h__
 
-#include "board_buffer.h"
-#include "clock.h"
-#include "region.h"
+#ifndef __rocket_h__
+# error Please include rocket.h instead of this file
+#endif
 
 #define MAX_HEIGHT 5
 

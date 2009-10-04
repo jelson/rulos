@@ -1,10 +1,5 @@
-#include <inttypes.h>
-
-#include "display_controller.h"
+#include "rocket.h"
 #include "display_docking.h"
-#include "util.h"
-#include "random.h"
-#include "focus.h"
 
 UIEventDisposition ddock_event_handler(
 	UIEventHandler *raw_handler, UIEvent evt);

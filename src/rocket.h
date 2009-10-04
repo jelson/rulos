@@ -1,18 +1,21 @@
 #ifndef __rocket_h__
 #define __rocket_h__
 
+#include <stdio.h>
+#include <string.h>
+#include <inttypes.h>
 
-#include "inttypes.h"
-
-
-/*
- * Functions that are separately implemented by both the simulator and the real hardware
- */
-
-typedef void (*Handler)();
-
-void delay_ms(int ms);
-void start_clock_ms(int ms, Handler handler);
+#include "util.h"
+#include "random.h"
+#include "heap.h"
+#include "display_controller.h"
+#include "board_buffer.h"
+#include "hal.h"
+#include "clock.h"
+#include "queue.h"
+#include "region.h"
+#include "cursor.h"
+#include "focus.h"
 
 #endif /* __rocket_h__ */
 

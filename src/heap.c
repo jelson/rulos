@@ -1,5 +1,4 @@
-#include "heap.h"
-#include "util.h"
+#include "rocket.h"
 
 #define HEAP_CAPACITY 16
 HeapEntry heap[HEAP_CAPACITY];

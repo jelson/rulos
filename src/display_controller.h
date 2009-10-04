@@ -1,5 +1,9 @@
-#ifndef display_controller_h
-#define display_controller_h
+#ifndef __display_controller_h__
+#define __display_controller_h__
+
+#ifndef __rocket_h__
+# error Please include rocket.h instead of this file
+#endif
 
 #include <inttypes.h>
 
@@ -81,7 +85,6 @@
 
 typedef uint8_t SSBitmap;
 
-void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff);
 void program_cell(uint8_t board, uint8_t digit, SSBitmap bitmap);
 void program_board(uint8_t board, SSBitmap *bitmap);
 //void program_string(uint8_t board, char *string);

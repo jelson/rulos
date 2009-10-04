@@ -1,9 +1,4 @@
-#include <stdio.h>
-#include <string.h>
-#include "board_buffer.h"
-#include "display_controller.h"
-#include "clock.h"
-#include "util.h"
+#include "rocket.h"
 #include "display_boardid.h"
 
 static void update(BoardActivation_t *ba)

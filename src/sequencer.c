@@ -1,6 +1,5 @@
-#include <stdio.h>
+#include "rocket.h"
 #include "sequencer.h"
-#include "util.h"
 
 #define STUB(s)	{}
 #define LAUNCH_CODE	4671
