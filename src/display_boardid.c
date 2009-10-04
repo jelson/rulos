@@ -47,6 +47,6 @@ void boardid_init(BoardActivation_t *ba)
 		board_buffer_push(&ba->b[board], board);
 	}
 
-	schedule(500, (Activation *)&ba);
+	schedule(500, (Activation *) ba);
 }
 
