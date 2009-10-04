@@ -1,6 +1,6 @@
+#include "hal.h"
 #include "input_controller.h"
 
-char scan_keyboard();	// defined in sim.c, and ... where else? TODO include appropriate header
 void input_controller_update(InputControllerAct *act);
 
 void input_controller_init(InputControllerAct *act, UIEventHandler *topHandler)
@@ -13,7 +13,7 @@ void input_controller_init(InputControllerAct *act, UIEventHandler *topHandler)
 
 void input_controller_update(InputControllerAct *act)
 {
-	char k = scan_keyboard();
+	char k = hal_scan_keyboard();
 	if (k!=0)
 	{
 		UIEventDisposition uied = uied_blur;

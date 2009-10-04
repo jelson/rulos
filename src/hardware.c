@@ -25,7 +25,6 @@
 #define SEGSEL2		GPIO_D7
 #define DATA		GPIO_B0
 #define STROBE		GPIO_B1
-fasdf
 #elif defined(V1PCB)
 #define BOARDSEL0	GPIO_B2
 #define BOARDSEL1	GPIO_B3
@@ -70,6 +69,12 @@ void init_pins()
 	gpio_make_input(KEYPAD_COL3);
 }
 
+void hal_init()
+{
+	init_pins();
+}
+
+
 /*
  * 0x1738 - 0x16ca new
  * 0x1708 - 0x16c8 old
@@ -98,11 +103,6 @@ void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onof
 	gpio_set(STROBE);
 }
 
-
-void hal_init()
-{
-	init_pins();
-}
 
 Handler timer_handler;
 
@@ -164,7 +164,7 @@ void start_clock_ms(int ms, Handler handler)
 /*			 Keyboard input									  */
 /**************************************************************/
 
-uint8_t scan_row()
+static uint8_t scan_row()
 {
 		/*
 		 * Scan the four columns in of the row.  Return 1..4 if any of
@@ -180,7 +180,7 @@ uint8_t scan_row()
 }
 
 
-char scan_keyboard()
+char hal_scan_keyboard()
 {
 		uint8_t row;
 

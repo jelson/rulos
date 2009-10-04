@@ -147,7 +147,7 @@ void program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onof
   wrefresh(mainwnd);
 }
 
-char scan_keyboard()
+char hal_scan_keyboard()
 {
   char c = getch();
 

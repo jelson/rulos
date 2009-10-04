@@ -21,6 +21,7 @@
 #include "cpumon.h"
 #include "idle_display.h"
 #include "sequencer.h"
+#include "display_keytest.h"
 
 
 /************************************************************************************/
@@ -54,6 +55,10 @@ int main()
 
 	BoardActivation_t ba;
 	boardid_init(&ba);
+
+	KeyTestActivation_t kta;
+	display_keytest_init(&kta, 7);
+
 	cpumon_main_loop();
 	return 0;
 }
@@ -100,6 +105,7 @@ int main()
 
 	DScrollMsgAct da2;
 	dscrlmsg_init(&da2, 3, buf, 200);	// overwritted by idle display
+
 
 /*
 	// scroll our ascii set.

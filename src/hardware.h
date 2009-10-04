@@ -24,12 +24,18 @@
 #define GPIO_D7  (&DDRD), (&PORTD), (&PIND), (PORTD7)
 
 
-static inline void raw_set(volatile uint8_t *reg, uint8_t bit)
+/*
+ * set a bit in a register
+ */
+static inline void reg_set(volatile uint8_t *reg, uint8_t bit)
 {
 	*reg |= (1 << bit);
 }
 
-static inline void raw_clr(volatile uint8_t *reg, uint8_t bit)
+/*
+ * clear a bit in a register
+ */
+static inline void reg_clr(volatile uint8_t *reg, uint8_t bit)
 {
 	*reg &= ~(1 << bit);
 }
@@ -40,34 +46,46 @@ static inline void gpio_make_output(volatile uint8_t *ddr,
 									volatile uint8_t *pin,
 									uint8_t bit)
 {
-	raw_set(ddr, bit);
+	reg_set(ddr, bit);
 }
 
+/*
+ * configure a pin as input, and enable its internal pullup resistors
+ */
 static inline void gpio_make_input(volatile uint8_t *ddr,
 								   volatile uint8_t *port,
 								   volatile uint8_t *pin,
 								   uint8_t bit)
 {
-	raw_clr(ddr, bit);
-	raw_set(port, bit);
+	reg_clr(ddr, bit);
+	reg_set(port, bit);
 }
 
+/*
+ * assert an output pin HIGH
+ */
 static inline void gpio_set(volatile uint8_t *ddr,
 							volatile uint8_t *port,
 							volatile uint8_t *pin,
 							uint8_t bit)
 {
-	raw_set(port, bit);
+	reg_set(port, bit);
 }
 
+/*
+ * assert an output pin LOW
+ */
 static inline void gpio_clr(volatile uint8_t *ddr,
 							volatile uint8_t *port,
 							volatile uint8_t *pin,
 							uint8_t bit)
 {
-	raw_clr(port, bit);
+	reg_clr(port, bit);
 }
 
+/*
+ * assert an output either high or low depending on the 'onoff' parameter
+ */
 static inline void gpio_set_or_clr(volatile uint8_t *ddr,
 								   volatile uint8_t *port,
 								   volatile uint8_t *pin,
@@ -80,6 +98,9 @@ static inline void gpio_set_or_clr(volatile uint8_t *ddr,
 		gpio_clr(ddr, port, pin, bit);
 }
 
+/*
+ * returns true if an input is being asserted LOW, false otherwise
+ */
 static inline int gpio_is_clr(volatile uint8_t *ddr,
 							  volatile uint8_t *port,
 							  volatile uint8_t *pin,
@@ -88,6 +109,9 @@ static inline int gpio_is_clr(volatile uint8_t *ddr,
 	return ((*pin) & (1 << bit)) == 0;
 }
 
+/*
+ * returns true if an input is being asserted HIGH, false otherwise
+ */
 static inline int gpio_is_set(volatile uint8_t *ddr,
 							  volatile uint8_t *port,
 							  volatile uint8_t *pin,

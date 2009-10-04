@@ -12,6 +12,7 @@ COMMON_OBJECTS = \
 	display_controller.o \
 	display_docking.o \
 	display_gratuitous_graph.o \
+	display_keytest.o \
 	display_rtc.o \
 	display_scroll_msg.o \
 	drift_anim.o \
