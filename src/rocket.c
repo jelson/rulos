@@ -26,7 +26,9 @@
 /************************************************************************************/
 /************************************************************************************/
 
-#if BOARDID
+#define BOARDID
+
+#ifdef BOARDID
 int main()
 {
 	init_util();
@@ -50,11 +52,13 @@ int main()
 	clock_init();
 	board_buffer_module_init();
 
-	boardid_init();
+	BoardActivation_t ba;
+	boardid_init(&ba);
 	cpumon_main_loop();
 	return 0;
 }
-#endif
+
+#else //boardid
 
 
 int main()
@@ -150,3 +154,4 @@ int main()
 	return 0;
 }
 
+#endif
