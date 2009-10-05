@@ -23,7 +23,7 @@ void launch_init(Launch *launch, uint8_t board0, FocusManager *fa)
 	launch->p0_config = lpc_blank;
 	launch->p1_config = lpc_blank;
 
-	dscrlmsg_init(&launch->p0_scroller, board0, " ", 100, FALSE);
+	dscrlmsg_init(&launch->p0_scroller, board0, " ", 100);
 	board_buffer_pop(&launch->p0_scroller.bbuf);	// hold p0_config invariant
 
 	blinker_init(&launch->p0_blinker, 500);

@@ -27,7 +27,7 @@
 /************************************************************************************/
 /************************************************************************************/
 
-#define BOARDID
+//#define BOARDID
 
 #ifdef BOARDID
 int main()
@@ -91,7 +91,7 @@ int main()
 	labeled_display_init(&ldh, 0, &fa);
 
 	DScrollMsgAct da1;
-	dscrlmsg_init(&da1, 2, "x", 0, FALSE);	// overwritted by idle display
+	dscrlmsg_init(&da1, 2, "x", 0);	// overwritten by idle display
 	
 	IdleDisplayAct idisp;
 	idle_display_init(&idisp, &da1, &cpumon);
@@ -106,7 +106,7 @@ int main()
 	strcpy(p, "  ");
 
 	DScrollMsgAct da2;
-	dscrlmsg_init(&da2, 3, "Hi Eliot!   ", 200, TRUE);
+	dscrlmsg_init(&da2, 3, "This is a test sequence with original scroll. ", 100);
 
 
 /*
@@ -121,7 +121,7 @@ int main()
 		}
 		buf[i] = '\0';
 	}
-	dscrlmsg_init(&da2, 3, buf, 200, FALSE);
+	dscrlmsg_init(&da2, 3, buf, 200);
 
 	NumericInputAct ni;
 	BoardBuffer bbuf;
@@ -140,10 +140,11 @@ int main()
 	DGratuitousGraph dgg;
 	dgg_init(&dgg, 5, "volts", 5000);
 
-	DDockAct ddock;
-	ddock_init(&ddock, 0, &fa);
 */
 #if !MCUatmega8
+
+	DDockAct ddock;
+	ddock_init(&ddock, 0, &fa);
 
 	Launch launch;
 	launch_init(&launch, 4, &fa);

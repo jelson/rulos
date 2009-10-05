@@ -7,7 +7,10 @@ UIEventDisposition ddock_event_handler(
 void ddock_update_once(DDockAct *act);
 void ddock_update(DDockAct *act);
 uint32_t ddock_compute_dx(int yc, int r, int y);
-void ddock_paint_hrow(SSBitmap *bm, int y, int x0, int x1, SSBitmap mask);
+void ddock_draw_buffers(DDockAct *act);
+void ddock_clear_buffer(DDockAct *act);
+void ddock_paint_axes(DDockAct *act);
+void ddock_paint_pixel(DDockAct *dock, int x, int y);
 
 void ddock_init(DDockAct *act, uint8_t b0, FocusManager *focus)
 {
@@ -62,51 +65,59 @@ void ddock_update_once(DDockAct *act)
 	int xc = da_read(&act->xd);
 	int yc = da_read(&act->yd);
 	int rad = da_read(&act->rd);
+
+	ddock_clear_buffer(act);
+
+	ddock_paint_axes(act);
+
+	// Here, y & x are in centered coordinates -- offset by MAX_*/2.
+	int y;
+	for (y=-MAX_Y/2; y<MAX_Y/2; y++)
+	{
+		int dx = ddock_compute_dx(yc, rad, y+0);
+		if (dx!=I_NAN)
+		{
+			ddock_paint_pixel(act, xc-dx   +CTR_X, y+CTR_Y);
+			ddock_paint_pixel(act, xc-dx+1 +CTR_X, y+CTR_Y);
+			ddock_paint_pixel(act, xc+dx   +CTR_X, y+CTR_Y);
+			ddock_paint_pixel(act, xc+dx-1 +CTR_X, y+CTR_Y);
+		}
+	}
+
+	ddock_draw_buffers(act);
+}
+
+void ddock_draw_buffers(DDockAct *act)
+{
 	int row;
 	for (row=0; row<DOCK_HEIGHT; row++)
 	{
-		SSBitmap *bm = act->bbuf[row].buffer;
-
-		int y = DOCK_HEIGHT*7/2 - (row*7);
-
-		// draw axes
-		int i;
-		SSBitmap bg = (row==(DOCK_HEIGHT/2)) ? 0b1000000 : 0;
-		for (i=0; i<NUM_DIGITS; i++)	// zero buffer
-		{
-			bm[i] = bg;
-		}
-		bm[NUM_DIGITS/2-1] |= 0b0110000;
-
-		int dx;
-
-		dx = ddock_compute_dx(yc, rad, y+0);
-		if (dx!=I_NAN)
-			ddock_paint_hrow(bm, y+0, xc-dx+1, xc+dx+1, 0b0001000);
-
-		dx = ddock_compute_dx(yc, rad, y+1);
-		if (dx!=I_NAN)
-		{
-			ddock_paint_hrow(bm, y+1, xc-dx+0, xc+dx+0, 0b0010000);
-			ddock_paint_hrow(bm, y+1, xc-dx+2, xc+dx+2, 0b0000100);
-		}
-		dx = ddock_compute_dx(yc, rad, y+2);
-		if (dx!=I_NAN)
-			ddock_paint_hrow(bm, y+2, xc-dx+1, xc+dx+1, 0b0000001);
-
-		dx = ddock_compute_dx(yc, rad, y+3);
-		if (dx!=I_NAN)
-		{
-			ddock_paint_hrow(bm, y+3, xc-dx+0, xc+dx+0, 0b0100000);
-			ddock_paint_hrow(bm, y+3, xc-dx+2, xc+dx+2, 0b0000010);
-		}
-
-
-		dx = ddock_compute_dx(yc, rad, y+4);
-		if (dx!=I_NAN)
-			ddock_paint_hrow(bm, y+4, xc-dx+1, xc+dx+1, 0b1000000);
-
 		board_buffer_draw(&act->bbuf[row]);
+	}
+}
+
+void ddock_clear_buffer(DDockAct *act)
+{
+	int row;
+	for (row=0; row<DOCK_HEIGHT; row++)
+	{
+		memset(act->bbuf[row].buffer, 0, NUM_DIGITS);
+	}
+}
+
+void ddock_paint_axes(DDockAct *act)
+{
+	int y;
+	for (y=0; y<MAX_Y; y++)
+	{
+		// always paint a 2-pixel region to be sure we spill some ink
+		ddock_paint_pixel(act, MAX_X/2, y);
+	}
+
+	int x;
+	for (x=0; x<MAX_X; x++)
+	{
+		ddock_paint_pixel(act, x, MAX_Y/2);
 	}
 }
 
@@ -119,22 +130,26 @@ uint32_t ddock_compute_dx(int yc, int r, int y)
 	return isqrt(dx2);
 }
 
-void ddock_paint_hrow(SSBitmap *bm, int y, int x0, int x1, SSBitmap mask)
+static SSBitmap _sevseg_pixel_mask[6][4] = {
+	{ 0b00000000, 0b01000000, 0b00000000, 0b00000000 },
+	{ 0b00000010, 0b00000000, 0b00100000, 0b00000000 },
+	{ 0b00000000, 0b00000001, 0b00000000, 0b00000000 },
+	{ 0b00000100, 0b00000000, 0b00010000, 0b00000000 },
+	{ 0b00000000, 0b00001000, 0b00000000, 0b10000000 },
+	{ 0b00000000, 0b00000000, 0b00000000, 0b00000000 }
+	};
+
+void ddock_paint_pixel(DDockAct *dock, int x, int y)
 {
-#if 0 // fill
-	int d0 = bound((x0+NUM_DIGITS*4/2)/4, 0, NUM_DIGITS-1);
-	int d1 = bound((x1+NUM_DIGITS*4/2)/4, 0, NUM_DIGITS-1);
-	int c;
-	for (c=d0; c<=d1; c++)
-	{
-		bm[c] |= mask;
-	}
-#else	// outline
-	int d0 = (x0+NUM_DIGITS*4/2)/4;
-	if (d0>=0 && d0<NUM_DIGITS) { bm[d0] |= mask; }
-	int d1 = (x1+NUM_DIGITS*4/2)/4;
-	if (d1>=0 && d1<NUM_DIGITS) { bm[d1] |= mask; }
-#endif
+	int maj_x = x/4;
+	int min_x = x-(maj_x*4);
+	int maj_y = y/6;
+	int min_y = y-(maj_y*6);
+
+	if (maj_y<0 || maj_y >= DOCK_HEIGHT
+		|| maj_x<0 || maj_x >= NUM_DIGITS) { return; }
+
+	dock->bbuf[maj_y].buffer[maj_x] |= _sevseg_pixel_mask[min_y][min_x];
 }
 
 UIEventDisposition ddock_event_handler(
