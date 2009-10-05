@@ -91,7 +91,7 @@ int main()
 	labeled_display_init(&ldh, 0, &fa);
 
 	DScrollMsgAct da1;
-	dscrlmsg_init(&da1, 2, "x", 0);	// overwritted by idle display
+	dscrlmsg_init(&da1, 2, "x", 0, FALSE);	// overwritted by idle display
 	
 	IdleDisplayAct idisp;
 	idle_display_init(&idisp, &da1, &cpumon);
@@ -99,14 +99,14 @@ int main()
 	char buf[50], *p;
 	strcpy(buf, "calib_spin ");
 	p = buf+strlen(buf);
-	p+=int_to_string(p, 0, 0, cpumon.calibration_spin_counts);
+	p+=int_to_string2(p, 0, 0, cpumon.calibration_spin_counts);
 	strcpy(p, " interval ");
 	p = buf+strlen(buf);
-	p+=int_to_string(p, 0, 0, cpumon.calibration_interval);
+	p+=int_to_string2(p, 0, 0, cpumon.calibration_interval);
 	strcpy(p, "  ");
 
 	DScrollMsgAct da2;
-	dscrlmsg_init(&da2, 3, buf, 200);	// overwritted by idle display
+	dscrlmsg_init(&da2, 3, "Hi Eliot!   ", 200, TRUE);
 
 
 /*
@@ -121,9 +121,8 @@ int main()
 		}
 		buf[i] = '\0';
 	}
-	dscrlmsg_init(&da2, 3, buf, 200);
+	dscrlmsg_init(&da2, 3, buf, 200, FALSE);
 
-#if !MCUatmega8
 	NumericInputAct ni;
 	BoardBuffer bbuf;
 	board_buffer_init(&bbuf);
@@ -131,29 +130,23 @@ int main()
 	RowRegion region = { &bbuf, 3, 4 };
 
 	numeric_input_init(&ni, region, NULL, &fa, "numeric");
-	*/
 
-/*
 	Calculator calc;
 	calculator_init(&calc, 4, &fa);
-*/
 
-/*
 	DCompassAct dc;
 	dcompass_init(&dc, 4, &fa);
 
-*/
-
-/*
-	DDockAct ddock;
-	ddock_init(&ddock, 0, &fa);
-
 	DGratuitousGraph dgg;
 	dgg_init(&dgg, 5, "volts", 5000);
+
+	DDockAct ddock;
+	ddock_init(&ddock, 0, &fa);
 */
 #if !MCUatmega8
+
 	Launch launch;
-	launch_init(&launch, 4);
+	launch_init(&launch, 4, &fa);
 #endif
 
 

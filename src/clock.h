@@ -10,7 +10,7 @@
 
 void clock_init();
 
-typedef uint32_t Time;
+typedef int32_t Time;
 
 // Current as of last scheduler execution; cheap to evaluate
 // we don't bother offering externally the more-expensive version that reads

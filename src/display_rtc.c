@@ -6,9 +6,10 @@
 
 void drtc_update(DRTCAct *act);
 
-void drtc_init(DRTCAct *act, uint8_t board)
+void drtc_init(DRTCAct *act, uint8_t board, Time base_time)
 {
 	act->func = (ActivationFunc) drtc_update;
+	act->base_time = base_time;
 	board_buffer_init(&act->bbuf);
 	board_buffer_push(&act->bbuf, board);
 	schedule(1, (Activation*) act);
@@ -16,13 +17,12 @@ void drtc_init(DRTCAct *act, uint8_t board)
 
 void drtc_update(DRTCAct *act)
 {
-	uint32_t c = clock_time();
+	Time c = clock_time() - act->base_time;
+
 	char buf[16], *p = buf;
-	*p++ = 't';
-	p += int_to_string(p, 5, FALSE, c/1000);
-	//*p++ = '.';
-	p += int_to_string(p, 2, TRUE, (c%1000)/10);
-	
+	p += int_to_string2(p, 8, 3, c/10);
+	buf[0] = 't';
+
 	ascii_to_bitmap_str(act->bbuf.buffer, NUM_DIGITS, buf);
 	// jonh hard-codes decimal point
 	act->bbuf.buffer[5] |= SSB_DECIMAL;
@@ -30,3 +30,8 @@ void drtc_update(DRTCAct *act)
 	schedule(30, (Activation*) act);
 }
 
+void drtc_set_base_time(DRTCAct *act, Time base_time)
+{
+	act->base_time = base_time;
+	drtc_update(act);
+}

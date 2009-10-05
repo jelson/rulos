@@ -81,7 +81,7 @@ void ni_start_input(NumericInputAct *act)
 	act->cur_value.mantissa = 0;
 	act->cur_value.neg_exponent = 0;
 
-	RectRegion rr = { &act->region.bbuf, 1, act->region.x, act->region.xlen };
+	RectRegion rr = { &act->region.bbuf, 1, act->region.x+act->region.xlen-1, 1 };
 	cursor_show(&act->cursor, rr);
 	act->decimal_present = FALSE;
 

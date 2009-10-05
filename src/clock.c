@@ -22,7 +22,7 @@ void clock_init()
 
 void schedule(int offset_ms, Activation *act)
 {
-	//LOGF((logfp, "scheduling act %08x\n", (int) act));
+	//LOGF((logfp, "scheduling act %08x func %08x\n", (int) act, (int) act->func));
 
 	// never schedule anything for "now", or we might stick the scheduler
 	// in a loop at "now".

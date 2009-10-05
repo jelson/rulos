@@ -11,11 +11,13 @@ typedef struct s_dscrollmsgact {
 	uint8_t speed_ms;
 	int index;
 	char *msg;
+	uint8_t half;
+	uint8_t useHalf;
 } DScrollMsgAct;
 
 
 void dscrlmsg_init(struct s_dscrollmsgact *act,
-	uint8_t board, char *msg, uint8_t speed_ms);
+	uint8_t board, char *msg, uint8_t speed_ms, uint8_t useHalf);
 
 void dscrlmsg_set_msg(DScrollMsgAct *act, char *msg);
 

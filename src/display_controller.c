@@ -32,15 +32,16 @@ void program_board(uint8_t board, SSBitmap *bitmap)
 	}
 }
 
-int int_to_string(char *strp, uint8_t min_width, int zero_padded, uint32_t i)
+int int_to_string2(char *strp, uint8_t min_width, uint8_t min_zeros, int32_t i)
 {
 	int c = 0;
 	int neg = 0;
 	char *ptr = 0;
 	
+	//LOGF((logfp, "i %d\n", ));
 	if (strp!=0)
 	{
-		int ct = int_to_string(0, min_width, zero_padded, i);
+		int ct = int_to_string2(0, min_width, min_zeros, i);
 		ptr = strp+ct-1;
 		ptr[1] = '\0';
 	}
@@ -68,6 +69,13 @@ int int_to_string(char *strp, uint8_t min_width, int zero_padded, uint32_t i)
 			i /= 10;
 		}
 	}
+	while (c<min_zeros)
+	{
+		if (strp!=0) {
+			ptr[-c] = '0';
+		}
+		c+=1;
+	}
 	if (neg)
 	{
 		if (strp!=0) {
@@ -78,11 +86,11 @@ int int_to_string(char *strp, uint8_t min_width, int zero_padded, uint32_t i)
 	while (c<min_width)
 	{
 		if (strp!=0) {
-			ptr[-c] = zero_padded ? '0' : ' ';
+			ptr[-c] = ' ';
 		}
 		c+=1;
 	}
-	//LOGF((logfp, "ct %d c0 %02x str %s\n", c, strp?strp[0]:"_", strp));
+	//LOGF((logfp, "  ct %d str %s\n", c, strp));
 	return c;
 }
 

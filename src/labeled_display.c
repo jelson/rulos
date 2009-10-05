@@ -1,4 +1,5 @@
 #include "rocket.h"
+#include "util.h"
 #include "labeled_display.h"
 
 UIEventDisposition labeled_display_event_handler(
@@ -8,8 +9,8 @@ void labeled_display_init(LabeledDisplayHandler *ldh, int b0, FocusManager *focu
 {
 	ldh->func = labeled_display_event_handler;
 
-	dscrlmsg_init(&ldh->msgAct, 0, " clock  ", b0);
-	drtc_init(&ldh->rtcAct, b0+1);
+	dscrlmsg_init(&ldh->msgAct, 0, " clock  ", b0, FALSE);
+	drtc_init(&ldh->rtcAct, b0+1, 0);
 
 	ldh->bufs[0] = &ldh->msgAct.bbuf;
 	ldh->bufs[1] = &ldh->rtcAct.bbuf;

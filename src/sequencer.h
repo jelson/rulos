@@ -22,6 +22,7 @@
 #include "display_rtc.h"
 #include "display_blinker.h"
 #include "numeric_input.h"
+#include "focus.h"
 
 typedef enum {
 	lpc_blank,
@@ -44,11 +45,12 @@ typedef enum {
 	sequencer_timeout = 0x90,
 } SequencerEvent;
 
-typedef enum {
-	launch_evt_notify_code = 0xa0,
-} LaunchEvent;
-
 struct s_launch;
+
+typedef struct {
+	ActivationFunc func;
+	struct s_launch *launch;
+} LaunchClockAct;
 
 typedef struct s_launch {
 	UIEventHandlerFunc func;
@@ -64,8 +66,10 @@ typedef struct s_launch {
 	DRTCAct p1_timer;
 	BoardBuffer textentry_bbuf;
 	NumericInputAct p1_textentry;
+	BoardBuffer *bbufary[2];	// for focus target. Tricky, because we swap them out. :v(
+	LaunchClockAct clock_act;
 } Launch;
 
-void launch_init(Launch *launch, uint8_t board0);
+void launch_init(Launch *launch, uint8_t board0, FocusManager *fa);
 
 #endif // _sequencer_h
