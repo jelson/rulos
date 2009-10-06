@@ -22,6 +22,7 @@
 #include "idle_display.h"
 #include "sequencer.h"
 #include "display_keytest.h"
+#include "rasters.h"
 
 
 /************************************************************************************/
@@ -91,7 +92,7 @@ int main()
 	labeled_display_init(&ldh, 0, &fa);
 
 	DScrollMsgAct da1;
-	dscrlmsg_init(&da1, 2, "x", 0);	// overwritten by idle display
+	dscrlmsg_init(&da1, 0, "x", 0);	// overwritten by idle display
 	
 	IdleDisplayAct idisp;
 	idle_display_init(&idisp, &da1, &cpumon);
@@ -105,11 +106,15 @@ int main()
 	p+=int_to_string2(p, 0, 0, cpumon.calibration_interval);
 	strcpy(p, "  ");
 
+/*
 	DScrollMsgAct da2;
 	dscrlmsg_init(&da2, 3, "This is a test sequence with original scroll. ", 100);
-
+	*/
 
 /*
+	Calculator calc;
+	calculator_init(&calc, 4, &fa);
+
 	// scroll our ascii set.
 	DScrollMsgAct da2;
 	char buf[129-32];
@@ -131,9 +136,6 @@ int main()
 
 	numeric_input_init(&ni, region, NULL, &fa, "numeric");
 
-	Calculator calc;
-	calculator_init(&calc, 4, &fa);
-
 	DCompassAct dc;
 	dcompass_init(&dc, 4, &fa);
 
@@ -143,12 +145,19 @@ int main()
 */
 #if !MCUatmega8
 
+/*
 	DDockAct ddock;
 	ddock_init(&ddock, 0, &fa);
+*/
 
+	RasterBigDigit rdigit;
+	raster_big_digit_init(&rdigit, 2);
+#endif
+
+/*
 	Launch launch;
 	launch_init(&launch, 4, &fa);
-#endif
+*/
 
 
 	cpumon_main_loop();

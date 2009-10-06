@@ -28,6 +28,7 @@ COMMON_OBJECTS = \
 	util.o \
 	sequencer.o \
 	display_blinker.o \
+	rasters.o \
 
 
 .PHONY: all
@@ -39,10 +40,15 @@ include Makefile.sim
 include Makefile.avr
 
 $(SIM_OBJDIR)/display_controller.o: sevseg_bitmaps.ch
-
 $(AVR_OBJDIR)/display_controller.o: sevseg_bitmaps.ch
 
 sevseg_bitmaps.ch: sevseg_convert.py sevseg_artwork.txt
 	./sevseg_convert.py > $@
+
+$(SIM_OBJDIR)/rasters.o: rasters_auto.ch
+$(AVR_OBJDIR)/rasters.o: rasters_auto.ch
+
+rasters_auto.ch: bitmaploader.py bitmaps/*.png
+	./bitmaploader.py > /dev/null
 
 
