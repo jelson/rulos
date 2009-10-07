@@ -13,7 +13,7 @@ typedef struct {
 extern RasterIndex rasterIndex[];
 extern uint8_t rasterData[];
 
-void raster_draw_sym(RectRegion *rrect, char sym);
+void raster_draw_sym(RectRegion *rrect, char sym, int8_t dx, int8_t dy);
 void raster_paint_pixel(RectRegion *rrect, int x, int y);
 
 typedef struct {

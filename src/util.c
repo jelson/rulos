@@ -34,3 +34,23 @@ uint32_t isqrt(uint32_t v)
 	return (delta/2-1);
 }
 
+int int_div_with_correct_truncation(int a, int b)
+{
+	if (b<0) { a=-a; b=-b; }	// b is positive
+	if (a>0)
+	{
+		return a/b;
+	}
+	else
+	{
+		int tmp = (-a)/b;
+		if (tmp*b < -a)
+		{
+			// got truncated; round *up*
+			tmp += 1;
+		}
+		return -tmp;
+	}
+}
+
+

@@ -1,9 +1,7 @@
 TODO
+	make circle thing work with thrustiness, with x/y in corners
 	assert displayer
 	E6b
-
-	fix bitmapiness / zero axes of display_docking
-	make circle thing work with thrustiness, with x/y in corners
 
 BUGS
 	calculator should shift in precision for div, when available.

@@ -25,7 +25,7 @@ uint16_t get_bitfield(uint8_t *bytes, uint16_t offset, uint8_t len)
 	return outVal;
 }
 
-void raster_draw_sym(RectRegion *rrect, char sym)
+void raster_draw_sym(RectRegion *rrect, char sym, int8_t dx, int8_t dy)
 {
 	RasterIndex *ri = rasterIndex;
 	while (ri->sym != '\0' && ri->sym != sym)
@@ -34,6 +34,7 @@ void raster_draw_sym(RectRegion *rrect, char sym)
 	}
 	if (ri->sym=='\0')
 	{
+		LOGF((logfp, "sym = %d (%c)\n", sym, sym));
 		assert(FALSE);	// symbol not found
 		return;
 	}
@@ -51,8 +52,8 @@ void raster_draw_sym(RectRegion *rrect, char sym)
 		int x;
 		for (x=x0; x<x1; x++)
 		{
-			//LOGF((logfp, "paintpixel(%d,%d)\n", x, y));
-			raster_paint_pixel(rrect, x, y);
+			//LOGF((logfp, "paintpixel(%d,%d)\n", dx+x, dy+y));
+			raster_paint_pixel(rrect, dx+x, dy+y);
 		}
 	}
 }
@@ -68,9 +69,9 @@ static SSBitmap _sevseg_pixel_mask[6][4] = {
 
 void raster_paint_pixel(RectRegion *rrect, int x, int y)
 {
-	int maj_x = x/4;
+	int maj_x = int_div_with_correct_truncation(x,4);
 	int min_x = x-(maj_x*4);
-	int maj_y = y/6;
+	int maj_y = int_div_with_correct_truncation(y,6);
 	int min_y = y-(maj_y*6);
 
 	//LOGF((logfp, "x-painted y%2d.%d x%2d.%d\n", maj_y, min_y, maj_x, min_x));
@@ -108,10 +109,25 @@ void raster_big_digit_update(RasterBigDigit *digit)
 {
 	raster_clear_buffers(&digit->rrect);
 
-	schedule(1000, (Activation*) digit);
-	Time t = clock_time() - digit->startTime;
-	int s = 9 - ((t / 1000) % 10);
-	raster_draw_sym(&digit->rrect, '0'+s);
+	schedule(100, (Activation*) digit);
+
+	const int spacing = 30;
+	Time t = -(clock_time() - digit->startTime);
+	while (t<0) { t+=1000000; }
+	int tens = ((t / 10000) % 10);
+	int next_tens = (tens+1)%10;
+	int ones = ((t / 1000) % 10);
+	int ones_offset = (t*spacing/1000) % spacing;
+	int tens_offset = 0;
+	if (ones==9)
+	{
+		tens_offset = ones_offset;
+	}
+	int next_ones = (ones+1)%10;
+	raster_draw_sym(&digit->rrect, '0'+tens, 0, tens_offset);
+	raster_draw_sym(&digit->rrect, '0'+next_tens, 0, -spacing+tens_offset);
+	raster_draw_sym(&digit->rrect, '0'+ones, 16, ones_offset);
+	raster_draw_sym(&digit->rrect, '0'+next_ones, 16, -spacing+ones_offset);
 
 	raster_draw_buffers(&digit->rrect);
 }

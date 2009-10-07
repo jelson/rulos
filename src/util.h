@@ -32,4 +32,7 @@ uint32_t isqrt(uint32_t v);
 #define min(a,b)	(((a)<(b))?(a):(b))
 #define max(a,b)	(((a)>(b))?(a):(b))
 
+int int_div_with_correct_truncation(int a, int b);
+
+
 #endif // _util_h

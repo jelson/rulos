@@ -113,24 +113,26 @@ class BitmapFromFile:
 		self.symname = filename.split("/")[-1].split(".")[0][0]
 		self.datablock = datablock
 		self.datablock.start_sym(self.symname)
-		self.startflip = None
+		self.startBlack = None
 		self.lastStripe = None
 		img = Image.open(filename)
 		for y in range(img.size[1]):
 			#print "y=%s" % y
-			last = img.getpixel((0,y))
+			last = (255,255,255,255)
 			for x in range(img.size[0]):
 				pixel = img.getpixel((x,y))
 				if (pixel!=last):
 					self.flip(x,y)
 				last = pixel
+			if (self.startBlack):
+				self.flip(x,y)
 
 	def flip(self, x, y):
-		m = "sf %s flip %s %s" % (self.startflip, x,y)
-		if (self.startflip == None):
-			self.startflip = (x,y)
+		m = "sf %s flip %s %s" % (self.startBlack, x,y)
+		if (self.startBlack == None):
+			self.startBlack = (x,y)
 			#print m,"start"
-		elif (y!=self.startflip[1]):
+		elif (y!=self.startBlack[1]):
 			assert(False)
 			return
 		else:
@@ -138,12 +140,12 @@ class BitmapFromFile:
 			lasty = 0
 			if (self.lastStripe!=None):
 				lasty = self.lastStripe.y
-			stripe = Stripe(y, self.startflip[0], x)
+			stripe = Stripe(y, self.startBlack[0], x)
 			self.lastStripe = stripe
 			ebf = stripe.makeElevenBitField(lasty)
 			print "BFF lasty %s y %s stripe %s %s" % (lasty, y, stripe, ebf>>10)
 			self.datablock.add_field(self.symname, ebf)
-			self.startflip = None
+			self.startBlack = None
 
 	def emit(self, fp):
 		fp.write('  "%s", {\n' % self.symname)
