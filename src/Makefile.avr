@@ -3,7 +3,7 @@
 MCU = atmega8
 
 # Compilation
-AVR_OBJDIR = ../../obj.avr
+AVR_OBJDIR = $(ROCKET_ROOT)/obj.avr
 AVR_LIBNAME = rocket
 AVR_LIB_FILE = $(AVR_OBJDIR)/lib$(AVR_LIBNAME).a
 CC = avr-gcc
@@ -13,7 +13,7 @@ AVR_COMMON_FLAGS = -Wall -Werror -mmcu=$(MCU)
 
 ## Compile options common for all C compilation units.
 AVR_CFLAGS = $(AVR_COMMON_FLAGS)
-AVR_CFLAGS += -Wall -Werror -I../../include -I$(AVR_OBJDIR)
+AVR_CFLAGS += -Wall -Werror -I$(ROCKET_ROOT)/include -I$(AVR_OBJDIR)
 AVR_CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 AVR_CFLAGS += -MD -MP -MT $(AVR_OBJDIR)/$(*F).o -MF $(AVR_OBJDIR)/$(@F).d 
 AVR_CFLAGS += -gdwarf-2 -std=gnu99 -Os 
@@ -48,7 +48,7 @@ AVR_TARGET_OBJECTS := $(patsubst %.o,$(AVR_OBJDIR)/%.o, \
 avr-all: $(TARGET).elf $(TARGET).hex $(TARGET).eep $(TARGET).lss $(TARGET).size
 
 ## Compile
-$(AVR_OBJDIR)/%.o: ../../lib/%.c
+$(AVR_OBJDIR)/%.o: $(ROCKET_ROOT)/lib/%.c
 	$(CC) $(AVR_CFLAGS) -c $< -o $@
 $(AVR_OBJDIR)/%.o: %.c
 	$(CC) $(AVR_CFLAGS) -c $< -o $@

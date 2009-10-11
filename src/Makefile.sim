@@ -1,9 +1,9 @@
 
-SIM_OBJDIR = ../../obj.sim
+SIM_OBJDIR = $(ROCKET_ROOT)/obj.sim
 SIM_LIBNAME = rocket
 SIM_LIB_FILE = $(SIM_OBJDIR)/lib$(SIM_LIBNAME).a
 
-SIM_CFLAGS = -Wall -Werror -g -DSIM -I../../include -I$(SIM_OBJDIR)
+SIM_CFLAGS = -Wall -Werror -g -DSIM -I$(ROCKET_ROOT)/include -I$(SIM_OBJDIR)
 SIM_CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 SIM_CFLAGS += -MD -MP -MT $(SIM_OBJDIR)/$(*F).o -MF $(SIM_OBJDIR)/$(@F).d
 
@@ -18,7 +18,7 @@ SIM_TARGET_OBJECTS := $(patsubst %.o,$(SIM_OBJDIR)/%.o, \
 	$(TARGET_OBJECTS))
 
 # For lib objects
-$(SIM_OBJDIR)/%.o: ../../lib/%.c
+$(SIM_OBJDIR)/%.o: $(ROCKET_ROOT)/lib/%.c
 	gcc $(SIM_CFLAGS) -c $< -o $@
 
 # For local app objects

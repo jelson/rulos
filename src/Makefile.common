@@ -33,22 +33,22 @@ all: sim-all avr-all
 
 clean: sim-clean avr-clean
 
-include ../../Makefile.sim
-include ../../Makefile.avr
+include $(ROCKET_ROOT)/Makefile.sim
+include $(ROCKET_ROOT)/Makefile.avr
 
 # Generate the sevseg bitmaps from the artwork file
 $(SIM_OBJDIR)/display_controller.o: $(SIM_OBJDIR)/sevseg_bitmaps.ch
 $(AVR_OBJDIR)/display_controller.o: $(AVR_OBJDIR)/sevseg_bitmaps.ch
 
-%/sevseg_bitmaps.ch: ../../util/sevseg_convert.py ../../lib/sevseg_artwork.txt
-	../../util/sevseg_convert.py ../../lib/sevseg_artwork.txt > $@
+%/sevseg_bitmaps.ch: $(ROCKET_ROOT)/util/sevseg_convert.py $(ROCKET_ROOT)/lib/sevseg_artwork.txt
+	$(ROCKET_ROOT)/util/sevseg_convert.py $(ROCKET_ROOT)/lib/sevseg_artwork.txt > $@
 
 
 # Generate rasters
 $(SIM_OBJDIR)/rasters.o: $(SIM_OBJDIR)/rasters_auto.ch
 $(AVR_OBJDIR)/rasters.o: $(AVR_OBJDIR)/rasters_auto.ch
 
-%/rasters_auto.ch: ../../util/bitmaploader.py ../../bitmaps/*.png
-	../../util/bitmaploader.py $@ ../../bitmaps > /dev/null
+%/rasters_auto.ch: $(ROCKET_ROOT)/util/bitmaploader.py $(ROCKET_ROOT)/bitmaps/*.png
+	$(ROCKET_ROOT)/util/bitmaploader.py $@ $(ROCKET_ROOT)/bitmaps > /dev/null
 
 
