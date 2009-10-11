@@ -1,6 +1,8 @@
 #!/usr/bin/python
+
 import Image
 import glob
+import sys
 
 class Index:
 	def __init__(self, sym, offset_bits):
@@ -153,8 +155,8 @@ class BitmapFromFile:
 			fp.write("    %s,\n" % stripe)
 
 def main():
-	fp = open("rasters_auto.ch", "w")
-	flist = glob.glob("bitmaps/*.png")
+	fp = open(sys.argv[1], "w")
+	flist = glob.glob("%s/*.png" % (sys.argv[2]))
 	flist.sort()
 	datablock = DataBlock()
 	for fn in flist:

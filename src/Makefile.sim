@@ -1,34 +1,46 @@
 
-SIM_OBJDIR = obj.sim
-TARGET = rocketsim
+SIM_OBJDIR = ../../obj.sim
+SIM_LIBNAME = rocket
+SIM_LIB_FILE = $(SIM_OBJDIR)/lib$(SIM_LIBNAME).a
 
-CFLAGS = -Wall -Werror -g -DSIM
-CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
-CFLAGS += -MD -MP -MT $(SIM_OBJDIR)/$(*F).o -MF $(SIM_OBJDIR)/$(@F).d
+SIM_CFLAGS = -Wall -Werror -g -DSIM -I../../include -I$(SIM_OBJDIR)
+SIM_CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
+SIM_CFLAGS += -MD -MP -MT $(SIM_OBJDIR)/$(*F).o -MF $(SIM_OBJDIR)/$(@F).d
+
+SIM_LDFLAGS = -L$(SIM_OBJDIR) -l$(SIM_LIBNAME)
 
 ############
 
-SIM_OBJECTS_M := $(COMMON_OBJECTS) \
-	$(MAIN_OBJECT) \
-	sim.o \
+SIM_LIB_OBJECTS := $(patsubst %.o,$(SIM_OBJDIR)/%.o,$(COMMON_OBJECTS) \
+	sim.o )
 
+SIM_TARGET_OBJECTS := $(patsubst %.o,$(SIM_OBJDIR)/%.o, \
+	$(TARGET_OBJECTS))
 
-SIM_OBJECTS := $(patsubst %.o,$(SIM_OBJDIR)/%.o,$(SIM_OBJECTS_M))
+# For lib objects
+$(SIM_OBJDIR)/%.o: ../../lib/%.c
+	gcc $(SIM_CFLAGS) -c $< -o $@
 
+# For local app objects
 $(SIM_OBJDIR)/%.o: %.c
-	gcc $(CFLAGS) -c $< -o $@
+	gcc $(SIM_CFLAGS) -c $< -o $@
 
-#librocket.a: $(OBJS)
-#	rm -f $@
-#	ar -r $@ $^
+$(SIM_LIB_FILE): $(SIM_LIB_OBJECTS)
+	rm -f $@
+	ar r $@ $(SIM_LIB_OBJECTS)
 
-$(TARGET): $(SIM_OBJECTS)
-	gcc $(SIM_LDLAGS) $(SIM_OBJECTS) -o $@ -lncurses
+$(TARGET)sim: $(SIM_LIB_FILE) $(SIM_TARGET_OBJECTS)
+	gcc $(SIM_TARGET_OBJECTS) $(SIM_LDFLAGS) -o $@ -lncurses
 
-sim-all: $(TARGET)
+sim-all: $(TARGET)sim
 
 sim-clean:
-	rm -f $(SIM_OBJECTS) $(TARGET) $(SIM_OBJDIR)/*.d
+	rm -f \
+		$(SIM_LIB_FILE) \
+		$(SIM_LIB_OBJECTS) \
+		$(SIM_TARGET_OBJECTS) \
+		$(TARGET)sim \
+		$(SIM_OBJDIR)/*.d
 
 ## Other dependencies
 -include $(shell mkdir -p $(SIM_OBJDIR)) $(wildcard $(SIM_OBJDIR)/*.d)

@@ -80,7 +80,7 @@ def get_bitmap(lr):
 def main():
     bitmap_map = {}
     
-    lr = LineReader("sevseg_artwork.txt")
+    lr = LineReader(sys.argv[1])
 
     while True:
         line = lr.get_line(eofOK = True)
