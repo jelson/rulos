@@ -112,12 +112,13 @@ void raster_big_digit_update(RasterBigDigit *digit)
 	schedule(100, (Activation*) digit);
 
 	const int spacing = 30;
+	const int roll = 10;
 	Time t = -(clock_time() - digit->startTime);
 	while (t<0) { t+=1000000; }
 	int tens = ((t / 10000) % 10);
 	int next_tens = (tens+1)%10;
 	int ones = ((t / 1000) % 10);
-	int ones_offset = (t*spacing/1000) % spacing;
+	int ones_offset = min((t*(spacing+roll)/1000) % (spacing+roll), spacing);
 	int tens_offset = 0;
 	if (ones==9)
 	{
