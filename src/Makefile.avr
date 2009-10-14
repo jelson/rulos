@@ -1,9 +1,15 @@
-
-## General Flags
-MCU = atmega8
+.PHONY: mcu-defined-check
+ 
+mcu-defined-check:
+ifeq ($(MCU),)
+	@echo "MCU must be defined in your local Makefile (atmega8, atmega328p)"
+	@false
+else
+	@true
+endif
 
 # Compilation
-AVR_OBJDIR = $(ROCKET_ROOT)/obj.avr
+AVR_OBJDIR = $(ROCKET_ROOT)/obj.avr.$(MCU)
 AVR_LIBNAME = rocket
 AVR_LIB_FILE = $(AVR_OBJDIR)/lib$(AVR_LIBNAME).a
 CC = avr-gcc
@@ -45,7 +51,7 @@ AVR_TARGET_OBJECTS := $(patsubst %.o,$(AVR_OBJDIR)/%.o, \
 	$(TARGET_OBJECTS))
 
 ## Build
-avr-all: $(TARGET).elf $(TARGET).hex $(TARGET).eep $(TARGET).lss $(TARGET).size
+avr-all: mcu-defined-check $(TARGET).elf $(TARGET).hex $(TARGET).eep $(TARGET).lss $(TARGET).size
 
 ## Compile
 $(AVR_OBJDIR)/%.o: $(ROCKET_ROOT)/lib/%.c
@@ -79,13 +85,13 @@ $(TARGET).size: $(TARGET).elf
 
 ## Clean target
 avr-clean:
-	-rm -rf $(AVR_OBJECTS) \
+	-rm -rf \
+	    	$(AVR_OBJDIR)/* \
 		$(TARGET).elf \
 		$(TARGET).hex \
 		$(TARGET).eep \
 		$(TARGET).lss \
 		$(TARGET).map \
-		$(AVR_OBJDIR)/*.d
 
 
 ## Other dependencies
