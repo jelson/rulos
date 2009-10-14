@@ -16,14 +16,21 @@ void pov_init(PovHandler *pov, MirrorHandler *mirror, uint8_t laser_board, uint8
 		pov->bitmap[i] = i & 0x0ff;
 	}
 
-	schedule(1, (Activation*) pov);
+	schedule_us(1, (Activation*) pov);
 }
 
 void pov_update(PovHandler *pov)
 {
-	schedule(1, (Activation*) pov);
+	// update pov display at clock frequency
+	schedule_us(1, (Activation*) pov);
 
-	Time now = u_clock_time();
+	if (pov->mirror->period==0)
+	{
+		// can't divide by that; wait.
+		return;
+	}
+
+	Time now = clock_time_us();
 	// TODO can we afford a divide on every update?
 	uint32_t frac = ((now - pov->mirror->last_interrupt)*BITMAP_LENGTH) / pov->mirror->period;
 

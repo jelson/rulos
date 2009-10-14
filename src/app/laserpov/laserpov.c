@@ -8,6 +8,7 @@
 #include "cpumon.h"
 #include "mirror.h"
 #include "pov.h"
+#include "input_controller.h"
 
 
 int main()
@@ -15,7 +16,10 @@ int main()
 	heap_init();
 	util_init();
 	hal_init();
-	clock_init();
+	clock_init(300);
+
+	InputControllerAct ia;
+	input_controller_init(&ia, NULL);
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);	// includes slow calibration phase
@@ -24,7 +28,7 @@ int main()
 	mirror_init(&mirror);
 
 	PovHandler pov;
-	pov_init(&pov, &mirror, 0, 7);
+	pov_init(&pov, &mirror, 0, 1);
 
 	board_buffer_module_init();
 

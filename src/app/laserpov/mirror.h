@@ -5,8 +5,8 @@
 
 typedef struct
 {
-	UTime last_interrupt;
-	UTime period;
+	Time last_interrupt;
+	Time period;
 } MirrorHandler;
 
 // NB this can only be called once per program, because it owns the

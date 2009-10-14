@@ -174,6 +174,25 @@ char hal_read_keybuf()
   return 0;
 }
 
+Handler _sensor_interrupt_handler = NULL;
+Handler user_clock_handler;
+const uint32_t sensor_interrupt_simulator_counter_period = 507;
+uint32_t sensor_interrupt_simulator_counter;
+
+void sim_clock_handler()
+{
+	sensor_interrupt_simulator_counter += 1;
+	if (sensor_interrupt_simulator_counter == sensor_interrupt_simulator_counter_period)
+	{
+		if (_sensor_interrupt_handler != NULL)
+		{
+			_sensor_interrupt_handler();
+		}
+		sensor_interrupt_simulator_counter = 0;
+	}
+
+	user_clock_handler();
+}
 
 void hal_start_clock_us(uint32_t us, Handler handler)
 {
@@ -183,7 +202,8 @@ void hal_start_clock_us(uint32_t us, Handler handler)
 	ivalue.it_value = ivalue.it_interval;
 	setitimer(ITIMER_REAL, &ivalue, &ovalue);
 
-	signal(SIGALRM, handler);
+	user_clock_handler = handler;
+	signal(SIGALRM, sim_clock_handler);
 }
 
 void hal_start_atomic()
@@ -204,4 +224,9 @@ void hal_idle()
 	tv.tv_sec = 0;
 	tv.tv_usec = 100;	// .1 ms
 	select(0, NULL, NULL, NULL, &tv);
+}
+
+void sensor_interrupt_register_handler(Handler handler)
+{
+	_sensor_interrupt_handler = handler;
 }
