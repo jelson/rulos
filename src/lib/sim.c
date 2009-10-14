@@ -175,11 +175,11 @@ char hal_read_keybuf()
 }
 
 
-void hal_start_clock_ms(int ms, Handler handler)
+void hal_start_clock_us(uint32_t us, Handler handler)
 {
 	struct itimerval ivalue, ovalue;
-	ivalue.it_interval.tv_sec = ms/1000;
-	ivalue.it_interval.tv_usec = (ms%1000)*1000;
+	ivalue.it_interval.tv_sec = us/1000000;
+	ivalue.it_interval.tv_usec = (us%1000000);
 	ivalue.it_value = ivalue.it_interval;
 	setitimer(ITIMER_REAL, &ivalue, &ovalue);
 

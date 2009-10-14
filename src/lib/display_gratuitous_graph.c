@@ -5,23 +5,23 @@
 void dgg_update(DGratuitousGraph *act);
 
 void dgg_init(DGratuitousGraph *dgg,
-	uint8_t board, char *name, uint16_t impulse_frequency)
+	uint8_t board, char *name, Time impulse_frequency_us)
 {
 	dgg->func = (ActivationFunc) dgg_update;
 	board_buffer_init(&dgg->bbuf);
 	board_buffer_push(&dgg->bbuf, board);
 	drift_anim_init(&dgg->drift, 10, 0, 0, 16, 2);
 	dgg->name = name;
-	dgg->impulse_frequency = impulse_frequency;
+	dgg->impulse_frequency_us = impulse_frequency_us;
 	dgg->last_impulse = 0;
-	schedule(1, (Activation*) dgg);
+	schedule_us(1, (Activation*) dgg);
 }
 
 void dgg_update(DGratuitousGraph *dgg)
 {
-	schedule(50, (Activation*) dgg);
-	uint32_t t = clock_time();
-	if (t - dgg->last_impulse > dgg->impulse_frequency)
+	schedule_us(Exp2Time(16), (Activation*) dgg);
+	uint32_t t = clock_time_us();
+	if (t - dgg->last_impulse > dgg->impulse_frequency_us)
 	{
 		dgg->last_impulse = t;
 		da_random_impulse(&dgg->drift);

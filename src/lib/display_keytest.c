@@ -4,7 +4,7 @@
 
 static void update(KeyTestActivation_t *kta)
 {
-	schedule(50, (Activation *) kta);
+	schedule_us(50000, (Activation *) kta);
 	char k = hal_read_keybuf();
 
 	LOGF((logfp, "in update for keytest\n"))
@@ -24,6 +24,6 @@ void display_keytest_init(KeyTestActivation_t *kta, uint8_t board)
 	kta->f = (ActivationFunc) update;
 	board_buffer_init(&kta->bbuf);
 	board_buffer_push(&kta->bbuf, board);
-	schedule(1, (Activation *) kta);
+	schedule_us(1, (Activation *) kta);
 }
 

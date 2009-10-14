@@ -12,7 +12,7 @@ void blinker_init(DBlinker *blinker, uint16_t period)
 	blinker->msg = NULL;
 	blinker->cur_line = 0;
 	board_buffer_init(&blinker->bbuf);
-	schedule(1, (Activation*) blinker);
+	schedule_us(1, (Activation*) blinker);
 }
 
 void blinker_set_msg(DBlinker *blinker, const char **msg)
@@ -37,7 +37,7 @@ void blinker_update_once(DBlinker *blinker)
 
 void blinker_update(DBlinker *blinker)
 {
-	schedule(blinker->period, (Activation*) blinker);
+	schedule_us(blinker->period*1000, (Activation*) blinker);
 	blinker_update_once(blinker);
 
 	blinker->cur_line += 1;

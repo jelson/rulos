@@ -100,20 +100,20 @@ void raster_big_digit_init(RasterBigDigit *digit, uint8_t board0)
 	digit->rrect.ylen = 4;
 	digit->rrect.x = 0;
 	digit->rrect.xlen = 8;
-	digit->startTime = clock_time();
+	digit->startTime = clock_time_us();
 
-	schedule(1, (Activation*) digit);
+	schedule_us(1, (Activation*) digit);
 }
 
 void raster_big_digit_update(RasterBigDigit *digit)
 {
 	raster_clear_buffers(&digit->rrect);
 
-	schedule(100, (Activation*) digit);
+	schedule_us(100000, (Activation*) digit);
 
 	const int spacing = 30;
 	const int roll = 10;
-	Time t = -(clock_time() - digit->startTime);
+	Time t = -(clock_time_us() - digit->startTime)/1000;
 	while (t<0) { t+=1000000; }
 	int tens = ((t / 10000) % 10);
 	int next_tens = (tens+1)%10;

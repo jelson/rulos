@@ -21,7 +21,7 @@ void dcompass_init(DCompassAct *act, uint8_t board, FocusManager *focus)
 	act->btable = &act->bbuf;
 	RectRegion rr = { &act->btable, 1, 0, 7};
 	focus_register(focus, (UIEventHandler*) &act->handler, rr, "compass");
-	schedule(1, (Activation*) act);
+	schedule_us(1, (Activation*) act);
 }
 
 static char *compass_display = "N.,.3.,.S.,.E.,.N.,.3.,.S.,.E.,.";
@@ -29,24 +29,24 @@ static char *compass_display = "N.,.3.,.S.,.E.,.N.,.3.,.S.,.E.,.";
 void dcompass_update(DCompassAct *act)
 {
 	dcompass_update_once(act);
-	uint32_t interval;
+	uint32_t interval_us;
 	if (act->focused)
 	{
-		interval = 128;
+		interval_us = 128000;
 	}
 	else
 	{
-		interval = 300+(deadbeef_rand() & 0x0ff);
+		interval_us = (300+(deadbeef_rand() & 0x0ff)) * 1000;
 	}
-	schedule(interval, (Activation*) act);
+	schedule_us(interval_us, (Activation*) act);
 }
 
 void dcompass_update_once(DCompassAct *act)
 {
 	if (!act->focused)
 	{
-		uint32_t t = clock_time();
-		if (t - act->last_impulse_time > 3000)
+		Time t = clock_time_us();
+		if (t - act->last_impulse_time > 3000000)
 		{
 			da_random_impulse(&act->drift);
 			// drift is bounded, but compass rolls indefinitely.
@@ -58,7 +58,7 @@ void dcompass_update_once(DCompassAct *act)
 	ascii_to_bitmap_str(act->bbuf.buffer,
 		NUM_DIGITS,
 		compass_display + (da_read(&act->drift) & 0x0f));
-	if (act->focused && (clock_time()>>7)&1)
+	if (act->focused && (clock_time_us()>>17)&1)
 	{
 		act->bbuf.buffer[7] = 0b1111000;
 		act->bbuf.buffer[0] = 0b1001110;

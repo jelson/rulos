@@ -122,3 +122,6 @@ static inline int gpio_is_set(volatile uint8_t *ddr,
 
 
 #define _NOP() do { __asm__ __volatile__ ("nop"); } while (0)
+
+void sensor_interrupt_register_handler(Handler handler);
+

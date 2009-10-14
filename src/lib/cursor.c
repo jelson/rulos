@@ -1,7 +1,7 @@
 #include "rocket.h"
 #include "cursor.h"
 
-#define BLINK2	(8)	// blink every 2^BLINK2 ms
+#define BLINK2	(18)	// blink every 256ms
 
 char cursor_label_white[0];
 void cursor_update_once(CursorAct *act);
@@ -17,7 +17,7 @@ void cursor_init(CursorAct *act)
 	}
 	act->visible = FALSE;
 	act->label = NULL;
-	schedule(1, (Activation*) act);
+	schedule_us(1, (Activation*) act);
 }
 
 void cursor_hide(CursorAct *act)
@@ -94,7 +94,7 @@ void cursor_update_once(CursorAct *act)
 			}
 
 			// hide cursor half the time
-			uint8_t on = ((clock_time() >> BLINK2)&1);
+			uint8_t on = ((clock_time_us() >> BLINK2)&1);
 			board_buffer_set_alpha(bbp, on ? act->alpha : 0);
 
 			board_buffer_draw(bbp);
@@ -105,7 +105,7 @@ void cursor_update_once(CursorAct *act)
 void cursor_update(CursorAct *act)
 {
 	cursor_update_once(act);
-	schedule(1<<BLINK2, (Activation*) act);
+	schedule_us(Exp2Time(BLINK2), (Activation*) act);
 }
 
 void cursor_set_label(CursorAct *act, char *label)

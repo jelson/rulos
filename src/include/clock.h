@@ -5,12 +5,9 @@
 # error Please include rocket.h instead of this file
 #endif
 
+typedef int32_t Time;	// in units of usec
 
-#define RTC_INTERVAL_MS	10
-
-void clock_init();
-
-typedef int32_t Time;
+void clock_init(Time interval_us);
 
 // Current as of last scheduler execution; cheap to evaluate
 // we don't bother offering externally the more-expensive version that reads
@@ -19,11 +16,14 @@ typedef int32_t Time;
 // continuation.
 
 // not sure why "inline" defn doesn't work. Meh.
-//inline Time clock_time() { return _stale_time_ms; }
-extern Time _stale_time_ms;	
-#define clock_time()	(_stale_time_ms)
+//inline Time clock_time() { return _stale_time_us; }
+extern Time _stale_time_us;	
+#define clock_time_us()	(_stale_time_us)
 
-void schedule(int offset_ms, Activation *act);
+void schedule_us(Time offset_us, Activation *act);
+#define Exp2Time(v)	(((Time)1)<<(v))
+#define schedule_ms(ms,act) { schedule_us(ms*1000, act); }
+
 void scheduler_run_once();
 
 void spin_counter_increment();

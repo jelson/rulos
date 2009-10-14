@@ -140,30 +140,43 @@ uint32_t f_cpu[] = {
   *	  
   * Use timer/counter1 to generate clock ticks for events.
   *
+  * For >=1ms interval,
   * Using CTC mode (mode 4) with 1/64 prescaler.
+  * For smaller intervals (where a 16MHz clock won't
+  * overflow a 16-bit register), we use prescaler 1.
   *
   * 64 counter ticks takes 64/F_CPU seconds.  Therefore, to get an s-second
   * interrupt, we need to take one every s / (64/F_CPU) ticks.
   *
-  * To avoid floating point, do computation in msec rather than seconds:
-  * take an interrupt every ms / (64 / F_CPU / 1000) counter ticks, 
-  * or, (ms * F_CPU) / (64 * 1000).
+  * To avoid floating point, do computation in usec rather than seconds:
+  * take an interrupt every us / (prescaler / F_CPU / 1000000) counter ticks, 
+  * or, (us * F_CPU) / (prescaler * 1000000).
+  * We move around the constants in the calculations below to
+  * keep the intermediate results fitting in a 32-bit int.
   */
-void hal_start_clock_ms(int ms, Handler handler)
+void hal_start_clock_us(uint32_t us, Handler handler)
 {
 	uint8_t cksel = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS) & 0x0f;
 
-	long ticks_tmp = ms * f_cpu[cksel-1];
-	ticks_tmp /= 64000;
+	uint32_t target;
+	uint8_t tccr1b = _BV(WGM12);		// CTC Mode 4 (interrupt on count-up)
+	if (us < 1000)
+	{
+		tccr1b |= _BV(CS10);				// Prescaler = 1
+		target = ((f_cpu[cksel-1] / 100) * us) / 10000;
+	}
+	else
+	{
+		tccr1b |= _BV(CS11) | _BV(CS10);	// Prescaler = 64
+		target = (f_cpu[cksel-1] / 6400) * us / 10000;
+	}
 
 	timer_handler = handler;
 	cli();
 
-	OCR1A = (unsigned int) ticks_tmp;
-
-	/* CTC Mode 4 Prescaler 64 */
+	OCR1A = (unsigned int) target;
 	TCCR1A = 0;
-	TCCR1B = (1<<WGM12)|(1<<CS11)|(1<<CS10); 
+	TCCR1B = tccr1b;
 
 	/* enable output-compare int. */
 	TIMSK |= (1<<OCIE1A);
@@ -173,6 +186,24 @@ void hal_start_clock_ms(int ms, Handler handler)
 
 	/* re-enable interrupts */
 	sei();
+}
+
+/**************************************************************/
+/*			 Interrupt-driven senor input                     */
+/**************************************************************/
+// jonh hardcodes this for a specific interrupt line. Not sure
+// yet how to generalize; will do when needed, I guess.
+
+Handler sensor_interrupt_handler;
+
+void sensor_interrupt_register_handler(Handler handler)
+{
+	sensor_interrupt_handler = handler;
+}
+
+ISR(INT0_vect)
+{
+	sensor_interrupt_handler();
 }
 
 /**************************************************************/
@@ -246,8 +277,8 @@ static char scan_keypad()
 		return 0;
 }
 
-
-#define KEY_REFRACTORY_TIME_MS 30
+#define KEY_SCAN_INTERVAL_US 10000
+#define KEY_REFRACTORY_TIME_US 30000
 
 /*
  * This is called periodically to scan the keypad, debounce the keys,
@@ -265,12 +296,12 @@ static void debounce_keypad(InputBufferAct_t *iba)
 
 	// key was just released.  Set refactory time.
 	if (k == 0) {
-		iba->keypad_next_allowed_key_time = clock_time() + KEY_REFRACTORY_TIME_MS;
+		iba->keypad_next_allowed_key_time = clock_time_us() + KEY_REFRACTORY_TIME_US;
 		return;
 	}
 
 	// key was just pushed.  if refrac time has arrived, queue it
-	if (clock_time() >= iba->keypad_next_allowed_key_time) {
+	if (clock_time_us() >= iba->keypad_next_allowed_key_time) {
 		ByteQueue_append((ByteQueue *)iba->keypad_q, k);
 	}
 	
@@ -278,7 +309,7 @@ static void debounce_keypad(InputBufferAct_t *iba)
 
 static void scan_inputs(InputBufferAct_t *iba)
 {
-	schedule(RTC_INTERVAL_MS, (Activation *) iba);
+	schedule_us(KEY_SCAN_INTERVAL_US, (Activation *) iba);
 	debounce_keypad(iba);
 }
 
@@ -317,5 +348,5 @@ void hal_init()
 	init_pins();
 
 	ByteQueue_init((ByteQueue *) iba.keypad_q, sizeof(iba.keypad_q));
-	schedule(RTC_INTERVAL_MS, (Activation *) &iba);
+	schedule_us(1, (Activation *) &iba);
 }

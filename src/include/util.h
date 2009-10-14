@@ -21,7 +21,7 @@ extern FILE *logfp;
 
 #else	//!SIM
 
-#define assert(x)	{ if (!x) { /* TODO display assert on a rocket panel! :v) */ } }
+#define assert(x)	{ if (!(x)) { /* TODO display assert on a rocket panel! :v) */ } }
 #define LOGF(x)	{}
 #endif //SIM
 

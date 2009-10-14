@@ -15,7 +15,7 @@ void hal_init();
 void hal_start_atomic();	// block interrupts/signals
 void hal_end_atomic();		// resume interrupts/signals
 void hal_idle();			// hw: spin. sim: sleep
-void hal_start_clock_ms(int ms, Handler handler);
+void hal_start_clock_us(uint32_t us, Handler handler);
 void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff);
 char hal_read_keybuf();
 

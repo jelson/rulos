@@ -2,41 +2,43 @@
 
 #include "rocket.h"
 
-Time _real_time_since_boot_ms;
-Time _stale_time_ms;	// current as of last scheduler execution; cheap to evaluate
+Time _rtc_interval_us;
+Time _real_time_since_boot_us;
+Time _stale_time_us;	// current as of last scheduler execution; cheap to evaluate
 uint32_t _spin_counter;
 
 void clock_handler()
 {
 	// NB we assume this runs in interrupt context and is hence
 	// automatically atomic.
-	_real_time_since_boot_ms += RTC_INTERVAL_MS;
+	_real_time_since_boot_us += _rtc_interval_us;
 }
 
-void clock_init()
+void clock_init(Time interval_us)
 {
-	_real_time_since_boot_ms = 0;
-	hal_start_clock_ms(RTC_INTERVAL_MS, clock_handler);
+	_rtc_interval_us = interval_us;
+	_real_time_since_boot_us = 0;
+	hal_start_clock_us(interval_us, clock_handler);
 	_spin_counter = 0;
 }
 
-void schedule(int offset_ms, Activation *act)
+void schedule_us(Time offset_us, Activation *act)
 {
 	//LOGF((logfp, "scheduling act %08x func %08x\n", (int) act, (int) act->func));
 
 	// never schedule anything for "now", or we might stick the scheduler
 	// in a loop at "now".
-	assert(offset_ms > 0);
+	assert(offset_us > 0);
 
-	heap_insert(clock_time() + offset_ms, act);
+	heap_insert(clock_time_us() + offset_us, act);
 }
 
 Time _read_clock()	// this is the expensive one, with a lock
 {
 	hal_start_atomic();
-	_stale_time_ms = _real_time_since_boot_ms;
+	_stale_time_us = _real_time_since_boot_us;
 	hal_end_atomic();
-	return _stale_time_ms;
+	return _stale_time_us;
 }
 
 void spin_counter_increment()

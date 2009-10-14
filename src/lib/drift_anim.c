@@ -9,12 +9,12 @@ void drift_anim_init(DriftAnim *da, uint8_t expscale, int32_t initValue, int32_t
 	da->maxSpeed = maxSpeed << expscale;
 	da_random_impulse(da);	// assign a valid velocity.
 	da->base = initValue;
-	da->base_time = clock_time();
+	da->base_time = clock_time_us();
 }
 
-int32_t _da_eval(DriftAnim *da, uint32_t t)
+int32_t _da_eval(DriftAnim *da, Time t)
 {
-	int32_t dt = t - da->base_time;
+	int32_t dt = (t - da->base_time)/1000;
 	int32_t nv = da->base + ((da->velocity * dt) >> 10);
 	int32_t res = bound(nv, da->min, da->max);
 	return res;
@@ -22,12 +22,12 @@ int32_t _da_eval(DriftAnim *da, uint32_t t)
 
 int32_t da_read(DriftAnim *da)
 {
-	return _da_eval(da, clock_time()) >> da->expscale;
+	return _da_eval(da, clock_time_us()) >> da->expscale;
 }
 
 void _da_update_base(DriftAnim *da)
 {
-	uint32_t t = clock_time();
+	uint32_t t = clock_time_us();
 	da->base = _da_eval(da, t);
 	da->base_time = t;
 }
@@ -48,5 +48,5 @@ void da_set_velocity(DriftAnim *da, int32_t velocity)
 void da_set_value(DriftAnim *da, int32_t value)
 {
 	da->base = value << da->expscale;
-	da->base_time = clock_time();
+	da->base_time = clock_time_us();
 }

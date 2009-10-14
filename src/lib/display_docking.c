@@ -35,10 +35,10 @@ void ddock_init(DDockAct *act, uint8_t b0, FocusManager *focus)
 	drift_anim_init(&act->rd, 10, 7, 7, 13, 10);
 	act->last_impulse_time = 0;
 
-	schedule(1, (Activation*) act);
+	schedule_us(1, (Activation*) act);
 }
 
-#define IMPULSE_FREQUENCY_MS 5000
+#define IMPULSE_FREQUENCY_US 5000000
 
 void ddock_update(DDockAct *act)
 {
@@ -47,8 +47,8 @@ void ddock_update(DDockAct *act)
 	if (!act->focused)
 	{
 		// standard animation
-		uint32_t t = clock_time();
-		if (t - act->last_impulse_time > IMPULSE_FREQUENCY_MS)
+		Time t = clock_time_us();
+		if (t - act->last_impulse_time > IMPULSE_FREQUENCY_US)
 		{
 			da_random_impulse(&act->xd);
 			da_random_impulse(&act->yd);
@@ -56,7 +56,7 @@ void ddock_update(DDockAct *act)
 			act->last_impulse_time = t;
 		}
 	}
-	schedule(256, (Activation*) act);
+	schedule_us(Exp2Time(18), (Activation*) act);
 }
 
 #define I_NAN	 0x7fffffff

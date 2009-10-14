@@ -73,7 +73,7 @@ int main()
 	heap_init();
 	util_init();
 	hal_init();
-	clock_init();
+	clock_init(10000);
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);	// includes slow calibration phase
@@ -140,7 +140,7 @@ int main()
 	dcompass_init(&dc, 4, &fa);
 
 	DGratuitousGraph dgg;
-	dgg_init(&dgg, 5, "volts", 5000);
+	dgg_init(&dgg, 5, "volts", 5000000);
 
 */
 #if !MCUatmega8

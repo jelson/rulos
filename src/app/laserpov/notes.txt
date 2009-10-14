@@ -1,0 +1,8 @@
+30 Hz update rate =
+	3 sides => 600rpm
+	4 sides => 450rpm
+
+30 Hz update rate * 256 pixels = 7680 pix/sec = 1.3 ms / pixel
+*2 for dead band? 700 us / pixel
+measure mirror period to 1/2 pixel = 350us clock resolution =
+	350 cycles per clock interrupt @ 1MHz. No problem.

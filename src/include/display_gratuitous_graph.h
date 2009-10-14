@@ -10,11 +10,11 @@ typedef struct s_d_gratuitous_graph {
 	BoardBuffer bbuf;
 	DriftAnim drift;
 	char *name;
-	uint16_t impulse_frequency;
-	uint32_t last_impulse;
+	Time impulse_frequency_us;
+	Time last_impulse;
 } DGratuitousGraph;
 
 void dgg_init(DGratuitousGraph *dgg,
-	uint8_t board, char *name, uint16_t impulse_frequency);
+	uint8_t board, char *name, Time impulse_frequency_us);
 
 #endif // display_gratuitous_graph_h

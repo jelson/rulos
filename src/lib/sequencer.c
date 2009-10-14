@@ -44,15 +44,15 @@ void launch_init(Launch *launch, uint8_t board0, FocusManager *fa)
 
 	launch->clock_act.func = launch_clock_handler;
 	launch->clock_act.launch = launch;
-	schedule(1, (Activation*) &launch->clock_act);
+	schedule_us(1, (Activation*) &launch->clock_act);
 }
 
 void launch_set_state(Launch *launch, LaunchState state, uint32_t time_ms)
 {
 	launch->state = state;
-	launch->state_start_time = clock_time();
+	launch->state_start_time = clock_time_us();
 	launch->timer_expired = FALSE;
-	launch->timer_deadline = launch->state_start_time + time_ms;
+	launch->timer_deadline = launch->state_start_time + time_ms*1000;
 }
 
 void launch_config_panels(Launch *launch, LaunchPanelConfig new0, LaunchPanelConfig new1)
@@ -138,7 +138,7 @@ void launch_enter_state_enter_code(Launch *launch)
 
 void launch_enter_state_countdown(Launch *launch)
 {
-	drtc_set_base_time(&launch->p1_timer, clock_time()+10000);
+	drtc_set_base_time(&launch->p1_timer, clock_time_us()+10000000);
 	launch_config_panels(launch, lpc_p0scroller, lpc_p1timer);
 	dscrlmsg_set_msg(&launch->p0_scroller, "Launch sequence initiated. Countdown.  ");
 	launch_set_state(launch, launch_state_countdown, 10001);
@@ -250,8 +250,8 @@ void launch_clock_handler(Activation *act)
 	Launch *launch = lca->launch;
 //	LOGF((logfp, "Funky, cold medina. launch %08x Act %08x func %08x\n",
 //		(int)launch, (int) &launch->clock_act, (int)launch->clock_act.func));
-	schedule(250, (Activation*) &launch->clock_act);
-	if (!launch->timer_expired && clock_time() >= launch->timer_deadline)
+	schedule_us(250000, (Activation*) &launch->clock_act);
+	if (!launch->timer_expired && clock_time_us() >= launch->timer_deadline)
 	{
 		launch->timer_expired = TRUE;
 		launch->func((UIEventHandler*) launch, sequencer_timeout);

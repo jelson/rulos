@@ -13,7 +13,7 @@ void cpumon_init(CpumonAct *act)
 	act->func = (ActivationFunc) cpumon_act;
 	act->phase = cpumon_phase_align;
 	act->num_calibrations = 3;
-	schedule(1, (Activation *) act);
+	schedule_us(1, (Activation *) act);
 
 	cpumon_main_loop();
 	// exits once due to message from phase_measure; next call runs forever.
@@ -33,14 +33,14 @@ void cpumon_main_loop()
 void cpumon_act(CpumonAct *act)
 {
 	uint32_t spins = read_spin_counter();
-	Time time = clock_time();
+	Time time = clock_time_us();
 
 	switch (act->phase)
 	{
 		case cpumon_phase_align:
 		{
 			act->phase = cpumon_phase_measure;
-			schedule(100, (Activation *) act);
+			schedule_us(100000, (Activation *) act);
 			break;
 		}
 		case cpumon_phase_measure:
@@ -55,11 +55,11 @@ void cpumon_act(CpumonAct *act)
 			if (act->num_calibrations>0)
 			{
 				act->phase = cpumon_phase_align;
-				schedule(1, (Activation *) act);
+				schedule_us(1, (Activation *) act);
 			}
 			else
 			{
-				schedule(1000, (Activation *) act);
+				schedule_us(1000000, (Activation *) act);
 				// signal that we're done with cpumon_init()'s invocation of
 				// cpumon_main_loop; let rocket.c's main initialization
 				// continue until it's called for real (and forEVVEEEEERRRR).
@@ -77,7 +77,7 @@ void cpumon_act(CpumonAct *act)
 				act->sample_spin_counts, act->sample_interval,
 				cpumon_get_idle_percentage(act)));
 			*/
-			schedule(1000, (Activation *) act);
+			schedule_us(1000000, (Activation *) act);
 			break;
 		}
 	}

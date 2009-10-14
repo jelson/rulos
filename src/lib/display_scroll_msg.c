@@ -16,7 +16,7 @@ void dscrlmsg_init(struct s_dscrollmsgact *act,
 	act->speed_ms = speed_ms;
 	act->index = 0;
 	dscrlmsg_set_msg(act, msg);
-	schedule(1, (Activation*) act);
+	schedule_us(1, (Activation*) act);
 }
 
 int dscrlmsg_nexti(DScrollMsgAct *act, int i)
@@ -46,7 +46,7 @@ void dscrlmsg_update(DScrollMsgAct *act)
 {
 	if (act->speed_ms > 0)
 	{
-		schedule(act->speed_ms, (Activation*) act);
+		schedule_us(act->speed_ms*1000, (Activation*) act);
 		if (act->len > NUM_DIGITS)
 		{
 			act->index = dscrlmsg_nexti(act, act->index);

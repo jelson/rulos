@@ -26,7 +26,7 @@ static void update(BoardActivation_t *ba)
 	if (++(ba->stage) == 4)
 		ba->stage = 0;
 
-	schedule(1500, (Activation *)ba);
+	schedule_us(1500000, (Activation *)ba);
 	return;
 }
 
@@ -42,6 +42,6 @@ void boardid_init(BoardActivation_t *ba)
 		board_buffer_push(&ba->b[board], board);
 	}
 
-	schedule(500, (Activation *) ba);
+	schedule_us(500000, (Activation *) ba);
 }
 
