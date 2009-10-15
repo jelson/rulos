@@ -111,6 +111,12 @@ static sim_input_handler_stop_t sim_input_handler_stop = NULL;
 static WINDOW *uart_input_window = NULL;
 char recent_uart_buf[20];
 
+static void draw_uart_input_window()
+{
+	mvwprintw(uart_input_window, 2, 1, "%s", recent_uart_buf);
+	wrefresh(uart_input_window);
+}
+
 static void uart_simulator_input(char c)
 {
 	LOGF((logfp, "sim inserting to uart: %c\n", c));
@@ -127,8 +133,7 @@ static void uart_simulator_input(char c)
 	else
 		strcat(recent_uart_buf, ".");
 
-	mvwprintw(uart_input_window, 2, 1, "%s", recent_uart_buf);
-	wrefresh(uart_input_window);
+	draw_uart_input_window();
 
 	// upcall to the uart code
 	uart_receive(c);
@@ -157,7 +162,7 @@ static void uart_simulator_start()
 			   NUM_DIGITS*DIGIT_WIDTH + 3);
 	mvwprintw(uart_input_window, 1, 1, "UART Input Mode:");
 	box(uart_input_window, ACS_VLINE, ACS_HLINE);
-	wrefresh(uart_input_window);
+	draw_uart_input_window();
 }
 
 void hal_uart_init(uint16_t baud)
