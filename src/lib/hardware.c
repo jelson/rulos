@@ -200,18 +200,18 @@ uint16_t hal_elapsed_milliintervals()
 }
 
 // Speed up or slow down the clock by a certain
-// ratio, expressed in parts per thousand.
+// ratio, expressed in parts per million
 //
 // A ratio of 0 will keep the clock unchanged.
 // Positive ratios will make the clock tick faster.
 // Negative ratios will make the clock tick slower.
 // Ex: +20 makes the clock tick 2% faster.
 // 
-void hal_speedup_clock_ppt(uint16_t ratio)
+void hal_speedup_clock_ppm(uint32_t ratio)
 {
 	uint32_t adjustment = OCR1A;
 	adjustment *= -ratio;
-	adjustment /= 1000;
+	adjustment /= 1000000;
 	OCR1A += (uint16_t) adjustment;
 }
 

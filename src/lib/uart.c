@@ -7,6 +7,7 @@ char uart_queue_store[32];
 UartQueue_t uart_queue_g;
 
 
+// upcall from HAL
 void uart_receive(char c)
 {
 	if (uart_queue_g.reception_time_us == 0) {
@@ -15,6 +16,9 @@ void uart_receive(char c)
 	ByteQueue_append(uart_queue_g.q, c);
 }
 
+//////////////////////////////////////////////////////////
+
+
 void uart_queue_reset()
 {
 	uart_queue_g.q = (ByteQueue *) uart_queue_store;
@@ -22,9 +26,9 @@ void uart_queue_reset()
 	uart_queue_g.reception_time_us = 0;
 }
 
-UartQueue_t uart_queue_get()
+UartQueue_t *uart_queue_get()
 {
-	return uart_queue_g;
+	return &uart_queue_g;
 }
 
 uint8_t uart_read(uint8_t *c /* OUT */)

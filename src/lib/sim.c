@@ -300,6 +300,11 @@ uint16_t hal_elapsed_milliintervals()
 	return 0;
 }
 
+void hal_speedup_clock_ppm(uint32_t ratio)
+{
+	// do nothing for now
+}
+
 void hal_start_atomic()
 {
 	sigprocmask(SIG_BLOCK, &alrm_set, NULL);
