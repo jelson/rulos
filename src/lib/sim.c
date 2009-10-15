@@ -8,6 +8,7 @@
 #include <sys/timeb.h>
 #include <signal.h>
 #include <sched.h>
+#include <ctype.h>
 
 #include "rocket.h"
 #include "util.h"
@@ -63,6 +64,7 @@ sigset_t alrm_set;
 
 static void terminate_sim(void)
 {
+	nocbreak();
 	endwin();
 	exit(0);
 }
@@ -106,10 +108,29 @@ static sim_input_handler_stop_t sim_input_handler_stop = NULL;
 /********************** uart simulator *********************/
 
 
+static WINDOW *uart_input_window = NULL;
+char recent_uart_buf[20];
+
 static void uart_simulator_input(char c)
 {
-	// curses magic to draw the character on the screen
 	LOGF((logfp, "sim inserting to uart: %c\n", c));
+
+	// display on screen
+	if (strlen(recent_uart_buf) == sizeof(recent_uart_buf)-1)
+	{
+		memmove(&recent_uart_buf[0],
+				&recent_uart_buf[1],
+				sizeof(recent_uart_buf)-1);
+	}
+	if (isprint(c))
+		sprintf(recent_uart_buf+strlen(recent_uart_buf), "%c", c);
+	else
+		strcat(recent_uart_buf, ".");
+
+	mvwprintw(uart_input_window, 2, 1, "%s", recent_uart_buf);
+	wrefresh(uart_input_window);
+
+	// upcall to the uart code
 	uart_receive(c);
 }
 
@@ -117,14 +138,26 @@ static void uart_simulator_stop()
 {
 	sim_special_input_handler = NULL;
 	sim_input_handler_stop = NULL;
-	// curses magic to take subwindow away
+	delwin(uart_input_window);
+	touchwin(mainwnd);
+	refresh();
 }
 
 static void uart_simulator_start()
 {
+	// set up handlers
 	sim_special_input_handler = uart_simulator_input;
 	sim_input_handler_stop = uart_simulator_stop;
-	// curses magic to open a sub-window
+
+	// create input window
+	uart_input_window =
+		newwin(4,
+			   sizeof(recent_uart_buf)+1,
+			   2,
+			   NUM_DIGITS*DIGIT_WIDTH + 3);
+	mvwprintw(uart_input_window, 1, 1, "UART Input Mode:");
+	box(uart_input_window, ACS_VLINE, ACS_HLINE);
+	wrefresh(uart_input_window);
 }
 
 void hal_uart_init(uint16_t baud)
@@ -181,21 +214,27 @@ static void sim_poll_keyboard()
 
 	LOGF((logfp, "poll_kb got char: %c (%x)\n", c, c));
 
-	if (c == 'q' || c == 27 /* escape */) {
-		if (sim_input_handler_stop != NULL) {
+	// if we're in normal mode and hit 'q', terminate the simulator
+	if (sim_special_input_handler == NULL && c == 'q')
+	{
+		terminate_sim();
+	}
+
+	// If we're in a special input mode and hit escape, exit the mode.
+	// Otherwise, pass the character to the handler.
+	if (sim_special_input_handler != NULL)
+	{
+		if (c == 27 /* escape */)
+		{
 			sim_input_handler_stop();
-		} else {
-			terminate_sim();
+		}
+		else
+		{
+			sim_special_input_handler(c);
 		}
 		return;
 	}
 
-	// if we're in a special input mode (e.g. uart simulator),
-	// pass the character to its handler.
-	if (sim_special_input_handler != NULL) {
-		sim_special_input_handler(c);
-		return;
-	}
 
 	// Check for one of the characters that puts us into a special
 	// input mode.  If none of them match, default to keypad input
@@ -288,14 +327,14 @@ void hal_init()
 {
 	/* init input buffers */
 	ByteQueue_init((ByteQueue *) keypad_buf, sizeof(keypad_buf));
+	memset(recent_uart_buf, 0, sizeof(recent_uart_buf));
 
 	/* init curses */
 	mainwnd = initscr();
 	noecho();
 	cbreak();
 	nodelay(mainwnd, TRUE);
-	refresh(); // 1)
-	wrefresh(mainwnd);
+	refresh();
 	curs_set(0);
 
 	/* init screen */
