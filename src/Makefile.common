@@ -4,12 +4,10 @@ COMMON_OBJECTS = \
 	clock.o \
 	cpumon.o \
 	cursor.o \
-	display_boardid.o \
 	display_compass.o \
 	display_controller.o \
 	display_docking.o \
 	display_gratuitous_graph.o \
-	display_keytest.o \
 	display_rtc.o \
 	display_scroll_msg.o \
 	drift_anim.o \
@@ -22,6 +20,7 @@ COMMON_OBJECTS = \
 	numeric_input.o \
 	queue.o \
 	random.o \
+	uart.o \
 	util.o \
 	sequencer.o \
 	display_blinker.o \

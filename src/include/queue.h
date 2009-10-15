@@ -14,6 +14,8 @@ void ByteQueue_init(ByteQueue *bq, uint8_t buf_size);
 uint8_t ByteQueue_append(ByteQueue *bq, uint8_t elt);
 uint8_t ByteQueue_peek(ByteQueue *bq, /*OUT*/ uint8_t *elt);
 uint8_t ByteQueue_pop(ByteQueue *bq, /*OUT*/ uint8_t *elt);
+uint8_t ByteQueue_pop_n(ByteQueue *bq, /*OUT*/ uint8_t *elt, uint8_t n);
+uint8_t ByteQueue_length(ByteQueue *bq);
 
 /* usage:
 declare storage

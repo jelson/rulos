@@ -3,69 +3,211 @@
 #include <string.h>
 
 #include "rocket.h"
-#include "clock.h"
-#include "util.h"
-#include "display_boardid.h"
-#include "display_controller.h"
-#include "display_rtc.h"
-#include "display_scroll_msg.h"
-#include "display_compass.h"
-#include "focus.h"
-#include "labeled_display.h"
-#include "display_docking.h"
-#include "display_gratuitous_graph.h"
-#include "numeric_input.h"
-#include "input_controller.h"
-#include "calculator.h"
-#include "hal.h"
-#include "cpumon.h"
-#include "idle_display.h"
-#include "sequencer.h"
-#include "display_keytest.h"
-#include "rasters.h"
+#include "uart.h"
 
 
-/************************************************************************************/
-/************************************************************************************/
+#define MILLION 1000000
 
-//#define BOARDID
+typedef struct {
+  ActivationFunc f;
+  BoardBuffer bbuf;
+  Time last_update_time;
+  uint8_t hour;
+  uint8_t minute;
+  uint8_t second;
+  uint8_t hundreth;
+  uint8_t unhappy_state;
+  uint8_t unhappy_timer;
+  UartQueue_t uq;
+} WallClockActivation_t;
 
-#ifdef BOARDID
-int main()
+
+
+/******************** Display *******************************/
+
+static void display_time(WallClockActivation_t *wca)
 {
-	heap_init();
-	util_init();
-	hal_init();
+  char buf[9];
 
-#if 0
-	int i;
-
-	while (1){
-		for (i = 0; i < 8; i++) {
-			program_segment(0, 0, i, 0);
-			_delay_ms(1000);
-		}
-		for (i = 0; i < 8; i++) {
-			program_segment(0, 0, i, 1);
-			_delay_ms(1000);
-		}
-	}
-#endif
-
-	clock_init();
-	board_buffer_module_init();
-
-	BoardActivation_t ba;
-	boardid_init(&ba);
-
-	KeyTestActivation_t kta;
-	display_keytest_init(&kta, 7);
-
-	cpumon_main_loop();
-	return 0;
+  int_to_string2(buf,   2, 2, wca->hour);
+  int_to_string2(buf+2, 2, 2, wca->minute);
+  int_to_string2(buf+4, 2, 2, wca->second);
+  int_to_string2(buf+6, 2, 2, wca->hundredth);
+  ascii_to_bitmap_str(wca->bbuf.buffer, 8, buf);
+  wca->bbuf.buffer[1] |= SSB_DECIMAL;
+  wca->bbuf.buffer[2] |= SSB_DECIMAL;
+  wca->bbuf.buffer[3] |= SSB_DECIMAL;
+  wca->bbuf.buffer[4] |= SSB_DECIMAL;
+  wca->bbuf.buffer[5] |= SSB_DECIMAL;
 }
 
-#else //boardid
+
+static void display_unhappy(WallClockActivation_t *wca, uint16_t interval_ms)
+{
+  wca->unhappy_timer += interval_ms;
+
+  if (wca->unhappy_timer > 500)
+    wca->unhappy_state++;
+  if (wca->unhappy_state >= 2)
+    wca->unhappy_state = 0;
+
+  if (wca->unhappy_state == 0)
+    ascii_to_bitmap_str(wca->bbuf.buffer, 8, "CONNECT");
+  else if (wca->unhappy_state == 1)
+    ascii_to_bitmap_str(wca->bbuf.buffer, 8, "PC");
+}
+
+
+
+/****************  Clock Management *****************************/
+
+static void calibrate_clock(WallClockActivation_t *wca,
+			    uint8_t hour,
+			    uint8_t minute,
+			    uint8_t second,
+			    Time reception_us)
+{
+  // Compute the elapsed time according to our local clock between
+  // this packet received and when the previous one was received
+  Time reception_diff_us = reception_us - wca->last_reception_us;
+
+  // Update the wall-clock and record when we received this pulse
+  wca->hour = hour;
+  wca->minute = minute;
+  wca->second = second;
+  wca->hundredth = 0;
+  wca->last_reception_us = reception_us;
+    
+  // There were supposed to be 60 seconds between this one and the last.
+  // TODO: Support arbitrary intervals.
+  Time error = 60*MILLION - reception_diff_us;
+
+  // If it's off by 20 seconds or more, don't use this as a
+  // calibration.
+  if (error > 20*MILLION || error < -20*MILLION)
+    return;
+
+  // Compute the ratio by which we're off in parts per thousand
+  Time ratio = error / (60 * 1000);
+
+  // Update the clock rate
+  hal_speedup_clock_ppt(ratio);
+}
+
+
+/*
+ * Advance the display clock by a given number of milliseconds
+ */
+static void advance_clock(WallClockActivation_t *wca, uint16_t interval_ms)
+{
+  // if we don't have a valid time, don't change the clock
+  if (wca->hour < 0)
+    return;
+
+  wca->hundredth += (interval_ms / 10);
+
+  while (wca->hundredth >= 100) {
+    wca->hundredth -= 100;
+    wca->second++;
+  }
+  while (wca->seconds >= 60) {
+    wca->second -= 60;
+    wca->minute++;
+  }
+  while (wca->minutes >= 60) {
+    wca->minute -= 60;
+    wca->hour++;
+  }
+  while (wca->hour >= 24) {
+    wca->hour -= 24;
+  }
+}
+
+
+/******************* main ***********************************/
+
+static void ascii_digit(uint8_t c)
+{
+  if (c >= '0' && c <= '9')
+    return c - '0';
+  else
+    return 0;
+}
+
+// Check the UART to see if there's a valid message.  I'll arbitrarily
+// define a protocol: messages are 8 ASCII characters: T123055E
+// ("Time 12:30:55 End").  So, we'll check the uart periodically.
+// If the buffer doesn't begin with T, we assume a framing error and
+// throw the whole buffer away.
+//
+// Note that the UART timestamping code returns a timestamp only for
+// the first character in the queue.
+static void check_uart(WallClockActivation_t *wca)
+{
+  uint8_t msg[8];
+
+  hal_start_atomic();
+
+  // In case of framing error, clear the queue
+  if (ByteQueue_peek(wca->uq.q, &msg[0]) && msg[0] != 'T') {
+    uart_queue_reset();
+    goto done;
+  }
+
+  // If there are fewer than 8 characters, it could just be that the
+  // message is still in transit; do nothing.
+  if (ByteQueue_length(wca->uq.q) < 8)
+    goto done;
+
+  // There are (at least) 8 characters - great!  Copy them in and
+  // reset the queue.
+  ByteQueue_pop_n(wca->uq.q, msg, 8);
+  uart_queue_reset();
+
+  // Make sure both framing characters are correct
+  if (msg[0] != 'T' || msg[7] != 'E')
+    goto done;
+
+  // Decode the characters
+  uint8_t hour   = ascii_digit(msg[1])*10 + ascii_digit(msg[2]);
+  uint8_t minute = ascii_digit(msg[3])*10 + ascii_digit(msg[4]);
+  uint8_t second = ascii_digit(msg[5])*10 + ascii_digit(msg[6]);
+
+  // Update the clock
+  calibrate_clock(wca, hour, minute, second, wca->uq.reception_time_us);
+
+ done:
+  hal_end_atomic();
+
+     
+}
+
+static void update(WallClockActivation_t *wca)
+{
+  // compute how much time has passed since we were last called
+  Time now = clock_time_us();
+  Time interval_us = now - wca->last_update_time;
+  uint16_t interval_ms = (interval_us + 500) / 1000;
+  wca->last_update_time = now;
+
+  // advance the clock by that amount
+  advance_clock(wca, interval_ms);
+
+  // check and see if we've gotten any uart messages
+  check_uart(wca);
+
+  // display either the time (if the clock has been set)
+  // or an unhappy message (if it has not)
+  if (wca->hour < 0)
+    display_unhappy(wca, interval_ms);
+  else
+    display_clock(wca);
+  board_buffer_draw(&wca->bbuf);
+
+
+  // schedule the next callback
+  schedule_us(10000, (Activation *) wca);
+}
 
 
 int main()
@@ -73,96 +215,29 @@ int main()
 	heap_init();
 	util_init();
 	hal_init();
+	board_buffer_module_init();
+
+	// start clock with 10 msec resolution
 	clock_init(10000);
 
-	CpumonAct cpumon;
-	cpumon_init(&cpumon);	// includes slow calibration phase
+	// start the uart running
+	uart_init();
 
-	//install_handler(ADC, adc_handler);
+	// initialize our internal state
+	WallClockActivation_t wca;
+	memset(&wca, sizeof(WallClockActivation_t), 0);
+	wca.f = (ActivationFunc) update;
+	wca.hour = -1;
+	wca.last_update_time = clock_time_us();
+	wca.uq = uart_queue_get();
 
-	board_buffer_module_init();
+	// init the board buffer
+	board_buffer_init(wca.bbuf);
+	board_buffer_push(wca.bbuf, 0);
 
-	FocusManager fa;
-	focus_init(&fa);
-
-	InputControllerAct ia;
-	input_controller_init(&ia, (UIEventHandler*) &fa);
-
-	LabeledDisplayHandler ldh;
-	labeled_display_init(&ldh, 0, &fa);
-
-	DScrollMsgAct da1;
-	dscrlmsg_init(&da1, 0, "x", 0);	// overwritten by idle display
-	
-	IdleDisplayAct idisp;
-	idle_display_init(&idisp, &da1, &cpumon);
-
-	char buf[50], *p;
-	strcpy(buf, "calib_spin ");
-	p = buf+strlen(buf);
-	p+=int_to_string2(p, 0, 0, cpumon.calibration_spin_counts);
-	strcpy(p, " interval ");
-	p = buf+strlen(buf);
-	p+=int_to_string2(p, 0, 0, cpumon.calibration_interval);
-	strcpy(p, "  ");
-
-/*
-	DScrollMsgAct da2;
-	dscrlmsg_init(&da2, 3, "This is a test sequence with original scroll. ", 100);
-	*/
-
-/*
-	Calculator calc;
-	calculator_init(&calc, 4, &fa);
-
-	// scroll our ascii set.
-	DScrollMsgAct da2;
-	char buf[129-32];
-	{
-		int i;
-		for (i=0; i<128-32; i++)
-		{
-			buf[i] = i+32;
-		}
-		buf[i] = '\0';
-	}
-	dscrlmsg_init(&da2, 3, buf, 200);
-
-	NumericInputAct ni;
-	BoardBuffer bbuf;
-	board_buffer_init(&bbuf);
-	board_buffer_push(&bbuf, 4);
-	RowRegion region = { &bbuf, 3, 4 };
-
-	numeric_input_init(&ni, region, NULL, &fa, "numeric");
-
-	DCompassAct dc;
-	dcompass_init(&dc, 4, &fa);
-
-	DGratuitousGraph dgg;
-	dgg_init(&dgg, 5, "volts", 5000000);
-
-*/
-#if !MCUatmega8
-
-/*
-	DDockAct ddock;
-	ddock_init(&ddock, 0, &fa);
-*/
-
-	RasterBigDigit rdigit;
-	raster_big_digit_init(&rdigit, 2);
-#endif
-
-/*
-	Launch launch;
-	launch_init(&launch, 4, &fa);
-*/
-
+	// have the callback get called immediately
+	schedule_us(1, (Activation *) &wca);
 
 	cpumon_main_loop();
-
 	return 0;
 }
-
-#endif

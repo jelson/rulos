@@ -33,11 +33,17 @@ void schedule_us(Time offset_us, Activation *act)
 	heap_insert(clock_time_us() + offset_us, act);
 }
 
-Time _read_clock()	// this is the expensive one, with a lock
+// this is the expensive one, with a lock
+Time precise_clock_time_us()
 {
+	uint16_t milliintervals;
+
 	hal_start_atomic();
+	milliintervals = hal_elapsed_milliintervals();
 	_stale_time_us = _real_time_since_boot_us;
 	hal_end_atomic();
+
+	_stale_time_us += ((_rtc_interval_us * milliintervals) / 1000);
 	return _stale_time_us;
 }
 
@@ -53,7 +59,7 @@ uint32_t read_spin_counter()
 
 void scheduler_run_once()
 {
-	Time now = _read_clock();
+	Time now = precise_clock_time_us();
 
 	while (1)	// run until nothing to do for this time
 	{

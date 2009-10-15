@@ -1,15 +1,10 @@
-.PHONY: mcu-defined-check
- 
-mcu-defined-check:
-ifeq ($(MCU),)
-	@echo "MCU must be defined in your local Makefile (atmega8, atmega328p)"
-	@false
-else
-	@true
-endif
+# Objects that should be part of the real hardware but
+# not the simulator
+AVR_ONLY_OBJECTS := \
+	hardware.o
 
 # Compilation
-AVR_OBJDIR = $(ROCKET_ROOT)/obj.avr.$(MCU)
+AVR_OBJDIR = obj.avr.$(MCU)
 AVR_LIBNAME = rocket
 AVR_LIB_FILE = $(AVR_OBJDIR)/lib$(AVR_LIBNAME).a
 CC = avr-gcc
@@ -45,10 +40,22 @@ HEX_EEPROM_FLAGS += --change-section-lma .eeprom=0 --no-change-warnings
 
 ## Objects that must be built in order to link
 AVR_LIB_OBJECTS := $(patsubst %.o,$(AVR_OBJDIR)/%.o,$(COMMON_OBJECTS) \
-	hardware.o )
+	$(AVR_ONLY_OBJECTS) )
 
 AVR_TARGET_OBJECTS := $(patsubst %.o,$(AVR_OBJDIR)/%.o, \
 	$(TARGET_OBJECTS))
+
+
+# Make sure MCU is defined
+.PHONY: mcu-defined-check
+ 
+mcu-defined-check:
+ifeq ($(MCU),)
+	@echo "MCU must be defined in your local Makefile (atmega8, atmega328p)"
+	@false
+else
+	@true
+endif
 
 ## Build
 avr-all: mcu-defined-check $(TARGET).elf $(TARGET).hex $(TARGET).eep $(TARGET).lss $(TARGET).size

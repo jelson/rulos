@@ -1,10 +1,10 @@
 ROCKET_ROOT := ../..
 
 MCU := atmega8
-TARGET := wallclock
+TARGET := keypadtest
 
 TARGET_OBJECTS := \
-	wallclock.o
+	keypadtest.o
 
 
 include $(ROCKET_ROOT)/Makefile.common

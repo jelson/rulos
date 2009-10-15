@@ -16,6 +16,7 @@
 #include "region.h"
 #include "cursor.h"
 #include "focus.h"
+#include "cpumon.h"
 
 #endif /* __rocket_h__ */
 

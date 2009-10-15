@@ -9,16 +9,13 @@ typedef int32_t Time;	// in units of usec
 
 void clock_init(Time interval_us);
 
-// Current as of last scheduler execution; cheap to evaluate
-// we don't bother offering externally the more-expensive version that reads
-// the real current time with an atomic op, because it would only differ
-// if our code sucked so much that we were consuming > 1 jiffy for one
-// continuation.
-
-// not sure why "inline" defn doesn't work. Meh.
-//inline Time clock_time() { return _stale_time_us; }
 extern Time _stale_time_us;	
-#define clock_time_us()	(_stale_time_us)
+
+// cheap but only precise to one jiffy
+static inline Time clock_time_us() { return _stale_time_us; }
+
+// expensive but more accurate
+Time precise_clock_time_us(); 
 
 void schedule_us(Time offset_us, Activation *act);
 #define Exp2Time(v)	(((Time)1)<<(v))

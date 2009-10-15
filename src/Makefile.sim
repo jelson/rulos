@@ -1,5 +1,8 @@
+# Objects only used by the simulator
+SIM_ONLY_OBJECTS :=  \
+	sim.o
 
-SIM_OBJDIR = $(ROCKET_ROOT)/obj.sim
+SIM_OBJDIR = obj.sim
 SIM_LIBNAME = rocket
 SIM_LIB_FILE = $(SIM_OBJDIR)/lib$(SIM_LIBNAME).a
 
@@ -12,7 +15,7 @@ SIM_LDFLAGS = -L$(SIM_OBJDIR) -l$(SIM_LIBNAME)
 ############
 
 SIM_LIB_OBJECTS := $(patsubst %.o,$(SIM_OBJDIR)/%.o,$(COMMON_OBJECTS) \
-	sim.o )
+	$(SIM_ONLY_OBJECTS) )
 
 SIM_TARGET_OBJECTS := $(patsubst %.o,$(SIM_OBJDIR)/%.o, \
 	$(TARGET_OBJECTS))

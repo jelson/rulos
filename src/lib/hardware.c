@@ -11,6 +11,7 @@
 
 #include "rocket.h"
 #include "hardware.h"
+#include "uart.h"
 
 #if defined(PROTO_BOARD)
 #define BOARDSEL0	GPIO_B2
@@ -188,6 +189,33 @@ void hal_start_clock_us(uint32_t us, Handler handler)
 	sei();
 }
 
+/*
+ * How long since the last interval timer?
+ * 0 == the current interval just started.
+ * 1000 = the next interval is about to start.
+ */
+uint16_t hal_elapsed_milliintervals()
+{
+	return 1000 * TCNT1 / OCR1A;
+}
+
+// Speed up or slow down the clock by a certain
+// ratio, expressed in parts per thousand.
+//
+// A ratio of 0 will keep the clock unchanged.
+// Positive ratios will make the clock tick faster.
+// Negative ratios will make the clock tick slower.
+// Ex: +20 makes the clock tick 2% faster.
+// 
+void hal_speedup_clock_ppt(uint16_t ratio)
+{
+	uint32_t adjustment = OCR1A;
+	adjustment *= -ratio;
+	adjustment /= 1000;
+	OCR1A += (uint16_t) adjustment;
+}
+
+
 /**************************************************************/
 /*			 Interrupt-driven senor input                     */
 /**************************************************************/
@@ -212,69 +240,69 @@ ISR(INT0_vect)
 
 static uint8_t scan_row()
 {
-		/*
-		 * Scan the four columns in of the row.  Return 1..4 if any of
-		 * them are low.  Return 0 if they're all high.
-		 */
-		_NOP();
-		if (gpio_is_clr(KEYPAD_COL0)) return 1;
-		if (gpio_is_clr(KEYPAD_COL1)) return 2;
-		if (gpio_is_clr(KEYPAD_COL2)) return 3;
-		if (gpio_is_clr(KEYPAD_COL3)) return 4;
+	/*
+	 * Scan the four columns in of the row.  Return 1..4 if any of
+	 * them are low.  Return 0 if they're all high.
+	 */
+	_NOP();
+	if (gpio_is_clr(KEYPAD_COL0)) return 1;
+	if (gpio_is_clr(KEYPAD_COL1)) return 2;
+	if (gpio_is_clr(KEYPAD_COL2)) return 3;
+	if (gpio_is_clr(KEYPAD_COL3)) return 4;
 
-		return 0;
+	return 0;
 }
 
 
 static char scan_keypad()
 {
-		uint8_t row;
+	uint8_t col;
 
-		/* Scan first row */
-		gpio_clr(KEYPAD_ROW0);
-		gpio_set(KEYPAD_ROW1);
-		gpio_set(KEYPAD_ROW2);
-		gpio_set(KEYPAD_ROW3);
-		row = scan_row();
-		if (row == 1)			return '1';
-		if (row == 2)			return '2';
-		if (row == 3)			return '3';
-		if (row == 4)			return 'a';
+	/* Scan first row */
+	gpio_clr(KEYPAD_ROW0);
+	gpio_set(KEYPAD_ROW1);
+	gpio_set(KEYPAD_ROW2);
+	gpio_set(KEYPAD_ROW3);
+	col = scan_row();
+	if (col == 1)			return '1';
+	if (col == 2)			return '2';
+	if (col == 3)			return '3';
+	if (col == 4)			return 'a';
 
-		/* Scan second row */
-		gpio_set(KEYPAD_ROW0);
-		gpio_clr(KEYPAD_ROW1);
-		gpio_set(KEYPAD_ROW2);
-		gpio_set(KEYPAD_ROW3);
-		row = scan_row();
-		if (row == 1)			return '4';
-		if (row == 2)			return '5';
-		if (row == 3)			return '6';
-		if (row == 4)			return 'b';
+	/* Scan second row */
+	gpio_set(KEYPAD_ROW0);
+	gpio_clr(KEYPAD_ROW1);
+	gpio_set(KEYPAD_ROW2);
+	gpio_set(KEYPAD_ROW3);
+	col = scan_row();
+	if (col == 1)			return '4';
+	if (col == 2)			return '5';
+	if (col == 3)			return '6';
+	if (col == 4)			return 'b';
 
-		/* Scan third row */
-		gpio_set(KEYPAD_ROW0);
-		gpio_set(KEYPAD_ROW1);
-		gpio_clr(KEYPAD_ROW2);
-		gpio_set(KEYPAD_ROW3);
-		row = scan_row();
-		if (row == 1)			return '7';
-		if (row == 2)			return '8';
-		if (row == 3)			return '9';
-		if (row == 4)			return 'c';
+	/* Scan third row */
+	gpio_set(KEYPAD_ROW0);
+	gpio_set(KEYPAD_ROW1);
+	gpio_clr(KEYPAD_ROW2);
+	gpio_set(KEYPAD_ROW3);
+	col = scan_row();
+	if (col == 1)			return '7';
+	if (col == 2)			return '8';
+	if (col == 3)			return '9';
+	if (col == 4)			return 'c';
 
-		/* Scan fourth row */
-		gpio_set(KEYPAD_ROW0);
-		gpio_set(KEYPAD_ROW1);
-		gpio_set(KEYPAD_ROW2);
-		gpio_clr(KEYPAD_ROW3);
-		row = scan_row();
-		if (row == 1)			return 's';
-		if (row == 2)			return '0';
-		if (row == 3)			return 'p';
-		if (row == 4)			return 'd';
+	/* Scan fourth row */
+	gpio_set(KEYPAD_ROW0);
+	gpio_set(KEYPAD_ROW1);
+	gpio_set(KEYPAD_ROW2);
+	gpio_clr(KEYPAD_ROW3);
+	col = scan_row();
+	if (col == 1)			return 's';
+	if (col == 2)			return '0';
+	if (col == 3)			return 'p';
+	if (col == 4)			return 'd';
 
-		return 0;
+	return 0;
 }
 
 #define KEY_SCAN_INTERVAL_US 10000
@@ -324,7 +352,31 @@ char hal_read_keybuf()
 		return 0;
 }
 
+//// uart stuff
 
+ISR(USART_RXC_vect)
+{
+	uart_receive(UDR);
+}
+
+void hal_uart_init(uint16_t baud)
+{
+	// disable interrupts
+	cli();
+
+	// set baud rate
+	UBRRH = (unsigned char) baud >> 8;
+	UBRRL = (unsigned char) baud;
+
+	// enable receiver and receiver interrupts
+	UCSRB = _BV(RXEN) | _BV(RXCIE);
+
+	// set frame format: async, 8 bit data, 1 stop  bit, no parity
+	UCSRC = _BV(UCSZ0) | _BV(UCSZ1);
+
+	// enable interrupts
+	sei();
+}
 
 /*************************************************************************************/
 
