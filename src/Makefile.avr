@@ -16,6 +16,7 @@ AVR_COMMON_FLAGS = -Wall -Werror -mmcu=$(MCU)
 AVR_CFLAGS = $(AVR_COMMON_FLAGS)
 AVR_CFLAGS += -Wall -Werror -I$(ROCKET_ROOT)/include -I$(AVR_OBJDIR)
 AVR_CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
+AVR_CFLAGS += -fdata-sections -ffunction-sections # Put all funcs/data in their own sections
 AVR_CFLAGS += -MD -MP -MT $(AVR_OBJDIR)/$(*F).o -MF $(AVR_OBJDIR)/$(@F).d 
 AVR_CFLAGS += -gdwarf-2 -std=gnu99 -Os 
 AVR_CFLAGS += -DMCU$(MCU)=1
@@ -28,6 +29,7 @@ ASMFLAGS += -x assembler-with-cpp -Wa,-gdwarf2
 ## Linker flags
 AVR_LDFLAGS = $(AVR_COMMON_FLAGS)
 AVR_LDFLAGS +=  -Wl,-Map=$(TARGET).map -L$(AVR_OBJDIR) -l$(AVR_LIBNAME) 
+AVR_LDFLAGS += -Wl,--gc-sections # Garbage-collect ununused functions
 
 
 ## Intel Hex file production flags
