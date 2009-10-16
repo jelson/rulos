@@ -40,6 +40,7 @@ void board_buffer_init(BoardBuffer *buf)
 	buf->next = NULL;
 	buf->board_index = 0xff;
 	buf->alpha = 0xff;
+	buf->upside_down = 0;
 	assert(sizeof(buf->alpha)*8 >= NUM_DIGITS);
 }
 
@@ -109,7 +110,7 @@ void board_buffer_set_alpha(BoardBuffer *buf, uint8_t alpha)
 
 void board_buffer_draw(BoardBuffer *buf)
 {
-	int board_index = buf->board_index;
+	uint8_t board_index = buf->board_index;
 	uint8_t mask = buf->mask;
 	SSBitmap *bm = buf->buffer;
 	uint8_t idx;
@@ -117,7 +118,10 @@ void board_buffer_draw(BoardBuffer *buf)
 	{
 		if (mask & 0x80)
 		{
-			program_cell(board_index, idx, bm[idx]);
+			SSBitmap tmp = bm[idx];
+			if (buf->upside_down & (1 << idx))
+				hal_upside_down_led(&tmp);
+			program_cell(board_index, idx, tmp);
 		}
 	}
 }

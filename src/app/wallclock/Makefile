@@ -4,8 +4,8 @@ MCU := atmega8
 TARGET := wallclock
 
 TARGET_OBJECTS := \
-	uart.o \
-	wallclock.o
+	wallclock.o \
+	uart.o
 
 
 include $(ROCKET_ROOT)/Makefile.common

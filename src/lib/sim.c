@@ -60,6 +60,7 @@ struct segment_def_s {
 
   
 sigset_t alrm_set;
+uint32_t f_cpu = 4000000;
 
 
 static void terminate_sim(void)
@@ -69,6 +70,10 @@ static void terminate_sim(void)
 	exit(0);
 }
 
+
+void hal_upside_down_led(SSBitmap *b)
+{
+}
 
 void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff)
 {
@@ -325,6 +330,15 @@ void hal_idle()
 	select(0, NULL, NULL, NULL, &tv);
 	sim_poll_keyboard();
 }
+
+void hal_delay_ms(uint16_t ms)
+{
+	static struct timeval tv;
+	tv.tv_sec = ms/1000;
+	tv.tv_usec = 1000*(ms%1000);
+	select(0, NULL, NULL, NULL, &tv);
+}
+
 
 void sensor_interrupt_register_handler(Handler handler)
 {

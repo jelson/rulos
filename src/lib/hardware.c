@@ -8,6 +8,7 @@
 #include <avr/boot.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay_basic.h>
 
 #include "rocket.h"
 #include "hardware.h"
@@ -119,6 +120,28 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t 
 	gpio_set(STROBE);
 }
 
+// swap decimal point with segment H, which are the nodes reversed
+// when an LED is mounted upside-down
+void hal_upside_down_led(SSBitmap *b)
+{
+	uint8_t tmp;
+
+	if (*b & SSB_DECIMAL)
+		tmp = 1;
+	else
+		tmp = 0;
+
+	if (*b & SSB_SEG_g)
+		*b |= SSB_DECIMAL;
+	else
+		*b &= ~(SSB_DECIMAL);
+
+	if (tmp)
+		*b |= SSB_SEG_g;
+	else
+		*b &= ~(SSB_SEG_g);
+}
+
 
 Handler timer_handler;
 
@@ -128,12 +151,14 @@ ISR(TIMER1_COMPA_vect)
 }
 
 /* clock calibration by jelson: took 209 seconds to lose one second */
-uint32_t f_cpu[] = {
-	(1000000 * 209 / 210),
-	(2000000 * 209 / 210),
-	(4000000 * 209 / 210),
-	(8000000 * 209 / 210),
+uint32_t f_cpu_values[] = {
+	(1000000),
+	(2000000),
+	(4000000),
+	(8000000),
 	};
+
+uint32_t f_cpu;
 
  /* 
   * 
@@ -157,19 +182,17 @@ uint32_t f_cpu[] = {
   */
 void hal_start_clock_us(uint32_t us, Handler handler)
 {
-	uint8_t cksel = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS) & 0x0f;
-
 	uint32_t target;
 	uint8_t tccr1b = _BV(WGM12);		// CTC Mode 4 (interrupt on count-up)
 	if (us < 1000)
 	{
 		tccr1b |= _BV(CS10);				// Prescaler = 1
-		target = ((f_cpu[cksel-1] / 100) * us) / 10000;
+		target = ((f_cpu / 100) * us) / 10000;
 	}
 	else
 	{
 		tccr1b |= _BV(CS11) | _BV(CS10);	// Prescaler = 64
-		target = (f_cpu[cksel-1] / 6400) * us / 10000;
+		target = (f_cpu / 6400) * us / 10000;
 	}
 
 	timer_handler = handler;
@@ -222,6 +245,7 @@ void hal_speedup_clock_ppm(uint32_t ratio)
 // jonh hardcodes this for a specific interrupt line. Not sure
 // yet how to generalize; will do when needed, I guess.
 
+#if 0
 Handler sensor_interrupt_handler;
 
 void sensor_interrupt_register_handler(Handler handler)
@@ -233,6 +257,7 @@ ISR(INT0_vect)
 {
 	sensor_interrupt_handler();
 }
+#endif
 
 /**************************************************************/
 /*			 Keyboard input									  */
@@ -375,6 +400,32 @@ void hal_uart_init(uint16_t baud)
 
 /*************************************************************************************/
 
+
+
+void hal_delay_ms(uint16_t __ms)
+{
+	// copied from util/delay.h
+	uint16_t __ticks;
+	double __tmp = ((f_cpu) / 4e3) * __ms;
+	if (__tmp < 1.0)
+		__ticks = 1;
+	else if (__tmp > 65535)
+        {
+			//      __ticks = requested delay in 1/10 ms
+			__ticks = (uint16_t) (__ms * 10.0);
+			while(__ticks)
+                {
+					// wait 1/10 ms
+					_delay_loop_2(((f_cpu) / 4e3) / 10);
+					__ticks --;
+                }
+			return;
+        }
+	else
+		__ticks = (uint16_t)__tmp;
+	_delay_loop_2(__ticks);
+}
+
 void hal_start_atomic()
 {
 	cli();
@@ -394,6 +445,11 @@ void hal_init()
 {
 	init_pins();
 
+	// read fuses to determine clock frequency
+	uint8_t cksel = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS) & 0x0f;
+	f_cpu = f_cpu_values[cksel-1];
+
+	// start reading input periodically
 	ByteQueue_init((ByteQueue *) iba.keypad_q, sizeof(iba.keypad_q));
 	schedule_us(1, (Activation *) &iba);
 }

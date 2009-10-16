@@ -10,6 +10,7 @@ typedef struct s_board_buffer {
 	SSBitmap buffer[NUM_DIGITS];
 	uint8_t alpha;
 	uint8_t mask;	// visible alpha
+	uint8_t upside_down; // LEDs mounted upside-down
 	struct s_board_buffer *next;
 #if BBDEBUG && SIM
 	char *label;

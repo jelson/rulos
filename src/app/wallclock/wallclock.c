@@ -61,9 +61,9 @@ static void display_unhappy(WallClockActivation_t *wca, uint16_t interval_ms)
 		wca->unhappy_state = 0;
 	
 	if (wca->unhappy_state == 0)
-		ascii_to_bitmap_str(wca->bbuf.buffer, 8, "CONNECt");
+		ascii_to_bitmap_str(wca->bbuf.buffer, 8, "NEEd");
 	else if (wca->unhappy_state == 1)
-		ascii_to_bitmap_str(wca->bbuf.buffer, 8, "   PC  ");
+		ascii_to_bitmap_str(wca->bbuf.buffer, 8, " PC ");
 }
 
 
@@ -230,7 +230,7 @@ int main()
 	clock_init(10000);
 
 	// start the uart running
-	uart_init(0);
+	uart_init(3);
 
 	// initialize our internal state
 	WallClockActivation_t wca;
@@ -242,6 +242,7 @@ int main()
 
 	// init the board buffer
 	board_buffer_init(&wca.bbuf);
+	wca.bbuf.upside_down = (1 << 2) | (1 << 4);
 	board_buffer_push(&wca.bbuf, 0);
 
 	// have the callback get called immediately
