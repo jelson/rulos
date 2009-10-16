@@ -36,7 +36,17 @@ include $(ROCKET_ROOT)/Makefile.avr
 
 # Generate the sevseg bitmaps from the artwork file
 $(SIM_OBJDIR)/display_controller.o: $(SIM_OBJDIR)/sevseg_bitmaps.ch
+
 $(AVR_OBJDIR)/display_controller.o: $(AVR_OBJDIR)/sevseg_bitmaps.ch
+
+$(SIM_OBJDIR)/laserfont.o: $(SIM_OBJDIR)/laserfont.ch
+
+$(AVR_OBJDIR)/laserfont.o: $(AVR_OBJDIR)/laserfont.ch
+
+FONTZIPS=$(glob $(ROCKET_ROOT)/bitmaps/*.zip)
+
+%/laserfont.ch: $(ROCKET_ROOT)/util/ttf_to_bitmap.py $(FONTZIPS)
+	$(ROCKET_ROOT)/util/ttf_to_bitmap.py $(ROCKET_ROOT)/bitmaps > $@
 
 %/sevseg_bitmaps.ch: $(ROCKET_ROOT)/util/sevseg_convert.py $(ROCKET_ROOT)/lib/sevseg_artwork.txt
 	$(ROCKET_ROOT)/util/sevseg_convert.py $(ROCKET_ROOT)/lib/sevseg_artwork.txt > $@

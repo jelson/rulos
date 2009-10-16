@@ -4,7 +4,7 @@
 #include "rocket.h"
 #include "mirror.h"
 
-#define BITMAP_LENGTH (256)
+#define POV_BITMAP_LENGTH (256)
 
 typedef struct
 {
@@ -12,7 +12,7 @@ typedef struct
 	MirrorHandler *mirror;
 	uint8_t laser_board;
 	uint8_t laser_digit;
-	SSBitmap bitmap[BITMAP_LENGTH];
+	SSBitmap bitmap[POV_BITMAP_LENGTH];
 } PovHandler;
 
 void pov_init(PovHandler *pov, MirrorHandler *mirror, uint8_t laser_board, uint8_t laser_digit);
