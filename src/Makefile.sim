@@ -1,5 +1,6 @@
 # Objects only used by the simulator
 SIM_ONLY_OBJECTS :=  \
+	uart.o \
 	sim.o
 
 SIM_OBJDIR = obj.sim

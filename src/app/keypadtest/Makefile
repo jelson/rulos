@@ -4,6 +4,7 @@ MCU := atmega8
 TARGET := keypadtest
 
 TARGET_OBJECTS := \
+	uart.o \
 	keypadtest.o
 
 

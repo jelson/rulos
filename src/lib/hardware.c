@@ -354,11 +354,6 @@ char hal_read_keybuf()
 
 //// uart stuff
 
-ISR(USART_RXC_vect)
-{
-	uart_receive(UDR);
-}
-
 void hal_uart_init(uint16_t baud)
 {
 	// disable interrupts

@@ -1,6 +1,15 @@
+// NOTE: This file is not included in the default compile to prevent
+// the UART interrupt handler (and all its consequent dependencies)
+// from being implicitly included in all programs.  If writing a
+// program that neds UART support, add uart.o to the list of
+// application-specific objects.
 #include "rocket.h"
 #include "uart.h"
 
+#ifndef SIM
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#endif
 
 // Global instance of the UART buffer state struct
 char uart_queue_store[32];
@@ -47,4 +56,16 @@ void uart_init(uint16_t baud)
 	hal_uart_init(baud);
 }
 
+////
+
+// This really belongs in hardware.c, but moving it here makes it easy
+// to avoid polluting non-uart-using progarms with the uart interrupt
+// handler, simply by not linking this file.
+
+#ifndef SIM
+ISR(USART_RXC_vect)
+{
+	uart_receive(UDR);
+}
+#endif
 

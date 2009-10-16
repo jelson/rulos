@@ -5,7 +5,6 @@
 #include "rocket.h"
 #include "clock.h"
 #include "util.h"
-#include "display_boardid.h"
 #include "display_controller.h"
 #include "display_rtc.h"
 #include "display_scroll_msg.h"
@@ -21,7 +20,6 @@
 #include "cpumon.h"
 #include "idle_display.h"
 #include "sequencer.h"
-#include "display_keytest.h"
 #include "rasters.h"
 
 

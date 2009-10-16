@@ -20,7 +20,6 @@ COMMON_OBJECTS = \
 	numeric_input.o \
 	queue.o \
 	random.o \
-	uart.o \
 	util.o \
 	sequencer.o \
 	display_blinker.o \
