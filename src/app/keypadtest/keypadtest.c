@@ -47,13 +47,16 @@ int main()
 	hal_init();
 	clock_init(10000);
 	board_buffer_module_init();
-	uart_init(0);
+	uart_init(12);
 
 	KeyTestActivation_t kta;
 	kta.f = (ActivationFunc) update;
 	board_buffer_init(&kta.bbuf_k);
+	kta.bbuf_k.upside_down = (1 << 2) | (1 << 4);
 	board_buffer_push(&kta.bbuf_k, 0);
+
 	board_buffer_init(&kta.bbuf_u);
+	kta.bbuf_u.upside_down = (1 << 2) | (1 << 4);
 	board_buffer_push(&kta.bbuf_u, 1);
 	schedule_us(1, (Activation *) &kta);
 
