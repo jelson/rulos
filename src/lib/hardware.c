@@ -3,7 +3,7 @@
  *
  * This file is not compiled by the simulator.
  */
-#define V1PCB
+#define V11PCB
 
 #include <avr/boot.h>
 #include <avr/io.h>
@@ -43,6 +43,27 @@
 #define KEYPAD_ROW1 GPIO_B2
 #define KEYPAD_ROW2 GPIO_B3
 #define KEYPAD_ROW3 GPIO_B4
+#define KEYPAD_COL0 GPIO_D0
+#define KEYPAD_COL1 GPIO_D1
+#define KEYPAD_COL2 GPIO_D2
+#define KEYPAD_COL3 GPIO_D3
+#elif defined(V11PCB)
+#define BOARDSEL0	GPIO_B0
+#define BOARDSEL1	GPIO_B1
+#define BOARDSEL2	GPIO_B2
+#define DIGSEL0		GPIO_D5
+#define DIGSEL1		GPIO_D6
+#define DIGSEL2		GPIO_D7
+#define SEGSEL0		GPIO_B3
+#define SEGSEL1		GPIO_B4
+#define SEGSEL2		GPIO_B5
+#define DATA		GPIO_B6
+#define STROBE		GPIO_B7
+
+#define KEYPAD_ROW0 DATA
+#define KEYPAD_ROW1 BOARDSEL0
+#define KEYPAD_ROW2 BOARDSEL1
+#define KEYPAD_ROW3 BOARDSEL2
 #define KEYPAD_COL0 GPIO_D0
 #define KEYPAD_COL1 GPIO_D1
 #define KEYPAD_COL2 GPIO_D2
@@ -392,7 +413,7 @@ void hal_uart_init(uint16_t baud)
 	UCSRB = _BV(RXEN) | _BV(RXCIE);
 
 	// set frame format: async, 8 bit data, 1 stop  bit, no parity
-	UCSRC = _BV(UCSZ0) | _BV(UCSZ1);
+	UCSRC = _BV(URSEL) | _BV(UCSZ1) | _BV(UCSZ0);
 
 	// enable interrupts
 	sei();
