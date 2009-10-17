@@ -48,22 +48,19 @@ static void display_clock(WallClockActivation_t *wca)
 
 static void display_unhappy(WallClockActivation_t *wca, uint16_t interval_ms)
 {
-	wca->unhappy_timer += interval_ms;
+	char *msg[] = { " NEEd ", "  PC  ", "SErIAL", "      ", NULL };
 
-	LOGF((logfp, "unhappy timer: %d\n", wca->unhappy_timer));
+	wca->unhappy_timer += interval_ms;
 
 	if (wca->unhappy_timer > 1500)
 	{
 		wca->unhappy_state++;
 		wca->unhappy_timer = 0;
 	}
-	if (wca->unhappy_state >= 2)
+	if (msg[wca->unhappy_state] == NULL)
 		wca->unhappy_state = 0;
-	
-	if (wca->unhappy_state == 0)
-		ascii_to_bitmap_str(wca->bbuf.buffer, 8, "NEEd");
-	else if (wca->unhappy_state == 1)
-		ascii_to_bitmap_str(wca->bbuf.buffer, 8, " PC ");
+
+	ascii_to_bitmap_str(wca->bbuf.buffer, 8, msg[wca->unhappy_state]);
 }
 
 
@@ -196,7 +193,6 @@ static void update(WallClockActivation_t *wca)
 	Time now = clock_time_us();
 	Time interval_us = now - wca->last_redraw_time;
 	uint16_t interval_ms = (interval_us + 500) / 1000;
-	LOGF((logfp, "interval: %d\n", interval_ms));
 	wca->last_redraw_time = now;
 
 	// advance the clock by that amount
@@ -234,7 +230,7 @@ int main()
 
 	// initialize our internal state
 	WallClockActivation_t wca;
-	memset(&wca, sizeof(wca), 0);
+	memset(&wca, 0, sizeof(wca));
 	wca.f = (ActivationFunc) update;
 	wca.hour = -1;
 	wca.unhappy_timer = 0;
