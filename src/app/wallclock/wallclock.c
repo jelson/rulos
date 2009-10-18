@@ -7,6 +7,7 @@
 
 
 #define MILLION 1000000
+#define WALLCLOCK_CALLBACK_INTERVAL 10000
 
 typedef struct {
 	ActivationFunc f;
@@ -212,9 +213,16 @@ static void update(WallClockActivation_t *wca)
 {
 	// compute how much time has passed since we were last called
 	Time now = clock_time_us();
-	Time interval_us = now - wca->last_redraw_time;
-	uint16_t interval_ms = (interval_us + 500) / 1000;
+	Time interval_us;
+
+	// handle clock rollover
+	if (wca->last_redraw_time > now) {
+		interval_us = WALLCLOCK_CALLBACK_INTERVAL;
+	} else {
+		interval_us = now - wca->last_redraw_time;
+	}
 	wca->last_redraw_time = now;
+	uint16_t interval_ms = (interval_us + 500) / 1000;
 
 	// advance the clock by that amount
 	advance_clock(wca, interval_ms);
@@ -232,7 +240,7 @@ static void update(WallClockActivation_t *wca)
 
 
 	// schedule the next callback
-	schedule_us(10000, (Activation *) wca);
+	schedule_us(WALLCLOCK_CALLBACK_INTERVAL, (Activation *) wca);
 }
 
 
@@ -244,7 +252,7 @@ int main()
 	board_buffer_module_init();
 
 	// start clock with 10 msec resolution
-	clock_init(10000);
+	clock_init(WALLCLOCK_CALLBACK_INTERVAL);
 
 	// start the uart running at 34k baud (assumes 8mhz clock: fixme)
 	uart_init(12);
