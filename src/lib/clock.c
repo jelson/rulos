@@ -7,6 +7,15 @@ Time _real_time_since_boot_us;
 Time _stale_time_us;	// current as of last scheduler execution; cheap to evaluate
 uint32_t _spin_counter;
 
+// Returns true if a > b using rollover math, assuming 32-bit signed time values
+uint8_t greater_than(Time a, Time b)
+{
+	Time diff = a - b;
+
+	return diff > 0 && diff < 0x7fffffff;
+}
+
+
 void clock_handler()
 {
 	// NB we assume this runs in interrupt context and is hence
@@ -71,7 +80,7 @@ void scheduler_run_once()
 		if (rc!=0) { break; }
 			// no work to do at all
 
-		if (due_time > now) { break; }
+		if (greater_than(due_time, now)) { break; }
 			// no work to do now
 
 		//LOGF((logfp, "popping act %08x func %08x\n", (uint32_t) act, (uint32_t) act->func));
