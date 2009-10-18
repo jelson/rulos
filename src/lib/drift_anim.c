@@ -27,7 +27,7 @@ int32_t da_read(DriftAnim *da)
 
 void _da_update_base(DriftAnim *da)
 {
-	uint32_t t = clock_time_us();
+	Time t = clock_time_us();
 	da->base = _da_eval(da, t);
 	da->base_time = t;
 }

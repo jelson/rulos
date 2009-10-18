@@ -77,7 +77,7 @@ typedef struct {
 	/* keypad */
 	char keypad_q[20];
 	char keypad_last;
-	uint32_t keypad_next_allowed_key_time;
+	Time keypad_next_allowed_key_time;
 } InputBufferAct_t;
 
 static void scan_inputs(InputBufferAct_t *iba);

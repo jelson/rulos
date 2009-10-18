@@ -131,7 +131,7 @@ static void advance_clock(WallClockActivation_t *wca, uint16_t interval_ms)
 	if (wca->hour < 0)
 		return;
 
-	wca->hundredth += (interval_ms / 10);
+	wca->hundredth += ((interval_ms + 5) / 10);
 
 	while (wca->hundredth >= 100) {
 		wca->hundredth -= 100;

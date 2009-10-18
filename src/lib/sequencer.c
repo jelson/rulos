@@ -5,7 +5,7 @@
 #define LAUNCH_CODE		4671
 #define LAUNCH_CODE_S	"4671"
 
-void launch_set_state(Launch *launch, LaunchState state, uint32_t time_ms);
+void launch_set_state(Launch *launch, LaunchState state, Time time_ms);
 void launch_config_panels(Launch *launch, LaunchPanelConfig new0, LaunchPanelConfig new1);
 void launch_enter_state_ready(Launch *launch);
 void launch_enter_state_enter_code(Launch *launch);
@@ -47,7 +47,7 @@ void launch_init(Launch *launch, uint8_t board0, FocusManager *fa)
 	schedule_us(1, (Activation*) &launch->clock_act);
 }
 
-void launch_set_state(Launch *launch, LaunchState state, uint32_t time_ms)
+void launch_set_state(Launch *launch, LaunchState state, Time time_ms)
 {
 	launch->state = state;
 	launch->state_start_time = clock_time_us();

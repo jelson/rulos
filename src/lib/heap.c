@@ -28,7 +28,7 @@ void heap_bubble(int ptr)
 	}
 }
 
-void heap_insert(uint32_t key, Activation *act)
+void heap_insert(Time key, Activation *act)
 {
 	assert(heap_count < HEAP_CAPACITY);	// heap overflow
 	heap[heap_count].key = key;
@@ -37,7 +37,7 @@ void heap_insert(uint32_t key, Activation *act)
 	heap_count += 1;
 }
 
-int heap_peek(/*out*/ uint32_t *key, /*out*/ Activation **act)
+int heap_peek(/*out*/ Time *key, /*out*/ Activation **act)
 {
 	if (heap_count == 0)
 	{

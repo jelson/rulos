@@ -20,7 +20,7 @@ void dgg_init(DGratuitousGraph *dgg,
 void dgg_update(DGratuitousGraph *dgg)
 {
 	schedule_us(Exp2Time(16), (Activation*) dgg);
-	uint32_t t = clock_time_us();
+	Time t = clock_time_us();
 	if (t - dgg->last_impulse > dgg->impulse_frequency_us)
 	{
 		dgg->last_impulse = t;

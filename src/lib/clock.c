@@ -63,7 +63,7 @@ void scheduler_run_once()
 
 	while (1)	// run until nothing to do for this time
 	{
-		uint32_t due_time;
+		Time due_time;
 		Activation *act;
 		int rc;
 		rc = heap_peek(&due_time, &act);

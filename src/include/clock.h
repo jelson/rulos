@@ -5,7 +5,6 @@
 # error Please include rocket.h instead of this file
 #endif
 
-typedef int32_t Time;	// in units of usec
 
 void clock_init(Time interval_us);
 
