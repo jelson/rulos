@@ -31,6 +31,7 @@ void clock_init(Time interval_us)
 	// Initialize the clock to 20 seconds before rollover time so that 
 	// rollover bugs happen quickly during testing
 	_real_time_since_boot_us = (((uint32_t) 1) << 31) - ((uint32_t) 20000000);
+	_stale_time_us = _real_time_since_boot_us;
 	hal_start_clock_us(interval_us, clock_handler);
 	_spin_counter = 0;
 }

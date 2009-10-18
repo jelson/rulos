@@ -218,14 +218,7 @@ static void update(WallClockActivation_t *wca)
 {
 	// compute how much time has passed since we were last called
 	Time now = clock_time_us();
-	Time interval_us;
-
-	// handle clock rollover
-	if (wca->last_redraw_time > now) {
-		interval_us = WALLCLOCK_CALLBACK_INTERVAL;
-	} else {
-		interval_us = now - wca->last_redraw_time;
-	}
+	Time interval_us = now - wca->last_redraw_time;
 	wca->last_redraw_time = now;
 	uint16_t interval_ms = (interval_us + 500) / 1000;
 
@@ -274,6 +267,7 @@ int main()
 	wca.f = (ActivationFunc) update;
 	wca.hour = -1;
 	wca.unhappy_timer = 0;
+	wca.last_redraw_time = clock_time_us();
 	wca.uq = uart_queue_get();
 
 	// init the board buffer
