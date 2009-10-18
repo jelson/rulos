@@ -21,7 +21,7 @@ void heap_bubble(int ptr)
 	while (ptr > 0)
 	{
 		int parent = ptr >> 1;
-		if (greater_than(heap[ptr].key, heap[parent].key)) { return; }	 // already correct
+		if (later_than(heap[ptr].key, heap[parent].key)) { return; }	 // already correct
 
 		heap_swap(parent, ptr);
 		ptr = parent;
@@ -61,11 +61,11 @@ void heap_pop()
 		int c0 = ptr*2;
 		int c1 = c0 + 1;
 		int candidate = ptr;
-		if (c0 < heap_count && greater_than(heap[candidate].key, heap[c0].key))
+		if (c0 < heap_count && later_than(heap[candidate].key, heap[c0].key))
 		{
 			candidate = c0;
 		}
-		if (c1 < heap_count && greater_than(heap[candidate].key, heap[c1].key))
+		if (c1 < heap_count && later_than(heap[candidate].key, heap[c1].key))
 		{
 			candidate = c1;
 		}

@@ -6,7 +6,7 @@
 #endif
 
 
-uint8_t greater_than(Time a, Time b);
+uint8_t later_than(Time a, Time b);
 void clock_init(Time interval_us);
 
 extern Time _stale_time_us;	

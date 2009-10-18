@@ -8,11 +8,13 @@ Time _stale_time_us;	// current as of last scheduler execution; cheap to evaluat
 uint32_t _spin_counter;
 
 // Returns true if a > b using rollover math, assuming 32-bit signed time values
-uint8_t greater_than(Time a, Time b)
+uint8_t later_than(Time a, Time b)
 {
-	Time diff = a - b;
+	// the subtraction will roll over too
+	return a - b > 0;
 
-	return diff > 0 && diff < 0x7fffffff;
+	// this took forever to puzzle out and was originally a
+	// complicated set of conditionals
 }
 
 
@@ -26,7 +28,9 @@ void clock_handler()
 void clock_init(Time interval_us)
 {
 	_rtc_interval_us = interval_us;
-	_real_time_since_boot_us = 0;
+	// Initialize the clock to 20 seconds before rollover time so that 
+	// rollover bugs happen quickly during testing
+	_real_time_since_boot_us = (((uint32_t) 1) << 31) - ((uint32_t) 20000000);
 	hal_start_clock_us(interval_us, clock_handler);
 	_spin_counter = 0;
 }
@@ -80,7 +84,7 @@ void scheduler_run_once()
 		if (rc!=0) { break; }
 			// no work to do at all
 
-		if (greater_than(due_time, now)) { break; }
+		if (later_than(due_time, now)) { break; }
 			// no work to do now
 
 		//LOGF((logfp, "popping act %08x func %08x\n", (uint32_t) act, (uint32_t) act->func));

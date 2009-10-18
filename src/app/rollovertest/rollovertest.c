@@ -27,12 +27,6 @@ int main()
 	hal_init();
 	clock_init(1000);
 
-	hal_start_atomic();
-	extern Time _real_time_since_boot_us;
-	_real_time_since_boot_us = (0xffffffff & ~(1 << 31)) - 500647;
-	precise_clock_time_us();
-	hal_end_atomic();
-
 	RolloverTest_t t1, t2, t3, t4;
 	t1.update = t2.update = t3.update = t4.update = (ActivationFunc) update;
 	t1.task = 1;
