@@ -24,6 +24,8 @@ typedef struct {
 	// uart time-setting stuff
 	UartQueue_t *uq;
 	Time last_reception_us;
+
+	uint8_t display_flag;
 } WallClockActivation_t;
 
 
@@ -104,9 +106,9 @@ static void calibrate_clock(WallClockActivation_t *wca,
 	wca->second = second + extra_seconds;
 	wca->hundredth = extra_hundredths;
 
-	// If it's off by 3 seconds or more, don't use this as a
+	// If it's off by 5 seconds or more, don't use this as a
 	// calibration.
-	if (error > 3*MILLION || error < -3*MILLION) {
+	if (error > 5*MILLION || error < -5*MILLION) {
 		LOGF((logfp, "error too large -- not correcting\n"));
 		return;
 	}
@@ -203,6 +205,9 @@ static void check_uart(WallClockActivation_t *wca)
 	calibrate_clock(wca, hour, minute, second, wca->uq->reception_time_us);
 	uart_queue_reset();
 
+	// indicate we got a message
+	wca->display_flag = 25;
+
  done:
 	hal_end_atomic();
 
@@ -236,6 +241,12 @@ static void update(WallClockActivation_t *wca)
 		display_unhappy(wca, interval_ms);
 	else
 		display_clock(wca);
+
+	if (wca->display_flag) {
+		wca->display_flag--;
+		wca->bbuf.buffer[7] |= SSB_DECIMAL;
+	}
+
 	board_buffer_draw(&wca->bbuf);
 
 
