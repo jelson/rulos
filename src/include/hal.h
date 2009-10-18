@@ -20,7 +20,7 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t 
 void hal_upside_down_led(SSBitmap *b);
 char hal_read_keybuf();
 uint16_t hal_elapsed_milliintervals();
-void hal_speedup_clock_ppm(uint32_t ratio);
+void hal_speedup_clock_ppm(int32_t ratio);
 void hal_uart_init(uint16_t baud);
 void hal_delay_ms(uint16_t ms);
 

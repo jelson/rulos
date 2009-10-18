@@ -305,7 +305,7 @@ uint16_t hal_elapsed_milliintervals()
 	return 0;
 }
 
-void hal_speedup_clock_ppm(uint32_t ratio)
+void hal_speedup_clock_ppm(int32_t ratio)
 {
 	// do nothing for now
 }

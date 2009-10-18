@@ -75,28 +75,47 @@ static void calibrate_clock(WallClockActivation_t *wca,
 {
 	// Compute the elapsed time according to our local clock between
 	// this packet received and when the previous one was received
-	Time reception_diff_us = reception_us - wca->last_reception_us;
+	Time reception_diff_us, error;
 
-	// Update the wall-clock and record when we received this pulse
+	if (wca->last_reception_us && reception_us > wca->last_reception_us) {
+		reception_diff_us = reception_us - wca->last_reception_us;
+		// There were supposed to be 60 seconds between this one and
+		// the last.  TODO: Support arbitrary intervals.
+		error = 60*MILLION - reception_diff_us;
+	}
+	else {
+		reception_diff_us = -1;
+		error = 0;
+	}
+
+	LOGF((logfp, "got pulse at %d, last at %d, diff is %d, error %d\n", 
+		  reception_us, wca->last_reception_us, reception_diff_us, error));
+	wca->last_reception_us = reception_us;
+
+
+	// Update the wall-clock.  Account for the time between when we
+	// received the pulse and the current time.
+	Time time_past_pulse = precise_clock_time_us() - reception_us;
+	uint8_t extra_seconds = time_past_pulse / 1000000;
+	uint8_t extra_hundredths = (time_past_pulse % 1000000) / 10000;
 	wca->hour = hour;
 	wca->minute = minute;
-	wca->second = second;
-	wca->hundredth = 0;
-	wca->last_reception_us = reception_us;
-    
-	// There were supposed to be 60 seconds between this one and the last.
-	// TODO: Support arbitrary intervals.
-	Time error = 60*MILLION - reception_diff_us;
-	
-	// If it's off by 20 seconds or more, don't use this as a
+	wca->second = second + extra_seconds;
+	wca->hundredth = extra_hundredths;
+
+	// If it's off by 3 seconds or more, don't use this as a
 	// calibration.
-	if (error > 20*MILLION || error < -20*MILLION)
+	if (error > 3*MILLION || error < -3*MILLION) {
+		LOGF((logfp, "error too large -- not correcting\n"));
 		return;
+	}
 
 	// Compute the ratio by which we're off in parts per million and
 	// update the clock rate
-	Time ratio = error / 60;
-	hal_speedup_clock_ppm(ratio);
+	if (error) {
+		Time ratio = error / 60;
+		hal_speedup_clock_ppm(ratio);
+	}
 }
 
 
@@ -167,11 +186,12 @@ static void check_uart(WallClockActivation_t *wca)
 	// There are (at least) 8 characters - great!  Copy them in and
 	// reset the queue.
 	ByteQueue_pop_n(wca->uq->q, msg, 8);
-	uart_queue_reset();
 
 	// Make sure both framing characters are correct
-	if (msg[0] != 'T' || msg[7] != 'E')
+	if (msg[0] != 'T' || msg[7] != 'E') {
+		uart_queue_reset();
 		goto done;
+	}
 
 	// Decode the characters
 	uint8_t hour   = ascii_digit(msg[1])*10 + ascii_digit(msg[2]);
@@ -180,6 +200,7 @@ static void check_uart(WallClockActivation_t *wca)
 
 	// Update the clock
 	calibrate_clock(wca, hour, minute, second, wca->uq->reception_time_us);
+	uart_queue_reset();
 
  done:
 	hal_end_atomic();
@@ -225,8 +246,8 @@ int main()
 	// start clock with 10 msec resolution
 	clock_init(10000);
 
-	// start the uart running
-	uart_init(3);
+	// start the uart running at 34k baud (assumes 8mhz clock: fixme)
+	uart_init(12);
 
 	// initialize our internal state
 	WallClockActivation_t wca;
