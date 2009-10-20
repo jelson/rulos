@@ -70,6 +70,8 @@ static void display_unhappy(WallClockActivation_t *wca, uint16_t interval_ms)
 
 /****************  Clock Management *****************************/
 
+#define SECONDS_BETWEEN_PULSES 60
+
 static void calibrate_clock(WallClockActivation_t *wca,
 							uint8_t hour,
 							uint8_t minute,
@@ -84,7 +86,7 @@ static void calibrate_clock(WallClockActivation_t *wca,
 		reception_diff_us = reception_us - wca->last_reception_us;
 		// There were supposed to be 60 seconds between this one and
 		// the last.  TODO: Support arbitrary intervals.
-		error = 60*MILLION - reception_diff_us;
+		error = SECONDS_BETWEEN_PULSES*MILLION - reception_diff_us;
 	}
 	else {
 		reception_diff_us = -1;
@@ -114,9 +116,10 @@ static void calibrate_clock(WallClockActivation_t *wca,
 	}
 
 	// Compute the ratio by which we're off in parts per million and
-	// update the clock rate
+	// update the clock rate.  Then divide by 2, to give us an
+	// exponentially weighted moving average of the clock rate.
 	if (error) {
-		Time ratio = error / 60;
+		Time ratio = error / SECONDS_BETWEEN_PULSES / 2;
 		hal_speedup_clock_ppm(ratio);
 	}
 }
