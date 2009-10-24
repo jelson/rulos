@@ -110,6 +110,18 @@ static sim_special_input_handler_t sim_special_input_handler = NULL;
 static sim_input_handler_stop_t sim_input_handler_stop = NULL;
 
 
+/********************** adc simulator *********************/
+
+
+uint16_t adc[8];
+
+uint16_t *hal_get_adc(uint8_t channel)
+{
+	adc[channel] = 1234;
+	return &(adc[channel]);
+}
+
+
 /********************** uart simulator *********************/
 
 
@@ -180,6 +192,7 @@ void hal_uart_init(uint16_t baud)
 
 char keypad_buf[10];
 ByteQueue *keypad_q = (ByteQueue *) keypad_buf;
+
 
 char hal_read_keybuf()
 {
@@ -262,6 +275,7 @@ static void sim_poll_keyboard()
 		break;
 	}
 }
+
 
 /**************** clock ****************/
 

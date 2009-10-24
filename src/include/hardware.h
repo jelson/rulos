@@ -40,6 +40,16 @@ static inline void reg_clr(volatile uint8_t *reg, uint8_t bit)
 	*reg &= ~(1 << bit);
 }
 
+static inline uint8_t reg_is_clr(volatile uint8_t *reg, uint8_t bit)
+{
+	return ((*reg) & (1 << bit)) == 0;
+}
+
+static inline uint8_t reg_is_set(volatile uint8_t *reg, uint8_t bit)
+{
+	return !reg_is_clr(reg, bit);
+}
+
 /* configure a pin as output */
 static inline void gpio_make_output(volatile uint8_t *ddr,
 									volatile uint8_t *port,
@@ -106,7 +116,7 @@ static inline int gpio_is_clr(volatile uint8_t *ddr,
 							  volatile uint8_t *pin,
 							  uint8_t bit)
 {
-	return ((*pin) & (1 << bit)) == 0;
+	return reg_is_clr(pin, bit);
 }
 
 /*

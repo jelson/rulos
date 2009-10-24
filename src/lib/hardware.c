@@ -68,6 +68,8 @@
 #define KEYPAD_COL1 GPIO_D1
 #define KEYPAD_COL2 GPIO_D2
 #define KEYPAD_COL3 GPIO_D3
+
+#define NUM_ADCS 4
 #endif
 
 
@@ -78,6 +80,7 @@ typedef struct {
 	char keypad_q[20];
 	char keypad_last;
 	Time keypad_next_allowed_key_time;
+	uint16_t adc[NUM_ADCS];
 } InputBufferAct_t;
 
 static void scan_inputs(InputBufferAct_t *iba);
@@ -110,6 +113,11 @@ static void init_pins()
 	gpio_make_input(KEYPAD_COL1);
 	gpio_make_input(KEYPAD_COL2);
 	gpio_make_input(KEYPAD_COL3);
+
+#ifdef NUM_ADCS
+	reg_set(&ADCSRA, ADEN); // enable ADC
+#endif
+
 }
 
 
@@ -393,6 +401,23 @@ static void scan_inputs(InputBufferAct_t *iba)
 {
 	schedule_us(KEY_SCAN_INTERVAL_US, (Activation *) iba);
 	debounce_keypad(iba);
+
+#ifdef NUM_ADCS
+	uint8_t adc_channel;
+
+	for (adc_channel = 0; adc_channel < NUM_ADCS; adc_channel++) {
+		ADMUX = adc_channel; // select adc channel
+		reg_set(&ADCSRA, ADSC); // start conversion
+
+		// wait for conversion to complete
+		while (reg_is_set(&ADCSRA, ADSC))
+			;
+
+		uint16_t newval = ADCL | ((uint16_t) ADCH << 8);
+		iba->adc[adc_channel] = 
+			(6*iba->adc[adc_channel] + 4*newval) / 10;
+	}
+#endif
 }
 
 
@@ -404,6 +429,11 @@ char hal_read_keybuf()
 		return k;
 	else
 		return 0;
+}
+
+uint16_t *hal_get_adc(uint8_t channel)
+{
+	return &iba.adc[channel];
 }
 
 //// uart stuff

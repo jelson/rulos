@@ -22,6 +22,7 @@ char hal_read_keybuf();
 uint16_t hal_elapsed_milliintervals();
 void hal_speedup_clock_ppm(int32_t ratio);
 void hal_uart_init(uint16_t baud);
+uint16_t *hal_get_adc(uint8_t channel);
 void hal_delay_ms(uint16_t ms);
 
 #endif // __hal_h__
