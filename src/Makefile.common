@@ -10,11 +10,13 @@ COMMON_OBJECTS = \
 	display_gratuitous_graph.o \
 	display_rtc.o \
 	display_scroll_msg.o \
+	display_thrusters.o \
 	drift_anim.o \
 	focus.o \
 	heap.o \
 	idle_display.o \
 	input_controller.o \
+	joystick.o \
 	knob.o \
 	labeled_display.o \
 	numeric_input.o \

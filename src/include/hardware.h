@@ -1,3 +1,5 @@
+#include <avr/io.h>
+
 #define GPIO_B0  (&DDRB), (&PORTB), (&PINB), (PORTB0)
 #define GPIO_B1  (&DDRB), (&PORTB), (&PINB), (PORTB1)
 #define GPIO_B2  (&DDRB), (&PORTB), (&PINB), (PORTB2)

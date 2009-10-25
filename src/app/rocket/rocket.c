@@ -26,45 +26,6 @@
 /************************************************************************************/
 /************************************************************************************/
 
-//#define BOARDID
-
-#ifdef BOARDID
-int main()
-{
-	heap_init();
-	util_init();
-	hal_init();
-
-#if 0
-	int i;
-
-	while (1){
-		for (i = 0; i < 8; i++) {
-			program_segment(0, 0, i, 0);
-			_delay_ms(1000);
-		}
-		for (i = 0; i < 8; i++) {
-			program_segment(0, 0, i, 1);
-			_delay_ms(1000);
-		}
-	}
-#endif
-
-	clock_init();
-	board_buffer_module_init();
-
-	BoardActivation_t ba;
-	boardid_init(&ba);
-
-	KeyTestActivation_t kta;
-	display_keytest_init(&kta, 7);
-
-	cpumon_main_loop();
-	return 0;
-}
-
-#else //boardid
-
 
 int main()
 {

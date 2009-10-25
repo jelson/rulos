@@ -103,7 +103,7 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t 
 
 /************** simulator input *****************/
 
-typedef void (*sim_special_input_handler_t)(char c);
+typedef void (*sim_special_input_handler_t)(int c);
 typedef void (*sim_input_handler_stop_t)();
 
 static sim_special_input_handler_t sim_special_input_handler = NULL;
@@ -112,12 +112,80 @@ static sim_input_handler_stop_t sim_input_handler_stop = NULL;
 
 /********************** adc simulator *********************/
 
+#define NUM_ADC 6
 
-uint16_t adc[8];
+static WINDOW *adc_input_window = NULL;
+static int adc_input_channel = 0;
+uint16_t adc[NUM_ADC];
+
+static void draw_adc_input_window()
+{
+	mvwprintw(adc_input_window, 1, 1, "ADC Channel %d:", adc_input_channel);
+	mvwprintw(adc_input_window, 2, 1, "%4d", adc[adc_input_channel]);
+	keypad(mainwnd, 1);
+	wrefresh(adc_input_window);
+}
+
+static void adc_simulator_input(int c)
+{
+	switch (c) {
+	case KEY_RIGHT:
+		adc_input_channel++;
+		break;
+	case KEY_LEFT:
+		adc_input_channel--;
+		break;
+	case KEY_UP:
+		adc[adc_input_channel] += 5;
+		break;
+	case KEY_DOWN:
+		adc[adc_input_channel] -= 5;
+		break;
+	case KEY_PPAGE:
+		adc[adc_input_channel] += 100;
+		break;
+	case KEY_NPAGE:
+		adc[adc_input_channel] -= 100;
+		break;
+	}
+	
+	adc_input_channel = max(0, min(NUM_ADC, adc_input_channel));
+	adc[adc_input_channel] = max(0, min(1023, adc[adc_input_channel]));
+
+	draw_adc_input_window();
+}
+
+
+static void adc_simulator_stop()
+{
+	keypad(mainwnd, 0);
+	sim_special_input_handler = NULL;
+	sim_input_handler_stop = NULL;
+	delwin(adc_input_window);
+	touchwin(mainwnd);
+	refresh();
+}
+
+static void adc_simulator_start()
+{
+	// set up handlers
+	sim_special_input_handler = adc_simulator_input;
+	sim_input_handler_stop = adc_simulator_stop;
+
+	// create input window
+	adc_input_window =
+		newwin(4,
+			   17,
+			   2,
+			   NUM_DIGITS*DIGIT_WIDTH + 3);
+	box(adc_input_window, ACS_VLINE, ACS_HLINE);
+	draw_adc_input_window();
+}
+
 
 uint16_t *hal_get_adc(uint8_t channel)
 {
-	adc[channel] = 1234;
+	adc[channel] = 512;
 	return &(adc[channel]);
 }
 
@@ -134,7 +202,7 @@ static void draw_uart_input_window()
 	wrefresh(uart_input_window);
 }
 
-static void uart_simulator_input(char c)
+static void uart_simulator_input(int c)
 {
 	LOGF((logfp, "sim inserting to uart: %c\n", c));
 
@@ -266,6 +334,10 @@ static void sim_poll_keyboard()
 	switch (c) {
 	case 'u':
 		uart_simulator_start();
+		break;
+
+	case 'i':
+		adc_simulator_start();
 		break;
 
 	default:
