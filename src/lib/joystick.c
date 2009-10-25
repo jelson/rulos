@@ -18,7 +18,7 @@
 // this equation works assuming 42k resistors and a 0..1023 adc
 static int8_t adc_to_100scale(uint16_t adc)
 {
-	int32_t retval = 2*((uint32_t) 42*1024 / (uint32_t) adc - 42) - 100;
+	int32_t retval = ((uint32_t) 84*1024 / (uint32_t) adc - 84) - 100;
 
 	if (retval < -99)
 		return -99;
