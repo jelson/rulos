@@ -26,6 +26,7 @@ COMMON_OBJECTS = \
 	sequencer.o \
 	display_blinker.o \
 	rasters.o \
+	pong.o \
 
 
 .PHONY: all

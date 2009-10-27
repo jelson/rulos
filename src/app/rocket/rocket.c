@@ -21,6 +21,7 @@
 #include "idle_display.h"
 #include "sequencer.h"
 #include "rasters.h"
+#include "pong.h"
 
 
 /************************************************************************************/
@@ -107,10 +108,12 @@ int main()
 /*
 	DDockAct ddock;
 	ddock_init(&ddock, 0, &fa);
-*/
 
 	RasterBigDigit rdigit;
 	raster_big_digit_init(&rdigit, 2);
+*/
+	Pong pong;
+	pong_init(&pong, 2, &fa);
 #endif
 
 /*
