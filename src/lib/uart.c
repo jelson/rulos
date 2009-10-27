@@ -24,7 +24,10 @@ void uart_receive(char c)
 	}
 	LOGF((logfp, "uart_receive: got char at %d, msgtime=%d\n",
 		  precise_clock_time_us(), uart_queue_g.reception_time_us))
-	ByteQueue_append(uart_queue_g.q, c);
+	if (uart_queue_g.q != NULL)
+	{
+		ByteQueue_append(uart_queue_g.q, c);
+	}
 }
 
 //////////////////////////////////////////////////////////
