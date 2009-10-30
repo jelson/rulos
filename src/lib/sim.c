@@ -75,18 +75,60 @@ void hal_upside_down_led(SSBitmap *b)
 {
 }
 
+typedef struct {
+	char *label;
+	short colors[8];
+	short x, y;
+} BoardLayout;
+
+#define PAIR_GREEN	1
+#define PAIR_YELLOW	2
+#define PAIR_RED	3
+#define PAIR_BLUE	4
+#define PAIR_WHITE	5
+#define PG PAIR_GREEN
+#define PY PAIR_YELLOW
+#define PR PAIR_RED
+#define PB PAIR_BLUE
+#define PW PAIR_WHITE
+BoardLayout tree0[] = {
+	{ "Mission Clock",			{ PG,PG,PG,PG,PG,PG,PY,PY },  3, 0 },
+	{ "Azimuth, Elevation",		{ PG,PG,PG,PY,PY,PY,PR,PR }, 33, 4 },
+	{ "Liquid Hydrogen Prs",	{ PG,PG,PG,PG,PG,PG,PG,PG },  3, 8 },
+	{ "Distance to Moon",		{ PR,PR,PR,PR,PR,PR,PR,PR }, 33, 12 },
+	{ "Speed",					{ PY,PY,PY,PY,PY,PY,PY,PY },  3, 16 },
+	{ "Flight Computer",		{ PR,PR,PR,PR,PY,PY,PY,PY }, 17, 20 },
+	{ "",						{ PG,PG,PG,PG,PB,PB,PB,PB }, 17, 23 },
+	{ "Thruster Actuation",		{ PR,PR,PR,PR,PY,PY,PY,PY },  3, 27 },
+	{ NULL }
+};
+
+void hal_program_labels()
+{
+	BoardLayout *bl;
+	for (bl = tree0; bl->label != NULL; bl+=1)
+	{
+		attroff(A_BOLD);
+		wcolor_set(mainwnd, PW, NULL);
+		mvwprintw(mainwnd,
+			bl->y, bl->x+(4*NUM_DIGITS-strlen(bl->label))/2, bl->label);
+	}
+}
+
 void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff)
 {
 	if (board < 0 || board >= NUM_BOARDS || digit < 0 || digit >= NUM_DIGITS || segment < 0 || segment >= 8)
     return;
 
-	int x_origin = (digit) * DIGIT_WIDTH;
-	int y_origin = board * DIGIT_HEIGHT;
+	int x_origin = tree0[board].x + (digit) * DIGIT_WIDTH;
+	int y_origin = tree0[board].y + 1;
 	int i;
 
 	x_origin += segment_defs[segment].xoff;
 	y_origin += segment_defs[segment].yoff;
 
+	attron(A_BOLD);
+	wcolor_set(mainwnd, tree0[board].colors[digit], NULL);
 	if (onoff)
 	{
 		mvwprintw(mainwnd, y_origin, x_origin, segment_defs[segment].s);
@@ -441,6 +483,13 @@ void hal_init()
 
 	/* init curses */
 	mainwnd = initscr();
+	start_color();
+	init_pair(PB, COLOR_BLUE, COLOR_BLACK);
+	init_pair(PY, COLOR_YELLOW, COLOR_BLACK);
+	init_pair(PG, COLOR_GREEN, COLOR_BLACK);
+	init_pair(PR, COLOR_RED, COLOR_BLACK);
+	init_pair(PW, COLOR_WHITE, COLOR_BLACK);
+	//attron(COLOR_PAIR(1));
 	noecho();
 	cbreak();
 	nodelay(mainwnd, TRUE);
@@ -448,6 +497,7 @@ void hal_init()
 	curs_set(0);
 
 	/* init screen */
+	hal_program_labels();
 	SSBitmap value = ascii_to_bitmap('8') | SSB_DECIMAL;
 	int board, digit;
 	for (board = 0; board < NUM_BOARDS; board++) {

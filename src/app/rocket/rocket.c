@@ -48,6 +48,13 @@ int main()
 	InputControllerAct ia;
 	input_controller_init(&ia, (UIEventHandler*) &fa);
 
+	DRTCAct dr;
+	drtc_init(&dr, 0, clock_time_us()+20000000);
+
+	DScrollMsgAct thruster_actuation_placeholder;
+	dscrlmsg_init(&thruster_actuation_placeholder, 7, " -29  73", 0);
+
+/*
 	LabeledDisplayHandler ldh;
 	labeled_display_init(&ldh, 0, &fa);
 
@@ -56,7 +63,9 @@ int main()
 	
 	IdleDisplayAct idisp;
 	idle_display_init(&idisp, &da1, &cpumon);
+	*/
 
+/*
 	char buf[50], *p;
 	strcpy(buf, "calib_spin ");
 	p = buf+strlen(buf);
@@ -66,14 +75,11 @@ int main()
 	p+=int_to_string2(p, 0, 0, cpumon.calibration_interval);
 	strcpy(p, "  ");
 
-/*
 	DScrollMsgAct da2;
 	dscrlmsg_init(&da2, 3, "This is a test sequence with original scroll. ", 100);
 	*/
 
 /*
-	Calculator calc;
-	calculator_init(&calc, 4, &fa);
 
 	// scroll our ascii set.
 	DScrollMsgAct da2;
@@ -99,8 +105,6 @@ int main()
 	DCompassAct dc;
 	dcompass_init(&dc, 4, &fa);
 
-	DGratuitousGraph dgg;
-	dgg_init(&dgg, 5, "volts", 5000000);
 
 */
 #if !MCUatmega8
@@ -111,9 +115,14 @@ int main()
 
 	RasterBigDigit rdigit;
 	raster_big_digit_init(&rdigit, 2);
-*/
 	Pong pong;
 	pong_init(&pong, 2, &fa);
+*/
+	DGratuitousGraph dgg;
+	dgg_init(&dgg, 2, "pres", 1000000);
+
+	Calculator calc;
+	calculator_init(&calc, 5, &fa);
 #endif
 
 /*

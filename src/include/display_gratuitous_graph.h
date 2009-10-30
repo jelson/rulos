@@ -8,7 +8,7 @@
 typedef struct s_d_gratuitous_graph {
 	ActivationFunc func;
 	BoardBuffer bbuf;
-	DriftAnim drift;
+	DriftAnim drift[3];
 	char *name;
 	Time impulse_frequency_us;
 	Time last_impulse;
