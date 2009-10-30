@@ -22,6 +22,7 @@
 #include "sequencer.h"
 #include "rasters.h"
 #include "pong.h"
+#include "lunar_distance.h"
 
 
 /************************************************************************************/
@@ -129,6 +130,9 @@ int main()
 	Launch launch;
 	launch_init(&launch, 4, &fa);
 */
+
+	LunarDistance ld;
+	lunar_distance_init(&ld, 3, 4);
 
 
 	cpumon_main_loop();

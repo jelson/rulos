@@ -27,6 +27,7 @@ COMMON_OBJECTS = \
 	display_blinker.o \
 	rasters.o \
 	pong.o \
+	lunar_distance.o \
 
 
 .PHONY: all
