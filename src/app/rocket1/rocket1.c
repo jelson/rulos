@@ -33,7 +33,7 @@
 int main()
 {
 #if SIM
-	sim_configure_tree(tree0);
+	sim_configure_tree(tree1);
 #endif //SIM
 	heap_init();
 	util_init();
@@ -53,33 +53,24 @@ int main()
 	InputControllerAct ia;
 	input_controller_init(&ia, (UIEventHandler*) &fa);
 
-	DRTCAct dr;
-	drtc_init(&dr, 0, clock_time_us()+20000000);
-
-	LunarDistance ld;
-	lunar_distance_init(&ld, 1, 2);
-
 	DScrollMsgAct thruster_actuation_placeholder;
-	dscrlmsg_init(&thruster_actuation_placeholder, 3, " -29  73", 0);
+	dscrlmsg_init(&thruster_actuation_placeholder, 0, "aaaeeerr", 0);
 
+/*
+	DScrollMsgAct da1;
+	dscrlmsg_init(&da1, 0, "x", 0);	// overwritten by idle display
+	
+	IdleDisplayAct idisp;
+	idle_display_init(&idisp, &da1, &cpumon);
+*/
 
 #if !MCUatmega8
-// Stuff that can go on matrix display:
-/*
-	Launch launch;
-	launch_init(&launch, 4, &fa);
+	DGratuitousGraph dgg;
+	dgg_init(&dgg, 1, "pres", 1000000);
 
-	DDockAct ddock;
-	ddock_init(&ddock, 4, &fa);
-
-	RasterBigDigit rdigit;
-	raster_big_digit_init(&rdigit, 4);
-*/
-	
-	Pong pong;
-	pong_init(&pong, 4, &fa);
+	Calculator calc;
+	calculator_init(&calc, 2, &fa);
 #endif
-
 
 	cpumon_main_loop();
 

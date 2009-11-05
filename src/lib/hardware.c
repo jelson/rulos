@@ -3,7 +3,8 @@
  *
  * This file is not compiled by the simulator.
  */
-#define V11PCB
+#define V1PCB
+//#define V11PCB
 
 #include <avr/boot.h>
 #include <avr/io.h>
@@ -47,6 +48,8 @@
 #define KEYPAD_COL1 GPIO_D1
 #define KEYPAD_COL2 GPIO_D2
 #define KEYPAD_COL3 GPIO_D3
+
+#define NUM_ADCS 0
 #elif defined(V11PCB)
 #define BOARDSEL0	GPIO_B0
 #define BOARDSEL1	GPIO_B1

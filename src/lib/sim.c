@@ -75,7 +75,7 @@ void hal_upside_down_led(SSBitmap *b)
 {
 }
 
-typedef struct {
+typedef struct s_board_layout {
 	char *label;
 	short colors[8];
 	short x, y;
@@ -91,22 +91,53 @@ typedef struct {
 #define PR PAIR_RED
 #define PB PAIR_BLUE
 #define PW PAIR_WHITE
-BoardLayout tree0[] = {
-	{ "Mission Clock",			{ PG,PG,PG,PG,PG,PG,PY,PY },  3, 0 },
-	{ "Azimuth, Elevation",		{ PG,PG,PG,PY,PY,PY,PR,PR }, 33, 4 },
-	{ "Liquid Hydrogen Prs",	{ PG,PG,PG,PG,PG,PG,PG,PG },  3, 8 },
-	{ "Distance to Moon",		{ PR,PR,PR,PR,PR,PR,PR,PR }, 33, 12 },
-	{ "Speed",					{ PY,PY,PY,PY,PY,PY,PY,PY },  3, 16 },
-	{ "Flight Computer",		{ PR,PR,PR,PR,PY,PY,PY,PY }, 17, 20 },
-	{ "",						{ PG,PG,PG,PG,PB,PB,PB,PB }, 17, 23 },
-	{ "Thruster Actuation",		{ PR,PR,PR,PR,PY,PY,PY,PY },  3, 27 },
+
+BoardLayout tree0_def[] = {
+	{ "Mission Clock",			{ PG,PG,PG,PG,PG,PG,PY,PY },  3,  0 },
+	{ "Distance to Moon",		{ PR,PR,PR,PR,PR,PR,PR,PR }, 33,  4 },
+	{ "Speed",					{ PY,PY,PY,PY,PY,PY,PY,PY }, 33,  8 },
+	{ "Thruster Actuation",		{ PR,PR,PR,PR,PY,PY,PY,PY },  3, 12 },
+	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 16 },
+	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 19 },
+	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 22 },
+	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 25 },
 	{ NULL }
-};
+}, *tree0 = tree0_def;
+
+BoardLayout tree1_def[] = {
+	{ "Azimuth, Elevation",		{ PG,PG,PG,PY,PY,PY,PR,PR }, 33, 0 },
+	{ "Liquid Hydrogen Prs",	{ PG,PG,PG,PG,PG,PG,PG,PG },  3, 4 },
+	{ "Flight Computer",		{ PR,PR,PR,PR,PY,PY,PY,PY }, 17, 9 },
+	{ "",						{ PG,PG,PG,PG,PB,PB,PB,PB }, 17, 12 },
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL }
+}, *tree1 = tree1_def;
+
+BoardLayout wallclock_tree_def[] = {
+	{ "Clock",		{ PG,PG,PG,PG,PG,PG,PB,PB }, 15, 0 },
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL }
+}, *wallclock_tree = wallclock_tree_def;
+
+BoardLayout *g_sim_theTree = NULL;
+
+void sim_configure_tree(BoardLayout *tree)
+{
+	g_sim_theTree = tree;
+}
 
 void hal_program_labels()
 {
 	BoardLayout *bl;
-	for (bl = tree0; bl->label != NULL; bl+=1)
+	assert(g_sim_theTree!=NULL); // You forgot to call sim_configure_tree.
+	for (bl = g_sim_theTree; bl->label != NULL; bl+=1)
 	{
 		attroff(A_BOLD);
 		wcolor_set(mainwnd, PW, NULL);
@@ -117,18 +148,18 @@ void hal_program_labels()
 
 void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff)
 {
-	if (board < 0 || board >= NUM_BOARDS || digit < 0 || digit >= NUM_DIGITS || segment < 0 || segment >= 8)
+	if (board < 0 || board >= NUM_BOARDS || digit < 0 || digit >= NUM_DIGITS || segment < 0 || segment >= 8 || g_sim_theTree[board].label==NULL)
     return;
 
-	int x_origin = tree0[board].x + (digit) * DIGIT_WIDTH;
-	int y_origin = tree0[board].y + 1;
+	int x_origin = g_sim_theTree[board].x + (digit) * DIGIT_WIDTH;
+	int y_origin = g_sim_theTree[board].y + 1;
 	int i;
 
 	x_origin += segment_defs[segment].xoff;
 	y_origin += segment_defs[segment].yoff;
 
 	attron(A_BOLD);
-	wcolor_set(mainwnd, tree0[board].colors[digit], NULL);
+	wcolor_set(mainwnd, g_sim_theTree[board].colors[digit], NULL);
 	if (onoff)
 	{
 		mvwprintw(mainwnd, y_origin, x_origin, segment_defs[segment].s);
@@ -472,8 +503,6 @@ void sensor_interrupt_register_handler(Handler handler)
 {
 	_sensor_interrupt_handler = handler;
 }
-
-
 
 void hal_init()
 {

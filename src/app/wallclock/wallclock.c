@@ -4,6 +4,7 @@
 
 #include "rocket.h"
 #include "uart.h"
+#include "sim.h"
 
 
 #define MILLION 1000000
@@ -253,6 +254,9 @@ static void update(WallClockActivation_t *wca)
 
 int main()
 {
+#if SIM
+	sim_configure_tree(wallclock_tree);
+#endif //SIM
 	heap_init();
 	util_init();
 	hal_init();
