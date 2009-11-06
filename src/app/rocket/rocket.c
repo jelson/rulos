@@ -24,6 +24,8 @@
 #include "pong.h"
 #include "lunar_distance.h"
 #include "sim.h"
+#include "display_thrusters.h"
+#include "network.h"
 
 
 /************************************************************************************/
@@ -33,6 +35,7 @@
 int main()
 {
 #if SIM
+	sim_twi_set_instance(0);
 	sim_configure_tree(tree0);
 #endif //SIM
 	heap_init();
@@ -59,8 +62,13 @@ int main()
 	LunarDistance ld;
 	lunar_distance_init(&ld, 1, 2);
 
-	DScrollMsgAct thruster_actuation_placeholder;
-	dscrlmsg_init(&thruster_actuation_placeholder, 3, " -29  73", 0);
+	Network network;
+	init_network(&network);
+
+#define THRUSTER_X_CHAN	3
+#define THRUSTER_Y_CHAN	2
+	ThrusterState_t ts;
+	thrusters_init(&ts, 3, THRUSTER_X_CHAN, THRUSTER_Y_CHAN, &network);
 
 
 #if !MCUatmega8
@@ -71,13 +79,13 @@ int main()
 
 	DDockAct ddock;
 	ddock_init(&ddock, 4, &fa);
-
-	RasterBigDigit rdigit;
-	raster_big_digit_init(&rdigit, 4);
-*/
 	
 	Pong pong;
 	pong_init(&pong, 4, &fa);
+*/
+
+	RasterBigDigit rdigit;
+	raster_big_digit_init(&rdigit, 4);
 #endif
 
 

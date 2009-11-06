@@ -5,10 +5,13 @@
 # error Please include rocket.h instead of this file
 #endif
 
+#include <inttypes.h>
+
 #define FALSE 0
 #define TRUE 1
-
-#include <inttypes.h>
+typedef uint8_t r_bool;
+	// "r_bool" for ROCKET bool! ncurses and other libraries define
+	// incompatible bools, so I want to avoid (rather than battle) collisions.
 
 #ifdef SIM
 

@@ -21,8 +21,21 @@ void hal_upside_down_led(SSBitmap *b);
 char hal_read_keybuf();
 uint16_t hal_elapsed_milliintervals();
 void hal_speedup_clock_ppm(int32_t ratio);
-void hal_uart_init(uint16_t baud);
 uint16_t *hal_get_adc(uint8_t channel);
 void hal_delay_ms(uint16_t ms);
+
+void hal_uart_init(uint16_t baud);
+/*
+void hal_uart_send_byte(uint8_t byte);
+void hal_uart_set_recv_handler(Activation *act);
+	// Runs on interrupt stack -- keep it sweet and race-free.
+*/
+
+void hal_twi_init(Activation *act);
+	// act is scheduled after each send() (when the send buffer is again free),
+	// and after each received byte.
+r_bool hal_twi_ready_to_send();
+void hal_twi_send_byte(uint8_t byte);
+r_bool hal_twi_read_byte(/*OUT*/ uint8_t *byte);
 
 #endif // __hal_h__

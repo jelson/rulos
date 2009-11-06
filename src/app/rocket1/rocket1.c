@@ -12,7 +12,7 @@
 #include "focus.h"
 #include "labeled_display.h"
 #include "display_docking.h"
-#include "display_gratuitous_graph.h"
+#include "display_thruster_graph.h"
 #include "numeric_input.h"
 #include "input_controller.h"
 #include "calculator.h"
@@ -23,6 +23,7 @@
 #include "rasters.h"
 #include "pong.h"
 #include "lunar_distance.h"
+#include "network.h"
 #include "sim.h"
 
 
@@ -33,6 +34,7 @@
 int main()
 {
 #if SIM
+	sim_twi_set_instance(1);
 	sim_configure_tree(tree1);
 #endif //SIM
 	heap_init();
@@ -42,6 +44,9 @@ int main()
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);	// includes slow calibration phase
+
+	Network network;
+	init_network(&network);
 
 	//install_handler(ADC, adc_handler);
 
@@ -65,8 +70,8 @@ int main()
 */
 
 #if !MCUatmega8
-	DGratuitousGraph dgg;
-	dgg_init(&dgg, 1, "pres", 1000000);
+	DThrusterGraph dtg;
+	dtg_init(&dtg, 1, &network);
 
 	Calculator calc;
 	calculator_init(&calc, 2, &fa);

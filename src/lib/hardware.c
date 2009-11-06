@@ -3,8 +3,8 @@
  *
  * This file is not compiled by the simulator.
  */
-#define V1PCB
-//#define V11PCB
+//#define V1PCB
+#define V11PCB
 
 #include <avr/boot.h>
 #include <avr/io.h>
@@ -515,3 +515,29 @@ void hal_init()
 	ByteQueue_init((ByteQueue *) iba.keypad_q, sizeof(iba.keypad_q));
 	schedule_us(1, (Activation *) &iba);
 }
+
+// Stubbed-out TWI hardware modules
+Activation *g_hal_twi_act = NULL;
+void hal_twi_init(Activation *act)
+{
+	g_hal_twi_act = act;
+}
+
+r_bool hal_twi_ready_to_send()
+{
+	return TRUE;
+}
+
+void hal_twi_send_byte(uint8_t byte)
+{
+	LOGF((logfp, "hal_twi_send_byte(%02x [%c])",
+		byte,
+		(byte>=' ' && byte<127) ? byte : '_'));
+	schedule_us(1, g_hal_twi_act);
+}
+
+r_bool hal_twi_read_byte(/*OUT*/ uint8_t *byte)
+{
+	return FALSE;
+}
+

@@ -19,7 +19,7 @@ void lunar_distance_update(LunarDistance *ld)
 	schedule_us(100000, (Activation*) ld);
 
 	char buf[NUM_DIGITS+1];
-	LOGF((logfp, "lunar dist %d\n", da_read(&ld->da)));
+	//LOGF((logfp, "lunar dist %d\n", da_read(&ld->da)));
 	int_to_string2(buf, NUM_DIGITS, 0, da_read(&ld->da));
 	ascii_to_bitmap_str(ld->dist_board.buffer, NUM_DIGITS, buf);
 	ld->dist_board.buffer[NUM_DIGITS-4] |= SSB_DECIMAL;

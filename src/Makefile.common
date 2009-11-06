@@ -28,6 +28,8 @@ COMMON_OBJECTS = \
 	rasters.o \
 	pong.o \
 	lunar_distance.o \
+	network.o \
+	display_thruster_graph.o \
 
 
 .PHONY: all

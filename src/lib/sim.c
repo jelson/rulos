@@ -2,18 +2,29 @@
 #define DIGIT_HEIGHT 4
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
+#include <time.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/timeb.h>
 #include <signal.h>
 #include <sched.h>
 #include <ctype.h>
+#include <curses.h>
+
+// TWI simulator
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <errno.h>
 
 #include "rocket.h"
 #include "util.h"
 #include "display_controller.h"
 #include "uart.h"
+#include "sim.h"
 
 /*
    __
@@ -31,15 +42,6 @@ seg  x  y char
 7    4  2 .
 
 */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <time.h>
-#include <curses.h>
-
-#include "rocket.h"
 
 static WINDOW *mainwnd;
 
@@ -74,12 +76,6 @@ static void terminate_sim(void)
 void hal_upside_down_led(SSBitmap *b)
 {
 }
-
-typedef struct s_board_layout {
-	char *label;
-	short colors[8];
-	short x, y;
-} BoardLayout;
 
 #define PAIR_GREEN	1
 #define PAIR_YELLOW	2
@@ -441,6 +437,8 @@ static void sim_clock_handler()
 		sensor_interrupt_simulator_counter = 0;
 	}
 
+	twi_poll();
+
 	user_clock_handler();
 }
 
@@ -539,3 +537,105 @@ void hal_init()
 	sigemptyset(&alrm_set);
 	sigaddset(&alrm_set, SIGALRM);
 }
+
+TWIState g_sim_twi_state = {FALSE};
+
+void sim_twi_set_instance(int instance)
+{
+	assert(0<=instance && instance<SIM_TWI_NUM_NODES);
+	g_sim_twi_state.instance = instance;
+}
+
+void hal_twi_init(Activation *act)
+{
+	g_sim_twi_state.user_act = act;
+	g_sim_twi_state.udp_socket = socket(PF_INET, SOCK_DGRAM, 0);
+	g_sim_twi_state.read_ready = FALSE;
+
+	char on = 1;
+	ioctl(g_sim_twi_state.udp_socket, FIONBIO, (char*) &on);
+
+	struct sockaddr_in sai;
+	sai.sin_family = AF_INET;
+	sai.sin_addr.s_addr = htonl(INADDR_ANY);
+	sai.sin_port = htons(SIM_TWI_PORT_BASE + g_sim_twi_state.instance);
+	bind(g_sim_twi_state.udp_socket, (struct sockaddr*)&sai, sizeof(sai));
+	g_sim_twi_state.initted = TRUE;
+}
+
+void twi_poll()
+{
+	if (!g_sim_twi_state.initted)
+	{
+		return;
+	}
+	if (g_sim_twi_state.read_ready)
+	{
+		// best not consume any more packets until we've delivered this one.
+		return;
+	}
+	
+	char buf[10];
+	int rc = recv(g_sim_twi_state.udp_socket, buf, sizeof(buf), MSG_DONTWAIT);
+	if (rc<0)
+	{
+		assert(errno == EAGAIN);
+		return;
+	}
+
+	assert(rc>0);
+	//LOGF((logfp, "sim reads TWI byte %02x; ignores %d more\n", buf[0], rc-1));
+
+	g_sim_twi_state.read_byte = buf[0];
+	g_sim_twi_state.read_ready = TRUE;
+}
+
+r_bool hal_twi_ready_to_send()
+{
+	return TRUE;
+}
+
+void hal_twi_send_byte(uint8_t byte)
+{
+/*
+	LOGF((logfp, "hal_twi_send_byte(%02x [%c])\n",
+		byte,
+		(byte>=' ' && byte<127) ? byte : '_'));
+*/
+	
+	struct sockaddr_in sai;
+	int i;
+	sai.sin_family = AF_INET;
+	sai.sin_addr.s_addr = htonl(0x7f000001);
+	for (i=0; i<SIM_TWI_NUM_NODES; i++)
+	{
+		// I ignore the bytes I sent on the TWI. I hope that's
+		// a correct model, or the real network code gets much tricksier!
+		if (i==g_sim_twi_state.instance)
+		{
+			continue;
+		}
+		sai.sin_port = htons(SIM_TWI_PORT_BASE + i);
+		sendto(g_sim_twi_state.udp_socket, &byte, 1,
+			0, (struct sockaddr*)&sai, sizeof(sai));
+	}
+
+	schedule_us(1, g_sim_twi_state.user_act);
+}
+
+r_bool hal_twi_read_byte(/*OUT*/ uint8_t *byte)
+{
+	if (g_sim_twi_state.read_ready)
+	{
+		*byte = g_sim_twi_state.read_byte;
+		g_sim_twi_state.read_ready = FALSE;
+		// whoah, another byte is ready RIGHT NOW!
+		schedule_us(1, g_sim_twi_state.user_act);
+		return TRUE;
+	}
+	else
+	{
+		return FALSE;
+	}
+}
+
