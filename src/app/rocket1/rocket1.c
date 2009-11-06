@@ -75,7 +75,8 @@ int main()
 	dtg_init(&dtg, 1, &network);
 
 	Calculator calc;
-	calculator_init(&calc, 2, &fa);
+	calculator_init(&calc, 2, &fa,
+		(FetchCalcDecorationValuesIfc*) &daer.decoration_ifc);
 #endif
 
 	cpumon_main_loop();

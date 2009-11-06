@@ -4,21 +4,29 @@
 #include "focus.h"
 #include "knob.h"
 #include "numeric_input.h"
-#include "cursor.h"
 #include "board_buffer.h"
 #include "display_scroll_msg.h"
+#include "calculator_decoration.h"
 
-typedef struct {
+typedef struct s_calculator {
 	UIEventHandlerFunc func;
 	BoardBuffer bbuf[2];
 	BoardBuffer *btable[2];
 	NumericInputAct operands[2];
 	Knob operator;
 	NumericInputAct result;
-	CursorAct cursor;
 	FocusManager focus;
+
+	struct s_decoration_timeout {
+		ActivationFunc func;
+		struct s_calculator *calc;
+		Time last_activity;
+		FetchCalcDecorationValuesIfc *fetchDecorationValuesObj;
+	} decorationTimeout;
 } Calculator;
 
-void calculator_init(Calculator *calc, int board0, FocusManager *fa);
+void calculator_init(
+	Calculator *calc, int board0, FocusManager *fa,
+	FetchCalcDecorationValuesIfc *fetchDecorationValuesObj);
 
 #endif // _calculator_h

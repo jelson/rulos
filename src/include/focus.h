@@ -49,6 +49,7 @@ typedef struct s_focus_act {
 
 void focus_init(FocusManager *act);
 void focus_register(FocusManager *act, UIEventHandler *handler, RectRegion rr, char *label);
+r_bool focus_is_active(FocusManager *act);
 
 #endif // focus_h
 

@@ -14,8 +14,12 @@ char *operator_strs[] = {
 	"add", "sub", "mul", "div" };
 
 UIEventDisposition calculator_notify(UIEventHandler *notify, UIEvent evt);
+UIEventDisposition calculator_notify_internal(Calculator *calc, UIEvent evt);
+void calculator_timeout_func(struct s_decoration_timeout *calc_decoration_timeout);
 
-void calculator_init(Calculator *calc, int board0, FocusManager *fa)
+void calculator_init(
+	Calculator *calc, int board0, FocusManager *fa,
+	FetchCalcDecorationValuesIfc *fetchDecorationValuesObj)
 {
 	calc->func = calculator_notify;
 	focus_init(&calc->focus);
@@ -46,6 +50,13 @@ void calculator_init(Calculator *calc, int board0, FocusManager *fa)
 	numeric_input_set_value(&calc->operands[1], op1);
 	knob_set_value(&calc->operator, op_div);
 	calculator_notify((UIEventHandler*) calc, evt_notify);
+
+
+	calc->decorationTimeout.func = (ActivationFunc) calculator_timeout_func;
+	calc->decorationTimeout.calc = calc;
+	calc->decorationTimeout.last_activity = clock_time_us();
+	calc->decorationTimeout.fetchDecorationValuesObj = fetchDecorationValuesObj;
+	schedule_us(1, (Activation*) &calc->decorationTimeout);
 }
 
 char *err_overflow = "Ovrf";
@@ -54,14 +65,23 @@ char *err_negative = "Neg ";
 
 UIEventDisposition calculator_notify(UIEventHandler *notify, UIEvent evt)
 {
+	Calculator *calc = (Calculator*) notify;
+	calc->decorationTimeout.last_activity = clock_time_us();
+
+	return calculator_notify_internal(calc, evt);
+}
+
+// _internal doesn't update last_activity, so that displaying decorations
+// doesn't cancel the decorations.
+UIEventDisposition calculator_notify_internal(Calculator *calc, UIEvent evt)
+{
 	assert(evt==evt_notify);
 	DecimalFloatingPoint out;
-	Calculator *calc = (Calculator*) notify;
 	char *error = NULL;
 	DecimalFloatingPoint op0 = calc->operands[0].cur_value;
 	DecimalFloatingPoint op1 = calc->operands[1].cur_value;
-	LOGF((logfp, "start  op0 %3de%d o1 %3de%d\n",
-		op0.mantissa, op0.neg_exponent, op1.mantissa, op1.neg_exponent));
+//	LOGF((logfp, "start  op0 %3de%d o1 %3de%d\n",
+//		op0.mantissa, op0.neg_exponent, op1.mantissa, op1.neg_exponent));
 	uint32_t mantissa = 0;
 	switch (calc->operator.selected)
 	{
@@ -91,8 +111,8 @@ UIEventDisposition calculator_notify(UIEventHandler *notify, UIEvent evt)
 			mantissa /= ((uint32_t) op1.mantissa);
 			out.neg_exponent = op0.neg_exponent;
 
-			LOGF((logfp, "div  out %3de%d\n",
-				out.mantissa, out.neg_exponent));
+//			LOGF((logfp, "div  out %3de%d\n",
+//				out.mantissa, out.neg_exponent));
 			break;
 		}
 		case op_add:
@@ -115,8 +135,8 @@ UIEventDisposition calculator_notify(UIEventHandler *notify, UIEvent evt)
 				m0 *= 10;
 				op0.neg_exponent += 1;
 			}
-			LOGF((logfp, "setup2 op0 %3de%d o1 %3de%d\n",
-				m0, op0.neg_exponent, m1, op1.neg_exponent));
+//			LOGF((logfp, "setup2 op0 %3de%d o1 %3de%d\n",
+//				m0, op0.neg_exponent, m1, op1.neg_exponent));
 			assert(op0.neg_exponent == op1.neg_exponent);
 			// swap mantissas back so subtraction makes sense
 			if (swapped)
@@ -143,8 +163,8 @@ UIEventDisposition calculator_notify(UIEventHandler *notify, UIEvent evt)
 			out.neg_exponent = op0.neg_exponent;
 		}
 	}
-	LOGF((logfp, "after  op0 %3de%d\n",
-		mantissa, out.neg_exponent));
+//	LOGF((logfp, "after  op0 %3de%d\n",
+//		mantissa, out.neg_exponent));
 	// shift away digits until mantissa is legal
 	while (mantissa >> 16)
 	{
@@ -156,11 +176,11 @@ UIEventDisposition calculator_notify(UIEventHandler *notify, UIEvent evt)
 		mantissa /= 10;
 		out.neg_exponent -= 1;
 
-		LOGF((logfp, "16bit  op0 %3de%d\n",
-			mantissa, out.neg_exponent));
+//		LOGF((logfp, "16bit  op0 %3de%d\n",
+//			mantissa, out.neg_exponent));
 	}
-	LOGF((logfp, "cleanup op0 %3de%d\n",
-			mantissa, out.neg_exponent));
+//	LOGF((logfp, "cleanup op0 %3de%d\n",
+//			mantissa, out.neg_exponent));
 	out.mantissa = mantissa;
 	// now shift away significant digits until it can be represented
 	while (dfp_draw(&out, NULL, 4, FALSE)>4)
@@ -172,8 +192,8 @@ UIEventDisposition calculator_notify(UIEventHandler *notify, UIEvent evt)
 		}
 		out.mantissa /= 10;
 		out.neg_exponent -= 1;
-		LOGF((logfp, "4char  op0 %3de%d\n",
-			out.mantissa, out.neg_exponent));
+//		LOGF((logfp, "4char  op0 %3de%d\n",
+//			out.mantissa, out.neg_exponent));
 	}
 
 done:
@@ -189,4 +209,38 @@ done:
 		numeric_input_set_value(&calc->result, out);
 	}
 	return uied_accepted;
+}
+
+#define DECORATION_TIMEOUT 			7000000	/* 3 sec */
+#define DECORATION_UPDATE_INTERVAL   500000	/* 0.5 sec */
+
+void calculator_timeout_func(struct s_decoration_timeout *calc_decoration_timeout)
+{
+	schedule_us(DECORATION_UPDATE_INTERVAL, (Activation*) calc_decoration_timeout);
+	Calculator *calc = calc_decoration_timeout->calc;
+	LOGF((logfp, "calc: calculator_timeout_func\n"));
+
+	if (focus_is_active(&calc->focus))
+	{
+		// focus means activity.
+		calc->decorationTimeout.last_activity = clock_time_us();
+	}
+	else if (later_than(clock_time_us(), calc_decoration_timeout->last_activity + DECORATION_TIMEOUT))
+	{
+		LOGF((logfp, "calc: timed out\n"));
+		// update last_activity to keep it from rolling over
+		calc_decoration_timeout->last_activity =
+			clock_time_us() - DECORATION_TIMEOUT - 1;
+
+		// fetch values from source
+		if (calc_decoration_timeout->fetchDecorationValuesObj != NULL)
+		{
+			DecimalFloatingPoint op0, op1;
+			calc_decoration_timeout->fetchDecorationValuesObj->func(
+				calc_decoration_timeout->fetchDecorationValuesObj, &op0, &op1);
+			numeric_input_set_value(&calc->operands[0], op0);
+			numeric_input_set_value(&calc->operands[1], op1);
+			calculator_notify_internal(calc, evt_notify);
+		}
+	}
 }

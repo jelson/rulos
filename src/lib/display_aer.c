@@ -3,6 +3,9 @@
 
 
 void daer_update(DAER *act);
+void daer_fetchCalcDecorationValues(
+	struct s_decoration_ifc *daer_decoration_ifc,
+	DecimalFloatingPoint *op0, DecimalFloatingPoint *op1);
 
 void daer_init(DAER *daer, uint8_t board, Time impulse_frequency_us)
 {
@@ -14,6 +17,10 @@ void daer_init(DAER *daer, uint8_t board, Time impulse_frequency_us)
 	drift_anim_init(&daer->roll,      10, -90, -90,  90, 5);
 	daer->impulse_frequency_us = impulse_frequency_us;
 	daer->last_impulse = 0;
+
+	daer->decoration_ifc.func = (FetchCalcDecorationValuesFunc) daer_fetchCalcDecorationValues;
+	daer->decoration_ifc.daer = daer;
+
 	schedule_us(1, (Activation*) daer);
 }
 
@@ -38,3 +45,15 @@ void daer_update(DAER *daer)
 	ascii_to_bitmap_str(daer->bbuf.buffer, 8, str);
 	board_buffer_draw(&daer->bbuf);
 }
+
+void daer_fetchCalcDecorationValues(
+	struct s_decoration_ifc *daer_decoration_ifc,
+	DecimalFloatingPoint *op0, DecimalFloatingPoint *op1)
+{
+	DAER *daer = daer_decoration_ifc->daer;
+	op0->mantissa = da_read(&daer->azimuth)*10;
+	op0->neg_exponent = 1;
+	op1->mantissa = da_read(&daer->elevation)*100;
+	op1->neg_exponent = 2;
+}
+
