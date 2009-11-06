@@ -18,6 +18,9 @@
 // this equation works assuming 42k resistors and a 0..1023 adc
 static int8_t adc_to_100scale(uint16_t adc)
 {
+	// jonh "fixes" div-by-zero without understanding eqn:
+	if (adc==0) { adc = 1; }
+
 	int32_t retval = ((uint32_t) 84*1024 / (uint32_t) adc - 84) - 100;
 
 	if (retval < -99)

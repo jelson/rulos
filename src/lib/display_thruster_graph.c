@@ -32,8 +32,8 @@ void dtg_update(DThrusterGraph *dtg)
 	int d;
 	for (d=0; d<NUM_DIGITS; d++) { dtg->bbuf.buffer[d] = 0; }
 	dtg_draw_skinny_bars(&dtg->bbuf, (dtg->thruster_bits & 0x01) ? 16 : 0, 0b1000000);
-	dtg_draw_skinny_bars(&dtg->bbuf, (dtg->thruster_bits & 0x02) ? 16 : 0, 0b0000001);
-	dtg_draw_skinny_bars(&dtg->bbuf, (dtg->thruster_bits & 0x04) ? 16 : 0, 0b0001000);
+	dtg_draw_skinny_bars(&dtg->bbuf, (dtg->thruster_bits & 0x04) ? 16 : 0, 0b0000001);
+	dtg_draw_skinny_bars(&dtg->bbuf, (dtg->thruster_bits & 0x02) ? 16 : 0, 0b0001000);
 	
 	board_buffer_draw(&dtg->bbuf);
 }

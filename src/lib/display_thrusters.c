@@ -58,7 +58,7 @@ static void thrusters_update(ThrusterState_t *ts)
 		&& !ts->sendSlot.sending)
 	{
 		ThrusterPayload *tp = (ThrusterPayload *) ts->sendSlot.msg->data;
-		tp->thruster_bits = (ts->bbuf.buffer[0]>>4) & 0x07;
+		tp->thruster_bits = (~(ts->bbuf.buffer[0]>>4)) & 0x07;
 		net_send_message(ts->network, &ts->sendSlot);
 		ts->last_send = clock_time_us();
 	}
