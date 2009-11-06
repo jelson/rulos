@@ -1,5 +1,16 @@
 TODO
 	make circle thing work with thrustiness, with x/y in corners
+	display_thruster_graph should do exp-weighted avg
+	azimuth-elevation-roll should show something
+	write docking sequencer
+	decoration-mode UI
+	write UI modality:
+		decoration mode
+		{docking,launch,pong} modes
+		power-user UI mode?
+	send log data back to house
+	console bitmaps back to house
+
 	assert displayer
 	E6b
 
