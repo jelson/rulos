@@ -1,7 +1,5 @@
 TODO
 	make circle thing work with thrustiness, with x/y in corners
-	display_thruster_graph should do exp-weighted avg
-	azimuth-elevation-roll should show something
 	write docking sequencer
 	decoration-mode UI
 	write UI modality:

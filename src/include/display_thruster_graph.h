@@ -14,6 +14,7 @@ typedef struct s_d_thruster_graph {
 	RecvSlot recvSlot;
 	struct s_d_thruster_graph *self;
 	uint8_t thruster_bits;
+	uint32_t value[3];
 } DThrusterGraph;
 
 void dtg_init(DThrusterGraph *dtg, uint8_t board, Network *network);
