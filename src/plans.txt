@@ -1,7 +1,6 @@
 TODO
 	make circle thing work with thrustiness, with x/y in corners
 	write docking sequencer
-	decoration-mode UI
 	write UI modality:
 		decoration mode
 		{docking,launch,pong} modes
@@ -12,9 +11,9 @@ TODO
 	assert displayer
 	E6b
 
+SCRIPT
+
 BUGS
-	calculator should shift in precision for div, when available.
-	(3 div 2 = 1, right now, rather than 0.500.)
 
 
 1	K clock:

@@ -108,6 +108,11 @@ UIEventDisposition calculator_notify_internal(Calculator *calc, UIEvent evt)
 				error = err_divzero;
 				goto done;
 			}
+			while (mantissa < 100000)
+			{
+				mantissa *= 10;
+				op0.neg_exponent += 1;
+			}
 			mantissa /= ((uint32_t) op1.mantissa);
 			out.neg_exponent = op0.neg_exponent;
 
@@ -218,7 +223,7 @@ void calculator_timeout_func(struct s_decoration_timeout *calc_decoration_timeou
 {
 	schedule_us(DECORATION_UPDATE_INTERVAL, (Activation*) calc_decoration_timeout);
 	Calculator *calc = calc_decoration_timeout->calc;
-	LOGF((logfp, "calc: calculator_timeout_func\n"));
+//	LOGF((logfp, "calc: calculator_timeout_func\n"));
 
 	if (focus_is_active(&calc->focus))
 	{
@@ -227,7 +232,7 @@ void calculator_timeout_func(struct s_decoration_timeout *calc_decoration_timeou
 	}
 	else if (later_than(clock_time_us(), calc_decoration_timeout->last_activity + DECORATION_TIMEOUT))
 	{
-		LOGF((logfp, "calc: timed out\n"));
+//		LOGF((logfp, "calc: timed out\n"));
 		// update last_activity to keep it from rolling over
 		calc_decoration_timeout->last_activity =
 			clock_time_us() - DECORATION_TIMEOUT - 1;
