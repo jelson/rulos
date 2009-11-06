@@ -108,7 +108,7 @@ UIEventDisposition calculator_notify_internal(Calculator *calc, UIEvent evt)
 				error = err_divzero;
 				goto done;
 			}
-			while (mantissa < 100000)
+			while (0 < mantissa && mantissa < 100000)
 			{
 				mantissa *= 10;
 				op0.neg_exponent += 1;
