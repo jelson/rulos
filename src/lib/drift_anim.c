@@ -8,7 +8,7 @@ void drift_anim_init(DriftAnim *da, uint8_t expscale, int32_t initValue, int32_t
 	da->max = max << expscale;
 	da->maxSpeed = maxSpeed << expscale;
 	da_random_impulse(da);	// assign a valid velocity.
-	da->base = initValue;
+	da->base = initValue << expscale;
 	da->base_time = clock_time_us();
 }
 

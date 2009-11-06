@@ -30,6 +30,7 @@ COMMON_OBJECTS = \
 	lunar_distance.o \
 	network.o \
 	display_thruster_graph.o \
+	display_aer.o \
 
 
 .PHONY: all

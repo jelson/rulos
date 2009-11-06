@@ -92,7 +92,7 @@ BoardLayout tree0_def[] = {
 	{ "Mission Clock",			{ PG,PG,PG,PG,PG,PG,PY,PY },  3,  0 },
 	{ "Distance to Moon",		{ PR,PR,PR,PR,PR,PR,PR,PR }, 33,  4 },
 	{ "Speed",					{ PY,PY,PY,PY,PY,PY,PY,PY }, 33,  8 },
-	{ "Thruster Actuation",		{ PR,PR,PR,PR,PY,PY,PY,PY },  3, 12 },
+	{ "Thruster Actuation",		{ PB,PR,PR,PR,PB,PY,PY,PY },  3, 12 },
 	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 16 },
 	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 19 },
 	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 22 },
@@ -101,7 +101,7 @@ BoardLayout tree0_def[] = {
 }, *tree0 = tree0_def;
 
 BoardLayout tree1_def[] = {
-	{ "Azimuth, Elevation",		{ PG,PG,PG,PY,PY,PY,PR,PR }, 33, 0 },
+	{ "Azimuth, Elevation",		{ PG,PG,PG,PR,PR,PY,PY,PY }, 33, 0 },
 	{ "Liquid Hydrogen Prs",	{ PG,PG,PG,PG,PG,PG,PG,PG },  3, 4 },
 	{ "Flight Computer",		{ PR,PR,PR,PR,PY,PY,PY,PY }, 17, 9 },
 	{ "",						{ PG,PG,PG,PG,PB,PB,PB,PB }, 17, 12 },

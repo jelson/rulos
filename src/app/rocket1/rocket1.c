@@ -25,6 +25,7 @@
 #include "lunar_distance.h"
 #include "network.h"
 #include "sim.h"
+#include "display_aer.h"
 
 
 /************************************************************************************/
@@ -58,8 +59,8 @@ int main()
 	InputControllerAct ia;
 	input_controller_init(&ia, (UIEventHandler*) &fa);
 
-	DScrollMsgAct thruster_actuation_placeholder;
-	dscrlmsg_init(&thruster_actuation_placeholder, 0, "aaaeeerr", 0);
+	DAER daer;
+	daer_init(&daer, 0, ((Time)5)<<20);
 
 /*
 	DScrollMsgAct da1;
