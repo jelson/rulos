@@ -41,7 +41,7 @@ static void update(BoardIDAct_t *ba)
 	if (++(ba->stage) == 4)
 		ba->stage = 0;
 
-	schedule_us(1500000, (Activation *)ba);
+	schedule_us(1000000, (Activation *)ba);
 	return;
 }
 
@@ -51,21 +51,6 @@ int main()
 	heap_init();
 	util_init();
 	hal_init();
-
-#if 0
-	int i;
-
-	while (1){
-		for (i = 0; i < 8; i++) {
-			program_segment(0, 0, i, 0);
-			_delay_ms(1000);
-		}
-		for (i = 0; i < 8; i++) {
-			program_segment(0, 0, i, 1);
-			_delay_ms(1000);
-		}
-	}
-#endif
 
 	clock_init(100000);
 	board_buffer_module_init();

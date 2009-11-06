@@ -74,10 +74,10 @@ static void display_unhappy(WallClockActivation_t *wca, uint16_t interval_ms)
 #define SECONDS_BETWEEN_PULSES 60
 
 static void calibrate_clock(WallClockActivation_t *wca,
-							uint8_t hour,
-							uint8_t minute,
-							uint8_t second,
-							Time reception_us)
+			    uint8_t hour,
+			    uint8_t minute,
+			    uint8_t second,
+			    Time reception_us)
 {
 	// Compute the elapsed time according to our local clock between
 	// this packet received and when the previous one was received

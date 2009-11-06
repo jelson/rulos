@@ -182,7 +182,6 @@ ISR(TIMER1_COMPA_vect)
 	timer_handler();
 }
 
-/* clock calibration by jelson: took 209 seconds to lose one second */
 uint32_t f_cpu_values[] = {
 	(1000000),
 	(2000000),
@@ -235,7 +234,13 @@ void hal_start_clock_us(uint32_t us, Handler handler)
 	TCCR1B = tccr1b;
 
 	/* enable output-compare int. */
-	TIMSK |= (1<<OCIE1A);
+#if defined(MCUatmega8)
+	TIMSK  |= _BV(OCIE1A);
+#elif defined (MCUatmega328p)
+	TIMSK1 |= _BV(OCIE1A);
+#else
+# error hardware-specific timer code needs help!
+#endif
 
 	/* reset counter */
 	TCNT1 = 0; 
@@ -441,20 +446,48 @@ uint16_t *hal_get_adc(uint8_t channel)
 
 //// uart stuff
 
+#if defined(MCUatmega8)
+# define _UBRRH    UBRRH
+# define _UBRRL    UBRRL
+# define _UCSRA    UCSRA
+# define _UCSRB    UCSRB
+# define _UCSRC    UCSRC
+# define _RXEN     RXEN
+# define _RXCIE    RXCIE
+# define _UCSZ0    UCSZ0
+# define _UCSZ1    UCSZ1
+#elif defined(MCUatmega328p)
+# define _UBRRH    UBRR0H
+# define _UBRRL    UBRR0L
+# define _UCSRA    UCSR0A
+# define _UCSRB    UCSR0B
+# define _UCSRC    UCSR0C
+# define _RXEN     RXEN0
+# define _RXCIE    RXCIE0
+# define _UCSZ0    UCSZ00
+# define _UCSZ1    UCSZ01
+#else
+# error Hardware-specific UART code needs love
+#endif
+
 void hal_uart_init(uint16_t baud)
 {
 	// disable interrupts
 	cli();
 
 	// set baud rate
-	UBRRH = (unsigned char) baud >> 8;
-	UBRRL = (unsigned char) baud;
+	_UBRRH = (unsigned char) baud >> 8;
+	_UBRRL = (unsigned char) baud;
 
 	// enable receiver and receiver interrupts
-	UCSRB = _BV(RXEN) | _BV(RXCIE);
+	_UCSRB = _BV(_RXEN) | _BV(_RXCIE);
 
 	// set frame format: async, 8 bit data, 1 stop  bit, no parity
-	UCSRC = _BV(URSEL) | _BV(UCSZ1) | _BV(UCSZ0);
+	_UCSRC =  _BV(_UCSZ1) | _BV(_UCSZ0)
+#ifdef MCUatmega8
+	  | _BV(URSEL)
+#endif
+	  ;
 
 	// enable interrupts
 	sei();
@@ -507,9 +540,15 @@ void hal_init()
 {
 	init_pins();
 
+#if defined(MCUatmega8)
 	// read fuses to determine clock frequency
 	uint8_t cksel = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS) & 0x0f;
 	f_cpu = f_cpu_values[cksel-1];
+#elif defined(MCUatmega328p)
+	f_cpu = (uint32_t) 8000000;
+#else
+# error Hardware-specific clock code needs help
+#endif
 
 	// start reading input periodically
 	ByteQueue_init((ByteQueue *) iba.keypad_q, sizeof(iba.keypad_q));
