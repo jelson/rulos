@@ -29,6 +29,8 @@
 #include "network.h"
 #include "remote_keyboard.h"
 #include "remote_bbuf.h"
+#include "remote_uie.h"
+#include "control_panel.h"
 
 
 /************************************************************************************/
@@ -53,21 +55,8 @@ int main()
 
 	board_buffer_module_init();
 
-	FocusManager fa;
-	focus_init(&fa);
-
 	Network network;
 	init_network(&network);
-
-	InputFocusInjector ifi;
-	input_focus_injector_init(&ifi, (UIEventHandler*) &fa);
-
-	// Both local poller and remote receiver inject keyboard events.
-	InputPollerAct ip;
-	input_poller_init(&ip, (InputInjectorIfc*) &ifi);
-
-	RemoteKeyboardRecv rkr;
-	init_remote_keyboard_recv(&rkr, &network, (InputInjectorIfc*) &ifi);
 
 	DRTCAct dr;
 	drtc_init(&dr, 0, clock_time_us()+20000000);
@@ -75,6 +64,7 @@ int main()
 	LunarDistance ld;
 	lunar_distance_init(&ld, 1, 2);
 
+#if 0	// my ill-fated attempt to run the calc code here and remote the display
 	RemoteBBufSend rbs;
 	init_remote_bbuf_send(&rbs, &network);
 	install_remote_bbuf_send(&rbs);
@@ -85,20 +75,29 @@ int main()
 	Calculator calc;
 	calculator_init(&calc, NUM_BOARDS+2, &fa,
 		(FetchCalcDecorationValuesIfc*) &daer.decoration_ifc);
-	
+#endif
 
 #define THRUSTER_X_CHAN	3
 #define THRUSTER_Y_CHAN	2
 	ThrusterState_t ts;
 	thrusters_init(&ts, 3, THRUSTER_X_CHAN, THRUSTER_Y_CHAN, &network);
 
+	ControlPanel cp;
+	init_control_panel(&cp, 4, &network);
 
-#if !MCUatmega8
+	// Both local poller and remote receiver inject keyboard events.
+	InputPollerAct ip;
+	input_poller_init(&ip, (InputInjectorIfc*) &cp.direct_injector);
+
+	RemoteKeyboardRecv rkr;
+	init_remote_keyboard_recv(&rkr, &network, (InputInjectorIfc*) &cp.direct_injector, REMOTE_KEYBOARD_PORT);
+
+
 // Stuff that can go on matrix display:
+/*
 	Launch launch;
 	launch_init(&launch, 4, &fa);
 
-/*
 	DDockAct ddock;
 	ddock_init(&ddock, 4, &fa);
 	
@@ -108,8 +107,6 @@ int main()
 	RasterBigDigit rdigit;
 	raster_big_digit_init(&rdigit, 4);
 */
-#endif
-
 
 	cpumon_main_loop();
 

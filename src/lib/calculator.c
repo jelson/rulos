@@ -32,8 +32,11 @@ void calculator_init(
 		calc->btable[i] = &calc->bbuf[i];
 	}
 
-	RectRegion calc_region = { calc->btable, 2, 1, 6 };
-	focus_register(fa, (UIEventHandler*) &calc->focus, calc_region, "calculator");
+	if (fa!=NULL)
+	{
+		RectRegion calc_region = { calc->btable, 2, 1, 6 };
+		focus_register(fa, (UIEventHandler*) &calc->focus, calc_region, "calculator");
+	}
 
 	RowRegion region0 = { &calc->bbuf[0], 0, 4 };
 	numeric_input_init(&calc->operands[0], region0, (UIEventHandler*) calc, &calc->focus, "o1");

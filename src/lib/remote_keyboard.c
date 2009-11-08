@@ -4,9 +4,10 @@ void rk_send(InputInjectorIfc *injector, char key);
 void rk_send_complete(SendSlot *sendSlot);
 void rk_recv(RecvSlot *recvSlot);
 
-void init_remote_keyboard_send(RemoteKeyboardSend *rk, Network *network)
+void init_remote_keyboard_send(RemoteKeyboardSend *rk, Network *network, Port port)
 {
 	rk->network = network;
+	rk->port = port;
 
 	rk->sendSlot.func = rk_send_complete;
 	rk->sendSlot.msg = (Message*) rk->send_msg_alloc;
@@ -25,7 +26,7 @@ void rk_send(InputInjectorIfc *injector, char key)
 		LOGF((logfp, "RemoteKeyboard drops a message due to full send queue.\n"));
 		return;
 	}
-	rk->sendSlot.msg->dest_port = REMOTE_KEYBOARD_PORT;
+	rk->sendSlot.msg->dest_port = rk->port;
 	rk->sendSlot.msg->message_size = sizeof(KeystrokeMessage);
 	KeystrokeMessage *km = (KeystrokeMessage *) &rk->sendSlot.msg->data;
 	km->key = key;
@@ -37,10 +38,10 @@ void rk_send_complete(SendSlot *sendSlot)
 	sendSlot->sending = FALSE;
 }
 
-void init_remote_keyboard_recv(RemoteKeyboardRecv *rk, Network *network, InputInjectorIfc *acceptNetStrokes)
+void init_remote_keyboard_recv(RemoteKeyboardRecv *rk, Network *network, InputInjectorIfc *acceptNetStrokes, Port port)
 {
 	rk->recvSlot.func = rk_recv;
-	rk->recvSlot.port = REMOTE_KEYBOARD_PORT;
+	rk->recvSlot.port = port;
 	rk->recvSlot.payload_capacity = sizeof(KeystrokeMessage);
 	rk->recvSlot.msg_occupied = FALSE;
 	rk->recvSlot.msg = (Message*) rk->recv_msg_alloc;

@@ -33,6 +33,8 @@ COMMON_OBJECTS = \
 	display_aer.o \
 	remote_keyboard.o \
 	remote_bbuf.o \
+	remote_uie.o \
+	control_panel.o \
 
 
 .PHONY: all

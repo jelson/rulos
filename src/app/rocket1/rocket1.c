@@ -28,6 +28,7 @@
 #include "display_aer.h"
 #include "remote_keyboard.h"
 #include "remote_bbuf.h"
+#include "remote_uie.h"
 
 
 /************************************************************************************/
@@ -55,20 +56,37 @@ int main()
 
 	board_buffer_module_init();
 
+/*
 	FocusManager fa;
 	focus_init(&fa);
+*/
 
 	RemoteKeyboardSend rks;
-	init_remote_keyboard_send(&rks, &network);
+	init_remote_keyboard_send(&rks, &network, REMOTE_KEYBOARD_PORT);
 
 	InputPollerAct ip;
 	input_poller_init(&ip, &rks.forwardLocalStrokes);
 
+/*
 	RemoteBBufRecv rbr;
 	init_remote_bbuf_recv(&rbr, &network);
+*/
 
+	DAER daer;
+	daer_init(&daer, 0, ((Time)5)<<20);
+	
 	DThrusterGraph dtg;
 	dtg_init(&dtg, 1, &network);
+
+	Calculator calc;
+	calculator_init(&calc, 2, NULL,
+		(FetchCalcDecorationValuesIfc*) &daer.decoration_ifc);
+
+	CascadedInputInjector cii;
+	init_cascaded_input_injector(&cii, (UIEventHandler*) &calc.focus, &rks.forwardLocalStrokes);
+	RemoteKeyboardRecv rkr;
+	init_remote_keyboard_recv(&rkr, &network, (InputInjectorIfc*) &cii, REMOTE_SUBFOCUS_PORT0);
+
 
 
 /*

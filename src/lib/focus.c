@@ -34,8 +34,16 @@ UIEventDisposition focus_input_handler(UIEventHandler *raw_handler, UIEvent evt)
 	uint8_t old_cursor_child = fm->selectedChild;
 	if (fm->focusedChild != NO_CHILD)
 	{
-		UIEventHandler *childHandler = fm->children[fm->focusedChild].handler;
-		UIEventDisposition uied = childHandler->func(childHandler, evt);
+		UIEventDisposition uied;
+		if (evt==evt_remote_escape)
+		{
+			uied = uied_blur;
+		}
+		else
+		{
+			UIEventHandler *childHandler = fm->children[fm->focusedChild].handler;
+			uied = childHandler->func(childHandler, evt);
+		}
 		if (uied==uied_blur)
 		{
 			fm->selectedChild = fm->focusedChild;
@@ -76,6 +84,10 @@ UIEventDisposition focus_input_handler(UIEventHandler *raw_handler, UIEvent evt)
 			case uie_escape:	// escape -- yield focus to *my* parent
 				fm->selectedChild = NO_CHILD;
 				result = uied_blur;
+				break;
+			case evt_remote_escape:
+				// shouldn't happen; if it does, it's that the network
+				// is out of sync. Just drop it.
 				break;
 		}
 	}

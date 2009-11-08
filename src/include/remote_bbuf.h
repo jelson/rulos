@@ -4,8 +4,8 @@
 #include "rocket.h"
 #include "network.h"
 #include "board_buffer.h"
+#include "network_ports.h"
 
-#define REMOTE_BBUF_PORT	(0x13)
 #define REMOTE_BBUF_NUM_BOARDS	NUM_BOARDS
 
 typedef struct {

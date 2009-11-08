@@ -15,6 +15,7 @@ enum {
 	uie_right = 'a',
 	uie_left = 'b',
 	evt_notify = 0x80,
+	evt_remote_escape = 0x82,
 } EventName;
 
 typedef enum {

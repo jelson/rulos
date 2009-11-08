@@ -12,6 +12,13 @@ TODO
 	E6b
 
 SCRIPT
+	mode tree:
+		+ decoration
+			+ calculator
+			+ launch
+			+ dock
+			+ pong
+		
 	Rocket power-up: decoration mode
 	Enter launch mode
 		Enter launch code

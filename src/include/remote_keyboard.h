@@ -3,9 +3,8 @@
 
 #include "rocket.h"
 #include "network.h"
+#include "network_ports.h"
 #include "input_controller.h"
-
-#define REMOTE_KEYBOARD_PORT	(0x12)
 
 typedef struct {
 	char key;
@@ -13,6 +12,7 @@ typedef struct {
 
 typedef struct s_remote_keyboard_send {
 	Network *network;
+	Port port;
 	uint8_t send_msg_alloc[sizeof(Message)+sizeof(KeystrokeMessage)];
 	SendSlot sendSlot;
 
@@ -20,7 +20,7 @@ typedef struct s_remote_keyboard_send {
 	struct s_remote_keyboard_send *forward_this;
 } RemoteKeyboardSend;
 
-void init_remote_keyboard_send(RemoteKeyboardSend *rk, Network *network);
+void init_remote_keyboard_send(RemoteKeyboardSend *rk, Network *network, Port port);
 
 typedef struct s_remote_keyboard_recv {
 	uint8_t recv_msg_alloc[sizeof(Message)+sizeof(KeystrokeMessage)];
@@ -30,6 +30,6 @@ typedef struct s_remote_keyboard_recv {
 	InputInjectorIfc *acceptNetStrokes;
 } RemoteKeyboardRecv;
 
-void init_remote_keyboard_recv(RemoteKeyboardRecv *rk, Network *network, InputInjectorIfc *acceptNetStrokes);
+void init_remote_keyboard_recv(RemoteKeyboardRecv *rk, Network *network, InputInjectorIfc *acceptNetStrokes, Port port);
 
 #endif // _remote_keyboard_h

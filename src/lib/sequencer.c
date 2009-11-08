@@ -39,8 +39,11 @@ void launch_init(Launch *launch, uint8_t board0, FocusManager *fa)
 
 	launch->bbufary[0] = &launch->p0_scroller.bbuf;
 	launch->bbufary[1] = &launch->p1_timer.bbuf;
-	RectRegion rr = {launch->bbufary, 1, 0, 8};
-	focus_register(fa, (UIEventHandler*) launch, rr, "launch");
+	if (fa!=NULL)
+	{
+		RectRegion rr = {launch->bbufary, 1, 0, 8};
+		focus_register(fa, (UIEventHandler*) launch, rr, "launch");
+	}
 
 	launch->clock_act.func = launch_clock_handler;
 	launch->clock_act.launch = launch;
@@ -119,7 +122,7 @@ void launch_config_panels(Launch *launch, LaunchPanelConfig new0, LaunchPanelCon
 
 void launch_enter_state_ready(Launch *launch)
 {
-	launch_config_panels(launch, lpc_p0scroller, lpc_blank);
+	launch_config_panels(launch, lpc_blank, lpc_blank);
 	dscrlmsg_set_msg(&launch->p0_scroller, "Ready.  ");
 	launch_set_state(launch, launch_state_ready, 0);
 }
