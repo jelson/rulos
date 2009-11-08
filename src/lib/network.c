@@ -8,12 +8,13 @@ QUEUE_DEFINE(SendSlotPtr)
 
 void net_update(Network *net);
 void net_timer_update(NetworkTimer *network_timer);
-void net_got_payload(Network *net);
-void net_sent_payload(Network *net);
-void net_init_checksum(uint8_t *cksum);
-void net_update_checksum(uint8_t *cksum, uint8_t byte);
+uint8_t net_compute_checksum(uint8_t *buf, int size);
+void net_extract_received_message(Network *net);
+void net_log_buffer(uint8_t *buf, int len);
+void net_recv_discard(Network *net, uint8_t count, r_bool log);
 void net_heartbeat(Network *net);
 r_bool net_timeout(Network *net);
+r_bool net_send_buffer_empty(Network *net);
 
 void init_network(Network *net)
 {
@@ -25,9 +26,11 @@ void init_network(Network *net)
 		net->recvSlots[i] = NULL;
 	}
 
-	SendSlotPtrQueue_init(SendQueue(net), SEND_QUEUE_SIZE);
+	SendSlotPtrQueue_init(SendQueue(net), sizeof(net->sendQueue_storage));
 
-	net->state = NET_STATE_IDLE;
+	net->send_index = 0;
+	net->send_size = 0;
+	net->recv_index = 0;
 
 	net_heartbeat(net);
 
@@ -40,7 +43,7 @@ void init_network(Network *net)
 	schedule_us(1, (Activation*) &net->network_timer);
 }
 
-int net_find_slot(Network *net, uint8_t port)
+int net_find_slot(Network *net, Port port)
 {
 	int i;
 	for (i=0; i<MAX_LISTENERS; i++)
@@ -82,10 +85,16 @@ void net_bind_receiver(Network *net, RecvSlot *recvSlot)
 
 r_bool net_send_message(Network *net, SendSlot *sendSlot)
 {
+	r_bool need_wake = (SendSlotPtrQueue_length(SendQueue(net))>0);
+
 	r_bool fit = SendSlotPtrQueue_append(SendQueue(net), sendSlot);
 	if (fit)
 	{
 		sendSlot->sending = TRUE;
+	}
+	if (need_wake)
+	{
+		schedule_now((Activation*) net);
 	}
 	return fit;
 }
@@ -97,223 +106,207 @@ r_bool net_send_message(Network *net, SendSlot *sendSlot)
 // [n*uint8_t]
 // <checksum>
 
+r_bool net_send_buffer_empty(Network *net)
+{
+	return net->send_index >= net->send_size;
+}
+
+void net_pop_message_to_send(Network *net)
+{
+	assert(net_send_buffer_empty(net));
+
+	SendSlot *ss;
+	r_bool rc = SendSlotPtrQueue_pop(SendQueue(net), &ss);
+	assert(rc);
+
+	// 2: NET_SYNC & checksum fields
+	assert(ss->msg->message_size <= NET_MAX_MESSAGE_SIZE - sizeof(Message) - 2);
+
+	uint8_t *buf = net->send_buffer;
+	int off = 0;
+	buf[off] = NET_SYNC;
+	off+=1;
+	memmove(&buf[off], ss->msg, sizeof(Message));
+	off+=sizeof(Message);
+	memmove(&buf[off], ss->msg->data, ss->msg->message_size);
+	off+=ss->msg->message_size;
+	buf[off] = net_compute_checksum(net->send_buffer, off);
+	off+=1;
+	net->send_size = off;
+	net->send_index = 0;
+
+	//LOGF((logfp, "popped to send: "));
+	//net_log_buffer(net->send_buffer, net->send_size);
+
+	ss->func(ss);
+}
+
 void net_update(Network *net)
 {
 	//LOGF((logfp, "net_update(%.2f)\n", (double)(clock_time_us())/1000000.0 ));
+
+	// Send a byte
+	if (hal_twi_ready_to_send()
+		&& !net_send_buffer_empty(net))
+	{
+		//LOGF((logfp, "send byte\n"));
+		hal_twi_send_byte(net->send_buffer[net->send_index]);
+		net->send_index += 1;
+	}
+
+	// Shift in a new message to send, if nothing on send buffer
+	if (net_send_buffer_empty(net)
+		&& SendSlotPtrQueue_length(SendQueue(net))>0)
+	{
+		net_pop_message_to_send(net);
+	}
+
+	// Read a byte
 	uint8_t byte;
 	if (hal_twi_read_byte(&byte))
 	{
-		//LOGF((logfp, "Net collects byte %02x\n", byte));
-		switch (net->state)
-		{
-			case NET_STATE_IDLE:
-			case NET_STATE_RESYNC:
-				if (byte==NET_SYNC) {
-					net->state = NET_STATE_RECV_PORT;
-				} else {
-					net->state = NET_STATE_RESYNC;
-				}
-				break;
-			case NET_STATE_RECV_PORT:
-				net->slot = net_find_slot(net, byte);
-				if (net->slot != SLOT_NONE)
-				{
-					RecvSlot *rs = net->recvSlots[net->slot];
-					rs->msg->dest_port = byte;
-					assert(rs->msg->dest_port == rs->port);
-				}
-				net->state = NET_STATE_RECV_PAYLOAD_SIZE;
-				break;
-			case NET_STATE_RECV_PAYLOAD_SIZE:
-				net->payload_remaining = byte;
-				if (net->slot != SLOT_NONE)
-				{
-					RecvSlot *rs = net->recvSlots[net->slot];
-					if (rs->payload_capacity < net->payload_remaining)
-					{
-						// can't deliver. Drop.
-						net->slot = SLOT_NONE;
-					}
-					else
-					{
-						// ready to start appending bytes
-						rs->msg->message_size = 0;
-					}
-				}
-				net_init_checksum(&net->checksum);
-				net_got_payload(net);
-				break;
-			case NET_STATE_RECV_PAYLOAD:
-				if (net->slot != SLOT_NONE)
-				{
-					RecvSlot *rs = net->recvSlots[net->slot];
-					rs->msg->data[rs->msg->message_size++] = byte;
-				}
-				net->payload_remaining -= 1;
-				net_update_checksum(&net->checksum, byte);
-				net_got_payload(net);
-				break;
-			case NET_STATE_RECV_CHECKSUM:
-				if (net->checksum != byte)
-				{
-					// bogus packet. Drop.
-					LOGF((logfp, "computed checksum %02x, received checksum %02x.", net->checksum, byte));
-					// could be because we were mid-packet, and this
-					// wasn't really a checksum.
-					// Better wait for a timeout.
-					net->state = NET_STATE_RESYNC;
-				}
-				else
-				{
-					RecvSlot *rs = net->recvSlots[net->slot];
-					rs->msg_occupied = TRUE;
-					rs->func(rs);
-					net->state = NET_STATE_IDLE;
-
-					// wake up again immediately to see if we want to send
-					// TODO a random delay might be wise here, to see
-					// if someone else is planning to send.
-					schedule_us(1, (Activation*) net);
-				}
-				break;
-			case NET_STATE_SEND_PORT:
-			case NET_STATE_SEND_PAYLOAD_SIZE:
-			case NET_STATE_SEND_PAYLOAD:
-			case NET_STATE_SEND_CHECKSUM:
-				// received a byte during sending phase. On half-duplex TWI,
-				// that's an error. Probably should abort the send, but
-				// the easiest implementation is just to quietly let it
-				// complete.
-				LOGF((logfp, "Received byte %02x during send. Ignoring.", byte));
-				break;
-		}
-		net_heartbeat(net);
-		goto func_exit;
+		assert(net->recv_index < NET_MAX_MESSAGE_SIZE - 1);
+		net->recv_buffer[net->recv_index] = byte;
+		net->recv_index += 1;
+		net_extract_received_message(net);
 	}
+}
 
-	if (hal_twi_ready_to_send())
+void net_extract_received_message(Network *net)
+{
+	while (TRUE)
 	{
-		SendSlot *ss = NULL;
-		SendSlotPtrQueue_peek(SendQueue(net), &ss);
+		if (net->recv_index == 0)
+		{
+			// buffer empty; wait
+			break;
+		}
+
+		if (net->recv_buffer[0]!=NET_SYNC)
+		{
+			// Uh oh, message out of sync
+			LOGF((logfp, "resync: "));
+			net_recv_discard(net, 1, TRUE);
+			continue;
+		}
+
+		if (net->recv_index < 3)
+		{
+			// payload size not available yet; wait.
+			break;
+		}
+
+		uint8_t payload_size = net->recv_buffer[2];
+		uint8_t packet_size = payload_size + 4;
 		
-		switch (net->state)
+		if (packet_size > NET_MAX_MESSAGE_SIZE)
 		{
-			case NET_STATE_RESYNC:
-			case NET_STATE_RECV_PORT:
-			case NET_STATE_RECV_PAYLOAD_SIZE:
-			case NET_STATE_RECV_PAYLOAD:
-			case NET_STATE_RECV_CHECKSUM:
-				// someone else owns the medium right now. Wait.
-				// Fall through to timeout check.
-				goto func_timeout_check;
-			case NET_STATE_IDLE:
-				//LOGF((logfp, "Start send\n"));
-				if (SendSlotPtrQueue_length(SendQueue(net))==0)
-				{
-					// nothing to send.
-					goto func_exit;
-				}
-				hal_twi_send_byte(NET_SYNC);
-				net->state = NET_STATE_SEND_PORT;
-				break;
-			case NET_STATE_SEND_PORT:
-			{
-				assert(ss!=NULL);
-				hal_twi_send_byte(ss->msg->dest_port);
-				net->state = NET_STATE_SEND_PAYLOAD_SIZE;
-				break;
-			}
-			case NET_STATE_SEND_PAYLOAD_SIZE:
-			{
-				assert(ss!=NULL);
-				net_init_checksum(&net->checksum);
-				hal_twi_send_byte(ss->msg->message_size);
-				net->payload_remaining = ss->msg->message_size;
-				net_sent_payload(net);
-				break;
-			}
-			case NET_STATE_SEND_PAYLOAD:
-			{
-				assert(ss!=NULL);
-				uint8_t byte = ss->msg->data[ss->msg->message_size - net->payload_remaining];
-				hal_twi_send_byte(byte);
-				net_update_checksum(&net->checksum, byte);
-				net->payload_remaining -= 1;
-				net_sent_payload(net);
-				break;
-			}
-			case NET_STATE_SEND_CHECKSUM:
-			{
-				hal_twi_send_byte(net->checksum);
-				SendSlot *ss2 = NULL;
-				r_bool rc = SendSlotPtrQueue_pop(SendQueue(net), &ss2);
-				assert(rc);
-				assert(ss2==ss);
-				ss->sending = FALSE;
-				ss->func(ss);
-				net->state = NET_STATE_IDLE;
-				break;
-			}
+			LOGF((logfp, "packet too big (%02x > %02x); resyncing\n",
+				packet_size, NET_MAX_MESSAGE_SIZE));
+			// discard every byte we've got left -- can't run into another
+			// legitimate packet, since this one claimed to be longer than
+			// our buffer.
+			net_recv_discard(net, net->recv_index, TRUE);
+			// this will immediately fall out with empty buffer
+			continue;
 		}
-		//LOGF((logfp, "Net delivers a byte\n"));
-		net_heartbeat(net);
-		goto func_exit;
+
+		if (net->recv_index < packet_size)
+		{
+			// entire message not yet available.
+			break;
+		}
+
+		uint8_t received_checksum = net->recv_buffer[packet_size-1];
+		uint8_t computed_checksum = net_compute_checksum(net->recv_buffer, packet_size-1);
+		if (received_checksum != computed_checksum)
+		{
+			LOGF((logfp, "discarding %d-byte packet; received checksum %02x, computed %02x\n",
+				packet_size, received_checksum, computed_checksum));
+			net_recv_discard(net, packet_size, TRUE);
+			continue;
+		}
+
+		// Okay, we've got a fully-formed, checksum-matching packet
+		Port port = net->recv_buffer[1];
+		uint8_t recv_slot_idx = net_find_slot(net, port);
+		if (recv_slot_idx == SLOT_NONE)
+		{
+			LOGF((logfp, "discarding packet for unbound port %02x\n", port));
+			net_recv_discard(net, packet_size, TRUE);
+			continue;
+		}
+
+		RecvSlot *rs = net->recvSlots[recv_slot_idx];
+		if (rs->msg_occupied)
+		{
+			LOGF((logfp, "discarding packet due to busy port %02x\n", port));
+			net_recv_discard(net, packet_size, TRUE);
+			continue;
+		}
+
+		if (payload_size > rs->payload_capacity)
+		{
+			LOGF((logfp, "discarding oversized packet for port %02x\n", port));
+			net_recv_discard(net, packet_size, TRUE);
+			continue;
+		}
+
+		{
+			// Yay! We can deliver the packet!
+			memmove(rs->msg, &net->recv_buffer[1], sizeof(Message)+payload_size);
+//			LOGF((logfp, "Received valid packet: "));
+			net_recv_discard(net, packet_size, FALSE);
+
+			rs->func(rs);
+			continue;
+		}
 	}
 
-func_timeout_check:
-	if (net_timeout(net))
+	// there should always be room to write more bytes.
+	assert(net->recv_index < NET_MAX_MESSAGE_SIZE -1);
+}
+
+void net_log_buffer(uint8_t *buf, int len)
+{
+	int i;
+	for (i=0; i<len; i++)
 	{
-		if (net->state!=NET_STATE_IDLE)
-		{
-			LOGF((logfp, "timeout! leaving state %d\n", net->state));
-		}
-		net->state = NET_STATE_IDLE;
+		LOGF((logfp, "%02x ", buf[i]));
 	}
-	//LOGF((logfp, "Net does nada\n"));
+	LOGF((logfp, "\n"));
+}
 
-func_exit:
-	//LOGF((logfp, "Net state %d\n", net->state));
-	{}
+// TODO inefficient shift
+void net_recv_discard(Network *net, uint8_t count, r_bool log)
+{
+	if (log)
+	{
+		LOGF((logfp, "discarding: "));
+		net_log_buffer(net->recv_buffer, count);
+	}
+
+	assert(net->recv_index >= count);
+	memmove(net->recv_buffer, net->recv_buffer+count, net->recv_index-count);
+	net->recv_index -= count;
 }
 
 void net_timer_update(NetworkTimer *network_timer)
 {
+	//LOGF((logfp, "running net_update from network_timer\n"));
 	net_update(network_timer->net);
 	schedule_us(NET_TIMEOUT, (Activation*) network_timer);
 }
 
-void net_got_payload(Network *net)
+uint8_t net_compute_checksum(uint8_t *buf, int size)
 {
-	if (net->payload_remaining == 0)
+	int i;
+	uint8_t cksum = 0x67;
+	for (i=0; i<size; i++)
 	{
-		net->state = NET_STATE_RECV_CHECKSUM;
+		cksum = cksum*131 + buf[i];
 	}
-	else
-	{
-		net->state = NET_STATE_RECV_PAYLOAD;
-	}
-}
-
-void net_sent_payload(Network *net)
-{
-	if (net->payload_remaining == 0)
-	{
-		net->state = NET_STATE_SEND_CHECKSUM;
-	}
-	else
-	{
-		net->state = NET_STATE_SEND_PAYLOAD;
-	}
-}
-
-void net_init_checksum(uint8_t *cksum)
-{
-	*cksum = 0x67;
-}
-
-void net_update_checksum(uint8_t *cksum, uint8_t byte)
-{
-	*cksum = (*cksum)*131 + byte;
+	return cksum;
 }
 
 void net_heartbeat(Network *net)

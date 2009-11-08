@@ -13,6 +13,7 @@
 #include <sched.h>
 #include <ctype.h>
 #include <curses.h>
+#include <fcntl.h>
 
 // TWI simulator
 #include <sys/ioctl.h>
@@ -25,6 +26,8 @@
 #include "display_controller.h"
 #include "uart.h"
 #include "sim.h"
+
+void twi_poll(const char *source);
 
 /*
    __
@@ -61,7 +64,7 @@ struct segment_def_s {
 };
 
   
-sigset_t alrm_set;
+sigset_t mask_set;
 uint32_t f_cpu = 4000000;
 
 
@@ -454,7 +457,7 @@ static void sim_clock_handler()
 		sensor_interrupt_simulator_counter = 0;
 	}
 
-	twi_poll();
+	twi_poll("clock poll");
 
 	user_clock_handler();
 }
@@ -486,12 +489,12 @@ void hal_speedup_clock_ppm(int32_t ratio)
 
 void hal_start_atomic()
 {
-	sigprocmask(SIG_BLOCK, &alrm_set, NULL);
+	sigprocmask(SIG_BLOCK, &mask_set, NULL);
 }
 
 void hal_end_atomic()
 {
-	sigprocmask(SIG_UNBLOCK, &alrm_set, NULL);
+	sigprocmask(SIG_UNBLOCK, &mask_set, NULL);
 }
 
 void hal_idle()
@@ -551,8 +554,9 @@ void hal_init()
 	}
 
 	/* init clock stuff */
-	sigemptyset(&alrm_set);
-	sigaddset(&alrm_set, SIGALRM);
+	sigemptyset(&mask_set);
+	sigaddset(&mask_set, SIGALRM);
+	sigaddset(&mask_set, SIGIO);
 }
 
 TWIState g_sim_twi_state = {FALSE};
@@ -563,14 +567,31 @@ void sim_twi_set_instance(int instance)
 	g_sim_twi_state.instance = instance;
 }
 
+void sim_twi_sigio_handler()
+{
+	twi_poll("sigio");
+}
+
 void hal_twi_init(Activation *act)
 {
+	signal(SIGIO, sim_twi_sigio_handler);
+
 	g_sim_twi_state.user_act = act;
 	g_sim_twi_state.udp_socket = socket(PF_INET, SOCK_DGRAM, 0);
 	g_sim_twi_state.read_ready = FALSE;
 
-	char on = 1;
-	ioctl(g_sim_twi_state.udp_socket, FIONBIO, (char*) &on);
+	int rc;
+	int on = 1;
+	int flags = fcntl(g_sim_twi_state.udp_socket, F_GETFL);
+	rc = fcntl(g_sim_twi_state.udp_socket, F_SETFL, flags | O_ASYNC);
+	assert(rc==0);
+	rc = ioctl(g_sim_twi_state.udp_socket, FIOASYNC, &on );
+	assert(rc==0);
+	rc = ioctl(g_sim_twi_state.udp_socket, FIONBIO, &on);
+	assert(rc==0);
+	int flag = -getpid();
+	rc = ioctl(g_sim_twi_state.udp_socket, SIOCSPGRP, &flag);
+	assert(rc==0);
 
 	struct sockaddr_in sai;
 	sai.sin_family = AF_INET;
@@ -580,7 +601,7 @@ void hal_twi_init(Activation *act)
 	g_sim_twi_state.initted = TRUE;
 }
 
-void twi_poll()
+void twi_poll(const char *source)
 {
 	if (!g_sim_twi_state.initted)
 	{
@@ -599,12 +620,18 @@ void twi_poll()
 		assert(errno == EAGAIN);
 		return;
 	}
+	if (rc>1)
+	{
+		LOGF((logfp, "Discarding %d-byte suffix of long packet\n", rc-1));
+	}
 
 	assert(rc>0);
 	//LOGF((logfp, "sim reads TWI byte %02x; ignores %d more\n", buf[0], rc-1));
 
 	g_sim_twi_state.read_byte = buf[0];
 	g_sim_twi_state.read_ready = TRUE;
+	//LOGF((logfp, "scheduled net_update from %s\n", source));
+	schedule_now(g_sim_twi_state.user_act);
 }
 
 r_bool hal_twi_ready_to_send()
@@ -637,7 +664,8 @@ void hal_twi_send_byte(uint8_t byte)
 			0, (struct sockaddr*)&sai, sizeof(sai));
 	}
 
-	schedule_us(1, g_sim_twi_state.user_act);
+	//LOGF((logfp, "scheduled net_update from %s\n", "hal_twi_send_byte"));
+	schedule_now(g_sim_twi_state.user_act);
 }
 
 r_bool hal_twi_read_byte(/*OUT*/ uint8_t *byte)
@@ -647,7 +675,8 @@ r_bool hal_twi_read_byte(/*OUT*/ uint8_t *byte)
 		*byte = g_sim_twi_state.read_byte;
 		g_sim_twi_state.read_ready = FALSE;
 		// whoah, another byte is ready RIGHT NOW!
-		schedule_us(1, g_sim_twi_state.user_act);
+		//LOGF((logfp, "scheduled net_update from %s\n", "hal_twi_read_byte"));
+		schedule_now(g_sim_twi_state.user_act);
 		return TRUE;
 	}
 	else

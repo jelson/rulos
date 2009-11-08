@@ -12,9 +12,26 @@ TODO
 	E6b
 
 SCRIPT
+	Rocket power-up: decoration mode
+	Enter launch mode
+		Enter launch code
+		watch countdown
+		press launch button
+		enjoy rumble and light show
+		exit launch mode
+	decoration mode
+	Enter docking mode
+		display shows target, instructions
+		fire thrusters!
+		clang: display message and exit
+		miss: cycle around. Toroidial starfield.
+		give up: exit
+	decoration mode
+	Enter pong mode (covers only part of display)
+		exit pong mode
 
 BUGS
-
+	Allow board_buffers to be popped when not at top of stack
 
 1	K clock:
 	real-time

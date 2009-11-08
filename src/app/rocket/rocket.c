@@ -16,6 +16,7 @@
 #include "numeric_input.h"
 #include "input_controller.h"
 #include "calculator.h"
+#include "display_aer.h"
 #include "hal.h"
 #include "cpumon.h"
 #include "idle_display.h"
@@ -26,6 +27,8 @@
 #include "sim.h"
 #include "display_thrusters.h"
 #include "network.h"
+#include "remote_keyboard.h"
+#include "remote_bbuf.h"
 
 
 /************************************************************************************/
@@ -53,8 +56,18 @@ int main()
 	FocusManager fa;
 	focus_init(&fa);
 
-	InputControllerAct ia;
-	input_controller_init(&ia, (UIEventHandler*) &fa);
+	Network network;
+	init_network(&network);
+
+	InputFocusInjector ifi;
+	input_focus_injector_init(&ifi, (UIEventHandler*) &fa);
+
+	// Both local poller and remote receiver inject keyboard events.
+	InputPollerAct ip;
+	input_poller_init(&ip, (InputInjectorIfc*) &ifi);
+
+	RemoteKeyboardRecv rkr;
+	init_remote_keyboard_recv(&rkr, &network, (InputInjectorIfc*) &ifi);
 
 	DRTCAct dr;
 	drtc_init(&dr, 0, clock_time_us()+20000000);
@@ -62,8 +75,17 @@ int main()
 	LunarDistance ld;
 	lunar_distance_init(&ld, 1, 2);
 
-	Network network;
-	init_network(&network);
+	RemoteBBufSend rbs;
+	init_remote_bbuf_send(&rbs, &network);
+	install_remote_bbuf_send(&rbs);
+
+	DAER daer;
+	daer_init(&daer, NUM_BOARDS+0, ((Time)5)<<20);
+	
+	Calculator calc;
+	calculator_init(&calc, NUM_BOARDS+2, &fa,
+		(FetchCalcDecorationValuesIfc*) &daer.decoration_ifc);
+	
 
 #define THRUSTER_X_CHAN	3
 #define THRUSTER_Y_CHAN	2
@@ -73,19 +95,19 @@ int main()
 
 #if !MCUatmega8
 // Stuff that can go on matrix display:
-/*
 	Launch launch;
 	launch_init(&launch, 4, &fa);
 
+/*
 	DDockAct ddock;
 	ddock_init(&ddock, 4, &fa);
 	
 	Pong pong;
 	pong_init(&pong, 4, &fa);
-*/
 
 	RasterBigDigit rdigit;
 	raster_big_digit_init(&rdigit, 4);
+*/
 #endif
 
 

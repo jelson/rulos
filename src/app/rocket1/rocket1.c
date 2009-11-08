@@ -26,6 +26,8 @@
 #include "network.h"
 #include "sim.h"
 #include "display_aer.h"
+#include "remote_keyboard.h"
+#include "remote_bbuf.h"
 
 
 /************************************************************************************/
@@ -56,28 +58,27 @@ int main()
 	FocusManager fa;
 	focus_init(&fa);
 
-	InputControllerAct ia;
-	input_controller_init(&ia, (UIEventHandler*) &fa);
+	RemoteKeyboardSend rks;
+	init_remote_keyboard_send(&rks, &network);
 
-	DAER daer;
-	daer_init(&daer, 0, ((Time)5)<<20);
+	InputPollerAct ip;
+	input_poller_init(&ip, &rks.forwardLocalStrokes);
 
-/*
-	DScrollMsgAct da1;
-	dscrlmsg_init(&da1, 0, "x", 0);	// overwritten by idle display
-	
-	IdleDisplayAct idisp;
-	idle_display_init(&idisp, &da1, &cpumon);
-*/
+	RemoteBBufRecv rbr;
+	init_remote_bbuf_recv(&rbr, &network);
 
-#if !MCUatmega8
 	DThrusterGraph dtg;
 	dtg_init(&dtg, 1, &network);
+
+
+/*
+	DAER daer;
+	daer_init(&daer, 0, ((Time)5)<<20);
 
 	Calculator calc;
 	calculator_init(&calc, 2, &fa,
 		(FetchCalcDecorationValuesIfc*) &daer.decoration_ifc);
-#endif
+*/
 
 	cpumon_main_loop();
 

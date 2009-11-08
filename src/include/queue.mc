@@ -1,7 +1,7 @@
 #define QUEUE_DEFINE(TYPE) \
 void TYPE##Queue_init(TYPE##Queue *bq, uint8_t buf_size) \
 { \
-	bq->capacity = buf_size - sizeof(TYPE##Queue); \
+	bq->capacity = (buf_size - sizeof(TYPE##Queue)) / sizeof(TYPE); \
 	bq->size = 0; \
 } \
  \
@@ -31,12 +31,12 @@ r_bool TYPE##Queue_pop_n(TYPE##Queue *bq, /*OUT*/ TYPE *elt, uint8_t n) \
 	{ \
 		return FALSE; \
 	} \
-	memcpy(elt, bq->elts, n * sizeof(*elt)); \
+	memcpy(elt, bq->elts, n * sizeof(TYPE)); \
  \
 	/* Linear-time pop. Yay! (Yes, I could have written a circular \
 	   queue, but then I'd have to test it, and debug it, and you \
 	   can see the bind I'm in!) */ \
-	memmove(&bq->elts[0], &bq->elts[n], bq->size-n); \
+	memmove(&bq->elts[0], &bq->elts[n], (bq->size-n) * sizeof(TYPE)); \
 	bq->size -= n; \
 	return TRUE; \
 } \

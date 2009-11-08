@@ -31,6 +31,8 @@ COMMON_OBJECTS = \
 	network.o \
 	display_thruster_graph.o \
 	display_aer.o \
+	remote_keyboard.o \
+	remote_bbuf.o \
 
 
 .PHONY: all

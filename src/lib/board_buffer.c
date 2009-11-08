@@ -1,13 +1,14 @@
 #include <stdio.h>
 
 #include "rocket.h"
+#include "remote_bbuf.h"
 
 #if BBDEBUG && SIM
 void dump()
 {
 	int b;
 	LOGF((logfp, "-----\n"));
-	for (b=0; b<NUM_BOARDS; b++)
+	for (b=0; b<NUM_PSEUDO_BOARDS; b++)
 	{
 		LOGF((logfp, "b%d: ", b));
 		BoardBuffer *buf = foreground[b];
@@ -21,13 +22,21 @@ void dump()
 }
 #endif // BBDEBUG && SIM
 
+RemoteBBufSend *g_remote_bbuf_send;
+
 void board_buffer_module_init()
 {
 	int i;
-	for (i=0; i<NUM_BOARDS; i++)
+	for (i=0; i<NUM_PSEUDO_BOARDS; i++)
 	{
 		foreground[i] = NULL;
 	}
+	g_remote_bbuf_send = NULL;
+}
+
+void install_remote_bbuf_send(RemoteBBufSend *rbs)
+{
+	g_remote_bbuf_send = rbs;
 }
 
 void board_buffer_init(BoardBuffer *buf)
@@ -111,16 +120,35 @@ void board_buffer_set_alpha(BoardBuffer *buf, uint8_t alpha)
 void board_buffer_draw(BoardBuffer *buf)
 {
 	uint8_t board_index = buf->board_index;
-	uint8_t mask = buf->mask;
-	SSBitmap *bm = buf->buffer;
+
+	// draw locally, if we can.
+	if (0<=board_index && board_index<NUM_BOARDS)
+	{
+		board_buffer_paint(buf->buffer, board_index, buf->mask);
+	}
+	else if (g_remote_bbuf_send!=NULL
+		&& NUM_BOARDS<=board_index && board_index<NUM_PSEUDO_BOARDS)
+	{
+		// jonh hard-codes remote send ability, rather than getting all
+		// objecty about it, because doing this well with polymorphism
+		// really wants a dynamic memory allocator.
+		send_remote_bbuf(g_remote_bbuf_send, buf->buffer, board_index-NUM_BOARDS, buf->mask);
+	}
+}
+
+void board_buffer_paint(SSBitmap *bm, uint8_t board_index, uint8_t mask)
+{
 	uint8_t idx;
 	for (idx=0; idx<NUM_DIGITS; idx++, mask<<=1)
 	{
 		if (mask & 0x80)
 		{
 			SSBitmap tmp = bm[idx];
+#if 0
+	// TODO upside_down should be a property of the board, not of the bbuf.
 			if (buf->upside_down & (1 << idx))
 				hal_upside_down_led(&tmp);
+#endif
 			program_cell(board_index, idx, tmp);
 		}
 	}
@@ -128,6 +156,6 @@ void board_buffer_draw(BoardBuffer *buf)
 
 uint8_t board_buffer_is_foreground(BoardBuffer *buf)
 {
-	return (buf->board_index<NUM_BOARDS
+	return (buf->board_index<NUM_PSEUDO_BOARDS
 		&& foreground[buf->board_index] == buf);
 }

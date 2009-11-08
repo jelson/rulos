@@ -40,19 +40,6 @@ typedef struct s_send_slot {
 #include "queue.mh"
 QUEUE_DECLARE(SendSlotPtr)
 
-typedef enum {
-	NET_STATE_IDLE,
-	NET_STATE_RECV_PORT,
-	NET_STATE_RECV_PAYLOAD_SIZE,
-	NET_STATE_RECV_PAYLOAD,
-	NET_STATE_RECV_CHECKSUM,
-	NET_STATE_RESYNC,	//	misaligned; look for sync byte.
-	NET_STATE_SEND_PORT,
-	NET_STATE_SEND_PAYLOAD_SIZE,
-	NET_STATE_SEND_PAYLOAD,
-	NET_STATE_SEND_CHECKSUM,
-} NetState;
-
 struct s_network_timer;
 
 typedef struct s_network_timer {
@@ -60,14 +47,23 @@ typedef struct s_network_timer {
 	struct s_network *net;
 } NetworkTimer;
 
+#define NET_MAX_MESSAGE_SIZE 16	/* payload + overhead */
+
 typedef struct s_network {
 	ActivationFunc func;
 	RecvSlot *recvSlots[MAX_LISTENERS];
 	uint8_t sendQueue_storage[sizeof(SendSlotPtrQueue)+sizeof(MessagePtr)*SEND_QUEUE_SIZE];
-	NetState state;
 	uint8_t slot;	// RecvSlot index for message being received
 	uint8_t payload_remaining;
 	uint8_t checksum;
+
+	uint8_t send_buffer[NET_MAX_MESSAGE_SIZE];
+	uint8_t send_index;
+	uint8_t send_size;
+
+	uint8_t recv_buffer[NET_MAX_MESSAGE_SIZE];
+	uint8_t recv_index;
+
 	Time last_activity;
 	NetworkTimer network_timer;
 } Network;

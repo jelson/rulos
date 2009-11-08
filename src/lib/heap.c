@@ -1,6 +1,6 @@
 #include "rocket.h"
 
-#define HEAP_CAPACITY 16
+#define HEAP_CAPACITY 32
 HeapEntry heap[HEAP_CAPACITY];
 int heap_count;
 

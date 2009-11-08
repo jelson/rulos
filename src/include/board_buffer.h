@@ -5,6 +5,7 @@
 # error Please include rocket.h instead of this file
 #endif
 
+
 typedef struct s_board_buffer {
 	uint8_t board_index;
 	SSBitmap buffer[NUM_DIGITS];
@@ -17,9 +18,14 @@ typedef struct s_board_buffer {
 #endif // BBDEBUG && SIM
 } BoardBuffer;
 
-BoardBuffer *foreground[NUM_BOARDS];
+#define NUM_AUX_BOARDS 4
+#define NUM_PSEUDO_BOARDS (NUM_BOARDS + NUM_AUX_BOARDS)
+
+BoardBuffer *foreground[NUM_PSEUDO_BOARDS];
 
 void board_buffer_module_init();
+struct s_remote_bbuf_send;
+void install_remote_bbuf_send(struct s_remote_bbuf_send *rbs);
 
 void board_buffer_init(BoardBuffer *buf);
 void board_buffer_pop(BoardBuffer *buf);
@@ -27,5 +33,8 @@ void board_buffer_push(BoardBuffer *buf, int board);
 void board_buffer_set_alpha(BoardBuffer *buf, uint8_t alpha);
 void board_buffer_draw(BoardBuffer *buf);
 uint8_t board_buffer_is_foreground(BoardBuffer *buf);
+
+// internal method used by remote_bbuf:
+void board_buffer_paint(SSBitmap *bm, uint8_t board_index, uint8_t mask);
 
 #endif // __board_buffer_h__

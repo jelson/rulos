@@ -2,6 +2,8 @@
 
 #include "rocket.h"
 
+void schedule_us_internal(Time offset_us, Activation *act);
+
 Time _rtc_interval_us;
 Time _real_time_since_boot_us;
 Time _stale_time_us;	// current as of last scheduler execution; cheap to evaluate
@@ -38,11 +40,20 @@ void clock_init(Time interval_us)
 
 void schedule_us(Time offset_us, Activation *act)
 {
-	//LOGF((logfp, "scheduling act %08x func %08x\n", (int) act, (int) act->func));
-
 	// never schedule anything for "now", or we might stick the scheduler
 	// in a loop at "now".
 	assert(offset_us > 0);
+	schedule_us_internal(offset_us, act);
+}
+
+void schedule_now(Activation *act)
+{
+	schedule_us_internal(0, act);
+}
+
+void schedule_us_internal(Time offset_us, Activation *act)
+{
+	//LOGF((logfp, "scheduling act %08x func %08x\n", (int) act, (int) act->func));
 
 	heap_insert(clock_time_us() + offset_us, act);
 }
@@ -80,16 +91,25 @@ void scheduler_run_once()
 		Time due_time;
 		Activation *act;
 		int rc;
+
+		r_bool valid = FALSE;
+
+		hal_start_atomic();
 		rc = heap_peek(&due_time, &act);
+		if (!rc && !later_than(due_time, now))
+		{
+			valid = TRUE;
+			heap_pop();
+		}
+		hal_end_atomic();
 
-		if (rc!=0) { break; }
-			// no work to do at all
-
-		if (later_than(due_time, now)) { break; }
-			// no work to do now
+		if (!valid)
+		{
+			break;
+		}
 
 		//LOGF((logfp, "popping act %08x func %08x\n", (uint32_t) act, (uint32_t) act->func));
-		heap_pop();
+
 		act->func(act);
 		//LOGF((logfp, "returned act %08x func %08x\n", (uint32_t) act, (uint32_t) act->func));
 	}

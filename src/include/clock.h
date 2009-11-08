@@ -18,8 +18,12 @@ static inline Time clock_time_us() { return _stale_time_us; }
 Time precise_clock_time_us(); 
 
 void schedule_us(Time offset_us, Activation *act);
+	// schedule in the future. (asserts us>0)
+void schedule_now(Activation *act);
+	// Be very careful with schedule_now -- it can result in an infinite
+	// loop if you schedule yourself for now repeatedly.
 #define Exp2Time(v)	(((Time)1)<<(v))
-#define schedule_ms(ms,act) { schedule_us(ms*1000, act); }
+//#define schedule_ms(ms,act) { schedule_us(ms*1000, act); }
 
 void scheduler_run_once();
 
