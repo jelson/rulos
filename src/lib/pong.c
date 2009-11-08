@@ -23,6 +23,7 @@ UIEventDisposition pong_event_handler(
 void pong_init(Pong *pong, uint8_t b0, FocusManager *focus)
 {
 	pong->func = (ActivationFunc) pong_update;
+	pong->board0 = b0;
 	int i;
 	for (i=0; i<PONG_HEIGHT; i++)
 	{
@@ -38,7 +39,10 @@ void pong_init(Pong *pong, uint8_t b0, FocusManager *focus)
 	pong->rrect.x = 0;
 	pong->rrect.xlen = 8;
 
-	focus_register(focus, (UIEventHandler*) &pong->handler, pong->rrect, "pong");
+	if (focus!=NULL)
+	{
+		focus_register(focus, (UIEventHandler*) &pong->handler, pong->rrect, "pong");
+	}
 
 	pong_serve(pong, 0);
 
@@ -48,6 +52,9 @@ void pong_init(Pong *pong, uint8_t b0, FocusManager *focus)
 	pong->score[0] = 0;
 	pong->score[1] = 0;
 	pong->lastScore = clock_time_us();
+
+	region_hide(&pong->rrect);
+	pong->focused = FALSE;
 
 	schedule_us(1, (Activation*) pong);
 }
@@ -132,7 +139,7 @@ void pong_score_one(Pong *pong, uint8_t player)
 void pong_update(Pong *pong)
 {
 	schedule_us(1000000/PONG_FREQ, (Activation*) pong);
-	if (!pong_is_paused(pong))
+	if (!pong_is_paused(pong) && pong->focused)
 	{
 		pong_advance_ball(pong);
 	}
@@ -200,7 +207,19 @@ UIEventDisposition pong_event_handler(
 			pong->paddley[1] = max(pong->paddley[1]-2, 0); break;
 		case '6':
 			pong->paddley[1] = min(pong->paddley[1]+2, 22-PADDLEHEIGHT); break;
+		case uie_focus:
+			if (!pong->focused)
+			{
+				region_show(&pong->rrect, pong->board0);
+			}
+			pong->focused = TRUE;
+			break;
 		case uie_escape:
+			if (pong->focused)
+			{
+				region_hide(&pong->rrect);
+			}
+			pong->focused = FALSE;
 			result = uied_blur;
 			break;
 	}

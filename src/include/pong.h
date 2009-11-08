@@ -16,6 +16,7 @@ typedef struct s_pong_handler {
 
 typedef struct s_pong {
 	ActivationFunc func;
+	uint8_t board0;
 	BoardBuffer bbuf[PONG_HEIGHT];
 	BoardBuffer *btable[PONG_HEIGHT];
 	RectRegion rrect;
@@ -24,6 +25,7 @@ typedef struct s_pong {
 	int paddley[2];
 	int score[2];
 	Time lastScore;
+	r_bool focused;
 } Pong;
 
 void pong_init(Pong *pong, uint8_t b0, FocusManager *focus);

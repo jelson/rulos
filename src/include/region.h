@@ -18,4 +18,7 @@ typedef struct {
 	uint8_t xlen;
 } RectRegion;
 
+void region_hide(RectRegion *rr);
+void region_show(RectRegion *rr, int board0);
+
 #endif // _region_h

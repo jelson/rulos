@@ -21,6 +21,7 @@ typedef struct {
 
 typedef struct s_ddockact {
 	ActivationFunc func;
+	uint8_t board0;
 	BoardBuffer bbuf[DOCK_HEIGHT];
 	BoardBuffer *btable[DOCK_HEIGHT];
 	RectRegion rrect;
@@ -31,5 +32,6 @@ typedef struct s_ddockact {
 } DDockAct;
 
 void ddock_init(DDockAct *act, uint8_t board0, FocusManager *focus);
+void ddock_reset(DDockAct *dd);
 
 #endif // display_docking_h

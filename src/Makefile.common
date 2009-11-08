@@ -25,6 +25,7 @@ COMMON_OBJECTS = \
 	util.o \
 	sequencer.o \
 	display_blinker.o \
+	region.o \
 	rasters.o \
 	pong.o \
 	lunar_distance.o \

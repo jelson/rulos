@@ -23,5 +23,6 @@ int32_t da_read(DriftAnim *da);
 void da_random_impulse(DriftAnim *da);
 void da_set_velocity(DriftAnim *da, int32_t velocity);
 void da_set_value(DriftAnim *da, int32_t value);
+void da_set_random_value(DriftAnim *da);
 
 #endif // drift_anim_h

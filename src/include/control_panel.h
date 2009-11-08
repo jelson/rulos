@@ -5,26 +5,22 @@
 #include "remote_keyboard.h"
 #include "remote_uie.h"
 #include "sequencer.h"
+#include "display_docking.h"
+#include "pong.h"
 
 #define CONTROL_PANEL_HEIGHT 4
 #define CONTROL_PANEL_NUM_CHILDREN 4
 #define CP_NO_CHILD (0xff)
 
 struct s_control_child;
-typedef void (*CCActivateFunc)(struct s_control_child*);
-typedef void (*CCDeactivateFunc)(struct s_control_child*);
 
 typedef struct s_control_child {
 	UIEventHandler *uie_handler;
-	CCActivateFunc activateFunc;
-	CCDeactivateFunc deactivateFunc;
 	char *name;
 } ControlChild;
 
 typedef struct {
 	UIEventHandler *uie_handler;
-	CCActivateFunc activateFunc;
-	CCDeactivateFunc deactivateFunc;
 	char *name;
 	RemoteKeyboardSend rks;
 	RemoteUIE ruie;
@@ -32,11 +28,21 @@ typedef struct {
 
 typedef struct {
 	UIEventHandler *uie_handler;
-	CCActivateFunc activateFunc;
-	CCDeactivateFunc deactivateFunc;
 	char *name;
 	Launch launch;
 } CCLaunch;
+
+typedef struct {
+	UIEventHandler *uie_handler;
+	char *name;
+	DDockAct dock;
+} CCDock;
+
+typedef struct {
+	UIEventHandler *uie_handler;
+	char *name;
+	Pong pong;
+} CCPong;
 
 typedef struct s_control_panel {
 	UIEventHandlerFunc handler_func;
@@ -57,6 +63,8 @@ typedef struct s_control_panel {
 	// actual children listed here to allocate their storage statically.
 	CCRemoteCalc ccrc;
 	CCLaunch ccl;
+	CCDock ccdock;
+	CCPong ccpong;
 } ControlPanel;
 
 void init_control_panel(ControlPanel *cp, uint8_t board0, Network *network);

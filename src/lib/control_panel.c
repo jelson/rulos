@@ -2,22 +2,8 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ccrc_activate(CCRemoteCalc *ccrc)
-{
-	ccrc->uie_handler->func(ccrc->uie_handler, uie_focus);
-}
-
-void ccrc_deactivate(CCRemoteCalc *ccrc)
-{
-	// a little network-droppiness-protection: be sure guy on other
-	// end has heard that he's not active.
-	ccrc->uie_handler->func(ccrc->uie_handler, uie_escape);
-}
-
 void init_cc_remote_calc(CCRemoteCalc *ccrc, Network *network)
 {
-	ccrc->activateFunc = (CCActivateFunc) ccrc_activate;
-	ccrc->deactivateFunc = (CCActivateFunc) ccrc_deactivate;
 	init_remote_keyboard_send(&ccrc->rks, network, REMOTE_SUBFOCUS_PORT0);
 	init_remote_uie(&ccrc->ruie, &ccrc->rks.forwardLocalStrokes);
 	ccrc->uie_handler = (UIEventHandler*) &ccrc->ruie;
@@ -26,23 +12,29 @@ void init_cc_remote_calc(CCRemoteCalc *ccrc, Network *network)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ccl_activate(CCRemoteCalc *ccl)
-{
-	ccl->uie_handler->func(ccl->uie_handler, uie_focus);
-}
-
-void ccl_deactivate(CCRemoteCalc *ccl)
-{
-	ccl->uie_handler->func(ccl->uie_handler, uie_escape);
-}
-
 void init_cc_launch(CCLaunch *ccl, uint8_t board0)
 {
-	ccl->activateFunc = (CCActivateFunc) ccl_activate;
-	ccl->deactivateFunc = (CCActivateFunc) ccl_deactivate;
 	launch_init(&ccl->launch, board0, NULL);
 	ccl->uie_handler = (UIEventHandler*) &ccl->launch;
 	ccl->name = "Launch";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void init_cc_dock(CCDock *ccd, uint8_t board0)
+{
+	ddock_init(&ccd->dock, board0, NULL);
+	ccd->uie_handler = (UIEventHandler*) &ccd->dock.handler;
+	ccd->name = "Dock";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void init_cc_pong(CCPong *ccp, uint8_t board0)
+{
+	pong_init(&ccp->pong, board0, NULL);
+	ccp->uie_handler = (UIEventHandler*) &ccp->pong.handler;
+	ccp->name = "Pong";
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -78,6 +70,12 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, Network *network)
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccl;
 	init_cc_launch(&cp->ccl, board0);
 
+	cp->children[cp->child_count++] = (ControlChild*) &cp->ccdock;
+	init_cc_dock(&cp->ccdock, board0);
+
+	cp->children[cp->child_count++] = (ControlChild*) &cp->ccpong;
+	init_cc_pong(&cp->ccpong, board0);
+
 	cp->selected_child = 0;
 	cp->active_child = CP_NO_CHILD;
 
@@ -105,7 +103,7 @@ UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt)
 		}
 		if (result==uied_blur)
 		{
-			cc->deactivateFunc(cc);
+			cc->uie_handler->func(cc->uie_handler, uie_escape);
 			cp->active_child = CP_NO_CHILD;
 		}
 	}
@@ -127,7 +125,7 @@ UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt)
 			{
 				cp->active_child = cp->selected_child;
 				ControlChild *cc = cp->children[cp->active_child];
-				cc->activateFunc(cc);
+				cc->uie_handler->func(cc->uie_handler, uie_focus);
 			}
 		}
 	}

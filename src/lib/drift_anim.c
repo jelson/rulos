@@ -50,3 +50,11 @@ void da_set_value(DriftAnim *da, int32_t value)
 	da->base = value << da->expscale;
 	da->base_time = clock_time_us();
 }
+
+void da_set_random_value(DriftAnim *da)
+{
+	int32_t scaledrange = da->max - da->min;
+	int32_t scaledvalue = (deadbeef_rand() % scaledrange) + da->min;
+	da->base = scaledvalue;
+	da->base_time = clock_time_us();
+}

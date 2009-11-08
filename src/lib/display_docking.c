@@ -1,6 +1,7 @@
 #include "rocket.h"
 #include "display_docking.h"
 #include "rasters.h"
+#include "region.h"
 
 UIEventDisposition ddock_event_handler(
 	UIEventHandler *raw_handler, UIEvent evt);
@@ -10,9 +11,16 @@ void ddock_update(DDockAct *act);
 uint32_t ddock_compute_dx(int yc, int r, int y);
 void ddock_paint_axes(DDockAct *act);
 
+#define DD_MAX_POS 20
+#define DD_MIN_RADIUS 3
+#define DD_MAX_RADIUS 14
+#define DD_SPEED_LIMIT 5
+#define DD_GROW_SPEED 1
+
 void ddock_init(DDockAct *act, uint8_t b0, FocusManager *focus)
 {
 	act->func = (ActivationFunc) ddock_update;
+	act->board0 = b0;
 	int i;
 	for (i=0; i<DOCK_HEIGHT; i++)
 	{
@@ -28,14 +36,39 @@ void ddock_init(DDockAct *act, uint8_t b0, FocusManager *focus)
 	act->rrect.ylen = DOCK_HEIGHT;
 	act->rrect.x = 0;
 	act->rrect.xlen = 8;
-	focus_register(focus, (UIEventHandler*) &act->handler, act->rrect, "docking");
+	if (focus!=NULL)
+	{
+		focus_register(focus, (UIEventHandler*) &act->handler, act->rrect, "docking");
+	}
 
-	drift_anim_init(&act->xd, 10, 0, -14, 14, 10);
-	drift_anim_init(&act->yd, 10, 0, -15, 15, 10);
-	drift_anim_init(&act->rd, 10, 7, 7, 13, 10);
+	drift_anim_init(&act->xd, 10, 0, -DD_MAX_POS, DD_MAX_POS, DD_SPEED_LIMIT);
+	drift_anim_init(&act->yd, 10, 0, -DD_MAX_POS, DD_MAX_POS, DD_SPEED_LIMIT);
+	drift_anim_init(&act->rd, 10, DD_MIN_RADIUS, DD_MIN_RADIUS, DD_MAX_RADIUS, DD_SPEED_LIMIT);
 	act->last_impulse_time = 0;
 
+	region_hide(&act->rrect);
+
 	schedule_us(1, (Activation*) act);
+}
+
+void ddock_init_axis(DriftAnim *da)
+{
+	da_random_impulse(da);
+	da_set_random_value(da);
+	// be sure velocity isn't pushing away from center
+	if ((da->base>0) == (da->velocity>0))
+	{
+		da->velocity = -da->velocity;
+	}
+}
+
+void ddock_reset(DDockAct *dd)
+{
+	ddock_init_axis(&dd->xd);
+	//LOGF((logfp, "ddock_reset: xd_b %d xd_v %d\n", dd->xd.base, dd->xd.velocity));
+	ddock_init_axis(&dd->yd);
+	da_set_value(&dd->rd, DD_MIN_RADIUS);
+	da_set_velocity(&dd->rd, DD_GROW_SPEED);
 }
 
 #define IMPULSE_FREQUENCY_US 5000000
@@ -44,6 +77,7 @@ void ddock_update(DDockAct *act)
 {
 	ddock_update_once(act);
 
+#if RANDOM_DRIFT
 	if (!act->focused)
 	{
 		// standard animation
@@ -56,6 +90,8 @@ void ddock_update(DDockAct *act)
 			act->last_impulse_time = t;
 		}
 	}
+#endif // RANDOM_DRIFT
+
 	schedule_us(Exp2Time(18), (Activation*) act);
 }
 
@@ -66,6 +102,8 @@ void ddock_update_once(DDockAct *act)
 	int xc = da_read(&act->xd);
 	int yc = da_read(&act->yd);
 	int rad = da_read(&act->rd);
+
+	//LOGF((logfp, "ddock_update_once: %d %d %d\n", xc, act->xd.base, act->xd.velocity));
 
 	raster_clear_buffers(&act->rrect);
 
@@ -121,6 +159,7 @@ UIEventDisposition ddock_event_handler(
 	UIEventDisposition result = uied_accepted;
 	switch (evt)
 	{
+#if RANDOM_DRIFT
 		case '2':
 			da_set_value(&act->yd, da_read(&act->yd)+1); break;
 		case '8':
@@ -139,14 +178,22 @@ UIEventDisposition ddock_event_handler(
 			da_set_value(&act->xd, 0);
 			da_set_value(&act->yd, 0);
 			break;
+#endif // RANDOM_DRIFT
 		case uie_focus:
-			act->focused = TRUE;
-			da_set_velocity(&act->xd, 0);
-			da_set_velocity(&act->yd, 0);
-			da_set_velocity(&act->rd, 0);
+			if (!act->focused)
+			{
+				ddock_reset(act);
+				ddock_update_once(act);
+				region_show(&act->rrect, act->board0);
+				act->focused = TRUE;
+			}
 			break;
 		case uie_escape:
-			act->focused = FALSE;
+			if (act->focused)
+			{
+				region_hide(&act->rrect);
+				act->focused = FALSE;
+			}
 			result = uied_blur;
 			break;
 	}
