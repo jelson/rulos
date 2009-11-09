@@ -5,6 +5,7 @@
 #include "board_buffer.h"
 #include "focus.h"
 #include "drift_anim.h"
+#include "thruster_protocol.h"
 
 #define DOCK_HEIGHT 4
 #define MAX_Y (DOCK_HEIGHT*6)
@@ -19,6 +20,11 @@ typedef struct {
 	struct s_ddockact *act;
 } DDockHandler;
 
+typedef struct {
+	ThrusterUpdateFunc func;
+	struct s_ddockact *act;
+} DockThrusterUpdate;
+
 typedef struct s_ddockact {
 	ActivationFunc func;
 	uint8_t board0;
@@ -26,12 +32,17 @@ typedef struct s_ddockact {
 	BoardBuffer *btable[DOCK_HEIGHT];
 	RectRegion rrect;
 	DDockHandler handler;
+	DockThrusterUpdate thrusterUpdate;
 	uint8_t focused;
 	DriftAnim xd, yd, rd;
 	uint32_t last_impulse_time;
+	ThrusterPayload thrusterPayload;
+	BoardBuffer auxboards[2];
+	uint8_t auxboard_base;
+	r_bool docking_complete;
 } DDockAct;
 
-void ddock_init(DDockAct *act, uint8_t board0, FocusManager *focus);
+void ddock_init(DDockAct *act, uint8_t b0, uint8_t auxboard_base, FocusManager *focus);
 void ddock_reset(DDockAct *dd);
 
 #endif // display_docking_h

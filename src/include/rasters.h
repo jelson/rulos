@@ -15,6 +15,7 @@ extern uint8_t rasterData[];
 
 void raster_draw_sym(RectRegion *rrect, char sym, int8_t dx, int8_t dy);
 void raster_paint_pixel(RectRegion *rrect, int x, int y);
+void raster_paint_pixel_v(RectRegion *rrect, int x, int y, r_bool on);
 	// x in [0,32), y in [0,24)
 
 typedef struct {

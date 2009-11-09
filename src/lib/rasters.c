@@ -69,6 +69,11 @@ static SSBitmap _sevseg_pixel_mask[6][4] = {
 
 void raster_paint_pixel(RectRegion *rrect, int x, int y)
 {
+	raster_paint_pixel_v(rrect, x, y, TRUE);
+}
+
+void raster_paint_pixel_v(RectRegion *rrect, int x, int y, r_bool on)
+{
 	int maj_x = int_div_with_correct_truncation(x,4);
 	int min_x = x-(maj_x*4);
 	int maj_y = int_div_with_correct_truncation(y,6);
@@ -83,7 +88,14 @@ void raster_paint_pixel(RectRegion *rrect, int x, int y)
 	}
 
 	//LOGF((logfp, "PAINT!\n"));
-	rrect->bbuf[maj_y]->buffer[maj_x] |= _sevseg_pixel_mask[min_y][min_x];
+	if (on)
+	{
+		rrect->bbuf[maj_y]->buffer[maj_x] |= _sevseg_pixel_mask[min_y][min_x];
+	}
+	else
+	{
+		rrect->bbuf[maj_y]->buffer[maj_x] &= ~(_sevseg_pixel_mask[min_y][min_x]);
+	}
 }
 
 void raster_big_digit_init(RasterBigDigit *digit, uint8_t board0)

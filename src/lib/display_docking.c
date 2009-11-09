@@ -2,6 +2,7 @@
 #include "display_docking.h"
 #include "rasters.h"
 #include "region.h"
+#include "sound.h"
 
 UIEventDisposition ddock_event_handler(
 	UIEventHandler *raw_handler, UIEvent evt);
@@ -10,14 +11,21 @@ void ddock_update_once(DDockAct *act);
 void ddock_update(DDockAct *act);
 uint32_t ddock_compute_dx(int yc, int r, int y);
 void ddock_paint_axes(DDockAct *act);
+void ddock_thruster_update(DockThrusterUpdate *dtu, ThrusterPayload *tp);
+void dd_bump(DDockAct *act, uint8_t thruster_bit, uint32_t xscale, uint32_t yscale);
+void ddock_hide(DDockAct *dd);
+void ddock_show(DDockAct *dd);
 
 #define DD_MAX_POS 20
 #define DD_MIN_RADIUS 3
 #define DD_MAX_RADIUS 14
-#define DD_SPEED_LIMIT 5
+#define DD_SPEED_LIMIT 3
 #define DD_GROW_SPEED 1
+#define DD_GROW_SPEED_SCALE 2
+#define DD_THRUSTER_DOWNSCALE	4
+#define DD_TOLERANCE	2
 
-void ddock_init(DDockAct *act, uint8_t b0, FocusManager *focus)
+void ddock_init(DDockAct *act, uint8_t b0, uint8_t auxboard_base, FocusManager *focus)
 {
 	act->func = (ActivationFunc) ddock_update;
 	act->board0 = b0;
@@ -30,6 +38,9 @@ void ddock_init(DDockAct *act, uint8_t b0, FocusManager *focus)
 	}
 	act->handler.func = (UIEventHandlerFunc) ddock_event_handler;
 	act->handler.act = act;
+
+	act->thrusterUpdate.func = (ThrusterUpdateFunc) ddock_thruster_update;
+	act->thrusterUpdate.act = act;
 
 	act->focused = FALSE;
 	act->rrect.bbuf = act->btable;
@@ -46,9 +57,32 @@ void ddock_init(DDockAct *act, uint8_t b0, FocusManager *focus)
 	drift_anim_init(&act->rd, 10, DD_MIN_RADIUS, DD_MIN_RADIUS, DD_MAX_RADIUS, DD_SPEED_LIMIT);
 	act->last_impulse_time = 0;
 
-	region_hide(&act->rrect);
+	act->thrusterPayload.thruster_bits = 0;
+	ddock_reset(act);
+
+	board_buffer_init(&act->auxboards[0]);
+	board_buffer_init(&act->auxboards[1]);
+	board_buffer_push(&act->auxboards[0], auxboard_base+0);
+	board_buffer_push(&act->auxboards[1], auxboard_base+1);
+	act->auxboard_base = auxboard_base;
+
+	ddock_hide(act);
 
 	schedule_us(1, (Activation*) act);
+}
+
+void ddock_hide(DDockAct *dd)
+{
+	region_hide(&dd->rrect);
+	board_buffer_pop(&dd->auxboards[0]);
+	board_buffer_pop(&dd->auxboards[1]);
+}
+
+void ddock_show(DDockAct *dd)
+{
+	region_show(&dd->rrect, dd->board0);
+	board_buffer_push(&dd->auxboards[0], dd->auxboard_base+0);
+	board_buffer_push(&dd->auxboards[1], dd->auxboard_base+1);
 }
 
 void ddock_init_axis(DriftAnim *da)
@@ -68,7 +102,8 @@ void ddock_reset(DDockAct *dd)
 	//LOGF((logfp, "ddock_reset: xd_b %d xd_v %d\n", dd->xd.base, dd->xd.velocity));
 	ddock_init_axis(&dd->yd);
 	da_set_value(&dd->rd, DD_MIN_RADIUS);
-	da_set_velocity(&dd->rd, DD_GROW_SPEED);
+	da_set_velocity_scaled(&dd->rd, DD_GROW_SPEED, DD_GROW_SPEED_SCALE);
+	dd->docking_complete = FALSE;
 }
 
 #define IMPULSE_FREQUENCY_US 5000000
@@ -92,36 +127,144 @@ void ddock_update(DDockAct *act)
 	}
 #endif // RANDOM_DRIFT
 
-	schedule_us(Exp2Time(18), (Activation*) act);
+	_da_update_base(&act->xd);
+	_da_update_base(&act->yd);
+	dd_bump(act, THRUSTER_REAR,	  	   0,  2);
+	dd_bump(act, THRUSTER_FRONTLEFT,   1, -1);
+	dd_bump(act, THRUSTER_FRONTRIGHT, -1, -1);
+	//LOGF((logfp, "velocity %6d %6d\n", act->xd.velocity, act->yd.velocity));
+
+	if (da_read(&act->rd) == DD_MAX_RADIUS)
+	{
+		int x = da_read(&act->xd);
+		int y = da_read(&act->yd);
+		r_bool success = ((-DD_TOLERANCE<=x && x<=DD_TOLERANCE)
+						&& (-DD_TOLERANCE<=y && y<=DD_TOLERANCE));
+		if (success && !act->docking_complete)
+		{
+			// TODO snap clanger solenoid
+			sound_start(sound_dock_clang, FALSE);
+			act->docking_complete = TRUE;
+			LOGF((logfp, "docking success!\n"));
+		}
+	}
+			
+/*
+	LOGF((logfp, "x %d y %d rad %d\n",
+		da_read(&act->xd),
+		da_read(&act->yd),
+		da_read(&act->rd)));
+*/
+
+	schedule_us(Exp2Time(17), (Activation*) act);
+}
+
+void dd_bump(DDockAct *act, uint8_t thruster_bit, uint32_t xscale, uint32_t yscale)
+{
+	if (act->thrusterPayload.thruster_bits & thruster_bit)
+	{
+#if DD_INERTIA
+		act->xd.velocity += (DD_SPEED_LIMIT*xscale) << (act->xd.expscale - DD_THRUSTER_DOWNSCALE);
+		da_bound_velocity(&act->xd);
+
+		act->yd.velocity += (DD_SPEED_LIMIT*yscale) << (act->yd.expscale - DD_THRUSTER_DOWNSCALE);
+		da_bound_velocity(&act->yd);
+#else // DD_INERTIA
+		da_set_velocity(&act->xd, 0);
+		act->xd.base += DD_SPEED_LIMIT*xscale << (act->xd.expscale - DD_THRUSTER_DOWNSCALE);
+
+		da_set_velocity(&act->yd, 0);
+		act->yd.base += DD_SPEED_LIMIT*yscale << (act->yd.expscale - DD_THRUSTER_DOWNSCALE);
+#endif // DD_INERTIA
+	}
 }
 
 #define I_NAN	 0x7fffffff
+#define DD_SC	3
+
+void ddock_show_complete(DDockAct *act)
+{
+	raster_clear_buffers(&act->rrect);
+	ascii_to_bitmap_str(act->rrect.bbuf[1]->buffer, 8, "Docking");
+	ascii_to_bitmap_str(act->rrect.bbuf[2]->buffer, 8, "complete");
+	raster_draw_buffers(&act->rrect);
+}
+
+void dock_update_aux_display(DDockAct *act, int xc, int yc, int rad)
+{
+	char buf[9];
+	strcpy(buf, "Range   ");
+	int_to_string2(buf+5, 3, 0, DD_MAX_RADIUS - da_read(&act->rd));
+	ascii_to_bitmap_str(act->auxboards[0].buffer, 8, buf);
+	board_buffer_draw(&act->auxboards[0]);
+
+	memset(buf, ' ', 8);
+	int_to_string2(buf, 3, 0, xc);
+	buf[3] = ' ';	// blast stupid string terminator
+	int_to_string2(buf+5, 3, 0, yc);
+	ascii_to_bitmap_str(act->auxboards[1].buffer, 8, buf);
+	board_buffer_draw(&act->auxboards[1]);
+}
 
 void ddock_update_once(DDockAct *act)
 {
-	int xc = da_read(&act->xd);
-	int yc = da_read(&act->yd);
-	int rad = da_read(&act->rd);
+	if (act->docking_complete)
+	{
+		ddock_show_complete(act);
+		return;
+	}
+
+	int xc  = da_read_clip(&act->xd, 0, TRUE);
+	int yc_s  = da_read_clip(&act->yd, DD_SC, TRUE);
+	int rad = da_read_clip(&act->rd, DD_SC, FALSE);
+
+	dock_update_aux_display(act, xc, yc_s>>DD_SC, rad);
 
 	//LOGF((logfp, "ddock_update_once: %d %d %d\n", xc, act->xd.base, act->xd.velocity));
 
 	raster_clear_buffers(&act->rrect);
 
-	ddock_paint_axes(act);
+#if STARFIELD
+	int star = 0;
+	while (TRUE)
+	{
+		int ys = star / ((DD_MAX_POS<<DD_SC)*4);
+		int xs = star - ys * ((DD_MAX_POS<<DD_SC)*4);
+		int y = (ys >> DD_SC) - DD_MAX_POS*2;
+		int x = (xs >> DD_SC) - DD_MAX_POS*2;
+		LOGF((logfp, "star %d : %2d, %2d at %4d, %4d\n", star, x, y, x+xc, y+(yc_s>>DD_SC)));
+		raster_paint_pixel(&act->rrect,  x+xc, y+(yc_s>>DD_SC));
+		star += 2269;
+		if (y>DD_MAX_POS*2) { break; }
+	}
+#endif // STARFIELD
 
 	// Here, y & x are in centered coordinates -- offset by MAX_*/2.
 	int y;
 	for (y=-MAX_Y/2; y<MAX_Y/2; y++)
 	{
-		int dx = ddock_compute_dx(yc, rad, y+0);
-		if (dx!=I_NAN)
+		int dx = ddock_compute_dx(yc_s, rad, y<<DD_SC) >> DD_SC;
+		if (0<=dx && dx<DD_MAX_POS)
 		{
 			raster_paint_pixel(&act->rrect, xc-dx   +CTR_X, y+CTR_Y);
 			raster_paint_pixel(&act->rrect, xc-dx+1 +CTR_X, y+CTR_Y);
-			raster_paint_pixel(&act->rrect, xc+dx   +CTR_X, y+CTR_Y);
+
+#if STARFIELD
+			// panit black in the middle of the target to blot out any
+			// stars behind it.
+			int x;
+			for (x=xc-dx+2; x<xc+dx-1; x++)
+			{
+				raster_paint_pixel_v(&act->rrect, x +CTR_X, y+CTR_Y, FALSE);
+			}
+#endif // STARFIELD
+			
 			raster_paint_pixel(&act->rrect, xc+dx-1 +CTR_X, y+CTR_Y);
+			raster_paint_pixel(&act->rrect, xc+dx   +CTR_X, y+CTR_Y);
 		}
 	}
+
+	ddock_paint_axes(act);
 
 	raster_draw_buffers(&act->rrect);
 }
@@ -184,14 +327,14 @@ UIEventDisposition ddock_event_handler(
 			{
 				ddock_reset(act);
 				ddock_update_once(act);
-				region_show(&act->rrect, act->board0);
+				ddock_show(act);
 				act->focused = TRUE;
 			}
 			break;
 		case uie_escape:
 			if (act->focused)
 			{
-				region_hide(&act->rrect);
+				ddock_hide(act);
 				act->focused = FALSE;
 			}
 			result = uied_blur;
@@ -199,4 +342,10 @@ UIEventDisposition ddock_event_handler(
 	}
 
 	return result;
+}
+
+void ddock_thruster_update(DockThrusterUpdate *dtu, ThrusterPayload *tp)
+{
+	//LOGF((logfp, "ddock_thruster_update %d\n", tp->thruster_bits));
+	dtu->act->thrusterPayload.thruster_bits = tp->thruster_bits;
 }

@@ -36,7 +36,8 @@ COMMON_OBJECTS = \
 	remote_bbuf.o \
 	remote_uie.o \
 	control_panel.o \
-
+	thruster_protocol.o \
+	sound.o \
 
 .PHONY: all
 all: sim-all avr-all

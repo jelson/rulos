@@ -12,23 +12,35 @@ void drift_anim_init(DriftAnim *da, uint8_t expscale, int32_t initValue, int32_t
 	da->base_time = clock_time_us();
 }
 
-int32_t _da_eval(DriftAnim *da, Time t)
+int32_t _da_eval(DriftAnim *da, Time t, r_bool clip)
 {
 	int32_t dt = (t - da->base_time)/1000;
 	int32_t nv = da->base + ((da->velocity * dt) >> 10);
 	int32_t res = bound(nv, da->min, da->max);
+
+	if (clip && res!=nv)
+	{
+		_da_update_base(da);
+		da->velocity = 0;
+	}
+
 	return res;
 }
 
 int32_t da_read(DriftAnim *da)
 {
-	return _da_eval(da, clock_time_us()) >> da->expscale;
+	return da_read_clip(da, 0, FALSE);
+}
+
+int32_t da_read_clip(DriftAnim *da, uint8_t scale, r_bool clip)
+{
+	return _da_eval(da, clock_time_us(), clip) >> (da->expscale - scale);
 }
 
 void _da_update_base(DriftAnim *da)
 {
 	Time t = clock_time_us();
-	da->base = _da_eval(da, t);
+	da->base = _da_eval(da, t, FALSE);
 	da->base_time = t;
 }
 
@@ -41,8 +53,19 @@ void da_random_impulse(DriftAnim *da)
 
 void da_set_velocity(DriftAnim *da, int32_t velocity)
 {
+	da_set_velocity_scaled(da, velocity, 0);
+}
+
+void da_set_velocity_scaled(DriftAnim *da, int32_t velocity, uint8_t downscale)
+{
 	_da_update_base(da);
-	da->velocity = bound(velocity << da->expscale, -da->maxSpeed, da->maxSpeed);
+	da->velocity = velocity << (da->expscale - downscale);
+	da_bound_velocity(da);
+}
+
+void da_bound_velocity(DriftAnim *da)
+{
+	da->velocity = bound(da->velocity, -da->maxSpeed, da->maxSpeed);
 }
 
 void da_set_value(DriftAnim *da, int32_t value)

@@ -1,5 +1,6 @@
 #include "rocket.h"
 #include "sequencer.h"
+#include "sound.h"
 
 #define STUB(s)	{}
 #define LAUNCH_CODE		4671
@@ -153,14 +154,14 @@ void launch_enter_state_launching(Launch *launch)
 	launch_config_panels(launch, lpc_p0blinker, lpc_p1timer);
 	blinker_set_msg(&launch->p0_blinker, launch_message);
 	STUB(valve_control(VALVE_BOOSTER, 1));
-	STUB(sound_start(SOUND_LAUNCH_NOISE));
+	sound_start(sound_launch_noise, FALSE);
 	launch_set_state(launch, launch_state_launching, 10001);
 }
 
 const char *wrong_message[] = {"INVALID", "  CODE  ", NULL};
 void launch_enter_state_wrong_code(Launch *launch)
 {
-	STUB(sound_start(SOUND_KLAXON));
+	sound_start(sound_klaxon, FALSE);
 	launch_config_panels(launch, lpc_p0blinker, lpc_blank);
 	blinker_set_msg(&launch->p0_blinker, wrong_message);
 	launch_set_state(launch, launch_state_wrong_code, 3000);

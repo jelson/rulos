@@ -77,13 +77,9 @@ int main()
 		(FetchCalcDecorationValuesIfc*) &daer.decoration_ifc);
 #endif
 
-#define THRUSTER_X_CHAN	3
-#define THRUSTER_Y_CHAN	2
-	ThrusterState_t ts;
-	thrusters_init(&ts, 3, THRUSTER_X_CHAN, THRUSTER_Y_CHAN, &network);
 
 	ControlPanel cp;
-	init_control_panel(&cp, 4, &network);
+	init_control_panel(&cp, 4, 1, &network);
 
 	// Both local poller and remote receiver inject keyboard events.
 	InputPollerAct ip;
@@ -93,6 +89,19 @@ int main()
 	init_remote_keyboard_recv(&rkr, &network, (InputInjectorIfc*) &cp.direct_injector, REMOTE_KEYBOARD_PORT);
 
 
+	ThrusterSendNetwork tsn;
+	init_thruster_send_network(&tsn, &network);
+	ThrusterUpdate *thrusterUpdate[3] =
+	{
+		(ThrusterUpdate*) &tsn,
+		(ThrusterUpdate*) &cp.ccdock.dock.thrusterUpdate,
+		NULL
+	};
+
+#define THRUSTER_X_CHAN	3
+#define THRUSTER_Y_CHAN	2
+	ThrusterState_t ts;
+	thrusters_init(&ts, 3, THRUSTER_X_CHAN, THRUSTER_Y_CHAN, thrusterUpdate);
 // Stuff that can go on matrix display:
 /*
 	Launch launch;

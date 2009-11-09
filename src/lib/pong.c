@@ -1,7 +1,6 @@
 #include "pong.h"
 #include "rasters.h"
-
-#define STUB(s)	{}
+#include "sound.h"
 
 #define PS(v)	((v)<<PONG_SCALE2)
 #define BALLDIA	3
@@ -91,12 +90,12 @@ void pong_intersect_paddle(Pong *pong, uint8_t player, int by1)
 	int py1 = PS(pong->paddley[player]+PADDLEHEIGHT);
 	if (by1<py0 || by0>py1)
 	{
-		STUB(sound_start(SOUND_PONG_SCORE));
+		sound_start(sound_pong_score, FALSE);
 		pong_score_one(pong, 1-player);
 	}
 	else
 	{
-		STUB(sound_start(SOUND_PONG_PADDLE_BOUNCE));
+		sound_start(sound_pong_paddle_bounce, FALSE);
 	}
 }
 
@@ -117,12 +116,12 @@ void pong_advance_ball(Pong *pong)
 	if (newy> BALLMAXY) {
 		pong->dy = -pong->dy;
 		newy = BALLMAXY-(newy-BALLMAXY);
-		STUB(sound_start(SOUND_PONG_WALL_BOUNCE));
+		sound_start(sound_pong_wall_bounce, FALSE);
 	}
 	if (newy< BALLMINY) {
 		pong->dy = -pong->dy;
 		newy = BALLMINY+(BALLMINY-newy);
-		STUB(sound_start(SOUND_PONG_WALL_BOUNCE));
+		sound_start(sound_pong_wall_bounce, FALSE);
 	}
 	pong->x = newx;
 	pong->y = newy;

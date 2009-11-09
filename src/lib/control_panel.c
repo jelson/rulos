@@ -21,9 +21,9 @@ void init_cc_launch(CCLaunch *ccl, uint8_t board0)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_cc_dock(CCDock *ccd, uint8_t board0)
+void init_cc_dock(CCDock *ccd, uint8_t board0, uint8_t auxboard0)
 {
-	ddock_init(&ccd->dock, board0, NULL);
+	ddock_init(&ccd->dock, board0, auxboard0, NULL);
 	ccd->uie_handler = (UIEventHandler*) &ccd->dock.handler;
 	ccd->name = "Dock";
 }
@@ -43,7 +43,7 @@ UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt);
 void cp_inject(struct s_direct_injector *di, char k);
 void cp_paint(ControlPanel *cp);
 
-void init_control_panel(ControlPanel *cp, uint8_t board0, Network *network)
+void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network)
 {
 	cp->handler_func = (UIEventHandlerFunc) cp_uie_handler;
 
@@ -71,7 +71,7 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, Network *network)
 	init_cc_launch(&cp->ccl, board0);
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccdock;
-	init_cc_dock(&cp->ccdock, board0);
+	init_cc_dock(&cp->ccdock, board0, aux_board0);
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccpong;
 	init_cc_pong(&cp->ccpong, board0);
