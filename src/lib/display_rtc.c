@@ -35,3 +35,8 @@ void drtc_set_base_time(DRTCAct *act, Time base_time)
 	act->base_time = base_time;
 	drtc_update(act);
 }
+
+Time drtc_get_base_time(DRTCAct *act)
+{
+	return act->base_time;
+}

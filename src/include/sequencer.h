@@ -23,6 +23,7 @@
 #include "display_blinker.h"
 #include "numeric_input.h"
 #include "focus.h"
+#include "lunar_distance.h"
 
 typedef enum {
 	lpc_blank,
@@ -68,6 +69,8 @@ typedef struct s_launch {
 	NumericInputAct p1_textentry;
 	BoardBuffer *bbufary[2];	// for focus target. Tricky, because we swap them out. :v(
 	LaunchClockAct clock_act;
+	DRTCAct *main_rtc;
+	LunarDistance *lunar_distance;
 } Launch;
 
 void launch_init(Launch *launch, uint8_t board0, FocusManager *fa);

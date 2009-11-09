@@ -81,6 +81,9 @@ int main()
 	ControlPanel cp;
 	init_control_panel(&cp, 4, 1, &network);
 
+	cp.ccl.launch.main_rtc = &dr;
+	cp.ccl.launch.lunar_distance = &ld;
+
 	// Both local poller and remote receiver inject keyboard events.
 	InputPollerAct ip;
 	input_poller_init(&ip, (InputInjectorIfc*) &cp.direct_injector);

@@ -5,6 +5,7 @@
 #define STUB(s)	{}
 #define LAUNCH_CODE		4671
 #define LAUNCH_CODE_S	"4671"
+#define	L_LAUNCH_DURATION_MS	10001
 
 void launch_set_state(Launch *launch, LaunchState state, Time time_ms);
 void launch_config_panels(Launch *launch, LaunchPanelConfig new0, LaunchPanelConfig new1);
@@ -48,6 +49,10 @@ void launch_init(Launch *launch, uint8_t board0, FocusManager *fa)
 
 	launch->clock_act.func = launch_clock_handler;
 	launch->clock_act.launch = launch;
+
+	launch->main_rtc = NULL;
+	launch->lunar_distance = NULL;
+
 	schedule_us(1, (Activation*) &launch->clock_act);
 }
 
@@ -143,6 +148,10 @@ void launch_enter_state_enter_code(Launch *launch)
 void launch_enter_state_countdown(Launch *launch)
 {
 	drtc_set_base_time(&launch->p1_timer, clock_time_us()+10000000);
+	if (launch->main_rtc)
+	{
+		drtc_set_base_time(launch->main_rtc, clock_time_us()+10000000);
+	}
 	launch_config_panels(launch, lpc_p0scroller, lpc_p1timer);
 	dscrlmsg_set_msg(&launch->p0_scroller, "Launch sequence initiated. Countdown.  ");
 	launch_set_state(launch, launch_state_countdown, 10001);
@@ -155,7 +164,7 @@ void launch_enter_state_launching(Launch *launch)
 	blinker_set_msg(&launch->p0_blinker, launch_message);
 	STUB(valve_control(VALVE_BOOSTER, 1));
 	sound_start(sound_launch_noise, FALSE);
-	launch_set_state(launch, launch_state_launching, 10001);
+	launch_set_state(launch, launch_state_launching, L_LAUNCH_DURATION_MS);
 }
 
 const char *wrong_message[] = {"INVALID", "  CODE  ", NULL};
@@ -255,6 +264,27 @@ void launch_clock_handler(Activation *act)
 //	LOGF((logfp, "Funky, cold medina. launch %08x Act %08x func %08x\n",
 //		(int)launch, (int) &launch->clock_act, (int)launch->clock_act.func));
 	schedule_us(250000, (Activation*) &launch->clock_act);
+
+	if (launch->lunar_distance)
+	{
+		if (launch->state == launch_state_launching)
+		{
+			uint16_t ship_velocity_frac = 0;
+			Time launch_base = drtc_get_base_time(&launch->p1_timer);
+			Time elapsed_time = clock_time_us() - launch_base;
+			if (elapsed_time/1000 > L_LAUNCH_DURATION_MS)
+			{
+				ship_velocity_frac = 256;
+			}
+			else if (elapsed_time >= 0)
+			{
+				ship_velocity_frac = (elapsed_time/1000 * 256) / L_LAUNCH_DURATION_MS;
+			}
+			LOGF((logfp, "elapsed time %d frac %d\n", elapsed_time, ship_velocity_frac));
+			lunar_distance_set_velocity_256ths(launch->lunar_distance, ship_velocity_frac);
+		}
+	}
+
 	if (!launch->timer_expired && clock_time_us() >= launch->timer_deadline)
 	{
 		launch->timer_expired = TRUE;
