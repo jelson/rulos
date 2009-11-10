@@ -94,7 +94,7 @@ void hal_upside_down_led(SSBitmap *b)
 BoardLayout tree0_def[] = {
 	{ "Mission Clock",			{ PG,PG,PG,PG,PG,PG,PY,PY },  3,  0 },
 	{ "Distance to Moon",		{ PR,PR,PR,PR,PR,PR,PR,PR }, 33,  4 },
-	{ "Speed",					{ PY,PY,PY,PY,PY,PY,PY,PY }, 33,  8 },
+	{ "Speed (fps)",			{ PY,PY,PY,PY,PY,PY,PY,PY }, 33,  8 },
 	{ "Thruster Actuation",		{ PB,PR,PR,PR,PB,PY,PY,PY },  3, 12 },
 	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 16 },
 	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 19 },

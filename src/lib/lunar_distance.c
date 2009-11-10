@@ -3,17 +3,24 @@
 void lunar_distance_update(LunarDistance *ld);
 
 #define LD_CRUISE_SPEED (-237)
+#define LUNAR_DISTANCE 237674
 
 void lunar_distance_init(LunarDistance *ld, uint8_t dist_b0, uint8_t speed_b0)
 {
 	ld->func = (ActivationFunc) lunar_distance_update;
-	drift_anim_init(&ld->da, 0, 237674, 0, 237674, 2376);
+	drift_anim_init(&ld->da, 0, LUNAR_DISTANCE, 0, LUNAR_DISTANCE, 2376);
 	board_buffer_init(&ld->dist_board);
 	board_buffer_push(&ld->dist_board, dist_b0);
 	board_buffer_init(&ld->speed_board);
 	board_buffer_push(&ld->speed_board, speed_b0);
 	da_set_velocity(&ld->da, 0);
 	schedule_us(1, (Activation*) ld);
+}
+
+void lunar_distance_reset(LunarDistance *ld)
+{
+	da_set_value(&ld->da, LUNAR_DISTANCE);
+	da_set_velocity(&ld->da, 0);
 }
 
 void lunar_distance_set_velocity_256ths(LunarDistance *ld, uint16_t frac)
@@ -32,10 +39,23 @@ void lunar_distance_update(LunarDistance *ld)
 	ld->dist_board.buffer[NUM_DIGITS-4] |= SSB_DECIMAL;
 	board_buffer_draw(&ld->dist_board);
 
-	int fps = -ld->da.velocity * ((uint32_t)5280 * 1024 / 1000);
-	int_to_string2(buf, NUM_DIGITS-3, 0, fps);
-	strcpy(&buf[6], "fs");
+	int32_t fps = -ld->da.velocity * ((uint32_t)5280 * 1024 / 1000);
+
+	// add .03% noise to speed display
+	if (fps>100)
+	{
+		int32_t noise = (fps/10000) * (deadbeef_rand() & 0x3);
+		fps += noise;
+	}
+
+	int_to_string2(buf, NUM_DIGITS, 0, fps);
+	//strcpy(&buf[6], "fs");
 	ascii_to_bitmap_str(ld->speed_board.buffer, NUM_DIGITS, buf);
-	ld->speed_board.buffer[NUM_DIGITS-6] |= SSB_DECIMAL;
+	if (fps>999) {
+		ld->speed_board.buffer[4] |= SSB_DECIMAL;
+	}
+	if (fps>999999) {
+		ld->speed_board.buffer[1] |= SSB_DECIMAL;
+	}
 	board_buffer_draw(&ld->speed_board);
 }

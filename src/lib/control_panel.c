@@ -14,7 +14,7 @@ void init_cc_remote_calc(CCRemoteCalc *ccrc, Network *network)
 
 void init_cc_launch(CCLaunch *ccl, uint8_t board0)
 {
-	//launch_init(&ccl->launch, board0, NULL);
+	launch_init(&ccl->launch, board0);
 	ccl->uie_handler = (UIEventHandler*) &ccl->launch;
 	ccl->name = "Launch";
 }

@@ -15,7 +15,7 @@ void init_screen4(Screen4 *s4, uint8_t board0)
 	s4->rrect.bbuf = s4->bbufp;
 	s4->rrect.ylen = 4;
 	s4->rrect.x = 0;
-	s4->rrect.xlen = 8;
+	s4->rrect.xlen = NUM_DIGITS;
 }
 
 void s4_show(Screen4 *s4)
@@ -39,5 +39,14 @@ void s4_hide(Screen4 *s4)
 		{
 			board_buffer_pop(&s4->bbuf[r]);
 		}
+	}
+}
+
+void s4_draw(Screen4 *s4)
+{
+	int r;
+	for (r=0; r<SCREEN4SIZE; r++)
+	{
+		board_buffer_draw(&s4->bbuf[r]);
 	}
 }

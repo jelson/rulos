@@ -102,6 +102,7 @@ void raster_big_digit_init(RasterBigDigit *digit, uint8_t board0)
 {
 	digit->func = (ActivationFunc) raster_big_digit_update;
 	digit->startTime = clock_time_us();
+	init_screen4(&digit->s4, board0);
 
 	schedule_us(1, (Activation*) digit);
 }

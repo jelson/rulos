@@ -24,9 +24,11 @@
 #include "numeric_input.h"
 #include "focus.h"
 #include "lunar_distance.h"
+#include "screen4.h"
+#include "rasters.h"
 
 typedef enum {
-	launch_state_ready,
+	launch_state_hidden,
 	launch_state_enter_code,
 	launch_state_wrong_code,
 	launch_state_countdown,
@@ -41,21 +43,22 @@ typedef struct {
 	struct s_launch *launch;
 } LaunchClockAct;
 
-#define LAUNCH_HEIGHT 4
-
 typedef struct s_launch {
 	UIEventHandlerFunc func;
 	LaunchClockAct clock_act;
+
+	LaunchState state;
+
+	Screen4 s4;
+	DScrollMsgAct dscrlmsg;
+	BoardBuffer textentry_bbuf;
+	NumericInputAct textentry;
+	RasterBigDigit bigDigit;
+
 	DRTCAct *main_rtc;
 	LunarDistance *lunar_distance;
 
-	uint8_t board0;
-	BoardBuffer bbuf[LAUNCH_HEIGHT];
-	BoardBuffer *btable[LAUNCH_HEIGHT];
-	RectRegion rrect;
-
-	BoardBuffer textentry_bbuf;
-	NumericInputAct textentry;
+	Time nextEventTimeout;
 } Launch;
 
 void launch_init(Launch *launch, uint8_t board0);
