@@ -32,6 +32,14 @@ void lunar_distance_update(LunarDistance *ld)
 {
 	schedule_us(100000, (Activation*) ld);
 
+	if (da_read(&ld->da)==0)
+	{
+		// oh. we got there. Stop things to avoid clock rollover effects.
+		da_set_value(&ld->da, 0);
+		// also, velocity should be zero. :v)
+		da_set_velocity(&ld->da, 0);
+	}
+
 	char buf[NUM_DIGITS+1];
 	//LOGF((logfp, "lunar dist %d\n", da_read(&ld->da)));
 	int_to_string2(buf, NUM_DIGITS, 0, da_read(&ld->da));
