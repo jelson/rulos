@@ -3,6 +3,8 @@
 #include "rocket.h"
 #include "remote_bbuf.h"
 
+#define BBUF_UNMAPPED_INDEX (0xff)
+
 #if BBDEBUG && SIM
 void dump()
 {
@@ -47,7 +49,7 @@ void board_buffer_init(BoardBuffer *buf)
 		buf->buffer[i] = 0;
 	}
 	buf->next = NULL;
-	buf->board_index = 0xff;
+	buf->board_index = BBUF_UNMAPPED_INDEX;
 	buf->alpha = 0xff;
 	buf->upside_down = 0;
 	assert(sizeof(buf->alpha)*8 >= NUM_DIGITS);
@@ -89,7 +91,7 @@ void board_buffer_pop(BoardBuffer *buf)
 		foreground[buf->board_index] = buf->next;
 	}
 	buf->next = NULL;
-	buf->board_index = 0xff;
+	buf->board_index = BBUF_UNMAPPED_INDEX;
 #if BBDEBUG && SIM
 dump();
 #endif // BBDEBUG && SIM
@@ -158,4 +160,9 @@ uint8_t board_buffer_is_foreground(BoardBuffer *buf)
 {
 	return (buf->board_index<NUM_PSEUDO_BOARDS
 		&& foreground[buf->board_index] == buf);
+}
+
+r_bool board_buffer_is_stacked(BoardBuffer *buf)
+{
+	return buf->board_index != BBUF_UNMAPPED_INDEX;
 }

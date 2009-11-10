@@ -38,6 +38,7 @@ COMMON_OBJECTS = \
 	control_panel.o \
 	thruster_protocol.o \
 	sound.o \
+	screen4.o \
 
 .PHONY: all
 all: sim-all avr-all

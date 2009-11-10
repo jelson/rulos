@@ -25,11 +25,18 @@ typedef struct s_thruster_update
 } ThrusterUpdate;
 
 typedef struct {
+	ActivationFunc func;
+	struct s_thruster_send_network *tsn;
+} ThrusterUpdateTimer;
+
+typedef struct s_thruster_send_network {
 	ThrusterUpdateFunc func;
-	Time last_send;
 	Network *network;
 	uint8_t thruster_message_storage[sizeof(Message)+sizeof(ThrusterPayload)];
 	SendSlot sendSlot;
+	ThrusterPayload last_state;
+	r_bool state_changed;
+	ThrusterUpdateTimer timer;
 } ThrusterSendNetwork;
 
 void init_thruster_send_network(ThrusterSendNetwork *tsn, Network *network);

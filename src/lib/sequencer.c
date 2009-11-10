@@ -7,6 +7,7 @@
 #define LAUNCH_CODE_S	"4671"
 #define	L_LAUNCH_DURATION_MS	10001
 
+#if 0
 void launch_set_state(Launch *launch, LaunchState state, Time time_ms);
 void launch_config_panels(Launch *launch, LaunchPanelConfig new0, LaunchPanelConfig new1);
 void launch_enter_state_ready(Launch *launch);
@@ -15,38 +16,30 @@ void launch_enter_state_countdown(Launch *launch);
 void launch_enter_state_launching(Launch *launch);
 void launch_enter_state_wrong_code(Launch *launch);
 void launch_enter_state_complete(Launch *launch);
-UIEventDisposition launch_sequencer_state_machine(UIEventHandler *handler, UIEvent event);
+UIEventDisposition launch_uie_handler(Launch *launch, UIEvent event);
 void launch_clock_handler(Activation *act);
 
 void launch_init(Launch *launch, uint8_t board0, FocusManager *fa)
 {
-	launch->func = launch_sequencer_state_machine;
+	launch->func = launch_uie_handler;
 	launch->board0 = board0;
-	launch->p0_config = lpc_blank;
-	launch->p1_config = lpc_blank;
 
-	dscrlmsg_init(&launch->p0_scroller, board0, " ", 100);
-	board_buffer_pop(&launch->p0_scroller.bbuf);	// hold p0_config invariant
-
-	blinker_init(&launch->p0_blinker, 500);
-
-	drtc_init(&launch->p1_timer, board0, 0);
-	board_buffer_pop(&launch->p1_timer.bbuf);	// hold p1_config invariant
-
-	board_buffer_init(&launch->textentry_bbuf);
-	RowRegion rowregion = { &launch->textentry_bbuf, 0, 8 };
-	numeric_input_init(&launch->p1_textentry, rowregion, (UIEventHandler*) launch, NULL, NULL);
-
-	launch_enter_state_ready(launch);
-
-	launch->bbufary[0] = &launch->p0_scroller.bbuf;
-	launch->bbufary[1] = &launch->p1_timer.bbuf;
-	if (fa!=NULL)
+	int bbi;
+	for (bbi=0; bbi<CONTROL_PANEL_HEIGHT; bbi++)
 	{
-		RectRegion rr = {launch->bbufary, 1, 0, 8};
-		focus_register(fa, (UIEventHandler*) launch, rr, "launch");
+		launch->btable[bbi] = &launch->bbuf[bbi];
+		board_buffer_init(launch->btable[bbi]);
+		board_buffer_push(launch->btable[bbi], board0+bbi);
 	}
-
+	launch->rrect.bbuf = launch->btable;
+	launch->rrect.ylen = LAUNCH_HEIGHT;
+	launch->rrect.x = 0;
+	launch->rrect.xlen = 8;
+	
+	board_buffer_init(launch->textentry_bbuf);
+	RowRegion rowregion = { &launch->textentry_bbuf, 0, 8 };
+	numeric_input_init(&launch->textentry, rowregion, (UIEventHandler*) launch, NULL, NULL);
+	
 	launch->clock_act.func = launch_clock_handler;
 	launch->clock_act.launch = launch;
 
@@ -56,86 +49,17 @@ void launch_init(Launch *launch, uint8_t board0, FocusManager *fa)
 	schedule_us(1, (Activation*) &launch->clock_act);
 }
 
-void launch_set_state(Launch *launch, LaunchState state, Time time_ms)
+void launch_timer_update()
 {
-	launch->state = state;
-	launch->state_start_time = clock_time_us();
-	launch->timer_expired = FALSE;
-	launch->timer_deadline = launch->state_start_time + time_ms*1000;
+	if (state==enter_code)
+	{
+		display textentry_bbuf
 }
 
-void launch_config_panels(Launch *launch, LaunchPanelConfig new0, LaunchPanelConfig new1)
+void launch_config_panels(Launch *launch)
 {
-	switch (launch->p0_config)
-	{
-		case lpc_p0scroller:
-			board_buffer_pop(&launch->p0_scroller.bbuf);
-			break;
-		case lpc_p0blinker:
-			board_buffer_pop(&launch->p0_blinker.bbuf);
-			break;
-		default:
-			assert(launch->p1_config==lpc_blank);
-	}
-	launch->p0_config = lpc_blank;
-
-	switch (launch->p1_config)
-	{
-		case lpc_p1timer:
-			board_buffer_pop(&launch->p1_timer.bbuf);
-			break;
-		case lpc_p1textentry:
-			// defocus textentry to make its cursor go away, so we can pop its bbuf
-			launch->p1_textentry.handler.func(
-				(UIEventHandler*) &launch->p1_textentry.handler, uie_escape);
-			board_buffer_pop(&launch->textentry_bbuf);
-			break;
-		default:
-			assert(launch->p1_config==lpc_blank);
-	}
-	launch->p1_config = lpc_blank;
-
-	switch (new0)
-	{
-		case lpc_p0scroller:
-			board_buffer_push(&launch->p0_scroller.bbuf, launch->board0+0);
-			break;
-		case lpc_p0blinker:
-			board_buffer_push(&launch->p0_blinker.bbuf, launch->board0+0);
-			break;
-		default:
-			assert(new0==lpc_blank);
-	}
-	launch->p0_config = new0;
-
-	switch (new1)
-	{
-		case lpc_p1timer:
-			board_buffer_push(&launch->p1_timer.bbuf, launch->board0+1);
-			break;
-		case lpc_p1textentry:
-		{
-			DecimalFloatingPoint dfp = {0,0};
-			numeric_input_set_value(&launch->p1_textentry, dfp);
-			board_buffer_push(&launch->textentry_bbuf, launch->board0+1);
-			break;
-		}
-		default:
-			assert(new1==lpc_blank);
-	}
-	launch->p1_config = new1;
 }
 
-void launch_enter_state_ready(Launch *launch)
-{
-	launch_config_panels(launch, lpc_blank, lpc_blank);
-	dscrlmsg_set_msg(&launch->p0_scroller, "Ready.  ");
-	launch_set_state(launch, launch_state_ready, 0);
-}
-
-void launch_enter_state_enter_code(Launch *launch)
-{
-	launch_config_panels(launch, lpc_p0scroller, lpc_p1textentry);
 	dscrlmsg_set_msg(&launch->p0_scroller, "Initiate launch sequence. Enter code " LAUNCH_CODE_S ".  ");
 	// STUB(direct_focus(&launch->p1_textentry));
 	// Rather than trying to route focus, we just pass clicks through.
@@ -183,7 +107,7 @@ void launch_enter_state_complete(Launch *launch)
 	launch_set_state(launch, launch_state_complete, 0);
 }
 
-UIEventDisposition launch_sequencer_state_machine(UIEventHandler *handler, UIEvent event)
+UIEventDisposition launch_uie_handler(Launch *launch, UIEvent event)
 {
 	UIEventDisposition disposition = uied_accepted;
 	Launch *launch = (Launch*)handler;
@@ -291,3 +215,4 @@ void launch_clock_handler(Activation *act)
 		launch->func((UIEventHandler*) launch, sequencer_timeout);
 	}
 }
+#endif

@@ -101,17 +101,6 @@ void raster_paint_pixel_v(RectRegion *rrect, int x, int y, r_bool on)
 void raster_big_digit_init(RasterBigDigit *digit, uint8_t board0)
 {
 	digit->func = (ActivationFunc) raster_big_digit_update;
-	int r;
-	for (r=0; r<4; r++)
-	{
-		board_buffer_init(&digit->bbuf[r]);
-		board_buffer_push(&digit->bbuf[r], board0+r);
-		digit->bbufp[r] = &digit->bbuf[r];
-	}
-	digit->rrect.bbuf = digit->bbufp;
-	digit->rrect.ylen = 4;
-	digit->rrect.x = 0;
-	digit->rrect.xlen = 8;
 	digit->startTime = clock_time_us();
 
 	schedule_us(1, (Activation*) digit);
@@ -119,7 +108,7 @@ void raster_big_digit_init(RasterBigDigit *digit, uint8_t board0)
 
 void raster_big_digit_update(RasterBigDigit *digit)
 {
-	raster_clear_buffers(&digit->rrect);
+	raster_clear_buffers(&digit->s4.rrect);
 
 	schedule_us(100000, (Activation*) digit);
 
@@ -137,12 +126,12 @@ void raster_big_digit_update(RasterBigDigit *digit)
 		tens_offset = ones_offset;
 	}
 	int next_ones = (ones+1)%10;
-	raster_draw_sym(&digit->rrect, '0'+tens, 0, tens_offset);
-	raster_draw_sym(&digit->rrect, '0'+next_tens, 0, -spacing+tens_offset);
-	raster_draw_sym(&digit->rrect, '0'+ones, 16, ones_offset);
-	raster_draw_sym(&digit->rrect, '0'+next_ones, 16, -spacing+ones_offset);
+	raster_draw_sym(&digit->s4.rrect, '0'+tens, 0, tens_offset);
+	raster_draw_sym(&digit->s4.rrect, '0'+next_tens, 0, -spacing+tens_offset);
+	raster_draw_sym(&digit->s4.rrect, '0'+ones, 16, ones_offset);
+	raster_draw_sym(&digit->s4.rrect, '0'+next_ones, 16, -spacing+ones_offset);
 
-	raster_draw_buffers(&digit->rrect);
+	raster_draw_buffers(&digit->s4.rrect);
 }
 
 void raster_clear_buffers(RectRegion *rrect)

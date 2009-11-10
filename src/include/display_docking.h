@@ -6,6 +6,7 @@
 #include "focus.h"
 #include "drift_anim.h"
 #include "thruster_protocol.h"
+#include "screen4.h"
 
 #define DOCK_HEIGHT 4
 #define MAX_Y (DOCK_HEIGHT*6)
@@ -27,10 +28,7 @@ typedef struct {
 
 typedef struct s_ddockact {
 	ActivationFunc func;
-	uint8_t board0;
-	BoardBuffer bbuf[DOCK_HEIGHT];
-	BoardBuffer *btable[DOCK_HEIGHT];
-	RectRegion rrect;
+	Screen4 s4;
 	DDockHandler handler;
 	DockThrusterUpdate thrusterUpdate;
 	uint8_t focused;

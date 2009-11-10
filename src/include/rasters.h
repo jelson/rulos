@@ -3,6 +3,7 @@
 
 #include "rocket.h"
 #include "region.h"
+#include "screen4.h"
 
 typedef struct {
 	char sym;
@@ -20,9 +21,7 @@ void raster_paint_pixel_v(RectRegion *rrect, int x, int y, r_bool on);
 
 typedef struct {
 	ActivationFunc func;
-	BoardBuffer bbuf[4];
-	BoardBuffer *bbufp[4];
-	RectRegion rrect;
+	Screen4 s4;
 	Time startTime;
 } RasterBigDigit;
 

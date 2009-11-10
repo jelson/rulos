@@ -26,14 +26,6 @@
 #include "lunar_distance.h"
 
 typedef enum {
-	lpc_blank,
-	lpc_p0scroller,
-	lpc_p0blinker,
-	lpc_p1timer,
-	lpc_p1textentry,
-} LaunchPanelConfig;
-
-typedef enum {
 	launch_state_ready,
 	launch_state_enter_code,
 	launch_state_wrong_code,
@@ -42,10 +34,6 @@ typedef enum {
 	launch_state_complete,
 } LaunchState;
 
-typedef enum {
-	sequencer_timeout = 0x90,
-} SequencerEvent;
-
 struct s_launch;
 
 typedef struct {
@@ -53,26 +41,23 @@ typedef struct {
 	struct s_launch *launch;
 } LaunchClockAct;
 
+#define LAUNCH_HEIGHT 4
+
 typedef struct s_launch {
 	UIEventHandlerFunc func;
-	uint8_t board0;
-	uint8_t state;
-	uint8_t p0_config;
-	uint8_t p1_config;
-	Time state_start_time;
-	uint8_t timer_expired;
-	Time timer_deadline;
-	DScrollMsgAct p0_scroller;
-	DBlinker p0_blinker;
-	DRTCAct p1_timer;
-	BoardBuffer textentry_bbuf;
-	NumericInputAct p1_textentry;
-	BoardBuffer *bbufary[2];	// for focus target. Tricky, because we swap them out. :v(
 	LaunchClockAct clock_act;
 	DRTCAct *main_rtc;
 	LunarDistance *lunar_distance;
+
+	uint8_t board0;
+	BoardBuffer bbuf[LAUNCH_HEIGHT];
+	BoardBuffer *btable[LAUNCH_HEIGHT];
+	RectRegion rrect;
+
+	BoardBuffer textentry_bbuf;
+	NumericInputAct textentry;
 } Launch;
 
-void launch_init(Launch *launch, uint8_t board0, FocusManager *fa);
+void launch_init(Launch *launch, uint8_t board0);
 
 #endif // _sequencer_h
