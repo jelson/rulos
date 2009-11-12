@@ -117,7 +117,7 @@ BoardLayout tree1_def[] = {
 }, *tree1 = tree1_def;
 
 BoardLayout tree2_def[] = {
-	{ "AudioBoard",		{ PG,PG,PG,PR,PR,PY,PY,PY }, 1, 0 },
+	{ "AudioBoard",		{ PG,PG,PG,PG,PY,PY,PY,PY }, 1, 0 },
 	{ NULL },
 	{ NULL },
 	{ NULL },
