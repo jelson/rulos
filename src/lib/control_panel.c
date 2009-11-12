@@ -12,27 +12,27 @@ void init_cc_remote_calc(CCRemoteCalc *ccrc, Network *network)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_cc_launch(CCLaunch *ccl, uint8_t board0)
+void init_cc_launch(CCLaunch *ccl, uint8_t board0, AudioClient *audioClient)
 {
-	launch_init(&ccl->launch, board0);
+	launch_init(&ccl->launch, board0, audioClient);
 	ccl->uie_handler = (UIEventHandler*) &ccl->launch;
 	ccl->name = "Launch";
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_cc_dock(CCDock *ccd, uint8_t board0, uint8_t auxboard0)
+void init_cc_dock(CCDock *ccd, uint8_t board0, uint8_t auxboard0, AudioClient *audioClient)
 {
-	ddock_init(&ccd->dock, board0, auxboard0, NULL);
+	ddock_init(&ccd->dock, board0, auxboard0, NULL, audioClient);
 	ccd->uie_handler = (UIEventHandler*) &ccd->dock.handler;
 	ccd->name = "Dock";
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_cc_pong(CCPong *ccp, uint8_t board0)
+void init_cc_pong(CCPong *ccp, uint8_t board0, AudioClient *audioClient)
 {
-	pong_init(&ccp->pong, board0, NULL);
+	pong_init(&ccp->pong, board0, NULL, audioClient);
 	ccp->uie_handler = (UIEventHandler*) &ccp->pong.handler;
 	ccp->name = "Pong";
 }
@@ -43,7 +43,7 @@ UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt);
 void cp_inject(struct s_direct_injector *di, char k);
 void cp_paint(ControlPanel *cp);
 
-void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network)
+void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network, AudioClient *audioClient)
 {
 	cp->handler_func = (UIEventHandlerFunc) cp_uie_handler;
 
@@ -68,13 +68,13 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Ne
 	init_cc_remote_calc(&cp->ccrc, network);
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccl;
-	init_cc_launch(&cp->ccl, board0);
+	init_cc_launch(&cp->ccl, board0, audioClient);
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccdock;
-	init_cc_dock(&cp->ccdock, board0, aux_board0);
+	init_cc_dock(&cp->ccdock, board0, aux_board0, audioClient);
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccpong;
-	init_cc_pong(&cp->ccpong, board0);
+	init_cc_pong(&cp->ccpong, board0, audioClient);
 
 	cp->selected_child = 0;
 	cp->active_child = CP_NO_CHILD;

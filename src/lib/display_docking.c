@@ -25,10 +25,12 @@ void ddock_show(DDockAct *dd);
 #define DD_THRUSTER_DOWNSCALE	4
 #define DD_TOLERANCE	2
 
-void ddock_init(DDockAct *act, uint8_t b0, uint8_t auxboard_base, FocusManager *focus)
+void ddock_init(DDockAct *act, uint8_t b0, uint8_t auxboard_base, FocusManager *focus, AudioClient *audioClient)
 {
 	act->func = (ActivationFunc) ddock_update;
 	init_screen4(&act->s4, b0);
+
+	act->audioClient = audioClient;
 
 	act->handler.func = (UIEventHandlerFunc) ddock_event_handler;
 	act->handler.act = act;
@@ -133,7 +135,7 @@ void ddock_update(DDockAct *act)
 		if (success && !act->docking_complete)
 		{
 			// TODO snap clanger solenoid
-			sound_start(sound_dock_clang, FALSE);
+			ac_skip_to_clip(act->audioClient, sound_dock_clang, sound_silence);
 			act->docking_complete = TRUE;
 			LOGF((logfp, "docking success!\n"));
 		}

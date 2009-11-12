@@ -28,6 +28,8 @@
 #include "sim.h"
 
 void twi_poll(const char *source);
+void sim_audio_poll(const char *source);
+r_bool sim_audio_poll_once();
 
 /*
    __
@@ -113,6 +115,17 @@ BoardLayout tree1_def[] = {
 	{ NULL },
 	{ NULL }
 }, *tree1 = tree1_def;
+
+BoardLayout tree2_def[] = {
+	{ "AudioBoard",		{ PG,PG,PG,PR,PR,PY,PY,PY }, 1, 0 },
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL }
+}, *tree2 = tree2_def;
 
 BoardLayout wallclock_tree_def[] = {
 	{ "Clock",		{ PG,PG,PG,PG,PG,PG,PB,PB }, 15, 0 },
@@ -458,6 +471,7 @@ static void sim_clock_handler()
 	}
 
 	twi_poll("clock poll");
+	sim_audio_poll("clock poll");
 
 	user_clock_handler();
 }
@@ -567,14 +581,15 @@ void sim_twi_set_instance(int instance)
 	g_sim_twi_state.instance = instance;
 }
 
-void sim_twi_sigio_handler()
+void sim_sigio_handler()
 {
 	twi_poll("sigio");
+	sim_audio_poll("sigio");
 }
 
 void hal_twi_init(Activation *act)
 {
-	signal(SIGIO, sim_twi_sigio_handler);
+	signal(SIGIO, sim_sigio_handler);
 
 	g_sim_twi_state.user_act = act;
 	g_sim_twi_state.udp_socket = socket(PF_INET, SOCK_DGRAM, 0);
@@ -683,5 +698,121 @@ r_bool hal_twi_read_byte(/*OUT*/ uint8_t *byte)
 	{
 		return FALSE;
 	}
+}
+
+#define SIM_AUDIO_BUF_SIZE 1000
+typedef struct {
+	uint8_t pcm[SIM_AUDIO_BUF_SIZE];
+	uint8_t ptr;
+	uint8_t size;
+} SimAudioBuf;
+
+typedef struct s_SimAudioState {
+	int devdspfd;
+	SimAudioBuf bufs[2];
+	SimAudioBuf *cur;
+	SimAudioBuf *next;
+	HalAudioRefillIfc *refill;
+} SimAudioState;
+SimAudioState alloc_simAudioState, *simAudioState = NULL;
+
+void setasync(int fd)
+{
+	int flags, rc;
+	flags = fcntl(fd, F_GETFL);
+	rc = fcntl(fd, F_SETFL, flags | O_ASYNC | O_NONBLOCK);
+	assert(rc==0);
+}
+
+void hal_audio_init(uint16_t sample_period_us, HalAudioRefillIfc *refill)
+{
+	simAudioState = &alloc_simAudioState;
+	simAudioState->devdspfd = open("/dev/dsp", O_ASYNC|O_WRONLY);
+	simAudioState->cur = &simAudioState->bufs[0];
+	simAudioState->next = &simAudioState->bufs[0];
+	simAudioState->cur->size = 0;
+	simAudioState->cur->ptr = 0;
+	simAudioState->refill = refill;
+	simAudioState->next->size = 0;	// mark next as ready to refill
+
+	assert(simAudioState->devdspfd>0);
+	setasync(simAudioState->devdspfd);
+}
+
+void sim_audio_poll(const char *source)
+{
+	while (TRUE)
+	{
+		if (sim_audio_poll_once())
+		{
+			break;
+		}
+	}
+}
+
+r_bool sim_audio_poll_once()
+{
+	if (simAudioState==NULL)
+	{
+		// Not initted.
+		return TRUE;
+	}
+
+	// try to write some stuff.
+	// wantWrite == 0 if both buffers ever get fully drained.
+	// size/4-> give us extra chances to refill next buf
+	int wantWrite = min(simAudioState->cur->size - simAudioState->cur->ptr, SIM_AUDIO_BUF_SIZE/4);
+	int wrote = 0;
+	r_bool filled_devdsp = FALSE;
+	if (wantWrite>0)
+	{
+		wrote = write(
+			simAudioState->devdspfd,
+			simAudioState->cur->pcm+simAudioState->cur->ptr,
+			wantWrite);
+		if (wrote<0)
+		{
+			assert(errno==EAGAIN);
+			return TRUE;
+		}
+		LOGF((logfp, "wrote %d/%d bytes to devdsp\n", wrote, wantWrite));
+		filled_devdsp = (wrote < wantWrite);
+	}
+	else
+	{
+		// hmm -- didn't fill DSP, but don't have anything to say and
+		// hence don't want to loop.
+		filled_devdsp = FALSE;
+		LOGF((logfp, "DSP is ahead of me.\n"));
+	}
+	
+	simAudioState->cur->ptr += wrote;
+
+	// if we emptied a buffer, refill
+	assert(simAudioState->cur->ptr <= simAudioState->cur->size);
+	if (simAudioState->cur->ptr == simAudioState->cur->size)
+	{
+		// swap buffers
+		SimAudioBuf *tmp = simAudioState->cur;
+		simAudioState->cur = simAudioState->next;
+		simAudioState->next = tmp;
+
+		// put next buf in a safe state in case we swap back to it.
+		simAudioState->next->size = 0;
+		simAudioState->next->ptr = 0;
+	}
+
+	// always try to refill next buffer
+	if (simAudioState->next->size == 0)
+	{
+		// try to refill next buffer
+		uint8_t size = simAudioState->refill->func(
+			simAudioState->refill,
+			simAudioState->next->pcm,
+			SIM_AUDIO_BUF_SIZE);
+		simAudioState->next->size = size;
+	}
+
+	return filled_devdsp;
 }
 

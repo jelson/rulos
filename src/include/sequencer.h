@@ -26,6 +26,7 @@
 #include "lunar_distance.h"
 #include "screen4.h"
 #include "rasters.h"
+#include "audio_server.h"
 
 typedef enum {
 	launch_state_hidden,
@@ -59,8 +60,10 @@ typedef struct s_launch {
 	LunarDistance *lunar_distance;
 
 	Time nextEventTimeout;
+
+	AudioClient *audioClient;
 } Launch;
 
-void launch_init(Launch *launch, uint8_t board0);
+void launch_init(Launch *launch, uint8_t board0, AudioClient *audioClient);
 
 #endif // _sequencer_h

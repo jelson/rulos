@@ -7,7 +7,7 @@ typedef struct s_board_layout {
 	short x, y;
 } BoardLayout;
 
-extern BoardLayout *tree0, *tree1, *wallclock_tree;
+extern BoardLayout *tree0, *tree1, *tree2, *wallclock_tree;
 void sim_configure_tree(BoardLayout *tree);
 
 typedef struct {

@@ -39,6 +39,9 @@ COMMON_OBJECTS = \
 	thruster_protocol.o \
 	sound.o \
 	screen4.o \
+	audio_driver.o \
+	audio_server.o \
+
 
 .PHONY: all
 all: sim-all avr-all
@@ -50,11 +53,9 @@ include $(ROCKET_ROOT)/Makefile.avr
 
 # Generate the sevseg bitmaps from the artwork file
 $(SIM_OBJDIR)/display_controller.o: $(SIM_OBJDIR)/sevseg_bitmaps.ch
-
 $(AVR_OBJDIR)/display_controller.o: $(AVR_OBJDIR)/sevseg_bitmaps.ch
 
 $(SIM_OBJDIR)/laserfont.o: $(SIM_OBJDIR)/laserfont.ch
-
 $(AVR_OBJDIR)/laserfont.o: $(AVR_OBJDIR)/laserfont.ch
 
 FONTZIPS=$(glob $(ROCKET_ROOT)/bitmaps/*.zip)
@@ -65,6 +66,11 @@ FONTZIPS=$(glob $(ROCKET_ROOT)/bitmaps/*.zip)
 %/sevseg_bitmaps.ch: $(ROCKET_ROOT)/util/sevseg_convert.py $(ROCKET_ROOT)/lib/sevseg_artwork.txt
 	$(ROCKET_ROOT)/util/sevseg_convert.py $(ROCKET_ROOT)/lib/sevseg_artwork.txt > $@
 
+$(SIM_OBJDIR)/audio_driver.o: $(SIM_OBJDIR)/audio_index.ch
+$(AVR_OBJDIR)/audio_driver.o: $(AVR_OBJDIR)/audio_index.ch
+
+%/audio_index.ch: $(ROCKET_ROOT)/audio/compile_audio.py $(ROCKET_ROOT)/include/sound.h
+	$(ROCKET_ROOT)/audio/compile_audio.py $(ROCKET_ROOT)/include/sound.h $(ROCKET_ROOT)/audio/ > $@
 
 # Generate rasters
 $(SIM_OBJDIR)/rasters.o: $(SIM_OBJDIR)/rasters_auto.ch

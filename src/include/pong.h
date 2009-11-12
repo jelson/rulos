@@ -2,6 +2,7 @@
 #define _pong_h
 
 #include "rocket.h"
+#include "audio_server.h"
 
 #define PONG_HEIGHT 4
 #define PONG_SCALE2 6
@@ -26,8 +27,9 @@ typedef struct s_pong {
 	int score[2];
 	Time lastScore;
 	r_bool focused;
+	AudioClient *audioClient;
 } Pong;
 
-void pong_init(Pong *pong, uint8_t b0, FocusManager *focus);
+void pong_init(Pong *pong, uint8_t b0, FocusManager *focus, AudioClient *audioClient);
 
 #endif // _pong_h

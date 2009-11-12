@@ -38,4 +38,15 @@ r_bool hal_twi_ready_to_send();
 void hal_twi_send_byte(uint8_t byte);
 r_bool hal_twi_read_byte(/*OUT*/ uint8_t *byte);
 
+struct s_hal_audio_refill_ifc;
+typedef uint16_t (*HalAudioRefillFunc)(
+	struct s_hal_audio_refill_ifc *obj, uint8_t *sample_buf, uint16_t count);
+	// Put up to count bytes into sample_buf, return how many you put in.
+	// You can return 0, and I'll call you again on the next clock
+typedef struct s_hal_audio_refill_ifc {
+	HalAudioRefillFunc func;
+} HalAudioRefillIfc;
+
+void hal_audio_init(uint16_t sample_period_us, HalAudioRefillIfc *refill);
+
 #endif // __hal_h__

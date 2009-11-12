@@ -19,7 +19,7 @@ void pong_score_one(Pong *pong, uint8_t player);
 UIEventDisposition pong_event_handler(
 	UIEventHandler *raw_handler, UIEvent evt);
 
-void pong_init(Pong *pong, uint8_t b0, FocusManager *focus)
+void pong_init(Pong *pong, uint8_t b0, FocusManager *focus, AudioClient *audioClient)
 {
 	pong->func = (ActivationFunc) pong_update;
 	pong->board0 = b0;
@@ -51,6 +51,8 @@ void pong_init(Pong *pong, uint8_t b0, FocusManager *focus)
 	pong->score[0] = 0;
 	pong->score[1] = 0;
 	pong->lastScore = clock_time_us();
+
+	pong->audioClient = audioClient;
 
 	region_hide(&pong->rrect);
 	pong->focused = FALSE;
@@ -90,12 +92,12 @@ void pong_intersect_paddle(Pong *pong, uint8_t player, int by1)
 	int py1 = PS(pong->paddley[player]+PADDLEHEIGHT);
 	if (by1<py0 || by0>py1)
 	{
-		sound_start(sound_pong_score, FALSE);
+		ac_skip_to_clip(pong->audioClient, sound_pong_score, sound_silence);
 		pong_score_one(pong, 1-player);
 	}
 	else
 	{
-		sound_start(sound_pong_paddle_bounce, FALSE);
+		ac_skip_to_clip(pong->audioClient, sound_pong_paddle_bounce, sound_silence);
 	}
 }
 
@@ -116,12 +118,12 @@ void pong_advance_ball(Pong *pong)
 	if (newy> BALLMAXY) {
 		pong->dy = -pong->dy;
 		newy = BALLMAXY-(newy-BALLMAXY);
-		sound_start(sound_pong_wall_bounce, FALSE);
+		ac_skip_to_clip(pong->audioClient, sound_pong_wall_bounce, sound_silence);
 	}
 	if (newy< BALLMINY) {
 		pong->dy = -pong->dy;
 		newy = BALLMINY+(BALLMINY-newy);
-		sound_start(sound_pong_wall_bounce, FALSE);
+		ac_skip_to_clip(pong->audioClient, sound_pong_wall_bounce, sound_silence);
 	}
 	pong->x = newx;
 	pong->y = newy;

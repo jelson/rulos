@@ -7,6 +7,7 @@
 #include "drift_anim.h"
 #include "thruster_protocol.h"
 #include "screen4.h"
+#include "audio_server.h"
 
 #define DOCK_HEIGHT 4
 #define MAX_Y (DOCK_HEIGHT*6)
@@ -38,9 +39,10 @@ typedef struct s_ddockact {
 	BoardBuffer auxboards[2];
 	uint8_t auxboard_base;
 	r_bool docking_complete;
+	AudioClient *audioClient;
 } DDockAct;
 
-void ddock_init(DDockAct *act, uint8_t b0, uint8_t auxboard_base, FocusManager *focus);
+void ddock_init(DDockAct *act, uint8_t b0, uint8_t auxboard_base, FocusManager *focus, AudioClient *audioClient);
 void ddock_reset(DDockAct *dd);
 
 #endif // display_docking_h

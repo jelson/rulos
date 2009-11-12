@@ -77,9 +77,11 @@ int main()
 		(FetchCalcDecorationValuesIfc*) &daer.decoration_ifc);
 #endif
 
+	AudioClient audio_client;
+	init_audio_client(&audio_client, &network);
 
 	ControlPanel cp;
-	init_control_panel(&cp, 4, 1, &network);
+	init_control_panel(&cp, 4, 1, &network, &audio_client);
 
 	cp.ccl.launch.main_rtc = &dr;
 	cp.ccl.launch.lunar_distance = &ld;

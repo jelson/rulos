@@ -13,11 +13,13 @@ void launch_clock_update(LaunchClockAct *launchClockAct);
 void launch_configure_lunar_distance(Launch *launch);
 UIEventDisposition launch_uie_handler(Launch *launch, UIEvent event);
 
-void launch_init(Launch *launch, uint8_t board0)
+void launch_init(Launch *launch, uint8_t board0, AudioClient *audioClient)
 {
 	launch->func = (UIEventHandlerFunc) launch_uie_handler;
 	launch->clock_act.func = (ActivationFunc) launch_clock_update;
 	launch->clock_act.launch = launch;
+
+	launch->audioClient = audioClient;
 
 	launch->state = -1;	// force configuration
 
@@ -46,6 +48,8 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 	// teardown
 	if (board_buffer_is_stacked(&launch->textentry_bbuf))
 	{
+		// be sure cursor is removed before we try to pop textentry's bbuf
+		launch->textentry.handler.func((UIEventHandler*) &launch->textentry.handler, uie_escape);
 		board_buffer_pop(&launch->textentry_bbuf);
 	}
 	if (board_buffer_is_stacked(&launch->dscrlmsg.bbuf))
@@ -108,6 +112,7 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 
 	if (launch->state == launch_state_launching)
 	{
+		ac_skip_to_clip(launch->audioClient, sound_booster_start, sound_booster_running);
 		ascii_to_bitmap_str(launch->s4.bbuf[1].buffer, 8, " BLAST");
 		ascii_to_bitmap_str(launch->s4.bbuf[2].buffer, 8, "  OFF");
 		launch->nextEventTimeout = clock_time_us()+10000000;
@@ -115,6 +120,7 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 
 	if (launch->state == launch_state_complete)
 	{
+		ac_skip_to_clip(launch->audioClient, sound_booster_flameout, sound_silence);
 		ascii_to_bitmap_str(launch->s4.bbuf[1].buffer, 8, " boost");
 		ascii_to_bitmap_str(launch->s4.bbuf[2].buffer, 8, "complete");
 	}
