@@ -9,6 +9,7 @@ typedef enum e_sound_token {
 	sound_pong_score,
 	sound_pong_paddle_bounce,
 	sound_pong_wall_bounce,
+	sound_apollo_11_countdown,
 	sound_booster_start,
 	sound_booster_running,
 	sound_booster_flameout,

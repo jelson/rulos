@@ -5,6 +5,9 @@
 #define STUB(s)	{}
 #define LAUNCH_CODE		4671
 #define LAUNCH_CODE_S	"4671"
+#define LAUNCH_COUNTDOWN_TIME (20*1000000+500000)
+	// TODO half-second fudge factor may go away in real hardware; may be
+	// due to playback error in simulator.
 #define	L_LAUNCH_DURATION_MS	10001
 #define LAUNCH_CLOCK_PERIOD 10000
 
@@ -65,7 +68,11 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 	launch->state = newState;
 
 	// setup
-	if (launch->state != launch_state_hidden)
+	if (launch->state == launch_state_hidden)
+	{
+		ac_skip_to_clip(launch->audioClient, sound_silence, sound_silence);
+	}
+	else
 	{
 		s4_show(&launch->s4);
 		raster_clear_buffers(&launch->s4.rrect);
@@ -105,12 +112,13 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 	if (launch->state == launch_state_countdown)
 	{
 		s4_show(&launch->bigDigit.s4);
-		launch->bigDigit.startTime = clock_time_us()+10000000;
-		launch->nextEventTimeout = clock_time_us()+10000000;
+		launch->bigDigit.startTime = clock_time_us()+LAUNCH_COUNTDOWN_TIME;
+		launch->nextEventTimeout = clock_time_us()+LAUNCH_COUNTDOWN_TIME;
 		if (launch->main_rtc)
 		{
-			drtc_set_base_time(launch->main_rtc, clock_time_us()+10000000);
+			drtc_set_base_time(launch->main_rtc, clock_time_us()+LAUNCH_COUNTDOWN_TIME);
 		}
+		ac_skip_to_clip(launch->audioClient, sound_apollo_11_countdown, sound_booster_start);
 	}
 
 	if (launch->state == launch_state_launching)
