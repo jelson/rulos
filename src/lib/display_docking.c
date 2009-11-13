@@ -3,6 +3,7 @@
 #include "rasters.h"
 #include "region.h"
 #include "sound.h"
+#include "hpam.h"
 
 UIEventDisposition ddock_event_handler(
 	UIEventHandler *raw_handler, UIEvent evt);
@@ -121,9 +122,9 @@ void ddock_update(DDockAct *act)
 
 	_da_update_base(&act->xd);
 	_da_update_base(&act->yd);
-	dd_bump(act, THRUSTER_REAR,	  	   0,  2);
-	dd_bump(act, THRUSTER_FRONTLEFT,   1, -1);
-	dd_bump(act, THRUSTER_FRONTRIGHT, -1, -1);
+	dd_bump(act, hpam_thruster_rear,   		0, -2);
+	dd_bump(act, hpam_thruster_frontleft,   1,  1);
+	dd_bump(act, hpam_thruster_frontright, -1,  1);
 	//LOGF((logfp, "velocity %6d %6d\n", act->xd.velocity, act->yd.velocity));
 
 	if (da_read(&act->rd) == DD_MAX_RADIUS)
@@ -151,9 +152,9 @@ void ddock_update(DDockAct *act)
 	schedule_us(Exp2Time(17), (Activation*) act);
 }
 
-void dd_bump(DDockAct *act, uint8_t thruster_bit, uint32_t xscale, uint32_t yscale)
+void dd_bump(DDockAct *act, HPAMIndex thruster_index, uint32_t xscale, uint32_t yscale)
 {
-	if (act->thrusterPayload.thruster_bits & thruster_bit)
+	if (act->thrusterPayload.thruster_bits & (1<<thruster_index))
 	{
 #if DD_INERTIA
 		act->xd.velocity += (DD_SPEED_LIMIT*xscale) << (act->xd.expscale - DD_THRUSTER_DOWNSCALE);

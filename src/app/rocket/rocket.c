@@ -80,9 +80,17 @@ int main()
 	AudioClient audio_client;
 	init_audio_client(&audio_client, &network);
 
-	ControlPanel cp;
-	init_control_panel(&cp, 4, 1, &network, &audio_client);
+	ThrusterUpdate *thrusterUpdate[3] =
+	{
+		NULL,
+		NULL,
+		NULL
+	};
+	HPAM hpam;
+	init_hpam(&hpam, 3, thrusterUpdate);
 
+	ControlPanel cp;
+	init_control_panel(&cp, 4, 1, &network, &hpam, &audio_client);
 	cp.ccl.launch.main_rtc = &dr;
 	cp.ccl.launch.lunar_distance = &ld;
 
@@ -93,20 +101,16 @@ int main()
 	RemoteKeyboardRecv rkr;
 	init_remote_keyboard_recv(&rkr, &network, (InputInjectorIfc*) &cp.direct_injector, REMOTE_KEYBOARD_PORT);
 
-
 	ThrusterSendNetwork tsn;
 	init_thruster_send_network(&tsn, &network);
-	ThrusterUpdate *thrusterUpdate[3] =
-	{
-		(ThrusterUpdate*) &tsn,
-		(ThrusterUpdate*) &cp.ccdock.dock.thrusterUpdate,
-		NULL
-	};
+	thrusterUpdate[0] = (ThrusterUpdate*) &tsn;
+	thrusterUpdate[1] = (ThrusterUpdate*) &cp.ccdock.dock.thrusterUpdate;
+
 
 #define THRUSTER_X_CHAN	3
 #define THRUSTER_Y_CHAN	2
 	ThrusterState_t ts;
-	thrusters_init(&ts, 3, THRUSTER_X_CHAN, THRUSTER_Y_CHAN, thrusterUpdate);
+	thrusters_init(&ts, 3, THRUSTER_X_CHAN, THRUSTER_Y_CHAN, &hpam);
 // Stuff that can go on matrix display:
 /*
 	Launch launch;

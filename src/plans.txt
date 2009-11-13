@@ -1,10 +1,9 @@
 TODO
-	make circle thing work with thrustiness, with x/y in corners
-	write docking sequencer
-	write UI modality:
-		decoration mode
-		{docking,launch,pong} modes
-		power-user UI mode?
+	add beeps and buzzes to launch code entry
+	add Quindar beeps
+	add countdown voice digits
+
+	power-user UI mode?
 	send log data back to house
 	console bitmaps back to house
 

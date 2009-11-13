@@ -12,9 +12,9 @@ void init_cc_remote_calc(CCRemoteCalc *ccrc, Network *network)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_cc_launch(CCLaunch *ccl, uint8_t board0, AudioClient *audioClient)
+void init_cc_launch(CCLaunch *ccl, uint8_t board0, HPAM *hpam, AudioClient *audioClient)
 {
-	launch_init(&ccl->launch, board0, audioClient);
+	launch_init(&ccl->launch, board0, hpam, audioClient);
 	ccl->uie_handler = (UIEventHandler*) &ccl->launch;
 	ccl->name = "Launch";
 }
@@ -43,7 +43,7 @@ UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt);
 void cp_inject(struct s_direct_injector *di, char k);
 void cp_paint(ControlPanel *cp);
 
-void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network, AudioClient *audioClient)
+void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network, HPAM *hpam, AudioClient *audioClient)
 {
 	cp->handler_func = (UIEventHandlerFunc) cp_uie_handler;
 
@@ -68,7 +68,7 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Ne
 	init_cc_remote_calc(&cp->ccrc, network);
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccl;
-	init_cc_launch(&cp->ccl, board0, audioClient);
+	init_cc_launch(&cp->ccl, board0, hpam, audioClient);
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccdock;
 	init_cc_dock(&cp->ccdock, board0, aux_board0, audioClient);

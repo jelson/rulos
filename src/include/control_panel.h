@@ -7,6 +7,7 @@
 #include "sequencer.h"
 #include "display_docking.h"
 #include "pong.h"
+#include "hpam.h"
 
 #define CONTROL_PANEL_HEIGHT 4
 #define CONTROL_PANEL_NUM_CHILDREN 4
@@ -67,6 +68,6 @@ typedef struct s_control_panel {
 	CCPong ccpong;
 } ControlPanel;
 
-void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network, AudioClient *audioClient);
+void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network, HPAM *hpam, AudioClient *audioClient);
 
 #endif // _control_panel_h

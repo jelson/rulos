@@ -4,11 +4,7 @@
 #include "network.h"
 #include "network_ports.h"
 
-#define THRUSTER_REAR		4
-#define THRUSTER_FRONTLEFT	1
-#define THRUSTER_FRONTRIGHT	2
-
-#define THRUSTER_REPORT_INTERVAL 0500000
+#define THRUSTER_REPORT_INTERVAL 250000
 
 typedef struct {
 	uint8_t thruster_bits;

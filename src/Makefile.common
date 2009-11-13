@@ -41,6 +41,7 @@ COMMON_OBJECTS = \
 	screen4.o \
 	audio_driver.o \
 	audio_server.o \
+	hpam.o \
 
 
 .PHONY: all

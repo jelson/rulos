@@ -42,33 +42,16 @@ static void thrusters_update(ThrusterState_t *ts)
 	// UP         = thruster A.
 	// DOWN&LEFT  = thruster B.
 	// DOWN&RIGHT = thruster C.
-	ts->bbuf.buffer[0] = 0xff;
-	if (ts->joystick_state.state & JOYSTICK_UP)
-		ts->bbuf.buffer[0] = ~(SSB_SEG_a);
+	hpam_set_port(ts->hpam, hpam_thruster_rear,
+		ts->joystick_state.state & JOYSTICK_UP);
+	hpam_set_port(ts->hpam, hpam_thruster_frontright,
+		ts->joystick_state.state & JOYSTICK_DOWN &&
+			ts->joystick_state.state & JOYSTICK_LEFT);
+	hpam_set_port(ts->hpam, hpam_thruster_frontleft,
+		ts->joystick_state.state & JOYSTICK_DOWN &&
+			ts->joystick_state.state & JOYSTICK_RIGHT);
 
-	if (ts->joystick_state.state & JOYSTICK_DOWN &&
-		ts->joystick_state.state & JOYSTICK_LEFT)
-		ts->bbuf.buffer[0] = ~(SSB_SEG_b);
-
-	if (ts->joystick_state.state & JOYSTICK_DOWN &&
-		ts->joystick_state.state & JOYSTICK_RIGHT)
-		ts->bbuf.buffer[0] = ~(SSB_SEG_c);
-
-	// broadcast state to listeners
-	uint8_t new_bits = (~(ts->bbuf.buffer[0]>>4)) & 0x07;
-	if (new_bits != ts->payload.thruster_bits)
-	{
-		ts->payload.thruster_bits = new_bits;
-
-		ThrusterUpdate **tu = ts->thrusterUpdate;
-		while (tu[0]!=NULL)
-		{
-			tu[0]->func(tu[0], &ts->payload);
-			tu++;
-		}
-	}
-	
-	// commit output -- both digits and physical thrusters!
+	// draw digits
 	board_buffer_draw(&ts->bbuf);
 
 	schedule_us(10000, (Activation *) ts);
@@ -78,7 +61,7 @@ void thrusters_init(ThrusterState_t *ts,
 					uint8_t board,
 					uint8_t x_adc_channel,
 					uint8_t y_adc_channel,
-					ThrusterUpdate **thrusterUpdate)
+					HPAM *hpam)
 {
 	// initialize the joystick
 	ts->joystick_state.x_adc_channel = x_adc_channel;
@@ -87,14 +70,11 @@ void thrusters_init(ThrusterState_t *ts,
 
 	ts->func = (ActivationFunc) thrusters_update;
 	board_buffer_init(&ts->bbuf);
+	// mask off HPAM digits, so HPAM 'display' shows through
+	board_buffer_set_alpha(&ts->bbuf, 0x77);
 	board_buffer_push(&ts->bbuf, board);
 
-	// Digits 0 and 4 are the HPAMs.  Set latches low (by setting
-	// segments high, since we have common anodes on the LEDs)
-	ts->bbuf.buffer[0] = 0xff;
-	ts->bbuf.buffer[4] = 0xff;
-
-	ts->thrusterUpdate = thrusterUpdate;
+	ts->hpam = hpam;
 
 	schedule_us(1, (Activation *) ts);
 }
