@@ -14,6 +14,8 @@ typedef enum e_sound_token {
 	sound_booster_running,
 	sound_booster_flameout,
 	sound_dock_clang,
+	sound_quindar_key_down,
+	sound_quindar_key_up,
 // END_SOUND_TOKEN_ENUM
 } SoundToken;
 

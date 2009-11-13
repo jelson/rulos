@@ -1,7 +1,7 @@
 #include "audio_driver.h"
 
 uint16_t audio_refill_func(AudioDriver *ad, uint8_t *sample_buf, uint16_t count);
-void _ad_decode_ulaw(uint8_t *pcm8u_buf, uint8_t *ulaw_buf, uint8_t count);
+void _ad_decode_ulaw(uint8_t *pcm8u_buf, uint8_t *ulaw_buf, uint16_t count);
 uint8_t _ad_pcm16s_to_pcm8u(int16_t s);
 
 typedef struct {
@@ -32,21 +32,23 @@ uint16_t audio_refill_func(AudioDriver *ad, uint8_t *sample_buf, uint16_t count)
 	}
 
 	AudioClip *ac = &audio_clips[ad->cur_token];
-	uint8_t fill = min(count, ac->length - ad->cur_offset);
-	if (fill==0)
+	if (ac->length - ad->cur_offset == 0)
 	{
+		LOGF((logfp, "refill; idx %d at %d\n", ad->cur_token, ad->cur_offset));
 		// refill
 		ad->cur_token = ad->loop_token;
 		ad->cur_offset = 0;
 		// recompute
 		ac = &audio_clips[ad->cur_token];
-		fill = min(count, ac->length - ad->cur_offset);
 	}
+	uint16_t fill = min(count, ac->length - ad->cur_offset);
 #if SIM
 	_ad_decode_ulaw(sample_buf, buf_base+ac->start+ad->cur_offset, fill);
 #else
 #error No_SPI_flash_read_code_yet
 #endif
+	LOGF((logfp, "requested %d; satisfied %d bytes from %d.%d (%d)\n",
+		count, fill, ad->cur_token, ad->cur_offset, ac->length));
 	ad->cur_offset += fill;
 	return fill;
 }
@@ -76,9 +78,9 @@ uint8_t _ad_pcm16s_to_pcm8u(int16_t s)
 	return (s>>8)+127;
 }
 
-void _ad_decode_ulaw(uint8_t *pcm8u_buf, uint8_t *ulaw_buf, uint8_t count)
+void _ad_decode_ulaw(uint8_t *pcm8u_buf, uint8_t *ulaw_buf, uint16_t count)
 {
-	uint8_t i;
+	uint16_t i;
 	for (i=0; i<count; i++)
 	{
 		pcm8u_buf[i] = _ad_pcm16s_to_pcm8u(_ad_ulaw2linear(ulaw_buf[i]));

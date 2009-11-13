@@ -703,8 +703,8 @@ r_bool hal_twi_read_byte(/*OUT*/ uint8_t *byte)
 #define SIM_AUDIO_BUF_SIZE 1000
 typedef struct {
 	uint8_t pcm[SIM_AUDIO_BUF_SIZE];
-	uint8_t ptr;
-	uint8_t size;
+	uint16_t ptr;
+	uint16_t size;
 } SimAudioBuf;
 
 typedef struct s_SimAudioState {
@@ -728,6 +728,7 @@ void hal_audio_init(uint16_t sample_period_us, HalAudioRefillIfc *refill)
 {
 	simAudioState = &alloc_simAudioState;
 	simAudioState->devdspfd = open("/dev/dsp", O_ASYNC|O_WRONLY);
+	//simAudioState->devdspfd = open("devdsp", O_CREAT|O_WRONLY);
 	simAudioState->cur = &simAudioState->bufs[0];
 	simAudioState->next = &simAudioState->bufs[0];
 	simAudioState->cur->size = 0;
@@ -802,15 +803,16 @@ r_bool sim_audio_poll_once()
 		simAudioState->next->ptr = 0;
 	}
 
-	// always try to refill next buffer
-	if (simAudioState->next->size == 0)
+	// always see if we can keep filling the next buffer
+	if (SIM_AUDIO_BUF_SIZE - simAudioState->next->size > 0)
+	//if (simAudioState->next->size == 0)
 	{
 		// try to refill next buffer
-		uint8_t size = simAudioState->refill->func(
+		uint16_t size = simAudioState->refill->func(
 			simAudioState->refill,
-			simAudioState->next->pcm,
-			SIM_AUDIO_BUF_SIZE);
-		simAudioState->next->size = size;
+			&simAudioState->next->pcm[simAudioState->next->size],
+			SIM_AUDIO_BUF_SIZE - simAudioState->next->size);
+		simAudioState->next->size += size;
 	}
 
 	return filled_devdsp;
