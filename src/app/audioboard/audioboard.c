@@ -32,13 +32,9 @@ void init_audio_test(AudioTest *at, AudioDriver *ad)
 
 int main()
 {
-#if SIM
-	sim_twi_set_instance(2);
-	sim_configure_tree(tree2);
-#endif //SIM
 	heap_init();
 	util_init();
-	hal_init();
+	hal_init(bc_audioboard);
 	clock_init(10000);
 
 	AudioDriver ad;

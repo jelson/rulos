@@ -254,12 +254,9 @@ static void update(WallClockActivation_t *wca)
 
 int main()
 {
-#if SIM
-	sim_configure_tree(wallclock_tree);
-#endif //SIM
 	heap_init();
 	util_init();
-	hal_init();
+	hal_init(bc_wallclock);
 	board_buffer_module_init();
 
 	// start clock with 10 msec resolution

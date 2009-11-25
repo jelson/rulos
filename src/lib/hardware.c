@@ -14,6 +14,9 @@
 #include "rocket.h"
 #include "hardware.h"
 #include "uart.h"
+#include "hal.h"
+
+#define NUM_ADCS 6
 
 #if defined(PROTO_BOARD)
 #define BOARDSEL0	GPIO_B2
@@ -49,7 +52,6 @@
 #define KEYPAD_COL2 GPIO_D2
 #define KEYPAD_COL3 GPIO_D3
 
-#define NUM_ADCS 0
 #elif defined(V11PCB)
 #define BOARDSEL0	GPIO_B0
 #define BOARDSEL1	GPIO_B1
@@ -71,32 +73,146 @@
 #define KEYPAD_COL1 GPIO_D1
 #define KEYPAD_COL2 GPIO_D2
 #define KEYPAD_COL3 GPIO_D3
-
-#define NUM_ADCS 4
 #endif
 
+//////////////////////////////////////////////////////////////////////////////
+// Keypad
+//////////////////////////////////////////////////////////////////////////////
+
+#define KEY_SCAN_INTERVAL_US 10000
+#define KEY_REFRACTORY_TIME_US 30000
 
 typedef struct {
-	ActivationFunc f;
-
-	/* keypad */
+	ActivationFunc func;
 	char keypad_q[20];
 	char keypad_last;
 	Time keypad_next_allowed_key_time;
-	uint16_t adc[NUM_ADCS];
-} InputBufferAct_t;
+} KeypadState;
 
-static void scan_inputs(InputBufferAct_t *iba);
+static KeypadState g_theKeypad;
+static void init_keypad(KeypadState *keypad);
+static void keypad_update(KeypadState *key);
+static char scan_keypad();
+static uint8_t scan_row();
 
-/*
- * Global instance of the input scanner state struct
- */
-static InputBufferAct_t iba = {
-	.f = (ActivationFunc) scan_inputs,
-	.keypad_last = 0,
-	.keypad_next_allowed_key_time = 0
-};
-	 
+void hal_init_keypad()
+{
+	init_keypad(&g_theKeypad);
+}
+
+static void init_keypad(KeypadState *keypad)
+{
+	keypad->func = (ActivationFunc) keypad_update;
+	ByteQueue_init((ByteQueue *) keypad->keypad_q, sizeof(keypad->keypad_q));
+	keypad->keypad_last = 0;
+	keypad->keypad_next_allowed_key_time = clock_time_us();
+
+	schedule_us(1, (Activation *) keypad);
+}
+
+static void keypad_update(KeypadState *key)
+{
+	schedule_us(KEY_SCAN_INTERVAL_US, (Activation *) key);
+
+	char k = scan_keypad();
+
+	// if the same key is down, or up, ignore it
+	if (k == key->keypad_last)
+		return;
+
+	key->keypad_last = k;
+
+	// key was just released.  Set refactory time.
+	if (k == 0) {
+		key->keypad_next_allowed_key_time = clock_time_us() + KEY_REFRACTORY_TIME_US;
+		return;
+	}
+
+	// key was just pushed.  if refrac time has arrived, queue it
+	if (clock_time_us() >= key->keypad_next_allowed_key_time) {
+		ByteQueue_append((ByteQueue *)key->keypad_q, k);
+	}
+	
+}
+
+char hal_read_keybuf()
+{
+	uint8_t k;
+
+	if (ByteQueue_pop((ByteQueue *) g_theKeypad.keypad_q, &k))
+		return k;
+	else
+		return 0;
+}
+
+static char scan_keypad()
+{
+	uint8_t col;
+
+	/* Scan first row */
+	gpio_clr(KEYPAD_ROW0);
+	gpio_set(KEYPAD_ROW1);
+	gpio_set(KEYPAD_ROW2);
+	gpio_set(KEYPAD_ROW3);
+	col = scan_row();
+	if (col == 1)			return '1';
+	if (col == 2)			return '2';
+	if (col == 3)			return '3';
+	if (col == 4)			return 'a';
+
+	/* Scan second row */
+	gpio_set(KEYPAD_ROW0);
+	gpio_clr(KEYPAD_ROW1);
+	gpio_set(KEYPAD_ROW2);
+	gpio_set(KEYPAD_ROW3);
+	col = scan_row();
+	if (col == 1)			return '4';
+	if (col == 2)			return '5';
+	if (col == 3)			return '6';
+	if (col == 4)			return 'b';
+
+	/* Scan third row */
+	gpio_set(KEYPAD_ROW0);
+	gpio_set(KEYPAD_ROW1);
+	gpio_clr(KEYPAD_ROW2);
+	gpio_set(KEYPAD_ROW3);
+	col = scan_row();
+	if (col == 1)			return '7';
+	if (col == 2)			return '8';
+	if (col == 3)			return '9';
+	if (col == 4)			return 'c';
+
+	/* Scan fourth row */
+	gpio_set(KEYPAD_ROW0);
+	gpio_set(KEYPAD_ROW1);
+	gpio_set(KEYPAD_ROW2);
+	gpio_clr(KEYPAD_ROW3);
+	col = scan_row();
+	if (col == 1)			return 's';
+	if (col == 2)			return '0';
+	if (col == 3)			return 'p';
+	if (col == 4)			return 'd';
+
+	return 0;
+}
+
+static uint8_t scan_row()
+{
+	/*
+	 * Scan the four columns in of the row.  Return 1..4 if any of
+	 * them are low.  Return 0 if they're all high.
+	 */
+	_NOP();
+	if (gpio_is_clr(KEYPAD_COL0)) return 1;
+	if (gpio_is_clr(KEYPAD_COL1)) return 2;
+	if (gpio_is_clr(KEYPAD_COL2)) return 3;
+	if (gpio_is_clr(KEYPAD_COL3)) return 4;
+
+	return 0;
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
 
 static void init_pins()
 {
@@ -116,13 +232,38 @@ static void init_pins()
 	gpio_make_input(KEYPAD_COL1);
 	gpio_make_input(KEYPAD_COL2);
 	gpio_make_input(KEYPAD_COL3);
-
-#ifdef NUM_ADCS
-	reg_set(&ADCSRA, ADEN); // enable ADC
-#endif
-
 }
 
+static uint8_t segmentRemapTables[4][8] = {
+#define SRT_SUBU	0
+	{ 0, 1, 2, 3, 4, 5, 6, 7 },
+#define SRT_SDBU	1
+// swap decimal point with segment H, which are the nodes reversed
+// when an LED is mounted upside-down
+	{ 0, 1, 2, 3, 4, 5, 7, 6 },
+#define SRT_SUBD	2
+	{ 3, 4, 5, 0, 1, 2, 6, 7 },
+#define SRT_SDBD	3
+	{ 3, 4, 5, 0, 1, 2, 7, 6 },
+	};
+typedef uint8_t SegmentRemapIndex;
+
+typedef struct {
+	r_bool				reverseDigits;
+	SegmentRemapIndex	segmentRemapIndices[8];
+} BoardRemap;
+
+static BoardRemap boardRemapTables[8] = {
+#define BRT_SOLDERED_UP_BOARD_UP	0
+	{ FALSE, { SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU }},
+#define BRT_SOLDERED_DN_BOARD_DN	1
+	{ TRUE,  { SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD }},
+#define BRT_WALLCLOCK				2
+	{ FALSE, { SRT_SUBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SUBU, SRT_SUBU }},
+};
+typedef uint8_t BoardRemapIndex;
+
+static BoardRemapIndex displayConfiguration[NUM_BOARDS];
 
 /*
  * 0x1738 - 0x16ca new
@@ -130,7 +271,17 @@ static void init_pins()
  */
 void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff)
 {
-	uint8_t rdigit = NUM_DIGITS - 1 - digit;
+	BoardRemap *br = &boardRemapTables[displayConfiguration[board]];
+	uint8_t rdigit;
+	if (br->reverseDigits)
+	{
+		rdigit = digit;
+	}
+	else
+	{
+		rdigit = NUM_DIGITS - 1 - digit;
+	}
+	uint8_t asegment = segmentRemapTables[br->segmentRemapIndices[rdigit]][segment];
 
 	gpio_set_or_clr(BOARDSEL0, board & (1 << 0));
 	gpio_set_or_clr(BOARDSEL1, board & (1 << 1));
@@ -140,9 +291,9 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t 
 	gpio_set_or_clr(DIGSEL1, rdigit & (1 << 1));	
 	gpio_set_or_clr(DIGSEL2, rdigit & (1 << 2));	
 	
-	gpio_set_or_clr(SEGSEL0, segment & (1 << 0));
-	gpio_set_or_clr(SEGSEL1, segment & (1 << 1));
-	gpio_set_or_clr(SEGSEL2, segment & (1 << 2));
+	gpio_set_or_clr(SEGSEL0, asegment & (1 << 0));
+	gpio_set_or_clr(SEGSEL1, asegment & (1 << 1));
+	gpio_set_or_clr(SEGSEL2, asegment & (1 << 2));
 
 	/* sense reversed because cathode is common */
 	gpio_set_or_clr(DATA, !onoff);
@@ -151,29 +302,6 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t 
 	_NOP();
 	gpio_set(STROBE);
 }
-
-// swap decimal point with segment H, which are the nodes reversed
-// when an LED is mounted upside-down
-void hal_upside_down_led(SSBitmap *b)
-{
-	uint8_t tmp;
-
-	if (*b & SSB_DECIMAL)
-		tmp = 1;
-	else
-		tmp = 0;
-
-	if (*b & SSB_SEG_g)
-		*b |= SSB_DECIMAL;
-	else
-		*b &= ~(SSB_DECIMAL);
-
-	if (tmp)
-		*b |= SSB_SEG_g;
-	else
-		*b &= ~(SSB_SEG_g);
-}
-
 
 Handler timer_handler;
 
@@ -304,145 +432,101 @@ ISR(INT0_vect)
 }
 #endif
 
-/**************************************************************/
-/*			 Keyboard input									  */
-/**************************************************************/
+//////////////////////////////////////////////////////////////////////////////
+// ADC
+//////////////////////////////////////////////////////////////////////////////
 
-static uint8_t scan_row()
+typedef struct {
+	ActivationFunc func;
+	r_bool enable[NUM_ADCS];
+	volatile uint16_t value[NUM_ADCS];
+} ADCState;
+
+static ADCState g_theADC;
+
+static void init_adc(ADCState *adc);
+static void adc_update(ADCState *adc);
+
+void hal_init_adc()
 {
-	/*
-	 * Scan the four columns in of the row.  Return 1..4 if any of
-	 * them are low.  Return 0 if they're all high.
-	 */
-	_NOP();
-	if (gpio_is_clr(KEYPAD_COL0)) return 1;
-	if (gpio_is_clr(KEYPAD_COL1)) return 2;
-	if (gpio_is_clr(KEYPAD_COL2)) return 3;
-	if (gpio_is_clr(KEYPAD_COL3)) return 4;
-
-	return 0;
+	init_adc(&g_theADC);
 }
 
+#define RAW_ADC
 
-static char scan_keypad()
+void hal_init_adc_channel(uint8_t idx)
 {
-	uint8_t col;
-
-	/* Scan first row */
-	gpio_clr(KEYPAD_ROW0);
-	gpio_set(KEYPAD_ROW1);
-	gpio_set(KEYPAD_ROW2);
-	gpio_set(KEYPAD_ROW3);
-	col = scan_row();
-	if (col == 1)			return '1';
-	if (col == 2)			return '2';
-	if (col == 3)			return '3';
-	if (col == 4)			return 'a';
-
-	/* Scan second row */
-	gpio_set(KEYPAD_ROW0);
-	gpio_clr(KEYPAD_ROW1);
-	gpio_set(KEYPAD_ROW2);
-	gpio_set(KEYPAD_ROW3);
-	col = scan_row();
-	if (col == 1)			return '4';
-	if (col == 2)			return '5';
-	if (col == 3)			return '6';
-	if (col == 4)			return 'b';
-
-	/* Scan third row */
-	gpio_set(KEYPAD_ROW0);
-	gpio_set(KEYPAD_ROW1);
-	gpio_clr(KEYPAD_ROW2);
-	gpio_set(KEYPAD_ROW3);
-	col = scan_row();
-	if (col == 1)			return '7';
-	if (col == 2)			return '8';
-	if (col == 3)			return '9';
-	if (col == 4)			return 'c';
-
-	/* Scan fourth row */
-	gpio_set(KEYPAD_ROW0);
-	gpio_set(KEYPAD_ROW1);
-	gpio_set(KEYPAD_ROW2);
-	gpio_clr(KEYPAD_ROW3);
-	col = scan_row();
-	if (col == 1)			return 's';
-	if (col == 2)			return '0';
-	if (col == 3)			return 'p';
-	if (col == 4)			return 'd';
-
-	return 0;
+#ifndef RAW_ADC
+	g_theADC.enable[idx] = TRUE;
+#endif
+	switch (idx)
+	{
+		case 0: gpio_make_input(GPIO_C0); break;
+		case 1: gpio_make_input(GPIO_C1); break;
+		case 2: gpio_make_input(GPIO_C2); break;
+		case 3: gpio_make_input(GPIO_C3); break;
+		case 4: gpio_make_input(GPIO_C4); break;
+		case 5: gpio_make_input(GPIO_C5); break;
+	}
 }
 
-#define KEY_SCAN_INTERVAL_US 10000
-#define KEY_REFRACTORY_TIME_US 30000
-
-/*
- * This is called periodically to scan the keypad, debounce the keys,
- * and enqueue any characters that survive.
- */
-static void debounce_keypad(InputBufferAct_t *iba)
+uint16_t read_adc_raw(uint8_t adc_channel)
 {
-	char k = scan_keypad();
+	ADMUX = adc_channel; // select adc channel
+	reg_set(&ADCSRA, ADSC); // start conversion
 
-	// if the same key is down, or up, ignore it
-	if (k == iba->keypad_last)
-		return;
+	// wait for conversion to complete
+	while (reg_is_set(&ADCSRA, ADSC))
+		{}
 
-	iba->keypad_last = k;
+	uint16_t newval = ADCL | ((uint16_t) ADCH << 8);
+	return newval;
+}
 
-	// key was just released.  Set refactory time.
-	if (k == 0) {
-		iba->keypad_next_allowed_key_time = clock_time_us() + KEY_REFRACTORY_TIME_US;
-		return;
+uint16_t hal_read_adc(uint8_t idx)
+{
+#ifdef RAW_ADC
+	return read_adc_raw(idx);
+#endif
+
+	uint16_t value;
+	hal_start_atomic();
+	value = g_theADC.value[idx];
+	hal_end_atomic();
+	return value;
+}
+
+static void init_adc(ADCState *adc)
+{
+	adc->func = (ActivationFunc) adc_update;
+	uint8_t idx;
+	for (idx=0; idx<NUM_ADCS; idx++)
+	{
+		adc->enable[idx] = FALSE;
 	}
 
-	// key was just pushed.  if refrac time has arrived, queue it
-	if (clock_time_us() >= iba->keypad_next_allowed_key_time) {
-		ByteQueue_append((ByteQueue *)iba->keypad_q, k);
-	}
-	
+	reg_set(&ADCSRA, ADEN); // enable ADC
+
+	schedule_us(1, (Activation*) adc);
 }
 
-static void scan_inputs(InputBufferAct_t *iba)
+static void adc_update(ADCState *adc)
 {
-	schedule_us(KEY_SCAN_INTERVAL_US, (Activation *) iba);
-	debounce_keypad(iba);
+	schedule_us(KEY_SCAN_INTERVAL_US, (Activation *) adc);
 
-#ifdef NUM_ADCS
 	uint8_t adc_channel;
 
 	for (adc_channel = 0; adc_channel < NUM_ADCS; adc_channel++) {
-		ADMUX = adc_channel; // select adc channel
-		reg_set(&ADCSRA, ADSC); // start conversion
+		if (!adc->enable[adc_channel]) { continue; }
 
-		// wait for conversion to complete
-		while (reg_is_set(&ADCSRA, ADSC))
-			;
-
-		uint16_t newval = ADCL | ((uint16_t) ADCH << 8);
-		iba->adc[adc_channel] = 
-			(6*iba->adc[adc_channel] + 4*newval) / 10;
+		uint16_t newval = read_adc_raw(adc_channel);
+		adc->value[adc_channel] = 
+			(6*adc->value[adc_channel] + 4*newval) / 10;
+			// Exponentially-weighted moving average
 	}
-#endif
 }
 
-
-char hal_read_keybuf()
-{
-	uint8_t k;
-
-	if (ByteQueue_pop((ByteQueue *) iba.keypad_q, &k))
-		return k;
-	else
-		return 0;
-}
-
-uint16_t *hal_get_adc(uint8_t channel)
-{
-	return &iba.adc[channel];
-}
+//////////////////////////////////////////////////////////////////////////////
 
 //// uart stuff
 
@@ -536,8 +620,31 @@ void hal_idle()
 	// just busy-wait on microcontroller.
 }
 
-void hal_init()
+void hal_init(BoardConfiguration bc)
 {
+	// This code is static per binary; could save some code space
+	// by using #ifdefs instead of dynamic code.
+	int i;
+	for (i=0; i<NUM_BOARDS; i++)
+	{
+		displayConfiguration[i] = BRT_SOLDERED_UP_BOARD_UP;
+	}
+	switch (bc)
+	{
+		case bc_rocket0:
+			displayConfiguration[4] = BRT_SOLDERED_DN_BOARD_DN;
+			displayConfiguration[5] = BRT_SOLDERED_DN_BOARD_DN;
+			break;
+		case bc_rocket1:
+			displayConfiguration[2] = BRT_SOLDERED_DN_BOARD_DN;
+			break;
+		case bc_audioboard:
+			break;
+		case bc_wallclock:
+			displayConfiguration[0] = BRT_WALLCLOCK;
+			break;
+	}
+
 	init_pins();
 
 #if defined(MCUatmega8)
@@ -549,10 +656,6 @@ void hal_init()
 #else
 # error Hardware-specific clock code needs help
 #endif
-
-	// start reading input periodically
-	ByteQueue_init((ByteQueue *) iba.keypad_q, sizeof(iba.keypad_q));
-	schedule_us(1, (Activation *) &iba);
 }
 
 // Stubbed-out TWI hardware modules
@@ -580,3 +683,101 @@ r_bool hal_twi_read_byte(/*OUT*/ uint8_t *byte)
 	return FALSE;
 }
 
+// TODO arrange for hardware to call audio_emit_sample once every 125us
+// (8kHz), either by speeding up the main clock (and only firing the clock
+// handler every n ticks), or by using a separate CPU clock (TIMER0)
+
+#define AUDIO_BUF_SIZE 32
+static struct s_hardware_audio {
+	HalAudioRefillIfc *refill;
+	uint8_t buf[2][AUDIO_BUF_SIZE];
+	uint8_t output_idx;
+	uint8_t output_ptr;
+	uint8_t output_size;
+	uint8_t input_size;
+} audio =
+	{ NULL };
+
+void audio_write_sample(uint8_t value)
+{
+	// TODO send this out to the DAC
+}
+
+void audio_emit_sample()
+{
+	if (audio.refill==NULL)
+	{
+		// not initialized.
+		return;
+	}
+
+	// runs in interrupt context; atomic.
+	audio_write_sample(audio.buf[audio.output_idx][audio.output_ptr++]);
+
+	// swap buffers
+	if (audio.output_ptr>=audio.output_size)
+	{
+		audio.output_idx = 1 - audio.output_idx;
+		audio.output_size = audio.input_size;
+		audio.output_ptr = 0;
+		audio.input_size = 0;
+	}
+
+	// refill input
+	// TODO this is a little too enthusiastic; we'll be fetching one byte
+	// per call, in the common case.
+	if (audio.input_size < AUDIO_BUF_SIZE)
+	{
+		audio.input_size += audio.refill->func(audio.refill, &audio.buf[1-audio.output_idx][audio.input_size], AUDIO_BUF_SIZE-audio.input_size);
+	}
+}
+
+void hal_audio_init(uint16_t sample_period_us, HalAudioRefillIfc *refill)
+{
+	assert(sample_period_us == 125);	// not that an assert in hardware.c helps...
+	audio.refill = refill;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// SPI: ATMega...32P page 82, 169
+// Flash: w25x16 page 17+
+
+HALSPIIfc *g_spi;
+
+ISR(SPI_STC_vect)
+{
+	uint8_t byte = SPDR;
+	g_spi->func(g_spi, byte);	// read from SPDR?
+}
+
+#define DDR_SPI	DDRB
+#define DD_MOSI	DDB3
+#define DD_SCK	DDB5
+#define DD_SS	DDB2
+#define SPI_SS	GPIO_B2
+// TODO these can't be right -- GPIO_B2 is allocated to BOARDSEL2
+// in V11PCB.
+
+void hal_init_spi(HALSPIIfc *spi)
+{
+	g_spi = spi;
+	// TODO I'm blasting the port B DDR here; we may care
+	// about correct values for PB[0167].
+	DDR_SPI = (1<<DD_MOSI)|(1<<DD_SCK)|(1<<DD_SS);
+	SPCR = (1<<SPE) | (1<<MSTR) | (1<<SPR0);
+}
+
+void hal_spi_open()
+{
+	gpio_set_or_clr(SPI_SS, 0);
+}
+
+void hal_spi_send(uint8_t byte)
+{
+	SPDR = byte;
+}
+
+void hal_spi_close()
+{
+	gpio_set_or_clr(SPI_SS, 1);
+}

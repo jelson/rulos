@@ -37,8 +37,8 @@ static int8_t adc_to_100scale(uint16_t adc)
 // parameters.
 void joystick_poll(JoystickState_t *js)
 {
-	js->x_pos =  adc_to_100scale(*js->x_adc);
-	js->y_pos = -adc_to_100scale(*js->y_adc);
+	js->x_pos =  adc_to_100scale(hal_read_adc(js->x_adc_channel));
+	js->y_pos = -adc_to_100scale(hal_read_adc(js->y_adc_channel));
 	
 	if (js->x_pos < -ACTUATION_THRESHOLD)
 		js->state |= JOYSTICK_LEFT;
@@ -72,6 +72,7 @@ void joystick_init(JoystickState_t *js)
 #ifndef SIM
 	gpio_make_input(JOYSTICK_TRIGGER_GPIO);
 #endif
-	js->x_adc = hal_get_adc(js->x_adc_channel);
-	js->y_adc = hal_get_adc(js->y_adc_channel);
+	hal_init_adc();
+	hal_init_adc_channel(js->x_adc_channel);
+	hal_init_adc_channel(js->y_adc_channel);
 }

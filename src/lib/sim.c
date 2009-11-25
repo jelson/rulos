@@ -30,6 +30,7 @@
 void twi_poll(const char *source);
 void sim_audio_poll(const char *source);
 r_bool sim_audio_poll_once();
+void sim_twi_set_instance(int instance);
 
 /*
    __
@@ -536,8 +537,30 @@ void sensor_interrupt_register_handler(Handler handler)
 	_sensor_interrupt_handler = handler;
 }
 
-void hal_init()
+void hal_init(BoardConfiguration bc)
 {
+	switch (bc)
+	{
+		case bc_rocket0:
+			sim_configure_tree(tree0);
+			sim_twi_set_instance(0);
+			break;
+		case bc_rocket1:
+			sim_configure_tree(tree1);
+			sim_twi_set_instance(1);
+			break;
+		case bc_audioboard:
+			sim_configure_tree(tree2);
+			sim_twi_set_instance(2);
+			break;
+		case bc_wallclock:
+			sim_configure_tree(wallclock_tree);
+			sim_twi_set_instance(3);
+			break;
+		default:
+			assert(FALSE);	// configuration not defined in simulator
+	}
+
 	/* init input buffers */
 	ByteQueue_init((ByteQueue *) keypad_buf, sizeof(keypad_buf));
 	memset(recent_uart_buf, 0, sizeof(recent_uart_buf));
@@ -818,3 +841,71 @@ r_bool sim_audio_poll_once()
 	return filled_devdsp;
 }
 
+typedef enum {
+	sss_ready,
+	sss_read_addr,
+	sss_read_fetch,
+} SimSpiState;
+
+typedef struct s_sim_spi {
+	HALSPIIfc *spi_ifc;
+	FILE *fp;
+	SimSpiState state;
+	int addr_off;
+	uint8_t addr[3];
+} SimSpi;
+SimSpi g_spi;
+
+void hal_init_spi(HALSPIIfc *spi)
+{
+	g_spi.spi_ifc = spi;
+	g_spi.fp = fopen("spiflash.bin", "r");
+	assert(g_spi.fp != NULL);
+}
+
+void hal_spi_open()
+{
+	g_spi.state = sss_ready;
+}
+
+void hal_spi_send(uint8_t byte)
+{
+	uint8_t result = 0;
+	switch (g_spi.state)
+	{
+		case sss_ready:
+			if (byte==SPIFLASH_CMD_READ_DATA)
+			{
+				g_spi.state = sss_read_addr;
+				g_spi.addr_off = 0;
+			}
+			else
+			{
+				assert(FALSE); // "unsupported SPI command"
+			}
+			break;
+		case sss_read_addr:
+			g_spi.addr[g_spi.addr_off++] = byte;
+			if (g_spi.addr_off == 3)
+			{
+				int addr =
+					  (((int)g_spi.addr[0])<<16)
+					| (((int)g_spi.addr[1])<<8)
+					| (((int)g_spi.addr[2])<<0);
+				fseek(g_spi.fp, addr, SEEK_SET);
+				g_spi.state = sss_read_fetch;
+			}
+			break;
+		case sss_read_fetch:
+			result = fgetc(g_spi.fp);
+			break;	
+	}
+
+	// deliver on stack. This may be a little infinite-recursion-y
+	g_spi.spi_ifc->func(g_spi.spi_ifc, result);
+}
+
+void hal_spi_close()
+{
+	g_spi.state = sss_ready;
+}

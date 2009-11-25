@@ -7,9 +7,6 @@ typedef struct s_board_layout {
 	short x, y;
 } BoardLayout;
 
-extern BoardLayout *tree0, *tree1, *tree2, *wallclock_tree;
-void sim_configure_tree(BoardLayout *tree);
-
 typedef struct {
 	r_bool initted;
 	int instance;
@@ -19,7 +16,6 @@ typedef struct {
 	r_bool read_ready;
 } TWIState;
 
-void sim_twi_set_instance(int instance);
 void twi_poll();
 
 #define SIM_TWI_PORT_BASE 9470

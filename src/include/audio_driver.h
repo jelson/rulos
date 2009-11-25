@@ -3,13 +3,20 @@
 
 #include "rocket.h"
 #include "sound.h"
+#include "spiflash.h"
 
-typedef struct {
+typedef struct s_audio_driver {
 	HalAudioRefillFunc func;
 	SoundToken cur_token;
 	uint32_t cur_offset;
 	SoundToken loop_token;
 	r_bool locked;
+
+	SPIFlash spif;
+	struct {
+		ActivationFunc func;
+		struct s_audio_driver *this;
+	} spiComplete;
 } AudioDriver;
 
 void init_audio_driver(AudioDriver *ad);

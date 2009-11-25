@@ -39,13 +39,9 @@
 
 int main()
 {
-#if SIM
-	sim_twi_set_instance(0);
-	sim_configure_tree(tree0);
-#endif //SIM
 	heap_init();
 	util_init();
-	hal_init();
+	hal_init(bc_rocket0);
 	clock_init(10000);
 
 	CpumonAct cpumon;

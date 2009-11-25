@@ -11,18 +11,29 @@
 
 typedef void (*Handler)();
 
-void hal_init();
+typedef enum {
+	bc_rocket0,
+	bc_rocket1,
+	bc_audioboard,
+	bc_wallclock,
+} BoardConfiguration;
+
+void hal_init(BoardConfiguration bc);
+
 void hal_start_atomic();	// block interrupts/signals
 void hal_end_atomic();		// resume interrupts/signals
 void hal_idle();			// hw: spin. sim: sleep
 void hal_start_clock_us(uint32_t us, Handler handler);
 void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff);
-void hal_upside_down_led(SSBitmap *b);
 char hal_read_keybuf();
 uint16_t hal_elapsed_milliintervals();
 void hal_speedup_clock_ppm(int32_t ratio);
-uint16_t *hal_get_adc(uint8_t channel);
 void hal_delay_ms(uint16_t ms);
+
+void hal_init_keypad();
+void hal_init_adc();
+void hal_init_adc_channel(uint8_t idx);
+uint16_t hal_read_adc(uint8_t idx);
 
 void hal_uart_init(uint16_t baud);
 /*
@@ -48,5 +59,18 @@ typedef struct s_hal_audio_refill_ifc {
 } HalAudioRefillIfc;
 
 void hal_audio_init(uint16_t sample_period_us, HalAudioRefillIfc *refill);
+
+struct s_hal_spi_ifc;
+typedef void (*HALSPIFunc)(struct s_hal_spi_ifc *ifc, uint8_t data);
+typedef struct s_hal_spi_ifc {
+	HALSPIFunc func;
+} HALSPIIfc;
+
+#define SPIFLASH_CMD_READ_DATA	(0x03)
+
+void hal_init_spi(HALSPIIfc *spi);
+void hal_spi_open();
+void hal_spi_send(uint8_t byte);
+void hal_spi_close();
 
 #endif // __hal_h__

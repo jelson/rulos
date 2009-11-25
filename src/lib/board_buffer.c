@@ -51,7 +51,6 @@ void board_buffer_init(BoardBuffer *buf)
 	buf->next = NULL;
 	buf->board_index = BBUF_UNMAPPED_INDEX;
 	buf->alpha = 0xff;
-	buf->upside_down = 0;
 	assert(sizeof(buf->alpha)*8 >= NUM_DIGITS);
 }
 
@@ -146,11 +145,7 @@ void board_buffer_paint(SSBitmap *bm, uint8_t board_index, uint8_t mask)
 		if (mask & 0x80)
 		{
 			SSBitmap tmp = bm[idx];
-#if 0
-	// TODO upside_down should be a property of the board, not of the bbuf.
-			if (buf->upside_down & (1 << idx))
-				hal_upside_down_led(&tmp);
-#endif
+			// 
 			program_cell(board_index, idx, tmp);
 		}
 	}

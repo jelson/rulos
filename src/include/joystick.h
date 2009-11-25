@@ -22,10 +22,6 @@ typedef struct {
 	int8_t x_pos;
 	int8_t y_pos;
 	uint8_t state;
-
-	// Private state for joystick module - don't touch.
-	uint16_t *x_adc;
-	uint16_t *y_adc;
 } JoystickState_t;
 
 void joystick_init(JoystickState_t *js);

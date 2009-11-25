@@ -19,6 +19,8 @@ void init_audio_driver(AudioDriver *ad)
 	ad->loop_token = sound_silence;
 	ad->locked = FALSE;
 
+	init_spiflash(&ad->spif, (Activation*) &ad->spiComplete);
+
 	hal_audio_init(125, (HalAudioRefillIfc*) ad);
 }
 
@@ -45,7 +47,7 @@ uint16_t audio_refill_func(AudioDriver *ad, uint8_t *sample_buf, uint16_t count)
 #if SIM
 	_ad_decode_ulaw(sample_buf, buf_base+ac->start+ad->cur_offset, fill);
 #else
-#error No_SPI_flash_read_code_yet
+//#error TODO No_SPI_flash_read_code_yet
 #endif
 	LOGF((logfp, "requested %d; satisfied %d bytes from %d.%d (%d)\n",
 		count, fill, ad->cur_token, ad->cur_offset, ac->length));
@@ -106,3 +108,4 @@ void ad_queue_loop_clip(AudioDriver *ad, SoundToken loop_token)
 	ad->loop_token = loop_token;
 	ad->locked = FALSE;
 }
+
