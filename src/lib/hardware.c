@@ -452,7 +452,7 @@ void hal_init_adc()
 	init_adc(&g_theADC);
 }
 
-#define RAW_ADC
+//#define RAW_ADC
 
 void hal_init_adc_channel(uint8_t idx)
 {

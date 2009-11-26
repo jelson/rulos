@@ -334,7 +334,6 @@ void init_control(ControlAct *ctl)
 	{
 		ctl->mode = cm_setLeft;
 	}
-	ctl->mode = cm_run;	// TODO debug
 	init_servo(&ctl->servo);
 	ctl->pot_servo = 0;
 		// not important; gets immediately overwritten.
@@ -494,11 +493,9 @@ int main()
 	hal_init(bc_rocket0);
 	clock_init(SYSTEM_CLOCK);
 	hal_init_adc();
-	/*
 	hal_init_adc_channel(POT_ADC_CHANNEL);
 	hal_init_adc_channel(OPT0_ADC_CHANNEL);
 	hal_init_adc_channel(OPT1_ADC_CHANNEL);
-	*/
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);	// includes slow calibration phase
