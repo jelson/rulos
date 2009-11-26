@@ -115,6 +115,7 @@ typedef struct s_quadrature {
 	uint16_t threshhold;
 	uint8_t oldState;
 	int16_t position;
+	int8_t sign;
 } Quadrature;
 
 static void quadrature_handler(Quadrature *quad);
@@ -157,7 +158,7 @@ static void quadrature_handler(Quadrature *quad)
 	uint8_t newState = (c1<<1) | c0;
 	uint8_t transition = (quad->oldState<<2) | newState;
 	int8_t delta = quad_state_machine[transition];
-	quad->position += delta;
+	quad->position += delta * quad->sign;
 	quad->oldState = newState;
 }
 
@@ -230,7 +231,8 @@ r_bool get_pushbutton()
 typedef struct s_config {
 	uint8_t magic;	// to detect a valid eeprom record
 	int16_t doorMax;
-	uint8_t servoPos[2];
+	int16_t servoPos[2];
+	int8_t quadSign;
 } Config;
 
 #define EEPROM_CONFIG_BASE 0
@@ -258,6 +260,7 @@ r_bool init_config(Config *config)
 		config->doorMax = 60;
 		config->servoPos[0] = 0;
 		config->servoPos[1] = 212;
+		config->quadSign = 1;
 	}
 	return valid;
 }
@@ -274,7 +277,7 @@ uint16_t config_clip(Config *config, Quadrature *quad)
 void config_update_servo(Config *config, ServoAct *servo, uint16_t doorPos)
 {
 	// Linearly interpolate
-	uint32_t servoPos = (config->servoPos[1]-config->servoPos[0]);
+	int32_t servoPos = (config->servoPos[1]-config->servoPos[0]);
 	servoPos *= doorPos;
 	servoPos /= config->doorMax;
 	servoPos += config->servoPos[0];
@@ -324,6 +327,7 @@ void init_control(ControlAct *ctl)
 	r_bool valid = init_config(&ctl->config);
 	if (valid)
 	{
+		ctl->quad.sign = ctl->config.quadSign;
 		ctl->mode = cm_run;
 	}
 	else
@@ -403,6 +407,7 @@ static UIEventDisposition control_handler(
 	case cm_run:
 		{
 			control->mode = cm_setLeft;
+			control->quad.sign = +1;
 			break;
 		}
 	case cm_setLeft:
@@ -414,9 +419,18 @@ static UIEventDisposition control_handler(
 	case cm_setRight:
 		{
 			control->config.servoPos[1] = control->pot_servo;
-			control->config.doorMax = quad_get_position(&control->quad);
+			int8_t quad_sign = +1;
+			int16_t doorMax = quad_get_position(&control->quad);
+			if (doorMax < 0)
+			{
+				doorMax = -doorMax;
+				quad_sign = -1;
+			}
+			control->config.doorMax = doorMax;
+			control->config.quadSign = quad_sign;
 			config_write_eeprom(&control->config);
 			control->mode = cm_run;
+			control->quad.sign = quad_sign;
 			break;
 		}
 	}
@@ -470,48 +484,57 @@ void button_update(ButtonAct *button)
 
 
 /****************************************************************************/
+/****************************************************************************/
 
-typedef struct s_blink_act {
-	ActivationFunc func;
-	ServoAct *servo;
-	r_bool state;
-} BlinkAct;
 
-void blink_update(BlinkAct *act)
+int main()
 {
-	schedule_us(((Time)1)<<15, (Activation*) act);
+	heap_init();
+	util_init();
+	hal_init(bc_rocket0);
+	clock_init(SYSTEM_CLOCK);
+	hal_init_adc();
+	/*
+	hal_init_adc_channel(POT_ADC_CHANNEL);
+	hal_init_adc_channel(OPT0_ADC_CHANNEL);
+	hal_init_adc_channel(OPT1_ADC_CHANNEL);
+	*/
 
-	act->state = !act->state;
-//	gpio_set_or_clr(LED0, act->state);
-//	gpio_set_or_clr(SERVO, act->state);
+	CpumonAct cpumon;
+	cpumon_init(&cpumon);	// includes slow calibration phase
 
-//	uint8_t phase = (clock_time_us() >> 18) & 0x07;
-	uint16_t pot = hal_read_adc(OPT0_ADC_CHANNEL) & 0x03ff;
-	servo_set_pwm(act->servo, ((uint32_t) pot)*212 / 1024);
+/*
+	ServoAct servo;
+	init_servo(&servo);
 
-	uint8_t phase = ((uint32_t) pot*7)/1024;
+	BlinkAct blink;
+	init_blink(&blink, &servo);
 
-	gpio_set_or_clr(LED0, phase & 1);
-	gpio_set_or_clr(LED1, phase & 2);
-	gpio_set_or_clr(LED2, phase & 4);
+	QuadTest qt;
+	init_quad_test(&qt);
 
-	//servo_set_pwm(act->servo, phase<<5);
-	//act->servo->pwmDuty = pot % 5;
+*/
+	ControlAct control;
+	init_control(&control);
+
+	ButtonAct button;
+	init_button(&button, (UIEventHandler*) &control.handler);
+	
+	cpumon_main_loop();
+
+	return 0;
 }
 
-void init_blink(BlinkAct *act, ServoAct *servo)
+#else
+int main()
 {
-	act->func = (ActivationFunc) blink_update;
-	act->servo = servo;
-	act->state = TRUE;
-	gpio_make_output(LED0);
-	gpio_make_output(LED1);
-	gpio_make_output(LED2);
-
-	schedule_us(((Time)1)<<15, (Activation*) act);
+	return 0;
 }
+#endif // SIM
 
-
+#if 0
+/****************************************************************************/
+/* test code */
 /****************************************************************************/
 
 typedef struct s_quad_test {
@@ -578,48 +601,44 @@ static void qt_update(QuadTest *qt)
 
 /****************************************************************************/
 
+typedef struct s_blink_act {
+	ActivationFunc func;
+	ServoAct *servo;
+	r_bool state;
+} BlinkAct;
 
-int main()
+void blink_update(BlinkAct *act)
 {
-	heap_init();
-	util_init();
-	hal_init(bc_rocket0);
-	clock_init(SYSTEM_CLOCK);
-	hal_init_adc();
-	/*
-	hal_init_adc_channel(POT_ADC_CHANNEL);
-	hal_init_adc_channel(OPT0_ADC_CHANNEL);
-	hal_init_adc_channel(OPT1_ADC_CHANNEL);
-	*/
+	schedule_us(((Time)1)<<15, (Activation*) act);
 
-	CpumonAct cpumon;
-	cpumon_init(&cpumon);	// includes slow calibration phase
+	act->state = !act->state;
+//	gpio_set_or_clr(LED0, act->state);
+//	gpio_set_or_clr(SERVO, act->state);
 
-/*
-	ServoAct servo;
-	init_servo(&servo);
+//	uint8_t phase = (clock_time_us() >> 18) & 0x07;
+	uint16_t pot = hal_read_adc(OPT0_ADC_CHANNEL) & 0x03ff;
+	servo_set_pwm(act->servo, ((uint32_t) pot)*212 / 1024);
 
-	BlinkAct blink;
-	init_blink(&blink, &servo);
+	uint8_t phase = ((uint32_t) pot*7)/1024;
 
-	QuadTest qt;
-	init_quad_test(&qt);
+	gpio_set_or_clr(LED0, phase & 1);
+	gpio_set_or_clr(LED1, phase & 2);
+	gpio_set_or_clr(LED2, phase & 4);
 
-*/
-	ControlAct control;
-	init_control(&control);
-
-	ButtonAct button;
-	init_button(&button, (UIEventHandler*) &control.handler);
-	
-	cpumon_main_loop();
-
-	return 0;
+	//servo_set_pwm(act->servo, phase<<5);
+	//act->servo->pwmDuty = pot % 5;
 }
 
-#else
-int main()
+void init_blink(BlinkAct *act, ServoAct *servo)
 {
-	return 0;
+	act->func = (ActivationFunc) blink_update;
+	act->servo = servo;
+	act->state = TRUE;
+	gpio_make_output(LED0);
+	gpio_make_output(LED1);
+	gpio_make_output(LED2);
+
+	schedule_us(((Time)1)<<15, (Activation*) act);
 }
-#endif // SIM
+
+#endif // 0
