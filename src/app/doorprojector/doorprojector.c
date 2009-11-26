@@ -59,40 +59,96 @@
 #define QUADRATURE_PERIOD 1000
 #define SYSTEM_CLOCK 1000
 
-/****************************************************************************/
+/****************************************************************************
+ Dealing with jitter. I can think of four techniques to stabilize the pulse
+ width.
+
+ 1. Use hardware PWM generation.
+ 	+ very stable pulse & period
+	- low resolution: 1/20 * 1024 => 51 values
+	- have to move system clock to an 8-bit timer => software postscaling
+ 2. Use a hardware CTC timer to establish pulse width.
+ 	+ very stable pulse
+	- have to move system clock to a different timer
+		or solder PWM to OC2 line, which means leaving servo attached
+		to programming header pin
+	- all remaining timers 8-bit timer => software postscaling
+	- doesn't stabilize period
+ 3. Eliminate cli/sei pairs
+ 	+ no hardware constraints or clock conflict
+ 	- success requires eliminating ALL cli/sei -- software maintenance hassle
+	- doesn't stabilize period
+ 4. p0wn the processor and busy-wait during software pulse generation
+ 	+ no constraints on scheduler structure
+ 	- blocks processor for 2ms at a time
+	- doesn't stabilize period
+
+ *--------------------------------------------------------------------------*/
 
 typedef struct s_servo {
 	ActivationFunc func;
 	uint8_t pwm_width;	// 0..125
 	r_bool state;
+	Time last_clock;
+	uint8_t phase;
 } ServoAct;
+
+ServoAct *g_theServo = NULL;
 
 void servo_set_pwm(ServoAct *servo, uint8_t pwm_width);
 
+#if 0
 ISR(TIMER2_COMP_vect)
 {
 	TIMSK &= ~_BV(OCIE2);
 	gpio_clr(SERVO);
+
+	ServoAct *servo = g_theServo;
+	uint8_t ocr2;
+	if (servo->phase==0)
+	{
+		// start a pulse
+		ocr2 = 43+servo->pwm_width;
+		gpio_set(SERVO);
+	}
+	else if (servo->phase==1)
+	{
+		// finish out a 2ms window
+		ocr2 = 250-(43+servo->pwm_width);
+	}
+	else
+	{
+		// fill in 9 more 2ms windows
+		ocr2 = 250.0;
+	}
+	OCR2 = ocr2;
+	TCNT2 = 0;
+	TIFR |= _BV(OCF2);	// clear OCF2 (inverted sense)
+	TIMSK |= _BV(OCIE2);
+	servo->phase = (servo->phase+1) % 11;
 }
+#endif
 
 void servo_update(ServoAct *servo)
 {
-	schedule_us(SERVO_PERIOD, (Activation*) servo);
+	servo->last_clock += SERVO_PERIOD;
+	schedule_absolute(servo->last_clock, (Activation*) servo);
 
 	cli();
 	OCR2 = 43+servo->pwm_width;
 	TCNT2 = 0;
 	TIFR |= _BV(OCF2);	// clear OCF2 (inverted sense)
 	TIMSK |= _BV(OCIE2);
+	gpio_set(SERVO);
 	sei();
 
-	gpio_set(SERVO);
 //	servo->state = !servo->state;
 //	gpio_set_or_clr(SERVO, servo->state);
 }
 
 void init_servo(ServoAct *servo)
 {
+	return;
 	gpio_make_output(SERVO);
 
 	// CTC mode ; prescaler 64 (8MHz => 8us ticks)
@@ -100,7 +156,19 @@ void init_servo(ServoAct *servo)
 
 	servo_set_pwm(servo, 1);
 	servo->func = (ActivationFunc) servo_update;
-	schedule_us(1, (Activation*) servo);
+	servo->last_clock = clock_time_us();
+	servo->phase = 0;
+	g_theServo = servo;
+//	schedule_us(1, (Activation*) servo);
+
+	// launch TIMER2 interrupts
+	cli();
+	OCR2 = 100;
+	TCNT2 = 0;
+	TIFR |= _BV(OCF2);	// clear OCF2 (inverted sense)
+	TIMSK |= _BV(OCIE2);
+
+	sei();
 }
 
 void servo_set_pwm(ServoAct *servo, uint8_t pwm_width)
@@ -483,6 +551,28 @@ void button_update(ButtonAct *button)
 
 
 /****************************************************************************/
+
+typedef struct s_blink_act {
+	ActivationFunc func;
+	r_bool state;
+} BlinkAct;
+
+void blink_update(BlinkAct *act)
+{
+	schedule_us(((Time)1)<<18, (Activation*) act);
+
+	act->state = !act->state;
+	gpio_set_or_clr(LED0, act->state);
+}
+
+void init_blink(BlinkAct *act)
+{
+	act->func = (ActivationFunc) blink_update;
+	act->state = TRUE;
+	gpio_make_output(LED0);
+
+	schedule_us(((Time)1)<<18, (Activation*) act);
+}
 /****************************************************************************/
 
 
@@ -491,31 +581,40 @@ int main()
 	heap_init();
 	util_init();
 	hal_init(bc_rocket0);
-	clock_init(SYSTEM_CLOCK);
+	init_clock(SYSTEM_CLOCK, TIMER1);
 	hal_init_adc();
 	hal_init_adc_channel(POT_ADC_CHANNEL);
 	hal_init_adc_channel(OPT0_ADC_CHANNEL);
 	hal_init_adc_channel(OPT1_ADC_CHANNEL);
 
+	gpio_make_output(LED1);
+	gpio_clr(LED1);
+
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);	// includes slow calibration phase
 
+	gpio_make_output(LED2);
+	gpio_clr(LED2);
+
+	BlinkAct blink;
+	init_blink(&blink);
 /*
 	ServoAct servo;
 	init_servo(&servo);
+	servo_set_pwm(&servo, 110);
 
-	BlinkAct blink;
-	init_blink(&blink, &servo);
 
 	QuadTest qt;
 	init_quad_test(&qt);
-
 */
+
+/*
 	ControlAct control;
 	init_control(&control);
 
 	ButtonAct button;
 	init_button(&button, (UIEventHandler*) &control.handler);
+*/
 	
 	cpumon_main_loop();
 
@@ -596,46 +695,5 @@ static void qt_update(QuadTest *qt)
 	*/
 }
 
-/****************************************************************************/
-
-typedef struct s_blink_act {
-	ActivationFunc func;
-	ServoAct *servo;
-	r_bool state;
-} BlinkAct;
-
-void blink_update(BlinkAct *act)
-{
-	schedule_us(((Time)1)<<15, (Activation*) act);
-
-	act->state = !act->state;
-//	gpio_set_or_clr(LED0, act->state);
-//	gpio_set_or_clr(SERVO, act->state);
-
-//	uint8_t phase = (clock_time_us() >> 18) & 0x07;
-	uint16_t pot = hal_read_adc(OPT0_ADC_CHANNEL) & 0x03ff;
-	servo_set_pwm(act->servo, ((uint32_t) pot)*212 / 1024);
-
-	uint8_t phase = ((uint32_t) pot*7)/1024;
-
-	gpio_set_or_clr(LED0, phase & 1);
-	gpio_set_or_clr(LED1, phase & 2);
-	gpio_set_or_clr(LED2, phase & 4);
-
-	//servo_set_pwm(act->servo, phase<<5);
-	//act->servo->pwmDuty = pot % 5;
-}
-
-void init_blink(BlinkAct *act, ServoAct *servo)
-{
-	act->func = (ActivationFunc) blink_update;
-	act->servo = servo;
-	act->state = TRUE;
-	gpio_make_output(LED0);
-	gpio_make_output(LED1);
-	gpio_make_output(LED2);
-
-	schedule_us(((Time)1)<<15, (Activation*) act);
-}
 
 #endif // 0
