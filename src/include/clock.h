@@ -7,7 +7,8 @@
 
 
 uint8_t later_than(Time a, Time b);
-void clock_init(Time interval_us);
+
+void init_clock(Time interval_us, uint8_t timer_id);
 
 extern Time _stale_time_us;	
 
@@ -22,6 +23,8 @@ void schedule_us(Time offset_us, Activation *act);
 void schedule_now(Activation *act);
 	// Be very careful with schedule_now -- it can result in an infinite
 	// loop if you schedule yourself for now repeatedly.
+void schedule_absolute(Time at_time, Activation *act);
+
 #define Exp2Time(v)	(((Time)1)<<(v))
 //#define schedule_ms(ms,act) { schedule_us(ms*1000, act); }
 

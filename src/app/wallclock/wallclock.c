@@ -260,7 +260,7 @@ int main()
 	board_buffer_module_init();
 
 	// start clock with 10 msec resolution
-	clock_init(WALLCLOCK_CALLBACK_INTERVAL);
+	init_clock(WALLCLOCK_CALLBACK_INTERVAL, TIMER1);
 
 	// start the uart running at 34k baud (assumes 8mhz clock: fixme)
 	uart_init(12);
@@ -276,7 +276,6 @@ int main()
 
 	// init the board buffer
 	board_buffer_init(&wca.bbuf);
-	wca.bbuf.upside_down = (1 << 2) | (1 << 4);
 	board_buffer_push(&wca.bbuf, 0);
 
 	// have the callback get called immediately

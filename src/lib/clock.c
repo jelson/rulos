@@ -27,14 +27,13 @@ void clock_handler()
 	_real_time_since_boot_us += _rtc_interval_us;
 }
 
-void clock_init(Time interval_us)
+void init_clock(Time interval_us, uint8_t timer_id)
 {
-	_rtc_interval_us = interval_us;
 	// Initialize the clock to 20 seconds before rollover time so that 
 	// rollover bugs happen quickly during testing
 	_real_time_since_boot_us = (((uint32_t) 1) << 31) - ((uint32_t) 20000000);
 	_stale_time_us = _real_time_since_boot_us;
-	hal_start_clock_us(interval_us, clock_handler);
+	_rtc_interval_us = hal_start_clock_us(interval_us, clock_handler, timer_id);
 	_spin_counter = 0;
 }
 
@@ -56,6 +55,11 @@ void schedule_us_internal(Time offset_us, Activation *act)
 	//LOGF((logfp, "scheduling act %08x func %08x\n", (int) act, (int) act->func));
 
 	heap_insert(clock_time_us() + offset_us, act);
+}
+
+void schedule_absolute(Time at_time, Activation *act)
+{
+	heap_insert(at_time, act);
 }
 
 // this is the expensive one, with a lock

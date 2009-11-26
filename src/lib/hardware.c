@@ -303,11 +303,21 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t 
 	gpio_set(STROBE);
 }
 
-Handler timer_handler;
+void null_handler()
+{
+}
+
+Handler timer1_handler = null_handler;
+Handler timer2_handler = null_handler;
 
 ISR(TIMER1_COMPA_vect)
 {
-	timer_handler();
+	timer1_handler();
+}
+
+ISR(TIMER2_COMP_vect)
+{
+	timer2_handler();
 }
 
 uint32_t f_cpu_values[] = {
@@ -339,42 +349,116 @@ uint32_t f_cpu;
   * We move around the constants in the calculations below to
   * keep the intermediate results fitting in a 32-bit int.
   */
-void hal_start_clock_us(uint32_t us, Handler handler)
-{
-	uint32_t target;
-	uint8_t tccr1b = _BV(WGM12);		// CTC Mode 4 (interrupt on count-up)
-	if (us < 1000)
-	{
-		tccr1b |= _BV(CS10);				// Prescaler = 1
-		target = ((f_cpu / 100) * us) / 10000;
-	}
-	else
-	{
-		tccr1b |= _BV(CS11) | _BV(CS10);	// Prescaler = 64
-		target = (f_cpu / 6400) * us / 10000;
-	}
 
-	timer_handler = handler;
+static uint8_t _timer1_prescaler_bits[] = { 0xff, 0, 3, 6, 8, 10, 0xff, 0xff };
+static uint8_t _timer2_prescaler_bits[] = { 0xff, 0, 3, 5, 6,  7,    8,   10 };
+typedef struct {
+	uint8_t *prescaler_bits;
+	uint8_t ocr_bits;
+} TimerDef;
+static TimerDef _timer1 = { _timer1_prescaler_bits, 16 };
+static TimerDef _timer2 = { _timer2_prescaler_bits,  8 };
+
+static void find_prescaler(uint32_t req_us_per_period, TimerDef *timerDef,
+	uint32_t *out_us_per_period,
+	uint8_t *out_cs,	// prescaler selection
+	uint16_t *out_ocr	// count limit
+	)
+{
+	uint8_t cs;
+	for (cs=1; cs<8; cs++)
+	{
+		// Units: 16hs = 1us
+		if (timerDef->prescaler_bits[cs] == 0xff) { continue; }
+		uint32_t hs_per_cpu_tick = 16000000 / f_cpu;
+		uint32_t hs_per_prescale_tick = hs_per_cpu_tick << (timerDef->prescaler_bits[cs]);
+		uint32_t prescale_tick_per_period =
+			((req_us_per_period<<4) / hs_per_prescale_tick);
+		uint32_t max_prescale_ticks = (((uint32_t) 1)<<timerDef->ocr_bits)-1;
+		if (prescale_tick_per_period > max_prescale_ticks)
+		{
+			// go try a bigger prescaler
+			continue;
+		}
+		*out_us_per_period = (prescale_tick_per_period * hs_per_prescale_tick) >> 4;
+		*out_cs = cs;
+		*out_ocr = prescale_tick_per_period;
+		return;
+	}
+	assert(FALSE);	// might need a software scaler
+}
+
+uint32_t hal_start_clock_us(uint32_t us, Handler handler, uint8_t timer_id)
+{
+	uint32_t actual_us_per_period;
+		// may not equal what we asked for, because of prescaler rounding.
+	uint8_t cs;
+	uint16_t ocr;
+
 	cli();
 
-	OCR1A = (unsigned int) target;
-	TCCR1A = 0;
-	TCCR1B = tccr1b;
+	if (timer_id == TIMER1)
+	{
+		find_prescaler(us, &_timer1, &actual_us_per_period, &cs, &ocr);
 
-	/* enable output-compare int. */
+		uint8_t tccr1b = _BV(WGM12);		// CTC Mode 4 (interrupt on count-up)
+		tccr1b |= (cs & 4) ? _BV(CS12) : 0;
+		tccr1b |= (cs & 2) ? _BV(CS11) : 0;
+		tccr1b |= (cs & 1) ? _BV(CS10) : 0;
+
+		timer1_handler = handler;
+
+		OCR1A = ocr;
+		TCCR1A = 0;
+		TCCR1B = tccr1b;
+
+		/* enable output-compare int. */
 #if defined(MCUatmega8)
-	TIMSK  |= _BV(OCIE1A);
+		TIMSK  |= _BV(OCIE1A);
 #elif defined (MCUatmega328p)
-	TIMSK1 |= _BV(OCIE1A);
+		TIMSK1 |= _BV(OCIE1A);
 #else
 # error hardware-specific timer code needs help!
 #endif
 
-	/* reset counter */
-	TCNT1 = 0; 
+		/* reset counter */
+		TCNT1 = 0; 
+	}
+	else if (timer_id == TIMER2)
+	{
+		find_prescaler(us, &_timer2, &actual_us_per_period, &cs, &ocr);
+
+		uint8_t tccr2 = _BV(WGM21);		// CTC Mode 2 (interrupt on count-up)
+		tccr2 |= (cs & 4) ? _BV(CS22) : 0;
+		tccr2 |= (cs & 2) ? _BV(CS21) : 0;
+		tccr2 |= (cs & 1) ? _BV(CS20) : 0;
+
+		timer2_handler = handler;
+
+		OCR2 = ocr;
+		TCCR2 = tccr2;
+
+		/* enable output-compare int. */
+#if defined(MCUatmega8)
+		TIMSK  |= _BV(OCIE2);
+#elif defined (MCUatmega328p)
+		TIMSK1 |= _BV(OCIE2);
+#else
+# error hardware-specific timer code needs help!
+#endif
+
+		/* reset counter */
+		TCNT2 = 0; 
+	}
+	else
+	{
+		assert(FALSE);
+	}
 
 	/* re-enable interrupts */
 	sei();
+
+	return actual_us_per_period;
 }
 
 /*
@@ -803,4 +887,9 @@ void hal_spi_send(uint8_t byte)
 void hal_spi_close()
 {
 	gpio_set_or_clr(SPI_SS, 1);
+}
+
+void hardware_assert(uint16_t line)
+{
+	while (1) { }
 }

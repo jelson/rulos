@@ -24,7 +24,11 @@ extern FILE *logfp;
 
 #else	//!SIM
 
-#define assert(x)	{ if (!(x)) { /* TODO display assert on a rocket panel! :v) */ } }
+// jonh apologizes for evilly dup-declaring this here rather than
+// rearranging includes to make sense.
+extern void hardware_assert(uint16_t line);
+
+#define assert(x)	{ if (!(x)) { hardware_assert(__LINE__); } }
 #define LOGF(x)	{}
 #endif //SIM
 

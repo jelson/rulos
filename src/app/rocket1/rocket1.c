@@ -40,7 +40,7 @@ int main()
 	heap_init();
 	util_init();
 	hal_init(bc_rocket1);
-	clock_init(10000);
+	init_clock(10000, TIMER1);
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);	// includes slow calibration phase

@@ -477,7 +477,7 @@ static void sim_clock_handler()
 	user_clock_handler();
 }
 
-void hal_start_clock_us(uint32_t us, Handler handler)
+uint32_t hal_start_clock_us(uint32_t us, Handler handler, uint8_t timer_id)
 {
 	struct itimerval ivalue, ovalue;
 	ivalue.it_interval.tv_sec = us/1000000;
@@ -487,6 +487,8 @@ void hal_start_clock_us(uint32_t us, Handler handler)
 
 	user_clock_handler = handler;
 	signal(SIGALRM, sim_clock_handler);
+	
+	return us;
 }
 
 // this COULD be implemented with gettimeofday(), but I'm too lazy,

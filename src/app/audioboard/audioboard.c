@@ -35,7 +35,7 @@ int main()
 	heap_init();
 	util_init();
 	hal_init(bc_audioboard);
-	clock_init(10000);
+	init_clock(10000, TIMER1);
 
 	AudioDriver ad;
 	init_audio_driver(&ad);
