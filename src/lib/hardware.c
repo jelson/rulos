@@ -470,16 +470,39 @@ void hal_init_adc_channel(uint8_t idx)
 	}
 }
 
-uint16_t read_adc_raw(uint8_t adc_channel)
+static void adc_busy_wait_conversion()
 {
-	ADMUX = adc_channel; // select adc channel
-	reg_set(&ADCSRA, ADSC); // start conversion
-
+	// start conversion
+	reg_set(&ADCSRA, ADSC);
 	// wait for conversion to complete
 	while (reg_is_set(&ADCSRA, ADSC))
 		{}
+}
 
-	uint16_t newval = ADCL | ((uint16_t) ADCH << 8);
+static uint16_t read_adc_raw(uint8_t adc_channel)
+{
+	ADMUX = adc_channel; // select adc channel
+
+	adc_busy_wait_conversion();
+
+	// Turns out the rules on when you can set ADMUX and expect it to
+	// affect the next sample are a little confusing. (ATmega8 page 200).
+	// I didn't think we were actually violating any of them, but
+	// apparently we were, because busy-delaying after setting ADMUX
+	// and before taking the sample cured the crosstalk problem.
+	// For now, I work around by just taking another sample (sloooow)
+	// to be sure we have a legitimate one.
+
+	adc_busy_wait_conversion();
+
+	/*
+	ATmega8 page 198:
+	ADCL must be read first, then ADCH, to ensure that the content of the Data
+	Registers belongs to the same conversion.
+	*/
+	uint16_t newval = ADCL;
+	newval |= ((uint16_t) ADCH << 8);
+
 	return newval;
 }
 

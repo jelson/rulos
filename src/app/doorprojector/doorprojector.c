@@ -56,6 +56,8 @@
 #define POT_ADC_CHANNEL 4
 #define OPT0_ADC_CHANNEL 2
 #define OPT1_ADC_CHANNEL 0
+#define QUADRATURE_PERIOD 1000
+#define SYSTEM_CLOCK 1000
 
 /****************************************************************************/
 
@@ -75,7 +77,7 @@ ISR(TIMER2_COMP_vect)
 
 void servo_update(ServoAct *servo)
 {
-	schedule_us(SERVO_PERIOD-100, (Activation*) servo);
+	schedule_us(SERVO_PERIOD, (Activation*) servo);
 
 	cli();
 	OCR2 = 43+servo->pwm_width;
@@ -109,16 +111,21 @@ void servo_set_pwm(ServoAct *servo, uint8_t pwm_width)
 /****************************************************************************/
 
 typedef struct s_quadrature {
+	ActivationFunc func;
 	uint16_t threshhold;
 	uint8_t oldState;
 	int16_t position;
 } Quadrature;
 
+static void quadrature_handler(Quadrature *quad);
+
 void init_quadrature(Quadrature *quad)
 {
+	quad->func = (ActivationFunc) quadrature_handler;
 	quad->threshhold = 400;
 	quad->oldState = 0;
 	quad->position = 0;
+	schedule_us(1, (Activation*) quad);
 }
 
 #define XX	0	/* invalid transition */
@@ -141,8 +148,10 @@ static int8_t quad_state_machine[16] = {
 	 0	//1111
 };
 	
-void quadrature_handler(Quadrature *quad)
+static void quadrature_handler(Quadrature *quad)
 {
+	schedule_us(QUADRATURE_PERIOD, (Activation*) quad);
+
 	r_bool c0 = hal_read_adc(OPT0_ADC_CHANNEL) > quad->threshhold;
 	r_bool c1 = hal_read_adc(OPT1_ADC_CHANNEL) > quad->threshhold;
 	uint8_t newState = (c1<<1) | c0;
@@ -220,7 +229,7 @@ r_bool get_pushbutton()
 
 typedef struct s_config {
 	uint8_t magic;	// to detect a valid eeprom record
-	uint16_t doorMax;
+	int16_t doorMax;
 	uint8_t servoPos[2];
 } Config;
 
@@ -246,7 +255,7 @@ r_bool init_config(Config *config)
 	{
 		// install default meaningless values
 		config->magic = CONFIG_MAGIC;
-		config->doorMax = 100;
+		config->doorMax = 60;
 		config->servoPos[0] = 0;
 		config->servoPos[1] = 212;
 	}
@@ -321,6 +330,7 @@ void init_control(ControlAct *ctl)
 	{
 		ctl->mode = cm_setLeft;
 	}
+	ctl->mode = cm_run;	// TODO debug
 	init_servo(&ctl->servo);
 	ctl->pot_servo = 0;
 		// not important; gets immediately overwritten.
@@ -341,23 +351,26 @@ static void control_update(ControlAct *ctl)
 {
 	schedule_us(100, (Activation*) ctl);
 
-	gpio_set(LED0);
-	gpio_set(LED1);
-	gpio_set(LED2);
+	uint8_t blink_rate = 0;
+
+	// display quad info
+	int16_t pos = quad_get_position(&ctl->quad) & 0x03;
+	gpio_set_or_clr(LED2, !(pos==2));
+	gpio_set_or_clr(LED1, !(pos==1));
+	gpio_set_or_clr(LED0, !(pos==0));
 
 	switch (ctl->mode)
 	{
 	case cm_run:
 		{
-		gpio_clr(LED0);
+		blink_rate = 0;
 		uint8_t pos = config_clip(&ctl->config, &ctl->quad);
 	 	config_update_servo(&ctl->config, &ctl->servo, pos);
 		break;
 		}
 	case cm_setLeft:
 		{
-		gpio_clr(LED1);
-
+		blink_rate = 18;
 		// hold door at "zero"
 		quad_set_position(&ctl->quad, 0);
 
@@ -367,14 +380,17 @@ static void control_update(ControlAct *ctl)
 		}
 	case cm_setRight:
 		{
-		gpio_clr(LED2);
-
+		blink_rate = 17;
 		// let door slide to learn doorMax
 
 		control_servo_from_pot(ctl);
 
 		break;
 		}
+	}
+	if (blink_rate!=0)
+	{
+		gpio_set_or_clr(LED0, (clock_time_us()>>blink_rate) & 1);
 	}
 }
 
@@ -500,6 +516,7 @@ void init_blink(BlinkAct *act, ServoAct *servo)
 
 typedef struct s_quad_test {
 	ActivationFunc func;
+	Quadrature quad;
 } QuadTest;
 
 static void qt_update(QuadTest *qt);
@@ -512,17 +529,44 @@ void init_quad_test(QuadTest *qt)
 	gpio_make_output(LED1);
 	gpio_make_output(LED2);
 
+	init_quadrature(&qt->quad);
+
 	schedule_us(20000, (Activation*) qt);
 }
 
+/* bar spacing:
+ * sensors are 0.4" on center
+ * they should be 1/4 or 3/4 out of phase.
+ * That gives p*.25 = 0.4 or p*.75 = 0.4
+ * => p = 1.6 or p = .533
+ * => f = .625 or f = 1.87
+ * Bar width in points = (p/2)*72: 19.188 for f=1.87
+ * To make quick & dirty bar, go to
+ * http://incompetech.com/graphpaper/weightedgrid/
+ *   horiz line weight 19.188
+ *   vert line weight 0
+ *   grid spacing 1.87
+ *   color black
+ */
 
 static void qt_update(QuadTest *qt)
 {
 	schedule_us(20000, (Activation*) qt);
 
+/*
 	gpio_set_or_clr(LED2, !(hal_read_adc(POT_ADC_CHANNEL) > 350));
-	gpio_set_or_clr(LED1, !(hal_read_adc(OPT1_ADC_CHANNEL) > 350));
-	gpio_set_or_clr(LED0, !(hal_read_adc(OPT0_ADC_CHANNEL) > 350));
+*/
+	//gpio_set_or_clr(LED2, (clock_time_us()>>18) & 1);
+
+/*
+	gpio_set_or_clr(LED2, !(hal_read_adc(POT_ADC_CHANNEL) > 350));
+	gpio_set_or_clr(LED1, !(hal_read_adc(OPT0_ADC_CHANNEL) > 350));
+	gpio_set_or_clr(LED0, !(hal_read_adc(OPT1_ADC_CHANNEL) > 350));
+*/
+	uint8_t v = quad_get_position(&qt->quad) & 0x03;
+	gpio_set_or_clr(LED2, !(v==2));
+	gpio_set_or_clr(LED1, !(v==1));
+	gpio_set_or_clr(LED0, !(v==0));
 	
 	/*
 	uint16_t v = hal_read_adc(OPT1_ADC_CHANNEL);
@@ -540,7 +584,7 @@ int main()
 	heap_init();
 	util_init();
 	hal_init(bc_rocket0);
-	clock_init(SERVO_PERIOD);
+	clock_init(SYSTEM_CLOCK);
 	hal_init_adc();
 	/*
 	hal_init_adc_channel(POT_ADC_CHANNEL);
@@ -557,18 +601,16 @@ int main()
 
 	BlinkAct blink;
 	init_blink(&blink, &servo);
-*/
 
 	QuadTest qt;
 	init_quad_test(&qt);
 
-/*
+*/
 	ControlAct control;
 	init_control(&control);
 
 	ButtonAct button;
 	init_button(&button, (UIEventHandler*) &control.handler);
-*/
 	
 	cpumon_main_loop();
 
