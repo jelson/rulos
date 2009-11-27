@@ -893,3 +893,19 @@ void hardware_assert(uint16_t line)
 {
 	while (1) { }
 }
+
+void hardware_assign_timer_handler(uint8_t timer_id, Handler handler)
+{
+	if (timer_id==TIMER1)
+	{
+		timer1_handler = handler;
+	}
+	else if (timer_id==TIMER2)
+	{
+		timer2_handler = handler;
+	}
+	else
+	{
+		assert(FALSE);
+	}
+}

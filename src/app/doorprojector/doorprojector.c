@@ -53,6 +53,8 @@
 #define BUTTON_REFRACTORY_PERIOD	40000
 
 #define SERVO_PERIOD	20000
+#define SERVO_PULSE_MIN_US	350
+#define SERVO_PULSE_MAX_US	2000
 #define POT_ADC_CHANNEL 4
 #define OPT0_ADC_CHANNEL 2
 #define OPT1_ADC_CHANNEL 0
@@ -86,94 +88,35 @@
  *--------------------------------------------------------------------------*/
 
 typedef struct s_servo {
-	ActivationFunc func;
-	uint8_t pwm_width;	// 0..125
-	r_bool state;
-	Time last_clock;
-	uint8_t phase;
 } ServoAct;
 
-ServoAct *g_theServo = NULL;
-
-void servo_set_pwm(ServoAct *servo, uint8_t pwm_width);
-
-#if 0
-ISR(TIMER2_COMP_vect)
-{
-	TIMSK &= ~_BV(OCIE2);
-	gpio_clr(SERVO);
-
-	ServoAct *servo = g_theServo;
-	uint8_t ocr2;
-	if (servo->phase==0)
-	{
-		// start a pulse
-		ocr2 = 43+servo->pwm_width;
-		gpio_set(SERVO);
-	}
-	else if (servo->phase==1)
-	{
-		// finish out a 2ms window
-		ocr2 = 250-(43+servo->pwm_width);
-	}
-	else
-	{
-		// fill in 9 more 2ms windows
-		ocr2 = 250.0;
-	}
-	OCR2 = ocr2;
-	TCNT2 = 0;
-	TIFR |= _BV(OCF2);	// clear OCF2 (inverted sense)
-	TIMSK |= _BV(OCIE2);
-	servo->phase = (servo->phase+1) % 11;
-}
-#endif
-
-void servo_update(ServoAct *servo)
-{
-	servo->last_clock += SERVO_PERIOD;
-	schedule_absolute(servo->last_clock, (Activation*) servo);
-
-	cli();
-	OCR2 = 43+servo->pwm_width;
-	TCNT2 = 0;
-	TIFR |= _BV(OCF2);	// clear OCF2 (inverted sense)
-	TIMSK |= _BV(OCIE2);
-	gpio_set(SERVO);
-	sei();
-
-//	servo->state = !servo->state;
-//	gpio_set_or_clr(SERVO, servo->state);
-}
+void servo_set_pwm(ServoAct *servo, uint16_t pwm_width);
 
 void init_servo(ServoAct *servo)
 {
-	return;
 	gpio_make_output(SERVO);
 
-	// CTC mode ; prescaler 64 (8MHz => 8us ticks)
-	TCCR2 =_BV(WGM21) | _BV(CS22);
+	TCCR1A = 0
+		| _BV(COM1A1)		// non-inverting PWM
+		| _BV(WGM11)		// Fast PWM, 16-bit, TOP=ICR1
+		;
+	TCCR1B = 0
+		| _BV(WGM13)		// Fast PWM, 16-bit, TOP=ICR1
+		| _BV(WGM12)		// Fast PWM, 16-bit, TOP=ICR1
+		| _BV(CS11)			// clkio/8 prescaler => 1us clock
+		;
 
-	servo_set_pwm(servo, 1);
-	servo->func = (ActivationFunc) servo_update;
-	servo->last_clock = clock_time_us();
-	servo->phase = 0;
-	g_theServo = servo;
-//	schedule_us(1, (Activation*) servo);
+	ICR1 = 20000;
+	OCR1A = 1500;
 
-	// launch TIMER2 interrupts
-	cli();
-	OCR2 = 100;
-	TCNT2 = 0;
-	TIFR |= _BV(OCF2);	// clear OCF2 (inverted sense)
-	TIMSK |= _BV(OCIE2);
-
-	sei();
+	servo_set_pwm(servo, 500);
 }
 
-void servo_set_pwm(ServoAct *servo, uint8_t pwm_width)
+void servo_set_pwm(ServoAct *servo, uint16_t pwm_width)
 {
-	servo->pwm_width = pwm_width;
+	OCR1A = SERVO_PULSE_MIN_US+
+		(pwm_width /
+			(65535/(SERVO_PULSE_MAX_US - SERVO_PULSE_MIN_US)));
 }
 
 /****************************************************************************/
@@ -350,7 +293,7 @@ void config_update_servo(Config *config, ServoAct *servo, uint16_t doorPos)
 	servoPos /= config->doorMax;
 	servoPos += config->servoPos[0];
 
-	servo_set_pwm(servo, (uint8_t) servoPos);
+	servo_set_pwm(servo, (uint16_t) servoPos*(65535/1024));
 }
 
 void config_write_eeprom(Config *config)
@@ -414,8 +357,8 @@ void init_control(ControlAct *ctl)
 static void control_servo_from_pot(ControlAct *ctl)
 {
 	uint32_t pot = hal_read_adc(POT_ADC_CHANNEL);
-	ctl->pot_servo = pot*212/1024;
-	servo_set_pwm(&ctl->servo, ctl->pot_servo);
+	ctl->pot_servo = pot;
+	servo_set_pwm(&ctl->servo, ctl->pot_servo*(65535/1024));
 }
 
 static void control_update(ControlAct *ctl)
@@ -581,23 +524,19 @@ int main()
 	heap_init();
 	util_init();
 	hal_init(bc_rocket0);
-	init_clock(SYSTEM_CLOCK, TIMER1);
+	init_clock(SYSTEM_CLOCK, TIMER2);
 	hal_init_adc();
 	hal_init_adc_channel(POT_ADC_CHANNEL);
 	hal_init_adc_channel(OPT0_ADC_CHANNEL);
 	hal_init_adc_channel(OPT1_ADC_CHANNEL);
 
-	gpio_make_output(LED1);
-	gpio_clr(LED1);
-
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);	// includes slow calibration phase
 
-	gpio_make_output(LED2);
-	gpio_clr(LED2);
-
+/*
 	BlinkAct blink;
 	init_blink(&blink);
+*/
 /*
 	ServoAct servo;
 	init_servo(&servo);
@@ -608,13 +547,11 @@ int main()
 	init_quad_test(&qt);
 */
 
-/*
 	ControlAct control;
 	init_control(&control);
 
 	ButtonAct button;
 	init_button(&button, (UIEventHandler*) &control.handler);
-*/
 	
 	cpumon_main_loop();
 
