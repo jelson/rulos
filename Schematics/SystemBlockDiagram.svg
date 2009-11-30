@@ -16,7 +16,10 @@
    inkscape:version="0.46"
    version="1.0"
    sodipodi:docname="SystemBlockDiagram.svg"
-   inkscape:output_extension="org.inkscape.output.svg.inkscape">
+   inkscape:output_extension="org.inkscape.output.svg.inkscape"
+   inkscape:export-filename="/home/sekiu/jonh/jonh-svn/rocket/rocketsim/Schematics/SystemBlockDiagram.png"
+   inkscape:export-xdpi="120"
+   inkscape:export-ydpi="120">
   <defs
      id="defs4">
     <linearGradient
@@ -59,12 +62,12 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1.0300654"
-     inkscape:cx="305.69164"
-     inkscape:cy="374.65524"
+     inkscape:cx="488.68722"
+     inkscape:cy="503.30928"
      inkscape:document-units="in"
      inkscape:current-layer="layer1"
      showgrid="true"
-     inkscape:window-width="1801"
+     inkscape:window-width="1235"
      inkscape:window-height="1018"
      inkscape:window-x="0"
      inkscape:window-y="26"
@@ -113,7 +116,7 @@
        id="rect3381" />
     <path
        style="opacity:1;fill:#00ffff;fill-opacity:0.07450980000000000;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:5.66999987999999977, 5.66999987999999977;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;color:#000000"
-       d="M 290 105 L 290 285 L 290 305.09375 L 290 315 L 290 385 L 290 585 L 400 585 L 400 385 L 400 315 L 400 305.09375 L 400 285 L 400 235 L 430 235 L 430 105 L 290 105 z "
+       d="M 290 235 L 290 285 L 290 305.09375 L 290 315 L 290 385 L 290 585 L 400 585 L 400 385 L 400 315 L 400 305.09375 L 400 285 L 400 235 L 290 235 z "
        id="rect3880" />
     <rect
        style="fill:#00ffff;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:5.66999987999999977, 5.66999987999999977;stroke-dashoffset:0;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:0.07450980000000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
@@ -378,7 +381,6 @@
            x="30.095179"
            y="36.890862"
            style="font-size:12px;stroke-width:0.99000001;stroke-miterlimit:4;stroke-dasharray:none" /></flowRegion><flowPara
-         id="flowPara3397" /><flowPara
          id="flowPara3401">thruster</flowPara><flowPara
          id="flowPara3474">solenoid</flowPara></flowRoot>    <rect
        style="fill:#ffffff;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
@@ -694,9 +696,9 @@
        id="path3735" />
     <path
        id="path3737"
-       d="M 540,456.01124 L 610,456.01124 L 610,466.01124"
+       d="M 610,456.01124 L 610,466.01124"
        style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       sodipodi:nodetypes="ccc" />
+       sodipodi:nodetypes="cc" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
        d="M 230.12184,55.485407 L 259.79675,55.485407"
@@ -945,7 +947,7 @@
            y="232.99492"
            style="fill:#000000;fill-opacity:1" /></flowRegion><flowPara
          id="flowPara3396">1</flowPara></flowRoot>    <path
-       transform="translate(397.60346,-152.39654)"
+       transform="translate(252.81244,-17.281309)"
        d="M 50,250 A 15,15 0 1 1 20,250 A 15,15 0 1 1 50,250 z"
        sodipodi:ry="15"
        sodipodi:rx="15"
@@ -955,7 +957,7 @@
        style="opacity:1;fill:#dfffff;fill-opacity:1;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
        sodipodi:type="arc" />
     <flowRoot
-       transform="translate(397.56445,-144.75201)"
+       transform="translate(252.77343,-9.6367788)"
        style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
        id="flowRoot3400"
        xml:space="preserve"><flowRegion
@@ -1076,5 +1078,30 @@
            x="19.416245"
            y="232.99492"
            style="fill:#000000;fill-opacity:1" /></flowRegion><flowPara
-         id="flowPara3468">7</flowPara></flowRoot>  </g>
+         id="flowPara3468">7</flowPara></flowRoot>    <rect
+       style="opacity:1;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       id="rect3481"
+       width="89.674911"
+       height="48.988758"
+       x="669.95355"
+       y="465.46576" />
+    <flowRoot
+       transform="translate(639.6351,429.35966)"
+       xml:space="preserve"
+       id="flowRoot3483"
+       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.99000001;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;font-family:Bitstream Vera Sans"><flowRegion
+         id="flowRegion3485"><rect
+           id="rect3487"
+           width="89.31472"
+           height="47.569798"
+           x="30.095179"
+           y="36.890862"
+           style="font-size:12px;stroke-width:0.99000001;stroke-miterlimit:4;stroke-dasharray:none" /></flowRegion><flowPara
+         id="flowPara3491">clanger</flowPara><flowPara
+         id="flowPara3495">solenoid</flowPara></flowRoot>    <path
+       sodipodi:nodetypes="ccc"
+       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 540,455 L 719.99997,455 L 719.99997,465"
+       id="path3497" />
+  </g>
 </svg>
