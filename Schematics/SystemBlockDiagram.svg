@@ -62,15 +62,15 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1.0300654"
-     inkscape:cx="551.18473"
+     inkscape:cx="426.94139"
      inkscape:cy="366.90563"
      inkscape:document-units="in"
      inkscape:current-layer="layer1"
      showgrid="true"
-     inkscape:window-width="1235"
+     inkscape:window-width="1455"
      inkscape:window-height="1002"
-     inkscape:window-x="29"
-     inkscape:window-y="0"
+     inkscape:window-x="0"
+     inkscape:window-y="26"
      showguides="true"
      inkscape:guide-bbox="true">
     <inkscape:grid
@@ -563,7 +563,7 @@
            y="36.890862"
            style="font-size:12px" /></flowRegion><flowPara
          id="flowPara3577">CPU1</flowPara><flowPara
-         id="flowPara2657">flight computer</flowPara><flowPara
+         id="flowPara2657">flt computer</flowPara><flowPara
          id="flowPara2659">ID 2,3</flowPara><flowPara
          id="flowPara2655" /></flowRoot>    <path
        style="fill:none;fill-rule:evenodd;stroke:#f80000;stroke-width:2.70000005;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:10.8, 2.7;stroke-dashoffset:0;stroke-opacity:1;display:inline"
@@ -712,12 +712,12 @@
        d="M 230.12184,55.485407 L 259.79675,55.485407"
        id="path3741" />
     <path
-       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.89;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.89;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:1.89,5.67;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
        d="M 280,85 L 280,685 L 300,685"
        id="path3743"
        sodipodi:nodetypes="ccc" />
     <path
-       style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.89;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:1.89,5.67;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
        d="M 280,265 L 300,265"
        id="path3745" />
     <text
@@ -800,7 +800,7 @@
            style="font-size:12px" /></flowRegion><flowPara
          id="flowPara3804" /><flowPara
          id="flowPara3808">joystick</flowPara><flowPara
-         id="flowPara3467">interface board/</flowPara><flowPara
+         id="flowPara3467">interface /</flowPara><flowPara
          id="flowPara3471">TWI Bus</flowPara></flowRoot>    <text
        xml:space="preserve"
        style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
@@ -1156,5 +1156,9 @@
        id="path3473"
        inkscape:connector-type="polyline"
        sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:1.88999999999999990, 5.66999999999999993;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       d="M 230,65 C 240,65 260,65 260,65"
+       id="path3433" />
   </g>
 </svg>
