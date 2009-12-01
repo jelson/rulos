@@ -598,9 +598,8 @@ void init_quad_test(QuadTest *qt)
  * => f = .625 or f = 1.87
  * Bar width in points = (p/2)*72: 19.188 for f=1.87
  * To make quick & dirty bar, go to
- * http://incompetech.com/graphpaper/weightedgrid/
+ * http://incompetech.com/graphpaper/lined/
  *   horiz line weight 19.188
- *   vert line weight 0
  *   grid spacing 1.87
  *   color black
  */
