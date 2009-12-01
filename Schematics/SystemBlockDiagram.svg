@@ -61,9 +61,9 @@
      objecttolerance="10"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.72836623"
-     inkscape:cx="257.30834"
-     inkscape:cy="491.00588"
+     inkscape:zoom="1.0300654"
+     inkscape:cx="551.18473"
+     inkscape:cy="366.90563"
      inkscape:document-units="in"
      inkscape:current-layer="layer1"
      showgrid="true"
@@ -575,7 +575,7 @@
        xml:space="preserve"
        style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
        id="text3601"
-       transform="matrix(-1,0,0,-1,603.01562,955)"><textPath
+       transform="matrix(-1,0,0,-1,653.01562,860)"><textPath
          xlink:href="#path3599"
          startOffset="50%"
          id="textPath3605"><tspan
@@ -712,7 +712,7 @@
        d="M 230.12184,55.485407 L 259.79675,55.485407"
        id="path3741" />
     <path
-       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.89;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
        d="M 280,85 L 280,685 L 300,685"
        id="path3743"
        sodipodi:nodetypes="ccc" />
@@ -1120,7 +1120,7 @@
        y="302.89343"
        id="text2647"><tspan
          sodipodi:role="line"
-         id="tspan2649"></tspan></text>
+         id="tspan2649" /></text>
     <rect
        style="opacity:1;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
        id="rect2667"
@@ -1148,8 +1148,8 @@
          id="flowPara2679">Hatch Solenoid (future)</flowPara></flowRoot>    <path
        sodipodi:nodetypes="cccc"
        id="path3465"
-       d="M 450,455 L 420,455 L 420,205 L 230,205"
-       style="fill:none;fill-rule:evenodd;stroke:#e418ed;stroke-width:1.04884541000000000px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+       d="M 450,490 L 420,490 L 420,205 L 230,205"
+       style="fill:none;fill-rule:evenodd;stroke:#e418ed;stroke-width:1.89;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#f80000;stroke-width:2.70000005;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:10.8, 2.7;stroke-dashoffset:0;stroke-opacity:1;display:inline"
        d="M 310,365 L 310,675"
