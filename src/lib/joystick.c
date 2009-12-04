@@ -11,6 +11,7 @@
 # include "hardware.h"
 # define JOYSTICK_TRIGGER_GPIO GPIO_D4
 #endif
+#define JOYSTICK_ADC_SCAN_RATE 10000
 
 
 
@@ -72,7 +73,7 @@ void joystick_init(JoystickState_t *js)
 #ifndef SIM
 	gpio_make_input(JOYSTICK_TRIGGER_GPIO);
 #endif
-	hal_init_adc();
+	hal_init_adc(JOYSTICK_ADC_SCAN_RATE);
 	hal_init_adc_channel(js->x_adc_channel);
 	hal_init_adc_channel(js->y_adc_channel);
 }

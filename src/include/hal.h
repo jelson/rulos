@@ -35,7 +35,7 @@ void hal_speedup_clock_ppm(int32_t ratio);
 void hal_delay_ms(uint16_t ms);
 
 void hal_init_keypad();
-void hal_init_adc();
+void hal_init_adc(Time scan_period);
 void hal_init_adc_channel(uint8_t idx);
 uint16_t hal_read_adc(uint8_t idx);
 

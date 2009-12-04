@@ -524,16 +524,17 @@ typedef struct {
 	ActivationFunc func;
 	r_bool enable[NUM_ADCS];
 	volatile uint16_t value[NUM_ADCS];
+	Time scan_period;
 } ADCState;
 
 static ADCState g_theADC;
 
-static void init_adc(ADCState *adc);
+static void init_adc(ADCState *adc, Time scan_period);
 static void adc_update(ADCState *adc);
 
-void hal_init_adc()
+void hal_init_adc(Time scan_period)
 {
-	init_adc(&g_theADC);
+	init_adc(&g_theADC, scan_period);
 }
 
 //#define RAW_ADC
@@ -603,9 +604,10 @@ uint16_t hal_read_adc(uint8_t idx)
 	return value;
 }
 
-static void init_adc(ADCState *adc)
+static void init_adc(ADCState *adc, Time scan_period)
 {
 	adc->func = (ActivationFunc) adc_update;
+	adc->scan_period = scan_period;
 	uint8_t idx;
 	for (idx=0; idx<NUM_ADCS; idx++)
 	{
@@ -619,7 +621,7 @@ static void init_adc(ADCState *adc)
 
 static void adc_update(ADCState *adc)
 {
-	schedule_us(KEY_SCAN_INTERVAL_US, (Activation *) adc);
+	schedule_us(adc->scan_period, (Activation *) adc);
 
 	uint8_t adc_channel;
 

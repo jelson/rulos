@@ -59,7 +59,8 @@
 #define OPT0_ADC_CHANNEL 2
 #define OPT1_ADC_CHANNEL 0
 #define QUADRATURE_PERIOD 1000
-#define SYSTEM_CLOCK 1000
+#define ADC_PERIOD 500
+#define SYSTEM_CLOCK 500
 
 /****************************************************************************
  Dealing with jitter. I can think of four techniques to stabilize the pulse
@@ -68,6 +69,8 @@
  1. Use hardware PWM generation.
  	+ very stable pulse & period
 	- low resolution: 1/20 * 1024 => 51 values
+  ** ^ this assumption turned out to be wrong. Hardware can generate 16-bit
+  ** PWM. And that works just groovily.
 	- have to move system clock to an 8-bit timer => software postscaling
  2. Use a hardware CTC timer to establish pulse width.
  	+ very stable pulse
@@ -120,6 +123,21 @@ void servo_set_pwm(ServoAct *servo, uint16_t pwm_width)
 }
 
 /****************************************************************************/
+
+ 
+/* bar spacing:
+ * sensors are 0.4" on center
+ * they should be 1/4 or 3/4 out of phase.
+ * That gives p*.25 = 0.4 or p*.75 = 0.4
+ * => p = 1.6 or p = .533
+ * => f = .625 or f = 1.87
+ * Bar width in points = (p/2)*72: 19.188 for f=1.87
+ * To make quick & dirty bar, go to
+ * http://incompetech.com/graphpaper/lined/
+ *   horiz line weight 19.188
+ *   grid spacing 1.87
+ *   color black
+ */
 
 typedef struct s_quadrature {
 	ActivationFunc func;
@@ -185,52 +203,6 @@ void quad_set_position(Quadrature *quad, int16_t pos)
 
 /****************************************************************************/
 
-// atmega8 manual pages 22-23
-// sigh. already defined in avr .h file.
-
-#if 0
-void eeprom_write(uint16_t address, uint8_t data)
-{
-	while (EECR & (1<<EEWE))
-		{}
-
-	EEAR = address;
-	EEDR = data;
-	EECR |= (1<<EEMWE);
-	EECR |= (1<<EEWE);
-}
-
-uint8_t eeprom_read(uint16_t address)
-{
-	while (EECR & (1<<EEWE))
-		{}
-
-	EEAR = address;
-	EECR |= (1<<EERE);
-	return EEDR;
-}
-
-void eeprom_write_block(uint16_t ee_dest, uint8_t *src, uint16_t length)
-{
-	uint16_t off;
-	for (off=0; off<length; off++)
-	{
-		eeprom_write(ee_dest+off, src[off]);
-	}
-}
-
-void eeprom_read_block(uint8_t *dest, uint16_t ee_src, uint16_t length)
-{
-	uint16_t off;
-	for (off=0; off<length; off++)
-	{
-		dest[off] = eeprom_read(ee_src+off);
-	}
-}
-#endif
-
-/****************************************************************************/
-
 r_bool get_pushbutton()
 {
 	gpio_make_input(PUSHBUTTON);
@@ -246,25 +218,22 @@ typedef struct s_config {
 	int8_t quadSign;
 } Config;
 
-#define EEPROM_CONFIG_BASE 0
+#define EEPROM_CONFIG_BASE 4
 #define CONFIG_MAGIC 0xc3
+void config_read_eeprom(Config *config);
 
 r_bool init_config(Config *config)
 {
-	r_bool valid;
+	config_read_eeprom(config);
 
-	if (get_pushbutton())
-	{
-		// hold button on boot to clear memory
-		valid = FALSE;
-	}
-	else
-	{
-		eeprom_read_block((void*) config, EEPROM_CONFIG_BASE, sizeof(*config));
-		valid = (config->magic == CONFIG_MAGIC);
-	}
-	
-	if (!valid)
+	if (config->magic != CONFIG_MAGIC
+		|| !get_pushbutton())
+		// button-down on boot => ignore eeprom
+		// Not clear this is doing anything, since the light doesn't
+		// start blinking until I release the button, which is also
+		// what it does when you push/release after boot. Oh well.
+		// Hopefully the code will not break in a way requiring this
+		// recovery. :v)
 	{
 		// install default meaningless values
 		config->magic = CONFIG_MAGIC;
@@ -272,8 +241,14 @@ r_bool init_config(Config *config)
 		config->servoPos[0] = 0;
 		config->servoPos[1] = 212;
 		config->quadSign = 1;
+		return FALSE;
 	}
-	return valid;
+	return TRUE;
+}
+
+void config_read_eeprom(Config *config)
+{
+	eeprom_read_block((void*) config, (void*) EEPROM_CONFIG_BASE, sizeof(*config));
 }
 
 uint16_t config_clip(Config *config, Quadrature *quad)
@@ -299,7 +274,7 @@ void config_update_servo(Config *config, ServoAct *servo, uint16_t doorPos)
 void config_write_eeprom(Config *config)
 {
 	/* note arg order is src, dest; reversed from avr eeprom_read_block */
-	eeprom_write_block((void*) config, EEPROM_CONFIG_BASE, sizeof(*config));
+	eeprom_write_block((void*) config, (void*) EEPROM_CONFIG_BASE, sizeof(*config));
 }
 
 /****************************************************************************/
@@ -321,6 +296,9 @@ typedef struct s_control_act {
 		UIEventHandlerFunc handler_func;
 		struct s_control_act *controlAct;
 	} handler;
+#if 0
+	uint8_t msg;
+#endif
 } ControlAct;
 
 static void control_update(ControlAct *ctl);
@@ -369,9 +347,15 @@ static void control_update(ControlAct *ctl)
 
 	// display quad info
 	int16_t pos = quad_get_position(&ctl->quad) & 0x03;
+
 	gpio_set_or_clr(LED2, !(pos==2));
 	gpio_set_or_clr(LED1, !(pos==1));
 	gpio_set_or_clr(LED0, !(pos==0));
+
+#if 0
+	gpio_set_or_clr(LED2, !((ctl->msg>>1)&1));
+	gpio_set_or_clr(LED1, !((ctl->msg>>0)&1));
+#endif
 
 	switch (ctl->mode)
 	{
@@ -408,6 +392,16 @@ static void control_update(ControlAct *ctl)
 	}
 }
 
+#if 0
+static void control_read_test(ControlAct *control)
+{
+	Config read_test;
+	config_read_eeprom(&read_test);
+	control->msg = (read_test.magic == CONFIG_MAGIC)
+		? 3 : 2;
+}
+#endif
+
 static UIEventDisposition control_handler(
 	struct s_control_event_handler *handler, UIEvent evt)
 {
@@ -439,6 +433,7 @@ static UIEventDisposition control_handler(
 			control->config.doorMax = doorMax;
 			control->config.quadSign = quad_sign;
 			config_write_eeprom(&control->config);
+
 			control->mode = cm_run;
 			control->quad.sign = quad_sign;
 			break;
@@ -516,6 +511,7 @@ void init_blink(BlinkAct *act)
 
 	schedule_us(((Time)1)<<18, (Activation*) act);
 }
+
 /****************************************************************************/
 
 
@@ -525,7 +521,7 @@ int main()
 	util_init();
 	hal_init(bc_rocket0);
 	init_clock(SYSTEM_CLOCK, TIMER2);
-	hal_init_adc();
+	hal_init_adc(ADC_PERIOD);
 	hal_init_adc_channel(POT_ADC_CHANNEL);
 	hal_init_adc_channel(OPT0_ADC_CHANNEL);
 	hal_init_adc_channel(OPT1_ADC_CHANNEL);
@@ -545,8 +541,18 @@ int main()
 
 	QuadTest qt;
 	init_quad_test(&qt);
-*/
 
+	gpio_make_output(LED0);
+	gpio_make_output(LED1);
+	gpio_make_output(LED2);
+	uint8_t *p = (uint8_t *) 17;
+	uint8_t v = eeprom_read_byte(p);
+	gpio_set_or_clr(LED0, !((v>>0)&1));
+	gpio_set_or_clr(LED1, !((v>>1)&1));
+	gpio_set_or_clr(LED2, !((v>>2)&1));
+	v+=1;
+	eeprom_write_byte(p, v);
+*/
 	ControlAct control;
 	init_control(&control);
 
@@ -565,71 +571,4 @@ int main()
 }
 #endif // SIM
 
-#if 0
-/****************************************************************************/
-/* test code */
-/****************************************************************************/
 
-typedef struct s_quad_test {
-	ActivationFunc func;
-	Quadrature quad;
-} QuadTest;
-
-static void qt_update(QuadTest *qt);
-
-void init_quad_test(QuadTest *qt)
-{
-	qt->func = (ActivationFunc) qt_update;
-
-	gpio_make_output(LED0);
-	gpio_make_output(LED1);
-	gpio_make_output(LED2);
-
-	init_quadrature(&qt->quad);
-
-	schedule_us(20000, (Activation*) qt);
-}
-
-/* bar spacing:
- * sensors are 0.4" on center
- * they should be 1/4 or 3/4 out of phase.
- * That gives p*.25 = 0.4 or p*.75 = 0.4
- * => p = 1.6 or p = .533
- * => f = .625 or f = 1.87
- * Bar width in points = (p/2)*72: 19.188 for f=1.87
- * To make quick & dirty bar, go to
- * http://incompetech.com/graphpaper/lined/
- *   horiz line weight 19.188
- *   grid spacing 1.87
- *   color black
- */
-
-static void qt_update(QuadTest *qt)
-{
-	schedule_us(20000, (Activation*) qt);
-
-/*
-	gpio_set_or_clr(LED2, !(hal_read_adc(POT_ADC_CHANNEL) > 350));
-*/
-	//gpio_set_or_clr(LED2, (clock_time_us()>>18) & 1);
-
-/*
-	gpio_set_or_clr(LED2, !(hal_read_adc(POT_ADC_CHANNEL) > 350));
-	gpio_set_or_clr(LED1, !(hal_read_adc(OPT0_ADC_CHANNEL) > 350));
-	gpio_set_or_clr(LED0, !(hal_read_adc(OPT1_ADC_CHANNEL) > 350));
-*/
-	uint8_t v = quad_get_position(&qt->quad) & 0x03;
-	gpio_set_or_clr(LED2, !(v==2));
-	gpio_set_or_clr(LED1, !(v==1));
-	gpio_set_or_clr(LED0, !(v==0));
-	
-	/*
-	uint16_t v = hal_read_adc(OPT1_ADC_CHANNEL);
-	gpio_set_or_clr(LED2, !((v>>9) & 1));
-	gpio_set_or_clr(LED1, !((v>>8) & 1));
-	gpio_set_or_clr(LED0, !((v>>7) & 1));
-	*/
-}
-
-
-#endif // 0
