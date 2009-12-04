@@ -3,8 +3,10 @@
 AVR_ONLY_OBJECTS := \
 	hardware.o
 
+ARCHTARG := $(TARGET).$(MCU).$(BOARD)
+
 # Compilation
-AVR_OBJDIR = obj.avr.$(MCU)
+AVR_OBJDIR = obj.avr.$(MCU).$(BOARD)
 AVR_LIBNAME = rocket
 AVR_LIB_FILE = $(AVR_OBJDIR)/lib$(AVR_LIBNAME).a
 CC = avr-gcc
@@ -19,7 +21,7 @@ AVR_CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 AVR_CFLAGS += -fdata-sections -ffunction-sections # Put all funcs/data in their own sections
 AVR_CFLAGS += -MD -MP -MT $(AVR_OBJDIR)/$(*F).o -MF $(AVR_OBJDIR)/$(@F).d 
 AVR_CFLAGS += -gdwarf-2 -std=gnu99 -Os 
-AVR_CFLAGS += -DMCU$(MCU)=1
+AVR_CFLAGS += -DMCU$(MCU)=1 -DBOARD_$(BOARD)
 
 ## Assembly specific flags
 ASMFLAGS = $(AVR_COMMON_FLAGS)
@@ -28,7 +30,7 @@ ASMFLAGS += -x assembler-with-cpp -Wa,-gdwarf2
 
 ## Linker flags
 AVR_LDFLAGS = $(AVR_COMMON_FLAGS)
-AVR_LDFLAGS +=  -Wl,-Map=$(TARGET).map -L$(AVR_OBJDIR) -l$(AVR_LIBNAME) 
+AVR_LDFLAGS +=  -Wl,-Map=$(ARCHTARG).map -L$(AVR_OBJDIR) -l$(AVR_LIBNAME) 
 AVR_LDFLAGS += -Wl,--gc-sections # Garbage-collect ununused functions
 
 
@@ -51,16 +53,22 @@ AVR_TARGET_OBJECTS := $(patsubst %.o,$(AVR_OBJDIR)/%.o, \
 # Make sure MCU is defined
 .PHONY: mcu-defined-check
  
-mcu-defined-check:
+def-checks:
 ifeq ($(MCU),)
 	@echo "MCU must be defined in your local Makefile (atmega8, atmega328p)"
 	@false
 else
 	@true
 endif
+ifeq ($(BOARD),)
+	@echo "BOARD must be defined in your local Makefile (PCB10, PCB11, CUSTOM)"
+	@false
+else
+	@true
+endif
 
 ## Build
-avr-all: mcu-defined-check $(TARGET).elf $(TARGET).hex $(TARGET).eep $(TARGET).lss $(TARGET).size
+avr-all: def-checks $(ARCHTARG).elf $(ARCHTARG).hex $(ARCHTARG).eep $(ARCHTARG).lss $(ARCHTARG).size
 
 ## Compile
 $(AVR_OBJDIR)/%.o: $(ROCKET_ROOT)/lib/%.c
@@ -75,7 +83,7 @@ $(AVR_LIB_FILE): $(AVR_LIB_OBJECTS)
 	ar r $@ $(AVR_LIB_OBJECTS)
 
 ##Link
-$(TARGET).elf: $(AVR_LIB_FILE) $(AVR_TARGET_OBJECTS)
+$(ARCHTARG).elf: $(AVR_LIB_FILE) $(AVR_TARGET_OBJECTS)
 	$(CC) $(AVR_TARGET_OBJECTS) $(AVR_LDFLAGS) -o $@
 
 %.hex: %.elf
@@ -88,26 +96,26 @@ $(TARGET).elf: $(AVR_LIB_FILE) $(AVR_TARGET_OBJECTS)
 	avr-objdump -h -S $< > $@
 
 .PHONY:
-$(TARGET).size: $(TARGET).elf
+$(ARCHTARG).size: $(ARCHTARG).elf
 	@echo
-	@avr-size -C --mcu=${MCU} $(TARGET).elf
+	@avr-size -C --mcu=${MCU} $(ARCHTARG).elf
 
 ## Clean target
 avr-clean:
 	-rm -rf \
 	    	$(AVR_OBJDIR)/* \
-		$(TARGET).elf \
-		$(TARGET).hex \
-		$(TARGET).eep \
-		$(TARGET).lss \
-		$(TARGET).map \
+		$(ARCHTARG).elf \
+		$(ARCHTARG).hex \
+		$(ARCHTARG).eep \
+		$(ARCHTARG).lss \
+		$(ARCHTARG).map \
 
 
 ## Other dependencies
 -include $(shell mkdir -p $(AVR_OBJDIR)) $(wildcard $(AVR_OBJDIR)/*.d)
 
-program: $(TARGET).hex
-	sudo avrdude -c usbtiny -p m8 -u -U flash:w:$(TARGET).hex
+program: $(ARCHTARG).hex
+	sudo avrdude -c usbtiny -p m8 -u -U flash:w:$(ARCHTARG).hex
 
 # Fuse byte documentation:
 # page 223 of http://www.atmel.com/dyn/resources/prod_documents/doc2486.pdf

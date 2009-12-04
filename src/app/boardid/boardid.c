@@ -12,6 +12,7 @@ typedef struct {
 	ActivationFunc f;
 	int stage;
 	BoardBuffer b[8];
+	SSBitmap b_bitmap, d_bitmap;
 } BoardIDAct_t;
 
 
@@ -20,25 +21,36 @@ static void update(BoardIDAct_t *ba)
 	uint8_t board, digit;
 
 	for (board = 0; board < NUM_BOARDS; board++) {
-		if (ba->stage == 0) {
-			SSBitmap b_bitmap = ascii_to_bitmap('b');
+		switch (ba->stage) {
+		case 0:
 			for (digit = 0; digit < NUM_DIGITS; digit++)
-				ba->b[board].buffer[digit] = b_bitmap;
-		}
-		else if (ba->stage == 1)
+				ba->b[board].buffer[digit] = ba->b_bitmap;
+			break;
+
+		case 1:
 			for (digit = 0; digit < NUM_DIGITS; digit++)
 				ba->b[board].buffer[digit] = ascii_to_bitmap(board + '0');
-		else if (ba->stage == 2) {
-			SSBitmap d_bitmap = ascii_to_bitmap('d');
+			break;
+
+		case 2:
 			for (digit = 0; digit < NUM_DIGITS; digit++)
-				ba->b[board].buffer[digit] = d_bitmap;
-		}
-		else if (ba->stage == 3)
+				ba->b[board].buffer[digit] = ba->d_bitmap;
+			break;
+
+		case 3:
 			for (digit = 0; digit < NUM_DIGITS; digit++)
 				ba->b[board].buffer[digit] = ascii_to_bitmap(digit + '0');
+			break;
+
+		default:
+			for (digit = 0; digit < NUM_DIGITS; digit++)
+				ba->b[board].buffer[digit] = (1 << (11-ba->stage));
+			
+		}
+
 		board_buffer_draw(&ba->b[board]);
 	}
-	if (++(ba->stage) == 4)
+	if (++(ba->stage) == 12)
 		ba->stage = 0;
 
 	schedule_us(1000000, (Activation *)ba);
@@ -50,14 +62,15 @@ int main()
 {
 	heap_init();
 	util_init();
-	hal_init();
-
-	clock_init(100000);
+	hal_init(bc_rocket0);
+	init_clock(100000, TIMER1);
 	board_buffer_module_init();
 
 	BoardIDAct_t ba;
 	ba.f = (ActivationFunc) update;
 	ba.stage = 0;
+	ba.b_bitmap = ascii_to_bitmap('b');
+	ba.d_bitmap = ascii_to_bitmap('d');
 
 	uint8_t board;
 	for (board = 0; board < NUM_BOARDS; board++) {
@@ -65,7 +78,7 @@ int main()
 		board_buffer_push(&ba.b[board], board);
 	}
 
-	schedule_us(1, (Activation *) &ba);
+	schedule_now((Activation *) &ba);
 
 	//	KeyTestActivation_t kta;
 	//	display_keytest_init(&kta, 7);

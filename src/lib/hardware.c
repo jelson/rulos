@@ -3,8 +3,6 @@
  *
  * This file is not compiled by the simulator.
  */
-//#define V1PCB
-#define V11PCB
 
 #include <avr/boot.h>
 #include <avr/io.h>
@@ -18,7 +16,7 @@
 
 #define NUM_ADCS 6
 
-#if defined(PROTO_BOARD)
+#if defined(BOARD_PROTO)
 #define BOARDSEL0	GPIO_B2
 #define BOARDSEL1	GPIO_B3
 #define BOARDSEL2	GPIO_B4
@@ -30,7 +28,7 @@
 #define SEGSEL2		GPIO_D7
 #define DATA		GPIO_B0
 #define STROBE		GPIO_B1
-#elif defined(V1PCB)
+#elif defined(BOARD_PCB10)
 #define BOARDSEL0	GPIO_B2
 #define BOARDSEL1	GPIO_B3
 #define BOARDSEL2	GPIO_B4
@@ -52,7 +50,7 @@
 #define KEYPAD_COL2 GPIO_D2
 #define KEYPAD_COL3 GPIO_D3
 
-#elif defined(V11PCB)
+#elif defined(BOARD_PCB11)
 #define BOARDSEL0	GPIO_B0
 #define BOARDSEL1	GPIO_B1
 #define BOARDSEL2	GPIO_B2
@@ -73,6 +71,11 @@
 #define KEYPAD_COL1 GPIO_D1
 #define KEYPAD_COL2 GPIO_D2
 #define KEYPAD_COL3 GPIO_D3
+
+#elif defined(BOARD_CUSTOM)
+/* nothing */
+#else
+# error No board definition given
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -93,7 +96,6 @@ static KeypadState g_theKeypad;
 static void init_keypad(KeypadState *keypad);
 static void keypad_update(KeypadState *key);
 static char scan_keypad();
-static uint8_t scan_row();
 
 void hal_init_keypad()
 {
@@ -145,8 +147,29 @@ char hal_read_keybuf()
 		return 0;
 }
 
+
+#ifdef KEYPAD_ROW0
+
+static uint8_t scan_row()
+{
+	/*
+	 * Scan the four columns in of the row.  Return 1..4 if any of
+	 * them are low.  Return 0 if they're all high.
+	 */
+	_NOP();
+	if (gpio_is_clr(KEYPAD_COL0)) return 1;
+	if (gpio_is_clr(KEYPAD_COL1)) return 2;
+	if (gpio_is_clr(KEYPAD_COL2)) return 3;
+	if (gpio_is_clr(KEYPAD_COL3)) return 4;
+
+	return 0;
+}
+#endif
+
+
 static char scan_keypad()
 {
+#ifdef KEYPAD_ROW0
 	uint8_t col;
 
 	/* Scan first row */
@@ -192,21 +215,7 @@ static char scan_keypad()
 	if (col == 2)			return '0';
 	if (col == 3)			return 'p';
 	if (col == 4)			return 'd';
-
-	return 0;
-}
-
-static uint8_t scan_row()
-{
-	/*
-	 * Scan the four columns in of the row.  Return 1..4 if any of
-	 * them are low.  Return 0 if they're all high.
-	 */
-	_NOP();
-	if (gpio_is_clr(KEYPAD_COL0)) return 1;
-	if (gpio_is_clr(KEYPAD_COL1)) return 2;
-	if (gpio_is_clr(KEYPAD_COL2)) return 3;
-	if (gpio_is_clr(KEYPAD_COL3)) return 4;
+#endif
 
 	return 0;
 }
@@ -216,6 +225,7 @@ static uint8_t scan_row()
 
 static void init_pins()
 {
+#ifdef BOARDSEL0
 	gpio_make_output(BOARDSEL0);
 	gpio_make_output(BOARDSEL1);
 	gpio_make_output(BOARDSEL2);
@@ -227,12 +237,18 @@ static void init_pins()
 	gpio_make_output(SEGSEL2);
 	gpio_make_output(DATA);
 	gpio_make_output(STROBE);
+#endif
 
+#ifdef KEYPAD_COL0
 	gpio_make_input(KEYPAD_COL0);
 	gpio_make_input(KEYPAD_COL1);
 	gpio_make_input(KEYPAD_COL2);
 	gpio_make_input(KEYPAD_COL3);
+#endif
 }
+
+
+#ifndef BOARD_CUSTOM
 
 static uint8_t segmentRemapTables[4][8] = {
 #define SRT_SUBU	0
@@ -302,6 +318,8 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t 
 	_NOP();
 	gpio_set(STROBE);
 }
+
+#endif // BOARD_CUSTOM
 
 void null_handler()
 {
@@ -731,6 +749,7 @@ void hal_idle()
 
 void hal_init(BoardConfiguration bc)
 {
+#ifndef BOARD_CUSTOM
 	// This code is static per binary; could save some code space
 	// by using #ifdefs instead of dynamic code.
 	int i;
@@ -753,6 +772,7 @@ void hal_init(BoardConfiguration bc)
 			displayConfiguration[0] = BRT_WALLCLOCK;
 			break;
 	}
+#endif
 
 	init_pins();
 
