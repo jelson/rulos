@@ -333,7 +333,13 @@ ISR(TIMER1_COMPA_vect)
 	timer1_handler();
 }
 
+#if defined(MCUatmega8)
 ISR(TIMER2_COMP_vect)
+#elif defined (MCUatmega328p)
+ISR(TIMER2_COMPA_vect)
+#else
+# error hardware-specific timer code needs help!
+#endif
 {
 	timer2_handler();
 }
@@ -453,14 +459,14 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, uint8_t timer_id)
 
 		timer2_handler = handler;
 
+#if defined(MCUatmega8)
 		OCR2 = ocr;
 		TCCR2 = tccr2;
-
-		/* enable output-compare int. */
-#if defined(MCUatmega8)
-		TIMSK  |= _BV(OCIE2);
+		TIMSK  |= _BV(OCIE2); /* enable output-compare int. */
 #elif defined (MCUatmega328p)
-		TIMSK1 |= _BV(OCIE2);
+		OCR2A = ocr;
+		TCCR2A = tccr2;
+		TIMSK1 |= _BV(OCIE2A); /* enable output-compare int. */
 #else
 # error hardware-specific timer code needs help!
 #endif

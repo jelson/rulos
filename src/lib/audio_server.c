@@ -79,11 +79,12 @@ void as_recv(RecvSlot *recvSlot)
 	AudioRequestMessage *arm = (AudioRequestMessage *) &recvSlot->msg->data;
 	if (arm->skip)
 	{
-		ad_skip_to_clip(as->ad, arm->skip_token, arm->loop_token);
+// TODO left off here
+//		ad_skip_to_clip(as->ad, arm->skip_token, arm->loop_token);
 	}
 	else
 	{
-		ad_queue_loop_clip(as->ad, arm->loop_token);
+//		ad_queue_loop_clip(as->ad, arm->loop_token);
 	}
 
 	as_update_display(as);

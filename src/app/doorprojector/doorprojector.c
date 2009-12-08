@@ -90,7 +90,29 @@
 
  *--------------------------------------------------------------------------*/
 
+/*
+ goals:
+ 1. If the door isn't moving, the long-term PWM value sent to the servo
+ should be a constant. A twitchy input sensor should not twitch the PWM.
+ 	- if the commanded position is within a small delta of the current
+	output, ignore the command and stick with current output. Delta
+	should be 1 unit, measured in input-space clicks.
+ 2. If the door starts moving the other way, we should move extra distance
+ to make up for backlash (slop) in the actuator mechanics.
+    - always push the window around with the PWM.
+ 3. Buzz protection: if we've just pushed on the actuator, we should overshoot
+ a little, and then, after the servo has finished actuating, back off a little
+ to leave the servo somewhere it's not buzzing.
+ 	- pwm to the edge of lash window temporarily,
+	- then rest a little inside the window
+*/
+
 typedef struct s_servo {
+	uint16_t backlash_width;	// push this far extra when changing directions
+	uint16_t hysteresis_width;	// allow output_position to differ from commanded_position by this much
+
+	uint16_t commanded_position;
+	uint16_t output_position;
 } ServoAct;
 
 void servo_set_pwm(ServoAct *servo, uint16_t pwm_width);

@@ -114,17 +114,35 @@ avr-clean:
 ## Other dependencies
 -include $(shell mkdir -p $(AVR_OBJDIR)) $(wildcard $(AVR_OBJDIR)/*.d)
 
+##############################################################################
+
+ifeq ($(MCU),atmega8)
+AVRCONFIG := 
+AVROPTS := -p m8
+endif
+ifeq ($(MCU),atmega328p)
+#AVROPTS := -p m328p
+AVRCONFIG := ../../avrdude+atmega328p.conf
+
+$(AVRCONFIG): /etc/avrdude.conf ../../avrdude-atmega328p.conf
+	cat $^ > $@
+
+AVROPTS := -C $(AVRCONFIG) -p m328p
+endif
+
 program: $(ARCHTARG).hex
-	sudo avrdude -c usbtiny -p m8 -u -U flash:w:$(ARCHTARG).hex
+	sudo avrdude -c usbtiny $(AVROPTS) -u -U flash:w:$(ARCHTARG).hex
 
 # Fuse byte documentation:
 # page 223 of http://www.atmel.com/dyn/resources/prod_documents/doc2486.pdf
 # CKSEL3..0 are the low nybble of lfuse. Internal values 1..4 (page 30)
 
-readclock:
-	sudo avrdude -c usbtiny -p m8 -u -U lfuse:r:lfuse:h
+
+readclock: $(AVRCONFIG)
+	sudo avrdude -c usbtiny $(AVROPTS) -u -U lfuse:r:lfuse:h
 	echo 'lfuse clock bits: ' `cat lfuse`
 
+# TODO figure out clock constants for 328p
 setclock1mhz:
 	sudo avrdude -c usbtiny -p m8 -u -U lfuse:w:0xe1:m
 

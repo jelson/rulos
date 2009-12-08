@@ -269,12 +269,6 @@ static void adc_simulator_start()
 }
 
 
-uint16_t *hal_get_adc(uint8_t channel)
-{
-	adc[channel] = 512;
-	return &(adc[channel]);
-}
-
 
 /********************** uart simulator *********************/
 
@@ -911,3 +905,18 @@ void hal_spi_close()
 {
 	g_spi.state = sss_ready;
 }
+
+void hal_init_adc(Time scan_period)
+{
+}
+
+void hal_init_adc_channel(uint8_t idx)
+{
+	adc[idx] = 512;
+}
+
+uint16_t hal_read_adc(uint8_t idx)
+{
+	return adc[idx];
+}
+
