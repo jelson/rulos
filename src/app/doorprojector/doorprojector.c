@@ -47,7 +47,14 @@
 #define LED2		GPIO_C5
 #define POT			GPIO_C4
 #define SERVO		GPIO_B1
-#define PUSHBUTTON	GPIO_B0
+#define SET_BTN		GPIO_B0
+#define LEFT_BTN	GPIO_D2
+#define RIGHT_BTN	GPIO_D3
+
+#define READ_BUTTON(btn)	(gpio_is_clr(btn))
+
+#define PAN_PERIOD (10000)			/* tick one PAN_RATE every 10ms */
+#define PAN_RATE 	(65535/100/4)	/* move complete distance every 4s */
 
 #define BUTTON_SCAN_PERIOD	20000
 #define BUTTON_REFRACTORY_PERIOD	40000
@@ -108,11 +115,7 @@
 */
 
 typedef struct s_servo {
-	uint16_t backlash_width;	// push this far extra when changing directions
-	uint16_t hysteresis_width;	// allow output_position to differ from commanded_position by this much
-
-	uint16_t commanded_position;
-	uint16_t output_position;
+	uint16_t desired_position;
 } ServoAct;
 
 void servo_set_pwm(ServoAct *servo, uint16_t pwm_width);
@@ -137,10 +140,37 @@ void init_servo(ServoAct *servo)
 	servo_set_pwm(servo, 500);
 }
 
-void servo_set_pwm(ServoAct *servo, uint16_t pwm_width)
+void servo_set_pwm(ServoAct *servo, uint16_t desired_position)
 {
+	if (desired_position == servo->desired_position)
+	{
+		return;
+	}
+
+#define SERVO_MAX		(0xffff)
+#define	SERVO_SLOP		(0x0180)
+#define SERVO_OFFSET	(1000)	/* give room to clamp values w/ over/underflow */
+
+	int32_t output;
+	if (desired_position < servo->desired_position)
+	{
+		output = SERVO_OFFSET + desired_position - SERVO_SLOP;
+	}
+	else
+	{
+		output = SERVO_OFFSET + desired_position + SERVO_SLOP;
+	}
+
+	// clamp output value
+	output = bound(output, SERVO_OFFSET, ((int32_t)SERVO_OFFSET)+((uint32_t)SERVO_MAX));
+	output = output - SERVO_OFFSET;
+	uint16_t output16 = output;
+
+	// record state for next time
+	servo->desired_position = desired_position;
+	
 	OCR1A = SERVO_PULSE_MIN_US+
-		(pwm_width /
+		(output16 /
 			(65535/(SERVO_PULSE_MAX_US - SERVO_PULSE_MIN_US)));
 }
 
@@ -225,14 +255,6 @@ void quad_set_position(Quadrature *quad, int16_t pos)
 
 /****************************************************************************/
 
-r_bool get_pushbutton()
-{
-	gpio_make_input(PUSHBUTTON);
-	return gpio_is_clr(PUSHBUTTON);
-}
-
-/****************************************************************************/
-
 typedef struct s_config {
 	uint8_t magic;	// to detect a valid eeprom record
 	int16_t doorMax;
@@ -249,7 +271,7 @@ r_bool init_config(Config *config)
 	config_read_eeprom(config);
 
 	if (config->magic != CONFIG_MAGIC
-		|| !get_pushbutton())
+		|| !READ_BUTTON(SET_BTN))
 		// button-down on boot => ignore eeprom
 		// Not clear this is doing anything, since the light doesn't
 		// start blinking until I release the button, which is also
@@ -290,7 +312,7 @@ void config_update_servo(Config *config, ServoAct *servo, uint16_t doorPos)
 	servoPos /= config->doorMax;
 	servoPos += config->servoPos[0];
 
-	servo_set_pwm(servo, (uint16_t) servoPos*(65535/1024));
+	servo_set_pwm(servo, (uint16_t) servoPos);
 }
 
 void config_write_eeprom(Config *config)
@@ -321,6 +343,8 @@ typedef struct s_control_act {
 #if 0
 	uint8_t msg;
 #endif
+	Time lastPanTime;
+	uint16_t pan_pos;
 } ControlAct;
 
 static void control_update(ControlAct *ctl);
@@ -329,9 +353,16 @@ static UIEventDisposition control_handler(
 
 void init_control(ControlAct *ctl)
 {
+	gpio_make_input(LEFT_BTN);
+	gpio_make_input(RIGHT_BTN);
+
 	gpio_make_output(LED0);
 	gpio_make_output(LED1);
 	gpio_make_output(LED2);
+
+	gpio_set(LED0);
+	gpio_set(LED1);
+	gpio_set(LED2);
 
 	ctl->func = (ActivationFunc) control_update;
 	init_quadrature(&ctl->quad);
@@ -351,30 +382,64 @@ void init_control(ControlAct *ctl)
 		// Just trying to have good constructor hygiene.
 	ctl->handler.handler_func = (UIEventHandlerFunc) control_handler;
 	ctl->handler.controlAct = ctl;
+	ctl->lastPanTime = clock_time_us();
+	ctl->pan_pos = 0x8fff;
 	schedule_us(100, (Activation*) ctl);
 }
 
+#if USE_POT
 static void control_servo_from_pot(ControlAct *ctl)
 {
 	uint32_t pot = hal_read_adc(POT_ADC_CHANNEL);
 	ctl->pot_servo = pot;
 	servo_set_pwm(&ctl->servo, ctl->pot_servo*(65535/1024));
 }
+#else
+static void control_servo_from_pan(ControlAct *ctl)
+{
+	servo_set_pwm(&ctl->servo, ctl->pan_pos);
+}
+#endif
 
 static void control_update(ControlAct *ctl)
 {
 	schedule_us(100, (Activation*) ctl);
+
+	if (clock_time_us() - ctl->lastPanTime > PAN_PERIOD)
+	{
+		ctl->lastPanTime = clock_time_us();
+		if (READ_BUTTON(LEFT_BTN))
+		{
+			ctl->pan_pos = (ctl->pan_pos < PAN_RATE)
+				? 0 : ctl->pan_pos - PAN_RATE;
+		}
+		else if (READ_BUTTON(RIGHT_BTN))
+		{
+			ctl->pan_pos = ((SERVO_MAX - ctl->pan_pos) < PAN_RATE)
+				? SERVO_MAX : ctl->pan_pos + PAN_RATE;
+		}
+	}
 
 	uint8_t blink_rate = 0;
 
 	// display quad info
 	int16_t pos = quad_get_position(&ctl->quad) & 0x03;
 
-	gpio_set_or_clr(LED2, !(pos==2));
-	gpio_set_or_clr(LED1, !(pos==1));
 	gpio_set_or_clr(LED0, !(pos==0));
 
-#if 0
+#define DISP_POSITION 1
+
+#if DISP_BTNS
+	gpio_set_or_clr(LED2, !READ_BUTTON(RIGHT_BTN));
+	gpio_set_or_clr(LED1, !READ_BUTTON(LEFT_BTN));
+#endif
+
+#if DISP_POSITION
+	gpio_set_or_clr(LED2, !(pos==2));
+	gpio_set_or_clr(LED1, !(pos==1));
+#endif
+
+#if DISP_MSG
 	gpio_set_or_clr(LED2, !((ctl->msg>>1)&1));
 	gpio_set_or_clr(LED1, !((ctl->msg>>0)&1));
 #endif
@@ -394,7 +459,7 @@ static void control_update(ControlAct *ctl)
 		// hold door at "zero"
 		quad_set_position(&ctl->quad, 0);
 
-		control_servo_from_pot(ctl);
+		control_servo_from_pan(ctl);
 		
 		break;
 		}
@@ -403,7 +468,7 @@ static void control_update(ControlAct *ctl)
 		blink_rate = 17;
 		// let door slide to learn doorMax
 
-		control_servo_from_pot(ctl);
+		control_servo_from_pan(ctl);
 
 		break;
 		}
@@ -438,13 +503,21 @@ static UIEventDisposition control_handler(
 		}
 	case cm_setLeft:
 		{
-			control->config.servoPos[0] = control->pot_servo;
+#if USE_POT
+			control->config.servoPos[0] = control->pot_servo*(65535/1024);
+#else
+			control->config.servoPos[0] = control->pan_pos;
+#endif
 			control->mode = cm_setRight;
 			break;
 		}
 	case cm_setRight:
 		{
-			control->config.servoPos[1] = control->pot_servo;
+#if USE_POT
+			control->config.servoPos[1] = control->pot_servo*(65535/1024);
+#else
+			control->config.servoPos[1] = control->pan_pos;
+#endif
 			int8_t quad_sign = +1;
 			int16_t doorMax = quad_get_position(&control->quad);
 			if (doorMax < 0)
@@ -482,7 +555,7 @@ void init_button(ButtonAct *button, UIEventHandler *handler)
 	button->lastStateTime = clock_time_us();
 	button->handler = handler;
 
-	gpio_make_input(PUSHBUTTON);
+	gpio_make_input(SET_BTN);
 
 	schedule_us(1, (Activation*) button);
 }
@@ -491,7 +564,7 @@ void button_update(ButtonAct *button)
 {
 	schedule_us(BUTTON_SCAN_PERIOD, (Activation*) button);
 
-	r_bool buttondown = get_pushbutton();
+	r_bool buttondown = READ_BUTTON(SET_BTN);
 
 	if (buttondown == button->lastState)
 		{ return; }
@@ -564,9 +637,11 @@ int main()
 	QuadTest qt;
 	init_quad_test(&qt);
 
+	gpio_make_input(SET_BTN);
 	gpio_make_output(LED0);
 	gpio_make_output(LED1);
 	gpio_make_output(LED2);
+
 	uint8_t *p = (uint8_t *) 17;
 	uint8_t v = eeprom_read_byte(p);
 	gpio_set_or_clr(LED0, !((v>>0)&1));

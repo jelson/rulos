@@ -561,7 +561,7 @@ void hal_init_adc(Time scan_period)
 	init_adc(&g_theADC, scan_period);
 }
 
-//#define RAW_ADC
+#define RAW_ADC
 
 void hal_init_adc_channel(uint8_t idx)
 {
@@ -787,6 +787,10 @@ void hal_init(BoardConfiguration bc)
 	uint8_t cksel = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS) & 0x0f;
 	f_cpu = f_cpu_values[cksel-1];
 #elif defined(MCUatmega328p)
+	// If we decide to do variable clock rates on 328p, see page 37
+	// for prescale configurations.
+	CLKPR = 0x80;
+	CLKPR = 0;
 	f_cpu = (uint32_t) 8000000;
 #else
 # error Hardware-specific clock code needs help
