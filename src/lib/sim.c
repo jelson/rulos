@@ -98,11 +98,11 @@ BoardLayout tree0_def[] = {
 	{ "Mission Clock",			{ PG,PG,PG,PG,PG,PG,PY,PY },  3,  0 },
 	{ "Distance to Moon",		{ PR,PR,PR,PR,PR,PR,PR,PR }, 33,  4 },
 	{ "Speed (fps)",			{ PY,PY,PY,PY,PY,PY,PY,PY }, 33,  8 },
-	{ "Thruster Actuation",		{ PB,PR,PR,PR,PB,PY,PY,PY },  3, 12 },
-	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 16 },
-	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 19 },
-	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 22 },
-	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 25 },
+	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 12 },
+	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 15 },
+	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 18 },
+	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 21 },
+	{ "Thruster Actuation",		{ PB,PR,PR,PR,PB,PY,PY,PY },  3, 25 },
 	{ NULL }
 }, *tree0 = tree0_def;
 
@@ -338,12 +338,19 @@ void hal_uart_init(uint16_t baud)
 
 /************ keypad simulator *********************/
 
+r_bool g_keypad_enabled = FALSE;
 char keypad_buf[10];
 ByteQueue *keypad_q = (ByteQueue *) keypad_buf;
 
+void hal_init_keypad()
+{
+	g_keypad_enabled = TRUE;
+}
 
 char hal_read_keybuf()
 {
+	if (!g_keypad_enabled) { return 0; }
+
 	uint8_t k;
 
 	if (ByteQueue_pop(keypad_q, &k))

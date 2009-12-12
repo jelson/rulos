@@ -44,21 +44,26 @@ int main()
 {
 	heap_init();
 	util_init();
-	hal_init();
-	clock_init(10000);
+	hal_init(bc_rocket0);
+	hal_init_keypad();
+	init_clock(10000, TIMER1);
 	board_buffer_module_init();
 	uart_init(12);
 
 	KeyTestActivation_t kta;
 	kta.f = (ActivationFunc) update;
+
 	board_buffer_init(&kta.bbuf_k);
-	kta.bbuf_k.upside_down = (1 << 2) | (1 << 4);
 	board_buffer_push(&kta.bbuf_k, 0);
 
 	board_buffer_init(&kta.bbuf_u);
-	kta.bbuf_u.upside_down = (1 << 2) | (1 << 4);
 	board_buffer_push(&kta.bbuf_u, 1);
 	schedule_us(1, (Activation *) &kta);
+
+	add_char_to_bbuf(&kta.bbuf_k, 'I');
+	add_char_to_bbuf(&kta.bbuf_k, 'n');
+	add_char_to_bbuf(&kta.bbuf_k, 'i');
+	add_char_to_bbuf(&kta.bbuf_k, 't');
 
 	cpumon_main_loop();
 	return 0;

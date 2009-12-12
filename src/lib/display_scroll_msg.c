@@ -46,7 +46,7 @@ void dscrlmsg_update(DScrollMsgAct *act)
 {
 	if (act->speed_ms > 0)
 	{
-		schedule_us(act->speed_ms*1000, (Activation*) act);
+		schedule_us(((Time) act->speed_ms)*1000, (Activation*) act);
 		if (act->len > NUM_DIGITS)
 		{
 			act->index = dscrlmsg_nexti(act, act->index);

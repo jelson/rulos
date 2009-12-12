@@ -53,4 +53,30 @@ int int_div_with_correct_truncation(int a, int b)
 	}
 }
 
+char hexmap[16] = "0123456789ABCDEF";
 
+void debug_msg_hex(char *m, uint16_t hex)
+{
+	static char buf[9];
+	static SSBitmap bm[8];
+
+	strcpy(buf, m);
+	int i;
+	for (i=strlen(buf); i<8; i++)
+	{
+		buf[i] = ' ';
+	}
+	buf[8] = '\0';
+	buf[4] = hexmap[(hex>>12)&0x0f];
+	buf[5] = hexmap[(hex>> 8)&0x0f];
+	buf[6] = hexmap[(hex>> 4)&0x0f];
+	buf[7] = hexmap[(hex    )&0x0f];
+	ascii_to_bitmap_str(bm, 8, buf);
+	program_board(1, bm);
+}
+
+uint16_t stack_ptr()
+{
+	uint8_t a, *b=&a;
+	return (unsigned) b;
+}

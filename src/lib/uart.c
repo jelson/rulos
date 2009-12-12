@@ -68,9 +68,18 @@ void uart_init(uint16_t baud)
 // handler, simply by not linking this file.
 
 #ifndef SIM
+#if defined(MCUatmega328p)
+ISR(USART_RX_vect)
+{
+	uart_receive(UDR0);
+}
+#elif defined(MCUatmega8)
 ISR(USART_RXC_vect)
 {
 	uart_receive(UDR);
 }
+#else
+#error need CPU love
+#endif
 #endif
 

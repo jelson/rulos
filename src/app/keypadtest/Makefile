@@ -1,7 +1,8 @@
 ROCKET_ROOT := ../..
 
-MCU := atmega8
+MCU := atmega328p
 TARGET := keypadtest
+BOARD := PCB10
 
 TARGET_OBJECTS := \
 	uart.o \

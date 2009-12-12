@@ -35,11 +35,13 @@ void launch_init(Launch *launch, uint8_t board0, HPAM *hpam, AudioClient *audioC
 		&launch->textentry, rowregion, (UIEventHandler*) launch, NULL, "");
 	raster_big_digit_init(&launch->bigDigit, board0);
 
+#if 0
 	launch->main_rtc = NULL;
 	launch->lunar_distance = NULL;
 
 	launch_configure_state(launch, launch_state_hidden);
 	schedule_us(1, (Activation*) &launch->clock_act);
+#endif
 }
 
 void launch_configure_state(Launch *launch, LaunchState newState)

@@ -766,8 +766,8 @@ void hal_init(BoardConfiguration bc)
 	switch (bc)
 	{
 		case bc_rocket0:
+			displayConfiguration[3] = BRT_SOLDERED_DN_BOARD_DN;
 			displayConfiguration[4] = BRT_SOLDERED_DN_BOARD_DN;
-			displayConfiguration[5] = BRT_SOLDERED_DN_BOARD_DN;
 			break;
 		case bc_rocket1:
 			displayConfiguration[2] = BRT_SOLDERED_DN_BOARD_DN;
@@ -811,10 +811,12 @@ r_bool hal_twi_ready_to_send()
 
 void hal_twi_send_byte(uint8_t byte)
 {
+#if 0
 	LOGF((logfp, "hal_twi_send_byte(%02x [%c])",
 		byte,
 		(byte>=' ' && byte<127) ? byte : '_'));
 	schedule_us(1, g_hal_twi_act);
+#endif
 }
 
 r_bool hal_twi_read_byte(/*OUT*/ uint8_t *byte)
@@ -923,6 +925,16 @@ void hal_spi_close()
 
 void hardware_assert(uint16_t line)
 {
+	char buf[9];
+	buf[0] = 'a';
+	buf[1] = 's';
+	buf[2] = 'r';
+	int_to_string2(&buf[3], 5, 0, line);
+	buf[8] = 0;
+	SSBitmap bm[8];
+	ascii_to_bitmap_str(bm, 8, buf);
+	program_board(0, bm);
+
 	while (1) { }
 }
 

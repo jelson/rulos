@@ -41,5 +41,8 @@ uint32_t isqrt(uint32_t v);
 
 int int_div_with_correct_truncation(int a, int b);
 
+extern char hexmap[16];
+void debug_msg_hex(char *m, uint16_t hex);
+uint16_t stack_ptr();
 
 #endif // _util_h
