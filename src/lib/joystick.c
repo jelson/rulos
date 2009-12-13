@@ -7,10 +7,6 @@
 //          right trigger  320 on/350 off
 //    Y direction -- adc0, full up   = 1020, center=470, down=300
 
-#ifndef SIM
-# include "hardware.h"
-# define JOYSTICK_TRIGGER_GPIO GPIO_D4
-#endif
 #define JOYSTICK_ADC_SCAN_RATE 10000
 
 
@@ -60,7 +56,7 @@ void joystick_poll(JoystickState_t *js)
 	if (js->y_pos > -RELEASE_THRESHOLD)
 		js->state &= ~(JOYSTICK_DOWN);
 
-#ifndef SIM
+#if defined(JOYSTICK_TRIGGER_GPIO)
 	if (gpio_is_clr(JOYSTICK_TRIGGER_GPIO))
 		js->state |= JOYSTICK_TRIGGER;
 	else
@@ -70,7 +66,9 @@ void joystick_poll(JoystickState_t *js)
 
 void joystick_init(JoystickState_t *js)
 {
-#ifndef SIM
+	js->state = 0;
+#if defined(JOYSTICK_TRIGGER_GPIO)
+	// Only PCB11 defines a joystick trigger line
 	gpio_make_input(JOYSTICK_TRIGGER_GPIO);
 #endif
 	hal_init_adc(JOYSTICK_ADC_SCAN_RATE);

@@ -156,10 +156,10 @@ void pong_paint_once(Pong *pong)
 		ascii_to_bitmap_str(pong->bbuf[1].buffer+1, 6, "P0  P1");
 
 		char scoretext[3];
-		int_to_string2(scoretext, 2, 0, pong->score[0]);
+		int_to_string2(scoretext, 2, 0, pong->score[0] % 100);
 		ascii_to_bitmap_str(pong->bbuf[2].buffer+1, 2, scoretext);
 
-		int_to_string2(scoretext, 2, 0, pong->score[1]);
+		int_to_string2(scoretext, 2, 0, pong->score[1] % 100);
 		ascii_to_bitmap_str(pong->bbuf[2].buffer+5, 2, scoretext);
 	}
 	else

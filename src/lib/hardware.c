@@ -28,6 +28,8 @@
 #define SEGSEL2		GPIO_D7
 #define DATA		GPIO_B0
 #define STROBE		GPIO_B1
+#define	AVAILABLE_ADCS	0x38
+
 #elif defined(BOARD_PCB10)
 #define BOARDSEL0	GPIO_B2
 #define BOARDSEL1	GPIO_B3
@@ -50,6 +52,8 @@
 #define KEYPAD_COL2 GPIO_D2
 #define KEYPAD_COL3 GPIO_D3
 
+#define	AVAILABLE_ADCS	0x38
+
 #elif defined(BOARD_PCB11)
 #define BOARDSEL0	GPIO_B0
 #define BOARDSEL1	GPIO_B1
@@ -71,6 +75,8 @@
 #define KEYPAD_COL1 GPIO_D1
 #define KEYPAD_COL2 GPIO_D2
 #define KEYPAD_COL3 GPIO_D3
+
+#define	AVAILABLE_ADCS	0x3f
 
 #elif defined(BOARD_CUSTOM)
 /* nothing */
@@ -565,6 +571,7 @@ void hal_init_adc(Time scan_period)
 
 void hal_init_adc_channel(uint8_t idx)
 {
+	assert((1<<idx) & AVAILABLE_ADCS);
 #ifndef RAW_ADC
 	g_theADC.enable[idx] = TRUE;
 #endif

@@ -25,6 +25,9 @@
 #define GPIO_D6  (&DDRD), (&PORTD), (&PIND), (PORTD6)
 #define GPIO_D7  (&DDRD), (&PORTD), (&PIND), (PORTD7)
 
+#if defined(BOARD_PCB11)
+#define JOYSTICK_TRIGGER_GPIO GPIO_D4
+#endif
 
 /*
  * set a bit in a register

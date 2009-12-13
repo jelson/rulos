@@ -49,5 +49,7 @@ int int_div_with_correct_truncation(int a, int b);
 extern char hexmap[16];
 void debug_msg_hex(uint8_t board, char *m, uint16_t hex);
 uint16_t stack_ptr();
+void debug_delay(int ms);
+#define debug_plod(m)	{ debug_msg_hex(0, m, __LINE__); debug_delay(250); }
 
 #endif // _util_h

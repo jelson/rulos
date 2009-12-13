@@ -25,7 +25,7 @@ void init_cc_dock(CCDock *ccd, uint8_t board0, uint8_t auxboard0, AudioClient *a
 {
 	ddock_init(&ccd->dock, board0, auxboard0, NULL, audioClient);
 	ccd->uie_handler = (UIEventHandler*) &ccd->dock.handler;
-	ccd->name = "Dock";
+	ccd->name = "dock";
 }
 
 //////////////////////////////////////////////////////////////////////////////

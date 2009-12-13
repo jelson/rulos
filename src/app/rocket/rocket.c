@@ -51,7 +51,14 @@ typedef struct {
 } Rocket0;
 
 #define THRUSTER_X_CHAN	3
+
+#if defined(BOARD_PCB10)
+#define THRUSTER_Y_CHAN	4
+#elif defined(BOARD_PCB11)
 #define THRUSTER_Y_CHAN	2
+#elif SIM
+#define THRUSTER_Y_CHAN	2
+#endif
 
 void init_rocket0(Rocket0 *r0)
 {
@@ -71,7 +78,7 @@ void init_rocket0(Rocket0 *r0)
 	r0->thrusterUpdate[1] = (ThrusterUpdate*) &r0->cp.ccdock.dock.thrusterUpdate;
 	init_thruster_send_network(&r0->tsn, &r0->network);
 	r0->thrusterUpdate[0] = (ThrusterUpdate*) &r0->tsn;
-	//thrusters_init(&r0->ts, 7, THRUSTER_X_CHAN, THRUSTER_Y_CHAN, &r0->hpam);
+	thrusters_init(&r0->ts, 7, THRUSTER_X_CHAN, THRUSTER_Y_CHAN, &r0->hpam);
 }
 
 static Rocket0 rocket0;	// allocate obj in .bss so it's easy to count
