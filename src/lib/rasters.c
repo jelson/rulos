@@ -6,11 +6,12 @@ void raster_big_digit_update(RasterBigDigit *digit);
 
 #include "rasters_auto.ch"
 
-uint16_t get_bitfield(uint8_t *bytes, uint16_t offset, uint8_t len)
+uint16_t get_bitfield(uint16_t offset, uint8_t len)
 {
 	uint8_t bitsAvaiableThisByte = 8-(offset%8);
 	uint8_t bitsUsedThisByte = min(bitsAvaiableThisByte, len);
-	uint16_t v = bytes[offset / 8] >> (bitsAvaiableThisByte - bitsUsedThisByte);
+	uint8_t byte = pgm_read_byte(&(rasterData[offset/8]));
+	uint16_t v = byte >> (bitsAvaiableThisByte - bitsUsedThisByte);
 	v &= ((1<<bitsUsedThisByte)-1);
 	uint16_t outVal = (v << (len-bitsUsedThisByte));
 
@@ -20,7 +21,7 @@ uint16_t get_bitfield(uint8_t *bytes, uint16_t offset, uint8_t len)
 	{
 		assert(rest_offset > offset);
 		assert((rest_offset % 8)==0);
-		outVal |= get_bitfield(bytes, rest_offset, rest_len);
+		outVal |= get_bitfield(rest_offset, rest_len);
 	}
 	return outVal;
 }
@@ -43,7 +44,7 @@ void raster_draw_sym(RectRegion *rrect, char sym, int8_t dx, int8_t dy)
 	int y=0;
 	for (idx=0; idx<ri->len; idx++)
 	{
-		uint16_t bitfield = get_bitfield(rasterData, ri->offset_bits+idx*11, 11);
+		uint16_t bitfield = get_bitfield(ri->offset_bits+idx*11, 11);
 		uint8_t ybit = (bitfield >> 10) & 1;
 		uint8_t x0 = (bitfield >> 5) & 0x1f;
 		uint8_t x1 = (bitfield >> 0) & 0x1f;
@@ -112,6 +113,12 @@ void raster_big_digit_update(RasterBigDigit *digit)
 	raster_clear_buffers(&digit->s4.rrect);
 
 	schedule_us(100000, (Activation*) digit);
+
+	if (!s4_visible(&digit->s4))
+	{
+		// this thing is EXPENSIVE! don't draw it to offscreen buffers!
+		return;
+	}
 
 	const int spacing = 30;
 	const int roll = 10;

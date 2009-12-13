@@ -1,12 +1,9 @@
 #include "rocket.h"
 
 // offset 32
-uint8_t sevseg_ascii[] = {
+uint8_t sevseg_ascii[] PROGMEM = {
 #include "sevseg_bitmaps.ch"
 };
-
-uint8_t *sevseg_digits = &sevseg_ascii['0'-32];
-uint8_t *sevseg_letters = &sevseg_ascii['A'-32];
 
 void program_cell(uint8_t board, uint8_t digit, SSBitmap bitmap)
 {
@@ -127,7 +124,7 @@ SSBitmap ascii_to_bitmap(char a)
 	{
 		return 0;
 	}
-	return sevseg_ascii[((uint8_t)a)-32];
+	return pgm_read_byte(&(sevseg_ascii[((uint8_t)a)-32]));
 }
 
 void ascii_to_bitmap_str(SSBitmap *b, int max_len, const char *a)

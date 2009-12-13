@@ -36,6 +36,45 @@
 /************************************************************************************/
 /************************************************************************************/
 
+typedef struct {
+	DRTCAct dr;
+	Network network;
+	LunarDistance ld;
+	AudioClient audio_client;
+	ThrusterUpdate *thrusterUpdate[3];
+	HPAM hpam;
+	ControlPanel cp;
+	InputPollerAct ip;
+	RemoteKeyboardRecv rkr;
+	ThrusterSendNetwork tsn;
+	ThrusterState_t ts;
+} Rocket0;
+
+#define THRUSTER_X_CHAN	3
+#define THRUSTER_Y_CHAN	2
+
+void init_rocket0(Rocket0 *r0)
+{
+	drtc_init(&r0->dr, 0, clock_time_us()+20000000);
+	init_network(&r0->network);
+	lunar_distance_init(&r0->ld, 1, 2);
+	init_audio_client(&r0->audio_client, &r0->network);
+	memset(&r0->thrusterUpdate, 0, sizeof(r0->thrusterUpdate));
+	init_hpam(&r0->hpam, 7, r0->thrusterUpdate);
+	init_control_panel(&r0->cp, 3, 1, &r0->network, &r0->hpam, &r0->audio_client);
+	r0->cp.ccl.launch.main_rtc = &r0->dr;
+	r0->cp.ccl.launch.lunar_distance = &r0->ld;
+	// Both local poller and remote receiver inject keyboard events.
+	input_poller_init(&r0->ip, (InputInjectorIfc*) &r0->cp.direct_injector);
+	init_remote_keyboard_recv(&r0->rkr, &r0->network, (InputInjectorIfc*) &r0->cp.direct_injector, REMOTE_KEYBOARD_PORT);
+
+	r0->thrusterUpdate[1] = (ThrusterUpdate*) &r0->cp.ccdock.dock.thrusterUpdate;
+	init_thruster_send_network(&r0->tsn, &r0->network);
+	r0->thrusterUpdate[0] = (ThrusterUpdate*) &r0->tsn;
+	//thrusters_init(&r0->ts, 7, THRUSTER_X_CHAN, THRUSTER_Y_CHAN, &r0->hpam);
+}
+
+static Rocket0 rocket0;	// allocate obj in .bss so it's easy to count
 
 int main()
 {
@@ -50,56 +89,15 @@ int main()
 
 	board_buffer_module_init();
 
-	DRTCAct dr;
-	drtc_init(&dr, 0, clock_time_us()+20000000);
+	init_rocket0(&rocket0);
 
-#if 0
-	RasterBigDigit bigDigit;
-	raster_big_digit_init(&bigDigit, 3);
-	s4_show(&bigDigit.s4);
-#endif
-
-	Network network;
-	init_network(&network);
-
-	LunarDistance ld;
-	lunar_distance_init(&ld, 1, 2);
-
-	AudioClient audio_client;
-	init_audio_client(&audio_client, &network);
-
-	ThrusterUpdate *thrusterUpdate[3] =
-	{
-		NULL,
-		NULL,
-		NULL
-	};
-	HPAM hpam;
-	init_hpam(&hpam, 7, thrusterUpdate);
-
-	ControlPanel cp;
-	init_control_panel(&cp, 3, 1, &network, &hpam, &audio_client);
-	cp.ccl.launch.main_rtc = &dr;
-	cp.ccl.launch.lunar_distance = &ld;
-
-	// Both local poller and remote receiver inject keyboard events.
-	InputPollerAct ip;
-	input_poller_init(&ip, (InputInjectorIfc*) &cp.direct_injector);
-
-	RemoteKeyboardRecv rkr;
-	init_remote_keyboard_recv(&rkr, &network, (InputInjectorIfc*) &cp.direct_injector, REMOTE_KEYBOARD_PORT);
-	thrusterUpdate[1] = (ThrusterUpdate*) &cp.ccdock.dock.thrusterUpdate;
-
-	ThrusterSendNetwork tsn;
-	init_thruster_send_network(&tsn, &network);
-	thrusterUpdate[0] = (ThrusterUpdate*) &tsn;
-
-#if BROKEN
-#define THRUSTER_X_CHAN	3
-#define THRUSTER_Y_CHAN	2
-	ThrusterState_t ts;
-	thrusters_init(&ts, 7, THRUSTER_X_CHAN, THRUSTER_Y_CHAN, &hpam);
-#endif
+#define DEBUG_IDLE_BUSY 1
+#if DEBUG_IDLE_BUSY
+	DScrollMsgAct dsm;
+	dscrlmsg_init(&dsm, 2, "bong", 100);
+	IdleDisplayAct idle;
+	idle_display_init(&idle, &dsm, &cpumon);
+#endif // DEBUG_IDLE_BUSY
 
 	cpumon_main_loop();
 

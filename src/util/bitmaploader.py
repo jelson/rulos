@@ -47,7 +47,7 @@ class DataBlock:
 			fp.write("  %s,\n" % idx)
 		fp.write("  {'\\0', 0, 0},\n")
 		fp.write("};\n")
-		fp.write("uint8_t rasterData[] = {\n")
+		fp.write("uint8_t rasterData[] PROGMEM = {\n")
 		for c in self.data:
 			fp.write("  0x%02x,\n" % c)
 		fp.write("};\n");

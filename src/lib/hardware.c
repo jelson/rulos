@@ -269,7 +269,7 @@ typedef struct {
 	SegmentRemapIndex	segmentRemapIndices[8];
 } BoardRemap;
 
-static BoardRemap boardRemapTables[8] = {
+static BoardRemap boardRemapTables[3] = {
 #define BRT_SOLDERED_UP_BOARD_UP	0
 	{ FALSE, { SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU }},
 #define BRT_SOLDERED_DN_BOARD_DN	1
