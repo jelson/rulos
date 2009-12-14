@@ -16,16 +16,18 @@ typedef struct {
 } HPAMPort;
 
 typedef enum {
-	hpam_empty_0 = 0,
-	hpam_empty_1 = 1,
-	hpam_empty_2 = 2,
-	hpam_empty_3 = 3,
+	hpam_gage = 0,
+	hpam_clanger = 1,
+	hpam_hatch_solenoid_reserved = 2,
+	hpam_lighting_flicker = 3,	// 5V
 	hpam_thruster_frontleft = 4,
 	hpam_thruster_frontright = 5,
 	hpam_thruster_rear = 6,
 	hpam_booster = 7,
 	hpam_end
 } HPAMIndex;
+
+// Future: gauges on a 12V HPAM.
 
 typedef struct {
 	ActivationFunc func;
