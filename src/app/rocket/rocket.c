@@ -31,6 +31,7 @@
 #include "remote_bbuf.h"
 #include "remote_uie.h"
 #include "control_panel.h"
+#include "autotype.h"
 
 
 /************************************************************************************/
@@ -105,6 +106,10 @@ int main()
 	IdleDisplayAct idle;
 	idle_display_init(&idle, &dsm, &cpumon);
 #endif // DEBUG_IDLE_BUSY
+
+	Autotype autotype;
+	init_autotype(&autotype, (InputInjectorIfc*) &rocket0.cp.direct_injector,
+		"000aaaaac004671c", (Time) 1300000);
 
 	cpumon_main_loop();
 

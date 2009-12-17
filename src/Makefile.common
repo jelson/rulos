@@ -42,6 +42,7 @@ COMMON_OBJECTS = \
 	audio_server.o \
 	hpam.o \
 	spiflash.o \
+	autotype.o \
 
 #	audio_driver.o \
 

@@ -28,7 +28,9 @@
 #define SEGSEL2		GPIO_D7
 #define DATA		GPIO_B0
 #define STROBE		GPIO_B1
+
 #define	AVAILABLE_ADCS	0x38
+#define	ASSERT_TO_BOARD	1
 
 #elif defined(BOARD_PCB10)
 #define BOARDSEL0	GPIO_B2
@@ -53,6 +55,7 @@
 #define KEYPAD_COL3 GPIO_D3
 
 #define	AVAILABLE_ADCS	0x38
+#define	ASSERT_TO_BOARD	1
 
 #elif defined(BOARD_PCB11)
 #define BOARDSEL0	GPIO_B0
@@ -77,9 +80,13 @@
 #define KEYPAD_COL3 GPIO_D3
 
 #define	AVAILABLE_ADCS	0x3f
+#define	ASSERT_TO_BOARD	1
 
 #elif defined(BOARD_CUSTOM)
-/* nothing */
+
+#define	AVAILABLE_ADCS	0x3f	// Good luck, board designer -- no safety check here
+#define	ASSERT_TO_BOARD	0
+
 #else
 # error No board definition given
 #endif
@@ -932,6 +939,7 @@ void hal_spi_close()
 
 void hardware_assert(uint16_t line)
 {
+#if ASSERT_TO_BOARD
 	char buf[9];
 	buf[0] = 'a';
 	buf[1] = 's';
@@ -941,6 +949,7 @@ void hardware_assert(uint16_t line)
 	SSBitmap bm[8];
 	ascii_to_bitmap_str(bm, 8, buf);
 	program_board(0, bm);
+#endif
 
 	while (1) { }
 }

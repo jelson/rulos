@@ -116,9 +116,13 @@
 
 typedef struct s_servo {
 	uint16_t desired_position;
+	uint16_t rest_offset;
 } ServoAct;
 
-void servo_set_pwm(ServoAct *servo, uint16_t pwm_width);
+#define SERVO_PUSH 7
+#define SERVO_REST 9
+
+void servo_set_pwm(ServoAct *servo, uint16_t pwm_width, uint8_t push_state);
 
 void init_servo(ServoAct *servo)
 {
@@ -137,28 +141,40 @@ void init_servo(ServoAct *servo)
 	ICR1 = 20000;
 	OCR1A = 1500;
 
-	servo_set_pwm(servo, 500);
+	servo->desired_position = 0;	// ensure servo_set_pwm sets all fields
+	servo_set_pwm(servo, 500, SERVO_PUSH);
 }
-
-void servo_set_pwm(ServoAct *servo, uint16_t desired_position)
-{
-	if (desired_position == servo->desired_position)
-	{
-		return;
-	}
 
 #define SERVO_MAX		(0xffff)
 #define	SERVO_SLOP		(0x0180)
 #define SERVO_OFFSET	(1000)	/* give room to clamp values w/ over/underflow */
 
+void servo_set_pwm(ServoAct *servo, uint16_t desired_position, uint8_t push_state)
+{
 	int32_t output;
-	if (desired_position < servo->desired_position)
+
+	if (push_state == SERVO_REST)
 	{
-		output = SERVO_OFFSET + desired_position - SERVO_SLOP;
+		// assert(desired_position == servo->desired_position)
+		output = SERVO_OFFSET + servo->desired_position + servo->rest_offset;
 	}
 	else
 	{
-		output = SERVO_OFFSET + desired_position + SERVO_SLOP;
+		if (desired_position == servo->desired_position)
+		{
+			return;
+		}
+
+		if (desired_position < servo->desired_position)
+		{
+			output = SERVO_OFFSET + desired_position - SERVO_SLOP;
+			servo->rest_offset = +SERVO_SLOP*3/4;
+		}
+		else
+		{
+			output = SERVO_OFFSET + desired_position + SERVO_SLOP;
+			servo->rest_offset = -SERVO_SLOP*3/4;
+		}
 	}
 
 	// clamp output value
@@ -304,7 +320,7 @@ uint16_t config_clip(Config *config, Quadrature *quad)
 	return newDoor;
 }
 
-void config_update_servo(Config *config, ServoAct *servo, uint16_t doorPos)
+void config_update_servo(Config *config, ServoAct *servo, uint16_t doorPos, uint8_t push_state)
 {
 	// Linearly interpolate
 	int32_t servoPos = (config->servoPos[1]-config->servoPos[0]);
@@ -312,7 +328,7 @@ void config_update_servo(Config *config, ServoAct *servo, uint16_t doorPos)
 	servoPos /= config->doorMax;
 	servoPos += config->servoPos[0];
 
-	servo_set_pwm(servo, (uint16_t) servoPos);
+	servo_set_pwm(servo, (uint16_t) servoPos, push_state);
 }
 
 void config_write_eeprom(Config *config)
@@ -322,6 +338,8 @@ void config_write_eeprom(Config *config)
 }
 
 /****************************************************************************/
+
+#define IDLE_TIME ((Time)1000000)	/* idle after 1 sec */
 
 typedef enum {
 	cm_run,
@@ -345,6 +363,10 @@ typedef struct s_control_act {
 #endif
 	Time lastPanTime;
 	uint16_t pan_pos;
+	
+	// idle checks
+	Time last_movement_time;
+	Time last_position;
 } ControlAct;
 
 static void control_update(ControlAct *ctl);
@@ -384,6 +406,8 @@ void init_control(ControlAct *ctl)
 	ctl->handler.controlAct = ctl;
 	ctl->lastPanTime = clock_time_us();
 	ctl->pan_pos = 0x8fff;
+	ctl->last_movement_time = 0;
+	ctl->last_position = 0;
 	schedule_us(100, (Activation*) ctl);
 }
 
@@ -392,14 +416,62 @@ static void control_servo_from_pot(ControlAct *ctl)
 {
 	uint32_t pot = hal_read_adc(POT_ADC_CHANNEL);
 	ctl->pot_servo = pot;
-	servo_set_pwm(&ctl->servo, ctl->pot_servo*(65535/1024));
+	servo_set_pwm(&ctl->servo, ctl->pot_servo*(65535/1024), SERVO_PUSH);
 }
 #else
 static void control_servo_from_pan(ControlAct *ctl)
 {
-	servo_set_pwm(&ctl->servo, ctl->pan_pos);
+	servo_set_pwm(&ctl->servo, ctl->pan_pos, SERVO_PUSH);
 }
 #endif
+
+#define IGNORE_THRESH (2)
+
+static uint8_t control_run_mode(ControlAct *ctl)
+{
+	Time now = clock_time_us();
+	Time since_movement = now - ctl->last_movement_time;
+	r_bool idle;
+	if (since_movement < 0)
+	{
+		// deal with clock wraparound -- preserve idleness
+		ctl->last_movement_time = now - IDLE_TIME - 1;
+		idle = TRUE;
+	}
+	else if (since_movement > IDLE_TIME)
+	{
+		idle = TRUE;
+	}
+	else
+	{
+		idle = FALSE;
+	}
+
+	uint16_t new_pos = config_clip(&ctl->config, &ctl->quad);
+	r_bool significant_movement =
+		new_pos <= ctl->last_position - IGNORE_THRESH
+		|| ctl->last_position + IGNORE_THRESH <= new_pos;
+
+	if (!idle || significant_movement)
+	{
+		if (significant_movement)
+		{
+			// don't update these unless we actually move;
+			// otherwise non-idleness causes non-idleness.
+			ctl->last_movement_time = now;
+			ctl->last_position = new_pos;
+		}
+		config_update_servo(&ctl->config, &ctl->servo, new_pos, SERVO_PUSH);
+	}
+	else
+	{
+		// else quiescent or idle & quiet "enough":
+		// let servo rest; don't update anything until a "real" change arrives
+		config_update_servo(&ctl->config, &ctl->servo, ctl->last_position, SERVO_REST);
+	}
+
+	return idle ? 0 : 15;
+}
 
 static void control_update(ControlAct *ctl)
 {
@@ -448,9 +520,7 @@ static void control_update(ControlAct *ctl)
 	{
 	case cm_run:
 		{
-		blink_rate = 0;
-		uint8_t pos = config_clip(&ctl->config, &ctl->quad);
-	 	config_update_servo(&ctl->config, &ctl->servo, pos);
+		blink_rate = control_run_mode(ctl);
 		break;
 		}
 	case cm_setLeft:
@@ -631,7 +701,7 @@ int main()
 /*
 	ServoAct servo;
 	init_servo(&servo);
-	servo_set_pwm(&servo, 110);
+	servo_set_pwm(&servo, 110, SERVO_PUSH);
 
 
 	QuadTest qt;

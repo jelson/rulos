@@ -22,10 +22,10 @@ void _hpam_init_port(HPAM *hpam, HPAMIndex idx, Time max_time_sec, uint8_t board
 void init_hpam(HPAM *hpam, uint8_t board0, ThrusterUpdate **thrusterUpdates)
 {
 	hpam->func = (ActivationFunc) hpam_update;
-	_hpam_init_port(hpam, hpam_empty_0, REST_NONE, board0, 0);
-	_hpam_init_port(hpam, hpam_empty_1, REST_NONE, board0, 0);
-	_hpam_init_port(hpam, hpam_empty_2, REST_NONE, board0, 0);
-	_hpam_init_port(hpam, hpam_empty_3, REST_NONE, board0, 0);
+	_hpam_init_port(hpam, hpam_gage, REST_NONE, board0, 0);
+	_hpam_init_port(hpam, hpam_clanger, REST_NONE, board0, 0);
+	_hpam_init_port(hpam, hpam_hatch_solenoid_reserved, REST_NONE, board0, 0);
+	_hpam_init_port(hpam, hpam_lighting_flicker, REST_NONE, board0, 0);
 	_hpam_init_port(hpam, hpam_thruster_frontleft, REST_TIME_SECONDS, board0, 0);
 	_hpam_init_port(hpam, hpam_thruster_frontright, REST_TIME_SECONDS, board0, 0);
 	_hpam_init_port(hpam, hpam_thruster_rear, REST_TIME_SECONDS, board0, 0);
