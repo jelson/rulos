@@ -139,6 +139,17 @@ BoardLayout wallclock_tree_def[] = {
 	{ NULL }
 }, *wallclock_tree = wallclock_tree_def;
 
+BoardLayout chaseclock_tree_def[] = {
+	{ "Clock",		{ PG,PG,PG,PG,PY,PY,PY,PY }, 15, 0 },
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL }
+}, *chaseclock_tree = chaseclock_tree_def;
+
 BoardLayout *g_sim_theTree = NULL;
 
 void sim_configure_tree(BoardLayout *tree)
@@ -558,6 +569,10 @@ void hal_init(BoardConfiguration bc)
 			break;
 		case bc_wallclock:
 			sim_configure_tree(wallclock_tree);
+			sim_twi_set_instance(3);
+			break;
+		case bc_chaseclock:
+			sim_configure_tree(chaseclock_tree);
 			sim_twi_set_instance(3);
 			break;
 		default:

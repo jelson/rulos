@@ -16,6 +16,7 @@ typedef enum {
 	bc_rocket1,
 	bc_audioboard,
 	bc_wallclock,
+	bc_chaseclock,
 } BoardConfiguration;
 
 void hal_init(BoardConfiguration bc);

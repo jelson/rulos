@@ -282,13 +282,15 @@ typedef struct {
 	SegmentRemapIndex	segmentRemapIndices[8];
 } BoardRemap;
 
-static BoardRemap boardRemapTables[3] = {
+static BoardRemap boardRemapTables[] = {
 #define BRT_SOLDERED_UP_BOARD_UP	0
 	{ FALSE, { SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU }},
 #define BRT_SOLDERED_DN_BOARD_DN	1
 	{ TRUE,  { SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD }},
 #define BRT_WALLCLOCK				2
 	{ FALSE, { SRT_SUBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SUBU, SRT_SUBU }},
+#define BRT_CHASECLOCK				3
+	{ FALSE, { SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SUBU }},
 };
 typedef uint8_t BoardRemapIndex;
 
@@ -790,6 +792,9 @@ void hal_init(BoardConfiguration bc)
 			break;
 		case bc_wallclock:
 			displayConfiguration[0] = BRT_WALLCLOCK;
+			break;
+		case bc_chaseclock:
+			displayConfiguration[0] = BRT_CHASECLOCK;
 			break;
 	}
 #endif
