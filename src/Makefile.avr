@@ -98,7 +98,8 @@ $(ARCHTARG).elf: $(AVR_LIB_FILE) $(AVR_TARGET_OBJECTS)
 .PHONY:
 $(ARCHTARG).size: $(ARCHTARG).elf
 	@echo
-	@avr-size -C --mcu=${MCU} $(ARCHTARG).elf
+#	@avr-size -C --mcu=${MCU} $(ARCHTARG).elf
+	avr-size $(ARCHTARG).elf
 
 ## Clean target
 avr-clean:
