@@ -99,7 +99,7 @@ int main()
 
 	init_rocket0(&rocket0);
 
-#define DEBUG_IDLE_BUSY 1
+#define DEBUG_IDLE_BUSY 0
 #if DEBUG_IDLE_BUSY
 	DScrollMsgAct dsm;
 	dscrlmsg_init(&dsm, 2, "bong", 100);
