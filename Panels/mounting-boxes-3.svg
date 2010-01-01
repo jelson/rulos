@@ -9,13 +9,13 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="3240"
-   height="720"
+   width="990"
+   height="765"
    id="svg2"
    sodipodi:version="0.32"
    inkscape:version="0.47 r22583"
    version="1.0"
-   sodipodi:docname="mounting-boxes-2.svg"
+   sodipodi:docname="mounting-boxes-3.svg"
    inkscape:output_extension="org.inkscape.output.svg.inkscape">
   <defs
      id="defs4">
@@ -169,16 +169,16 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="0.35462963"
-     inkscape:cx="1475.3663"
-     inkscape:cy="775.51075"
+     inkscape:cx="1147.1376"
+     inkscape:cy="650.08722"
      inkscape:document-units="in"
      inkscape:current-layer="layer1"
      showgrid="true"
      units="in"
      inkscape:window-width="1776"
      inkscape:window-height="988"
-     inkscape:window-x="60"
-     inkscape:window-y="101"
+     inkscape:window-x="78"
+     inkscape:window-y="140"
      inkscape:snap-intersection-grid-guide="false"
      inkscape:snap-bbox="false"
      inkscape:snap-nodes="true"
@@ -187,7 +187,9 @@
      inkscape:snap-grids="false"
      inkscape:bbox-nodes="true"
      inkscape:object-nodes="true"
-     inkscape:object-paths="true">
+     inkscape:object-paths="true"
+     showguides="true"
+     inkscape:guide-bbox="true">
     <inkscape:grid
        type="xygrid"
        id="grid2509"
@@ -207,7 +209,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -215,12 +217,12 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(0,-360)">
+     transform="translate(0,-315)">
     <flowRoot
        xml:space="preserve"
        id="flowRoot3394"
        style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
-       transform="matrix(4.1250743,0,0,4.1250743,-380.62806,-3900.6302)"><flowRegion
+       transform="matrix(4.1250743,0,0,4.1250743,-448.12806,-3900.6302)"><flowRegion
          id="flowRegion3396"><rect
            id="rect3398"
            width="385.25931"
@@ -230,19 +232,19 @@
          id="flowPara3400" /></flowRoot>    <text
        xml:space="preserve"
        style="font-size:18px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;writing-mode:lr-tb;text-anchor:middle;fill:#ff0000;fill-opacity:1;stroke:none;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT"
-       x="868.25275"
+       x="800.75275"
        y="722.69421"
        id="text3866"
        sodipodi:linespacing="125%"><tspan
          id="tspan3870"
          sodipodi:role="line"
-         x="868.25275"
+         x="800.75275"
          y="722.69421" /></text>
     <flowRoot
        xml:space="preserve"
        id="flowRoot3068"
        style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
-       transform="matrix(0,-0.47752963,0.47752963,0,2813.6744,883.52357)"><flowRegion
+       transform="matrix(0,-0.47752963,0.47752963,0,2935.1039,894.80294)"><flowRegion
          id="flowRegion3070"><rect
            id="rect3072"
            width="546.7594"
@@ -251,181 +253,19 @@
            y="-588.81781" /></flowRegion><flowPara
          id="flowPara3958">subtract .031 from each end for bend radius</flowPara></flowRoot>    <path
        style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="m 90.5,495.08747 2880,0 m -2880,0 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5"
+       d="m 23,495.08747 2880,0 m -2880,0 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5"
        id="path4229"
        inkscape:path-effect="#path-effect4231"
-       inkscape:original-d="m 90.5,495.08747 2880,0" />
+       inkscape:original-d="m 23,495.08747 2880,0" />
     <path
-       inkscape:original-d="m 90.5,1034.5 2880,0"
+       inkscape:original-d="m 23,1034.5 2880,0"
        inkscape:path-effect="#path-effect4321"
        id="path4319"
-       d="m 90.5,1034.5 2880,0 m -2880,0 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5"
+       d="m 23,1034.5 2880,0 m -2880,0 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5 m 22.5,22.5 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-10.8 m 22.5,10.8 0,-22.5"
        style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
     <g
-       id="g4461"
-       transform="translate(0,382.50009)">
-      <rect
-         style="color:#000000;fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:0.99000013;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
-         id="rect3975"
-         width="1320.84"
-         height="119.34"
-         x="622.84497"
-         y="468.93991" />
-      <rect
-         style="color:#000000;fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:0.99000001;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
-         id="rect3977"
-         width="420.84"
-         height="119.34"
-         x="1943.6849"
-         y="468.93991" />
-      <rect
-         y="468.93991"
-         x="202.005"
-         height="119.34"
-         width="420.84"
-         id="rect3979"
-         style="color:#000000;fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:0.99000007;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
-      <rect
-         style="color:#000000;fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:0.99000025;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
-         id="rect3981"
-         width="89.010002"
-         height="119.34"
-         x="112.995"
-         y="468.93991" />
-      <rect
-         style="color:#000000;fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:0.99000025;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
-         id="rect3983"
-         width="89.010002"
-         height="119.34"
-         x="2364.5249"
-         y="468.93991" />
-      <path
-         style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-         d="m 243.22498,427.71991 -41.21997,41.21995 420.83996,5e-5 -41.22,-41.21998 -338.39999,-2e-5 z"
-         id="path4021"
-         sodipodi:nodetypes="ccccc" />
-      <path
-         style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-         d="m 622.84497,468.93991 41.22,-41.21995 1238.39993,0 41.22,41.21995 -1320.83993,0 z"
-         id="path4023"
-         sodipodi:nodetypes="ccccc" />
-      <flowRoot
-         xml:space="preserve"
-         id="flowRoot4027"
-         style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
-         transform="translate(48.755698,1062.2731)"><flowRegion
-           id="flowRegion4029"><rect
-             id="rect4031"
-             width="733.95642"
-             height="156.54471"
-             x="207.2879"
-             y="-588.81781" /></flowRegion><flowPara
-           id="flowPara4041">CPU0 mission clock</flowPara><flowPara
-           id="flowPara4047">1.3-1.5&quot; deep  14.75 x 4.75</flowPara></flowRoot>      <path
-         sodipodi:nodetypes="ccccc"
-         id="path4453"
-         d="m 1984.9049,427.71991 -41.22,41.21995 420.84,5e-5 -41.22,-41.21998 -338.4,-2e-5 z"
-         style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
-      <path
-         sodipodi:nodetypes="ccccc"
-         id="path4455"
-         d="m 243.22498,629.49991 -41.21997,-41.21995 420.83996,-5e-5 -41.22,41.21998 -338.39999,2e-5 z"
-         style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
-      <path
-         sodipodi:nodetypes="ccccc"
-         id="path4457"
-         d="m 622.84497,588.27991 41.22,41.21995 1238.39993,0 41.22,-41.21995 -1320.83993,0 z"
-         style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
-      <path
-         style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-         d="m 1984.9049,629.49991 -41.22,-41.21995 420.84,-5e-5 -41.22,41.21998 -338.4,2e-5 z"
-         id="path4459"
-         sodipodi:nodetypes="ccccc" />
-    </g>
-    <g
-       transform="translate(0,135.00009)"
-       id="g4479">
-      <rect
-         y="468.93991"
-         x="870.34497"
-         height="119.34"
-         width="690.84003"
-         id="rect4481"
-         style="color:#000000;fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:0.99000019;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
-      <rect
-         style="color:#000000;fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:0.99000001;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
-         id="rect4485"
-         width="668.33997"
-         height="119.34"
-         x="202.005"
-         y="468.93991" />
-      <rect
-         y="468.93991"
-         x="112.995"
-         height="119.34"
-         width="89.010002"
-         id="rect4487"
-         style="color:#000000;fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:0.99000025;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
-      <rect
-         y="468.93991"
-         x="2229.5249"
-         height="119.34"
-         width="89.010002"
-         id="rect4489"
-         style="color:#000000;fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:0.99000025;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
-      <path
-         sodipodi:nodetypes="ccccc"
-         id="path4491"
-         d="m 243.22498,427.71991 -41.21997,41.21995 668.33996,5e-5 -41.22,-41.21998 -585.89999,-2e-5 z"
-         style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
-      <flowRoot
-         transform="translate(48.755698,1062.2731)"
-         style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
-         id="flowRoot4495"
-         xml:space="preserve"><flowRegion
-           id="flowRegion4497"><rect
-             y="-588.81781"
-             x="207.2879"
-             height="156.54471"
-             width="733.95642"
-             id="rect4499" /></flowRegion><flowPara
-           id="flowPara4501">Lunar dist speed</flowPara><flowPara
-           id="flowPara4503">1.3-1.5&quot; deep  7.75 x 7.5</flowPara></flowRoot>      <path
-         style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-         d="m 911.56497,427.71996 -41.22,41.21995 690.84013,0 -41.22,-41.21998 -608.40013,3e-5 z"
-         id="path4505"
-         sodipodi:nodetypes="ccccc" />
-      <rect
-         y="468.93991"
-         x="1561.1851"
-         height="119.34"
-         width="668.33997"
-         id="rect4515"
-         style="color:#000000;fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:0.99000001;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
-      <path
-         style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-         d="m 1602.405,427.71996 -41.22,41.21995 668.34,5e-5 -41.22,-41.21998 -585.9,-2e-5 z"
-         id="path4517"
-         sodipodi:nodetypes="ccccc" />
-      <path
-         style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-         d="m 243.22498,629.49991 -41.21997,-41.21995 668.33996,-5e-5 -41.22,41.21998 -585.89999,2e-5 z"
-         id="path4519"
-         sodipodi:nodetypes="ccccc" />
-      <path
-         sodipodi:nodetypes="ccccc"
-         id="path4521"
-         d="m 911.56497,629.49986 -41.22,-41.21995 690.84013,0 -41.22,41.21998 -608.40013,-3e-5 z"
-         style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
-      <path
-         sodipodi:nodetypes="ccccc"
-         id="path4523"
-         d="m 1602.405,629.49986 -41.22,-41.21995 668.34,-5e-5 -41.22,41.21998 -585.9,2e-5 z"
-         style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
-    </g>
-    <g
        id="g4567"
-       transform="translate(6.405038e-6,-341.37728)">
+       transform="translate(-67.499994,562.5)">
       <g
          transform="translate(0,-179.99991)"
          id="g4525">
@@ -507,6 +347,87 @@
            d="m 1872.405,629.49986 -41.22,-41.21995 758.34,-5e-5 -41.22,41.21998 -675.9,2e-5 z"
            style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
       </g>
+    </g>
+    <g
+       id="g2967"
+       transform="translate(-67.5,0)">
+      <rect
+         y="581.44"
+         x="892.84503"
+         height="119.34"
+         width="960.83997"
+         id="rect2898"
+         style="color:#000000;fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:0.99000013;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
+      <rect
+         style="color:#000000;fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:0.98999995;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+         id="rect2900"
+         width="690.84003"
+         height="119.34"
+         x="202.00502"
+         y="581.44" />
+      <rect
+         y="581.44"
+         x="112.99502"
+         height="119.34"
+         width="89.010002"
+         id="rect2902"
+         style="color:#000000;fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:0.99000025;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
+      <rect
+         y="581.44"
+         x="2544.5251"
+         height="119.34"
+         width="89.010002"
+         id="rect2904"
+         style="color:#000000;fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:0.99000025;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
+      <path
+         sodipodi:nodetypes="ccccc"
+         id="path2906"
+         d="m 243.22499,540.22 -41.21997,41.21995 690.84002,5e-5 -41.22,-41.21998 -608.40005,-2e-5 z"
+         style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+      <flowRoot
+         transform="translate(48.755711,1174.7732)"
+         style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
+         id="flowRoot2908"
+         xml:space="preserve"><flowRegion
+           id="flowRegion2910"><rect
+             y="-588.81781"
+             x="207.2879"
+             height="156.54471"
+             width="733.95642"
+             id="rect2912" /></flowRegion><flowPara
+           id="flowPara2914">aze</flowPara><flowPara
+           id="flowPara2916">1.3-1.5&quot; deep  10.75 x 7.75</flowPara></flowRoot>      <path
+         style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="m 934.06501,540.22005 -41.21997,41.21995 960.83996,0 -41.22,-41.21998 -878.39999,3e-5 z"
+         id="path2918"
+         sodipodi:nodetypes="ccccc" />
+      <rect
+         y="581.44"
+         x="1853.6851"
+         height="119.34"
+         width="690.84003"
+         id="rect2930"
+         style="color:#000000;fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:0.98999995;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
+      <path
+         style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="m 1894.905,540.22 -41.2199,41.21995 690.84,5e-5 -41.22,-41.21998 -608.4001,-2e-5 z"
+         id="path2932"
+         sodipodi:nodetypes="ccccc" />
+      <path
+         style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="m 243.225,742 -41.21997,-41.21995 690.84002,-5e-5 -41.22,41.21998 L 243.225,742 z"
+         id="path2961"
+         sodipodi:nodetypes="ccccc" />
+      <path
+         sodipodi:nodetypes="ccccc"
+         id="path2963"
+         d="M 934.06502,741.99995 892.84505,700.78 l 960.83995,0 -41.22,41.21998 -878.39998,-3e-5 z"
+         style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+      <path
+         sodipodi:nodetypes="ccccc"
+         id="path2965"
+         d="m 1894.905,742 -41.2199,-41.21995 690.84,-5e-5 -41.22,41.21998 -608.4001,2e-5 z"
+         style="fill:#8383ff;fill-opacity:0.125;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
     </g>
   </g>
 </svg>
