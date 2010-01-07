@@ -16,7 +16,7 @@ typedef struct {
 } HPAMPort;
 
 typedef enum {
-	hpam_gage = 0,
+	hpam_hobbs = 0,
 	hpam_clanger = 1,
 	hpam_hatch_solenoid_reserved = 2,
 	hpam_lighting_flicker = 3,	// 5V

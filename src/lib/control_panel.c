@@ -43,7 +43,7 @@ UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt);
 void cp_inject(struct s_direct_injector *di, char k);
 void cp_paint(ControlPanel *cp);
 
-void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network, HPAM *hpam, AudioClient *audioClient)
+void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network, HPAM *hpam, AudioClient *audioClient, IdleAct *idle)
 {
 	cp->handler_func = (UIEventHandlerFunc) cp_uie_handler;
 
@@ -78,6 +78,8 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Ne
 
 	cp->selected_child = 0;
 	cp->active_child = CP_NO_CHILD;
+
+	cp->idle = idle;
 
 	cp_paint(cp);
 }
@@ -130,6 +132,7 @@ UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt)
 		}
 	}
 	cp_paint(cp);
+	idle_touch(cp->idle);
 	return result;
 }
 

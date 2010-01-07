@@ -8,6 +8,8 @@ void hpam_update(HPAM *hpam);
 // melting due to broken software.
 #define REST_NONE	0
 // Lights don't need rest
+#define HPAM_DIGIT_0	0
+#define HPAM_DIGIT_1	4
 
 void _hpam_init_port(HPAM *hpam, HPAMIndex idx, Time max_time_sec, uint8_t board, uint8_t digit)
 {
@@ -22,14 +24,14 @@ void _hpam_init_port(HPAM *hpam, HPAMIndex idx, Time max_time_sec, uint8_t board
 void init_hpam(HPAM *hpam, uint8_t board0, ThrusterUpdate **thrusterUpdates)
 {
 	hpam->func = (ActivationFunc) hpam_update;
-	_hpam_init_port(hpam, hpam_gage, REST_NONE, board0, 0);
-	_hpam_init_port(hpam, hpam_clanger, REST_NONE, board0, 0);
-	_hpam_init_port(hpam, hpam_hatch_solenoid_reserved, REST_NONE, board0, 0);
-	_hpam_init_port(hpam, hpam_lighting_flicker, REST_NONE, board0, 0);
-	_hpam_init_port(hpam, hpam_thruster_frontleft, REST_TIME_SECONDS, board0, 0);
-	_hpam_init_port(hpam, hpam_thruster_frontright, REST_TIME_SECONDS, board0, 0);
-	_hpam_init_port(hpam, hpam_thruster_rear, REST_TIME_SECONDS, board0, 0);
-	_hpam_init_port(hpam, hpam_booster, REST_TIME_SECONDS, board0, 0);
+	_hpam_init_port(hpam, hpam_hobbs, REST_NONE, board0, HPAM_DIGIT_1);
+	_hpam_init_port(hpam, hpam_clanger, REST_NONE, board0, HPAM_DIGIT_1);
+	_hpam_init_port(hpam, hpam_hatch_solenoid_reserved, REST_NONE, board0, HPAM_DIGIT_1);
+	_hpam_init_port(hpam, hpam_lighting_flicker, REST_NONE, board0, HPAM_DIGIT_1);
+	_hpam_init_port(hpam, hpam_thruster_frontleft, REST_TIME_SECONDS, board0, HPAM_DIGIT_0);
+	_hpam_init_port(hpam, hpam_thruster_frontright, REST_TIME_SECONDS, board0, HPAM_DIGIT_0);
+	_hpam_init_port(hpam, hpam_thruster_rear, REST_TIME_SECONDS, board0, HPAM_DIGIT_0);
+	_hpam_init_port(hpam, hpam_booster, REST_TIME_SECONDS, board0, HPAM_DIGIT_0);
 	hpam->thrusterUpdates = thrusterUpdates;
 
 	board_buffer_init(&hpam->bbuf);
@@ -107,12 +109,16 @@ void hpam_set_port(HPAM *hpam, HPAMIndex idx, r_bool status)
 	port->expire_time = clock_time_us() + port->max_time;
 
 	// Forward the notice to listeners
-	ThrusterPayload payload;
-	payload.thruster_bits = (~(hpam->bbuf.buffer[port->digit]));
-	ThrusterUpdate **tu = hpam->thrusterUpdates;
-	while (tu[0]!=NULL)
+	// Ugh, this is klunky. We only forward info about one of the digits right now.
+	if (port->digit == HPAM_DIGIT_0)
 	{
-		tu[0]->func(tu[0], &payload);
-		tu++;
+		ThrusterPayload payload;
+		payload.thruster_bits = (~(hpam->bbuf.buffer[port->digit]));
+		ThrusterUpdate **tu = hpam->thrusterUpdates;
+		while (tu[0]!=NULL)
+		{
+			tu[0]->func(tu[0], &payload);
+			tu++;
+		}
 	}
 }

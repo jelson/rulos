@@ -64,6 +64,8 @@ typedef struct s_launch {
 
 	HPAM *hpam;
 	AudioClient *audioClient;
+	uint16_t launch_code;
+	char launch_code_str[45];
 } Launch;
 
 void launch_init(Launch *launch, uint8_t board0, HPAM *hpam, AudioClient *audioClient);

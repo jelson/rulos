@@ -71,26 +71,38 @@ void _board_buffer_compute_mask(BoardBuffer *buf, uint8_t redraw)
 
 void board_buffer_pop(BoardBuffer *buf)
 {
-	if (!board_buffer_is_foreground(buf))
+	if (board_buffer_is_foreground(buf))
 	{
-		// we're not actually on top of the display stack.
-		// we don't have up links to handle this case.
-		assert(0);
-	}
-
-	if (buf->next == NULL)
-	{
-		// will the last buffer to leave, please turn out the lights?
-		program_row(buf->board_index, 0);
-		foreground[buf->board_index] = NULL;
+		if (buf->next == NULL)
+		{
+			// will the last buffer to leave, please turn out the lights?
+			program_row(buf->board_index, 0);
+			foreground[buf->board_index] = NULL;
+		}
+		else
+		{
+			foreground[buf->board_index] = buf->next;
+		}
 	}
 	else
 	{
-		_board_buffer_compute_mask(buf->next, TRUE);
-		foreground[buf->board_index] = buf->next;
+		assert(buf->board_index<NUM_PSEUDO_BOARDS);	// TODO if restoring remote display code: this path not implemented.
+		BoardBuffer *prevbuf = foreground[buf->board_index];
+		uint8_t loopcheck=0;
+		while (prevbuf->next != buf)
+		{
+			prevbuf = prevbuf->next;
+			assert(prevbuf!=NULL);
+			loopcheck += 1;
+			assert(loopcheck<100);
+		}
+		prevbuf->next = buf->next;
 	}
+
+	_board_buffer_compute_mask(buf->next, TRUE);	// fyi okay even when buf->next==NULL
 	buf->next = NULL;
 	buf->board_index = BBUF_UNMAPPED_INDEX;
+
 #if BBDEBUG && SIM
 dump();
 #endif // BBDEBUG && SIM

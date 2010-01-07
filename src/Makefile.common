@@ -43,6 +43,9 @@ COMMON_OBJECTS = \
 	hpam.o \
 	spiflash.o \
 	autotype.o \
+	idle.o \
+	hobbs.o \
+	screenblanker.o \
 
 #	audio_driver.o \
 

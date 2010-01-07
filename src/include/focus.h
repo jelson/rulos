@@ -16,6 +16,8 @@ enum {
 	uie_left = 'b',
 	evt_notify = 0x80,
 	evt_remote_escape = 0x82,
+	evt_idle_nowidle = 0x83,
+	evt_idle_nowactive = 0x84,
 } EventName;
 
 typedef enum {

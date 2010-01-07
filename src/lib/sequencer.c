@@ -3,8 +3,6 @@
 #include "sound.h"
 
 #define STUB(s)	{}
-#define LAUNCH_CODE		4671
-#define LAUNCH_CODE_S	"4671"
 #define LAUNCH_COUNTDOWN_TIME (20*1000000+500000)
 	// TODO half-second fudge factor may go away in real hardware; may be
 	// due to playback error in simulator.
@@ -37,6 +35,7 @@ void launch_init(Launch *launch, uint8_t board0, HPAM *hpam, AudioClient *audioC
 
 	launch->main_rtc = NULL;
 	launch->lunar_distance = NULL;
+	launch->launch_code = 0;
 
 	launch_configure_state(launch, launch_state_hidden);
 	schedule_us(1, (Activation*) &launch->clock_act);
@@ -71,6 +70,8 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 	if (launch->state == launch_state_hidden)
 	{
 		ac_skip_to_clip(launch->audioClient, sound_silence, sound_silence);
+
+		launch->launch_code = 0;
 	}
 	else
 	{
@@ -80,6 +81,22 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 
 	if (launch->state == launch_state_enter_code)
 	{
+
+		if (launch->launch_code==0)
+		{
+			// create a new launch code
+			deadbeef_srand(clock_time_us());
+			uint8_t digit;
+			launch->launch_code = 0;
+			// insist on nonzero first digit, to keep text entry nonconfusing
+			// (numeric_input treats input as integers, so it hides leading zeros).
+			launch->launch_code = (deadbeef_rand() % 9)+1;
+			for (digit=1; digit<4; digit++)
+			{
+				launch->launch_code = launch->launch_code*10 + (deadbeef_rand() % 10);
+			}
+		}
+
 		if (launch->lunar_distance != NULL)
 		{
 			lunar_distance_reset(launch->lunar_distance);
@@ -90,8 +107,15 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 	{
 		if (launch->state == launch_state_enter_code)
 		{
-			dscrlmsg_set_msg(&launch->dscrlmsg,
-				"Initiate launch sequence. Enter code " LAUNCH_CODE_S ".  ");
+#define LAUNCH_ENTER_CODE_MSG "Initiate launch sequence. Enter code xxxx.  "
+			assert(strlen(LAUNCH_ENTER_CODE_MSG) < sizeof(launch->launch_code_str));
+			strcpy(launch->launch_code_str, LAUNCH_ENTER_CODE_MSG);
+
+			launch->launch_code_str[37] = '0' + ((launch->launch_code / 1000) % 10);
+			launch->launch_code_str[38] = '0' + ((launch->launch_code /  100) % 10);
+			launch->launch_code_str[39] = '0' + ((launch->launch_code /   10) % 10);
+			launch->launch_code_str[40] = '0' + ((launch->launch_code /    1) % 10);
+			dscrlmsg_set_msg(&launch->dscrlmsg, launch->launch_code_str);
 		}
 		else
 		{
@@ -222,7 +246,7 @@ UIEventDisposition launch_uie_handler(Launch *launch, UIEvent event)
 				switch (event)
 				{
 					case evt_notify:
-						if (launch->textentry.cur_value.mantissa == LAUNCH_CODE
+						if (launch->textentry.cur_value.mantissa == launch->launch_code
 							&& launch->textentry.cur_value.neg_exponent == 0)
 						{
 							launch_configure_state(launch, launch_state_countdown);

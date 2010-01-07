@@ -288,7 +288,8 @@ static BoardRemap boardRemapTables[] = {
 #define BRT_SOLDERED_DN_BOARD_DN	1
 	{ TRUE,  { SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD }},
 #define BRT_WALLCLOCK				2
-	{ FALSE, { SRT_SUBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SUBU, SRT_SUBU }},
+//	{ FALSE, { SRT_SUBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SUBU, SRT_SUBU }},
+	{ FALSE, { SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SUBU }},
 #define BRT_CHASECLOCK				3
 	{ FALSE, { SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SUBU }},
 };
@@ -782,6 +783,7 @@ void hal_init(BoardConfiguration bc)
 	switch (bc)
 	{
 		case bc_rocket0:
+			displayConfiguration[0] = BRT_WALLCLOCK;
 			displayConfiguration[3] = BRT_SOLDERED_DN_BOARD_DN;
 			displayConfiguration[4] = BRT_SOLDERED_DN_BOARD_DN;
 			break;
