@@ -15,31 +15,35 @@ static void thrusters_update(ThrusterState_t *ts)
 		  ts->joystick_state.y_pos));
 */
 
-	// display X and Y positions
-	if (ts->joystick_state.state & JOYSTICK_TRIGGER) {
-	  ascii_to_bitmap_str(&ts->bbuf.buffer[1], 3, "PSH");
-	  ascii_to_bitmap_str(&ts->bbuf.buffer[5], 3, "PSH");
+	if (ts->joystick_state.state & JOYSTICK_DISCONNECTED) {
+	  ascii_to_bitmap_str(&ts->bbuf.buffer[1], 3, " NO");
+	  ascii_to_bitmap_str(&ts->bbuf.buffer[5], 3, "JOy");
 	} else {
-	  int_to_string2(buf, 3, 2, ts->joystick_state.x_pos);
-	  ascii_to_bitmap_str(&ts->bbuf.buffer[1], 3, buf);
-	  int_to_string2(buf, 3, 2, ts->joystick_state.y_pos);
-	  ascii_to_bitmap_str(&ts->bbuf.buffer[5], 3, buf);
+		if (ts->joystick_state.state & JOYSTICK_TRIGGER) {
+			ascii_to_bitmap_str(&ts->bbuf.buffer[1], 3, "PSH");
+			ascii_to_bitmap_str(&ts->bbuf.buffer[5], 3, "PSH");
+		} else {
+			int_to_string2(buf, 3, 2, ts->joystick_state.x_pos);
+			ascii_to_bitmap_str(&ts->bbuf.buffer[1], 3, buf);
+			int_to_string2(buf, 3, 2, ts->joystick_state.y_pos);
+			ascii_to_bitmap_str(&ts->bbuf.buffer[5], 3, buf);
+		}
+
+		// display X and Y thresholds
+		if (ts->joystick_state.state & JOYSTICK_LEFT)
+			ts->bbuf.buffer[1] |= SSB_DECIMAL;
+		else if (ts->joystick_state.state & JOYSTICK_RIGHT)
+			ts->bbuf.buffer[3] |= SSB_DECIMAL;
+		else
+			ts->bbuf.buffer[2] |= SSB_DECIMAL;
+
+		if (ts->joystick_state.state & JOYSTICK_DOWN)
+			ts->bbuf.buffer[5] |= SSB_DECIMAL;
+		else if (ts->joystick_state.state & JOYSTICK_UP)
+			ts->bbuf.buffer[7] |= SSB_DECIMAL;
+		else
+			ts->bbuf.buffer[6] |= SSB_DECIMAL;
 	}
-
-	// display X and Y thresholds
-	if (ts->joystick_state.state & JOYSTICK_LEFT)
-		ts->bbuf.buffer[1] |= SSB_DECIMAL;
-	else if (ts->joystick_state.state & JOYSTICK_RIGHT)
-		ts->bbuf.buffer[3] |= SSB_DECIMAL;
-	else
-		ts->bbuf.buffer[2] |= SSB_DECIMAL;
-
-	if (ts->joystick_state.state & JOYSTICK_DOWN)
-		ts->bbuf.buffer[5] |= SSB_DECIMAL;
-	else if (ts->joystick_state.state & JOYSTICK_UP)
-		ts->bbuf.buffer[7] |= SSB_DECIMAL;
-	else
-		ts->bbuf.buffer[6] |= SSB_DECIMAL;
 
 	// fire thrusters, baby!!
 	//

@@ -66,9 +66,19 @@ static int8_t adc_to_100scale(uint16_t adc)
 // parameters.
 void joystick_poll(JoystickState_t *js)
 {
+	uint16_t x_adc = hal_read_adc(js->x_adc_channel);
+	uint16_t y_adc = hal_read_adc(js->y_adc_channel);
+
+	if (x_adc < 10 && y_adc < 10) {
+		js->state = JOYSTICK_DISCONNECTED;
+		return;
+	}
+		
+	js->state &= ~(JOYSTICK_DISCONNECTED);
+
 	js->x_pos =  adc_to_100scale(hal_read_adc(js->x_adc_channel));
 	js->y_pos = -adc_to_100scale(hal_read_adc(js->y_adc_channel));
-	
+
 	if (js->x_pos < -ACTUATION_THRESHOLD)
 		js->state |= JOYSTICK_LEFT;
 	if (js->x_pos > -RELEASE_THRESHOLD)

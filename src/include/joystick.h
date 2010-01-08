@@ -5,12 +5,12 @@
 # define _BV(x) (1 << (x))
 #endif
 
-#define JOYSTICK_UP      _BV(0)
-#define JOYSTICK_DOWN    _BV(1)
-#define JOYSTICK_LEFT    _BV(2)
-#define JOYSTICK_RIGHT   _BV(3)
-#define JOYSTICK_TRIGGER _BV(4)
-
+#define JOYSTICK_UP           _BV(0)
+#define JOYSTICK_DOWN         _BV(1)
+#define JOYSTICK_LEFT         _BV(2)
+#define JOYSTICK_RIGHT        _BV(3)
+#define JOYSTICK_TRIGGER      _BV(4)
+#define JOYSTICK_DISCONNECTED _BV(5)
 typedef struct {
 	// ADC channel numbers.  Should be initialized by caller before
 	// joystick_init is called.
