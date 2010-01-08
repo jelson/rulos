@@ -82,6 +82,7 @@ static inline void gpio_make_input_no_pullup(volatile uint8_t *ddr,
 					     uint8_t bit)
 {
 	reg_clr(ddr, bit); // set direction as input
+	reg_clr(port, bit); // DISABLE internal pull-up resistor
 }
 
 /*
