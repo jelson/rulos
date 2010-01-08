@@ -587,12 +587,12 @@ void hal_init_adc_channel(uint8_t idx)
 #endif
 	switch (idx)
 	{
-		case 0: gpio_make_input(GPIO_C0); break;
-		case 1: gpio_make_input(GPIO_C1); break;
-		case 2: gpio_make_input(GPIO_C2); break;
-		case 3: gpio_make_input(GPIO_C3); break;
-		case 4: gpio_make_input(GPIO_C4); break;
-		case 5: gpio_make_input(GPIO_C5); break;
+		case 0: gpio_make_input_no_pullup(GPIO_C0); break;
+		case 1: gpio_make_input_no_pullup(GPIO_C1); break;
+		case 2: gpio_make_input_no_pullup(GPIO_C2); break;
+		case 3: gpio_make_input_no_pullup(GPIO_C3); break;
+		case 4: gpio_make_input_no_pullup(GPIO_C4); break;
+		case 5: gpio_make_input_no_pullup(GPIO_C5); break;
 	}
 }
 

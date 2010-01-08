@@ -16,10 +16,15 @@ static void thrusters_update(ThrusterState_t *ts)
 */
 
 	// display X and Y positions
-	int_to_string2(buf, 3, 2, ts->joystick_state.x_pos);
-	ascii_to_bitmap_str(&ts->bbuf.buffer[1], 3, buf);
-	int_to_string2(buf, 3, 2, ts->joystick_state.y_pos);
-	ascii_to_bitmap_str(&ts->bbuf.buffer[5], 3, buf);
+	if (ts->joystick_state.state & JOYSTICK_TRIGGER) {
+	  ascii_to_bitmap_str(&ts->bbuf.buffer[1], 3, "PSH");
+	  ascii_to_bitmap_str(&ts->bbuf.buffer[5], 3, "PSH");
+	} else {
+	  int_to_string2(buf, 3, 2, ts->joystick_state.x_pos);
+	  ascii_to_bitmap_str(&ts->bbuf.buffer[1], 3, buf);
+	  int_to_string2(buf, 3, 2, ts->joystick_state.y_pos);
+	  ascii_to_bitmap_str(&ts->bbuf.buffer[5], 3, buf);
+	}
 
 	// display X and Y thresholds
 	if (ts->joystick_state.state & JOYSTICK_LEFT)

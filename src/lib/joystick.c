@@ -1,6 +1,14 @@
 #include "rocket.h"
 #include "joystick.h"
 
+#ifndef SIM
+# include "hardware.h"
+# if defined(BOARD_PCB11)
+#  define JOYSTICK_TRIGGER_GPIO GPIO_D4
+# endif
+#endif
+
+
 // Using 30k resistor:
 //    X direction -- adc1, full left = 1020, center=470, right=305
 //          left trigger   900 on/800 off
@@ -9,16 +17,40 @@
 
 #define JOYSTICK_ADC_SCAN_RATE 10000
 
+#if defined(BOARD_PCB11)
+#define JOYSTICK_TRIGGER_GPIO GPIO_D4
+#endif
 
 
 
-// this equation works assuming 42k resistors and a 0..1023 adc
+// The joystick circuit looks like this:
+//
+// (Vref, Joy input) 
+//      |
+// (Joy output, ADC input, resistor lead 1)
+//      |
+// (resistor lead 2, gnd)
+//
+// The joystick is in series with a fixed-size resistor (R).  The joystick resistance,
+// which ranges from 0 to 100kohm, is X.  Therefore the total resistance is X+R, and
+// at any given moment the portion at the resistor is R/X+R.
+// Since the ADC is scaled from 0..1023, and R=40Kohm, then the ADC value will be
+//      ADC = 1023 * (X/X+R).
+// Solving for X gives us
+//      X = (40*1023) / ADC  - 40.  (X in Kohm)
+// That will give us X between 0 and 100, since the joystick's range is 0.. 100Kohm.
+
 static int8_t adc_to_100scale(uint16_t adc)
 {
 	// jonh "fixes" div-by-zero without understanding eqn:
 	if (adc==0) { adc = 1; }
 
-	int32_t retval = ((uint32_t) 84*1024 / (uint32_t) adc - 84) - 100;
+	// this solves for the resistance in kohms:
+	//int32_t retval = ((int32_t) 40 * 1023) / adc - 40;
+	// now map the resistance, which ranges from 0..85kohm, to -100 to 100
+	//retval = (200 * retval) / 85 - 100;
+	// and combine into a single equation (cheating using mathematica - jer algebra fail):
+	int32_t retval = ((int32_t) 96282/adc) - 194;
 
 	if (retval < -99)
 		return -99;

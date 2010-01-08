@@ -25,10 +25,6 @@
 #define GPIO_D6  (&DDRD), (&PORTD), (&PIND), (PORTD6)
 #define GPIO_D7  (&DDRD), (&PORTD), (&PIND), (PORTD7)
 
-#if defined(BOARD_PCB11)
-#define JOYSTICK_TRIGGER_GPIO GPIO_D4
-#endif
-
 /*
  * set a bit in a register
  */
@@ -72,8 +68,20 @@ static inline void gpio_make_input(volatile uint8_t *ddr,
 								   volatile uint8_t *pin,
 								   uint8_t bit)
 {
-	reg_clr(ddr, bit);
-	reg_set(port, bit);
+	reg_clr(ddr, bit); // set direction as input
+	reg_set(port, bit); // enable internal pull-up resistors
+}
+
+
+/*
+ * configure a pin as input without enabling its pullups.
+ */
+static inline void gpio_make_input_no_pullup(volatile uint8_t *ddr,
+					     volatile uint8_t *port,
+					     volatile uint8_t *pin,
+					     uint8_t bit)
+{
+	reg_clr(ddr, bit); // set direction as input
 }
 
 /*
