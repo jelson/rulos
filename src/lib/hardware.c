@@ -577,7 +577,7 @@ void hal_init_adc(Time scan_period)
 	init_adc(&g_theADC, scan_period);
 }
 
-#define RAW_ADC
+// #define RAW_ADC
 
 void hal_init_adc_channel(uint8_t idx)
 {
