@@ -91,6 +91,8 @@ void init_rocket0(Rocket0 *r0)
 
 	init_hobbs(&r0->hobbs, &r0->hpam, &r0->idle);
 	init_screenblanker(&r0->screenblanker, bc_rocket0, &r0->hpam, &r0->idle);
+
+	hpam_set_port(&r0->hpam, hpam_lighting_flicker, TRUE);
 }
 
 static Rocket0 rocket0;	// allocate obj in .bss so it's easy to count

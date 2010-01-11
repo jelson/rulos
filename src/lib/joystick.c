@@ -1,14 +1,6 @@
 #include "rocket.h"
 #include "joystick.h"
 
-#ifndef SIM
-# include "hardware.h"
-# if defined(BOARD_PCB11)
-#  define JOYSTICK_TRIGGER_GPIO GPIO_D4
-# endif
-#endif
-
-
 // Using 30k resistor:
 //    X direction -- adc1, full left = 1020, center=470, right=305
 //          left trigger   900 on/800 off
@@ -16,11 +8,6 @@
 //    Y direction -- adc0, full up   = 1020, center=470, down=300
 
 #define JOYSTICK_ADC_SCAN_RATE 10000
-
-#if defined(BOARD_PCB11)
-#define JOYSTICK_TRIGGER_GPIO GPIO_D4
-#endif
-
 
 
 // The joystick circuit looks like this:
@@ -98,22 +85,17 @@ void joystick_poll(JoystickState_t *js)
 	if (js->y_pos > -RELEASE_THRESHOLD)
 		js->state &= ~(JOYSTICK_DOWN);
 
-#if defined(JOYSTICK_TRIGGER_GPIO)
-	if (gpio_is_clr(JOYSTICK_TRIGGER_GPIO))
+	if (hal_read_joystick_button())
 		js->state |= JOYSTICK_TRIGGER;
 	else
 		js->state &= ~(JOYSTICK_TRIGGER);
-#endif
 }
 
 void joystick_init(JoystickState_t *js)
 {
 	js->state = 0;
-#if defined(JOYSTICK_TRIGGER_GPIO)
-	// Only PCB11 defines a joystick trigger line
-	gpio_make_input(JOYSTICK_TRIGGER_GPIO);
-#endif
 	hal_init_adc(JOYSTICK_ADC_SCAN_RATE);
 	hal_init_adc_channel(js->x_adc_channel);
 	hal_init_adc_channel(js->y_adc_channel);
+	hal_init_joystick_button();
 }

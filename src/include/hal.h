@@ -40,6 +40,9 @@ void hal_init_adc(Time scan_period);
 void hal_init_adc_channel(uint8_t idx);
 uint16_t hal_read_adc(uint8_t idx);
 
+void hal_init_joystick_button();
+r_bool hal_read_joystick_button();
+
 void hal_uart_init(uint16_t baud);
 /*
 void hal_uart_send_byte(uint8_t byte);

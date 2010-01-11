@@ -31,6 +31,7 @@ void twi_poll(const char *source);
 void sim_audio_poll(const char *source);
 r_bool sim_audio_poll_once();
 void sim_twi_set_instance(int instance);
+r_bool g_joystick_trigger_state;
 
 /*
    __
@@ -441,6 +442,7 @@ static void sim_poll_keyboard()
 	case '!':	// center ADC
 		adc[2] =  512;	//y
 		adc[3] =  512;	//x
+		g_joystick_trigger_state = FALSE;
 		break;
 	case '@':	// back-left
 		adc[2] =   11;	//y
@@ -454,7 +456,9 @@ static void sim_poll_keyboard()
 		adc[2] =   11;	//y
 		adc[3] = 1023;	//x
 		break;
-//	case '%':	// button-on
+	case '%':	// button-on
+		g_joystick_trigger_state = TRUE;
+		break;
 
 	default:
 		if ((k = translate_to_keybuf(c)) != 0) {
@@ -943,3 +947,12 @@ uint16_t hal_read_adc(uint8_t idx)
 	return adc[idx];
 }
 
+void hal_init_joystick_button()
+{
+	g_joystick_trigger_state = FALSE;
+}
+
+r_bool hal_read_joystick_button()
+{
+	return g_joystick_trigger_state;
+}

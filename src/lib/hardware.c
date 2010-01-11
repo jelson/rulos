@@ -79,6 +79,8 @@
 #define KEYPAD_COL2 GPIO_D2
 #define KEYPAD_COL3 GPIO_D3
 
+#define JOYSTICK_TRIGGER	GPIO_D4
+
 #define	AVAILABLE_ADCS	0x3f
 #define	ASSERT_TO_BOARD	1
 
@@ -643,6 +645,25 @@ uint16_t hal_read_adc(uint8_t idx)
 	value = g_theADC.value[idx];
 	hal_end_atomic();
 	return value;
+}
+
+void hal_init_joystick_button()
+{
+#if defined(JOYSTICK_TRIGGER)
+	// Only PCB11 defines a joystick trigger line
+	gpio_make_input(JOYSTICK_TRIGGER);
+#else
+	assert(FALSE);	// no joystick on this hardware! why are you trying to read it?
+#endif
+}
+
+r_bool hal_read_joystick_button()
+{
+#if defined(JOYSTICK_TRIGGER)
+	return gpio_is_clr(JOYSTICK_TRIGGER);
+#else
+	return FALSE;
+#endif
 }
 
 static void init_adc(ADCState *adc, Time scan_period)
