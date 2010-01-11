@@ -2,7 +2,7 @@ ROCKET_ROOT := ../..
 
 #MCU := atmega8
 MCU := atmega328p
-BOARD := PCB11
+BOARD := PCB10
 
 TARGET := boardid
 

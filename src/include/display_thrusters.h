@@ -1,6 +1,7 @@
 #include "joystick.h"
 #include "network.h"
 #include "hpam.h"
+#include "idle.h"
 
 typedef struct {
 	ActivationFunc func;
@@ -8,10 +9,12 @@ typedef struct {
 	BoardBuffer bbuf;
 	ThrusterPayload payload;
 	HPAM *hpam;
+	IdleAct *idle;
 } ThrusterState_t;
 
 void thrusters_init(ThrusterState_t *ts,
 					uint8_t board,
 					uint8_t x_chan,
 					uint8_t y_chan,
-					HPAM *hpam);
+					HPAM *hpam,
+					IdleAct *idle);

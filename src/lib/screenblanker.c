@@ -33,14 +33,20 @@ UIEventDisposition screenblanker_handler(ScreenBlanker *screenblanker, UIEvent e
 	{
 		for (i=0; i<screenblanker->num_buffers; i++)
 		{
-			board_buffer_push(&screenblanker->buffer[i], i);
+			if (!board_buffer_is_stacked(&screenblanker->buffer[i]))
+			{
+				board_buffer_push(&screenblanker->buffer[i], i);
+			}
 		}
 	}
 	else if (evt == evt_idle_nowactive)
 	{
 		for (i=0; i<screenblanker->num_buffers; i++)
 		{
-			board_buffer_pop(&screenblanker->buffer[i]);
+			if (board_buffer_is_stacked(&screenblanker->buffer[i]))
+			{
+				board_buffer_pop(&screenblanker->buffer[i]);
+			}
 		}
 	}
 	return uied_accepted;

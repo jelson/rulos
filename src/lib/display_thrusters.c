@@ -60,6 +60,16 @@ static void thrusters_update(ThrusterState_t *ts)
 		ts->joystick_state.state & JOYSTICK_DOWN &&
 			ts->joystick_state.state & JOYSTICK_RIGHT);
 
+	// TODO: trigger should fire booster only in some special mode
+	hpam_set_port(ts->hpam, hpam_booster,
+		ts->joystick_state.state & JOYSTICK_TRIGGER);
+
+	if ((ts->joystick_state.state & (JOYSTICK_UP | JOYSTICK_LEFT | JOYSTICK_RIGHT | JOYSTICK_TRIGGER)) != 0)
+	{
+		//LOGF((logfp, "idle touch due to nonzero joystick: %d\n", ts->joystick_state.state));
+		idle_touch(ts->idle);
+	}
+
 	// draw digits
 	board_buffer_draw(&ts->bbuf);
 
@@ -70,7 +80,8 @@ void thrusters_init(ThrusterState_t *ts,
 					uint8_t board,
 					uint8_t x_adc_channel,
 					uint8_t y_adc_channel,
-					HPAM *hpam)
+					HPAM *hpam,
+					IdleAct *idle)
 {
 	// initialize the joystick
 	ts->joystick_state.x_adc_channel = x_adc_channel;
@@ -84,6 +95,7 @@ void thrusters_init(ThrusterState_t *ts,
 	board_buffer_push(&ts->bbuf, board);
 
 	ts->hpam = hpam;
+	ts->idle = idle;
 
 	schedule_us(1, (Activation *) ts);
 }

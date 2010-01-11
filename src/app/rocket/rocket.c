@@ -76,7 +76,7 @@ void init_rocket0(Rocket0 *r0)
 	memset(&r0->thrusterUpdate, 0, sizeof(r0->thrusterUpdate));
 	init_hpam(&r0->hpam, 7, r0->thrusterUpdate);
 	init_idle(&r0->idle);
-	r0->thrusterUpdate[2] = (ThrusterUpdate*) &r0->idle.thrusterListener;
+	//r0->thrusterUpdate[2] = (ThrusterUpdate*) &r0->idle.thrusterListener;
 	init_control_panel(&r0->cp, 3, 1, &r0->network, &r0->hpam, &r0->audio_client, &r0->idle);
 	r0->cp.ccl.launch.main_rtc = &r0->dr;
 	r0->cp.ccl.launch.lunar_distance = &r0->ld;
@@ -87,7 +87,7 @@ void init_rocket0(Rocket0 *r0)
 	r0->thrusterUpdate[1] = (ThrusterUpdate*) &r0->cp.ccdock.dock.thrusterUpdate;
 	init_thruster_send_network(&r0->tsn, &r0->network);
 	r0->thrusterUpdate[0] = (ThrusterUpdate*) &r0->tsn;
-	thrusters_init(&r0->ts, 7, THRUSTER_X_CHAN, THRUSTER_Y_CHAN, &r0->hpam);
+	thrusters_init(&r0->ts, 7, THRUSTER_X_CHAN, THRUSTER_Y_CHAN, &r0->hpam, &r0->idle);
 
 	init_hobbs(&r0->hobbs, &r0->hpam, &r0->idle);
 	init_screenblanker(&r0->screenblanker, bc_rocket0, &r0->hpam, &r0->idle);

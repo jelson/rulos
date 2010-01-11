@@ -443,17 +443,18 @@ static void sim_poll_keyboard()
 		adc[3] =  512;	//x
 		break;
 	case '@':	// back-left
-		adc[2] =    0;	//y
-		adc[3] =    0;	//x
+		adc[2] =   11;	//y
+		adc[3] =   11;	//x
 		break;
 	case '#':	// fwd
 		adc[2] = 1023;	//y
 		adc[3] =  512;	//x
 		break;
 	case '$':	// back-right
-		adc[2] =    0;	//y
+		adc[2] =   11;	//y
 		adc[3] = 1023;	//x
 		break;
+//	case '%':	// button-on
 
 	default:
 		if ((k = translate_to_keybuf(c)) != 0) {
