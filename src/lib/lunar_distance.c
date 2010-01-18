@@ -9,9 +9,9 @@ void lunar_distance_init(LunarDistance *ld, uint8_t dist_b0, uint8_t speed_b0)
 {
 	ld->func = (ActivationFunc) lunar_distance_update;
 	drift_anim_init(&ld->da, 0, LUNAR_DISTANCE, 0, LUNAR_DISTANCE, 2376);
-	board_buffer_init(&ld->dist_board);
+	board_buffer_init(&ld->dist_board DBG_BBUF_LABEL("dist"));
 	board_buffer_push(&ld->dist_board, dist_b0);
-	board_buffer_init(&ld->speed_board);
+	board_buffer_init(&ld->speed_board DBG_BBUF_LABEL("speed"));
 	board_buffer_push(&ld->speed_board, speed_b0);
 	da_set_velocity(&ld->da, 0);
 	schedule_us(1, (Activation*) ld);

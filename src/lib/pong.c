@@ -26,7 +26,7 @@ void pong_init(Pong *pong, uint8_t b0, FocusManager *focus, AudioClient *audioCl
 	int i;
 	for (i=0; i<PONG_HEIGHT; i++)
 	{
-		board_buffer_init(&pong->bbuf[i]);
+		board_buffer_init(&pong->bbuf[i] DBG_BBUF_LABEL("pong"));
 		board_buffer_push(&pong->bbuf[i], b0+i);
 		pong->btable[i] = &pong->bbuf[i];
 	}

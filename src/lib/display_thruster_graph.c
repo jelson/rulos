@@ -16,7 +16,7 @@ void dtg_recv_func(RecvSlot *recvSlot);
 void dtg_init(DThrusterGraph *dtg, uint8_t board, Network *network)
 {
 	dtg->func = (ActivationFunc) dtg_update;
-	board_buffer_init(&dtg->bbuf);
+	board_buffer_init(&dtg->bbuf DBG_BBUF_LABEL("thrustergraph"));
 	board_buffer_push(&dtg->bbuf, board);
 
 	dtg->network = network;

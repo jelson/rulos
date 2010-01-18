@@ -11,7 +11,7 @@ void blinker_init(DBlinker *blinker, uint16_t period)
 	blinker->period = period;
 	blinker->msg = NULL;
 	blinker->cur_line = 0;
-	board_buffer_init(&blinker->bbuf);
+	board_buffer_init(&blinker->bbuf DBG_BBUF_LABEL("blinker"));
 	schedule_us(1, (Activation*) blinker);
 }
 

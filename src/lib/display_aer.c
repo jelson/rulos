@@ -10,7 +10,7 @@ void daer_fetchCalcDecorationValues(
 void daer_init(DAER *daer, uint8_t board, Time impulse_frequency_us)
 {
 	daer->func = (ActivationFunc) daer_update;
-	board_buffer_init(&daer->bbuf);
+	board_buffer_init(&daer->bbuf DBG_BBUF_LABEL("aer"));
 	board_buffer_push(&daer->bbuf, board);
 	drift_anim_init(&daer->azimuth,   10, 320,   0, 360, 5);
 	drift_anim_init(&daer->elevation, 10,   4,   0,  90, 5);

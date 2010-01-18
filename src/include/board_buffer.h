@@ -5,6 +5,7 @@
 # error Please include rocket.h instead of this file
 #endif
 
+#define BBDEBUG 0
 
 typedef struct s_board_buffer {
 	uint8_t board_index;
@@ -13,7 +14,12 @@ typedef struct s_board_buffer {
 	uint8_t mask;	// visible alpha
 	struct s_board_buffer *next;
 #if BBDEBUG && SIM
+#define DBG_BBUF_LABEL(s)	, s
+#define DBG_BBUF_LABEL_DECL	, char *label
 	char *label;
+#else
+#define DBG_BBUF_LABEL(s)	/**/
+#define DBG_BBUF_LABEL_DECL	/**/
 #endif // BBDEBUG && SIM
 } BoardBuffer;
 
@@ -26,7 +32,7 @@ void board_buffer_module_init();
 struct s_remote_bbuf_send;
 void install_remote_bbuf_send(struct s_remote_bbuf_send *rbs);
 
-void board_buffer_init(BoardBuffer *buf);
+void board_buffer_init(BoardBuffer *buf DBG_BBUF_LABEL_DECL);
 void board_buffer_pop(BoardBuffer *buf);
 void board_buffer_push(BoardBuffer *buf, int board);
 void board_buffer_set_alpha(BoardBuffer *buf, uint8_t alpha);

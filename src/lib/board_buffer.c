@@ -6,13 +6,13 @@
 #define BBUF_UNMAPPED_INDEX (0xff)
 
 #if BBDEBUG && SIM
-void dump()
+void dump(char *prefix)
 {
 	int b;
 	LOGF((logfp, "-----\n"));
 	for (b=0; b<NUM_PSEUDO_BOARDS; b++)
 	{
-		LOGF((logfp, "b%d: ", b));
+		LOGF((logfp, "%s b%d: ", prefix, b));
 		BoardBuffer *buf = foreground[b];
 		while (buf!=NULL)
 		{
@@ -41,7 +41,7 @@ void install_remote_bbuf_send(RemoteBBufSend *rbs)
 	g_remote_bbuf_send = rbs;
 }
 
-void board_buffer_init(BoardBuffer *buf)
+void board_buffer_init(BoardBuffer *buf DBG_BBUF_LABEL_DECL)
 {
 	int i;
 	for (i=0; i<NUM_DIGITS; i++)
@@ -52,6 +52,9 @@ void board_buffer_init(BoardBuffer *buf)
 	buf->board_index = BBUF_UNMAPPED_INDEX;
 	buf->alpha = 0xff;
 	assert(sizeof(buf->alpha)*8 >= NUM_DIGITS);
+#if BBDEBUG && SIM
+	buf->label = label;
+#endif
 }
 
 void _board_buffer_compute_mask(BoardBuffer *buf, uint8_t redraw)
@@ -104,15 +107,14 @@ void board_buffer_pop(BoardBuffer *buf)
 	buf->board_index = BBUF_UNMAPPED_INDEX;
 
 #if BBDEBUG && SIM
-dump();
+dump("  after pop");
 #endif // BBDEBUG && SIM
 }
 
 void board_buffer_push(BoardBuffer *buf, int board)
 {
 #if BBDEBUG && SIM
-LOGF((logfp, "before push\n"));
-dump();
+dump("before push");
 #endif // BBDEBUG && SIM
 	buf->board_index = board;
 	buf->next = foreground[board];
@@ -120,19 +122,30 @@ dump();
 	_board_buffer_compute_mask(buf, FALSE);	// no redraw because...
 	board_buffer_draw(buf);	// ...this line will overwrite existing
 #if BBDEBUG && SIM
-dump();
+dump(" after push");
 #endif // BBDEBUG && SIM
 }
 
 void board_buffer_set_alpha(BoardBuffer *buf, uint8_t alpha)
 {
 	buf->alpha = alpha;
-	_board_buffer_compute_mask(buf, TRUE);
+
+	if (board_buffer_is_stacked(buf))
+	{
+		_board_buffer_compute_mask(foreground[buf->board_index], TRUE);
+	}
 }
 
 void board_buffer_draw(BoardBuffer *buf)
 {
 	uint8_t board_index = buf->board_index;
+
+#if BBDEBUG && SIM
+	if (board_index==3)
+	{
+		LOGF((logfp, "bb_draw(3, buf %08x %s, mask %x)\n", (int) buf, buf->label, buf->mask));
+	}
+#endif // BBDEBUG && SIM
 
 	// draw locally, if we can.
 	if (0<=board_index && board_index<NUM_BOARDS)

@@ -27,7 +27,7 @@ void launch_init(Launch *launch, uint8_t board0, HPAM *hpam, AudioClient *audioC
 
 	init_screen4(&launch->s4, board0);
 	dscrlmsg_init(&launch->dscrlmsg, board0, "", 120);
-	board_buffer_init(&launch->textentry_bbuf);
+	board_buffer_init(&launch->textentry_bbuf DBG_BBUF_LABEL("launch"));
 	RowRegion rowregion = {&launch->textentry_bbuf, 0, NUM_DIGITS};
 	numeric_input_init(
 		&launch->textentry, rowregion, (UIEventHandler*) launch, NULL, "");

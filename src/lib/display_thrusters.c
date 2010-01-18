@@ -89,7 +89,7 @@ void thrusters_init(ThrusterState_t *ts,
 	joystick_init(&ts->joystick_state);
 
 	ts->func = (ActivationFunc) thrusters_update;
-	board_buffer_init(&ts->bbuf);
+	board_buffer_init(&ts->bbuf DBG_BBUF_LABEL("thrusters"));
 	// mask off HPAM digits, so HPAM 'display' shows through
 	board_buffer_set_alpha(&ts->bbuf, 0x77);
 	board_buffer_push(&ts->bbuf, board);

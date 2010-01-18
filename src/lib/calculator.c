@@ -27,7 +27,7 @@ void calculator_init(
 	int i;
 	for (i=0; i<2; i++)
 	{
-		board_buffer_init(&calc->bbuf[i]);
+		board_buffer_init(&calc->bbuf[i] DBG_BBUF_LABEL("calculator"));
 		board_buffer_push(&calc->bbuf[i], board0+i);
 		calc->btable[i] = &calc->bbuf[i];
 	}

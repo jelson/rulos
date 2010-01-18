@@ -53,8 +53,8 @@ void ddock_init(DDockAct *act, uint8_t b0, uint8_t auxboard_base, FocusManager *
 	act->thrusterPayload.thruster_bits = 0;
 	ddock_reset(act);
 
-	board_buffer_init(&act->auxboards[0]);
-	board_buffer_init(&act->auxboards[1]);
+	board_buffer_init(&act->auxboards[0] DBG_BBUF_LABEL("dock"));
+	board_buffer_init(&act->auxboards[1] DBG_BBUF_LABEL("dock"));
 	board_buffer_push(&act->auxboards[0], auxboard_base+0);
 	board_buffer_push(&act->auxboards[1], auxboard_base+1);
 	act->auxboard_base = auxboard_base;

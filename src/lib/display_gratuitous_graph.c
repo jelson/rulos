@@ -10,7 +10,7 @@ void dgg_init(DGratuitousGraph *dgg,
 	uint8_t board, char *name, Time impulse_frequency_us)
 {
 	dgg->func = (ActivationFunc) dgg_update;
-	board_buffer_init(&dgg->bbuf);
+	board_buffer_init(&dgg->bbuf DBG_BBUF_LABEL("dgg"));
 	board_buffer_push(&dgg->bbuf, board);
 	int i;
 	for (i=0; i<3; i++)

@@ -10,7 +10,7 @@ UIEventDisposition dcompass_event_handler(
 void dcompass_init(DCompassAct *act, uint8_t board, FocusManager *focus)
 {
 	act->func = (ActivationFunc) dcompass_update;
-	board_buffer_init(&act->bbuf);
+	board_buffer_init(&act->bbuf DBG_BBUF_LABEL("compass"));
 	board_buffer_push(&act->bbuf, board);
 	int32_t range = ((int32_t)1)<<24;
 	drift_anim_init(&act->drift, 10, 0, -range, range, 3);

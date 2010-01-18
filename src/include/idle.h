@@ -6,7 +6,7 @@
 
 #define MAX_IDLE_HANDLERS 4
 //#define IDLE_PERIOD (((Time)1000000)*60*5)	// five minutes.
-#define IDLE_PERIOD (((Time)1000000)*3)			// 3 seconds (test)
+#define IDLE_PERIOD (((Time)1000000)*3)			// 20 seconds (test)
 	// NB can't make it more than half the clock rollover time, or
 	// later_than will screw up.  I think that's about 10 min.
 

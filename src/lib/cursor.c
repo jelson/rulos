@@ -13,7 +13,7 @@ void cursor_init(CursorAct *act)
 	int i;
 	for (i=0; i<MAX_HEIGHT; i++)
 	{
-		board_buffer_init(&act->bbuf[i]);
+		board_buffer_init(&act->bbuf[i] DBG_BBUF_LABEL("cursor"));
 	}
 	act->visible = FALSE;
 	act->label = NULL;

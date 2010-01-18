@@ -9,7 +9,7 @@ void init_screen4(Screen4 *s4, uint8_t board0)
 	int r;
 	for (r=0; r<SCREEN4SIZE; r++)
 	{
-		board_buffer_init(&s4->bbuf[r]);
+		board_buffer_init(&s4->bbuf[r] DBG_BBUF_LABEL("s4"));
 		s4->bbufp[r] = &s4->bbuf[r];
 	}
 	s4->rrect.bbuf = s4->bbufp;

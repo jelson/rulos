@@ -10,7 +10,7 @@ void drtc_init(DRTCAct *act, uint8_t board, Time base_time)
 {
 	act->func = (ActivationFunc) drtc_update;
 	act->base_time = base_time;
-	board_buffer_init(&act->bbuf);
+	board_buffer_init(&act->bbuf DBG_BBUF_LABEL("rtc"));
 	board_buffer_push(&act->bbuf, board);
 	schedule_us(1, (Activation*) act);
 }

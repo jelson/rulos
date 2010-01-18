@@ -65,7 +65,7 @@ void init_audio_server(AudioServer *as, AudioDriver *ad, Network *network, uint8
 	as->recvSlot.msg = (Message*) as->recv_msg_alloc;
 	as->recv_this = as;
 
-	board_buffer_init(&as->bbuf);
+	board_buffer_init(&as->bbuf DBG_BBUF_LABEL("audio_server"));
 	board_buffer_push(&as->bbuf, board0);
 
 	net_bind_receiver(network, &as->recvSlot);

@@ -51,7 +51,7 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Ne
 	for (bbi=0; bbi<CONTROL_PANEL_HEIGHT; bbi++)
 	{
 		cp->btable[bbi] = &cp->bbuf[bbi];
-		board_buffer_init(cp->btable[bbi]);
+		board_buffer_init(cp->btable[bbi] DBG_BBUF_LABEL("control_panel"));
 		board_buffer_push(cp->btable[bbi], board0+bbi);
 	}
 	cp->rrect.bbuf = cp->btable;

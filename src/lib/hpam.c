@@ -34,7 +34,7 @@ void init_hpam(HPAM *hpam, uint8_t board0, ThrusterUpdate **thrusterUpdates)
 	_hpam_init_port(hpam, hpam_booster, REST_TIME_SECONDS, board0, HPAM_DIGIT_0, 3);
 	hpam->thrusterUpdates = thrusterUpdates;
 
-	board_buffer_init(&hpam->bbuf);
+	board_buffer_init(&hpam->bbuf DBG_BBUF_LABEL("hpam"));
 	board_buffer_set_alpha(&hpam->bbuf, 0x88);	// hard-code hpam digits 0,4
 	board_buffer_push(&hpam->bbuf, board0);
 
