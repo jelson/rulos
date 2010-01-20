@@ -8,6 +8,7 @@
 #define MAX_BUFFERS 8
 
 struct s_screen_blanker;
+struct s_screenblanker_sender;
 
 typedef enum
 {
@@ -41,10 +42,36 @@ typedef struct s_screen_blanker {
 	HPAM *hpam;
 	uint32_t *tree;
 	uint8_t disco_color;
+	struct s_screenblanker_sender *screenblanker_sender;
 } ScreenBlanker;
 
 void init_screenblanker(ScreenBlanker *screenblanker, BoardConfiguration bc, HPAM *hpam, IdleAct *idle);
 void screenblanker_setmode(ScreenBlanker *screenblanker, ScreenBlankerMode newmode);
 void screenblanker_setdisco(ScreenBlanker *screenblanker, DiscoColor disco_color);
+
+//////////////////////////////////////////////////////////////////////////////
+
+typedef struct s_screenblanker_payload {
+	ScreenBlankerMode mode;
+	DiscoColor disco_color;
+} ScreenblankerPayload;
+
+typedef struct s_screenblanker_listener {
+	ScreenBlanker screenblanker;
+	RecvSlot recvSlot;
+	struct s_screenblanker_listener *self;
+	uint8_t message_storage[sizeof(Message)+sizeof(ScreenblankerPayload)];
+} ScreenBlankerListener;
+
+void init_screenblanker_listener(ScreenBlankerListener *sbl, Network *network, BoardConfiguration bc);
+
+typedef struct s_screenblanker_sender {
+	Network *network;
+	uint8_t message_storage[sizeof(Message)+sizeof(ScreenblankerPayload)];
+	SendSlot sendSlot;
+} ScreenBlankerSender;
+
+void init_screenblanker_sender(ScreenBlankerSender *sbs, Network *network);
+void sbs_send(ScreenBlankerSender *sbs, ScreenBlanker *sb);
 
 #endif // _SCREENBLANKER_H

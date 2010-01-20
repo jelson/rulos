@@ -55,6 +55,7 @@ typedef struct {
 	IdleAct idle;
 	Hobbs hobbs;
 	ScreenBlanker screenblanker;
+	ScreenBlankerSender screenblanker_sender;
 } Rocket0;
 
 #define THRUSTER_X_CHAN	3
@@ -78,7 +79,11 @@ void init_rocket0(Rocket0 *r0)
 	init_idle(&r0->idle);
 	thrusters_init(&r0->ts, 7, THRUSTER_X_CHAN, THRUSTER_Y_CHAN, &r0->hpam, &r0->idle);
 	//r0->thrusterUpdate[2] = (ThrusterUpdate*) &r0->idle.thrusterListener;
+
 	init_screenblanker(&r0->screenblanker, bc_rocket0, &r0->hpam, &r0->idle);
+	init_screenblanker_sender(&r0->screenblanker_sender, &r0->network);
+	r0->screenblanker.screenblanker_sender = &r0->screenblanker_sender;
+
 	init_control_panel(&r0->cp, 3, 1, &r0->network, &r0->hpam, &r0->audio_client, &r0->idle, &r0->screenblanker, &r0->ts.joystick_state);
 	r0->cp.ccl.launch.main_rtc = &r0->dr;
 	r0->cp.ccl.launch.lunar_distance = &r0->ld;

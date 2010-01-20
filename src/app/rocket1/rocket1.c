@@ -83,7 +83,8 @@ int main()
 	RemoteKeyboardRecv rkr;
 	init_remote_keyboard_recv(&rkr, &network, (InputInjectorIfc*) &cii, REMOTE_SUBFOCUS_PORT0);
 
-
+	ScreenBlankerListener sbl;
+	init_screenblanker_listener(&sbl, &network, bc_rocket1);
 
 /*
 	DAER daer;

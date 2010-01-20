@@ -63,11 +63,16 @@ void init_screenblanker(ScreenBlanker *screenblanker, BoardConfiguration bc, HPA
 
 	screenblanker->mode = sb_inactive;
 
+	screenblanker->screenblanker_sender = NULL;
+
 	screenblanker->clock_act.func = (ActivationFunc) screenblanker_update;
 	screenblanker->clock_act.sb = screenblanker;
 	schedule_us(1, (Activation*) &screenblanker->clock_act);
 
-	idle_add_handler(idle, (UIEventHandler *) screenblanker);
+	if (idle!=NULL)
+	{
+		idle_add_handler(idle, (UIEventHandler *) screenblanker);
+	}
 }
 
 UIEventDisposition screenblanker_handler(ScreenBlanker *screenblanker, UIEvent evt)
@@ -113,12 +118,24 @@ void screenblanker_setmode(ScreenBlanker *screenblanker, ScreenBlankerMode newmo
 		}
 	}
 	screenblanker->mode = newmode;
+
+	if (screenblanker->screenblanker_sender != NULL)
+	{
+		sbs_send(screenblanker->screenblanker_sender, screenblanker);
+	}
+
 	screenblanker_update_once(screenblanker);
 }
 
 void screenblanker_setdisco(ScreenBlanker *screenblanker, DiscoColor disco_color)
 {
 	screenblanker->disco_color = disco_color;
+
+	if (screenblanker->screenblanker_sender != NULL)
+	{
+		sbs_send(screenblanker->screenblanker_sender, screenblanker);
+	}
+
 	screenblanker_update_once(screenblanker);
 }
 
@@ -142,7 +159,10 @@ void screenblanker_update_once(ScreenBlanker *sb)
 	{
 	case sb_inactive:
 	{
-		hpam_set_port(sb->hpam, hpam_lighting_flicker, TRUE);
+		if (sb->hpam!=NULL)
+		{
+			hpam_set_port(sb->hpam, hpam_lighting_flicker, TRUE);
+		}
 		break;
 	}
 	case sb_blankdots:
@@ -153,7 +173,10 @@ void screenblanker_update_once(ScreenBlanker *sb)
 			}
 			board_buffer_set_alpha(&sb->buffer[i], sb->hpam_max_alpha[i]);
 		}
-		hpam_set_port(sb->hpam, hpam_lighting_flicker, TRUE);
+		if (sb->hpam!=NULL)
+		{
+			hpam_set_port(sb->hpam, hpam_lighting_flicker, TRUE);
+		}
 		break;
 	}
 	case sb_black:
@@ -164,7 +187,10 @@ void screenblanker_update_once(ScreenBlanker *sb)
 			}
 			board_buffer_set_alpha(&sb->buffer[i], sb->hpam_max_alpha[i]);
 		}
-		hpam_set_port(sb->hpam, hpam_lighting_flicker, TRUE);
+		if (sb->hpam!=NULL)
+		{
+			hpam_set_port(sb->hpam, hpam_lighting_flicker, TRUE);
+		}
 		break;
 	}
 	case sb_disco:
@@ -175,7 +201,10 @@ void screenblanker_update_once(ScreenBlanker *sb)
 			}
 			board_buffer_set_alpha(&sb->buffer[i], sb->hpam_max_alpha[i]);
 		}
-		hpam_set_port(sb->hpam, hpam_lighting_flicker, sb->disco_color==DISCO_WHITE);
+		if (sb->hpam!=NULL)
+		{
+			hpam_set_port(sb->hpam, hpam_lighting_flicker, sb->disco_color==DISCO_WHITE);
+		}
 		break;
 	}
 	case sb_flicker:
@@ -193,8 +222,69 @@ void screenblanker_update_once(ScreenBlanker *sb)
 			board_buffer_set_alpha(&sb->buffer[i], alpha);
 			// NB 'set_alpha includes a redraw.
 		}
-		hpam_set_port(sb->hpam, hpam_lighting_flicker, (deadbeef_rand()&3)!=0);
+		if (sb->hpam!=NULL)
+		{
+			hpam_set_port(sb->hpam, hpam_lighting_flicker, (deadbeef_rand()&3)!=0);
+		}
 		break;
 	}
 	}
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void sbl_recv_func(RecvSlot *recvSlot);
+
+void init_screenblanker_listener(ScreenBlankerListener *sbl, Network *network, BoardConfiguration bc)
+{
+	init_screenblanker(&sbl->screenblanker, bc, NULL, NULL);
+	sbl->recvSlot.func = sbl_recv_func;
+	sbl->recvSlot.port = SCREENBLANKER_PORT;
+	sbl->recvSlot.payload_capacity = sizeof(ScreenblankerPayload);
+	sbl->recvSlot.msg_occupied = FALSE;
+	sbl->recvSlot.msg = (Message*) sbl->message_storage;
+	sbl->self = sbl;
+
+	net_bind_receiver(network, &sbl->recvSlot);
+}
+
+void sbl_recv_func(RecvSlot *recvSlot)
+{
+	ScreenBlankerListener *sbl = *((ScreenBlankerListener **)(recvSlot+1));
+	ScreenblankerPayload *sp = (ScreenblankerPayload*) sbl->recvSlot.msg->data;
+	screenblanker_setdisco(&sbl->screenblanker, sp->disco_color);
+	screenblanker_setmode(&sbl->screenblanker, sp->mode);
+	sbl->recvSlot.msg_occupied = FALSE;
+	//LOGF((logfp, "sbl_recv_func got bits %x %x!\n", sp->mode, sp->disco_color));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void sb_message_sent(SendSlot *sendSlot);
+
+void init_screenblanker_sender(ScreenBlankerSender *sbs, Network *network)
+{
+	sbs->network = network;
+
+	sbs->sendSlot.func = sb_message_sent;
+	sbs->sendSlot.msg = (Message*) sbs->message_storage;
+	sbs->sendSlot.msg->dest_port = SCREENBLANKER_PORT;
+	sbs->sendSlot.msg->message_size = sizeof(ScreenblankerPayload);
+	sbs->sendSlot.sending = FALSE;
+}
+
+void sbs_send(ScreenBlankerSender *sbs, ScreenBlanker *sb)
+{
+	if (!sbs->sendSlot.sending)
+	{
+		ScreenblankerPayload *sp = (ScreenblankerPayload *) sbs->sendSlot.msg->data;
+		sp->mode = sb->mode;
+		sp->disco_color = sb->disco_color;
+		net_send_message(sbs->network, &sbs->sendSlot);
+	}
+}
+
+void sb_message_sent(SendSlot *sendSlot)
+{
+	sendSlot->sending = FALSE;
 }
