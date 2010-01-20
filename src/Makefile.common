@@ -47,6 +47,7 @@ COMMON_OBJECTS = \
 	hobbs.o \
 	screenblanker.o \
 	disco.o \
+	booster.o \
 
 #	audio_driver.o \
 

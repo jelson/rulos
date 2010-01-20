@@ -12,18 +12,18 @@ void init_cc_remote_calc(CCRemoteCalc *ccrc, Network *network)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_cc_launch(CCLaunch *ccl, uint8_t board0, HPAM *hpam, AudioClient *audioClient, ScreenBlanker *screenblanker)
+void init_cc_launch(CCLaunch *ccl, uint8_t board0, Booster *booster, AudioClient *audioClient, ScreenBlanker *screenblanker)
 {
-	launch_init(&ccl->launch, board0, hpam, audioClient, screenblanker);
+	launch_init(&ccl->launch, board0, booster, audioClient, screenblanker);
 	ccl->uie_handler = (UIEventHandler*) &ccl->launch;
 	ccl->name = "Launch";
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_cc_dock(CCDock *ccd, uint8_t board0, uint8_t auxboard0, AudioClient *audioClient)
+void init_cc_dock(CCDock *ccd, uint8_t board0, uint8_t auxboard0, AudioClient *audioClient, Booster *booster, JoystickState_t *joystick)
 {
-	ddock_init(&ccd->dock, board0, auxboard0, NULL, audioClient);
+	ddock_init(&ccd->dock, board0, auxboard0, NULL, audioClient, booster, joystick);
 	ccd->uie_handler = (UIEventHandler*) &ccd->dock.handler;
 	ccd->name = "dock";
 }
@@ -52,7 +52,7 @@ UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt);
 void cp_inject(struct s_direct_injector *di, char k);
 void cp_paint(ControlPanel *cp);
 
-void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network, HPAM *hpam, AudioClient *audioClient, IdleAct *idle, ScreenBlanker *screenblanker)
+void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network, HPAM *hpam, AudioClient *audioClient, IdleAct *idle, ScreenBlanker *screenblanker, JoystickState_t *joystick)
 {
 	cp->handler_func = (UIEventHandlerFunc) cp_uie_handler;
 
@@ -71,16 +71,18 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Ne
 	cp->direct_injector.injector_func = (InputInjectorFunc) cp_inject;
 	cp->direct_injector.cp = cp;
 
+	booster_init(&cp->booster, hpam, audioClient, screenblanker);
+
 	cp->child_count = 0;
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccrc;
 	init_cc_remote_calc(&cp->ccrc, network);
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccl;
-	init_cc_launch(&cp->ccl, board0, hpam, audioClient, screenblanker);
+	init_cc_launch(&cp->ccl, board0, &cp->booster, audioClient, screenblanker);
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccdock;
-	init_cc_dock(&cp->ccdock, board0, aux_board0, audioClient);
+	init_cc_dock(&cp->ccdock, board0, aux_board0, audioClient, &cp->booster, joystick);
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccpong;
 	init_cc_pong(&cp->ccpong, board0, audioClient);

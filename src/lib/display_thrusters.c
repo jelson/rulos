@@ -60,10 +60,6 @@ static void thrusters_update(ThrusterState_t *ts)
 		ts->joystick_state.state & JOYSTICK_DOWN &&
 			ts->joystick_state.state & JOYSTICK_RIGHT);
 
-	// TODO: trigger should fire booster only in some special mode
-	hpam_set_port(ts->hpam, hpam_booster,
-		ts->joystick_state.state & JOYSTICK_TRIGGER);
-
 	if ((ts->joystick_state.state & (JOYSTICK_UP | JOYSTICK_LEFT | JOYSTICK_RIGHT | JOYSTICK_TRIGGER)) != 0)
 	{
 		//LOGF((logfp, "idle touch due to nonzero joystick: %d\n", ts->joystick_state.state));

@@ -70,6 +70,8 @@ typedef struct s_control_panel {
 	uint8_t selected_child;
 	uint8_t active_child;
 
+	Booster booster;
+
 	// actual children listed here to allocate their storage statically.
 	CCRemoteCalc ccrc;
 	CCLaunch ccl;
@@ -80,6 +82,6 @@ typedef struct s_control_panel {
 	IdleAct *idle;
 } ControlPanel;
 
-void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network, HPAM *hpam, AudioClient *audioClient, IdleAct *idle, ScreenBlanker *screenblanker);
+void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network, HPAM *hpam, AudioClient *audioClient, IdleAct *idle, ScreenBlanker *screenblanker, JoystickState_t *joystick);
 
 #endif // _control_panel_h

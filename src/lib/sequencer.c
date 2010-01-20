@@ -15,13 +15,13 @@ void launch_clock_update(LaunchClockAct *launchClockAct);
 void launch_configure_lunar_distance(Launch *launch);
 UIEventDisposition launch_uie_handler(Launch *launch, UIEvent event);
 
-void launch_init(Launch *launch, uint8_t board0, HPAM *hpam, AudioClient *audioClient, struct s_screen_blanker *screenblanker)
+void launch_init(Launch *launch, uint8_t board0, Booster *booster, AudioClient *audioClient, struct s_screen_blanker *screenblanker)
 {
 	launch->func = (UIEventHandlerFunc) launch_uie_handler;
 	launch->clock_act.func = (ActivationFunc) launch_clock_update;
 	launch->clock_act.launch = launch;
 
-	launch->hpam = hpam;
+	launch->booster = booster;
 	launch->audioClient = audioClient;
 
 	launch->state = -1;	// force configuration
@@ -52,7 +52,7 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 	}
 
 	// teardown
-	hpam_set_port(launch->hpam, hpam_booster, FALSE);
+	booster_set(launch->booster, FALSE);
 
 	if (board_buffer_is_stacked(&launch->textentry_bbuf))
 	{
@@ -150,20 +150,17 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 
 	if (launch->state == launch_state_launching)
 	{
-		hpam_set_port(launch->hpam, hpam_booster, TRUE);
-		ac_skip_to_clip(launch->audioClient, sound_booster_start, sound_booster_running);
+		booster_set(launch->booster, TRUE);
 		ascii_to_bitmap_str(launch->s4.bbuf[1].buffer, 8, " BLAST");
 		ascii_to_bitmap_str(launch->s4.bbuf[2].buffer, 8, "  OFF");
 		launch->nextEventTimeout = clock_time_us()+10000000;
-		screenblanker_setmode(launch->screenblanker, sb_flicker);
 	}
 
 	if (launch->state == launch_state_complete)
 	{
-		ac_skip_to_clip(launch->audioClient, sound_booster_flameout, sound_silence);
+		booster_set(launch->booster, FALSE);
 		ascii_to_bitmap_str(launch->s4.bbuf[1].buffer, 8, " boost");
 		ascii_to_bitmap_str(launch->s4.bbuf[2].buffer, 8, "complete");
-		screenblanker_setmode(launch->screenblanker, sb_inactive);
 	}
 
 	s4_draw(&launch->s4);

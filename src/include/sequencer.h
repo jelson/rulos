@@ -26,7 +26,7 @@
 #include "lunar_distance.h"
 #include "screen4.h"
 #include "rasters.h"
-#include "hpam.h"
+#include "booster.h"
 #include "audio_server.h"
 
 typedef enum {
@@ -64,7 +64,7 @@ typedef struct s_launch {
 
 	Time nextEventTimeout;
 
-	HPAM *hpam;
+	Booster *booster;
 	AudioClient *audioClient;
 	uint16_t launch_code;
 	char launch_code_str[45];
@@ -72,6 +72,6 @@ typedef struct s_launch {
 	struct s_screen_blanker *screenblanker;
 } Launch;
 
-void launch_init(Launch *launch, uint8_t board0, HPAM *hpam, AudioClient *audioClient, struct s_screen_blanker *screenblanker);
+void launch_init(Launch *launch, uint8_t board0, Booster *booster, AudioClient *audioClient, struct s_screen_blanker *screenblanker);
 
 #endif // _sequencer_h

@@ -8,6 +8,8 @@
 #include "thruster_protocol.h"
 #include "screen4.h"
 #include "audio_server.h"
+#include "booster.h"
+#include "joystick.h"
 
 #define DOCK_HEIGHT 4
 #define MAX_Y (DOCK_HEIGHT*6)
@@ -40,9 +42,11 @@ typedef struct s_ddockact {
 	uint8_t auxboard_base;
 	r_bool docking_complete;
 	AudioClient *audioClient;
+	Booster *booster;
+	JoystickState_t *joystick;
 } DDockAct;
 
-void ddock_init(DDockAct *act, uint8_t b0, uint8_t auxboard_base, FocusManager *focus, AudioClient *audioClient);
+void ddock_init(DDockAct *act, uint8_t b0, uint8_t auxboard_base, FocusManager *focus, AudioClient *audioClient, Booster *booster, JoystickState_t *joystick);
 void ddock_reset(DDockAct *dd);
 
 #endif // display_docking_h

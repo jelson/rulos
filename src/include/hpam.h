@@ -34,6 +34,7 @@ typedef struct {
 	HPAMPort hpam_ports[hpam_end];
 	ThrusterUpdate **thrusterUpdates;
 	BoardBuffer bbuf;
+	ThrusterPayload thrusterPayload;
 } HPAM;
 
 void init_hpam(HPAM *hpam, uint8_t board0, ThrusterUpdate **thrusterUpdates);

@@ -26,7 +26,7 @@ void ddock_show(DDockAct *dd);
 #define DD_THRUSTER_DOWNSCALE	4
 #define DD_TOLERANCE	2
 
-void ddock_init(DDockAct *act, uint8_t b0, uint8_t auxboard_base, FocusManager *focus, AudioClient *audioClient)
+void ddock_init(DDockAct *act, uint8_t b0, uint8_t auxboard_base, FocusManager *focus, AudioClient *audioClient, Booster *booster, JoystickState_t *joystick)
 {
 	act->func = (ActivationFunc) ddock_update;
 	init_screen4(&act->s4, b0);
@@ -38,6 +38,9 @@ void ddock_init(DDockAct *act, uint8_t b0, uint8_t auxboard_base, FocusManager *
 
 	act->thrusterUpdate.func = (ThrusterUpdateFunc) ddock_thruster_update;
 	act->thrusterUpdate.act = act;
+
+	act->booster = booster;
+	act->joystick = joystick;
 
 	act->focused = FALSE;
 	if (focus!=NULL)
@@ -69,6 +72,7 @@ void ddock_hide(DDockAct *dd)
 	s4_hide(&dd->s4);
 	board_buffer_pop(&dd->auxboards[0]);
 	board_buffer_pop(&dd->auxboards[1]);
+	booster_set(dd->booster, FALSE);
 }
 
 void ddock_show(DDockAct *dd)
@@ -103,6 +107,8 @@ void ddock_reset(DDockAct *dd)
 
 void ddock_update(DDockAct *act)
 {
+	schedule_us(Exp2Time(17), (Activation*) act);
+
 	ddock_update_once(act);
 
 #if RANDOM_DRIFT
@@ -127,6 +133,12 @@ void ddock_update(DDockAct *act)
 	dd_bump(act, hpam_thruster_frontright, -1,  1);
 	//LOGF((logfp, "velocity %6d %6d\n", act->xd.velocity, act->yd.velocity));
 
+	if (act->focused)
+	{
+		r_bool button_pushed = ((act->joystick->state & JOYSTICK_TRIGGER)!=0);
+		booster_set(act->booster, button_pushed);
+	}
+
 	if (da_read(&act->rd) == DD_MAX_RADIUS)
 	{
 		int x = da_read(&act->xd);
@@ -148,12 +160,11 @@ void ddock_update(DDockAct *act)
 		da_read(&act->yd),
 		da_read(&act->rd)));
 */
-
-	schedule_us(Exp2Time(17), (Activation*) act);
 }
 
 void dd_bump(DDockAct *act, HPAMIndex thruster_index, uint32_t xscale, uint32_t yscale)
 {
+	//LOGF((logfp, "dd_bump(hpam %x tb %x) %d\n", 1<<thruster_index, act->thrusterPayload.thruster_bits, act->thrusterPayload.thruster_bits & (1<<thruster_index)));
 	if (act->thrusterPayload.thruster_bits & (1<<thruster_index))
 	{
 #if DD_INERTIA
@@ -339,6 +350,6 @@ UIEventDisposition ddock_event_handler(
 
 void ddock_thruster_update(DockThrusterUpdate *dtu, ThrusterPayload *tp)
 {
-	//LOGF((logfp, "ddock_thruster_update %d\n", tp->thruster_bits));
+	//LOGF((logfp, "ddock_thruster_update %02x\n", tp->thruster_bits));
 	dtu->act->thrusterPayload.thruster_bits = tp->thruster_bits;
 }

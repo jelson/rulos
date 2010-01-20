@@ -35,6 +35,7 @@ void init_hpam(HPAM *hpam, uint8_t board0, ThrusterUpdate **thrusterUpdates)
 	_hpam_init_port(hpam, hpam_thruster_frontright, REST_TIME_SECONDS, board0, HPAM_DIGIT_0, 1);
 	_hpam_init_port(hpam, hpam_thruster_rear, REST_TIME_SECONDS, board0, HPAM_DIGIT_0, 2);
 	_hpam_init_port(hpam, hpam_booster, REST_TIME_SECONDS, board0, HPAM_DIGIT_0, 3);
+	hpam->thrusterPayload.thruster_bits = 0;
 	hpam->thrusterUpdates = thrusterUpdates;
 
 	board_buffer_init(&hpam->bbuf DBG_BBUF_LABEL("hpam"));
@@ -112,17 +113,15 @@ void hpam_set_port(HPAM *hpam, HPAMIndex idx, r_bool status)
 	port->expire_time = clock_time_us() + port->max_time;
 
 	// Forward the notice to listeners
-	// Ugh, this is klunky. We only forward info about one of the digits right now. Luckily, both HPAMs are on one digit at the moment -- whew!
-	if (port->digit == HPAM_DIGIT_0)
+	uint8_t thruster_bits_mask = (1<<idx);
+	hpam->thrusterPayload.thruster_bits =
+		(hpam->thrusterPayload.thruster_bits & ~thruster_bits_mask)
+		| (status ? thruster_bits_mask : 0);
+	ThrusterUpdate **tu = hpam->thrusterUpdates;
+	while (tu[0]!=NULL)
 	{
-		ThrusterPayload payload;
-		payload.thruster_bits = (~(hpam->bbuf.buffer[port->digit]));
-		ThrusterUpdate **tu = hpam->thrusterUpdates;
-		while (tu[0]!=NULL)
-		{
-			tu[0]->func(tu[0], &payload);
-			tu++;
-		}
+		tu[0]->func(tu[0], &hpam->thrusterPayload);
+		tu++;
 	}
 
 #if SIM
