@@ -12,9 +12,9 @@ void init_cc_remote_calc(CCRemoteCalc *ccrc, Network *network)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_cc_launch(CCLaunch *ccl, uint8_t board0, HPAM *hpam, AudioClient *audioClient)
+void init_cc_launch(CCLaunch *ccl, uint8_t board0, HPAM *hpam, AudioClient *audioClient, ScreenBlanker *screenblanker)
 {
-	launch_init(&ccl->launch, board0, hpam, audioClient);
+	launch_init(&ccl->launch, board0, hpam, audioClient, screenblanker);
 	ccl->uie_handler = (UIEventHandler*) &ccl->launch;
 	ccl->name = "Launch";
 }
@@ -39,11 +39,20 @@ void init_cc_pong(CCPong *ccp, uint8_t board0, AudioClient *audioClient)
 
 //////////////////////////////////////////////////////////////////////////////
 
+void init_cc_disco(CCDisco *ccp, AudioClient *audioClient, ScreenBlanker *screenblanker)
+{
+	disco_init(&ccp->disco, audioClient, screenblanker);
+	ccp->uie_handler = (UIEventHandler*) &ccp->disco.handler;
+	ccp->name = "disco";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt);
 void cp_inject(struct s_direct_injector *di, char k);
 void cp_paint(ControlPanel *cp);
 
-void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network, HPAM *hpam, AudioClient *audioClient, IdleAct *idle)
+void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network, HPAM *hpam, AudioClient *audioClient, IdleAct *idle, ScreenBlanker *screenblanker)
 {
 	cp->handler_func = (UIEventHandlerFunc) cp_uie_handler;
 
@@ -61,20 +70,25 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Ne
 
 	cp->direct_injector.injector_func = (InputInjectorFunc) cp_inject;
 	cp->direct_injector.cp = cp;
-	
+
 	cp->child_count = 0;
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccrc;
 	init_cc_remote_calc(&cp->ccrc, network);
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccl;
-	init_cc_launch(&cp->ccl, board0, hpam, audioClient);
+	init_cc_launch(&cp->ccl, board0, hpam, audioClient, screenblanker);
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccdock;
 	init_cc_dock(&cp->ccdock, board0, aux_board0, audioClient);
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccpong;
 	init_cc_pong(&cp->ccpong, board0, audioClient);
+
+	cp->children[cp->child_count++] = (ControlChild*) &cp->ccdisco;
+	init_cc_disco(&cp->ccdisco, audioClient, screenblanker);
+
+	assert(cp->child_count <= CONTROL_PANEL_NUM_CHILDREN);
 
 	cp->selected_child = 0;
 	cp->active_child = CP_NO_CHILD;
@@ -139,15 +153,12 @@ UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt)
 void cp_paint(ControlPanel *cp)
 {
 	int coff;
-	for (coff=0; coff<cp->child_count; coff++)
+	for (coff=0; coff<CONTROL_PANEL_HEIGHT; coff++)
 	{
 		int ci = (cp->selected_child + coff) % cp->child_count;
 		ControlChild *cc = cp->children[ci];
-		if (coff < CONTROL_PANEL_NUM_CHILDREN)
-		{
-			memset(cp->btable[coff]->buffer, 0, cp->rrect.xlen);
-			ascii_to_bitmap_str(cp->btable[coff]->buffer, cp->rrect.xlen, cc->name);
-			board_buffer_draw(cp->btable[coff]);
-		}
+		memset(cp->btable[coff]->buffer, 0, cp->rrect.xlen);
+		ascii_to_bitmap_str(cp->btable[coff]->buffer, cp->rrect.xlen, cc->name);
+		board_buffer_draw(cp->btable[coff]);
 	}
 }

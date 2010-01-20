@@ -89,66 +89,56 @@ void hal_upside_down_led(SSBitmap *b)
 #define PAIR_RED	3
 #define PAIR_BLUE	4
 #define PAIR_WHITE	5
-#define PG PAIR_GREEN
-#define PY PAIR_YELLOW
-#define PR PAIR_RED
-#define PB PAIR_BLUE
-#define PW PAIR_WHITE
+#define PG PAIR_GREEN,
+#define PY PAIR_YELLOW,
+#define PR PAIR_RED,
+#define PB PAIR_BLUE,
+#define PW PAIR_WHITE,
 
-BoardLayout tree0_def[] = {
-	{ "Mission Clock",			{ PG,PG,PG,PG,PG,PG,PY,PY },  3,  0 },
-	{ "Distance to Moon",		{ PR,PR,PR,PR,PR,PR,PR,PR }, 33,  4 },
-	{ "Speed (fps)",			{ PY,PY,PY,PY,PY,PG,PG,PG }, 33,  8 },
-	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 12 },
-	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 15 },
-	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 18 },
-	{ "",						{ PR,PR,PR,PR,PR,PR,PR,PR },  9, 21 },
-	{ "Thruster Actuation",		{ PB,PR,PR,PR,PB,PY,PY,PY },  3, 25 },
-	{ NULL }
-}, *tree0 = tree0_def;
+#define	DBOARD(name, syms, x, y) \
+	{ name, {syms}, x, y }
+#define B_NO_BOARD	{ NULL },
+#define B_END	{ NULL }
+#include "board_defs.h"
 
-BoardLayout tree1_def[] = {
-	{ "Azimuth, Elevation",		{ PG,PG,PG,PR,PR,PY,PY,PY }, 33, 0 },
-	{ "Liquid Hydrogen Prs",	{ PG,PG,PG,PG,PG,PG,PG,PG },  3, 4 },
-	{ "Flight Computer",		{ PR,PR,PR,PR,PY,PY,PY,PY }, 17, 9 },
-	{ "",						{ PG,PG,PG,PG,PB,PB,PB,PB }, 17, 12 },
-	{ NULL },
-	{ NULL },
-	{ NULL },
-	{ NULL }
-}, *tree1 = tree1_def;
+BoardLayout tree0_def[] = { T_ROCKET0 }, *tree0 = tree0_def;
+
+BoardLayout tree1_def[] = { T_ROCKET1 }, *tree1 = tree1_def;
 
 BoardLayout tree2_def[] = {
-	{ "AudioBoard",		{ PG,PG,PG,PG,PY,PY,PY,PY }, 1, 0 },
-	{ NULL },
-	{ NULL },
-	{ NULL },
-	{ NULL },
-	{ NULL },
-	{ NULL },
-	{ NULL }
+	{ "AudioBoard",		{ PG PG PG PG PY PY PY PY }, 1, 0 },
+	B_NO_BOARD
+	B_NO_BOARD
+	B_NO_BOARD
+	B_NO_BOARD
+	B_NO_BOARD
+	B_NO_BOARD
+	B_NO_BOARD
+	B_END
 }, *tree2 = tree2_def;
 
 BoardLayout wallclock_tree_def[] = {
-	{ "Clock",		{ PG,PG,PG,PG,PG,PG,PB,PB }, 15, 0 },
-	{ NULL },
-	{ NULL },
-	{ NULL },
-	{ NULL },
-	{ NULL },
-	{ NULL },
-	{ NULL }
+	{ "Clock",		{ PG PG PG PG PG PG PB PB }, 15, 0 },
+	B_NO_BOARD
+	B_NO_BOARD
+	B_NO_BOARD
+	B_NO_BOARD
+	B_NO_BOARD
+	B_NO_BOARD
+	B_NO_BOARD
+	B_END
 }, *wallclock_tree = wallclock_tree_def;
 
 BoardLayout chaseclock_tree_def[] = {
-	{ "Clock",		{ PG,PG,PG,PG,PY,PY,PY,PY }, 15, 0 },
-	{ NULL },
-	{ NULL },
-	{ NULL },
-	{ NULL },
-	{ NULL },
-	{ NULL },
-	{ NULL }
+	{ "Clock",		{ PG PG PG PG PY PY PY PY }, 15, 0 },
+	B_NO_BOARD
+	B_NO_BOARD
+	B_NO_BOARD
+	B_NO_BOARD
+	B_NO_BOARD
+	B_NO_BOARD
+	B_NO_BOARD
+	B_END
 }, *chaseclock_tree = chaseclock_tree_def;
 
 BoardLayout *g_sim_theTree = NULL;
@@ -165,7 +155,7 @@ void hal_program_labels()
 	for (bl = g_sim_theTree; bl->label != NULL; bl+=1)
 	{
 		attroff(A_BOLD);
-		wcolor_set(mainwnd, PW, NULL);
+		wcolor_set(mainwnd, PAIR_WHITE, NULL);
 		mvwprintw(mainwnd,
 			bl->y, bl->x+(4*NUM_DIGITS-strlen(bl->label))/2, bl->label);
 	}
@@ -591,11 +581,11 @@ void hal_init(BoardConfiguration bc)
 	/* init curses */
 	mainwnd = initscr();
 	start_color();
-	init_pair(PB, COLOR_BLUE, COLOR_BLACK);
-	init_pair(PY, COLOR_YELLOW, COLOR_BLACK);
-	init_pair(PG, COLOR_GREEN, COLOR_BLACK);
-	init_pair(PR, COLOR_RED, COLOR_BLACK);
-	init_pair(PW, COLOR_WHITE, COLOR_BLACK);
+	init_pair(PAIR_BLUE, COLOR_BLUE, COLOR_BLACK);
+	init_pair(PAIR_YELLOW, COLOR_YELLOW, COLOR_BLACK);
+	init_pair(PAIR_GREEN, COLOR_GREEN, COLOR_BLACK);
+	init_pair(PAIR_RED, COLOR_RED, COLOR_BLACK);
+	init_pair(PAIR_WHITE, COLOR_WHITE, COLOR_BLACK);
 	//attron(COLOR_PAIR(1));
 	noecho();
 	cbreak();

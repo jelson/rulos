@@ -46,6 +46,7 @@ COMMON_OBJECTS = \
 	idle.o \
 	hobbs.o \
 	screenblanker.o \
+	disco.o \
 
 #	audio_driver.o \
 

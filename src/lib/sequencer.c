@@ -1,6 +1,7 @@
 #include "rocket.h"
 #include "sequencer.h"
 #include "sound.h"
+#include "screenblanker.h"
 
 #define STUB(s)	{}
 #define LAUNCH_COUNTDOWN_TIME (20*1000000+500000)
@@ -14,7 +15,7 @@ void launch_clock_update(LaunchClockAct *launchClockAct);
 void launch_configure_lunar_distance(Launch *launch);
 UIEventDisposition launch_uie_handler(Launch *launch, UIEvent event);
 
-void launch_init(Launch *launch, uint8_t board0, HPAM *hpam, AudioClient *audioClient)
+void launch_init(Launch *launch, uint8_t board0, HPAM *hpam, AudioClient *audioClient, struct s_screen_blanker *screenblanker)
 {
 	launch->func = (UIEventHandlerFunc) launch_uie_handler;
 	launch->clock_act.func = (ActivationFunc) launch_clock_update;
@@ -36,6 +37,8 @@ void launch_init(Launch *launch, uint8_t board0, HPAM *hpam, AudioClient *audioC
 	launch->main_rtc = NULL;
 	launch->lunar_distance = NULL;
 	launch->launch_code = 0;
+
+	launch->screenblanker = screenblanker;
 
 	launch_configure_state(launch, launch_state_hidden);
 	schedule_us(1, (Activation*) &launch->clock_act);
@@ -152,6 +155,7 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 		ascii_to_bitmap_str(launch->s4.bbuf[1].buffer, 8, " BLAST");
 		ascii_to_bitmap_str(launch->s4.bbuf[2].buffer, 8, "  OFF");
 		launch->nextEventTimeout = clock_time_us()+10000000;
+		screenblanker_setmode(launch->screenblanker, sb_flicker);
 	}
 
 	if (launch->state == launch_state_complete)
@@ -159,6 +163,7 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 		ac_skip_to_clip(launch->audioClient, sound_booster_flameout, sound_silence);
 		ascii_to_bitmap_str(launch->s4.bbuf[1].buffer, 8, " boost");
 		ascii_to_bitmap_str(launch->s4.bbuf[2].buffer, 8, "complete");
+		screenblanker_setmode(launch->screenblanker, sb_inactive);
 	}
 
 	s4_draw(&launch->s4);

@@ -45,6 +45,8 @@ typedef struct {
 	struct s_launch *launch;
 } LaunchClockAct;
 
+struct s_screen_blanker;
+
 typedef struct s_launch {
 	UIEventHandlerFunc func;
 	LaunchClockAct clock_act;
@@ -66,8 +68,10 @@ typedef struct s_launch {
 	AudioClient *audioClient;
 	uint16_t launch_code;
 	char launch_code_str[45];
+
+	struct s_screen_blanker *screenblanker;
 } Launch;
 
-void launch_init(Launch *launch, uint8_t board0, HPAM *hpam, AudioClient *audioClient);
+void launch_init(Launch *launch, uint8_t board0, HPAM *hpam, AudioClient *audioClient, struct s_screen_blanker *screenblanker);
 
 #endif // _sequencer_h

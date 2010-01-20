@@ -1,5 +1,36 @@
 #include "screenblanker.h"
 
+//////////////////////////////////////////////////////////////////////////////
+// disco mode defs
+
+#define _packed(c0, c1, c2, c3, c4, c5, c6, c7, zero) \
+		(0 \
+		| (((uint32_t)c0)<<(7*4)) \
+		| (((uint32_t)c1)<<(6*4)) \
+		| (((uint32_t)c2)<<(5*4)) \
+		| (((uint32_t)c3)<<(4*4)) \
+		| (((uint32_t)c4)<<(3*4)) \
+		| (((uint32_t)c5)<<(2*4)) \
+		| (((uint32_t)c6)<<(1*4)) \
+		| (((uint32_t)c7)<<(0*4)) \
+		)
+
+#define PG	DISCO_GREEN,
+#define PR	DISCO_RED,
+#define PY	DISCO_YELLOW,
+#define PB	DISCO_BLUE,
+
+#define DBOARD(name, colors, x, y) _packed(colors 0)
+#define B_NO_BOARD	/**/
+#define B_END	/**/
+
+#include "board_defs.h"
+
+static uint32_t t_rocket0[] = { T_ROCKET0 };
+static uint32_t t_rocket1[] = { T_ROCKET1 };
+
+//////////////////////////////////////////////////////////////////////////////
+
 UIEventDisposition screenblanker_handler(ScreenBlanker *screenblanker, UIEvent evt);
 void screenblanker_update(ScreenBlankerClockAct *act);
 void screenblanker_update_once(ScreenBlanker *sb);
@@ -9,6 +40,8 @@ void init_screenblanker(ScreenBlanker *screenblanker, BoardConfiguration bc, HPA
 	assert(bc==bc_rocket0 || bc==bc_rocket1);
 	screenblanker->func = (UIEventHandlerFunc) screenblanker_handler;
 	screenblanker->num_buffers = bc==bc_rocket0 ? 8 : 4;
+	screenblanker->tree = bc==bc_rocket0 ? t_rocket0 : t_rocket1;
+	screenblanker->disco_color = DISCO_RED;
 
 	int i;
 	for (i=0; i<screenblanker->num_buffers; i++)
@@ -40,7 +73,7 @@ UIEventDisposition screenblanker_handler(ScreenBlanker *screenblanker, UIEvent e
 {
 	if (evt == evt_idle_nowidle)
 	{
-		screenblanker_setmode(screenblanker, sb_flicker);
+		screenblanker_setmode(screenblanker, sb_blankdots);
 	}
 	else if (evt == evt_idle_nowactive)
 	{
@@ -79,6 +112,12 @@ void screenblanker_setmode(ScreenBlanker *screenblanker, ScreenBlankerMode newmo
 		}
 	}
 	screenblanker->mode = newmode;
+	screenblanker_update_once(screenblanker);
+}
+
+void screenblanker_setdisco(ScreenBlanker *screenblanker, DiscoColor disco_color)
+{
+	screenblanker->disco_color = disco_color;
 	screenblanker_update_once(screenblanker);
 }
 
@@ -126,7 +165,7 @@ void screenblanker_update_once(ScreenBlanker *sb)
 	{
 		for (i=0; i<sb->num_buffers; i++) {
 			for (j=0; j<NUM_DIGITS; j++) {
-				sb->buffer[i].buffer[j] = 0;
+				sb->buffer[i].buffer[j] = ((sb->tree[i]>>(4*(NUM_DIGITS-1-j)))&0x0f)==sb->disco_color ? 0xff : 0;
 			}
 			board_buffer_set_alpha(&sb->buffer[i], sb->hpam_max_alpha[i]);
 		}

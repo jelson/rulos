@@ -7,11 +7,13 @@
 #include "sequencer.h"
 #include "display_docking.h"
 #include "pong.h"
+#include "disco.h"
 #include "hpam.h"
 #include "idle.h"
+#include "screenblanker.h"
 
 #define CONTROL_PANEL_HEIGHT 4
-#define CONTROL_PANEL_NUM_CHILDREN 4
+#define CONTROL_PANEL_NUM_CHILDREN 5
 #define CP_NO_CHILD (0xff)
 
 struct s_control_child;
@@ -46,6 +48,12 @@ typedef struct {
 	Pong pong;
 } CCPong;
 
+typedef struct {
+	UIEventHandler *uie_handler;
+	char *name;
+	Disco disco;
+} CCDisco;
+
 typedef struct s_control_panel {
 	UIEventHandlerFunc handler_func;
 	BoardBuffer bbuf[CONTROL_PANEL_HEIGHT];
@@ -67,10 +75,11 @@ typedef struct s_control_panel {
 	CCLaunch ccl;
 	CCDock ccdock;
 	CCPong ccpong;
+	CCDisco ccdisco;
 
 	IdleAct *idle;
 } ControlPanel;
 
-void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network, HPAM *hpam, AudioClient *audioClient, IdleAct *idle);
+void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network, HPAM *hpam, AudioClient *audioClient, IdleAct *idle, ScreenBlanker *screenblanker);
 
 #endif // _control_panel_h

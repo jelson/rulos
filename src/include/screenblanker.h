@@ -18,6 +18,14 @@ typedef enum
 	sb_flicker		// mostly on, with segments vanishing intermittently
 } ScreenBlankerMode;
 
+typedef enum {
+	DISCO_GREEN=1,
+	DISCO_RED=2,
+	DISCO_YELLOW=3,
+	DISCO_BLUE=4,
+	DISCO_WHITE=5,
+} DiscoColor;
+
 typedef struct {
 	ActivationFunc func;
 	struct s_screen_blanker *sb;
@@ -30,9 +38,12 @@ typedef struct s_screen_blanker {
 	uint8_t num_buffers;
 	ScreenBlankerClockAct clock_act;
 	ScreenBlankerMode mode;
+	uint32_t *tree;
+	uint8_t disco_color;
 } ScreenBlanker;
 
 void init_screenblanker(ScreenBlanker *screenblanker, BoardConfiguration bc, HPAM *hpam, IdleAct *idle);
 void screenblanker_setmode(ScreenBlanker *screenblanker, ScreenBlankerMode newmode);
+void screenblanker_setdisco(ScreenBlanker *screenblanker, DiscoColor disco_color);
 
 #endif // _SCREENBLANKER_H
