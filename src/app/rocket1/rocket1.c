@@ -40,6 +40,7 @@ int main()
 	heap_init();
 	util_init();
 	hal_init(bc_rocket1);
+	hal_init_keypad();
 	init_clock(10000, TIMER1);
 
 	CpumonAct cpumon;
