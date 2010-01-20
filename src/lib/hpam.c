@@ -1,4 +1,7 @@
 #include "hpam.h"
+#if SIM
+#include "sim.h"
+#endif // SIM
 
 void hpam_update(HPAM *hpam);
 
@@ -121,4 +124,11 @@ void hpam_set_port(HPAM *hpam, HPAMIndex idx, r_bool status)
 			tu++;
 		}
 	}
+
+#if SIM
+	if (idx==hpam_lighting_flicker)
+	{
+		sim_display_light_status(status);
+	}
+#endif // SIM
 }

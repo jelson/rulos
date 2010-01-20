@@ -271,6 +271,21 @@ UIEventDisposition launch_uie_handler(Launch *launch, UIEvent event)
 				break;
 			case launch_state_wrong_code:
 			case launch_state_countdown:
+				switch (event)
+				{
+					// cheater button advances clock.
+					// But it doesn't help with the audio clip, which will
+					// run out of sync.
+					case uie_right:
+						launch->bigDigit.startTime -= 1000000;
+						launch->nextEventTimeout -= 1000000;
+						if (launch->main_rtc)
+						{
+							drtc_set_base_time(launch->main_rtc,
+								launch->main_rtc->base_time - 1000000);
+						}
+						break;
+				}
 			case launch_state_launching:
 			case launch_state_complete:
 				break;

@@ -89,6 +89,7 @@ void hal_upside_down_led(SSBitmap *b)
 #define PAIR_RED	3
 #define PAIR_BLUE	4
 #define PAIR_WHITE	5
+#define PAIR_BLACK_ON_WHITE	6
 #define PG PAIR_GREEN,
 #define PY PAIR_YELLOW,
 #define PR PAIR_RED,
@@ -158,6 +159,20 @@ void hal_program_labels()
 		wcolor_set(mainwnd, PAIR_WHITE, NULL);
 		mvwprintw(mainwnd,
 			bl->y, bl->x+(4*NUM_DIGITS-strlen(bl->label))/2, bl->label);
+	}
+}
+
+void sim_display_light_status(r_bool status)
+{
+	if (status)
+	{
+		wcolor_set(mainwnd, PAIR_BLACK_ON_WHITE, NULL);
+		mvwprintw(mainwnd, 17, 50, " Lights on  ");
+	}
+	else
+	{
+		wcolor_set(mainwnd, PAIR_WHITE, NULL);
+		mvwprintw(mainwnd, 17, 50, " Lights off ");
 	}
 }
 
@@ -586,6 +601,7 @@ void hal_init(BoardConfiguration bc)
 	init_pair(PAIR_GREEN, COLOR_GREEN, COLOR_BLACK);
 	init_pair(PAIR_RED, COLOR_RED, COLOR_BLACK);
 	init_pair(PAIR_WHITE, COLOR_WHITE, COLOR_BLACK);
+	init_pair(PAIR_BLACK_ON_WHITE, COLOR_BLACK, COLOR_WHITE);
 	//attron(COLOR_PAIR(1));
 	noecho();
 	cbreak();

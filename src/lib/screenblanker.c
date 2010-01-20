@@ -42,6 +42,7 @@ void init_screenblanker(ScreenBlanker *screenblanker, BoardConfiguration bc, HPA
 	screenblanker->num_buffers = bc==bc_rocket0 ? 8 : 4;
 	screenblanker->tree = bc==bc_rocket0 ? t_rocket0 : t_rocket1;
 	screenblanker->disco_color = DISCO_RED;
+	screenblanker->hpam = hpam;
 
 	int i;
 	for (i=0; i<screenblanker->num_buffers; i++)
@@ -140,7 +141,10 @@ void screenblanker_update_once(ScreenBlanker *sb)
 	switch (sb->mode)
 	{
 	case sb_inactive:
+	{
+		hpam_set_port(sb->hpam, hpam_lighting_flicker, TRUE);
 		break;
+	}
 	case sb_blankdots:
 	{
 		for (i=0; i<sb->num_buffers; i++) {
@@ -149,6 +153,7 @@ void screenblanker_update_once(ScreenBlanker *sb)
 			}
 			board_buffer_set_alpha(&sb->buffer[i], sb->hpam_max_alpha[i]);
 		}
+		hpam_set_port(sb->hpam, hpam_lighting_flicker, TRUE);
 		break;
 	}
 	case sb_black:
@@ -159,6 +164,7 @@ void screenblanker_update_once(ScreenBlanker *sb)
 			}
 			board_buffer_set_alpha(&sb->buffer[i], sb->hpam_max_alpha[i]);
 		}
+		hpam_set_port(sb->hpam, hpam_lighting_flicker, TRUE);
 		break;
 	}
 	case sb_disco:
@@ -169,6 +175,7 @@ void screenblanker_update_once(ScreenBlanker *sb)
 			}
 			board_buffer_set_alpha(&sb->buffer[i], sb->hpam_max_alpha[i]);
 		}
+		hpam_set_port(sb->hpam, hpam_lighting_flicker, sb->disco_color==DISCO_WHITE);
 		break;
 	}
 	case sb_flicker:
@@ -186,6 +193,7 @@ void screenblanker_update_once(ScreenBlanker *sb)
 			board_buffer_set_alpha(&sb->buffer[i], alpha);
 			// NB 'set_alpha includes a redraw.
 		}
+		hpam_set_port(sb->hpam, hpam_lighting_flicker, (deadbeef_rand()&3)!=0);
 		break;
 	}
 	}

@@ -17,6 +17,7 @@ typedef struct {
 } TWIState;
 
 void twi_poll();
+void sim_display_light_status(r_bool status);
 
 #define SIM_TWI_PORT_BASE 9470
 #define SIM_TWI_NUM_NODES 4
