@@ -5,7 +5,7 @@
 #include "idle.h"
 #include "hpam.h"
 
-#define MAX_BUFFERS 8
+#define SB_MAX_BUFFERS 8
 
 struct s_screen_blanker;
 struct s_screenblanker_sender;
@@ -34,8 +34,8 @@ typedef struct {
 
 typedef struct s_screen_blanker {
 	UIEventHandlerFunc func;
-	BoardBuffer buffer[MAX_BUFFERS];
-	uint8_t hpam_max_alpha[MAX_BUFFERS];
+	BoardBuffer buffer[SB_MAX_BUFFERS];
+	uint8_t hpam_max_alpha[SB_MAX_BUFFERS];
 	uint8_t num_buffers;
 	ScreenBlankerClockAct clock_act;
 	ScreenBlankerMode mode;

@@ -48,6 +48,7 @@ COMMON_OBJECTS = \
 	screenblanker.o \
 	disco.o \
 	booster.o \
+	slow_boot.o \
 
 #	audio_driver.o \
 

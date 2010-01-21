@@ -35,6 +35,7 @@
 #include "idle.h"
 #include "hobbs.h"
 #include "screenblanker.h"
+#include "slow_boot.h"
 
 
 /************************************************************************************/
@@ -56,6 +57,7 @@ typedef struct {
 	Hobbs hobbs;
 	ScreenBlanker screenblanker;
 	ScreenBlankerSender screenblanker_sender;
+	SlowBoot slow_boot;
 } Rocket0;
 
 #define THRUSTER_X_CHAN	3
@@ -96,6 +98,8 @@ void init_rocket0(Rocket0 *r0)
 	r0->thrusterUpdate[0] = (ThrusterUpdate*) &r0->tsn;
 
 	init_hobbs(&r0->hobbs, &r0->hpam, &r0->idle);
+
+	init_slow_boot(&r0->slow_boot, &r0->screenblanker, &r0->audio_client);
 }
 
 static Rocket0 rocket0;	// allocate obj in .bss so it's easy to count
