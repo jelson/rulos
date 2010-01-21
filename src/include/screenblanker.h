@@ -16,7 +16,8 @@ typedef enum
 	sb_blankdots,	// all digits showing only SB_DECIMAL
 	sb_black,		// all LED segments off; lights unaffected
 	sb_disco,		// flicker panels & lights by color
-	sb_flicker		// mostly on, with segments vanishing intermittently
+	sb_flicker,		// mostly on, with segments vanishing intermittently
+	sb_borrowed		// nothing; buffers borrowed by slow_boot. (memory-savings hack)
 } ScreenBlankerMode;
 
 typedef enum {

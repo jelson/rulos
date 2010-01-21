@@ -3,6 +3,7 @@
 
 #include "rocket.h"
 #include "audio_server.h"
+#include "screen4.h"
 
 #define PONG_HEIGHT 4
 #define PONG_SCALE2 6
@@ -17,10 +18,10 @@ typedef struct s_pong_handler {
 
 typedef struct s_pong {
 	ActivationFunc func;
-	uint8_t board0;
-	BoardBuffer bbuf[PONG_HEIGHT];
-	BoardBuffer *btable[PONG_HEIGHT];
-	RectRegion rrect;
+//	BoardBuffer bbuf[PONG_HEIGHT];
+//	BoardBuffer *btable[PONG_HEIGHT];
+//	RectRegion rrect;
+	Screen4 *s4;
 	PongHandler handler;
 	int x, y, dx, dy;	// scaled by PONG_SCALE
 	int paddley[2];
@@ -30,6 +31,6 @@ typedef struct s_pong {
 	AudioClient *audioClient;
 } Pong;
 
-void pong_init(Pong *pong, uint8_t b0, FocusManager *focus, AudioClient *audioClient);
+void pong_init(Pong *pong, Screen4 *s4, AudioClient *audioClient);
 
 #endif // _pong_h

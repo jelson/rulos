@@ -15,7 +15,7 @@ void launch_clock_update(LaunchClockAct *launchClockAct);
 void launch_configure_lunar_distance(Launch *launch);
 UIEventDisposition launch_uie_handler(Launch *launch, UIEvent event);
 
-void launch_init(Launch *launch, uint8_t board0, Booster *booster, AudioClient *audioClient, struct s_screen_blanker *screenblanker)
+void launch_init(Launch *launch, Screen4 *s4, Booster *booster, AudioClient *audioClient, struct s_screen_blanker *screenblanker)
 {
 	launch->func = (UIEventHandlerFunc) launch_uie_handler;
 	launch->clock_act.func = (ActivationFunc) launch_clock_update;
@@ -26,13 +26,13 @@ void launch_init(Launch *launch, uint8_t board0, Booster *booster, AudioClient *
 
 	launch->state = -1;	// force configuration
 
-	init_screen4(&launch->s4, board0);
-	dscrlmsg_init(&launch->dscrlmsg, board0, "", 120);
+	launch->s4 = s4;
+	dscrlmsg_init(&launch->dscrlmsg, s4->board0, "", 120);
 	board_buffer_init(&launch->textentry_bbuf DBG_BBUF_LABEL("launch"));
 	RowRegion rowregion = {&launch->textentry_bbuf, 0, NUM_DIGITS};
 	numeric_input_init(
 		&launch->textentry, rowregion, (UIEventHandler*) launch, NULL, "");
-	raster_big_digit_init(&launch->bigDigit, board0);
+	raster_big_digit_init(&launch->bigDigit, s4);
 
 	launch->main_rtc = NULL;
 	launch->lunar_distance = NULL;
@@ -64,8 +64,8 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 	{
 		board_buffer_pop(&launch->dscrlmsg.bbuf);
 	}
-	s4_hide(&launch->bigDigit.s4);
-	s4_hide(&launch->s4);
+	launch->bigDigit.focused = FALSE;
+	r_bool need_s4_hide = TRUE;
 
 	launch->state = newState;
 
@@ -78,8 +78,8 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 	}
 	else
 	{
-		s4_show(&launch->s4);
-		raster_clear_buffers(&launch->s4.rrect);
+		need_s4_hide = FALSE;
+		raster_clear_buffers(&launch->s4->rrect);
 	}
 
 	if (launch->state == launch_state_enter_code)
@@ -126,19 +126,19 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 				"Invalid code.  ");
 			launch->nextEventTimeout = clock_time_us()+3000000;
 		}
-		board_buffer_push(&launch->dscrlmsg.bbuf, launch->s4.board0+0);
+		board_buffer_push(&launch->dscrlmsg.bbuf, launch->s4->board0+0);
 	}
 
 	if (launch->state == launch_state_enter_code)
 	{
-		board_buffer_push(&launch->textentry_bbuf, launch->s4.board0+2);
+		board_buffer_push(&launch->textentry_bbuf, launch->s4->board0+2);
 		launch->textentry.handler.func(
 			(UIEventHandler*) &launch->textentry.handler, uie_focus);
 	}
 
 	if (launch->state == launch_state_countdown)
 	{
-		s4_show(&launch->bigDigit.s4);
+		launch->bigDigit.focused = TRUE;
 		launch->bigDigit.startTime = clock_time_us()+LAUNCH_COUNTDOWN_TIME;
 		launch->nextEventTimeout = clock_time_us()+LAUNCH_COUNTDOWN_TIME;
 		if (launch->main_rtc)
@@ -151,19 +151,27 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 	if (launch->state == launch_state_launching)
 	{
 		booster_set(launch->booster, TRUE);
-		ascii_to_bitmap_str(launch->s4.bbuf[1].buffer, 8, " BLAST");
-		ascii_to_bitmap_str(launch->s4.bbuf[2].buffer, 8, "  OFF");
+		ascii_to_bitmap_str(launch->s4->bbuf[1].buffer, 8, " BLAST");
+		ascii_to_bitmap_str(launch->s4->bbuf[2].buffer, 8, "  OFF");
 		launch->nextEventTimeout = clock_time_us()+10000000;
 	}
 
 	if (launch->state == launch_state_complete)
 	{
 		booster_set(launch->booster, FALSE);
-		ascii_to_bitmap_str(launch->s4.bbuf[1].buffer, 8, " boost");
-		ascii_to_bitmap_str(launch->s4.bbuf[2].buffer, 8, "complete");
+		ascii_to_bitmap_str(launch->s4->bbuf[1].buffer, 8, " boost");
+		ascii_to_bitmap_str(launch->s4->bbuf[2].buffer, 8, "complete");
 	}
 
-	s4_draw(&launch->s4);
+	if (need_s4_hide)
+	{
+		s4_hide(launch->s4);
+	}
+	else
+	{
+		s4_show(launch->s4);
+		s4_draw(launch->s4);
+	}
 }
 
 void launch_clock_update(LaunchClockAct *launchClockAct)

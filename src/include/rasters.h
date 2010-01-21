@@ -21,11 +21,12 @@ void raster_paint_pixel_v(RectRegion *rrect, int x, int y, r_bool on);
 
 typedef struct {
 	ActivationFunc func;
-	Screen4 s4;
+	Screen4 *s4;
 	Time startTime;
+	r_bool focused;
 } RasterBigDigit;
 
-void raster_big_digit_init(RasterBigDigit *digit, uint8_t board0);
+void raster_big_digit_init(RasterBigDigit *digit, Screen4 *s4);
 void raster_clear_buffers(RectRegion *rrect);
 void raster_draw_buffers(RectRegion *rrect);
 

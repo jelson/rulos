@@ -53,7 +53,7 @@ typedef struct s_launch {
 
 	LaunchState state;
 
-	Screen4 s4;
+	Screen4 *s4;
 	DScrollMsgAct dscrlmsg;
 	BoardBuffer textentry_bbuf;
 	NumericInputAct textentry;
@@ -72,6 +72,6 @@ typedef struct s_launch {
 	struct s_screen_blanker *screenblanker;
 } Launch;
 
-void launch_init(Launch *launch, uint8_t board0, Booster *booster, AudioClient *audioClient, struct s_screen_blanker *screenblanker);
+void launch_init(Launch *launch, Screen4 *s4, Booster *booster, AudioClient *audioClient, struct s_screen_blanker *screenblanker);
 
 #endif // _sequencer_h

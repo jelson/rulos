@@ -56,9 +56,7 @@ typedef struct {
 
 typedef struct s_control_panel {
 	UIEventHandlerFunc handler_func;
-	BoardBuffer bbuf[CONTROL_PANEL_HEIGHT];
-	BoardBuffer *btable[CONTROL_PANEL_HEIGHT];
-	RectRegion rrect;
+	Screen4 s4;
 
 	struct s_direct_injector {
 		InputInjectorFunc injector_func;

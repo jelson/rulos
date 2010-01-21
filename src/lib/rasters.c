@@ -99,26 +99,29 @@ void raster_paint_pixel_v(RectRegion *rrect, int x, int y, r_bool on)
 	}
 }
 
-void raster_big_digit_init(RasterBigDigit *digit, uint8_t board0)
+void raster_big_digit_init(RasterBigDigit *digit, Screen4 *s4)
 {
 	digit->func = (ActivationFunc) raster_big_digit_update;
 	digit->startTime = clock_time_us();
-	init_screen4(&digit->s4, board0);
+	digit->s4 = s4;
+	digit->focused = FALSE;
 
 	schedule_us(1, (Activation*) digit);
 }
 
 void raster_big_digit_update(RasterBigDigit *digit)
 {
-	raster_clear_buffers(&digit->s4.rrect);
-
 	schedule_us(100000, (Activation*) digit);
 
-	if (!s4_visible(&digit->s4))
+	if (!digit->focused)
 	{
 		// this thing is EXPENSIVE! don't draw it to offscreen buffers!
+		// Also, don't abuse shared s4 surface.
 		return;
 	}
+
+	RectRegion *rrect = &digit->s4->rrect;
+	raster_clear_buffers(rrect);
 
 	const int spacing = 30;
 	const int roll = 10;
@@ -134,12 +137,12 @@ void raster_big_digit_update(RasterBigDigit *digit)
 		tens_offset = ones_offset;
 	}
 	int next_ones = (ones+1)%10;
-	raster_draw_sym(&digit->s4.rrect, '0'+tens, 0, tens_offset);
-	raster_draw_sym(&digit->s4.rrect, '0'+next_tens, 0, -spacing+tens_offset);
-	raster_draw_sym(&digit->s4.rrect, '0'+ones, 16, ones_offset);
-	raster_draw_sym(&digit->s4.rrect, '0'+next_ones, 16, -spacing+ones_offset);
+	raster_draw_sym(rrect, '0'+tens, 0, tens_offset);
+	raster_draw_sym(rrect, '0'+next_tens, 0, -spacing+tens_offset);
+	raster_draw_sym(rrect, '0'+ones, 16, ones_offset);
+	raster_draw_sym(rrect, '0'+next_ones, 16, -spacing+ones_offset);
 
-	raster_draw_buffers(&digit->s4.rrect);
+	raster_draw_buffers(rrect);
 }
 
 void raster_clear_buffers(RectRegion *rrect)

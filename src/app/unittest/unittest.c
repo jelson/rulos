@@ -1,5 +1,6 @@
 #include "rocket.h"
 #include "queue.h"
+#include "ring_buffer.h"
 
 QUEUE_DECLARE(short)
 
@@ -8,7 +9,7 @@ QUEUE_DEFINE(short)
 
 #define NUM_ELTS 4
 
-int main()
+void test_shortqueue()
 {
 	util_init();
 
@@ -48,4 +49,56 @@ int main()
 			}
 		}
 	}
+}
+
+void test_ring_buffer()
+{
+	util_init();
+
+	uint8_t _storage_rb[sizeof(RingBuffer)+17+1];
+	RingBuffer *rb = (RingBuffer*) _storage_rb;
+	init_ring_buffer(rb, sizeof(_storage_rb));
+
+	uint8_t in = 0, out = 0;
+
+	while (TRUE)
+	{
+		if (deadbeef_rand() & 1)
+		{
+			if (ring_insert_avail(rb)>0)
+			{
+				ring_insert(rb, in);
+				LOGF((logfp, "in: %d\n", in));
+				in++;
+			}
+			else
+			{
+				LOGF((logfp, "full\n"));
+			}
+		}
+		else
+		{
+			uint8_t ra = ring_remove_avail(rb);
+			LOGF((logfp, "ra %d\n", ra));
+			if (ra)
+			{
+				uint8_t val;
+				val = ring_remove(rb);
+				assert(val==out);
+				LOGF((logfp, "        out: %d\n", out));
+				out++;
+			}
+			else
+			{
+				LOGF((logfp, "empty\n"));
+			}
+		}
+	}
+}
+
+int main()
+{
+	//test_shortqueue();
+	test_ring_buffer();
+	return 0;
 }

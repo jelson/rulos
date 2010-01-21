@@ -19,9 +19,11 @@ void pong_score_one(Pong *pong, uint8_t player);
 UIEventDisposition pong_event_handler(
 	UIEventHandler *raw_handler, UIEvent evt);
 
-void pong_init(Pong *pong, uint8_t b0, FocusManager *focus, AudioClient *audioClient)
+void pong_init(Pong *pong, Screen4 *s4, AudioClient *audioClient)
 {
 	pong->func = (ActivationFunc) pong_update;
+	pong->s4 = s4;
+#if 0
 	pong->board0 = b0;
 	int i;
 	for (i=0; i<PONG_HEIGHT; i++)
@@ -30,18 +32,14 @@ void pong_init(Pong *pong, uint8_t b0, FocusManager *focus, AudioClient *audioCl
 		board_buffer_push(&pong->bbuf[i], b0+i);
 		pong->btable[i] = &pong->bbuf[i];
 	}
-	pong->handler.func = (UIEventHandlerFunc) pong_event_handler;
-	pong->handler.pong = pong;
-
 	pong->rrect.bbuf = pong->btable;
 	pong->rrect.ylen = PONG_HEIGHT;
 	pong->rrect.x = 0;
 	pong->rrect.xlen = 8;
 
-	if (focus!=NULL)
-	{
-		focus_register(focus, (UIEventHandler*) &pong->handler, pong->rrect, "pong");
-	}
+#endif
+	pong->handler.func = (UIEventHandlerFunc) pong_event_handler;
+	pong->handler.pong = pong;
 
 	pong_serve(pong, 0);
 
@@ -54,7 +52,6 @@ void pong_init(Pong *pong, uint8_t b0, FocusManager *focus, AudioClient *audioCl
 
 	pong->audioClient = audioClient;
 
-	region_hide(&pong->rrect);
 	pong->focused = FALSE;
 
 	schedule_us(1, (Activation*) pong);
@@ -149,18 +146,26 @@ void pong_update(Pong *pong)
 
 void pong_paint_once(Pong *pong)
 {
-	raster_clear_buffers(&pong->rrect);
+	if (!pong->focused)
+	{
+		// don't paint on borrowed s4 surface
+		return;
+	}
+
+	Screen4 *s4 = pong->s4;
+	RectRegion *rrect = &s4->rrect;
+	raster_clear_buffers(rrect);
 
 	if (pong_is_paused(pong))
 	{
-		ascii_to_bitmap_str(pong->bbuf[1].buffer+1, 6, "P0  P1");
+		ascii_to_bitmap_str(s4->bbuf[1].buffer+1, 6, "P0  P1");
 
 		char scoretext[3];
 		int_to_string2(scoretext, 2, 0, pong->score[0] % 100);
-		ascii_to_bitmap_str(pong->bbuf[2].buffer+1, 2, scoretext);
+		ascii_to_bitmap_str(s4->bbuf[2].buffer+1, 2, scoretext);
 
 		int_to_string2(scoretext, 2, 0, pong->score[1] % 100);
-		ascii_to_bitmap_str(pong->bbuf[2].buffer+5, 2, scoretext);
+		ascii_to_bitmap_str(s4->bbuf[2].buffer+5, 2, scoretext);
 	}
 	else
 	{
@@ -169,7 +174,7 @@ void pong_paint_once(Pong *pong)
 		{
 			for (yo=0; yo<BALLDIA; yo++)
 			{
-				raster_paint_pixel(&pong->rrect, (pong->x >> PONG_SCALE2)+xo, (pong->y >> PONG_SCALE2)+yo);
+				raster_paint_pixel(rrect, (pong->x >> PONG_SCALE2)+xo, (pong->y >> PONG_SCALE2)+yo);
 			}
 		}
 	}
@@ -177,18 +182,19 @@ void pong_paint_once(Pong *pong)
 	pong_paint_paddle(pong, 0, pong->paddley[0]);
 	pong_paint_paddle(pong, 28, pong->paddley[1]);
 
-	raster_draw_buffers(&pong->rrect);
+	raster_draw_buffers(rrect);
 }
 
 void pong_paint_paddle(Pong *pong, int x, int y)
 {
-	raster_paint_pixel(&pong->rrect, x+1, y);
-	raster_paint_pixel(&pong->rrect, x+1, y+PADDLEHEIGHT);
+	RectRegion *rrect = &pong->s4->rrect;
+	raster_paint_pixel(rrect, x+1, y);
+	raster_paint_pixel(rrect, x+1, y+PADDLEHEIGHT);
 	int yo;
 	for (yo=1; yo<PADDLEHEIGHT; yo++)
 	{
-		raster_paint_pixel(&pong->rrect, x+0, y+yo);
-		raster_paint_pixel(&pong->rrect, x+2, y+yo);
+		raster_paint_pixel(rrect, x+0, y+yo);
+		raster_paint_pixel(rrect, x+2, y+yo);
 	}
 }
 
@@ -211,14 +217,14 @@ UIEventDisposition pong_event_handler(
 		case uie_focus:
 			if (!pong->focused)
 			{
-				region_show(&pong->rrect, pong->board0);
+				s4_show(pong->s4);
 			}
 			pong->focused = TRUE;
 			break;
 		case uie_escape:
 			if (pong->focused)
 			{
-				region_hide(&pong->rrect);
+				s4_hide(pong->s4);
 			}
 			pong->focused = FALSE;
 			result = uied_blur;

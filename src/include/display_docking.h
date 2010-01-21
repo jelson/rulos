@@ -31,7 +31,7 @@ typedef struct {
 
 typedef struct s_ddockact {
 	ActivationFunc func;
-	Screen4 s4;
+	Screen4 *s4;
 	DDockHandler handler;
 	DockThrusterUpdate thrusterUpdate;
 	uint8_t focused;
@@ -46,7 +46,7 @@ typedef struct s_ddockact {
 	JoystickState_t *joystick;
 } DDockAct;
 
-void ddock_init(DDockAct *act, uint8_t b0, uint8_t auxboard_base, FocusManager *focus, AudioClient *audioClient, Booster *booster, JoystickState_t *joystick);
+void ddock_init(DDockAct *act, Screen4 *s4, uint8_t auxboard_base, AudioClient *audioClient, Booster *booster, JoystickState_t *joystick);
 void ddock_reset(DDockAct *dd);
 
 #endif // display_docking_h

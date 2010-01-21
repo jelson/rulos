@@ -49,6 +49,7 @@ COMMON_OBJECTS = \
 	disco.o \
 	booster.o \
 	slow_boot.o \
+	ring_buffer.o \
 
 #	audio_driver.o \
 

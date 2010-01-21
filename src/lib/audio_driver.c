@@ -11,6 +11,7 @@ typedef struct {
 
 #include "audio_index.ch"
 
+#if 0
 void init_audio_driver(AudioDriver *ad)
 {
 	ad->func = (HalAudioRefillFunc) audio_refill_func;
@@ -54,6 +55,72 @@ uint16_t audio_refill_func(AudioDriver *ad, uint8_t *sample_buf, uint16_t count)
 	ad->cur_offset += fill;
 	return fill;
 }
+#endif
+
+void init_audio_driver(AudioDriver *ad)
+{
+	init_ring_buffer(ad->playback_buffer, sizeof(ad->playback_buffer_storage));
+}
+
+void audio_update(AudioDriver *ad)
+{
+	schedule(AUDIO_UPDATE_INTERVAL, (Activation*) ad);
+
+	// jonh not very happy about blocking interrupts for collecting this stuff.
+	hal_start_atomic();
+	uint8_t output_insert_avail = ring_insert_avail(ad->output_buffer);
+	hal_end_atomic();
+	int i;
+	uint8_t most_desperate_stream_index = -1;
+	for (i=0; i<NUM_STREAMS; i++)
+	{
+		hal_start_atomic();
+		stream_remove_avail[i] = ring_remove_avail(ad->stream[i]);
+		hal_end_atomic();
+
+		if (most_desperate_stream_index==-1 ||
+			(stream_remove_avail[i]
+				< stream_remove_avail[most_desperate_stream_index]))
+		{
+			most_desperate_stream_index = i;
+		}
+	}
+	
+	// inserts and removes can be done non-atomically, because they
+	// only touch vars that we only ever update. (They do assert on
+	// the opposite value, but in a way that is protected by monotonicity.)
+	while (pa>0)
+	{
+		uint8_t composite_value = 0;
+		for (i=0; i<NUM_STREAMS; i++)
+		{
+			if (stream_remove_avail[i] > 0)
+			{
+				stream_remove_avail[i]-=1;
+				composite_value += _ad_decode_ulaw(ring_remove(ad->stream[i]));
+			}
+		}
+		ring_insert(ad->output_buffer, composite_value);
+		pa -= 1;
+	}
+
+	if (spi_next_buf_ptr == SPI_NOTHING)
+	{
+		uint8_t desperate_stream_insert_avail =
+			ring_insert_avail(ad->stream[most_desperate_stream_index]);
+
+		SPIBufPtr *spib = the_idle_one;
+		if (desperate_stream_insert_avail > SPI_READ_SIZE)
+		{
+			spib->ring = ad->stream[most_desperate_stream_index];
+			spib->request_len = SPI_READ_SIZE;
+			also_figure_out_source_address;
+		}
+		hal_start_atomic();
+		spi_next_buf_ptr = spib;
+		hal_end_atomic();
+	}
+}
 
 // based on sample code at:
 // http://www.speech.cs.cmu.edu/comp.speech/Section2/Q2.7.html
@@ -80,6 +147,12 @@ uint8_t _ad_pcm16s_to_pcm8u(int16_t s)
 	return (s>>8)+127;
 }
 
+uint8_t _ad_decode_ulaw(uint8_t ulaw)
+{
+	return _ad_pcm16s_to_pcm8u(_ad_ulaw2linear(ulaw_buf[i]));
+}
+
+#if 0
 void _ad_decode_ulaw(uint8_t *pcm8u_buf, uint8_t *ulaw_buf, uint16_t count)
 {
 	uint16_t i;
@@ -88,6 +161,7 @@ void _ad_decode_ulaw(uint8_t *pcm8u_buf, uint8_t *ulaw_buf, uint16_t count)
 		pcm8u_buf[i] = _ad_pcm16s_to_pcm8u(_ad_ulaw2linear(ulaw_buf[i]));
 	}
 }
+#endif
 
 void ad_skip_to_clip(
 	AudioDriver *ad, SoundToken cur_token, SoundToken loop_token)

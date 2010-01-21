@@ -155,6 +155,12 @@ void screenblanker_update(ScreenBlankerClockAct *act)
 void screenblanker_update_once(ScreenBlanker *sb)
 {
 	int i, j;
+
+	// always exclude hpam digits, na mattar whaat
+	for (i=0; i<sb->num_buffers; i++) {
+		board_buffer_set_alpha(&sb->buffer[i], sb->hpam_max_alpha[i]);
+	}
+
 	switch (sb->mode)
 	{
 	case sb_inactive:
@@ -171,7 +177,6 @@ void screenblanker_update_once(ScreenBlanker *sb)
 			for (j=0; j<NUM_DIGITS; j++) {
 				sb->buffer[i].buffer[j] = SSB_DECIMAL;
 			}
-			board_buffer_set_alpha(&sb->buffer[i], sb->hpam_max_alpha[i]);
 		}
 		if (sb->hpam!=NULL)
 		{
@@ -185,7 +190,6 @@ void screenblanker_update_once(ScreenBlanker *sb)
 			for (j=0; j<NUM_DIGITS; j++) {
 				sb->buffer[i].buffer[j] = 0;
 			}
-			board_buffer_set_alpha(&sb->buffer[i], sb->hpam_max_alpha[i]);
 		}
 		if (sb->hpam!=NULL)
 		{
@@ -199,7 +203,6 @@ void screenblanker_update_once(ScreenBlanker *sb)
 			for (j=0; j<NUM_DIGITS; j++) {
 				sb->buffer[i].buffer[j] = ((sb->tree[i]>>(4*(NUM_DIGITS-1-j)))&0x0f)==sb->disco_color ? 0xff : 0;
 			}
-			board_buffer_set_alpha(&sb->buffer[i], sb->hpam_max_alpha[i]);
 		}
 		if (sb->hpam!=NULL)
 		{
@@ -225,6 +228,14 @@ void screenblanker_update_once(ScreenBlanker *sb)
 		if (sb->hpam!=NULL)
 		{
 			hpam_set_port(sb->hpam, hpam_lighting_flicker, (deadbeef_rand()&3)!=0);
+		}
+		break;
+	}
+	case sb_borrowed:
+	{
+		if (sb->hpam!=NULL)
+		{
+			hpam_set_port(sb->hpam, hpam_lighting_flicker, TRUE);
 		}
 		break;
 	}

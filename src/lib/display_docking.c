@@ -26,10 +26,11 @@ void ddock_show(DDockAct *dd);
 #define DD_THRUSTER_DOWNSCALE	4
 #define DD_TOLERANCE	2
 
-void ddock_init(DDockAct *act, uint8_t b0, uint8_t auxboard_base, FocusManager *focus, AudioClient *audioClient, Booster *booster, JoystickState_t *joystick)
+void ddock_init(DDockAct *act, Screen4 *s4, uint8_t auxboard_base, AudioClient *audioClient, Booster *booster, JoystickState_t *joystick)
 {
 	act->func = (ActivationFunc) ddock_update;
-	init_screen4(&act->s4, b0);
+	//init_screen4(&act->s4, b0);
+	act->s4 = s4;
 
 	act->audioClient = audioClient;
 
@@ -43,10 +44,6 @@ void ddock_init(DDockAct *act, uint8_t b0, uint8_t auxboard_base, FocusManager *
 	act->joystick = joystick;
 
 	act->focused = FALSE;
-	if (focus!=NULL)
-	{
-		focus_register(focus, (UIEventHandler*) &act->handler, act->s4.rrect, "docking");
-	}
 
 	drift_anim_init(&act->xd, 10, 0, -DD_MAX_POS, DD_MAX_POS, DD_SPEED_LIMIT);
 	drift_anim_init(&act->yd, 10, 0, -DD_MAX_POS, DD_MAX_POS, DD_SPEED_LIMIT);
@@ -69,7 +66,7 @@ void ddock_init(DDockAct *act, uint8_t b0, uint8_t auxboard_base, FocusManager *
 
 void ddock_hide(DDockAct *dd)
 {
-	s4_hide(&dd->s4);
+	s4_hide(dd->s4);
 	board_buffer_pop(&dd->auxboards[0]);
 	board_buffer_pop(&dd->auxboards[1]);
 	booster_set(dd->booster, FALSE);
@@ -77,7 +74,7 @@ void ddock_hide(DDockAct *dd)
 
 void ddock_show(DDockAct *dd)
 {
-	s4_show(&dd->s4);
+	s4_show(dd->s4);
 	board_buffer_push(&dd->auxboards[0], dd->auxboard_base+0);
 	board_buffer_push(&dd->auxboards[1], dd->auxboard_base+1);
 }
@@ -188,10 +185,10 @@ void dd_bump(DDockAct *act, HPAMIndex thruster_index, uint32_t xscale, uint32_t 
 
 void ddock_show_complete(DDockAct *act)
 {
-	raster_clear_buffers(&act->s4.rrect);
-	ascii_to_bitmap_str(act->s4.rrect.bbuf[1]->buffer, 8, "Docking");
-	ascii_to_bitmap_str(act->s4.rrect.bbuf[2]->buffer, 8, "complete");
-	raster_draw_buffers(&act->s4.rrect);
+	raster_clear_buffers(&act->s4->rrect);
+	ascii_to_bitmap_str(act->s4->rrect.bbuf[1]->buffer, 8, "Docking");
+	ascii_to_bitmap_str(act->s4->rrect.bbuf[2]->buffer, 8, "complete");
+	raster_draw_buffers(&act->s4->rrect);
 }
 
 void dock_update_aux_display(DDockAct *act, int xc, int yc, int rad)
@@ -212,6 +209,12 @@ void dock_update_aux_display(DDockAct *act, int xc, int yc, int rad)
 
 void ddock_update_once(DDockAct *act)
 {
+	if (!act->focused)
+	{
+		// don't draw on borrowed s4 surface!
+		return;
+	}
+
 	if (act->docking_complete)
 	{
 		ddock_show_complete(act);
@@ -226,7 +229,7 @@ void ddock_update_once(DDockAct *act)
 
 	//LOGF((logfp, "ddock_update_once: %d %d %d\n", xc, act->xd.base, act->xd.velocity));
 
-	raster_clear_buffers(&act->s4.rrect);
+	raster_clear_buffers(&act->s4->rrect);
 
 #if STARFIELD
 	int star = 0;
@@ -237,7 +240,7 @@ void ddock_update_once(DDockAct *act)
 		int y = (ys >> DD_SC) - DD_MAX_POS*2;
 		int x = (xs >> DD_SC) - DD_MAX_POS*2;
 		LOGF((logfp, "star %d : %2d, %2d at %4d, %4d\n", star, x, y, x+xc, y+(yc_s>>DD_SC)));
-		raster_paint_pixel(&act->s4.rrect,  x+xc, y+(yc_s>>DD_SC));
+		raster_paint_pixel(&act->s4->rrect,  x+xc, y+(yc_s>>DD_SC));
 		star += 2269;
 		if (y>DD_MAX_POS*2) { break; }
 	}
@@ -250,8 +253,8 @@ void ddock_update_once(DDockAct *act)
 		int dx = ddock_compute_dx(yc_s, rad, y<<DD_SC) >> DD_SC;
 		if (0<=dx && dx<DD_MAX_POS)
 		{
-			raster_paint_pixel(&act->s4.rrect, xc-dx   +CTR_X, y+CTR_Y);
-			raster_paint_pixel(&act->s4.rrect, xc-dx+1 +CTR_X, y+CTR_Y);
+			raster_paint_pixel(&act->s4->rrect, xc-dx   +CTR_X, y+CTR_Y);
+			raster_paint_pixel(&act->s4->rrect, xc-dx+1 +CTR_X, y+CTR_Y);
 
 #if STARFIELD
 			// panit black in the middle of the target to blot out any
@@ -259,18 +262,18 @@ void ddock_update_once(DDockAct *act)
 			int x;
 			for (x=xc-dx+2; x<xc+dx-1; x++)
 			{
-				raster_paint_pixel_v(&act->s4.rrect, x +CTR_X, y+CTR_Y, FALSE);
+				raster_paint_pixel_v(&act->s4->rrect, x +CTR_X, y+CTR_Y, FALSE);
 			}
 #endif // STARFIELD
 			
-			raster_paint_pixel(&act->s4.rrect, xc+dx-1 +CTR_X, y+CTR_Y);
-			raster_paint_pixel(&act->s4.rrect, xc+dx   +CTR_X, y+CTR_Y);
+			raster_paint_pixel(&act->s4->rrect, xc+dx-1 +CTR_X, y+CTR_Y);
+			raster_paint_pixel(&act->s4->rrect, xc+dx   +CTR_X, y+CTR_Y);
 		}
 	}
 
 	ddock_paint_axes(act);
 
-	raster_draw_buffers(&act->s4.rrect);
+	raster_draw_buffers(&act->s4->rrect);
 }
 
 void ddock_paint_axes(DDockAct *act)
@@ -279,13 +282,13 @@ void ddock_paint_axes(DDockAct *act)
 	for (y=0; y<MAX_Y; y++)
 	{
 		// always paint a 2-pixel region to be sure we spill some ink
-		raster_paint_pixel(&act->s4.rrect, MAX_X/2, y);
+		raster_paint_pixel(&act->s4->rrect, MAX_X/2, y);
 	}
 
 	int x;
 	for (x=0; x<MAX_X; x++)
 	{
-		raster_paint_pixel(&act->s4.rrect, x, MAX_Y/2);
+		raster_paint_pixel(&act->s4->rrect, x, MAX_Y/2);
 	}
 }
 

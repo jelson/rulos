@@ -12,27 +12,27 @@ void init_cc_remote_calc(CCRemoteCalc *ccrc, Network *network)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_cc_launch(CCLaunch *ccl, uint8_t board0, Booster *booster, AudioClient *audioClient, ScreenBlanker *screenblanker)
+void init_cc_launch(CCLaunch *ccl, Screen4 *s4, Booster *booster, AudioClient *audioClient, ScreenBlanker *screenblanker)
 {
-	launch_init(&ccl->launch, board0, booster, audioClient, screenblanker);
+	launch_init(&ccl->launch, s4, booster, audioClient, screenblanker);
 	ccl->uie_handler = (UIEventHandler*) &ccl->launch;
 	ccl->name = "Launch";
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_cc_dock(CCDock *ccd, uint8_t board0, uint8_t auxboard0, AudioClient *audioClient, Booster *booster, JoystickState_t *joystick)
+void init_cc_dock(CCDock *ccd, Screen4 *s4, uint8_t auxboard0, AudioClient *audioClient, Booster *booster, JoystickState_t *joystick)
 {
-	ddock_init(&ccd->dock, board0, auxboard0, NULL, audioClient, booster, joystick);
+	ddock_init(&ccd->dock, s4, auxboard0, audioClient, booster, joystick);
 	ccd->uie_handler = (UIEventHandler*) &ccd->dock.handler;
 	ccd->name = "dock";
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_cc_pong(CCPong *ccp, uint8_t board0, AudioClient *audioClient)
+void init_cc_pong(CCPong *ccp, Screen4 *s4, AudioClient *audioClient)
 {
-	pong_init(&ccp->pong, board0, NULL, audioClient);
+	pong_init(&ccp->pong, s4, audioClient);
 	ccp->uie_handler = (UIEventHandler*) &ccp->pong.handler;
 	ccp->name = "Pong";
 }
@@ -56,17 +56,7 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Ne
 {
 	cp->handler_func = (UIEventHandlerFunc) cp_uie_handler;
 
-	int bbi;
-	for (bbi=0; bbi<CONTROL_PANEL_HEIGHT; bbi++)
-	{
-		cp->btable[bbi] = &cp->bbuf[bbi];
-		board_buffer_init(cp->btable[bbi] DBG_BBUF_LABEL("control_panel"));
-		board_buffer_push(cp->btable[bbi], board0+bbi);
-	}
-	cp->rrect.bbuf = cp->btable;
-	cp->rrect.ylen = CONTROL_PANEL_HEIGHT;
-	cp->rrect.x = 0;
-	cp->rrect.xlen = 8;
+	init_screen4(&cp->s4, board0);
 
 	cp->direct_injector.injector_func = (InputInjectorFunc) cp_inject;
 	cp->direct_injector.cp = cp;
@@ -79,13 +69,13 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Ne
 	init_cc_remote_calc(&cp->ccrc, network);
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccl;
-	init_cc_launch(&cp->ccl, board0, &cp->booster, audioClient, screenblanker);
+	init_cc_launch(&cp->ccl, &cp->s4, &cp->booster, audioClient, screenblanker);
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccdock;
-	init_cc_dock(&cp->ccdock, board0, aux_board0, audioClient, &cp->booster, joystick);
+	init_cc_dock(&cp->ccdock, &cp->s4, aux_board0, audioClient, &cp->booster, joystick);
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccpong;
-	init_cc_pong(&cp->ccpong, board0, audioClient);
+	init_cc_pong(&cp->ccpong, &cp->s4, audioClient);
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccdisco;
 	init_cc_disco(&cp->ccdisco, audioClient, screenblanker);
@@ -96,6 +86,7 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Ne
 	cp->active_child = CP_NO_CHILD;
 
 	cp->idle = idle;
+	s4_show(&cp->s4);
 
 	cp_paint(cp);
 }
@@ -123,6 +114,7 @@ UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt)
 		{
 			cc->uie_handler->func(cc->uie_handler, uie_escape);
 			cp->active_child = CP_NO_CHILD;
+			s4_show(&cp->s4);
 		}
 	}
 	else
@@ -154,13 +146,23 @@ UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt)
 
 void cp_paint(ControlPanel *cp)
 {
+	if (cp->active_child != CP_NO_CHILD)
+	{
+		return;
+	}
+
 	int coff;
+// weird. Calling raster_{clear|draw}_buffers blows out the register file
+// and bloats the program by 56 bytes or so. I wonder if we're missing a
+// -Ospace sort of argument.
+//	raster_clear_buffers(&cp->s4.rrect);
 	for (coff=0; coff<CONTROL_PANEL_HEIGHT; coff++)
 	{
 		int ci = (cp->selected_child + coff) % cp->child_count;
 		ControlChild *cc = cp->children[ci];
-		memset(cp->btable[coff]->buffer, 0, cp->rrect.xlen);
-		ascii_to_bitmap_str(cp->btable[coff]->buffer, cp->rrect.xlen, cc->name);
-		board_buffer_draw(cp->btable[coff]);
+		memset(cp->s4.bbuf[coff].buffer, 0, cp->s4.rrect.xlen);
+		ascii_to_bitmap_str(cp->s4.bbuf[coff].buffer, cp->s4.rrect.xlen, cc->name);
+		board_buffer_draw(&cp->s4.bbuf[coff]);
 	}
+//	raster_draw_buffers(&cp->s4.rrect);
 }

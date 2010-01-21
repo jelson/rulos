@@ -6,10 +6,9 @@
 
 typedef struct {
 	r_bool status;
-	Time expire_time;
-	Time max_time;
+	uint8_t rest_time_secs;
+	Time expire_time;	// time when needs to rest, or when rest complete
 	r_bool resting;
-	Time rest_until;
 	uint8_t board;
 	uint8_t digit;
 	uint8_t segment;

@@ -14,10 +14,10 @@ void hpam_update(HPAM *hpam);
 #define HPAM_DIGIT_0	0
 #define HPAM_DIGIT_1	4
 
-void _hpam_init_port(HPAM *hpam, HPAMIndex idx, Time max_time_sec, uint8_t board, uint8_t digit, uint8_t segment)
+void _hpam_init_port(HPAM *hpam, HPAMIndex idx, uint8_t rest_time_secs, uint8_t board, uint8_t digit, uint8_t segment)
 {
 	hpam->hpam_ports[idx].status = FALSE;
-	hpam->hpam_ports[idx].max_time = max_time_sec * 1000000;
+	hpam->hpam_ports[idx].rest_time_secs = rest_time_secs;
 	hpam->hpam_ports[idx].board = board;
 	hpam->hpam_ports[idx].digit = digit;
 	hpam->hpam_ports[idx].segment = segment;
@@ -62,18 +62,20 @@ void hpam_update(HPAM *hpam)
 	{
 		HPAMPort *port = &hpam->hpam_ports[idx];
 		if (port->status
-			&& port->max_time > 0
+			&& !port->resting
+			&& port->rest_time_secs > 0
 			&& later_than(clock_time_us(), port->expire_time))
 		{
 			hpam_set_port(hpam, idx, FALSE);
 
 			port->resting = TRUE;
-			// 33% duty cycle
-			port->rest_until = clock_time_us() + 2*port->max_time;
+			// 33% duty cycle: rest expires two timeouts from now
+			port->expire_time =
+				clock_time_us() + 2*((Time)port->rest_time_secs*1000000);
 			LOGF((logfp, "RESTING HPAM idx %d\n", idx));
 		}
 		if (port->resting
-			&& later_than(clock_time_us(), port->rest_until))
+			&& later_than(clock_time_us(), port->expire_time))
 		{
 			port->resting = FALSE;
 			LOGF((logfp, "reactivating HPAM idx %d\n", idx));
@@ -110,7 +112,7 @@ void hpam_set_port(HPAM *hpam, HPAMIndex idx, r_bool status)
 	board_buffer_draw(&hpam->bbuf);
 
 	// update expire time (only matters for sets)
-	port->expire_time = clock_time_us() + port->max_time;
+	port->expire_time = clock_time_us() + ((Time)port->rest_time_secs*1000000);
 
 	// Forward the notice to listeners
 	uint8_t thruster_bits_mask = (1<<idx);
