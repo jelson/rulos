@@ -50,8 +50,7 @@ COMMON_OBJECTS = \
 	booster.o \
 	slow_boot.o \
 	ring_buffer.o \
-
-#	audio_driver.o \
+	audio_driver.o \
 
 
 .PHONY: all

@@ -16,7 +16,7 @@ void ac_send_complete(SendSlot *sendSlot)
 	sendSlot->sending = FALSE;
 }
 
-r_bool ac_skip_to_clip(AudioClient *ac, SoundToken cur_token, SoundToken loop_token)
+r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx, SoundToken cur_token, SoundToken loop_token)
 {
 	if (ac->sendSlot.sending)
 	{
@@ -25,6 +25,7 @@ r_bool ac_skip_to_clip(AudioClient *ac, SoundToken cur_token, SoundToken loop_to
 	ac->sendSlot.msg->dest_port = AUDIO_PORT;
 	ac->sendSlot.msg->message_size = sizeof(AudioRequestMessage);
 	AudioRequestMessage *arm = (AudioRequestMessage *) &ac->sendSlot.msg->data;
+	arm->stream_idx = stream_idx;
 	arm->skip = TRUE;
 	arm->skip_token = cur_token;
 	arm->loop_token = loop_token;
@@ -32,7 +33,7 @@ r_bool ac_skip_to_clip(AudioClient *ac, SoundToken cur_token, SoundToken loop_to
 	return TRUE;
 }
 
-r_bool ac_queue_loop_clip(AudioClient *ac, SoundToken loop_token)
+r_bool ac_queue_loop_clip(AudioClient *ac, uint8_t stream_idx, SoundToken loop_token)
 {
 	if (ac->sendSlot.sending)
 	{
@@ -41,6 +42,7 @@ r_bool ac_queue_loop_clip(AudioClient *ac, SoundToken loop_token)
 	ac->sendSlot.msg->dest_port = AUDIO_PORT;
 	ac->sendSlot.msg->message_size = sizeof(AudioRequestMessage);
 	AudioRequestMessage *arm = (AudioRequestMessage *) &ac->sendSlot.msg->data;
+	arm->stream_idx = stream_idx;
 	arm->skip = FALSE;
 	arm->skip_token = -1;
 	arm->loop_token = loop_token;
@@ -79,12 +81,11 @@ void as_recv(RecvSlot *recvSlot)
 	AudioRequestMessage *arm = (AudioRequestMessage *) &recvSlot->msg->data;
 	if (arm->skip)
 	{
-// TODO left off here
-//		ad_skip_to_clip(as->ad, arm->skip_token, arm->loop_token);
+		ad_skip_to_clip(as->ad, arm->stream_idx, arm->skip_token, arm->loop_token);
 	}
 	else
 	{
-//		ad_queue_loop_clip(as->ad, arm->loop_token);
+		ad_queue_loop_clip(as->ad, arm->stream_idx, arm->loop_token);
 	}
 
 	as_update_display(as);
@@ -99,8 +100,9 @@ void as_update(AudioServer *as)
 void as_update_display(AudioServer *as)
 {
 	char buf[9];
-	int_to_string2(buf, 4, 0, as->ad->cur_token);
-	int_to_string2(buf+4, 4, 0, as->ad->loop_token);
+	AudioStream *astream = &as->ad->stream[0];
+	int_to_string2(buf, 4, 0, astream->cur_token);
+	int_to_string2(buf+4, 4, 0, astream->loop_token);
 	ascii_to_bitmap_str(as->bbuf.buffer, 8, buf);
 	board_buffer_draw(&as->bbuf);
 }

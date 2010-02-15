@@ -21,6 +21,7 @@ typedef uint8_t r_bool;
 #define say(x)	{ fprintf(stderr, "say: %s\n", x); }
 extern FILE *logfp;
 #define LOGF(x)	{ fprintf x; fflush(logfp); }
+#define CONDSIMARG(x)	, x
 
 #define PROGMEM	/**/
 #define pgm_read_byte(addr)	(*((uint8_t*)addr))
@@ -31,10 +32,11 @@ extern FILE *logfp;
 
 // jonh apologizes for evilly dup-declaring this here rather than
 // rearranging includes to make sense.
-extern void hardware_assert(uint16_t line);
+void hardware_assert(uint16_t line);
 
 #define assert(x)	{ if (!(x)) { hardware_assert(__LINE__); } }
 #define LOGF(x)	{}
+#define CONDSIMARG(x)	/**/
 #endif //SIM
 
 void util_init();
@@ -51,5 +53,7 @@ void debug_msg_hex(uint8_t board, char *m, uint16_t hex);
 uint16_t stack_ptr();
 void debug_delay(int ms);
 #define debug_plod(m)	{ debug_msg_hex(0, m, __LINE__); debug_delay(250); }
+void board_debug_msg(uint16_t line);
+
 
 #endif // _util_h

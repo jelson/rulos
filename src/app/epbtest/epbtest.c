@@ -26,9 +26,13 @@ void test_update(TestAct *act)
 	uint8_t digit, segment, board;
 	for (board = 0; board < NUM_BOARDS; board++) {
 		if (board==DISPLAYBOARD) continue;
+		if (board!=4 && board!=5) continue;
 		for (digit = 0; digit < NUM_DIGITS; digit++) {
 			for (segment = 0; segment < 8; segment++) {
-				uint8_t onoff = (((clock_time_us()>>18)+digit) & 7) == segment;
+				uint8_t chosen_segment = (((clock_time_us()>>18)+digit) & 7);
+				uint8_t onoff = (chosen_segment == segment);
+//				if ((clock_time_us()>>21)&1)
+//					onoff = !onoff;
 				hal_program_segment(board, digit, segment, onoff);
 			}
 		}
@@ -43,6 +47,7 @@ void test_update(TestAct *act)
 	char buf[9];
 	memset(buf, '-', 8);
 	int_to_string2(buf, 6, 0, delay);
+	memset(buf+6, '-', 2);
 	SSBitmap bm[8];
 	ascii_to_bitmap_str(bm, 8, buf);
 	program_board(DISPLAYBOARD, bm);
@@ -54,6 +59,8 @@ int main()
 {
 	util_init();
 	hal_init(bc_rocket0);
+
+#if 0
 	init_clock(1000, TIMER1);
 	hal_init_adc(10000);
 	hal_init_adc_channel(0);
@@ -62,6 +69,12 @@ int main()
 	test_init(&test);
 
 	cpumon_main_loop();
+#else
+#if !SIM
+	extern void debug_abuse_epb();
+	debug_abuse_epb();
+#endif
+#endif
 	return 0;
 }
 

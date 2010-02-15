@@ -89,12 +89,12 @@ void pong_intersect_paddle(Pong *pong, uint8_t player, int by1)
 	int py1 = PS(pong->paddley[player]+PADDLEHEIGHT);
 	if (by1<py0 || by0>py1)
 	{
-		ac_skip_to_clip(pong->audioClient, sound_pong_score, sound_silence);
+		ac_skip_to_clip(pong->audioClient, AUDIO_STREAM_BURST_EFFECTS, sound_pong_score, sound_silence);
 		pong_score_one(pong, 1-player);
 	}
 	else
 	{
-		ac_skip_to_clip(pong->audioClient, sound_pong_paddle_bounce, sound_silence);
+		ac_skip_to_clip(pong->audioClient, AUDIO_STREAM_BURST_EFFECTS, sound_pong_paddle_bounce, sound_silence);
 	}
 }
 
@@ -115,12 +115,12 @@ void pong_advance_ball(Pong *pong)
 	if (newy> BALLMAXY) {
 		pong->dy = -pong->dy;
 		newy = BALLMAXY-(newy-BALLMAXY);
-		ac_skip_to_clip(pong->audioClient, sound_pong_wall_bounce, sound_silence);
+		ac_skip_to_clip(pong->audioClient, AUDIO_STREAM_BURST_EFFECTS, sound_pong_wall_bounce, sound_silence);
 	}
 	if (newy< BALLMINY) {
 		pong->dy = -pong->dy;
 		newy = BALLMINY+(BALLMINY-newy);
-		ac_skip_to_clip(pong->audioClient, sound_pong_wall_bounce, sound_silence);
+		ac_skip_to_clip(pong->audioClient, AUDIO_STREAM_BURST_EFFECTS, sound_pong_wall_bounce, sound_silence);
 	}
 	pong->x = newx;
 	pong->y = newy;

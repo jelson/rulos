@@ -299,6 +299,17 @@ typedef uint8_t BoardRemapIndex;
 
 static BoardRemapIndex displayConfiguration[NUM_BOARDS];
 
+uint16_t g_epb_delay_constant = 1;
+void epb_delay()
+{
+	uint16_t delay;
+	static volatile int x;
+	for (delay=0; delay<g_epb_delay_constant; delay++)
+	{
+		x = x+1;
+	}
+}
+
 /*
  * 0x1738 - 0x16ca new
  * 0x1708 - 0x16c8 old
@@ -317,10 +328,6 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t 
 	}
 	uint8_t asegment = segmentRemapTables[br->segmentRemapIndices[rdigit]][segment];
 
-	gpio_set_or_clr(BOARDSEL0, board & (1 << 0));
-	gpio_set_or_clr(BOARDSEL1, board & (1 << 1));
-	gpio_set_or_clr(BOARDSEL2, board & (1 << 2));
-
 	gpio_set_or_clr(DIGSEL0, rdigit & (1 << 0));	
 	gpio_set_or_clr(DIGSEL1, rdigit & (1 << 1));	
 	gpio_set_or_clr(DIGSEL2, rdigit & (1 << 2));	
@@ -329,14 +336,29 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t 
 	gpio_set_or_clr(SEGSEL1, asegment & (1 << 1));
 	gpio_set_or_clr(SEGSEL2, asegment & (1 << 2));
 
+	gpio_set_or_clr(BOARDSEL0, board & (1 << 0));
+	gpio_set_or_clr(BOARDSEL1, board & (1 << 1));
+	gpio_set_or_clr(BOARDSEL2, board & (1 << 2));
+
 	/* sense reversed because cathode is common */
 	gpio_set_or_clr(DATA, !onoff);
+	
+	epb_delay();
 
 	gpio_clr(STROBE);
-	_NOP();
+
+	epb_delay();
+
 	gpio_set(STROBE);
+
+	epb_delay();
 }
 
+#else
+void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff)
+{
+	assert(FALSE);
+}
 #endif // BOARD_CUSTOM
 
 void null_handler()
@@ -872,12 +894,8 @@ r_bool hal_twi_read_byte(/*OUT*/ uint8_t *byte)
 
 #define AUDIO_BUF_SIZE 32
 static struct s_hardware_audio {
-	HalAudioRefillIfc *refill;
-	uint8_t buf[2][AUDIO_BUF_SIZE];
-	uint8_t output_idx;
-	uint8_t output_ptr;
-	uint8_t output_size;
-	uint8_t input_size;
+	RingBuffer *ring;
+	uint8_t _storage[sizeof(RingBuffer)+1+AUDIO_BUF_SIZE];
 } audio =
 	{ NULL };
 
@@ -888,37 +906,27 @@ void audio_write_sample(uint8_t value)
 
 void audio_emit_sample()
 {
-	if (audio.refill==NULL)
+	if (audio.ring==NULL)
 	{
 		// not initialized.
 		return;
 	}
 
 	// runs in interrupt context; atomic.
-	audio_write_sample(audio.buf[audio.output_idx][audio.output_ptr++]);
-
-	// swap buffers
-	if (audio.output_ptr>=audio.output_size)
+	uint8_t sample = 0;
+	if (ring_remove_avail(audio.ring))
 	{
-		audio.output_idx = 1 - audio.output_idx;
-		audio.output_size = audio.input_size;
-		audio.output_ptr = 0;
-		audio.input_size = 0;
+		sample = ring_remove(audio.ring);
 	}
-
-	// refill input
-	// TODO this is a little too enthusiastic; we'll be fetching one byte
-	// per call, in the common case.
-	if (audio.input_size < AUDIO_BUF_SIZE)
-	{
-		audio.input_size += audio.refill->func(audio.refill, &audio.buf[1-audio.output_idx][audio.input_size], AUDIO_BUF_SIZE-audio.input_size);
-	}
+	audio_write_sample(sample);
 }
 
-void hal_audio_init(uint16_t sample_period_us, HalAudioRefillIfc *refill)
+RingBuffer *hal_audio_init(uint16_t sample_period_us)
 {
 	assert(sample_period_us == 125);	// not that an assert in hardware.c helps...
-	audio.refill = refill;
+	audio.ring = (RingBuffer*) audio._storage;
+	init_ring_buffer(audio.ring, sizeof(audio._storage));
+	return audio.ring;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -968,15 +976,7 @@ void hal_spi_close()
 void hardware_assert(uint16_t line)
 {
 #if ASSERT_TO_BOARD
-	char buf[9];
-	buf[0] = 'a';
-	buf[1] = 's';
-	buf[2] = 'r';
-	int_to_string2(&buf[3], 5, 0, line);
-	buf[8] = 0;
-	SSBitmap bm[8];
-	ascii_to_bitmap_str(bm, 8, buf);
-	program_board(0, bm);
+	board_debug_msg(line);
 #endif
 
 	while (1) { }
@@ -995,5 +995,32 @@ void hardware_assign_timer_handler(uint8_t timer_id, Handler handler)
 	else
 	{
 		assert(FALSE);
+	}
+}
+
+void debug_abuse_epb()
+{
+	while (TRUE)
+	{
+		gpio_set(BOARDSEL0);
+		gpio_clr(BOARDSEL0);
+		gpio_set(BOARDSEL1);
+		gpio_clr(BOARDSEL1);
+		gpio_set(BOARDSEL2);
+		gpio_clr(BOARDSEL2);
+		gpio_set(DIGSEL0);
+		gpio_clr(DIGSEL0);
+		gpio_set(DIGSEL1);
+		gpio_clr(DIGSEL1);
+		gpio_set(DIGSEL2);
+		gpio_clr(DIGSEL2);
+		gpio_set(SEGSEL0);
+		gpio_clr(SEGSEL0);
+		gpio_set(SEGSEL1);
+		gpio_clr(SEGSEL1);
+		gpio_set(SEGSEL2);
+		gpio_clr(SEGSEL2);
+		gpio_set(DATA);
+		gpio_clr(DATA);
 	}
 }

@@ -72,7 +72,8 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 	// setup
 	if (launch->state == launch_state_hidden)
 	{
-		ac_skip_to_clip(launch->audioClient, sound_silence, sound_silence);
+		booster_set(launch->booster, FALSE);
+		ac_skip_to_clip(launch->audioClient, AUDIO_STREAM_COUNTDOWN, sound_silence, sound_silence);
 
 		launch->launch_code = 0;
 	}
@@ -145,7 +146,7 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 		{
 			drtc_set_base_time(launch->main_rtc, clock_time_us()+LAUNCH_COUNTDOWN_TIME);
 		}
-		ac_skip_to_clip(launch->audioClient, sound_apollo_11_countdown, sound_booster_start);
+		ac_skip_to_clip(launch->audioClient, AUDIO_STREAM_COUNTDOWN, sound_apollo_11_countdown, sound_silence);
 	}
 
 	if (launch->state == launch_state_launching)

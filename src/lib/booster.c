@@ -6,6 +6,7 @@ void booster_init(Booster *booster, HPAM *hpam, AudioClient *audioClient, Screen
 	booster->hpam = hpam;
 	booster->audioClient = audioClient;
 	booster->screenblanker = screenblanker;
+	hpam_set_port(booster->hpam, hpam_booster, FALSE);
 }
 
 void booster_set(Booster *booster, r_bool status)
@@ -19,14 +20,14 @@ void booster_set(Booster *booster, r_bool status)
 	{
 		booster->status = TRUE;
 		hpam_set_port(booster->hpam, hpam_booster, TRUE);
-		ac_skip_to_clip(booster->audioClient, sound_booster_start, sound_booster_running);
+		ac_skip_to_clip(booster->audioClient, AUDIO_STREAM_CONTINUOUS_EFFECTS, sound_booster_start, sound_booster_running);
 		screenblanker_setmode(booster->screenblanker, sb_flicker);
 	}
 	else
 	{
 		booster->status = FALSE;
 		hpam_set_port(booster->hpam, hpam_booster, FALSE);
-		ac_skip_to_clip(booster->audioClient, sound_booster_flameout, sound_silence);
+		ac_skip_to_clip(booster->audioClient, AUDIO_STREAM_CONTINUOUS_EFFECTS, sound_booster_flameout, sound_silence);
 		screenblanker_setmode(booster->screenblanker, sb_inactive);
 	}
 }

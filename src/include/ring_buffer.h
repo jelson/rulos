@@ -1,8 +1,6 @@
 #ifndef _RING_BUFFER_H
 #define _RING_BUFFER_H
 
-#include "rocket.h"
-
 typedef struct {
 	uint8_t capacity;	// actually holds capacity-1 bytes;
 						// last byte is a sentinel

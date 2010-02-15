@@ -1,3 +1,4 @@
+#include "rocket.h"
 #include "ring_buffer.h"
 
 void init_ring_buffer(RingBuffer *rb, uint16_t allocsize)

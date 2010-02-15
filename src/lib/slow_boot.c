@@ -81,7 +81,7 @@ void slowboot_update(SlowBoot *slowboot)
 	step -= 2;
 	if (step==0)
 	{
-		ac_skip_to_clip(slowboot->audioClient, sound_quindar_key_down, sound_silence);
+		ac_skip_to_clip(slowboot->audioClient, AUDIO_STREAM_BURST_EFFECTS, sound_quindar_key_down, sound_silence);
 	}
 	step /= 4;
 	if (step < 5)

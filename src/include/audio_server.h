@@ -7,6 +7,7 @@
 #include "audio_driver.h"
 
 typedef struct {
+	uint8_t stream_idx;
 	r_bool skip;
 	SoundToken skip_token;
 	SoundToken loop_token;
@@ -19,8 +20,8 @@ typedef struct s_audio_client {
 } AudioClient;
 
 void init_audio_client(AudioClient *ac, Network *network);
-r_bool ac_skip_to_clip(AudioClient *ac, SoundToken cur_token, SoundToken loop_token);
-r_bool ac_queue_loop_clip(AudioClient *ac, SoundToken loop_token);
+r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx, SoundToken cur_token, SoundToken loop_token);
+r_bool ac_queue_loop_clip(AudioClient *ac, uint8_t stream_idx, SoundToken loop_token);
 
 
 typedef struct s_audio_server {

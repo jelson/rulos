@@ -1,7 +1,10 @@
 #include "audio_driver.h"
 
-uint16_t audio_refill_func(AudioDriver *ad, uint8_t *sample_buf, uint16_t count);
-void _ad_decode_ulaw(uint8_t *pcm8u_buf, uint8_t *ulaw_buf, uint16_t count);
+#define AUDIO_UPDATE_INTERVAL 1000
+#define SPI_READ_SIZE 10
+
+void audio_update(AudioDriver *ad);
+uint8_t _ad_decode_ulaw(uint8_t ulaw);
 uint8_t _ad_pcm16s_to_pcm8u(int16_t s);
 
 typedef struct {
@@ -11,114 +14,135 @@ typedef struct {
 
 #include "audio_index.ch"
 
-#if 0
-void init_audio_driver(AudioDriver *ad)
+void init_audio_stream(AudioStream *as)
 {
-	ad->func = (HalAudioRefillFunc) audio_refill_func;
-	ad->cur_token = sound_silence;
-	ad->cur_offset = 0;
-	ad->loop_token = sound_silence;
-	ad->locked = FALSE;
+	as->cur_token = sound_silence;
+	as->cur_offset = 0;
+	as->loop_token = sound_silence;
 
-	init_spiflash(&ad->spif, (Activation*) &ad->spiComplete);
-
-	hal_audio_init(125, (HalAudioRefillIfc*) ad);
+	as->ring = (RingBuffer*) as->_ring_buffer_storage;
+	init_ring_buffer(as->ring, sizeof(as->_ring_buffer_storage));
 }
 
-uint16_t audio_refill_func(AudioDriver *ad, uint8_t *sample_buf, uint16_t count)
+void init_audio_driver(AudioDriver *ad)
 {
-	// called in interrupt context. Runs atomically, but we may be
-	// interrupting a user-level call.
-	if (ad->locked)
+	init_spiflash(&ad->spif);
+	
+	int i;
+	for (i=0; i<NUM_STREAMS; i++)
 	{
-		return 0;
+		init_audio_stream(&ad->stream[i]);
 	}
 
-	AudioClip *ac = &audio_clips[ad->cur_token];
-	if (ac->length - ad->cur_offset == 0)
+	ad->spibspace[0].rb = NULL;
+	ad->spibspace[1].rb = NULL;
+	ad->next_spib = 0;
+	ad->output_buffer = hal_audio_init(125);
+	ad->func = (ActivationFunc) audio_update;
+
+	schedule_us(1, (Activation*) ad);
+}
+
+void audio_stream_refill(AudioDriver *ad, AudioStream *as CONDSIMARG(uint8_t stream_index))
+{
+	uint8_t insert_avail = ring_insert_avail(as->ring);
+	if (insert_avail == 0)
 	{
-		LOGF((logfp, "refill; idx %d at %d\n", ad->cur_token, ad->cur_offset));
+		return;
+	}
+
+	AudioClip *ac = &audio_clips[as->cur_token];
+	if (ac->length - as->cur_offset == 0)
+	{
+		LOGF((logfp, "refill; idx %d at %d\n", as->cur_token, as->cur_offset));
 		// refill
-		ad->cur_token = ad->loop_token;
-		ad->cur_offset = 0;
+		as->cur_token = as->loop_token;
+		as->cur_offset = 0;
 		// recompute
-		ac = &audio_clips[ad->cur_token];
+		ac = &audio_clips[as->cur_token];
 	}
-	uint16_t fill = min(count, ac->length - ad->cur_offset);
-#if SIM
-	_ad_decode_ulaw(sample_buf, buf_base+ac->start+ad->cur_offset, fill);
-#else
-//#error TODO No_SPI_flash_read_code_yet
-#endif
-	LOGF((logfp, "requested %d; satisfied %d bytes from %d.%d (%d)\n",
-		count, fill, ad->cur_token, ad->cur_offset, ac->length));
-	ad->cur_offset += fill;
-	return fill;
-}
-#endif
+	uint16_t fill = min(min(
+		SPI_READ_SIZE, ac->length - as->cur_offset), insert_avail);
 
-void init_audio_driver(AudioDriver *ad)
-{
-	init_ring_buffer(ad->playback_buffer, sizeof(ad->playback_buffer_storage));
+	SPIBuffer *spib = &ad->spibspace[ad->next_spib];
+	assert(spib->rb==NULL);	// debug to ensure we're not double-using spibspace.
+	// (I don't think we can be, since there's only room for two such
+	// pointers in spiflash, but I like to assert.)
+	ad->next_spib = 1-ad->next_spib;
+
+	spib->start_addr = ac->start + as->cur_offset;
+	spib->count = fill;
+	spib->rb = as->ring;
+
+	LOGF((logfp, "stream %d requested %d; satisfied %d bytes from %d.%d (bytes at %d)\n",
+		stream_index, insert_avail, fill, as->cur_token, as->cur_offset, spib->start_addr));
+
+	as->cur_offset += fill;
+
+	spiflash_fill_buffer(&ad->spif, spib);
 }
 
 void audio_update(AudioDriver *ad)
 {
-	schedule(AUDIO_UPDATE_INTERVAL, (Activation*) ad);
+	schedule_us(AUDIO_UPDATE_INTERVAL, (Activation*) ad);
 
 	// jonh not very happy about blocking interrupts for collecting this stuff.
 	hal_start_atomic();
 	uint8_t output_insert_avail = ring_insert_avail(ad->output_buffer);
 	hal_end_atomic();
-	int i;
-	uint8_t most_desperate_stream_index = -1;
-	for (i=0; i<NUM_STREAMS; i++)
+	int sidx;
+	int8_t most_desperate_stream_index = -1;
+	uint8_t stream_remove_avail[NUM_STREAMS];
+	for (sidx=0; sidx<NUM_STREAMS; sidx++)
 	{
 		hal_start_atomic();
-		stream_remove_avail[i] = ring_remove_avail(ad->stream[i]);
+		stream_remove_avail[sidx] = ring_remove_avail(ad->stream[sidx].ring);
 		hal_end_atomic();
 
 		if (most_desperate_stream_index==-1 ||
-			(stream_remove_avail[i]
+			(stream_remove_avail[sidx]
 				< stream_remove_avail[most_desperate_stream_index]))
 		{
-			most_desperate_stream_index = i;
+			most_desperate_stream_index = sidx;
 		}
 	}
+	assert(most_desperate_stream_index >= 0 && most_desperate_stream_index < NUM_STREAMS);
 	
 	// inserts and removes can be done non-atomically, because they
 	// only touch vars that we only ever update. (They do assert on
 	// the opposite value, but in a way that is protected by monotonicity.)
-	while (pa>0)
+
+	// composite bytes into output stream until we're out of output space,
+	// filling non-ready input streams with zeros.
+	LOGF((logfp, "  output_insert_avail %d\n", output_insert_avail));
+	while (output_insert_avail>0)
 	{
-		uint8_t composite_value = 0;
-		for (i=0; i<NUM_STREAMS; i++)
+		LOGF((logfp, "  output_insert_avail %d, ring sez %d\n", output_insert_avail, ring_insert_avail(ad->output_buffer)));
+		uint8_t composite_sample = 0;
+		for (sidx=0; sidx<NUM_STREAMS; sidx++)
 		{
-			if (stream_remove_avail[i] > 0)
+			if (stream_remove_avail[sidx] > 0)
 			{
-				stream_remove_avail[i]-=1;
-				composite_value += _ad_decode_ulaw(ring_remove(ad->stream[i]));
+				stream_remove_avail[sidx]-=1;
+				uint8_t ulaw_sample = ring_remove(ad->stream[sidx].ring);
+				uint8_t pcm_sample = _ad_decode_ulaw(ulaw_sample);
+				composite_sample += pcm_sample;
+				//LOGF((logfp, "  stream %d supplies ulaw %2x -> %2x\n", sidx, ulaw_sample, pcm_sample));
+			}
+			else
+			{
+				//LOGF((logfp, "  stream %d empty; filling with 0\n", sidx));
 			}
 		}
-		ring_insert(ad->output_buffer, composite_value);
-		pa -= 1;
+		ring_insert(ad->output_buffer, composite_sample);
+		LOGF((logfp, "  composite_sample %2x\n", composite_sample));
+		output_insert_avail -= 1;
 	}
 
-	if (spi_next_buf_ptr == SPI_NOTHING)
+	// pick an input stream to begin refilling.
+	if (spiflash_next_buffer_ready(&ad->spif))
 	{
-		uint8_t desperate_stream_insert_avail =
-			ring_insert_avail(ad->stream[most_desperate_stream_index]);
-
-		SPIBufPtr *spib = the_idle_one;
-		if (desperate_stream_insert_avail > SPI_READ_SIZE)
-		{
-			spib->ring = ad->stream[most_desperate_stream_index];
-			spib->request_len = SPI_READ_SIZE;
-			also_figure_out_source_address;
-		}
-		hal_start_atomic();
-		spi_next_buf_ptr = spib;
-		hal_end_atomic();
+		audio_stream_refill(ad, &ad->stream[most_desperate_stream_index] CONDSIMARG(most_desperate_stream_index));
 	}
 }
 
@@ -149,7 +173,7 @@ uint8_t _ad_pcm16s_to_pcm8u(int16_t s)
 
 uint8_t _ad_decode_ulaw(uint8_t ulaw)
 {
-	return _ad_pcm16s_to_pcm8u(_ad_ulaw2linear(ulaw_buf[i]));
+	return _ad_pcm16s_to_pcm8u(_ad_ulaw2linear(ulaw));
 }
 
 #if 0
@@ -164,22 +188,20 @@ void _ad_decode_ulaw(uint8_t *pcm8u_buf, uint8_t *ulaw_buf, uint16_t count)
 #endif
 
 void ad_skip_to_clip(
-	AudioDriver *ad, SoundToken cur_token, SoundToken loop_token)
+	AudioDriver *ad, uint8_t stream_idx, SoundToken cur_token, SoundToken loop_token)
 {
 	assert(cur_token < (sizeof(audio_clips)/sizeof(AudioClip)));
 	assert(loop_token < (sizeof(audio_clips)/sizeof(AudioClip)));
-	ad->locked = TRUE;
-	ad->cur_token = cur_token;
-	ad->cur_offset = 0;
-	ad->loop_token = loop_token;
-	ad->locked = FALSE;
+	AudioStream *as = &ad->stream[stream_idx];
+	as->cur_token = cur_token;
+	as->cur_offset = 0;
+	as->loop_token = loop_token;
 }
 
-void ad_queue_loop_clip(AudioDriver *ad, SoundToken loop_token)
+void ad_queue_loop_clip(AudioDriver *ad, uint8_t stream_idx, SoundToken loop_token)
 {
 	assert(loop_token < (sizeof(audio_clips)/sizeof(AudioClip)));
-	ad->locked = TRUE;
-	ad->loop_token = loop_token;
-	ad->locked = FALSE;
+	AudioStream *as = &ad->stream[stream_idx];
+	as->loop_token = loop_token;
 }
 

@@ -145,7 +145,7 @@ void ddock_update(DDockAct *act)
 		if (success && !act->docking_complete)
 		{
 			// TODO snap clanger solenoid
-			ac_skip_to_clip(act->audioClient, sound_dock_clang, sound_silence);
+			ac_skip_to_clip(act->audioClient, AUDIO_STREAM_BURST_EFFECTS, sound_dock_clang, sound_silence);
 			act->docking_complete = TRUE;
 			LOGF((logfp, "docking success!\n"));
 		}

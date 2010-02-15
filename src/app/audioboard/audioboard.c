@@ -10,7 +10,9 @@
 #include "audio_driver.h"
 #include "audio_server.h"
 
-#if 0
+#define AUDIOTEST 0
+
+#if AUDIOTEST
 typedef struct {
 	ActivationFunc func;
 	AudioDriver *ad;
@@ -19,7 +21,7 @@ typedef struct {
 void at_update(AudioTest *at)
 {
 	schedule_us(1000000, (Activation*) at);
-	ad_skip_to_clip(at->ad, deadbeef_rand()%8, sound_silence);
+	ad_skip_to_clip(at->ad, 0, deadbeef_rand()%8, sound_silence);
 }
 
 void init_audio_test(AudioTest *at, AudioDriver *ad)
@@ -35,7 +37,7 @@ int main()
 	heap_init();
 	util_init();
 	hal_init(bc_audioboard);
-	init_clock(10000, TIMER1);
+	init_clock(1000, TIMER1);
 
 	AudioDriver ad;
 	init_audio_driver(&ad);
@@ -46,7 +48,8 @@ int main()
 	AudioServer as;
 	init_audio_server(&as, &ad, &network, 0);
 
-#if 0
+	ad_skip_to_clip(&ad, 0, sound_apollo_11_countdown, sound_apollo_11_countdown);
+#if AUDIOTEST
 	AudioTest at;
 	init_audio_test(&at, &ad);
 #endif

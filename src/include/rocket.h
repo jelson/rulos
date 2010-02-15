@@ -11,6 +11,7 @@
 #include "clock.h"
 #include "display_controller.h"
 #include "board_buffer.h"
+#include "ring_buffer.h"
 #include "hal.h"
 #include "queue.h"
 #include "region.h"

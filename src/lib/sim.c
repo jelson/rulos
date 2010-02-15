@@ -8,6 +8,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/timeb.h>
 #include <signal.h>
 #include <sched.h>
@@ -30,6 +31,7 @@
 void twi_poll(const char *source);
 void sim_audio_poll(const char *source);
 r_bool sim_audio_poll_once();
+void sim_spi_poke();
 void sim_twi_set_instance(int instance);
 r_bool g_joystick_trigger_state;
 
@@ -495,6 +497,7 @@ static void sim_clock_handler()
 
 	twi_poll("clock poll");
 	sim_audio_poll("clock poll");
+	sim_spi_poke();
 
 	user_clock_handler();
 }
@@ -752,19 +755,13 @@ r_bool hal_twi_read_byte(/*OUT*/ uint8_t *byte)
 	}
 }
 
-#define SIM_AUDIO_BUF_SIZE 1000
-typedef struct {
-	uint8_t pcm[SIM_AUDIO_BUF_SIZE];
-	uint16_t ptr;
-	uint16_t size;
-} SimAudioBuf;
-
+#define AUDIO_BUF_SIZE 30
 typedef struct s_SimAudioState {
 	int devdspfd;
-	SimAudioBuf bufs[2];
-	SimAudioBuf *cur;
-	SimAudioBuf *next;
-	HalAudioRefillIfc *refill;
+	int debug_fd;
+	RingBuffer *ring;
+	uint8_t _storage[sizeof(RingBuffer)+1+AUDIO_BUF_SIZE];
+	int16_t deferredSample;
 } SimAudioState;
 SimAudioState alloc_simAudioState, *simAudioState = NULL;
 
@@ -776,98 +773,74 @@ void setasync(int fd)
 	assert(rc==0);
 }
 
-void hal_audio_init(uint16_t sample_period_us, HalAudioRefillIfc *refill)
+RingBuffer *hal_audio_init(uint16_t sample_period_us)
 {
+	assert(simAudioState == NULL);	// duplicate initialization
 	simAudioState = &alloc_simAudioState;
-	simAudioState->devdspfd = open("/dev/dsp", O_ASYNC|O_WRONLY);
-	//simAudioState->devdspfd = open("devdsp", O_CREAT|O_WRONLY);
-	simAudioState->cur = &simAudioState->bufs[0];
-	simAudioState->next = &simAudioState->bufs[0];
-	simAudioState->cur->size = 0;
-	simAudioState->cur->ptr = 0;
-	simAudioState->refill = refill;
-	simAudioState->next->size = 0;	// mark next as ready to refill
+	simAudioState->devdspfd = open("/dev/dsp", O_ASYNC|O_WRONLY, 0);
+	simAudioState->debug_fd = open("devdsp", O_CREAT|O_WRONLY, S_IRWXU);
+	simAudioState->deferredSample = -1;
+	simAudioState->ring = (RingBuffer*) simAudioState->_storage;
+	init_ring_buffer(simAudioState->ring, sizeof(simAudioState->_storage));
 
-	assert(simAudioState->devdspfd>0);
+	if (simAudioState->devdspfd<0)
+	{
+		perror("opening devdsp");
+		assert(FALSE);
+	}
+	assert(simAudioState->debug_fd >= 0);
 	setasync(simAudioState->devdspfd);
+	return simAudioState->ring;
 }
 
 void sim_audio_poll(const char *source)
 {
-	while (TRUE)
+	if (simAudioState==NULL) { return; }
+
+	if (simAudioState->deferredSample >= 0)
 	{
-		if (sim_audio_poll_once())
+		uint8_t sample = (uint8_t) simAudioState->deferredSample;
+		int wrote = write(
+			simAudioState->devdspfd,
+			&sample,
+			1);
+		if (wrote==0)
 		{
+			// still with the failure!
+			return;
+		}
+
+		wrote = write(
+			simAudioState->debug_fd,
+			&sample,
+			1);
+		assert(wrote==1);
+
+		simAudioState->deferredSample = -1;
+	}
+
+	while (ring_remove_avail(simAudioState->ring))
+	{
+		uint8_t sample = ring_remove(simAudioState->ring);
+		//LOGF((logfp, "sim_audio_poll removes sample %2x\n", sample));
+		int wrote = write(
+			simAudioState->devdspfd,
+			&sample,
+			1);
+		if (wrote==0)
+		{
+			// crap. Buffer full.
+			simAudioState->deferredSample = sample;
 			break;
 		}
-	}
-}
 
-r_bool sim_audio_poll_once()
-{
-	if (simAudioState==NULL)
-	{
-		// Not initted.
-		return TRUE;
-	}
-
-	// try to write some stuff.
-	// wantWrite == 0 if both buffers ever get fully drained.
-	// size/4-> give us extra chances to refill next buf
-	int wantWrite = min(simAudioState->cur->size - simAudioState->cur->ptr, SIM_AUDIO_BUF_SIZE/4);
-	int wrote = 0;
-	r_bool filled_devdsp = FALSE;
-	if (wantWrite>0)
-	{
 		wrote = write(
-			simAudioState->devdspfd,
-			simAudioState->cur->pcm+simAudioState->cur->ptr,
-			wantWrite);
-		if (wrote<0)
-		{
-			assert(errno==EAGAIN);
-			return TRUE;
-		}
-		LOGF((logfp, "wrote %d/%d bytes to devdsp\n", wrote, wantWrite));
-		filled_devdsp = (wrote < wantWrite);
-	}
-	else
-	{
-		// hmm -- didn't fill DSP, but don't have anything to say and
-		// hence don't want to loop.
-		filled_devdsp = FALSE;
-		LOGF((logfp, "DSP is ahead of me.\n"));
-	}
-	
-	simAudioState->cur->ptr += wrote;
+			simAudioState->debug_fd,
+			&sample,
+			1);
+		assert(wrote==1);
 
-	// if we emptied a buffer, refill
-	assert(simAudioState->cur->ptr <= simAudioState->cur->size);
-	if (simAudioState->cur->ptr == simAudioState->cur->size)
-	{
-		// swap buffers
-		SimAudioBuf *tmp = simAudioState->cur;
-		simAudioState->cur = simAudioState->next;
-		simAudioState->next = tmp;
-
-		// put next buf in a safe state in case we swap back to it.
-		simAudioState->next->size = 0;
-		simAudioState->next->ptr = 0;
 	}
-
-	// always see if we can keep filling the next buffer
-	if (SIM_AUDIO_BUF_SIZE - simAudioState->next->size > 0)
-	//if (simAudioState->next->size == 0)
-	{
-		// try to refill next buffer
-		uint16_t size = simAudioState->refill->func(
-			simAudioState->refill,
-			&simAudioState->next->pcm[simAudioState->next->size],
-			SIM_AUDIO_BUF_SIZE - simAudioState->next->size);
-		simAudioState->next->size += size;
-	}
-
-	return filled_devdsp;
 }
 
 typedef enum {
@@ -877,19 +850,23 @@ typedef enum {
 } SimSpiState;
 
 typedef struct s_sim_spi {
+	r_bool initted;
 	HALSPIIfc *spi_ifc;
 	FILE *fp;
 	SimSpiState state;
 	int addr_off;
 	uint8_t addr[3];
+	int16_t result;
+	uint8_t recursions;
 } SimSpi;
-SimSpi g_spi;
+SimSpi g_spi = { FALSE };
 
 void hal_init_spi(HALSPIIfc *spi)
 {
 	g_spi.spi_ifc = spi;
-	g_spi.fp = fopen("spiflash.bin", "r");
+	g_spi.fp = fopen("obj.sim/spiflash.bin", "r");
 	assert(g_spi.fp != NULL);
+	g_spi.initted = TRUE;
 }
 
 void hal_spi_open()
@@ -899,10 +876,13 @@ void hal_spi_open()
 
 void hal_spi_send(uint8_t byte)
 {
+	g_spi.recursions += 1;
+
 	uint8_t result = 0;
 	switch (g_spi.state)
 	{
 		case sss_ready:
+			LOGF((logfp, "sim:spi cmd %x\n", byte));
 			if (byte==SPIFLASH_CMD_READ_DATA)
 			{
 				g_spi.state = sss_read_addr;
@@ -914,6 +894,7 @@ void hal_spi_send(uint8_t byte)
 			}
 			break;
 		case sss_read_addr:
+			//LOGF((logfp, "sim:spi addr[%d] == %x\n", g_spi.addr_off, byte));
 			g_spi.addr[g_spi.addr_off++] = byte;
 			if (g_spi.addr_off == 3)
 			{
@@ -921,17 +902,40 @@ void hal_spi_send(uint8_t byte)
 					  (((int)g_spi.addr[0])<<16)
 					| (((int)g_spi.addr[1])<<8)
 					| (((int)g_spi.addr[2])<<0);
+				LOGF((logfp, "sim:spi addr == %x\n", addr));
 				fseek(g_spi.fp, addr, SEEK_SET);
 				g_spi.state = sss_read_fetch;
 			}
 			break;
 		case sss_read_fetch:
 			result = fgetc(g_spi.fp);
+			//LOGF((logfp, "sim:spi read fetch == %x\n", result));
 			break;	
 	}
 
 	// deliver on stack. This may be a little infinite-recursion-y
-	g_spi.spi_ifc->func(g_spi.spi_ifc, result);
+	if (g_spi.recursions > 10)
+	{
+		g_spi.result = result;
+	}
+	else
+	{
+		g_spi.spi_ifc->func(g_spi.spi_ifc, result);
+	}
+	g_spi.recursions -= 1;
+}
+
+void sim_spi_poke()
+{
+	if (!g_spi.initted) { return; }
+
+	//LOGF((logfp, "sim_spi_poke delivering deferred result\n"));
+	if (g_spi.result >= 0)
+	{
+		uint8_t result = g_spi.result;
+		g_spi.result = -1;
+		g_spi.spi_ifc->func(g_spi.spi_ifc, result);
+	}
 }
 
 void hal_spi_close()

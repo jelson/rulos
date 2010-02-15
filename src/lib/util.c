@@ -91,3 +91,18 @@ void debug_delay(int ms)
 		}
 	}
 }
+
+void board_debug_msg(uint16_t line)
+{
+	char buf[9];
+	buf[0] = 'a';
+	buf[1] = 's';
+	buf[2] = 'r';
+	int_to_string2(&buf[3], 5, 0, line);
+	buf[8] = 0;
+	SSBitmap bm[8];
+	ascii_to_bitmap_str(bm, 8, buf);
+	program_board(0, bm);
+}
+
+

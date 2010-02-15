@@ -1,98 +1,116 @@
 #include "spiflash.h"
 
 void _spif_start(SPIFlash *spif);
-void spiflash_receive(SPIFlash *spif, uint8_t byte);
+void _spiflash_receive(SPIFlash *spif, uint8_t byte);
 
-void init_spiflash(SPIFlash *spif, Activation *complete)
+void init_spiflash(SPIFlash *spif)
 {
-	spif->func = (HALSPIFunc) spiflash_receive;
-	spif->complete = complete;
+	spif->func = (HALSPIFunc) _spiflash_receive;
 	hal_init_spi((HALSPIIfc *) spif);
 
-	spif->dummy_buf.addr = 0;
-	spif->dummy_buf.buf = spif->dummy_space;
-	spif->dummy_buf.size = 0;
+	spif->zero_buf.start_addr = 0;
+	spif->zero_buf.count = 0;		// keeps us from trying to write into rb
+	spif->zero_buf.rb = NULL;
 
-	spif->done_buf = NULL;
-	spif->active_buf = &spif->dummy_buf;
-	spif->next_buf = &spif->dummy_buf;
+	spif->spibuf[0] = &spif->zero_buf;
+	spif->spibuf[1] = &spif->zero_buf;
+	spif->cur_buf_index = 0;
+
+	hal_start_atomic();
 	_spif_start(spif);
-}
-
-void spiflash_queue_buffer(SPIFlash *spif, SPIBuffer *buf)
-{
-	hal_start_atomic();
-	assert(spif->next_buf == NULL);
-	spif->next_buf = buf;
 	hal_end_atomic();
 }
 
-SPIBuffer *spiflash_collect_buffer(SPIFlash *spif)
+r_bool spiflash_next_buffer_ready(SPIFlash *spif)
 {
-	SPIBuffer *result;
 	hal_start_atomic();
-	result = spif->done_buf;
+	SPIBuffer *spib = spif->spibuf[1-spif->cur_buf_index];
 	hal_end_atomic();
-	return result;
+	return spib == &spif->zero_buf;
 }
 
-void _spif_next_buffer(SPIFlash *spif)
+void spiflash_fill_buffer(SPIFlash *spif, SPIBuffer *spib)
 {
-	if (spif->active_buf != &spif->dummy_buf)
-	{
-		spif->done_buf = spif->active_buf;
-		schedule_now(spif->complete);
-	}
-	else
-	{
-		spif->done_buf = NULL;
-	}
-	spif->active_buf = spif->next_buf;
-	spif->next_buf = &spif->dummy_buf;
-
-	// ATMEL is little-endian; flash wants 3 big-endian bytes
-	spif->addr[0] = spif->active_buf->addr>>24;
-	spif->addr[1] = spif->active_buf->addr>>16;
-	spif->addr[2] = spif->active_buf->addr>> 8;
-	spif->addrptr = 0;
-	spif->offset = 0;
+	hal_start_atomic();
+	LOGF((logfp, "spiflash_fill_buffer got spib %08x => %d; rb %08x\n",
+		(unsigned int) spib,
+		1-spif->cur_buf_index,
+		(unsigned) spib->rb));
+	spif->spibuf[1-spif->cur_buf_index] = spib;
+	hal_end_atomic();
 }
 
+// ATOMIC
 void _spif_start(SPIFlash *spif)
 {
-	_spif_next_buffer(spif);
+	// old buf is now idle
+	spif->spibuf[spif->cur_buf_index] = &spif->zero_buf;
+
+	// other buf is now current
+	uint8_t cbi = 1-spif->cur_buf_index;
+	spif->cur_buf_index = cbi;
+
+	// ATMEL is little-endian; flash wants 3 big-endian bytes
+	uint32_t start_addr = spif->spibuf[cbi]->start_addr;
+	spif->addr[0] = start_addr>>16;
+	spif->addr[1] = start_addr>> 8;
+	spif->addr[2] = start_addr>> 0;
+	spif->addrptr = 0;
+
+	LOGF((logfp, "spib %08x (%d) spiflash initiates at %2x %2x %2x, count %d\n",
+		(unsigned int) spif->spibuf[cbi],
+		cbi,
+		spif->addr[0],
+		spif->addr[1],
+		spif->addr[2],
+		spif->spibuf[spif->cur_buf_index]->count));
+
 	spif->state = spist_read_send_addr;
 	hal_spi_open();
 	hal_spi_send(SPIFLASH_CMD_READ_DATA);
 }
 
-void spiflash_receive(SPIFlash *spif, uint8_t byte)
+// INTERRUPT CONTEXT
+void _spiflash_receive(SPIFlash *spif, uint8_t byte)
 {
 	switch (spif->state)
 	{
 		case spist_read_send_addr:
-			hal_spi_send(spif->addr[spif->addrptr++]);
+		{
+			uint8_t sendbyte = spif->addr[spif->addrptr++];
 			if (spif->addrptr == 3)
 			{
 				spif->state = spist_read_send_dummy;
 			}
+			hal_spi_send(sendbyte);
 			break;
+		}
 		case spist_read_send_dummy:
-			hal_spi_send(0x00);
 			spif->state = spist_read_bytes;
-			break;
+			goto _spiflash_read_more;
 		case spist_read_bytes:
-			spif->active_buf->buf[spif->offset++] = byte;
-			if (spif->offset < spif->active_buf->size)
-			{
-				hal_spi_send(0x00);
-			}
-			else
-			{
-				hal_spi_close();
-				_spif_start(spif);
-			}
-			break;
+		{
+			SPIBuffer *spib = spif->spibuf[spif->cur_buf_index];
+			ring_insert(spib->rb, byte);
+			spib->count-=1;
+			goto _spiflash_read_more;
+		}
+	}
+	return;
+
+_spiflash_read_more:
+	{
+		SPIBuffer *spib = spif->spibuf[spif->cur_buf_index];
+		if (spib->count>0)
+		{
+			hal_spi_send(0x00);
+		}
+		else
+		{
+			spif->spibuf[spif->cur_buf_index]->rb = NULL;
+			hal_spi_close();
+			_spif_start(spif);
+		}
 	}
 }
 
