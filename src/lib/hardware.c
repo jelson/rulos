@@ -1000,6 +1000,7 @@ void hardware_assign_timer_handler(uint8_t timer_id, Handler handler)
 
 void debug_abuse_epb()
 {
+#if defined(BOARD_PCB11)
 	while (TRUE)
 	{
 		gpio_set(BOARDSEL0);
@@ -1023,4 +1024,8 @@ void debug_abuse_epb()
 		gpio_set(DATA);
 		gpio_clr(DATA);
 	}
+#else
+	assert(FALSE);
+#endif // defined(BOARD_PCB11)
 }
+
