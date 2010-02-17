@@ -39,6 +39,12 @@ typedef struct s_audio_driver {
 
 	// Points to hardware output buffer, which we fill from the compositing step
 	RingBuffer *output_buffer;
+
+#define TEST_OUTPUT_ONLY 0
+#if TEST_OUTPUT_ONLY
+	uint8_t test_output_val;
+#endif // TEST_OUTPUT_ONLY
+
 } AudioDriver;
 
 void init_audio_driver(AudioDriver *ad);

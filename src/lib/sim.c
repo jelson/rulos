@@ -35,6 +35,9 @@ void sim_spi_poke();
 void sim_twi_set_instance(int instance);
 r_bool g_joystick_trigger_state;
 
+void start_audio_fork_shuttling_child();
+void audio_shuttling_child(int audiofd, int flowfd);
+
 /*
    __
   |__|
@@ -757,19 +760,19 @@ r_bool hal_twi_read_byte(/*OUT*/ uint8_t *byte)
 
 #define AUDIO_BUF_SIZE 30
 typedef struct s_SimAudioState {
-	int devdspfd;
-	int debug_fd;
+	int audiofd;
+	int flowfd;
 	RingBuffer *ring;
 	uint8_t _storage[sizeof(RingBuffer)+1+AUDIO_BUF_SIZE];
-	int16_t deferredSample;
+	int write_avail;
 } SimAudioState;
 SimAudioState alloc_simAudioState, *simAudioState = NULL;
 
-void setasync(int fd)
+void setnonblock(int fd)
 {
 	int flags, rc;
 	flags = fcntl(fd, F_GETFL);
-	rc = fcntl(fd, F_SETFL, flags | O_ASYNC | O_NONBLOCK);
+	rc = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 	assert(rc==0);
 }
 
@@ -777,69 +780,154 @@ RingBuffer *hal_audio_init(uint16_t sample_period_us)
 {
 	assert(simAudioState == NULL);	// duplicate initialization
 	simAudioState = &alloc_simAudioState;
-	simAudioState->devdspfd = open("/dev/dsp", O_ASYNC|O_WRONLY, 0);
-	simAudioState->debug_fd = open("devdsp", O_CREAT|O_WRONLY, S_IRWXU);
-	simAudioState->deferredSample = -1;
 	simAudioState->ring = (RingBuffer*) simAudioState->_storage;
 	init_ring_buffer(simAudioState->ring, sizeof(simAudioState->_storage));
+	simAudioState->write_avail = 0;
 
-	if (simAudioState->devdspfd<0)
-	{
-		perror("opening devdsp");
-		assert(FALSE);
-	}
-	assert(simAudioState->debug_fd >= 0);
-	setasync(simAudioState->devdspfd);
+	start_audio_fork_shuttling_child(simAudioState);
+
 	return simAudioState->ring;
+}
+
+void start_audio_fork_shuttling_child(SimAudioState *sas)
+{
+	// Now, you'd think that you could just open /dev/dsp with O_NONBLOCK
+	// and just write to it as it accepts bytes, right? You'd think that,
+	// but then you'd be wrong, see, because it just doesn't work right;
+	// it produces blips and pops that sound like gaps in the stream.
+	// I tried all sorts of variations, from select(timeout=NULL), to
+	// select(timeout=.5ms), to busy-waiting, but you just can't seem to
+	// get the bytes in fast enough with O_NONBLOCK to keep the driver
+	// full. Perhaps the audio driver has a broken implementation of
+	// nonblocking-mode file descriptors? I do not know; all I know is
+	// that the "obvious thing" sure isn't working.
+	//
+	// So my apalling (apollo-ing?) workaround: fork a child process
+	// to read from a pipe and patiently feed the bytes into a nonblocking
+	// fd to /dev/dsp. Yes. It works.
+	//
+	// Of course, pipes have something like 32k of buffer, which introduces
+	// an unacceptably-long 4 sec latency in the audio stream, on top of the
+	// already-too-long-but-non-negotiable .25-sec latency due to the 1k
+	// buffer in /dev/dsp.
+	//
+	// So my even-more-apalling (gemini-ing?) workaroundaround: have the
+	// child process signal flow control by sending bytes on an *upstream*
+	// pipe; each upstream byte means there's room for another downstream
+	// byte. Sheesh.
+
+	int rc;
+	int audiofds[2];
+	rc = pipe(audiofds);
+	int flowfds[2];
+	rc = pipe(flowfds);
+
+	int pid = fork();
+	assert(pid>=0);
+
+	if (pid==0)
+	{
+		// child
+		audio_shuttling_child(audiofds[0], flowfds[1]);
+		assert(FALSE); // should not return
+	}
+
+	simAudioState->audiofd = audiofds[1];
+	setnonblock(simAudioState->audiofd);
+	simAudioState->flowfd = flowfds[0];
+	setnonblock(simAudioState->flowfd);
+}
+
+void audio_shuttling_child(int audiofd, int flowfd)
+{
+	char flowbuf = 0;
+	char audiobuf[6];
+	int rc;
+
+	int devdspfd = open("/dev/dsp", O_WRONLY, 0);
+	assert(devdspfd >= 0);
+	int debugfd = open("devdsp", O_CREAT|O_WRONLY, S_IRWXU);
+	assert(debugfd >= 0);
+
+	// give buffer a little depth.
+	// Smaller is better (less latency);
+	// but you need a minimum amount. In audioboard, we run the
+	// system clock at 1kHz (1ms). The audio subsystem is polled off
+	// the system clock, so we need to be able to fill at least 8 samples
+	// every poll to keep up with the buffer's drain rate.
+	// Experimentation shows that 10 is the minimum value that avoids
+	// clicks and pops.
+	int i;
+	for (i=0; i<12; i++)
+	{
+		rc = write(flowfd, &flowbuf, 1);
+		assert(rc==1);
+	}
+	
+	while (1)
+	{
+		// loop doing blocking reads and, more importantly,
+		// writes, which seem to stitch acceptably on /dev/dsp
+		rc = read(audiofd, audiobuf, 1);
+		assert(rc==1);
+		rc = write(devdspfd, audiobuf, 1);
+		assert(rc==1);
+		rc = write(debugfd, audiobuf, 1);
+		assert(rc==1);
+
+		// release a byte of flow control
+		rc = write(flowfd, &flowbuf, 1);
+		assert(rc==1);
+	}
+}
+
+void debug_audio_rate()
+{
+	static int counter=0;
+	static struct timeval start_time;
+	if (counter==0)
+	{
+		gettimeofday(&start_time, NULL);
+	}
+	counter += 1;
+	if (counter==900)
+	{
+		struct timeval end_time;
+		gettimeofday(&end_time, NULL);
+		suseconds_t tv_usec = end_time.tv_usec - start_time.tv_usec;
+		time_t tv_sec = end_time.tv_sec - start_time.tv_sec;
+		tv_usec += tv_sec*1000000;
+		float rate = 900.0/tv_usec*1000000.0;
+		LOGF((logfp, "output rate %f samples/sec\n", rate));
+		counter = 0;
+	}
 }
 
 void sim_audio_poll(const char *source)
 {
+	int rc;
+
 	if (simAudioState==NULL) { return; }
 
-	if (simAudioState->deferredSample >= 0)
+	// check for flow control signal
+	char flowbuf[10];
+	rc = read(simAudioState->flowfd, flowbuf, sizeof(flowbuf));
+	if (rc>=0)
 	{
-		uint8_t sample = (uint8_t) simAudioState->deferredSample;
-		int wrote = write(
-			simAudioState->devdspfd,
-			&sample,
-			1);
-		if (wrote==0)
-		{
-			// still with the failure!
-			return;
-		}
-
-		wrote = write(
-			simAudioState->debug_fd,
-			&sample,
-			1);
-		assert(wrote==1);
-
-		simAudioState->deferredSample = -1;
+		simAudioState->write_avail += rc;
 	}
 
-	while (ring_remove_avail(simAudioState->ring))
+	while (simAudioState->write_avail > 0
+		&& ring_remove_avail(simAudioState->ring) > 0)
 	{
 		uint8_t sample = ring_remove(simAudioState->ring);
 		//LOGF((logfp, "sim_audio_poll removes sample %2x\n", sample));
-		int wrote = write(
-			simAudioState->devdspfd,
-			&sample,
-			1);
-		if (wrote==0)
-		{
-			// crap. Buffer full.
-			simAudioState->deferredSample = sample;
-			break;
-		}
-
-		wrote = write(
-			simAudioState->debug_fd,
-			&sample,
-			1);
+		int wrote = write(simAudioState->audiofd, &sample, 1);
 		assert(wrote==1);
 
+		simAudioState->write_avail -= 1;
+
+		debug_audio_rate();
 	}
 }
 

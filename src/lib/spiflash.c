@@ -37,6 +37,9 @@ void spiflash_fill_buffer(SPIFlash *spif, SPIBuffer *spib)
 		1-spif->cur_buf_index,
 		(unsigned) spib->rb));
 	spif->spibuf[1-spif->cur_buf_index] = spib;
+
+	LOGF((logfp, "spiflash_fill_buffer spib %8x spib->count %d spib->rb size %d\n",
+		(int) spib, spib->count, ring_insert_avail(spib->rb)));
 	hal_end_atomic();
 }
 
@@ -93,6 +96,8 @@ void _spiflash_receive(SPIFlash *spif, uint8_t byte)
 			SPIBuffer *spib = spif->spibuf[spif->cur_buf_index];
 			ring_insert(spib->rb, byte);
 			spib->count-=1;
+			LOGF((logfp, "_spiflash_receive spib %8x spib->count %d spib->rb size %d\n",
+				(int) spib, spib->count, ring_insert_avail(spib->rb)));
 			goto _spiflash_read_more;
 		}
 	}
@@ -101,7 +106,7 @@ void _spiflash_receive(SPIFlash *spif, uint8_t byte)
 _spiflash_read_more:
 	{
 		SPIBuffer *spib = spif->spibuf[spif->cur_buf_index];
-		if (spib->count>0)
+		if (spib->count>0 && ring_insert_avail(spib->rb)>0)
 		{
 			hal_spi_send(0x00);
 		}

@@ -86,6 +86,19 @@ void audio_update(AudioDriver *ad)
 {
 	schedule_us(AUDIO_UPDATE_INTERVAL, (Activation*) ad);
 
+#if TEST_OUTPUT_ONLY
+	hal_start_atomic();
+	uint8_t output_insert_avail = ring_insert_avail(ad->output_buffer);
+	hal_end_atomic();
+	uint8_t c;
+	for (c=0; c<output_insert_avail; c++)
+	{
+		ring_insert(ad->output_buffer, (ad->test_output_val & 0x8) ? 69 : 3);
+		ad->test_output_val += 1;
+	}
+
+#else // TEST_OUTPUT_ONLY
+
 	// jonh not very happy about blocking interrupts for collecting this stuff.
 	hal_start_atomic();
 	uint8_t output_insert_avail = ring_insert_avail(ad->output_buffer);
@@ -118,7 +131,7 @@ void audio_update(AudioDriver *ad)
 	while (output_insert_avail>0)
 	{
 		LOGF((logfp, "  output_insert_avail %d, ring sez %d\n", output_insert_avail, ring_insert_avail(ad->output_buffer)));
-		uint8_t composite_sample = 0;
+		uint8_t composite_sample = 6;
 		for (sidx=0; sidx<NUM_STREAMS; sidx++)
 		{
 			if (stream_remove_avail[sidx] > 0)
@@ -144,6 +157,7 @@ void audio_update(AudioDriver *ad)
 	{
 		audio_stream_refill(ad, &ad->stream[most_desperate_stream_index] CONDSIMARG(most_desperate_stream_index));
 	}
+#endif // TEST_OUTPUT_ONLY
 }
 
 // based on sample code at:
