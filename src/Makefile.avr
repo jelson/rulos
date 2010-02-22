@@ -1,7 +1,8 @@
 # Objects that should be part of the real hardware but
 # not the simulator
 AVR_ONLY_OBJECTS := \
-	hardware.o
+	hardware.o \
+	hardware_twi.o 
 
 ARCHTARG := $(TARGET).$(MCU).$(BOARD)
 

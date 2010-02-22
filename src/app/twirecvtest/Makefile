@@ -2,10 +2,10 @@ ROCKET_ROOT := ../..
 
 MCU := atmega328p
 BOARD := PCB11
-TARGET := segtest
+TARGET := twirecvtest
 
 TARGET_OBJECTS := \
-	segtest.o
+	twirecvtest.o
 
 
 include $(ROCKET_ROOT)/Makefile.common

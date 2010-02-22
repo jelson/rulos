@@ -244,7 +244,7 @@ void screenblanker_update_once(ScreenBlanker *sb)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void sbl_recv_func(RecvSlot *recvSlot);
+void sbl_recv_func(RecvSlot *recvSlot, uint8_t payload_len);
 
 void init_screenblanker_listener(ScreenBlankerListener *sbl, Network *network, BoardConfiguration bc)
 {
@@ -254,15 +254,16 @@ void init_screenblanker_listener(ScreenBlankerListener *sbl, Network *network, B
 	sbl->recvSlot.payload_capacity = sizeof(ScreenblankerPayload);
 	sbl->recvSlot.msg_occupied = FALSE;
 	sbl->recvSlot.msg = (Message*) sbl->message_storage;
-	sbl->self = sbl;
+	sbl->recvSlot.user_data = sbl;
 
 	net_bind_receiver(network, &sbl->recvSlot);
 }
 
-void sbl_recv_func(RecvSlot *recvSlot)
+void sbl_recv_func(RecvSlot *recvSlot, uint8_t payload_len)
 {
-	ScreenBlankerListener *sbl = *((ScreenBlankerListener **)(recvSlot+1));
+	ScreenBlankerListener *sbl = (ScreenBlankerListener *) recvSlot->user_data;
 	ScreenblankerPayload *sp = (ScreenblankerPayload*) sbl->recvSlot.msg->data;
+	assert(payload_len == sizeof(ScreenblankerPayload));
 	screenblanker_setdisco(&sbl->screenblanker, sp->disco_color);
 	screenblanker_setmode(&sbl->screenblanker, sp->mode);
 	sbl->recvSlot.msg_occupied = FALSE;
@@ -277,25 +278,21 @@ void init_screenblanker_sender(ScreenBlankerSender *sbs, Network *network)
 {
 	sbs->network = network;
 
-	sbs->sendSlot.func = sb_message_sent;
+	sbs->sendSlot.func = NULL;
 	sbs->sendSlot.msg = (Message*) sbs->message_storage;
+	sbs->sendSlot.dest_addr = ROCKET1_ADDR;
 	sbs->sendSlot.msg->dest_port = SCREENBLANKER_PORT;
-	sbs->sendSlot.msg->message_size = sizeof(ScreenblankerPayload);
+	sbs->sendSlot.msg->payload_len = sizeof(ScreenblankerPayload);
 	sbs->sendSlot.sending = FALSE;
 }
 
 void sbs_send(ScreenBlankerSender *sbs, ScreenBlanker *sb)
 {
-	if (!sbs->sendSlot.sending)
-	{
-		ScreenblankerPayload *sp = (ScreenblankerPayload *) sbs->sendSlot.msg->data;
-		sp->mode = sb->mode;
-		sp->disco_color = sb->disco_color;
-		net_send_message(sbs->network, &sbs->sendSlot);
-	}
-}
+	if (sbs->sendSlot.sending)
+		return;
 
-void sb_message_sent(SendSlot *sendSlot)
-{
-	sendSlot->sending = FALSE;
+	ScreenblankerPayload *sp = (ScreenblankerPayload *) sbs->sendSlot.msg->data;
+	sp->mode = sb->mode;
+	sp->disco_color = sb->disco_color;
+	net_send_message(sbs->network, &sbs->sendSlot);
 }

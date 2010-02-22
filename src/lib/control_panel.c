@@ -4,7 +4,7 @@
 
 void init_cc_remote_calc(CCRemoteCalc *ccrc, Network *network)
 {
-	init_remote_keyboard_send(&ccrc->rks, network, REMOTE_SUBFOCUS_PORT0);
+	init_remote_keyboard_send(&ccrc->rks, network, ROCKET_ADDR, REMOTE_SUBFOCUS_PORT0);
 	init_remote_uie(&ccrc->ruie, &ccrc->rks.forwardLocalStrokes);
 	ccrc->uie_handler = (UIEventHandler*) &ccrc->ruie;
 	ccrc->name = "Computer";

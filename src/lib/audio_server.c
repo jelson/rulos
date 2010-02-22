@@ -6,15 +6,11 @@ void init_audio_client(AudioClient *ac, Network *network)
 {
 	ac->network = network;
 
-	ac->sendSlot.func = ac_send_complete;
+	ac->sendSlot.func = NULL;
 	ac->sendSlot.msg = (Message*) ac->send_msg_alloc;
 	ac->sendSlot.sending = FALSE;
 }
 
-void ac_send_complete(SendSlot *sendSlot)
-{
-	sendSlot->sending = FALSE;
-}
 
 r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx, SoundToken cur_token, SoundToken loop_token)
 {
@@ -22,14 +18,17 @@ r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx, SoundToken cur_token
 	{
 		return FALSE;
 	}
+
+	ac->sendSlot.dest_addr = AUDIO_ADDR;
 	ac->sendSlot.msg->dest_port = AUDIO_PORT;
-	ac->sendSlot.msg->message_size = sizeof(AudioRequestMessage);
+	ac->sendSlot.msg->payload_len = sizeof(AudioRequestMessage);
 	AudioRequestMessage *arm = (AudioRequestMessage *) &ac->sendSlot.msg->data;
 	arm->stream_idx = stream_idx;
 	arm->skip = TRUE;
 	arm->skip_token = cur_token;
 	arm->loop_token = loop_token;
 	net_send_message(ac->network, &ac->sendSlot);
+
 	return TRUE;
 }
 
@@ -39,21 +38,24 @@ r_bool ac_queue_loop_clip(AudioClient *ac, uint8_t stream_idx, SoundToken loop_t
 	{
 		return FALSE;
 	}
+
+	ac->sendSlot.dest_addr = AUDIO_ADDR;
 	ac->sendSlot.msg->dest_port = AUDIO_PORT;
-	ac->sendSlot.msg->message_size = sizeof(AudioRequestMessage);
+	ac->sendSlot.msg->payload_len = sizeof(AudioRequestMessage);
 	AudioRequestMessage *arm = (AudioRequestMessage *) &ac->sendSlot.msg->data;
 	arm->stream_idx = stream_idx;
 	arm->skip = FALSE;
 	arm->skip_token = -1;
 	arm->loop_token = loop_token;
 	net_send_message(ac->network, &ac->sendSlot);
+
 	return TRUE;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void as_update(AudioServer *as);
-void as_recv(RecvSlot *recvSlot);
+void as_recv(RecvSlot *recvSlot, uint8_t payload_len);
 void as_update_display(AudioServer *as);
 
 void init_audio_server(AudioServer *as, AudioDriver *ad, Network *network, uint8_t board0)
@@ -65,7 +67,7 @@ void init_audio_server(AudioServer *as, AudioDriver *ad, Network *network, uint8
 	as->recvSlot.payload_capacity = sizeof(AudioRequestMessage);
 	as->recvSlot.msg_occupied = FALSE;
 	as->recvSlot.msg = (Message*) as->recv_msg_alloc;
-	as->recv_this = as;
+	as->recvSlot.user_data = as;
 
 	board_buffer_init(&as->bbuf DBG_BBUF_LABEL("audio_server"));
 	board_buffer_push(&as->bbuf, board0);
@@ -75,10 +77,13 @@ void init_audio_server(AudioServer *as, AudioDriver *ad, Network *network, uint8
 	schedule_us(1, (Activation*) as);
 }
 
-void as_recv(RecvSlot *recvSlot)
+void as_recv(RecvSlot *recvSlot, uint8_t payload_len)
 {
-	AudioServer *as = *(AudioServer**)(recvSlot+1);
+	AudioServer *as = (AudioServer *) recvSlot->user_data;
 	AudioRequestMessage *arm = (AudioRequestMessage *) &recvSlot->msg->data;
+
+	assert(payload_len == sizeof(AudioRequestMessage));
+
 	if (arm->skip)
 	{
 		ad_skip_to_clip(as->ad, arm->stream_idx, arm->skip_token, arm->loop_token);

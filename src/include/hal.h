@@ -50,12 +50,27 @@ void hal_uart_set_recv_handler(Activation *act);
 	// Runs on interrupt stack -- keep it sweet and race-free.
 */
 
-void hal_twi_init(Activation *act);
-	// act is scheduled after each send() (when the send buffer is again free),
-	// and after each received byte.
-r_bool hal_twi_ready_to_send();
-void hal_twi_send_byte(uint8_t byte);
-r_bool hal_twi_read_byte(/*OUT*/ uint8_t *byte);
+/////////////// TWI ///////////////////////////////////////////////
+
+typedef uint8_t Addr;
+
+struct s_TWIRecvSlot;
+typedef void (*TWIRecvDoneFunc)(struct s_TWIRecvSlot *recvSlot, uint8_t len);
+typedef struct s_TWIRecvSlot {
+	TWIRecvDoneFunc func;
+	uint8_t capacity;
+	uint8_t occupied;
+	void *user_data; // storage for a pointer back to your state structure
+	char data[0];
+} TWIRecvSlot;
+
+void hal_twi_init(Addr local_addr, TWIRecvSlot *trs);
+
+typedef void (*TWISendDoneFunc)(void *user_data);
+void hal_twi_send(Addr dest_addr, char *data, uint8_t len, 
+				  TWISendDoneFunc sendDoneCB, void *sendDoneCBData);
+
+////////////////// Audio ////////////////////////////////////////////
 
 RingBuffer *hal_audio_init(uint16_t sample_period_us);
 

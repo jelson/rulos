@@ -1,4 +1,4 @@
-#include "thruster_protocol.h"
+#include "rocket.h"
 
 void tsn_update(ThrusterSendNetwork *tsn, ThrusterPayload *payload);
 void tsn_timer_func(ThrusterUpdateTimer *tut);
@@ -9,10 +9,11 @@ void init_thruster_send_network(ThrusterSendNetwork *tsn, Network *network)
 	tsn->func = (ThrusterUpdateFunc) tsn_update;
 	tsn->network = network;
 
-	tsn->sendSlot.func = thruster_message_sent;
+	tsn->sendSlot.func = NULL;
 	tsn->sendSlot.msg = (Message*) tsn->thruster_message_storage;
+	tsn->sendSlot.dest_addr = ROCKET1_ADDR;
 	tsn->sendSlot.msg->dest_port = THRUSTER_PORT;
-	tsn->sendSlot.msg->message_size = sizeof(ThrusterPayload);
+	tsn->sendSlot.msg->payload_len = sizeof(ThrusterPayload);
 	tsn->sendSlot.sending = FALSE;
 
 	tsn->last_state.thruster_bits = 0;
@@ -47,13 +48,14 @@ void tsn_timer_func(ThrusterUpdateTimer *tut)
 	{
 		ThrusterPayload *tp = (ThrusterPayload *) tsn->sendSlot.msg->data;
 		tp->thruster_bits = tsn->last_state.thruster_bits;
-		net_send_message(tsn->network, &tsn->sendSlot);
-		tsn->state_changed = FALSE;
+
+		if (net_send_message(tsn->network, &tsn->sendSlot))
+		{
+			tsn->sendSlot.sending = TRUE;
+			tsn->state_changed = FALSE;
+		}
 	}
 }
 
-void thruster_message_sent(SendSlot *sendSlot)
-{
-	sendSlot->sending = FALSE;
-}
+
 

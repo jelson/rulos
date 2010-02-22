@@ -12,12 +12,17 @@
 #include "display_controller.h"
 #include "board_buffer.h"
 #include "ring_buffer.h"
-#include "hal.h"
 #include "queue.h"
 #include "region.h"
 #include "cursor.h"
 #include "focus.h"
 #include "cpumon.h"
+#include "hal.h"
+#include "twi.h"
+#include "network.h"
+#include "network_ports.h"
+#include "thruster_protocol.h"
+
 
 #endif /* __rocket_h__ */
 

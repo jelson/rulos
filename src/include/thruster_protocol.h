@@ -1,9 +1,6 @@
 #ifndef _thruster_protocol_h
 #define _thruster_protocol_h
 
-#include "network.h"
-#include "network_ports.h"
-
 #define THRUSTER_REPORT_INTERVAL 250000
 
 typedef struct {

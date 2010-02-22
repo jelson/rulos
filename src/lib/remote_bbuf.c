@@ -2,7 +2,7 @@
 
 void rbs_update(RemoteBBufSend *rbs);
 void rbs_send_complete(SendSlot *slot);
-void rbr_recv(RecvSlot *recvSlot);
+void rbr_recv(RecvSlot *recvSlot, uint8_t payload_len);
 
 #define REMOTE_BBUF_SEND_RATE 33000	// 30 board msgs ber sec
 
@@ -10,7 +10,7 @@ void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network)
 {
 	rbs->func = (ActivationFunc) rbs_update;
 	rbs->network = network;
-	rbs->sendSlot.func = rbs_send_complete;
+	rbs->sendSlot.func = NULL;
 	rbs->sendSlot.msg = (Message*) rbs->send_msg_alloc;
 	rbs->sendSlot.sending = FALSE;
 	memset(rbs->offscreen, 0, REMOTE_BBUF_NUM_BOARDS*NUM_DIGITS*sizeof(SSBitmap));
@@ -18,11 +18,6 @@ void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network)
 	rbs->last_index = 0;
 
 	schedule_us(1, (Activation*) rbs);
-}
-
-void rbs_send_complete(SendSlot *slot)
-{
-	slot->sending = FALSE;
 }
 
 void send_remote_bbuf(RemoteBBufSend *rbs, SSBitmap *bm, uint8_t index, uint8_t mask)
@@ -77,14 +72,18 @@ void rbs_update(RemoteBBufSend *rbs)
 	LOGF((logfp, "rbs_update: update[%d]\n", index));
 
 	// send a packet for this changed line
+	rbs->sendSlot.dest_addr = ROCKET1_ADDR;
 	rbs->sendSlot.msg->dest_port = REMOTE_BBUF_PORT;
-	rbs->sendSlot.msg->message_size = sizeof(BBufMessage);
+	rbs->sendSlot.msg->payload_len = sizeof(BBufMessage);
 	BBufMessage *bbm = (BBufMessage *) &rbs->sendSlot.msg->data;
 	memcpy(bbm->buf, rbs->offscreen[index], NUM_DIGITS);
 	bbm->index = index;
-	net_send_message(rbs->network, &rbs->sendSlot);
 
-	rbs->changed[index] = FALSE;
+	if (net_send_message(rbs->network, &rbs->sendSlot))
+	{
+		rbs->changed[index] = FALSE;
+	}
+
 	rbs->last_index = index;
 }
 
@@ -99,8 +98,9 @@ void init_remote_bbuf_recv(RemoteBBufRecv *rbr, Network *network)
 	net_bind_receiver(network, &rbr->recvSlot);
 }
 
-void rbr_recv(RecvSlot *recvSlot)
+void rbr_recv(RecvSlot *recvSlot, uint8_t payload_len)
 {
+	assert(payload_len == sizeof(BBufMessage));
 	BBufMessage *bbm = (BBufMessage *) &recvSlot->msg->data;
 	board_buffer_paint(bbm->buf, bbm->index, 0xff);
 	recvSlot->msg_occupied = FALSE;

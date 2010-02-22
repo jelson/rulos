@@ -28,11 +28,10 @@
 #include "uart.h"
 #include "sim.h"
 
-void twi_poll(const char *source);
+static void twi_poll(const char *source);
 void sim_audio_poll(const char *source);
 r_bool sim_audio_poll_once();
 void sim_spi_poke();
-void sim_twi_set_instance(int instance);
 r_bool g_joystick_trigger_state;
 
 void start_audio_fork_shuttling_child();
@@ -573,23 +572,18 @@ void hal_init(BoardConfiguration bc)
 	{
 		case bc_rocket0:
 			sim_configure_tree(tree0);
-			sim_twi_set_instance(0);
 			break;
 		case bc_rocket1:
 			sim_configure_tree(tree1);
-			sim_twi_set_instance(1);
 			break;
 		case bc_audioboard:
 			sim_configure_tree(tree2);
-			sim_twi_set_instance(2);
 			break;
 		case bc_wallclock:
 			sim_configure_tree(wallclock_tree);
-			sim_twi_set_instance(3);
 			break;
 		case bc_chaseclock:
 			sim_configure_tree(chaseclock_tree);
-			sim_twi_set_instance(3);
 			break;
 		default:
 			assert(FALSE);	// configuration not defined in simulator
@@ -631,13 +625,12 @@ void hal_init(BoardConfiguration bc)
 	sigaddset(&mask_set, SIGIO);
 }
 
-TWIState g_sim_twi_state = {FALSE};
+struct {
+	r_bool initted;
+	TWIRecvSlot *trs;
+	int udp_socket;
+} g_sim_twi_state = { FALSE };
 
-void sim_twi_set_instance(int instance)
-{
-	assert(0<=instance && instance<SIM_TWI_NUM_NODES);
-	g_sim_twi_state.instance = instance;
-}
 
 void sim_sigio_handler()
 {
@@ -645,13 +638,13 @@ void sim_sigio_handler()
 	sim_audio_poll("sigio");
 }
 
-void hal_twi_init(Activation *act)
+
+void hal_twi_init(Addr local_addr, TWIRecvSlot *trs)
 {
 	signal(SIGIO, sim_sigio_handler);
 
-	g_sim_twi_state.user_act = act;
+	g_sim_twi_state.trs = trs;
 	g_sim_twi_state.udp_socket = socket(PF_INET, SOCK_DGRAM, 0);
-	g_sim_twi_state.read_ready = FALSE;
 
 	int rc;
 	int on = 1;
@@ -669,50 +662,84 @@ void hal_twi_init(Activation *act)
 	struct sockaddr_in sai;
 	sai.sin_family = AF_INET;
 	sai.sin_addr.s_addr = htonl(INADDR_ANY);
-	sai.sin_port = htons(SIM_TWI_PORT_BASE + g_sim_twi_state.instance);
+	sai.sin_port = htons(SIM_TWI_PORT_BASE + local_addr);
 	bind(g_sim_twi_state.udp_socket, (struct sockaddr*)&sai, sizeof(sai));
 	g_sim_twi_state.initted = TRUE;
 }
 
-void twi_poll(const char *source)
+typedef struct {
+	ActivationFunc f;
+	TWIRecvSlot *trs;
+	uint8_t len;
+} recvCallbackAct_t;
+
+recvCallbackAct_t recvCallbackAct_g;
+
+static void doRecvCallback(recvCallbackAct_t *rca)
+{
+	rca->trs->func(rca->trs, rca->len);
+}
+
+static void twi_poll(const char *source)
 {
 	if (!g_sim_twi_state.initted)
 	{
 		return;
 	}
-	if (g_sim_twi_state.read_ready)
-	{
-		// best not consume any more packets until we've delivered this one.
-		return;
-	}
-	
-	char buf[10];
-	int rc = recv(g_sim_twi_state.udp_socket, buf, sizeof(buf), MSG_DONTWAIT);
+
+	char buf[4096];
+
+	int rc = recv(
+		g_sim_twi_state.udp_socket,
+		buf,
+		sizeof(buf),
+		MSG_DONTWAIT);
+
 	if (rc<0)
 	{
 		assert(errno == EAGAIN);
 		return;
 	}
-	if (rc>1)
+
+	assert(rc != 0);
+
+	if (g_sim_twi_state.trs->occupied)
 	{
-		LOGF((logfp, "Discarding %d-byte suffix of long packet\n", rc-1));
+		LOGF((logfp, "TWI SIM: Packet arrived but network stack buffer busy; dropping\n"));
+		return;
 	}
 
-	assert(rc>0);
-	//LOGF((logfp, "sim reads TWI byte %02x; ignores %d more\n", buf[0], rc-1));
+	if (rc > g_sim_twi_state.trs->capacity)
+	{
+		LOGF((logfp, "TWI SIM: Discarding %d-byte packet; too long for net stack's buffer\n", rc));
+		return;
+	}
 
-	g_sim_twi_state.read_byte = buf[0];
-	g_sim_twi_state.read_ready = TRUE;
-	//LOGF((logfp, "scheduled net_update from %s\n", source));
-	schedule_now(g_sim_twi_state.user_act);
+	g_sim_twi_state.trs->occupied = TRUE;
+	memcpy(g_sim_twi_state.trs->data, buf, rc);
+
+	recvCallbackAct_g.f = (ActivationFunc) doRecvCallback;
+	recvCallbackAct_g.trs = g_sim_twi_state.trs;
+	recvCallbackAct_g.len = rc;
+	schedule_now((Activation *) &recvCallbackAct_g);
 }
 
-r_bool hal_twi_ready_to_send()
+
+typedef struct {
+	ActivationFunc f;
+	TWISendDoneFunc sendDoneCB;
+	void *sendDoneCBData;
+} sendCallbackAct_t;
+
+sendCallbackAct_t sendCallbackAct_g;
+
+static void doSendCallback(sendCallbackAct_t *sca)
 {
-	return TRUE;
+	sca->sendDoneCB(sca->sendDoneCBData);
 }
 
-void hal_twi_send_byte(uint8_t byte)
+void hal_twi_send(Addr dest_addr, char *data, uint8_t len,
+				  TWISendDoneFunc sendDoneCB, void *sendDoneCBData)
 {
 /*
 	LOGF((logfp, "hal_twi_send_byte(%02x [%c])\n",
@@ -721,42 +748,22 @@ void hal_twi_send_byte(uint8_t byte)
 */
 	
 	struct sockaddr_in sai;
-	int i;
+
 	sai.sin_family = AF_INET;
 	sai.sin_addr.s_addr = htonl(0x7f000001);
-	for (i=0; i<SIM_TWI_NUM_NODES; i++)
-	{
-		// I ignore the bytes I sent on the TWI. I hope that's
-		// a correct model, or the real network code gets much tricksier!
-		if (i==g_sim_twi_state.instance)
-		{
-			continue;
-		}
-		sai.sin_port = htons(SIM_TWI_PORT_BASE + i);
-		sendto(g_sim_twi_state.udp_socket, &byte, 1,
-			0, (struct sockaddr*)&sai, sizeof(sai));
-	}
+	sai.sin_port = htons(SIM_TWI_PORT_BASE + dest_addr);
+	sendto(g_sim_twi_state.udp_socket, data, len,
+		   0, (struct sockaddr*)&sai, sizeof(sai));
 
-	//LOGF((logfp, "scheduled net_update from %s\n", "hal_twi_send_byte"));
-	schedule_now(g_sim_twi_state.user_act);
+	if (sendDoneCB)
+	{
+		sendCallbackAct_g.f = (ActivationFunc) doSendCallback;
+		sendCallbackAct_g.sendDoneCB = sendDoneCB;
+		sendCallbackAct_g.sendDoneCBData = sendDoneCBData;
+		schedule_now((Activation *) &sendCallbackAct_g);
+	}
 }
 
-r_bool hal_twi_read_byte(/*OUT*/ uint8_t *byte)
-{
-	if (g_sim_twi_state.read_ready)
-	{
-		*byte = g_sim_twi_state.read_byte;
-		g_sim_twi_state.read_ready = FALSE;
-		// whoah, another byte is ready RIGHT NOW!
-		//LOGF((logfp, "scheduled net_update from %s\n", "hal_twi_read_byte"));
-		schedule_now(g_sim_twi_state.user_act);
-		return TRUE;
-	}
-	else
-	{
-		return FALSE;
-	}
-}
 
 #define AUDIO_BUF_SIZE 30
 typedef struct s_SimAudioState {

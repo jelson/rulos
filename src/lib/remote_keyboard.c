@@ -2,15 +2,18 @@
 
 void rk_send(InputInjectorIfc *injector, char key);
 void rk_send_complete(SendSlot *sendSlot);
-void rk_recv(RecvSlot *recvSlot);
+void rk_recv(RecvSlot *recvSlot, uint8_t payload_len);
 
-void init_remote_keyboard_send(RemoteKeyboardSend *rk, Network *network, Port port)
+void init_remote_keyboard_send(RemoteKeyboardSend *rk, Network *network, Addr addr, Port port)
 {
 	rk->network = network;
 	rk->port = port;
 
-	rk->sendSlot.func = rk_send_complete;
+	rk->sendSlot.func = NULL;
 	rk->sendSlot.msg = (Message*) rk->send_msg_alloc;
+	rk->sendSlot.dest_addr = addr;
+	rk->sendSlot.msg->dest_port = rk->port;
+	rk->sendSlot.msg->payload_len = sizeof(KeystrokeMessage);
 	rk->sendSlot.sending = FALSE;
 
 	rk->forwardLocalStrokes.func = rk_send;
@@ -20,23 +23,18 @@ void init_remote_keyboard_send(RemoteKeyboardSend *rk, Network *network, Port po
 void rk_send(InputInjectorIfc *injector, char key)
 {
 	RemoteKeyboardSend *rk = *(RemoteKeyboardSend **) (injector+1);
+	KeystrokeMessage *km = (KeystrokeMessage *) &rk->sendSlot.msg->data;
 
 	if (rk->sendSlot.sending)
 	{
 		LOGF((logfp, "RemoteKeyboard drops a message due to full send queue.\n"));
 		return;
 	}
-	rk->sendSlot.msg->dest_port = rk->port;
-	rk->sendSlot.msg->message_size = sizeof(KeystrokeMessage);
-	KeystrokeMessage *km = (KeystrokeMessage *) &rk->sendSlot.msg->data;
+
 	km->key = key;
 	net_send_message(rk->network, &rk->sendSlot);
 }
 
-void rk_send_complete(SendSlot *sendSlot)
-{
-	sendSlot->sending = FALSE;
-}
 
 void init_remote_keyboard_recv(RemoteKeyboardRecv *rk, Network *network, InputInjectorIfc *acceptNetStrokes, Port port)
 {
@@ -45,17 +43,18 @@ void init_remote_keyboard_recv(RemoteKeyboardRecv *rk, Network *network, InputIn
 	rk->recvSlot.payload_capacity = sizeof(KeystrokeMessage);
 	rk->recvSlot.msg_occupied = FALSE;
 	rk->recvSlot.msg = (Message*) rk->recv_msg_alloc;
-	rk->recv_this = rk;
+	rk->recvSlot.user_data = rk;
 
 	rk->acceptNetStrokes = acceptNetStrokes;
 
 	net_bind_receiver(network, &rk->recvSlot);
 }
 
-void rk_recv(RecvSlot *recvSlot)
+void rk_recv(RecvSlot *recvSlot, uint8_t payload_len)
 {
-	RemoteKeyboardRecv *rk = *(RemoteKeyboardRecv **)(recvSlot+1);
-	KeystrokeMessage *km = (KeystrokeMessage *) &recvSlot->msg->data;
+	RemoteKeyboardRecv *rk = (RemoteKeyboardRecv *) recvSlot->user_data;
+	KeystrokeMessage *km = (KeystrokeMessage *) recvSlot->msg->data;
+	assert(payload_len == sizeof(KeystrokeMessage));
 	rk->acceptNetStrokes->func(rk->acceptNetStrokes, km->key);
 	recvSlot->msg_occupied = FALSE;
 }

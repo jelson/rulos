@@ -60,7 +60,6 @@ typedef struct s_screenblanker_payload {
 typedef struct s_screenblanker_listener {
 	ScreenBlanker screenblanker;
 	RecvSlot recvSlot;
-	struct s_screenblanker_listener *self;
 	uint8_t message_storage[sizeof(Message)+sizeof(ScreenblankerPayload)];
 } ScreenBlankerListener;
 

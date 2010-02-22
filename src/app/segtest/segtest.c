@@ -11,7 +11,7 @@
 
 int main()
 {
-	hal_init();
+	hal_init(bc_rocket0);
 	int seg=0, dig=0;
 	seg=0;
 	dig=0;

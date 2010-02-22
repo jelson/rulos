@@ -861,32 +861,6 @@ void hal_init(BoardConfiguration bc)
 #endif
 }
 
-// Stubbed-out TWI hardware modules
-Activation *g_hal_twi_act = NULL;
-void hal_twi_init(Activation *act)
-{
-	g_hal_twi_act = act;
-}
-
-r_bool hal_twi_ready_to_send()
-{
-	return TRUE;
-}
-
-void hal_twi_send_byte(uint8_t byte)
-{
-#if 0
-	LOGF((logfp, "hal_twi_send_byte(%02x [%c])",
-		byte,
-		(byte>=' ' && byte<127) ? byte : '_'));
-	schedule_us(1, g_hal_twi_act);
-#endif
-}
-
-r_bool hal_twi_read_byte(/*OUT*/ uint8_t *byte)
-{
-	return FALSE;
-}
 
 // TODO arrange for hardware to call audio_emit_sample once every 125us
 // (8kHz), either by speeding up the main clock (and only firing the clock

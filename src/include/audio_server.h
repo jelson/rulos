@@ -31,7 +31,6 @@ typedef struct s_audio_server {
 	uint8_t recv_msg_alloc[sizeof(Message)+sizeof(AudioRequestMessage)];
 
 	RecvSlot recvSlot;
-	struct s_audio_server *recv_this;
 
 	BoardBuffer bbuf;
 } AudioServer;

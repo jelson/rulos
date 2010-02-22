@@ -11,7 +11,7 @@ void dtg_update_expwa(DThrusterGraph *dtg, int alpha, int i, uint8_t input);
 void dtg_draw_one_skinny(DThrusterGraph *dtg, int i, uint8_t input, SSBitmap mask);
 void dtg_draw_skinny_bars(BoardBuffer *bbuf, int v, SSBitmap bm);
 void dtg_draw_fat_bars(BoardBuffer *bbuf, int v, SSBitmap bm0, SSBitmap bm1);
-void dtg_recv_func(RecvSlot *recvSlot);
+void dtg_recv_func(RecvSlot *recvSlot, uint8_t payload_len);
 
 void dtg_init(DThrusterGraph *dtg, uint8_t board, Network *network)
 {
@@ -25,7 +25,7 @@ void dtg_init(DThrusterGraph *dtg, uint8_t board, Network *network)
 	dtg->recvSlot.payload_capacity = sizeof(ThrusterPayload);
 	dtg->recvSlot.msg_occupied = FALSE;
 	dtg->recvSlot.msg = (Message*) dtg->thruster_message_storage;
-	dtg->self = dtg;
+	dtg->recvSlot.user_data = dtg;
 
 	net_bind_receiver(dtg->network, &dtg->recvSlot);
 
@@ -93,10 +93,11 @@ void dtg_draw_fat_bars(BoardBuffer *bbuf, int v, SSBitmap bm0, SSBitmap bm1)
 	}
 }
 
-void dtg_recv_func(RecvSlot *recvSlot)
+void dtg_recv_func(RecvSlot *recvSlot, uint8_t payload_len)
 {
-	DThrusterGraph *dtg = *((DThrusterGraph **)(recvSlot+1));
-	ThrusterPayload *tp = (ThrusterPayload*) dtg->recvSlot.msg->data;
+	DThrusterGraph *dtg = (DThrusterGraph *) recvSlot->user_data;
+	ThrusterPayload *tp = (ThrusterPayload*) recvSlot->msg->data;
+	assert(payload_len == sizeof(ThrusterPayload));
 	dtg->thruster_bits = tp->thruster_bits;
 	dtg->recvSlot.msg_occupied = FALSE;
 //	LOGF((logfp, "dtg_recv_func got bits %1x!\n", dtg->thruster_bits & 0x7));

@@ -20,13 +20,11 @@ typedef struct s_remote_keyboard_send {
 	struct s_remote_keyboard_send *forward_this;
 } RemoteKeyboardSend;
 
-void init_remote_keyboard_send(RemoteKeyboardSend *rk, Network *network, Port port);
+void init_remote_keyboard_send(RemoteKeyboardSend *rk, Network *network, Addr addr, Port port);
 
 typedef struct s_remote_keyboard_recv {
 	uint8_t recv_msg_alloc[sizeof(Message)+sizeof(KeystrokeMessage)];
 	RecvSlot recvSlot;
-	struct s_remote_keyboard_recv *recv_this;
-
 	InputInjectorIfc *acceptNetStrokes;
 } RemoteKeyboardRecv;
 

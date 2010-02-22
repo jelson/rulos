@@ -47,7 +47,7 @@ int main()
 	cpumon_init(&cpumon);	// includes slow calibration phase
 
 	Network network;
-	init_network(&network);
+	init_network(&network, ROCKET1_ADDR);
 
 	//install_handler(ADC, adc_handler);
 
@@ -59,7 +59,7 @@ int main()
 */
 
 	RemoteKeyboardSend rks;
-	init_remote_keyboard_send(&rks, &network, REMOTE_KEYBOARD_PORT);
+	init_remote_keyboard_send(&rks, &network, ROCKET_ADDR, REMOTE_KEYBOARD_PORT);
 
 	InputPollerAct ip;
 	input_poller_init(&ip, &rks.forwardLocalStrokes);

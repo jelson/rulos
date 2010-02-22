@@ -12,7 +12,6 @@ typedef struct s_d_thruster_graph {
 	Network *network;
 	uint8_t thruster_message_storage[sizeof(Message)+sizeof(ThrusterPayload)];
 	RecvSlot recvSlot;
-	struct s_d_thruster_graph *self;
 	uint8_t thruster_bits;
 	uint32_t value[4];
 } DThrusterGraph;
