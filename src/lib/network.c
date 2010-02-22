@@ -97,6 +97,8 @@ void net_bind_receiver(Network *net, RecvSlot *recvSlot)
 	uint8_t slotIdx = net_find_empty_receive_slot(net);
 	assert(slotIdx != SLOT_NONE);
 	net->recvSlots[slotIdx] = recvSlot;
+	LOGF((logfp, "netstack: listener bound to port %d (0x%x), slot %d\n",
+		  recvSlot->port, recvSlot->port, slotIdx));
 }
 
 
@@ -171,6 +173,11 @@ static void net_twi_send_done(void *user_data);
 // External visible API from above to launch a packet.
 r_bool net_send_message(Network *net, SendSlot *sendSlot)
 {
+	LOGF((logfp, "netstack: sending %d-byte payload to %d:%d (0x%x:0x%x)\n",
+		  sendSlot->msg->payload_len,
+		  sendSlot->dest_addr, sendSlot->msg->dest_port,
+		  sendSlot->dest_addr, sendSlot->msg->dest_port))
+
 	r_bool need_wake = (SendSlotPtrQueue_length(SendQueue(net)) == 0);
 	r_bool fit = SendSlotPtrQueue_append(SendQueue(net), sendSlot);
 
@@ -219,10 +226,14 @@ static void net_twi_send_done(void *user_data)
 
 	assert(rc);
 	assert(sendSlot->sending == TRUE);
-	
-	sendSlot->sending = FALSE;
 
+	// mark the packet as no-longer-sending and call the user's
+	// callback
+	sendSlot->sending = FALSE;
 	if (sendSlot->func)
 		sendSlot->func(sendSlot);
+
+	// launch the next queued packet if any
+	net_send_next_message_down(net);
 }
 

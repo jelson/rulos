@@ -46,12 +46,13 @@ void tsn_timer_func(ThrusterUpdateTimer *tut)
 
 	if (tsn->state_changed && !tsn->sendSlot.sending)
 	{
+		LOGF((logfp, "tsn: state change, sending packet\n"));
+
 		ThrusterPayload *tp = (ThrusterPayload *) tsn->sendSlot.msg->data;
 		tp->thruster_bits = tsn->last_state.thruster_bits;
 
 		if (net_send_message(tsn->network, &tsn->sendSlot))
 		{
-			tsn->sendSlot.sending = TRUE;
 			tsn->state_changed = FALSE;
 		}
 	}
