@@ -61,9 +61,6 @@ int main()
 	RemoteKeyboardSend rks;
 	init_remote_keyboard_send(&rks, &network, ROCKET_ADDR, REMOTE_KEYBOARD_PORT);
 
-	InputPollerAct ip;
-	input_poller_init(&ip, &rks.forwardLocalStrokes);
-
 /*
 	RemoteBBufRecv rbr;
 	init_remote_bbuf_recv(&rbr, &network);
@@ -83,6 +80,14 @@ int main()
 	init_cascaded_input_injector(&cii, (UIEventHandler*) &calc.focus, &rks.forwardLocalStrokes);
 	RemoteKeyboardRecv rkr;
 	init_remote_keyboard_recv(&rkr, &network, (InputInjectorIfc*) &cii, REMOTE_SUBFOCUS_PORT0);
+
+	InputPollerAct ip;
+#define LOCALTEST 0
+#if LOCALTEST
+	input_poller_init(&ip, (InputInjectorIfc*) &cii);
+#else
+	input_poller_init(&ip, &rks.forwardLocalStrokes);
+#endif
 
 	ScreenBlankerListener sbl;
 	init_screenblanker_listener(&sbl, &network, bc_rocket1);

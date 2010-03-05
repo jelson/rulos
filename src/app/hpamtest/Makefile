@@ -1,12 +1,11 @@
 ROCKET_ROOT := ../..
 
 MCU := atmega328p
-TARGET := keypadtest
 BOARD := PCB11
+TARGET := hpamtest
 
 TARGET_OBJECTS := \
-	uart.o \
-	keypadtest.o
+	hpamtest.o
 
 
 include $(ROCKET_ROOT)/Makefile.common

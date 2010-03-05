@@ -130,7 +130,9 @@ int main()
 /*
 	Autotype autotype;
 	init_autotype(&autotype, (InputInjectorIfc*) &rocket0.cp.direct_injector,
-		"000aaaaac004671c", (Time) 1300000);
+		//"000aaaaac004671c",
+		"000bc",
+		(Time) 1300000);
 */
 
 	cpumon_main_loop();
