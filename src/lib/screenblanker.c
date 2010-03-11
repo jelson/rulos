@@ -15,6 +15,8 @@
 		| (((uint32_t)c7)<<(0*4)) \
 		)
 
+#undef PR
+
 #define PG	DISCO_GREEN,
 #define PR	DISCO_RED,
 #define PY	DISCO_YELLOW,
