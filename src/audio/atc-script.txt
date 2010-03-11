@@ -1,0 +1,37 @@
+[Read phonetic alphabet letters & digits]
+A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+0 1 2 3 4 5 6 7 8 9
+point
+thousand
+hundred
+ten eleven twelve thirteen fourteen fifteen
+
+Rocket Treehouse Uniform Victor Alpha Lima,
+cleared to Luna Spaceport as filed,
+climb and maintain one five thousand
+expect flight level six zero zero three minutes after departure
+departure frequency is one one niner point two
+squawk one two three four.
+
+Cleared for takeoff from pad one.
+Cleared to land, pad one.
+Go around.
+
+change to my frequency 119.2
+
+intersection
+arrival
+cleared for the
+approach
+
+prepare for countdown
+commence
+abort
+(read authoritatively :v) 9 8 7 6 5 4 3 2 1 0
+liftoff
+
+initaite docking procedure
+left of course and correcting
+right of course and diverging
+increase pitch attitude
+docking complete
