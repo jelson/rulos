@@ -269,6 +269,8 @@ void hal_twi_init(Addr local_addr, TWIRecvSlot *trs)
 void hal_twi_send(Addr dest_addr, char *data, uint8_t len, 
 				  TWISendDoneFunc sendDoneCB, void *sendDoneCBData)
 {
+	assert(twiState_g.out_pkt == NULL);
+
 	twiState_g.out_pkt = data;
 	twiState_g.out_destaddr = dest_addr;
 	twiState_g.out_len = len;
