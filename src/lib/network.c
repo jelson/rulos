@@ -178,6 +178,7 @@ r_bool net_send_message(Network *net, SendSlot *sendSlot)
 		  sendSlot->dest_addr, sendSlot->msg->dest_port,
 		  sendSlot->dest_addr, sendSlot->msg->dest_port))
 
+	assert(sendSlot->sending == FALSE);
 	r_bool need_wake = (SendSlotPtrQueue_length(SendQueue(net)) == 0);
 	r_bool fit = SendSlotPtrQueue_append(SendQueue(net), sendSlot);
 
