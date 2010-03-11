@@ -21,6 +21,7 @@ typedef struct {
 
 typedef struct twiState
 {
+	uint8_t initted;
 	uint8_t have_bus;
 
 	// sending state
@@ -38,7 +39,7 @@ typedef struct twiState
 	twiCallbackAct_t recvCallbackAct;
 } twiState_t;
 
-twiState_t twiState_g;
+twiState_t twiState_g = {FALSE};
 
 
 #if 0
@@ -89,6 +90,8 @@ static void abort_recv(twiState_t *twi)
 
 static void twi_set_control_bits(twiState_t *twi)
 {
+	uint8_t next_command = 0;
+
 	/*
 	 * If we have a packet to transmit, and we're not in the start
 	 * state, tell the CPU we want it to acquire the bus.
@@ -118,7 +121,8 @@ static void twi_set_control_bits(twiState_t *twi)
 
 static void twi_update(twiState_t *twi, uint8_t status)
 {
-	uint8_t next_command = 0;
+	if (!twi->initted)
+		return;
 
 	//  print_status(status);
 
@@ -242,8 +246,6 @@ static void twi_update(twiState_t *twi, uint8_t status)
 	twi_set_control_bits(twi);
 }
 
-}
-
 
 ISR(TWI_vect)
 {
@@ -291,6 +293,7 @@ void hal_twi_send(Addr dest_addr, char *data, uint8_t len,
 	twiState_g.out_n = 0;
 	twiState_g.sendDoneCB = sendDoneCB;
 	twiState_g.sendDoneCBData = sendDoneCBData;
+	twiState_g.initted = TRUE;
 
 	/*
 	 * run the handler so the bus gets requested.  Disable interrupts
