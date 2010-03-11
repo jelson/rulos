@@ -204,7 +204,7 @@ static void net_send_next_message_down(Network *net)
 		return;
 
 	// Make sure this guy thinks he's sending.
-	assert(sendSlot->sending == FALSE);
+	assert(sendSlot->sending == TRUE);
 
 	// compute length and checksum.
 	uint8_t len = sizeof(Message) + sendSlot->msg->payload_len;
