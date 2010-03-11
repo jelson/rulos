@@ -173,7 +173,7 @@ static void net_twi_send_done(void *user_data);
 // External visible API from above to launch a packet.
 r_bool net_send_message(Network *net, SendSlot *sendSlot)
 {
-	LOGF((logfp, "netstack: sending %d-byte payload to %d:%d (0x%x:0x%x)\n",
+	LOGF((logfp, "netstack: queueing %d-byte payload to %d:%d (0x%x:0x%x)\n",
 		  sendSlot->msg->payload_len,
 		  sendSlot->dest_addr, sendSlot->msg->dest_port,
 		  sendSlot->dest_addr, sendSlot->msg->dest_port))
@@ -202,6 +202,11 @@ static void net_send_next_message_down(Network *net)
 
 	if (rc == FALSE)
 		return;
+
+	LOGF((logfp, "netstack: releasing %d-byte payload to %d:%d (0x%x:0x%x)\n",
+		  sendSlot->msg->payload_len,
+		  sendSlot->dest_addr, sendSlot->msg->dest_port,
+		  sendSlot->dest_addr, sendSlot->msg->dest_port))
 
 	// Make sure this guy thinks he's sending.
 	assert(sendSlot->sending == TRUE);
