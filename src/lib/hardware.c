@@ -459,7 +459,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, uint8_t timer_id)
 	uint8_t cs;
 	uint16_t ocr;
 
-	cli();
+	hal_start_atomic();
 
 	if (timer_id == TIMER1)
 	{
@@ -520,7 +520,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, uint8_t timer_id)
 	}
 
 	/* re-enable interrupts */
-	sei();
+	hal_end_atomic();
 
 	return actual_us_per_period;
 }
@@ -544,7 +544,8 @@ uint16_t hal_elapsed_milliintervals()
 // 
 void hal_speedup_clock_ppm(int32_t ratio)
 {
-	cli();
+	hal_start_atomic();
+
 	uint16_t new_ocr1a = OCR1A;
 	int32_t adjustment = new_ocr1a;
 
@@ -556,7 +557,7 @@ void hal_speedup_clock_ppm(int32_t ratio)
 	if (TCNT1 >= new_ocr1a)
 		TCNT1 = new_ocr1a-1;
 
-	sei();
+	hal_end_atomic();
 }
 
 
@@ -750,7 +751,7 @@ static void adc_update(ADCState *adc)
 void hal_uart_init(uint16_t baud)
 {
 	// disable interrupts
-	cli();
+	hal_start_atomic();
 
 	// set baud rate
 	_UBRRH = (unsigned char) baud >> 8;
@@ -767,7 +768,7 @@ void hal_uart_init(uint16_t baud)
 	  ;
 
 	// enable interrupts
-	sei();
+	hal_end_atomic();
 }
 
 /*************************************************************************************/
@@ -798,14 +799,20 @@ void hal_delay_ms(uint16_t __ms)
 	_delay_loop_2(__ticks);
 }
 
+static int atomic_refcount_g = 0;
+
 void hal_start_atomic()
 {
+	atomic_refcount_g++;
 	cli();
 }
 
 void hal_end_atomic()
 {
-	sei();
+	atomic_refcount_g--;
+
+	if (atomic_refcount_g == 0)
+		sei();
 }
 
 void hal_idle()

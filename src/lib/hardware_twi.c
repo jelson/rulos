@@ -86,6 +86,36 @@ static void abort_recv(twiState_t *twi)
 }
 
 
+
+static void twi_set_control_bits(twiState_t *twi)
+{
+	/*
+	 * If we have a packet to transmit, and we're not in the start
+	 * state, tell the CPU we want it to acquire the bus.
+	 */
+	if (twi->out_pkt && !twi->have_bus)
+	{
+		next_command |= _BV(TWSTA);
+	}
+
+	/*
+	 * Conversely, if we're done sending the packet and are still in the
+	 * start state, send the stop state
+	 */ 
+	if (!twi->out_pkt && twi->have_bus) {
+		next_command |= _BV(TWSTO);
+		twi->have_bus = 0;
+	}
+
+	TWCR = next_command
+		| _BV(TWEN)    // Enable TWI
+		| _BV(TWIE)    // Enable interrupts
+		| _BV(TWEA)    // Ack incoming transmissions
+		| _BV(TWINT)   // Tell it we're ready for it to do the next byte
+		;
+}
+
+
 static void twi_update(twiState_t *twi, uint8_t status)
 {
 	uint8_t next_command = 0;
@@ -206,29 +236,12 @@ static void twi_update(twiState_t *twi, uint8_t status)
   
 
 	/*
-	 * If we have a packet to transmit, and we're not in the start
-	 * state, tell the CPU we want it to acquire the bus.
+	 * set the bus bits to ack this transmission and possibly request
+	 * the bus
 	 */
-	if (twi->out_pkt && !twi->have_bus)
-	{
-		next_command |= _BV(TWSTA);
-	}
+	twi_set_control_bits(twi);
+}
 
-	/*
-	 * Conversely, if we're done sending the packet and are still in the
-	 * start state, send the stop state
-	 */ 
-	if (!twi->out_pkt && twi->have_bus) {
-		next_command |= _BV(TWSTO);
-		twi->have_bus = 0;
-	}
-
-	TWCR = next_command
-		| _BV(TWEN)    // Enable TWI
-		| _BV(TWIE)    // Enable interrupts
-		| _BV(TWEA)    // Ack incoming transmissions
-		| _BV(TWINT)   // Tell it we're ready for it to do the next byte
-		;
 }
 
 
@@ -260,10 +273,11 @@ void hal_twi_init(Addr local_addr, TWIRecvSlot *trs)
 	/* set the mask to be all 0, meaning all bits of the address are significant */
 	TWAMR = 0;
 
-	// enable interrupts
-	sei();
+	/* configure twi bits */
+	twi_set_control_bits(&twiState_g);
 
-	twi_update(&twiState_g, 0);
+	/* enable interrupts */
+	sei();
 }
 
 void hal_twi_send(Addr dest_addr, char *data, uint8_t len, 
@@ -278,5 +292,11 @@ void hal_twi_send(Addr dest_addr, char *data, uint8_t len,
 	twiState_g.sendDoneCB = sendDoneCB;
 	twiState_g.sendDoneCBData = sendDoneCBData;
 
-	twi_update(&twiState_g, 1);
+	/*
+	 * run the handler so the bus gets requested.  Disable interrupts
+	 * first, because it's not reentrant
+	 */
+	hal_start_atomic();
+	twi_set_control_bits(&twiState_g);
+	hal_end_atomic();
 }
