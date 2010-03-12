@@ -37,6 +37,7 @@ typedef struct twiState
 	// receiving state
 	TWIRecvSlot *trs;
 	uint8_t in_n;
+	int in_done;
 	twiCallbackAct_t recvCallbackAct;
 } twiState_t;
 
@@ -63,14 +64,22 @@ static void print_status(uint16_t status)
 // can be sent during schedule-time, rather than interrupt-time.
 static void doSendCallback(twiCallbackAct_t *tca)
 {
+	// We store the callback and null it out before calling, because
+	// one of our sanity checks upon receiving a new packet to
+	// transmit is that we don't have a pending callback.  However,
+	// the callback is often where new packets get scheduled.
 	twiState_t *twi = tca->twi;
-	twi->sendDoneCB(twi->sendDoneCBData);
+	TWISendDoneFunc cb = twi->sendDoneCB;
+	twi->sendDoneCB = NULL;
+	cb->(twi->sendDoneCBData);
 }
 
 static void end_xmit(twiState_t *twi)
 {
-	twi->out_pkt = NULL;
-	schedule_now((Activation *) &twi->sendCallbackAct);
+	if (twi->out_pkt != NULL) {
+		twi->out_pkt = NULL;
+		schedule_now((Activation *) &twi->sendCallbackAct);
+	}
 }
 
 // This is a similar trampoline function for the receive upcall.
@@ -84,6 +93,7 @@ static void doRecvCallback(twiCallbackAct_t *tca)
 static void abort_recv(twiState_t *twi)
 {
 	twi->in_n = -1;
+	twi->in_done = FALSE;
 	twi->trs->occupied = FALSE;
 }
 
@@ -172,6 +182,7 @@ static void twi_update(twiState_t *twi, uint8_t status)
 		if (!twi->trs->occupied)
 		{
 			twi->trs->occupied = TRUE;
+			twi->in_done = FALSE;
 			twi->in_n = 0;
 		}
 		else
@@ -211,8 +222,9 @@ static void twi_update(twiState_t *twi, uint8_t status)
 
 	case TW_SR_STOP:
 		// end of packet, yay!  upcall into network stack
-		if (twi->in_n > 0)
+		if (!twi->in_done && twi->in_n > 0)
 		{
+			two->in_done = TRUE;
 			schedule_now((Activation *) &twi->recvCallbackAct);
 		}
 		break;
@@ -283,6 +295,7 @@ void hal_twi_send(Addr dest_addr, char *data, uint8_t len,
 {
 	hal_start_atomic();
 	assert(twiState_g.out_pkt == NULL);
+	assert(twiState_g.sendDoneCB == NULL);
 
 	twiState_g.out_pkt = data;
 	twiState_g.out_destaddr = dest_addr;
