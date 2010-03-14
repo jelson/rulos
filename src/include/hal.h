@@ -21,8 +21,12 @@ typedef enum {
 
 void hal_init(BoardConfiguration bc);
 
-void hal_start_atomic();	// block interrupts/signals
-void hal_end_atomic();		// resume interrupts/signals
+// block interrupts/signals; returns previous state of interrupts
+uint8_t hal_start_atomic(void);
+
+// restore previous interrupt state
+void hal_end_atomic(uint8_t old_interrupts);
+
 void hal_idle();			// hw: spin. sim: sleep
 
 #define TIMER1	(1)

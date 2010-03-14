@@ -52,25 +52,29 @@ void schedule_now(Activation *act)
 
 void schedule_us_internal(Time offset_us, Activation *act)
 {
-	//LOGF((logfp, "scheduling act %08x func %08x\n", (int) act, (int) act->func));
-
-	heap_insert(clock_time_us() + offset_us, act);
+	schedule_absolute(clock_time_us() + offset_us, act);
 }
 
 void schedule_absolute(Time at_time, Activation *act)
 {
+	//LOGF((logfp, "scheduling act %08x func %08x\n", (int) act, (int) act->func));
+
+	uint8_t old_interrupts;
+	old_interrupts = hal_start_atomic();
 	heap_insert(at_time, act);
+	hal_end_atomic(old_interrupts);
 }
 
 // this is the expensive one, with a lock
 Time precise_clock_time_us()
 {
 	uint16_t milliintervals;
+	uint8_t old_interrupts;
 
-	hal_start_atomic();
+	old_interrupts = hal_start_atomic();
 	milliintervals = hal_elapsed_milliintervals();
 	_stale_time_us = _real_time_since_boot_us;
-	hal_end_atomic();
+	hal_end_atomic(old_interrupts);
 
 	_stale_time_us += ((_rtc_interval_us * milliintervals) / 1000);
 	return _stale_time_us;
@@ -95,17 +99,18 @@ void scheduler_run_once()
 		Time due_time;
 		Activation *act;
 		int rc;
+		uint8_t old_interrupts;
 
 		r_bool valid = FALSE;
 
-		hal_start_atomic();
+		old_interrupts = hal_start_atomic();
 		rc = heap_peek(&due_time, &act);
 		if (!rc && !later_than(due_time, now))
 		{
 			valid = TRUE;
 			heap_pop();
 		}
-		hal_end_atomic();
+		hal_end_atomic(old_interrupts);
 
 		if (!valid)
 		{

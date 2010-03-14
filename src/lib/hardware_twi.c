@@ -43,6 +43,7 @@ typedef struct twiState
 
 twiState_t twiState_g = {FALSE};
 
+#define TWI_MAGIC 0x82
 
 #if 0
 static void print_status(uint16_t status)
@@ -71,15 +72,15 @@ static void doSendCallback(twiCallbackAct_t *tca)
 	twiState_t *twi = tca->twi;
 	TWISendDoneFunc cb = twi->sendDoneCB;
 	twi->sendDoneCB = NULL;
-	cb->(twi->sendDoneCBData);
+	cb(twi->sendDoneCBData);
 }
 
 static void end_xmit(twiState_t *twi)
 {
-	if (twi->out_pkt != NULL) {
-		twi->out_pkt = NULL;
-		schedule_now((Activation *) &twi->sendCallbackAct);
-	}
+	assert(twi->out_pkt != NULL);
+
+	twi->out_pkt = NULL;
+	schedule_now((Activation *) &twi->sendCallbackAct);
 }
 
 // This is a similar trampoline function for the receive upcall.
@@ -99,30 +100,37 @@ static void abort_recv(twiState_t *twi)
 
 
 
-static void twi_acquire_or_release_bus(twiState_t *twi)
+static void twi_set_control_register(twiState_t *twi, uint8_t bits)
 {
+	bits |=
+		_BV(TWEN) | // enable twi
+		_BV(TWIE) | // enable twi interrupts
+		_BV(TWEA) // ack incoming transmissions
+		;
+
 	// If we have a packet to transmit, and we're not in the start
 	// state, tell the CPU we want it to acquire the bus.
 	if (twi->out_pkt != NULL && !twi->have_bus)
 	{
-		reg_set(&TWCR, TWSTA);
+		bits |= _BV(TWSTA);
 	}
 
 	// Conversely, if we're done sending the packet and are still in
 	// the start state, send the stop state
 	if (twi->out_pkt == NULL && twi->have_bus) {
-		reg_set(&TWCR, TWSTO);
+		bits |= _BV(TWSTO);
 		twi->have_bus = 0;
 	}
+
+	TWCR = bits;
 }
 
 
 static void twi_update(twiState_t *twi, uint8_t status)
 {
-	if (!twi->initted)
-		return;
+	assert(twi->initted == TWI_MAGIC);
 
-	//  print_status(status);
+	//print_status(status);
 
 	switch (status) {
 
@@ -131,6 +139,8 @@ static void twi_update(twiState_t *twi, uint8_t status)
 	//
 	case TW_REP_START:
 	case TW_START:
+		assert(twi->out_pkt != NULL)
+
 		// if we just acquired the bus, send the dest. address
 		TWDR = twi->out_destaddr << 1 | TW_WRITE;
 		twi->have_bus = 1;
@@ -224,7 +234,7 @@ static void twi_update(twiState_t *twi, uint8_t status)
 		// end of packet, yay!  upcall into network stack
 		if (!twi->in_done && twi->in_n > 0)
 		{
-			two->in_done = TRUE;
+			twi->in_done = TRUE;
 			schedule_now((Activation *) &twi->recvCallbackAct);
 		}
 		break;
@@ -244,11 +254,9 @@ static void twi_update(twiState_t *twi, uint8_t status)
 		break;
 	}
   
-	// tell the TWI hardware we've processed the interrupt
-	reg_set(&TWCR, TWINT);
-
-	// acquire or release the bus as necessary
-	twi_acquire_or_release_bus(twi);
+	// tell the TWI hardware we've processed the interrupt,
+	// and acquire or release the bus as necessary.
+	twi_set_control_register(twi, _BV(TWINT));
 }
 
 
@@ -270,7 +278,7 @@ void hal_twi_init(Addr local_addr, TWIRecvSlot *trs)
 	twiState_g.in_n = -1;
 	twiState_g.recvCallbackAct.func = (ActivationFunc) doRecvCallback;
 	twiState_g.recvCallbackAct.twi = &twiState_g;
-	twiState_g.initted = TRUE;
+	twiState_g.initted = TWI_MAGIC;
 
 	/* set 100khz (assuming 8mhz local clock!  fix me...) */
 	TWBR = 32;
@@ -280,20 +288,26 @@ void hal_twi_init(Addr local_addr, TWIRecvSlot *trs)
 
 	/* set the mask to be all 0, meaning all bits of the address are
 	 * significant */
+#if defined(MCUatmega328p)
 	TWAMR = 0;
+#elif defined(MCUatmega8)
 
-	reg_set(&TWCR, TWEN); // enable twi
-	reg_set(&TWCR, TWIE); // enable twi interrupts
-	reg_set(&TWCR, TWEA); // ack incoming transmissions
+#endif
 
 	/* enable interrupts */
 	sei();
+
+	/* enable twi */
+	twi_set_control_register(&twiState_g, 0);
 }
 
 void hal_twi_send(Addr dest_addr, char *data, uint8_t len, 
 				  TWISendDoneFunc sendDoneCB, void *sendDoneCBData)
 {
-	hal_start_atomic();
+	uint8_t old_interrupts = hal_start_atomic();
+	assert(data != NULL);
+	assert(len > 0);
+	assert(twiState_g.initted == TWI_MAGIC);
 	assert(twiState_g.out_pkt == NULL);
 	assert(twiState_g.sendDoneCB == NULL);
 
@@ -304,6 +318,6 @@ void hal_twi_send(Addr dest_addr, char *data, uint8_t len,
 	twiState_g.sendDoneCB = sendDoneCB;
 	twiState_g.sendDoneCBData = sendDoneCBData;
 
-	twi_acquire_or_release_bus(&twiState_g);
-	hal_end_atomic();
+	twi_set_control_register(&twiState_g, 0);
+	hal_end_atomic(old_interrupts);
 }

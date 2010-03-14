@@ -531,14 +531,23 @@ void hal_speedup_clock_ppm(int32_t ratio)
 	// do nothing for now
 }
 
-void hal_start_atomic()
+uint8_t is_blocked = 0;
+
+uint8_t hal_start_atomic()
 {
+	uint8_t retval = is_blocked;
 	sigprocmask(SIG_BLOCK, &mask_set, NULL);
+	is_blocked = 1;
+	return retval;
 }
 
-void hal_end_atomic()
+void hal_end_atomic(uint8_t blocked)
 {
-	sigprocmask(SIG_UNBLOCK, &mask_set, NULL);
+	if (!blocked)
+	{
+		is_blocked = 0;
+		sigprocmask(SIG_UNBLOCK, &mask_set, NULL);
+	}
 }
 
 void hal_idle()

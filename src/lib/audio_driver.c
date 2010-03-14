@@ -85,11 +85,12 @@ void audio_stream_refill(AudioDriver *ad, AudioStream *as CONDSIMARG(uint8_t str
 void audio_update(AudioDriver *ad)
 {
 	schedule_us(AUDIO_UPDATE_INTERVAL, (Activation*) ad);
+	uint8_t old_interrupts;
 
 #if TEST_OUTPUT_ONLY
-	hal_start_atomic();
+	old_interrupts = hal_start_atomic();
 	uint8_t output_insert_avail = ring_insert_avail(ad->output_buffer);
-	hal_end_atomic();
+	hal_end_atomic(old_interrupts);
 	uint8_t c;
 	for (c=0; c<output_insert_avail; c++)
 	{
@@ -100,17 +101,17 @@ void audio_update(AudioDriver *ad)
 #else // TEST_OUTPUT_ONLY
 
 	// jonh not very happy about blocking interrupts for collecting this stuff.
-	hal_start_atomic();
+	old_interrupts = hal_start_atomic();
 	uint8_t output_insert_avail = ring_insert_avail(ad->output_buffer);
-	hal_end_atomic();
+	hal_end_atomic(old_interrupts);
 	int sidx;
 	int8_t most_desperate_stream_index = -1;
 	uint8_t stream_remove_avail[NUM_STREAMS];
 	for (sidx=0; sidx<NUM_STREAMS; sidx++)
 	{
-		hal_start_atomic();
+		old_interrupts = hal_start_atomic();
 		stream_remove_avail[sidx] = ring_remove_avail(ad->stream[sidx].ring);
-		hal_end_atomic();
+		hal_end_atomic(old_interrupts);
 
 		if (most_desperate_stream_index==-1 ||
 			(stream_remove_avail[sidx]

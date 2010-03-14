@@ -30,20 +30,17 @@ void heap_bubble(int ptr)
 
 void heap_insert(Time key, Activation *act)
 {
-	hal_start_atomic();
 	assert(heap_count < HEAP_CAPACITY);	// heap overflow
 	heap[heap_count].key = key;
 	heap[heap_count].activation = act;
 	heap_bubble(heap_count);
 	heap_count += 1;
-	hal_end_atomic();
 }
 
 int heap_peek(/*out*/ Time *key, /*out*/ Activation **act)
 {
 	int retval = -1;
 
-	hal_start_atomic();
 	if (heap_count == 0)
 	{
 		goto done;
@@ -53,13 +50,11 @@ int heap_peek(/*out*/ Time *key, /*out*/ Activation **act)
 	retval = 0;
 
  done:
-	hal_end_atomic();
 	return retval;
 }
 
 void heap_pop()
 {
-	hal_start_atomic();
 	assert(heap_count > 0);	// heap underflow
 	heap[0] = heap[heap_count-1];
 	heap_count -= 1;
@@ -87,5 +82,5 @@ void heap_pop()
 		ptr = candidate;
 	}
  done:
-	hal_end_atomic();
+	return;
 }

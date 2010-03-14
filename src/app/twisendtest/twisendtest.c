@@ -26,9 +26,27 @@ typedef struct {
 	int i;
 } sendAct_t;
 
+
+void board_say(char *s)
+{
+	SSBitmap bm[8];
+	int i;
+
+	ascii_to_bitmap_str(bm, 8, s);
+
+	for (i = 0; i < 8; i++)
+		program_board(i, bm);
+}
+
 void sendMessage(sendAct_t *sa)
 {
-	sa->i++;
+	char buf[9];
+
+	sa->i = (sa->i + 1) % 1000;
+
+	sprintf(buf, "sENd %3d", sa->i);
+	board_say(buf);
+
 	sprintf(sa->sendSlot->msg->data, "HELLO%3d", sa->i);
 	sa->sendSlot->msg->payload_len = strlen(sa->sendSlot->msg->data);
 
@@ -46,10 +64,11 @@ void sendMessage(sendAct_t *sa)
 	
 }
 
+
 void test_netstack()
 {
 	Network net;
-	char data[20];
+	char data[30];
 	SendSlot sendSlot;
 
 	init_clock(10000, TIMER1);
@@ -72,14 +91,16 @@ void test_netstack()
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);
 	cpumon_main_loop();
+	assert(FALSE);
 }
 
 int main()
 {
 	heap_init();
 	util_init();
-	hal_init(bc_rocket0);
+	hal_init(bc_audioboard);
 
+	board_say("  InIt  ");
 	// test_without_netstack();
 	test_netstack();
 

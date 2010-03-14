@@ -47,9 +47,9 @@ UartQueue_t *uart_queue_get()
 
 uint8_t uart_read(uint8_t *c /* OUT */)
 {
-	hal_start_atomic();
+	uint8_t old_interrupts = hal_start_atomic();
 	uint8_t retval = ByteQueue_pop(uart_queue_g.q, c);
-	hal_end_atomic();
+	hal_end_atomic(old_interrupts);
 	return retval;
 }
 

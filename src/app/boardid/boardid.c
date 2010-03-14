@@ -62,7 +62,7 @@ int main()
 {
 	heap_init();
 	util_init();
-	hal_init(bc_chaseclock);
+	hal_init(bc_audioboard);
 	init_clock(100000, TIMER1);
 	board_buffer_module_init();
 

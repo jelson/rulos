@@ -16,22 +16,22 @@ void init_spiflash(SPIFlash *spif)
 	spif->spibuf[1] = &spif->zero_buf;
 	spif->cur_buf_index = 0;
 
-	hal_start_atomic();
+	uint8_t old_interrupts = hal_start_atomic();
 	_spif_start(spif);
-	hal_end_atomic();
+	hal_end_atomic(old_interrupts);
 }
 
 r_bool spiflash_next_buffer_ready(SPIFlash *spif)
 {
-	hal_start_atomic();
+	uint8_t old_interrupts = hal_start_atomic();
 	SPIBuffer *spib = spif->spibuf[1-spif->cur_buf_index];
-	hal_end_atomic();
+	hal_end_atomic(old_interrupts);
 	return spib == &spif->zero_buf;
 }
 
 void spiflash_fill_buffer(SPIFlash *spif, SPIBuffer *spib)
 {
-	hal_start_atomic();
+	uint8_t old_interrupts = hal_start_atomic();
 	LOGF((logfp, "spiflash_fill_buffer got spib %08x => %d; rb %08x\n",
 		(unsigned int) spib,
 		1-spif->cur_buf_index,
@@ -40,7 +40,7 @@ void spiflash_fill_buffer(SPIFlash *spif, SPIBuffer *spib)
 
 	LOGF((logfp, "spiflash_fill_buffer spib %8x spib->count %d spib->rb size %d\n",
 		(int) spib, spib->count, ring_insert_avail(spib->rb)));
-	hal_end_atomic();
+	hal_end_atomic(old_interrupts);
 }
 
 // ATOMIC
