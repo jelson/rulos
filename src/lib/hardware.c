@@ -519,8 +519,11 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, uint8_t timer_id)
 		assert(FALSE);
 	}
 
-	/* re-enable interrupts */
+	/* restore interrupts */
 	hal_end_atomic(old_interrupts);
+
+	/* enable interrupts */
+	sei();
 
 	return actual_us_per_period;
 }
