@@ -459,7 +459,8 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, uint8_t timer_id)
 	uint8_t cs;
 	uint16_t ocr;
 
-	uint8_t old_interrupts = hal_start_atomic();
+	// disable interrupts
+	cli();
 
 	if (timer_id == TIMER1)
 	{
@@ -519,10 +520,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, uint8_t timer_id)
 		assert(FALSE);
 	}
 
-	/* restore interrupts */
-	hal_end_atomic(old_interrupts);
-
-	/* enable interrupts */
+	/* Enable interrupts (regardless of if they were on before or not) */
 	sei();
 
 	return actual_us_per_period;
@@ -754,7 +752,7 @@ static void adc_update(ADCState *adc)
 void hal_uart_init(uint16_t baud)
 {
 	// disable interrupts
-	uint8_t old_interrupts = hal_start_atomic();
+	cli();
 
 	// set baud rate
 	_UBRRH = (unsigned char) baud >> 8;
@@ -770,8 +768,8 @@ void hal_uart_init(uint16_t baud)
 #endif
 	  ;
 
-	// enable interrupts
-	hal_end_atomic(old_interrupts);
+	// enable interrupts, whether or not they'd been previously enabled
+	sei();
 }
 
 /*************************************************************************************/
@@ -803,6 +801,7 @@ void hal_delay_ms(uint16_t __ms)
 }
 
 
+// disable interrupts, and return true if interrupts had been enabled.
 uint8_t hal_start_atomic()
 {
 	uint8_t retval = SREG & _BV(SREG_I);
@@ -810,6 +809,7 @@ uint8_t hal_start_atomic()
 	return retval;
 }
 
+// conditionally enable interrupts
 void hal_end_atomic(uint8_t interrupt_flag)
 {
 	if (interrupt_flag)
