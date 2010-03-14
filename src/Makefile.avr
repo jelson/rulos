@@ -2,7 +2,11 @@
 # not the simulator
 AVR_ONLY_OBJECTS := \
 	hardware.o \
-	hardware_twi.o 
+	hardware_adc.o \
+	hardware_keypad.o \
+	hardware_timers.o \
+	hardware_twi.o \
+	hardware_uart.o
 
 ARCHTARG := $(TARGET).$(MCU).$(BOARD)
 

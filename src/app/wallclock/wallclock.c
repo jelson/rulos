@@ -177,7 +177,7 @@ static void check_uart(WallClockActivation_t *wca)
 {
 	uint8_t msg[8];
 
-	hal_start_atomic();
+	uint8_t old_flags = hal_start_atomic();
 
 	// In case of framing error, clear the queue
 	if (ByteQueue_peek(wca->uq->q, &msg[0]) && msg[0] != 'T') {
@@ -213,7 +213,7 @@ static void check_uart(WallClockActivation_t *wca)
 	wca->display_flag = 25;
 
  done:
-	hal_end_atomic();
+	hal_end_atomic(old_flags);
 
      
 }

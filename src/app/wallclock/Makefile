@@ -2,6 +2,7 @@ ROCKET_ROOT := ../..
 
 MCU := atmega8
 TARGET := wallclock
+BOARD := PCB11
 
 TARGET_OBJECTS := \
 	wallclock.o \

@@ -32,3 +32,85 @@
 	B_NO_BOARD			\
 	B_NO_BOARD			\
 	B_END
+
+
+#ifndef SIM
+
+#if defined(BOARD_PROTO)
+#define BOARDSEL0	GPIO_B2
+#define BOARDSEL1	GPIO_B3
+#define BOARDSEL2	GPIO_B4
+#define DIGSEL0		GPIO_C0
+#define DIGSEL1		GPIO_C1
+#define DIGSEL2		GPIO_C2
+#define SEGSEL0		GPIO_D5
+#define SEGSEL1		GPIO_D6
+#define SEGSEL2		GPIO_D7
+#define DATA		GPIO_B0
+#define STROBE		GPIO_B1
+
+#define	AVAILABLE_ADCS	0x38
+#define	ASSERT_TO_BOARD	1
+
+#elif defined(BOARD_PCB10)
+#define BOARDSEL0	GPIO_B2
+#define BOARDSEL1	GPIO_B3
+#define BOARDSEL2	GPIO_B4
+#define DIGSEL0		GPIO_C0
+#define DIGSEL1		GPIO_C1
+#define DIGSEL2		GPIO_C2
+#define SEGSEL0		GPIO_D5
+#define SEGSEL1		GPIO_D6
+#define SEGSEL2		GPIO_D7
+#define DATA		GPIO_D4
+#define STROBE		GPIO_B1
+
+#define KEYPAD_ROW0 GPIO_D4
+#define KEYPAD_ROW1 GPIO_B2
+#define KEYPAD_ROW2 GPIO_B3
+#define KEYPAD_ROW3 GPIO_B4
+#define KEYPAD_COL0 GPIO_D0
+#define KEYPAD_COL1 GPIO_D1
+#define KEYPAD_COL2 GPIO_D2
+#define KEYPAD_COL3 GPIO_D3
+
+#define	AVAILABLE_ADCS	0x38
+#define	ASSERT_TO_BOARD	1
+
+#elif defined(BOARD_PCB11)
+#define BOARDSEL0	GPIO_B0
+#define BOARDSEL1	GPIO_B1
+#define BOARDSEL2	GPIO_B2
+#define DIGSEL0		GPIO_D5
+#define DIGSEL1		GPIO_D6
+#define DIGSEL2		GPIO_D7
+#define SEGSEL0		GPIO_B3
+#define SEGSEL1		GPIO_B4
+#define SEGSEL2		GPIO_B5
+#define DATA		GPIO_B6
+#define STROBE		GPIO_B7
+
+#define KEYPAD_ROW0 DATA
+#define KEYPAD_ROW1 BOARDSEL0
+#define KEYPAD_ROW2 BOARDSEL1
+#define KEYPAD_ROW3 BOARDSEL2
+#define KEYPAD_COL0 GPIO_D0
+#define KEYPAD_COL1 GPIO_D1
+#define KEYPAD_COL2 GPIO_D2
+#define KEYPAD_COL3 GPIO_D3
+
+#define JOYSTICK_TRIGGER	GPIO_D4
+
+#define	AVAILABLE_ADCS	0x3f
+#define	ASSERT_TO_BOARD	1
+
+#elif defined(BOARD_CUSTOM)
+
+#define	AVAILABLE_ADCS	0x3f	// Good luck, board designer -- no safety check here
+#define	ASSERT_TO_BOARD	0
+
+#else
+# error No board definition given
+#endif
+
+#endif //SIM
