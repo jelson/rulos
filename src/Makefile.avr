@@ -39,6 +39,7 @@ ASMFLAGS += -x assembler-with-cpp -Wa,-gdwarf2
 AVR_LDFLAGS = $(AVR_COMMON_FLAGS)
 AVR_LDFLAGS +=  -Wl,-Map=$(ARCHTARG).map -L$(AVR_OBJDIR) -l$(AVR_LIBNAME) 
 AVR_LDFLAGS += -Wl,--gc-sections # Garbage-collect ununused functions
+AVR_LDFLAGS += $(EXTRA_AVR_LDFLAGS)
 
 
 ## Intel Hex file production flags

@@ -11,7 +11,7 @@ SIM_CFLAGS = -Wall -Werror -g -DSIM -I$(ROCKET_ROOT)/include -I$(SIM_OBJDIR)
 SIM_CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 SIM_CFLAGS += -MD -MP -MT $(SIM_OBJDIR)/$(*F).o -MF $(SIM_OBJDIR)/$(@F).d
 
-SIM_LDFLAGS = -L$(SIM_OBJDIR) -l$(SIM_LIBNAME)
+SIM_LDFLAGS = -L$(SIM_OBJDIR) -l$(SIM_LIBNAME) -lm
 
 ############
 
