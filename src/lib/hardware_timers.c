@@ -51,18 +51,22 @@ uint32_t f_cpu;
 
 void init_f_cpu()
 {
-#if defined(MCUatmega8)
+#ifdef CRYSTAL
+	f_cpu = CRYSTAL;
+#else
+# if defined(MCUatmega8)
 	// read fuses to determine clock frequency
 	uint8_t cksel = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS) & 0x0f;
 	f_cpu = f_cpu_values[cksel-1];
-#elif defined(MCUatmega328p)
+# elif defined(MCUatmega328p)
 	// If we decide to do variable clock rates on 328p, see page 37
 	// for prescale configurations.
 	CLKPR = 0x80;
 	CLKPR = 0;
 	f_cpu = (uint32_t) 8000000;
-#else
-# error Hardware-specific clock code needs help
+# else
+#  error Hardware-specific clock code needs help
+# endif
 #endif
 }
 
@@ -102,22 +106,23 @@ static void find_prescaler(uint32_t req_us_per_period, TimerDef *timerDef,
 	uint16_t *out_ocr	// count limit
 	)
 {
+#define HS_FACTOR 48
 	uint8_t cs;
 	for (cs=1; cs<8; cs++)
 	{
-		// Units: 16hs = 1us
+		// Units: 48hs = 1us.  jelson changed from 16 to 48 because of my 12mhz crystal
 		if (timerDef->prescaler_bits[cs] == 0xff) { continue; }
-		uint32_t hs_per_cpu_tick = 16000000 / f_cpu;
+		uint32_t hs_per_cpu_tick = (HS_FACTOR*1000000) / f_cpu;
 		uint32_t hs_per_prescale_tick = hs_per_cpu_tick << (timerDef->prescaler_bits[cs]);
 		uint32_t prescale_tick_per_period =
-			((req_us_per_period<<4) / hs_per_prescale_tick);
+			((req_us_per_period*HS_FACTOR) / hs_per_prescale_tick) + 1;
 		uint32_t max_prescale_ticks = (((uint32_t) 1)<<timerDef->ocr_bits)-1;
 		if (prescale_tick_per_period > max_prescale_ticks)
 		{
 			// go try a bigger prescaler
 			continue;
 		}
-		*out_us_per_period = (prescale_tick_per_period * hs_per_prescale_tick) >> 4;
+		*out_us_per_period = (prescale_tick_per_period * hs_per_prescale_tick) / HS_FACTOR;
 		*out_cs = cs;
 		*out_ocr = prescale_tick_per_period;
 		return;

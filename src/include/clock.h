@@ -5,15 +5,28 @@
 # error Please include rocket.h instead of this file
 #endif
 
+#include "hal.h"
 
 uint8_t later_than(Time a, Time b);
 
 void init_clock(Time interval_us, uint8_t timer_id);
 
-extern Time _stale_time_us;	
+extern Time _last_scheduler_run_us;
+extern volatile Time _interrupt_driven_jiffy_clock_us; // must have lock to read!
 
-// cheap but only precise to one jiffy
-static inline Time clock_time_us() { return _stale_time_us; }
+// very cheap but only precise to one jiffy.  this should be used my
+// most functions.
+static inline Time clock_time_us() { return _last_scheduler_run_us; }
+
+static inline Time get_interrupt_driven_jiffy_clock() {
+	Time retval;
+	uint8_t old_interrupts = hal_start_atomic();
+	retval = _interrupt_driven_jiffy_clock_us;
+	hal_end_atomic(old_interrupts);
+	return retval;
+}
+
+
 
 // expensive but more accurate
 Time precise_clock_time_us(); 

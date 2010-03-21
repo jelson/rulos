@@ -27,6 +27,8 @@ AVR_CFLAGS += -fdata-sections -ffunction-sections # Put all funcs/data in their 
 AVR_CFLAGS += -MD -MP -MT $(AVR_OBJDIR)/$(*F).o -MF $(AVR_OBJDIR)/$(@F).d 
 AVR_CFLAGS += -gdwarf-2 -std=gnu99 -Os 
 AVR_CFLAGS += -DMCU$(MCU)=1 -DBOARD_$(BOARD)
+AVR_CFLAGS += $(EXTRA_AVR_CFLAGS)
+
 
 ## Assembly specific flags
 ASMFLAGS = $(AVR_COMMON_FLAGS)

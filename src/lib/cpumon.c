@@ -1,6 +1,10 @@
 #include "rocket.h"
 #include "cpumon.h"
 
+#ifdef TIMING_DEBUG
+# include "hardware.h"
+#endif
+
 uint8_t _run_main_loop;
 
 void cpumon_act(CpumonAct *act);
@@ -21,11 +25,28 @@ void cpumon_init(CpumonAct *act)
 
 void cpumon_main_loop()
 {
+	Time now;
+
+	now = get_interrupt_driven_jiffy_clock();
+
 	_run_main_loop = TRUE;
 	while (_run_main_loop)
 	{
-		scheduler_run_once();
-		hal_idle();
+		_last_scheduler_run_us = now;
+
+		scheduler_run_once(now);
+
+		do {
+#ifdef TIMING_DEBUG
+			gpio_clr(GPIO_D4);
+#endif
+			hal_idle();
+#ifdef TIMING_DEBUG
+			gpio_set(GPIO_D4);
+#endif
+			now = get_interrupt_driven_jiffy_clock();
+		} while (_last_scheduler_run_us == now);
+
 		spin_counter_increment();
 	}
 }
