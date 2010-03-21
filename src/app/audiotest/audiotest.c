@@ -1,13 +1,23 @@
 #include <inttypes.h>
 #include <string.h>
+#include <math.h>
 
 #include "rocket.h"
+#ifndef SIM
 #include "hardware.h"
+#endif
 
 #define REGISTER_SER  GPIO_D5  // serial data input
 #define REGISTER_LAT  GPIO_D6  // assert register to parallel output lines
 #define REGISTER_CLK  GPIO_D7  // shift in data to register
 
+#define SAMPLE_RATE_HZ 8000
+#define USEC_PER_SAMPLE (1000000/SAMPLE_RATE_HZ)
+#define MAX_SAMPLES 100
+
+#define NOTE_LEN 500000
+
+#ifndef SIM
 static void init_audio_pins()
 {
 	gpio_make_output(REGISTER_SER);
@@ -35,42 +45,142 @@ static inline void latch_output()
 	gpio_set(REGISTER_LAT);
 	gpio_clr(REGISTER_LAT);
 }
+#else // sim
+
+static inline void shift_out_8bits(uint8_t num)
+{
+	LOGF((logfp, "%d,\n", num));
+}
+
+static inline void latch_output()
+{
+}
+static void init_audio_pins()
+{
+}
+#endif
 
 
 typedef struct {
 	ActivationFunc f;
-	int i;
-} testAct_t;
+	uint8_t waveform[MAX_SAMPLES];
+	uint16_t num_samples;
+	uint16_t sample_idx;
+} waveformAct_t;
 
 
-void test_func(testAct_t *ta)
+void emit_waveform(waveformAct_t *wa)
 {
-	schedule_us(1000, (Activation *) ta);
-
-	// assert the previous int
+	// assert the previous value.  We do this at the beginning to
+	// reduce jitter.
 	latch_output();
 
-	// inc
-	ta->i = (ta->i + 1) % 256;
+	schedule_us(USEC_PER_SAMPLE, (Activation *) wa);
 
-	// shift the next int
-	shift_out_8bits(ta->i);
-	//shift_out_8bits(128);
+	if (wa->num_samples == 0) {
+		shift_out_8bits(0);
+		return;
+	}
+
+	wa->sample_idx = (wa->sample_idx + 1) % wa->num_samples;
+	shift_out_8bits(wa->waveform[wa->sample_idx]);
 }
+
+
+void start_frequency(waveformAct_t *ta, float frequency)
+{
+	LOGF((logfp, "starting frequency %f\n", frequency));
+
+	// silence
+	if (frequency == 0)
+	{
+		ta->num_samples = 0;
+		return;
+	}
+
+	uint16_t num_samples = SAMPLE_RATE_HZ / frequency;
+
+	if (num_samples > MAX_SAMPLES)
+		return;
+
+	uint16_t i;
+	for (i = 0; i < num_samples; i++)
+		ta->waveform[i] = 128 + (128.0 * sin(i*frequency*2*3.14159/(1.0*SAMPLE_RATE_HZ)));
+	ta->num_samples = num_samples;
+	ta->sample_idx = 0;
+}
+
+
+typedef struct {
+	ActivationFunc f;
+	waveformAct_t *wa;
+	int i;
+} changeFrequencyAct_t;
+
+void change_frequency(changeFrequencyAct_t *cfa)
+{
+	float scale[] = { 
+		261.63, // c4
+		293.66, // d4
+		329.63, // e4
+		349.23, // f4
+		392.00, // g4
+		440.00, // a4
+		493.88, // b4
+		523.25, // c5
+		0 // rest
+		,-1};
+
+	cfa->i++;
+	if (scale[cfa->i] == -1)
+		cfa->i = 0;
+
+	start_frequency(cfa->wa, scale[cfa->i]);
+	schedule_us(NOTE_LEN, (Activation *) cfa);
+}
+
+
+waveformAct_t wa;
+changeFrequencyAct_t cfa;
 
 int main()
 {
 	heap_init();
 	util_init();
 	hal_init(bc_audioboard);
-	init_clock(1000, TIMER1);
+	init_clock(USEC_PER_SAMPLE, TIMER1);
 
 	init_audio_pins();
 
-	testAct_t ta;
-	ta.f = (ActivationFunc) test_func;
-	ta.i = 0;
-	schedule_now((Activation *) &ta);
+	wa.f = (ActivationFunc) emit_waveform;
+	schedule_now((Activation *) &wa);
+	start_frequency(&wa, 0);
+
+#if 0
+	wa.waveform[0] = 179;
+	wa.waveform[1] = 221;
+	wa.waveform[2] = 248;
+	wa.waveform[3] = 255;
+	wa.waveform[4] = 241;
+	wa.waveform[5] = 208;
+	wa.waveform[6] = 161;
+	wa.waveform[7] = 109;
+	wa.waveform[8] = 60;
+	wa.waveform[9] = 22;
+	wa.waveform[10] = 2;
+	wa.waveform[11] = 3;
+	wa.waveform[12] = 24;
+	wa.waveform[13] = 63;
+	wa.waveform[14] = 128;
+	wa.num_samples = 15;
+	wa.sample_idx = 0;
+#endif
+
+
+	cfa.wa = &wa;
+	cfa.f = (ActivationFunc) change_frequency;
+	cfa.i = -1;
+	schedule_now((Activation *) &cfa);
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);
