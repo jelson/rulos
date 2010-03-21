@@ -9,7 +9,7 @@
  * Functions that are separately implemented by both the simulator and the real hardware
  */
 
-typedef void (*Handler)();
+typedef void (*Handler)(void *data);
 
 typedef enum {
 	bc_rocket0,
@@ -31,7 +31,7 @@ void hal_idle();			// hw: spin. sim: sleep
 
 #define TIMER1	(1)
 #define TIMER2	(2)
-uint32_t hal_start_clock_us(uint32_t us, Handler handler, uint8_t timer_id);
+uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t timer_id);
 
 void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff);
 char hal_read_keybuf();

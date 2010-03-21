@@ -481,7 +481,9 @@ static void sim_poll_keyboard()
 /**************** clock ****************/
 
 Handler _sensor_interrupt_handler = NULL;
+void *_sensor_interrupt_data = NULL;
 Handler user_clock_handler;
+void *user_clock_data;
 const uint32_t sensor_interrupt_simulator_counter_period = 507;
 uint32_t sensor_interrupt_simulator_counter;
 
@@ -492,7 +494,7 @@ static void sim_clock_handler()
 	{
 		if (_sensor_interrupt_handler != NULL)
 		{
-			_sensor_interrupt_handler();
+			_sensor_interrupt_handler(_sensor_interrupt_data);
 		}
 		sensor_interrupt_simulator_counter = 0;
 	}
@@ -501,10 +503,10 @@ static void sim_clock_handler()
 	sim_audio_poll("clock poll");
 	sim_spi_poke();
 
-	user_clock_handler();
+	user_clock_handler(user_clock_data);
 }
 
-uint32_t hal_start_clock_us(uint32_t us, Handler handler, uint8_t timer_id)
+uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t timer_id)
 {
 	struct itimerval ivalue, ovalue;
 	ivalue.it_interval.tv_sec = us/1000000;
@@ -513,6 +515,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, uint8_t timer_id)
 	setitimer(ITIMER_REAL, &ivalue, &ovalue);
 
 	user_clock_handler = handler;
+	user_clock_data = data;
 	signal(SIGALRM, sim_clock_handler);
 	
 	return us;
@@ -570,9 +573,10 @@ void hal_delay_ms(uint16_t ms)
 }
 
 
-void sensor_interrupt_register_handler(Handler handler)
+void sensor_interrupt_register_handler(Handler handler, void *data)
 {
 	_sensor_interrupt_handler = handler;
+	_sensor_interrupt_data = data;
 }
 
 void hal_init(BoardConfiguration bc)

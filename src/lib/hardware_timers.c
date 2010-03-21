@@ -16,16 +16,19 @@
 
 
 
-void null_handler()
+void null_handler(void *data)
 {
 }
 
 Handler timer1_handler = null_handler;
+void *timer1_data = NULL;
+
 Handler timer2_handler = null_handler;
+void *timer2_data = NULL;
 
 ISR(TIMER1_COMPA_vect)
 {
-	timer1_handler();
+	timer1_handler(timer1_data);
 }
 
 #if defined(MCUatmega8)
@@ -36,7 +39,7 @@ ISR(TIMER2_COMPA_vect)
 # error hardware-specific timer code needs help!
 #endif
 {
-	timer2_handler();
+	timer2_handler(timer2_data);
 }
 
 uint32_t f_cpu_values[] = {
@@ -130,7 +133,7 @@ static void find_prescaler(uint32_t req_us_per_period, TimerDef *timerDef,
 	assert(FALSE);	// might need a software scaler
 }
 
-uint32_t hal_start_clock_us(uint32_t us, Handler handler, uint8_t timer_id)
+uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t timer_id)
 {
 	uint32_t actual_us_per_period;
 		// may not equal what we asked for, because of prescaler rounding.
@@ -150,6 +153,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, uint8_t timer_id)
 		tccr1b |= (cs & 1) ? _BV(CS10) : 0;
 
 		timer1_handler = handler;
+		timer1_data = data;
 
 		OCR1A = ocr;
 		TCCR1A = 0;
@@ -177,6 +181,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, uint8_t timer_id)
 		tccr2 |= (cs & 1) ? _BV(CS20) : 0;
 
 		timer2_handler = handler;
+		timer2_data = data;
 
 #if defined(MCUatmega8)
 		OCR2 = ocr;
@@ -240,21 +245,25 @@ void hal_speedup_clock_ppm(int32_t ratio)
 }
 
 
-void hardware_assign_timer_handler(uint8_t timer_id, Handler handler)
+#if 0
+void hardware_assign_timer_handler(uint8_t timer_id, Handler handler, void *data)
 {
 	if (timer_id==TIMER1)
 	{
 		timer1_handler = handler;
+		timer1_data = data;
 	}
 	else if (timer_id==TIMER2)
 	{
 		timer2_handler = handler;
+		timer2_data = data;
 	}
 	else
 	{
 		assert(FALSE);
 	}
 }
+#endif
 
 void hal_delay_ms(uint16_t __ms)
 {

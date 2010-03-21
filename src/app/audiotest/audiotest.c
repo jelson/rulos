@@ -11,9 +11,9 @@
 #define REGISTER_LAT  GPIO_D6  // assert register to parallel output lines
 #define REGISTER_CLK  GPIO_D7  // shift in data to register
 
-#define SAMPLE_RATE_HZ 8000
+#define SAMPLE_RATE_HZ 12000
 #define USEC_PER_SAMPLE (1000000/SAMPLE_RATE_HZ)
-#define MAX_SAMPLES 100
+#define MAX_SAMPLES 250
 
 #define NOTE_LEN 500000
 
@@ -75,7 +75,9 @@ void emit_waveform(waveformAct_t *wa)
 	// reduce jitter.
 	latch_output();
 
+#ifdef USE_SCHEDULER_FOR_WAVEFORM_PLAYBACK
 	schedule_us(USEC_PER_SAMPLE, (Activation *) wa);
+#endif
 
 	if (wa->num_samples == 0) {
 		shift_out_8bits(0);
@@ -148,13 +150,27 @@ int main()
 	heap_init();
 	util_init();
 	hal_init(bc_audioboard);
-	init_clock(USEC_PER_SAMPLE, TIMER1);
+	init_clock(100000, TIMER1);
 
 	init_audio_pins();
 
+
+	memset(&wa, 0, sizeof(wa));
+	start_frequency(&wa, 0);
+
+	cfa.wa = &wa;
+	cfa.f = (ActivationFunc) change_frequency;
+	cfa.i = -1;
+	schedule_now((Activation *) &cfa);
+
+
+#ifdef USE_SCHEDULER_FOR_WAVEFORM_PLAYBACK
 	wa.f = (ActivationFunc) emit_waveform;
 	schedule_now((Activation *) &wa);
-	start_frequency(&wa, 0);
+#else
+	hal_start_clock_us(USEC_PER_SAMPLE, (Handler) emit_waveform, &wa, TIMER2);
+#endif
+
 
 #if 0
 	wa.waveform[0] = 179;
@@ -177,10 +193,6 @@ int main()
 #endif
 
 
-	cfa.wa = &wa;
-	cfa.f = (ActivationFunc) change_frequency;
-	cfa.i = -1;
-	schedule_now((Activation *) &cfa);
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);
