@@ -101,6 +101,12 @@ int main()
 		(FetchCalcDecorationValuesIfc*) &daer.decoration_ifc);
 */
 
+	DScrollMsgAct dsm;
+	dscrlmsg_init(&dsm, 1, "bong", 100);
+	IdleDisplayAct idle;
+	idle_display_init(&idle, &dsm, &cpumon);
+
+
 	cpumon_main_loop();
 
 	return 0;
