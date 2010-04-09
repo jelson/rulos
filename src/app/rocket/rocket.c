@@ -121,10 +121,6 @@ int main()
 
 #define DEBUG_IDLE_BUSY 0
 #if DEBUG_IDLE_BUSY
-	DScrollMsgAct dsm;
-	dscrlmsg_init(&dsm, 2, "bong", 100);
-	IdleDisplayAct idle;
-	idle_display_init(&idle, &dsm, &cpumon);
 #endif // DEBUG_IDLE_BUSY
 
 /*
@@ -134,6 +130,11 @@ int main()
 		"000bc",
 		(Time) 1300000);
 */
+
+	DScrollMsgAct dsm;
+	dscrlmsg_init(&dsm, 2, "bong", 100);
+	IdleDisplayAct idle;
+	idle_display_init(&idle, &dsm, &cpumon);
 
 	cpumon_main_loop();
 
