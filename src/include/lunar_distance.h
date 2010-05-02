@@ -9,9 +9,10 @@ typedef struct {
 	DriftAnim da;
 	BoardBuffer dist_board;
 	BoardBuffer speed_board;
+	int adc_channel;
 } LunarDistance;
 
-void lunar_distance_init(LunarDistance *ld, uint8_t dist_b0, uint8_t speed_b0);
+void lunar_distance_init(LunarDistance *ld, uint8_t dist_b0, uint8_t speed_b0, int adc_channel);
 void lunar_distance_reset(LunarDistance *ld);
 void lunar_distance_set_velocity_256ths(LunarDistance *ld, uint16_t frac);
 

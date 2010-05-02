@@ -51,6 +51,8 @@ COMMON_OBJECTS = \
 	slow_boot.o \
 	ring_buffer.o \
 	audio_driver.o \
+	quadknob.o \
+	potsticker.o \
 
 
 .PHONY: all

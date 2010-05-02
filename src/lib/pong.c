@@ -61,8 +61,8 @@ void pong_serve(Pong *pong, uint8_t from_player)
 {
 	pong->x = BALLMINX;
 	pong->y = (deadbeef_rand() % (BALLMAXY - BALLMINY)) + BALLMINY;
-	pong->dx = PS((deadbeef_rand() & 7)+7);
-	pong->dy = PS((deadbeef_rand() & 7)+4);
+	pong->dx = PS(((deadbeef_rand() & 7)+7) << 1);
+	pong->dy = PS(((deadbeef_rand() & 7)+4) << 1);
 	if (from_player)
 	{
 		pong->x = BALLMAXX;
@@ -95,6 +95,8 @@ void pong_intersect_paddle(Pong *pong, uint8_t player, int by1)
 	else
 	{
 		ac_skip_to_clip(pong->audioClient, AUDIO_STREAM_BURST_EFFECTS, sound_pong_paddle_bounce, sound_silence);
+		pong->dx += PS((deadbeef_rand() % 5) - 2);
+		pong->dy += PS((deadbeef_rand() % 5) - 2);
 	}
 }
 
@@ -207,12 +209,16 @@ UIEventDisposition pong_event_handler(
 	switch (evt)
 	{
 		case '1':
+		case 'p':
 			pong->paddley[0] = max(pong->paddley[0]-2, 0); break;
 		case '4':
+		case 'q':
 			pong->paddley[0] = min(pong->paddley[0]+2, 22-PADDLEHEIGHT); break;
 		case '3':
+		case 'r':
 			pong->paddley[1] = max(pong->paddley[1]-2, 0); break;
 		case '6':
+		case 's':
 			pong->paddley[1] = min(pong->paddley[1]+2, 22-PADDLEHEIGHT); break;
 		case uie_focus:
 			if (!pong->focused)

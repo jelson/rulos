@@ -55,6 +55,7 @@ typedef struct s_launch {
 
 	Screen4 *s4;
 	DScrollMsgAct dscrlmsg;
+	BoardBuffer code_bbuf;
 	BoardBuffer textentry_bbuf;
 	NumericInputAct textentry;
 	RasterBigDigit bigDigit;

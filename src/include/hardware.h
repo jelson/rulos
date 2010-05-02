@@ -25,6 +25,16 @@
 #define GPIO_D6  (&DDRD), (&PORTD), (&PIND), (PORTD6)
 #define GPIO_D7  (&DDRD), (&PORTD), (&PIND), (PORTD7)
 
+// For when you simply must store the pin definition dynamically.
+typedef struct s_iopindef {
+	volatile uint8_t *ddr;
+	volatile uint8_t *port;
+	volatile uint8_t *pin;
+	uint8_t bit;
+} IOPinDef;
+#define PINDEF(IOPIN)	{IOPIN}
+#define PINUSE(IOPIN)	(IOPIN).ddr, (IOPIN).port, (IOPIN).pin, (IOPIN).bit
+
 /*
  * set a bit in a register
  */

@@ -36,6 +36,7 @@
 #include "hobbs.h"
 #include "screenblanker.h"
 #include "slow_boot.h"
+#include "potsticker.h"
 
 
 /************************************************************************************/
@@ -58,6 +59,7 @@ typedef struct {
 	ScreenBlanker screenblanker;
 	ScreenBlankerSender screenblanker_sender;
 	SlowBoot slow_boot;
+	PotSticker potsticker;
 } Rocket0;
 
 #define THRUSTER_X_CHAN	3
@@ -70,11 +72,14 @@ typedef struct {
 #define THRUSTER_Y_CHAN	2
 #endif
 
+#define POTSTICKER_CHANNEL 0
+#define SPEED_POT_CHANNEL 1
+
 void init_rocket0(Rocket0 *r0)
 {
 	drtc_init(&r0->dr, 0, clock_time_us()+20000000);
 	init_network(&r0->network, ROCKET_ADDR);
-	lunar_distance_init(&r0->ld, 1, 2);
+	lunar_distance_init(&r0->ld, 1, 2, SPEED_POT_CHANNEL);
 	init_audio_client(&r0->audio_client, &r0->network);
 	memset(&r0->thrusterUpdate, 0, sizeof(r0->thrusterUpdate));
 	init_hpam(&r0->hpam, 7, r0->thrusterUpdate);
@@ -100,6 +105,13 @@ void init_rocket0(Rocket0 *r0)
 	init_hobbs(&r0->hobbs, &r0->hpam, &r0->idle);
 
 	init_slow_boot(&r0->slow_boot, &r0->screenblanker, &r0->audio_client);
+
+	init_potsticker(&r0->potsticker,
+		POTSTICKER_CHANNEL,
+		(InputInjectorIfc*) &r0->cp.direct_injector,
+		9,
+		'p',
+		'q');
 }
 
 static Rocket0 rocket0;	// allocate obj in .bss so it's easy to count
@@ -131,10 +143,12 @@ int main()
 		(Time) 1300000);
 */
 
+#if MEASURE_CPU_FOR_RULOS_PAPER
 	DScrollMsgAct dsm;
 	dscrlmsg_init(&dsm, 2, "bong", 100);
 	IdleDisplayAct idle;
 	idle_display_init(&idle, &dsm, &cpumon);
+#endif // MEASURE_CPU_FOR_RULOS_PAPER
 
 	cpumon_main_loop();
 

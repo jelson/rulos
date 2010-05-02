@@ -28,6 +28,7 @@ void launch_init(Launch *launch, Screen4 *s4, Booster *booster, AudioClient *aud
 
 	launch->s4 = s4;
 	dscrlmsg_init(&launch->dscrlmsg, s4->board0, "", 120);
+	board_buffer_init(&launch->code_bbuf DBG_BBUF_LABEL("code"));
 	board_buffer_init(&launch->textentry_bbuf DBG_BBUF_LABEL("launch"));
 	RowRegion rowregion = {&launch->textentry_bbuf, 0, NUM_DIGITS};
 	numeric_input_init(
@@ -54,6 +55,10 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 	// teardown
 	booster_set(launch->booster, FALSE);
 
+	if (board_buffer_is_stacked(&launch->code_bbuf))
+	{
+		board_buffer_pop(&launch->code_bbuf);
+	}
 	if (board_buffer_is_stacked(&launch->textentry_bbuf))
 	{
 		// be sure cursor is removed before we try to pop textentry's bbuf
@@ -114,12 +119,19 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 #define LAUNCH_ENTER_CODE_MSG "Initiate launch sequence. Enter code xxxx.  "
 			assert(strlen(LAUNCH_ENTER_CODE_MSG) < sizeof(launch->launch_code_str));
 			strcpy(launch->launch_code_str, LAUNCH_ENTER_CODE_MSG);
-
-			launch->launch_code_str[37] = '0' + ((launch->launch_code / 1000) % 10);
-			launch->launch_code_str[38] = '0' + ((launch->launch_code /  100) % 10);
-			launch->launch_code_str[39] = '0' + ((launch->launch_code /   10) % 10);
-			launch->launch_code_str[40] = '0' + ((launch->launch_code /    1) % 10);
+			char code_str[8];
+			code_str[0] = 'c';
+			code_str[1] = 'o';
+			code_str[2] = 'd';
+			code_str[3] = 'e';
+			code_str[4] = launch->launch_code_str[37] = '0' + ((launch->launch_code / 1000) % 10);
+			code_str[5] = launch->launch_code_str[38] = '0' + ((launch->launch_code /  100) % 10);
+			code_str[6] = launch->launch_code_str[39] = '0' + ((launch->launch_code /   10) % 10);
+			code_str[7] = launch->launch_code_str[40] = '0' + ((launch->launch_code /    1) % 10);
 			dscrlmsg_set_msg(&launch->dscrlmsg, launch->launch_code_str);
+
+			ascii_to_bitmap_str(launch->code_bbuf.buffer, NUM_DIGITS, code_str);
+			board_buffer_draw(&launch->code_bbuf);
 		}
 		else
 		{
@@ -132,6 +144,7 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 
 	if (launch->state == launch_state_enter_code)
 	{
+		board_buffer_push(&launch->code_bbuf, launch->s4->board0+1);
 		board_buffer_push(&launch->textentry_bbuf, launch->s4->board0+2);
 		launch->textentry.handler.func(
 			(UIEventHandler*) &launch->textentry.handler, uie_focus);

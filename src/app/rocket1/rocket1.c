@@ -29,6 +29,7 @@
 #include "remote_keyboard.h"
 #include "remote_bbuf.h"
 #include "remote_uie.h"
+#include "quadknob.h"
 
 
 /************************************************************************************/
@@ -89,6 +90,19 @@ int main()
 	input_poller_init(&ip, &rks.forwardLocalStrokes);
 #endif
 
+#ifndef SIM
+	// IO pins aren't defined for SIM. Clunky. Could simulate them?
+	IOPinDef q0pin0 = PINDEF(GPIO_C0);
+	IOPinDef q0pin1 = PINDEF(GPIO_C1);
+	QuadKnob q0;
+	init_quadknob(&q0, &rks.forwardLocalStrokes, &q0pin0, &q0pin1, 'r', 's');
+
+	IOPinDef q1pin0 = PINDEF(GPIO_C2);
+	IOPinDef q1pin1 = PINDEF(GPIO_C3);
+	QuadKnob q1;
+	init_quadknob(&q1, &rks.forwardLocalStrokes, &q1pin0, &q1pin1, 'a', 'b');
+#endif
+
 	ScreenBlankerListener sbl;
 	init_screenblanker_listener(&sbl, &network, bc_rocket1);
 
@@ -101,11 +115,12 @@ int main()
 		(FetchCalcDecorationValuesIfc*) &daer.decoration_ifc);
 */
 
+#if MEASURE_CPU_FOR_RULOS_PAPER
 	DScrollMsgAct dsm;
 	dscrlmsg_init(&dsm, 1, "bong", 100);
 	IdleDisplayAct idle;
 	idle_display_init(&idle, &dsm, &cpumon);
-
+#endif // MEASURE_CPU_FOR_RULOS_PAPER
 
 	cpumon_main_loop();
 

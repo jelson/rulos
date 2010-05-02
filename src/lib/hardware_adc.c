@@ -80,17 +80,31 @@ uint16_t hal_read_adc(uint8_t idx)
 
 static void init_adc(ADCState *adc, Time scan_period)
 {
-	adc->func = (ActivationFunc) adc_update;
-	adc->scan_period = scan_period;
-	uint8_t idx;
-	for (idx=0; idx<NUM_ADCS; idx++)
+	static r_bool initted = FALSE;
+	if (initted)
 	{
-		adc->enable[idx] = FALSE;
+		// take the min of all requested periods
+		if (scan_period < adc->scan_period)
+		{
+			adc->scan_period = scan_period;
+		}
 	}
+	else
+	{
+		adc->func = (ActivationFunc) adc_update;
+		adc->scan_period = scan_period;
+		uint8_t idx;
+		for (idx=0; idx<NUM_ADCS; idx++)
+		{
+			adc->enable[idx] = FALSE;
+		}
 
-	reg_set(&ADCSRA, ADEN); // enable ADC
+		reg_set(&ADCSRA, ADEN); // enable ADC
 
-	schedule_us(1, (Activation*) adc);
+		initted = TRUE;
+
+		schedule_us(1, (Activation*) adc);
+	}
 }
 
 
