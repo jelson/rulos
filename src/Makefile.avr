@@ -88,7 +88,7 @@ $(AVR_OBJDIR)/%.o: %.c
 ##Build library (to avoid linking dead objects)
 $(AVR_LIB_FILE): $(AVR_LIB_OBJECTS)
 	rm -f $@
-	ar r $@ $(AVR_LIB_OBJECTS)
+	avr-ar r $@ $(AVR_LIB_OBJECTS)
 
 ##Link
 $(ARCHTARG).elf: $(AVR_LIB_FILE) $(AVR_TARGET_OBJECTS)
