@@ -322,7 +322,7 @@ static void uart_simulator_input(int c)
 	draw_uart_input_window();
 
 	// upcall to the uart code
-	uart_receive(c);
+	uart_receive(RULOS_UART0, c);
 }
 
 static void uart_simulator_stop()

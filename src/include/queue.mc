@@ -55,4 +55,5 @@ uint8_t TYPE##Queue_length(TYPE##Queue *bq) \
 void TYPE##Queue_clear(TYPE##Queue *bq) \
 { \
 	bq->size = 0; \
-} \
+} 
+

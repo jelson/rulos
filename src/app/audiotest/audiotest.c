@@ -138,7 +138,7 @@ void change_frequency(changeFrequencyAct_t *cfa)
 		cfa->i = 0;
 
 	start_frequency(cfa->wa, scale[cfa->i]);
-	schedule_us(NOTE_LEN, (Activation *) cfa);
+//	schedule_us(NOTE_LEN, (Activation *) cfa);
 }
 
 
