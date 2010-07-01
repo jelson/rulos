@@ -23,18 +23,17 @@ void cpumon_init(CpumonAct *act)
 	// exits once due to message from phase_measure; next call runs forever.
 }
 
+volatile uint8_t run_scheduler_now = FALSE;
+
 void cpumon_main_loop()
 {
-	Time now;
-
-	now = get_interrupt_driven_jiffy_clock();
-
 	_run_main_loop = TRUE;
+
 	while (_run_main_loop)
 	{
-		_last_scheduler_run_us = now;
+		run_scheduler_now = FALSE;
 
-		scheduler_run_once(now);
+		scheduler_run_once();
 
 		do {
 #ifdef TIMING_DEBUG
@@ -44,8 +43,7 @@ void cpumon_main_loop()
 #ifdef TIMING_DEBUG
 			gpio_set(GPIO_D4);
 #endif
-			now = get_interrupt_driven_jiffy_clock();
-		} while (_last_scheduler_run_us == now);
+		} while (!run_scheduler_now);
 
 		spin_counter_increment();
 	}

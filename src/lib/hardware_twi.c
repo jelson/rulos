@@ -391,7 +391,11 @@ void hal_twi_init(Addr local_addr, TWIRecvSlot *trs)
 	twiState_g.initted = TWI_MAGIC;
 
 	/* set 100khz (assuming 8mhz local clock!  fix me...) */
+#ifdef CUSTOM_TWBR
+	TWBR = CUSTOM_TWBR;
+#else
 	TWBR = 32;
+#endif
 
 	/* configure the local address */
 	TWAR = local_addr << 1;

@@ -20,6 +20,9 @@ Time _last_scheduler_run_us;
 
 uint32_t _spin_counter;
 
+extern volatile uint8_t run_scheduler_now;
+
+
 // Returns true if a > b using rollover math, assuming 32-bit signed time values
 uint8_t later_than(Time a, Time b)
 {
@@ -39,6 +42,7 @@ void clock_handler(void *data)
 	// NB we assume this runs in interrupt context and is hence
 	// automatically atomic.
 	_interrupt_driven_jiffy_clock_us += _rtc_interval_us;
+	run_scheduler_now = TRUE;
 #ifdef TIMING_DEBUG
 	gpio_clr(GPIO_D5);
 #endif
@@ -69,6 +73,7 @@ void schedule_us(Time offset_us, Activation *act)
 void schedule_now(Activation *act)
 {
 	schedule_us_internal(0, act);
+	run_scheduler_now = TRUE;
 }
 
 void schedule_us_internal(Time offset_us, Activation *act)
@@ -120,7 +125,8 @@ uint32_t read_spin_counter()
 
 void scheduler_run_once()
 {
-	Time now = clock_time_us();
+	// update output of clock_time_us()
+	_last_scheduler_run_us = get_interrupt_driven_jiffy_clock();
 
 	while (1)	// run until nothing to do for this time
 	{
@@ -136,7 +142,7 @@ void scheduler_run_once()
 #endif
 		old_interrupts = hal_start_atomic();
 		rc = heap_peek(&due_time, &act);
-		if (!rc && !later_than(due_time, now))
+		if (!rc && !later_than(due_time, _last_scheduler_run_us))
 		{
 			valid = TRUE;
 			heap_pop();
