@@ -4,6 +4,9 @@ MCU := atmega328p
 BOARD := CUSTOM
 TARGET := locatortest
 
+# Set twi to 500mhz (assuming 8 mhz processor)
+EXTRA_AVR_CFLAGS += -DCUSTOM_TWBR=0
+
 TARGET_OBJECTS := \
 	locatortest.o
 
