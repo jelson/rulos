@@ -178,16 +178,21 @@ static void check_uart(WallClockActivation_t *wca)
 
 	uint8_t old_flags = hal_start_atomic();
 
+	LOGF((logfp, "uart: %d chars so far\n", ByteQueue_length(wca->recvQueue->q));
+
 	// In case of framing error, clear the queue
 	if (ByteQueue_peek(wca->recvQueue->q, &msg[0]) && msg[0] != 'T') {
+		LOGF((logfp, "first char mismatch\n"));
 		uart_reset_recvq(wca->recvQueue);
 		goto done;
 	}
 
 	// If there are fewer than 8 characters, it could just be that the
 	// message is still in transit; do nothing.
-	if (ByteQueue_length(wca->recvQueue->q) < 8)
+	if (ByteQueue_length(wca->recvQueue->q) < 8) {
+		LOGF((logfp, "only %d chars so far\n", ByteQueue_length(wca->recvQueue->q));
 		goto done;
+	}
 
 	// There are (at least) 8 characters - great!  Copy them in and
 	// reset the queue.
@@ -217,6 +222,8 @@ static void check_uart(WallClockActivation_t *wca)
 
 static void update(WallClockActivation_t *wca)
 {
+	LOGF((logfp, "running update\n"));
+
 	// compute how much time has passed since we were last called
 	Time now = clock_time_us();
 	Time interval_us = now - wca->last_redraw_time;
