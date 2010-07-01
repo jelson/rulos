@@ -73,6 +73,8 @@ void hal_twi_init(Addr local_addr, TWIRecvSlot *trs);
 typedef void (*TWISendDoneFunc)(void *user_data);
 void hal_twi_send(Addr dest_addr, char *data, uint8_t len, 
 				  TWISendDoneFunc sendDoneCB, void *sendDoneCBData);
+void hal_twi_read(Addr addr, TWIRecvSlot *trs);
+
 
 ////////////////// Audio ////////////////////////////////////////////
 
