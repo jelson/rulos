@@ -3,6 +3,7 @@
 // from being implicitly included in all programs.  If writing a
 // program that neds UART support, add uart.o to the list of
 // application-specific objects.
+#define __UART_C__
 #include "rocket.h"
 #include "uart.h"
 
@@ -11,72 +12,95 @@
 #include <avr/interrupt.h>
 #endif
 
-// Global instance of the UART buffer state struct
-char uart_queue_store[32];
-UartQueue_t uart_queue_g;
+#ifndef UART_QUEUE_LEN
+#define UART_QUEUE_LEN 32
+#endif
 
-
-// upcall from HAL
-void uart_receive(char c)
+struct UartState_s
 {
-	if (uart_queue_g.reception_time_us == 0) {
-		uart_queue_g.reception_time_us = precise_clock_time_us();
+	uint8_t initted;
+	char recvQueueStore[UART_QUEUE_LEN];
+	UartQueue_t recvQueue;
+	char *out_buf;
+	uint8_t out_len;
+	uint8_t out_n;
+};
+
+// Global instance of the UART buffer state struct
+UartState_t uart0_g = {0};
+UartState_t *RULOS_UART0 = &uart0_g;
+
+
+// upcall from HAL.  Happens at interrupt time.
+void uart_receive(UartState_t *u, char c)
+{
+	if (!u->initted)
+		return;
+
+	if (u->recvQueue.reception_time_us == 0) {
+		u->recvQueue.reception_time_us = precise_clock_time_us();
 	}
+
 	LOGF((logfp, "uart_receive: got char at %d, msgtime=%d\n",
-		  precise_clock_time_us(), uart_queue_g.reception_time_us))
-	if (uart_queue_g.q != NULL)
-	{
-		ByteQueue_append(uart_queue_g.q, c);
-	}
+		  precise_clock_time_us(), u->recvQueue.reception_time_us));
+
+	// safe because we're in interrupt time.
+	ByteQueue_append(u->recvQueue.q, c);
 }
 
 //////////////////////////////////////////////////////////
 
 
-void uart_queue_reset()
-{
-	uart_queue_g.q = (ByteQueue *) uart_queue_store;
-	ByteQueue_init(uart_queue_g.q, sizeof(uart_queue_store));
-	uart_queue_g.reception_time_us = 0;
-}
-
-UartQueue_t *uart_queue_get()
-{
-	return &uart_queue_g;
-}
-
-uint8_t uart_read(uint8_t *c /* OUT */)
+uint8_t uart_read(UartState_t *u, uint8_t *c /* OUT */)
 {
 	uint8_t old_interrupts = hal_start_atomic();
-	uint8_t retval = ByteQueue_pop(uart_queue_g.q, c);
+	uint8_t retval = ByteQueue_pop(u->recvQueue.q, c);
 	hal_end_atomic(old_interrupts);
 	return retval;
 }
 
-void uart_init(uint16_t baud)
+UartQueue_t *uart_recvq(UartState_t *u)
+{
+	return &u->recvQueue;
+}
+
+void uart_reset_recvq(UartQueue_t *uq)
+{
+	uq->reception_time_us = 0;
+	ByteQueue_clear(uq->q);
+}
+
+
+void uart_init(UartState_t *u, uint16_t baud)
 {
 	// initialize the queue
-	uart_queue_reset();
-
-	hal_uart_init(baud);
+	u->recvQueue.q = (ByteQueue *) u->recvQueueStore;
+	ByteQueue_init(u->recvQueue.q, sizeof(u->recvQueueStore));
+	u->recvQueue.reception_time_us = 0;
+	hal_uart_init(baud); // parameterize this when we have 2 uarts
+	u->initted = TRUE;
 }
+
+
+
+
 
 ////
 
 // This really belongs in hardware.c, but moving it here makes it easy
-// to avoid polluting non-uart-using progarms with the uart interrupt
+// to avoid polluting non-uart-using programs with the uart interrupt
 // handler, simply by not linking this file.
 
 #ifndef SIM
 #if defined(MCUatmega328p)
 ISR(USART_RX_vect)
 {
-	uart_receive(UDR0);
+	uart_receive(RULOS_UART0, UDR0);
 }
 #elif defined(MCUatmega8)
 ISR(USART_RXC_vect)
 {
-	uart_receive(UDR);
+	uart_receive(RULOS_UART0, UDR);
 }
 #else
 #error need CPU love

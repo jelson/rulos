@@ -22,8 +22,7 @@ typedef struct {
 	int unhappy_state;
 	int unhappy_timer;
 
-	// uart time-setting stuff
-	UartQueue_t *uq;
+	UartQueue_t *recvQueue;
 	Time last_reception_us;
 
 	uint8_t display_flag;
@@ -180,25 +179,25 @@ static void check_uart(WallClockActivation_t *wca)
 	uint8_t old_flags = hal_start_atomic();
 
 	// In case of framing error, clear the queue
-	if (ByteQueue_peek(wca->uq->q, &msg[0]) && msg[0] != 'T') {
-		uart_queue_reset();
+	if (ByteQueue_peek(wca->recvQueue->q, &msg[0]) && msg[0] != 'T') {
+		uart_reset_recvq(wca->recvQueue);
 		goto done;
 	}
 
 	// If there are fewer than 8 characters, it could just be that the
 	// message is still in transit; do nothing.
-	if (ByteQueue_length(wca->uq->q) < 8)
+	if (ByteQueue_length(wca->recvQueue->q) < 8)
 		goto done;
 
 	// There are (at least) 8 characters - great!  Copy them in and
 	// reset the queue.
-	ByteQueue_pop_n(wca->uq->q, msg, 8);
+	ByteQueue_pop_n(wca->recvQueue->q, msg, 8);
+	Time reception_time_us = wca->recvQueue->reception_time_us;
+	uart_reset_recvq(wca->recvQueue);
 
 	// Make sure both framing characters are correct
-	if (msg[0] != 'T' || msg[7] != 'E') {
-		uart_queue_reset();
+	if (msg[0] != 'T' || msg[7] != 'E')
 		goto done;
-	}
 
 	// Decode the characters
 	uint8_t hour   = ascii_digit(msg[1])*10 + ascii_digit(msg[2]);
@@ -206,17 +205,15 @@ static void check_uart(WallClockActivation_t *wca)
 	uint8_t second = ascii_digit(msg[5])*10 + ascii_digit(msg[6]);
 
 	// Update the clock
-	calibrate_clock(wca, hour, minute, second, wca->uq->reception_time_us);
-	uart_queue_reset();
+	calibrate_clock(wca, hour, minute, second, reception_time_us);
 
 	// indicate we got a message
 	wca->display_flag = 25;
 
  done:
 	hal_end_atomic(old_flags);
-
-     
 }
+
 
 static void update(WallClockActivation_t *wca)
 {
@@ -263,7 +260,7 @@ int main()
 	init_clock(WALLCLOCK_CALLBACK_INTERVAL, TIMER1);
 
 	// start the uart running at 34k baud (assumes 8mhz clock: fixme)
-	uart_init(12);
+	uart_init(RULOS_UART0, 12);
 
 	// initialize our internal state
 	WallClockActivation_t wca;
@@ -272,7 +269,7 @@ int main()
 	wca.hour = -1;
 	wca.unhappy_timer = 0;
 	wca.last_redraw_time = clock_time_us();
-	wca.uq = uart_queue_get();
+	wca.recvQueue = uart_recvq(RULOS_UART0);
 
 	// init the board buffer
 	board_buffer_init(&wca.bbuf);

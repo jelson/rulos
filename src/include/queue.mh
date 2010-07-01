@@ -11,4 +11,5 @@ r_bool TYPE##Queue_peek(TYPE##Queue *bq, /*OUT*/ TYPE *elt); \
 r_bool TYPE##Queue_pop(TYPE##Queue *bq, /*OUT*/ TYPE *elt); \
 r_bool TYPE##Queue_pop_n(TYPE##Queue *bq, /*OUT*/ TYPE *elt, uint8_t n); \
 uint8_t TYPE##Queue_length(TYPE##Queue *bq); \
+void TYPE##Queue_clear(TYPE##Queue *bq); \
 
