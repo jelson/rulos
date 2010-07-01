@@ -61,6 +61,9 @@ uint8_t uart_read(UartState_t *u, uint8_t *c /* OUT */)
 
 UartQueue_t *uart_recvq(UartState_t *u)
 {
+	if (!u->initted)
+		return NULL;
+
 	return &u->recvQueue;
 }
 

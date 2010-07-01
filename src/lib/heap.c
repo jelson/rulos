@@ -35,7 +35,11 @@ void heap_insert(Time key, Activation *act)
 	heap[heap_count].activation = act;
 	heap_bubble(heap_count);
 	heap_count += 1;
+
+#if 0
 	LOGF((logfp, "heap_count %d this act func %08x period %d\n", heap_count, (unsigned) (act->func), key-_last_scheduler_run_us));
+#endif
+
 }
 
 int heap_peek(/*out*/ Time *key, /*out*/ Activation **act)

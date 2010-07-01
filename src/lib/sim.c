@@ -538,8 +538,8 @@ uint8_t is_blocked = 0;
 
 uint8_t hal_start_atomic()
 {
-	uint8_t retval = is_blocked;
 	sigprocmask(SIG_BLOCK, &mask_set, NULL);
+	uint8_t retval = is_blocked;
 	is_blocked = 1;
 	return retval;
 }

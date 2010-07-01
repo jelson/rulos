@@ -32,6 +32,7 @@ typedef struct {
 
 /******************** Display *******************************/
 
+
 static void display_clock(WallClockActivation_t *wca)
 {
 	char buf[9];
@@ -172,13 +173,15 @@ static uint8_t ascii_digit(uint8_t c)
 //
 // Note that the UART timestamping code returns a timestamp only for
 // the first character in the queue.
+
 static void check_uart(WallClockActivation_t *wca)
 {
 	uint8_t msg[8];
 
 	uint8_t old_flags = hal_start_atomic();
 
-	LOGF((logfp, "uart: %d chars so far\n", ByteQueue_length(wca->recvQueue->q));
+	if (ByteQueue_length(wca->recvQueue->q) == 0)
+		goto done;
 
 	// In case of framing error, clear the queue
 	if (ByteQueue_peek(wca->recvQueue->q, &msg[0]) && msg[0] != 'T') {
@@ -190,7 +193,6 @@ static void check_uart(WallClockActivation_t *wca)
 	// If there are fewer than 8 characters, it could just be that the
 	// message is still in transit; do nothing.
 	if (ByteQueue_length(wca->recvQueue->q) < 8) {
-		LOGF((logfp, "only %d chars so far\n", ByteQueue_length(wca->recvQueue->q));
 		goto done;
 	}
 
@@ -222,13 +224,12 @@ static void check_uart(WallClockActivation_t *wca)
 
 static void update(WallClockActivation_t *wca)
 {
-	LOGF((logfp, "running update\n"));
-
 	// compute how much time has passed since we were last called
 	Time now = clock_time_us();
 	Time interval_us = now - wca->last_redraw_time;
 	wca->last_redraw_time = now;
 	uint16_t interval_ms = (interval_us + 500) / 1000;
+
 
 	// advance the clock by that amount
 	advance_clock(wca, interval_ms);
@@ -249,7 +250,6 @@ static void update(WallClockActivation_t *wca)
 	}
 
 	board_buffer_draw(&wca->bbuf);
-
 
 	// schedule the next callback
 	schedule_us(WALLCLOCK_CALLBACK_INTERVAL, (Activation *) wca);
@@ -275,6 +275,7 @@ int main()
 	wca.f = (ActivationFunc) update;
 	wca.hour = -1;
 	wca.unhappy_timer = 0;
+	wca.unhappy_state = 0;
 	wca.last_redraw_time = clock_time_us();
 	wca.recvQueue = uart_recvq(RULOS_UART0);
 
