@@ -3,8 +3,9 @@
 
 typedef struct {
 	ActivationFunc f;
-	char sendBuf[30];
-	char recvBuf[30];
+	char TWIsendBuf[20];
+	char TWIrecvBuf[5];
+	char UARTsendBuf[30];
 	TWIRecvSlot *trs;
 } accelAct_t;
 
@@ -16,8 +17,8 @@ void completeAccelRead(TWIRecvSlot *trs, uint8_t len);
 
 void prepareAccelRead(accelAct_t *aa)
 {
-	aa->sendBuf[0] = 0x2;
-	hal_twi_send(ACCEL_ADDR, aa->sendBuf, 1, doAccelRead, aa);
+	aa->TWIsendBuf[0] = 0x2;
+	hal_twi_send(ACCEL_ADDR, aa->TWIsendBuf, 1, doAccelRead, aa);
 
 	schedule_us(50000, (Activation *) aa);
 }
@@ -25,16 +26,16 @@ void prepareAccelRead(accelAct_t *aa)
 void doAccelRead(void *user_data)
 {
 	accelAct_t *aa = (accelAct_t *) user_data;
-	aa->trs = (TWIRecvSlot *) aa->recvBuf;
+	aa->trs = (TWIRecvSlot *) aa->TWIrecvBuf;
 	aa->trs->func = completeAccelRead;
 	aa->trs->capacity = 6;
 	aa->trs->user_data = aa;
 	hal_twi_read(ACCEL_ADDR, aa->trs);
 }
 
-static inline int16_t convert_accel(uint8_t msb, uint8_t lsb)
+static inline int16_t convert_accel(char lsb, char msb)
 {
-	int16_t mag = ((int16_t) msb & 0b01111111) << 2 | (lsb >> 6);
+	int16_t mag = ((((int16_t) msb) & 0b01111111) << 2) | ((lsb & 0b11000000) >> 6);
 	
 	if (msb & 0b10000000)
 		mag = mag-512;
@@ -48,12 +49,12 @@ void completeAccelRead(TWIRecvSlot *trs, uint8_t len)
 	accelAct_t *aa = (accelAct_t *) trs->user_data;
 
 	// send the data out of serial
-	uint16_t x = convert_accel(trs->data[1], trs->data[0]);
-	uint16_t y = convert_accel(trs->data[3], trs->data[2]);
-	uint16_t z = convert_accel(trs->data[5], trs->data[4]);
-	sprintf(aa->sendBuf, "a;x=%5d;y=%5d;z=%5d\r\n", x, y, z);
+	int16_t x = convert_accel(trs->data[0], trs->data[1]);
+	int16_t y = convert_accel(trs->data[2], trs->data[3]);
+	int16_t z = convert_accel(trs->data[4], trs->data[5]);
+	snprintf(aa->UARTsendBuf, sizeof(aa->UARTsendBuf)-1, "a;x=%5d;y=%5d;z=%5d\r\n", x, y, z);
 
-	uart_send(RULOS_UART0, aa->sendBuf, strlen(aa->sendBuf), NULL, NULL);
+	uart_send(RULOS_UART0, aa->UARTsendBuf, strlen(aa->UARTsendBuf), NULL, NULL);
 }
 
 
