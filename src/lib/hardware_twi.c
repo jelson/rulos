@@ -330,7 +330,8 @@ static void twi_update(twiState_t *twi, uint8_t status)
 		break;
 
 	case TW_MR_DATA_ACK:
-		// received a byte!
+	case TW_MR_DATA_NACK:
+		// received a byte -- that we might have acked, or not acked
 		if (twi->mr_recvSlot && twi->mr_n < twi->mr_recvSlot->capacity)
 		{
 			twi->mr_recvSlot->data[twi->mr_n++] = TWDR;
@@ -349,9 +350,7 @@ static void twi_update(twiState_t *twi, uint8_t status)
 		break;
 
 	case TW_MR_SLA_NACK:
-	case TW_MR_DATA_NACK:
-		// device didn't reply, or stopped giving us data halfway
-		// through.  Just send up what we have.
+		// device didn't reply.  Just send up what we have.
 		end_mr(twi);
 		break;
 

@@ -73,8 +73,7 @@ void hal_uart_init(UartState_t *s, uint16_t baud)
 
 	_UCSRB =
 		_BV(_TXEN)  | // enable transmitter
-		_BV(_UDRIE) | // enable interrupt when data register is ready
-		_BV(_RXEN)  | // enable receiver
+		_BV(_RXEN)  |  // enable receiver
 		_BV(_RXCIE)   // enable receiver interrupt
 		;
 
@@ -89,37 +88,38 @@ void hal_uart_init(UartState_t *s, uint16_t baud)
 	sei();
 }
 
+static inline void enable_sendready_interrupt(uint8_t enable)
+{
+	if (enable)
+		reg_set(&_UCSRB, _UDRIE);
+	else
+		reg_clr(&_UCSRB, _UDRIE);
+}
 
+
+
+// Runs in user context.
 void hal_uart_start_send(UartState_t *u)
 {
-	// If the send register is ready, get the first character right
-	// now and send it.  If the send register is not ready, that must
-	// mean the previous transmission is still going out -- so do
-	// nothing.  An interrupt will be along shortly, and the first
-	// byte will go out in the interrupt handler.
+	// Just enable the send-ready interrupt.  It will fire as soon as
+	// the sender register is free.
 	uint8_t old_interrupts = hal_start_atomic();
-
-	char c;
-
-	if (!_uart_get_next_character(u, &c))
-		goto done;
-
-	// if data register is ready, send a char
-	if (_UCSRA & _BV(_UDRE)) {
-		_UDR = c;
-	}
-
- done:
+	enable_sendready_interrupt(TRUE);
 	hal_end_atomic(old_interrupts);
 }
 
 
+// Runs in interrupt context.
 void handle_send_ready(UartState_t *u)
 {
 	char c;
 
+	// If there is still data remaining to send, send it.  Otherwise,
+	// disable the send-ready interrupt.
 	if (_uart_get_next_character(u, &c))
 		_UDR = c;
+	else
+		enable_sendready_interrupt(FALSE);
 }
 
 

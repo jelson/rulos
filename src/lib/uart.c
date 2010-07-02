@@ -110,7 +110,7 @@ r_bool uart_send(UartState_t *u, char *c, uint8_t len,
 	u->out_len = len;
 	u->out_n = 0;
 	u->send_done_cb = callback;
-	u->send_done_cb_data = callback_data ;
+	u->send_done_cb_data = callback_data;
 
 	hal_uart_start_send(u);
 	return TRUE;
@@ -123,7 +123,7 @@ void uart_init(UartState_t *u, uint16_t baud)
 	u->recvQueue.q = (ByteQueue *) u->recvQueueStore;
 	ByteQueue_init(u->recvQueue.q, sizeof(u->recvQueueStore));
 	u->recvQueue.reception_time_us = 0;
-	hal_uart_init(u, baud); // parameterize this when we have 2 uarts
+	hal_uart_init(u, baud);
 	u->initted = TRUE;
 }
 
