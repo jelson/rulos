@@ -47,12 +47,8 @@ uint16_t hal_read_adc(uint8_t idx);
 void hal_init_joystick_button();
 r_bool hal_read_joystick_button();
 
-void hal_uart_init(uint16_t baud);
-/*
-void hal_uart_send_byte(uint8_t byte);
-void hal_uart_set_recv_handler(Activation *act);
-	// Runs on interrupt stack -- keep it sweet and race-free.
-*/
+void hal_uart_init(UartState_t *s, uint16_t baud);
+void hal_uart_start_send(UartState_t *u);
 
 /////////////// TWI ///////////////////////////////////////////////
 

@@ -1,8 +1,6 @@
 #ifndef _cpumon_h
 #define _cpumon_h
 
-#include "heap.h"
-#include "clock.h"
 
 typedef enum {
 	cpumon_phase_align,

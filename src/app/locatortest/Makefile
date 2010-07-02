@@ -8,7 +8,8 @@ TARGET := locatortest
 EXTRA_AVR_CFLAGS += -DCUSTOM_TWBR=0
 
 TARGET_OBJECTS := \
-	locatortest.o
+	uart.o \
+	locatortest.o 
 
 
 include $(ROCKET_ROOT)/Makefile.common

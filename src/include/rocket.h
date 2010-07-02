@@ -16,6 +16,7 @@
 #include "cursor.h"
 #include "focus.h"
 #include "cpumon.h"
+#include "uart.h"
 #include "hal.h"
 #include "clock.h"
 #include "twi.h"

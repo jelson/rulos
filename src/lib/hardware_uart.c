@@ -18,7 +18,14 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-//// uart stuff
+
+
+// NOTE: These functions currently statically use Uart0 at
+// compile-time using the constants below.  However, all the plumbing
+// is here to support multiple uarts; each function is already
+// parameterized with the uart struct.  To support multiple uarts,
+// compare the UartState passed in to each function and change the
+// register names conditionally.
 
 #if defined(MCUatmega8)
 # define _UBRRH    UBRRH
@@ -28,8 +35,13 @@
 # define _UCSRC    UCSRC
 # define _RXEN     RXEN
 # define _RXCIE    RXCIE
+# define _TXEN     TXEN
+# define _TXCIE    TXCIE
 # define _UCSZ0    UCSZ0
 # define _UCSZ1    UCSZ1
+# define _UDR      UDR
+# define _UDRE     UDRE
+# define _UDRIE    UDRIE
 #elif defined(MCUatmega328p)
 # define _UBRRH    UBRR0H
 # define _UBRRL    UBRR0L
@@ -38,13 +50,19 @@
 # define _UCSRC    UCSR0C
 # define _RXEN     RXEN0
 # define _RXCIE    RXCIE0
+# define _TXEN     TXEN0
+# define _TXCIE    TXCIE0
 # define _UCSZ0    UCSZ00
 # define _UCSZ1    UCSZ01
+# define _UDR      UDR0
+# define _UDRE     UDRE0
+# define _UDRIE    UDRIE0
 #else
 # error Hardware-specific UART code needs love
 #endif
 
-void hal_uart_init(uint16_t baud)
+
+void hal_uart_init(UartState_t *s, uint16_t baud)
 {
 	// disable interrupts
 	cli();
@@ -53,10 +71,14 @@ void hal_uart_init(uint16_t baud)
 	_UBRRH = (unsigned char) baud >> 8;
 	_UBRRL = (unsigned char) baud;
 
-	// enable receiver and receiver interrupts
-	_UCSRB = _BV(_RXEN) | _BV(_RXCIE);
+	_UCSRB =
+		_BV(_TXEN)  | // enable transmitter
+		_BV(_UDRIE) | // enable interrupt when data register is ready
+		_BV(_RXEN)  | // enable receiver
+		_BV(_RXCIE)   // enable receiver interrupt
+		;
 
-	// set frame format: async, 8 bit data, 1 stop  bit, no parity
+	// set frame format: async, 8 bit data, 1 stop bit, no parity
 	_UCSRC =  _BV(_UCSZ1) | _BV(_UCSZ0)
 #ifdef MCUatmega8
 	  | _BV(URSEL)
@@ -67,3 +89,55 @@ void hal_uart_init(uint16_t baud)
 	sei();
 }
 
+
+void hal_uart_start_send(UartState_t *u)
+{
+	// If the send register is ready, get the first character right
+	// now and send it.  If the send register is not ready, that must
+	// mean the previous transmission is still going out -- so do
+	// nothing.  An interrupt will be along shortly, and the first
+	// byte will go out in the interrupt handler.
+	uint8_t old_interrupts = hal_start_atomic();
+
+	char c;
+
+	if (!_uart_get_next_character(u, &c))
+		goto done;
+
+	// if data register is ready, send a char
+	if (_UCSRA & _BV(_UDRE)) {
+		_UDR = c;
+	}
+
+ done:
+	hal_end_atomic(old_interrupts);
+}
+
+
+void handle_send_ready(UartState_t *u)
+{
+	char c;
+
+	if (_uart_get_next_character(u, &c))
+		_UDR = c;
+}
+
+
+#if defined(MCUatmega8)
+ISR(USART_RXC_vect)
+{
+	_uart_receive(RULOS_UART0, UDR);
+}
+
+#elif defined(MCUatmega328p)
+ISR(USART_RX_vect)
+{
+	_uart_receive(RULOS_UART0, UDR0);
+}
+ISR(USART_UDRE_vect)
+{
+	handle_send_ready(RULOS_UART0);
+}
+#else
+#error need CPU love
+#endif

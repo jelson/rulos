@@ -34,7 +34,15 @@ void doAccelRead(void *user_data)
 
 void completeAccelRead(TWIRecvSlot *trs, uint8_t len)
 {
-	// do something with the data
+	// send the data out of serial
+	uint16_t x = ((uint16_t) trs->data[1] << 8) | (trs->data[0] >> 6);
+	uint16_t y = ((uint16_t) trs->data[3] << 8) | (trs->data[2] >> 6);
+	uint16_t z = ((uint16_t) trs->data[5] << 8) | (trs->data[4] >> 6);
+
+	char buf[30];
+
+	sprintf(buf, "a;x=%d;y=%d;z=%d\n", x, y, z);
+	uart_send(RULOS_UART0, buf, strlen(buf), NULL, NULL);
 }
 
 

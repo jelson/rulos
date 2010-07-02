@@ -5,7 +5,6 @@
 # error Please include rocket.h instead of this file
 #endif
 
-#include "hal.h"
 
 uint8_t later_than(Time a, Time b);
 

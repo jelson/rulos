@@ -5,25 +5,26 @@
 // application-specific objects.
 #define __UART_C__
 #include "rocket.h"
-#include "uart.h"
-
-#ifndef SIM
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#endif
 
 #ifndef UART_QUEUE_LEN
 #define UART_QUEUE_LEN 32
 #endif
 
+
 struct UartState_s
 {
 	uint8_t initted;
+
+	// receive
 	char recvQueueStore[UART_QUEUE_LEN];
 	UartQueue_t recvQueue;
+
+	// send
 	char *out_buf;
 	uint8_t out_len;
 	uint8_t out_n;
+	UARTSendDoneFunc send_done_cb;
+	void *send_done_cb_data;
 };
 
 // Global instance of the UART buffer state struct
@@ -31,8 +32,8 @@ UartState_t uart0_g = {0};
 UartState_t *RULOS_UART0 = &uart0_g;
 
 
-// upcall from HAL.  Happens at interrupt time.
-void uart_receive(UartState_t *u, char c)
+// Upcall from HAL when new data arrives.  Happens at interrupt time.
+void _uart_receive(UartState_t *u, char c)
 {
 	if (!u->initted)
 		return;
@@ -46,6 +47,30 @@ void uart_receive(UartState_t *u, char c)
 
 	// safe because we're in interrupt time.
 	ByteQueue_append(u->recvQueue.q, c);
+}
+
+// Upcall from hal when the next byte is needed for a send.  Happens
+// at interrupt time.
+r_bool _uart_get_next_character(UartState_t *u, char *c /* OUT */)
+{
+	assert(u != NULL);
+
+	if (u->out_buf == NULL)
+	{
+		return FALSE;
+	}
+
+	*c = u->out_buf[u->out_n++];
+
+	if (u->out_n == u->out_len)
+	{
+		//schedule_now(u->send_done_cb, u->send_done_cb_data);
+		u->out_buf = NULL;
+		u->send_done_cb = NULL;
+		u->send_done_cb_data = NULL;
+	}
+
+	return TRUE;
 }
 
 //////////////////////////////////////////////////////////
@@ -73,6 +98,24 @@ void uart_reset_recvq(UartQueue_t *uq)
 	ByteQueue_clear(uq->q);
 }
 
+r_bool uart_send(UartState_t *u, char *c, uint8_t len,
+				 UARTSendDoneFunc callback, void *callback_data)
+{
+	assert(u->initted);
+
+	if (u->out_buf != NULL || len == 0)
+		return FALSE;
+
+	u->out_buf = c;
+	u->out_len = len;
+	u->out_n = 0;
+	u->send_done_cb = callback;
+	u->send_done_cb_data = callback_data ;
+
+	hal_uart_start_send(u);
+	return TRUE;
+}
+
 
 void uart_init(UartState_t *u, uint16_t baud)
 {
@@ -80,33 +123,7 @@ void uart_init(UartState_t *u, uint16_t baud)
 	u->recvQueue.q = (ByteQueue *) u->recvQueueStore;
 	ByteQueue_init(u->recvQueue.q, sizeof(u->recvQueueStore));
 	u->recvQueue.reception_time_us = 0;
-	hal_uart_init(baud); // parameterize this when we have 2 uarts
+	hal_uart_init(u, baud); // parameterize this when we have 2 uarts
 	u->initted = TRUE;
 }
-
-
-
-
-
-////
-
-// This really belongs in hardware.c, but moving it here makes it easy
-// to avoid polluting non-uart-using programs with the uart interrupt
-// handler, simply by not linking this file.
-
-#ifndef SIM
-#if defined(MCUatmega328p)
-ISR(USART_RX_vect)
-{
-	uart_receive(RULOS_UART0, UDR0);
-}
-#elif defined(MCUatmega8)
-ISR(USART_RXC_vect)
-{
-	uart_receive(RULOS_UART0, UDR);
-}
-#else
-#error need CPU love
-#endif
-#endif
 
