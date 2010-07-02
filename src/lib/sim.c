@@ -322,7 +322,7 @@ static void uart_simulator_input(int c)
 	draw_uart_input_window();
 
 	// upcall to the uart code
-	uart_receive(RULOS_UART0, c);
+	_uart_receive(RULOS_UART0, c);
 }
 
 static void uart_simulator_stop()
@@ -351,7 +351,20 @@ static void uart_simulator_start()
 	draw_uart_input_window();
 }
 
-void hal_uart_init(uint16_t baud)
+void hal_uart_start_send(UartState_t *u)
+{
+	char buf[256];
+	int i = 0;
+
+	while (_uart_get_next_character(u, &buf[i]))
+		i++;
+
+	buf[i+1] = '\0';
+
+	LOGF((logfp, "Sent to uart: '%s'\n", buf));
+}
+
+void hal_uart_init(UartState_t *u, uint16_t baud)
 {
 }
 

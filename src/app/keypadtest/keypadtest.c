@@ -33,12 +33,14 @@ static void update(KeyTestActivation_t *kta)
 		add_char_to_bbuf(&kta->bbuf_k, c);
 	}
 
-	while (uart_read(&c)) {
+	while (uart_read(RULOS_UART0, &c)) {
 		LOGF((logfp, "got uart char %c\n", c));
 		add_char_to_bbuf(&kta->bbuf_u, c);
 	}
 }
 
+
+#define TEST_STR "hello world from the uart"
 
 int main()
 {
@@ -48,7 +50,10 @@ int main()
 	hal_init_keypad();
 	init_clock(10000, TIMER1);
 	board_buffer_module_init();
-	uart_init(12);
+	uart_init(RULOS_UART0, 12);
+
+
+	uart_send(RULOS_UART0, TEST_STR, strlen(TEST_STR), NULL, NULL);
 
 	KeyTestActivation_t kta;
 	kta.f = (ActivationFunc) update;
