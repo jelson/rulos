@@ -1,104 +1,112 @@
 #include "rocket.h"
 
-struct accelAct;
-typedef struct accelAct accelAct_t;
+struct locatorAct;
+typedef struct locatorAct locatorAct_t;
 
-typedef void (*AccelSendCompleteFunc)(accelAct_t *aa);
-typedef void (*AccelRecvCompleteFunc)(accelAct_t *aa, char *data, int len);
+typedef void (*PeripheralSendCompleteFunc)(locatorAct_t *aa);
+typedef void (*PeripheralRecvCompleteFunc)(locatorAct_t *aa, char *data, int len);
 
 
-struct accelAct {
+struct locatorAct {
 	ActivationFunc f;
 	char TWIsendBuf[20];
 	char TWIrecvBuf[5];
 	char UARTsendBuf[35];
 	TWIRecvSlot *trs;
-	AccelSendCompleteFunc sendFunc;
-	AccelRecvCompleteFunc recvFunc;
+	PeripheralSendCompleteFunc sendFunc;
+	PeripheralRecvCompleteFunc recvFunc;
+	uint8_t twiAddr;
 	uint8_t readLen;
 };
 
 #define ACCEL_ADDR 0b0111000
+#define ACCEL_SAMPLING_RATE_BITS 0b001 // 50 hz
+#define ACCEL_RANGE_BITS 0b01 // +/- 4g
 
-#define SAMPLING_RATE_BITS 0b001 // 50 hz
-#define RANGE_BITS 0b01 // +/- 4g
-
+#define FIRMWARE_ID ("Locator Firmware " "$Id$" "\r\n")
 
 /****************************************************/
 
 
-/*** sending a packet to the accelerometer ***/
-void _accelSendComplete(void *user_data)
+/*** sending data to a locator peripheral ***/
+
+void _peripheralSendComplete(void *user_data)
 {
-	accelAct_t *aa = (accelAct_t *) user_data;
+	locatorAct_t *aa = (locatorAct_t *) user_data;
 	aa->sendFunc(aa);
 }
 
-void sendToAccel(accelAct_t *aa,
-				 char *data,
-				 uint8_t len,
-				 AccelSendCompleteFunc f)
+void sendToPeripheral(locatorAct_t *aa,
+					  uint8_t twiAddr,
+					  char *data,
+					  uint8_t len,
+					  PeripheralSendCompleteFunc f)
 {
 	aa->sendFunc = f;
-	hal_twi_send(ACCEL_ADDR, data, len, _accelSendComplete, aa);
+	hal_twi_send(twiAddr, data, len, _peripheralSendComplete, aa);
 }
 
 
-/*** receiving a packet from the accelerometer ***/
+/*** receiving data from a locator peripheral, using the
+	 write-address-then-read protocol ***/
 
-void _accelReadComplete(TWIRecvSlot *trs, uint8_t len)
+void _locatorReadComplete(TWIRecvSlot *trs, uint8_t len)
 {
-	accelAct_t *aa = (accelAct_t *) trs->user_data;
+	locatorAct_t *aa = (locatorAct_t *) trs->user_data;
 	aa->recvFunc(aa, trs->data, aa->readLen);
 }
 
-void _readFromAccel2(accelAct_t *aa)
+void _readFromPeripheral2(locatorAct_t *aa)
 {
 	aa->trs = (TWIRecvSlot *) aa->TWIrecvBuf;
-	aa->trs->func = _accelReadComplete;
+	aa->trs->func = _locatorReadComplete;
 	aa->trs->capacity = aa->readLen;
 	aa->trs->user_data = aa;
-	hal_twi_read(ACCEL_ADDR, aa->trs);
+	hal_twi_read(aa->twiAddr, aa->trs);
 }
 
 
-void readFromAccel(accelAct_t *aa,
-				   uint16_t baseAddr,
-				   int len,
-				   AccelRecvCompleteFunc f)
+void readFromPeripheral(locatorAct_t *aa,
+						uint8_t twiAddr,
+						uint16_t baseAddr,
+						int len,
+						PeripheralRecvCompleteFunc f)
 {
 	aa->recvFunc = f;
 	aa->readLen = len;
 
+	aa->twiAddr = twiAddr;
 	aa->TWIsendBuf[0] = baseAddr;
-	sendToAccel(aa, aa->TWIsendBuf, 1, _readFromAccel2);
+	sendToPeripheral(aa, twiAddr, aa->TWIsendBuf, 1, _readFromPeripheral2);
 }
 
 
 
 /*************************************/
 
-// Configuring the accelerometer means first reading config byte 0x14,
-// then setting the low bits (leaving the 3 highest bits untouched),
-// and writing it back.
-
-void configAccel3(accelAct_t *aa)
+void configLocator3(locatorAct_t *aa)
 {
 	schedule_now((Activation *) aa);
 }
 
 
-void configAccel2(accelAct_t *aa, char *data, int len)
+// Configuring the accelerometer means first reading config byte 0x14,
+// then setting the low bits (leaving the 3 highest bits untouched),
+// and writing it back.
+void configLocator2(locatorAct_t *aa, char *data, int len)
 {
 	aa->TWIsendBuf[0] = 0x14;
-	aa->TWIsendBuf[1] = (data[0] & 0b11100000) | (RANGE_BITS << 3) | (SAMPLING_RATE_BITS);
-	sendToAccel(aa, aa->TWIsendBuf, 2, configAccel3);
+	aa->TWIsendBuf[1] =
+		(data[0] & 0b11100000) |
+		(ACCEL_RANGE_BITS << 3) |
+		(ACCEL_SAMPLING_RATE_BITS);
+	sendToPeripheral(aa, ACCEL_ADDR, aa->TWIsendBuf, 2, configLocator3);
 }
 
 
-void configAccel(accelAct_t *aa)
+void configLocator(locatorAct_t *aa)
 {
-	readFromAccel(aa, 0x14, 1, configAccel2);
+	readFromPeripheral(aa, ACCEL_ADDR, 0x14, 1, configLocator2);
 }
 
 
@@ -115,7 +123,7 @@ static inline int16_t convert_accel(char lsb, char msb)
 	return mag;
 }
 
-void sampleAccelDone(accelAct_t *aa, char *data, int len)
+void sampleLocatorDone(locatorAct_t *aa, char *data, int len)
 {
 	// convert and send the data out of serial
 	int16_t x = convert_accel(data[0], data[1]);
@@ -126,13 +134,13 @@ void sampleAccelDone(accelAct_t *aa, char *data, int len)
 	uart_send(RULOS_UART0, aa->UARTsendBuf, strlen(aa->UARTsendBuf), NULL, NULL);
 }
 
-void sampleAccel(accelAct_t *aa)
+void sampleLocator(locatorAct_t *aa)
 {
 	// schedule reading of the next sample
 	schedule_us(50000, (Activation *) aa);
 
-	// read 6 bytes starting from address 0x2
-	readFromAccel(aa, 0x2, 6, sampleAccelDone);
+	// read 6 bytes from accelerometer starting from address 0x2
+	readFromPeripheral(aa, ACCEL_ADDR, 0x2, 6, sampleLocatorDone);
 }
 
 
@@ -146,18 +154,19 @@ int main()
 	init_clock(10000, TIMER1);
 
 	hal_twi_init(0, NULL);
-	uart_init(RULOS_UART0, 12);
+	uart_init(RULOS_UART0, 0);
 
-	accelAct_t aa;
-	aa.f = (ActivationFunc) sampleAccel;
+	locatorAct_t aa;
+	aa.f = (ActivationFunc) sampleLocator;
 
-	configAccel(&aa);
+	configLocator(&aa);
+
+	uart_send(RULOS_UART0, FIRMWARE_ID, strlen(FIRMWARE_ID), NULL, NULL);
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);
 	cpumon_main_loop();
 	assert(FALSE);
-
 
 	return 0;
 }
