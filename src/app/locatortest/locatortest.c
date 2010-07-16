@@ -23,7 +23,7 @@ struct locatorAct {
 #define ACCEL_SAMPLING_RATE_BITS 0b001 // 50 hz
 #define ACCEL_RANGE_BITS 0b01 // +/- 4g
 
-#define FIRMWARE_ID ("Locator Firmware " "$Id$" "\r\n")
+#define FIRMWARE_ID ("Locator Firmware " "$Rev$" "\r\n")
 
 /****************************************************/
 
