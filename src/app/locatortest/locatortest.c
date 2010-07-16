@@ -28,6 +28,7 @@ struct locatorAct {
 #define GYRO_DLPF_CFG 0x3 // 42 hz
 
 #define FIRMWARE_ID "$Rev$"
+#define ID_OFFSET 6
 
 /****************************************************/
 
@@ -103,7 +104,7 @@ void configLocator3(locatorAct_t *aa)
 	aa->TWIsendBuf[1] =
 		(GYRO_FS_SEL << 3) |
 		(GYRO_DLPF_CFG);
-	sendToPeripheral(aa, GYRO_ADDR, aa->TWIsendBuf, 1, configLocator4);
+	sendToPeripheral(aa, GYRO_ADDR, aa->TWIsendBuf, 2, configLocator4);
 }
 
 
@@ -192,8 +193,8 @@ int main()
 
 	configLocator(&aa);
 
-	if (strlen(FIRMWARE_ID) > 5) {
-		snprintf(aa.UARTsendBuf, sizeof(aa.UARTsendBuf)-1, "^i;%s$\r\n", FIRMWARE_ID+5);
+	if (strlen(FIRMWARE_ID) > ID_OFFSET) {
+		snprintf(aa.UARTsendBuf, sizeof(aa.UARTsendBuf)-1, "^i;%s\r\n", FIRMWARE_ID+ID_OFFSET);
 	} else {
 		snprintf(aa.UARTsendBuf, sizeof(aa.UARTsendBuf)-1, "^i;0$\r\n");
 	}
