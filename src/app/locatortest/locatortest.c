@@ -23,7 +23,11 @@ struct locatorAct {
 #define ACCEL_SAMPLING_RATE_BITS 0b001 // 50 hz
 #define ACCEL_RANGE_BITS 0b01 // +/- 4g
 
-#define FIRMWARE_ID ("Locator Firmware " "$Rev$" "\r\n")
+#define GYRO_ADDR  0b1101000
+#define GYRO_FS_SEL 0x3 // 2000 deg/sec
+#define GYRO_DLPF_CFG 0x3 // 42 hz
+
+#define FIRMWARE_ID "$Rev$"
 
 /****************************************************/
 
@@ -84,13 +88,26 @@ void readFromPeripheral(locatorAct_t *aa,
 
 /*************************************/
 
-void configLocator3(locatorAct_t *aa)
+// all done!  start sampling.
+void configLocator4(locatorAct_t *aa)
 {
 	schedule_now((Activation *) aa);
 }
 
 
-// Configuring the accelerometer means first reading config byte 0x14,
+// Next configure the gyro by writing the full-scale deflection and
+// sample-rate bits to register 0x16.
+void configLocator3(locatorAct_t *aa)
+{
+	aa->TWIsendBuf[0] = 0x16;
+	aa->TWIsendBuf[1] =
+		(GYRO_FS_SEL << 3) |
+		(GYRO_DLPF_CFG);
+	sendToPeripheral(aa, GYRO_ADDR, aa->TWIsendBuf, 1, configLocator4);
+}
+
+
+// Configure the accelerometer by first reading config byte 0x14,
 // then setting the low bits (leaving the 3 highest bits untouched),
 // and writing it back.
 void configLocator2(locatorAct_t *aa, char *data, int len)
@@ -123,14 +140,28 @@ static inline int16_t convert_accel(char lsb, char msb)
 	return mag;
 }
 
-void sampleLocatorDone(locatorAct_t *aa, char *data, int len)
+void sampleLocator3(locatorAct_t *aa, char *data, int len)
 {
+	// convert and send the data out of serial
+	int16_t x = ((int16_t) data[0]) << 8 | data[1];
+	int16_t y = ((int16_t) data[2]) << 8 | data[3];
+	int16_t z = ((int16_t) data[4]) << 8 | data[5];
+
+	snprintf(aa->UARTsendBuf, sizeof(aa->UARTsendBuf)-1, "^g;x=%5d;y=%5d;z=%5d$\r\n", x, y, z);
+	uart_send(RULOS_UART0, aa->UARTsendBuf, strlen(aa->UARTsendBuf), NULL, NULL);
+}
+
+void sampleLocator2(locatorAct_t *aa, char *data, int len)
+{
+	// read 6 bytes from gyro starting from address 0x2
+	readFromPeripheral(aa, GYRO_ADDR, 0x1D, 6, sampleLocator3);
+
 	// convert and send the data out of serial
 	int16_t x = convert_accel(data[0], data[1]);
 	int16_t y = convert_accel(data[2], data[3]);
 	int16_t z = convert_accel(data[4], data[5]);
-	snprintf(aa->UARTsendBuf, sizeof(aa->UARTsendBuf)-1, "^a;x=%5d;y=%5d;z=%5d$\r\n", x, y, z);
 
+	snprintf(aa->UARTsendBuf, sizeof(aa->UARTsendBuf)-1, "^a;x=%5d;y=%5d;z=%5d$\r\n", x, y, z);
 	uart_send(RULOS_UART0, aa->UARTsendBuf, strlen(aa->UARTsendBuf), NULL, NULL);
 }
 
@@ -140,7 +171,7 @@ void sampleLocator(locatorAct_t *aa)
 	schedule_us(50000, (Activation *) aa);
 
 	// read 6 bytes from accelerometer starting from address 0x2
-	readFromPeripheral(aa, ACCEL_ADDR, 0x2, 6, sampleLocatorDone);
+	readFromPeripheral(aa, ACCEL_ADDR, 0x2, 6, sampleLocator2);
 }
 
 
@@ -161,7 +192,12 @@ int main()
 
 	configLocator(&aa);
 
-	uart_send(RULOS_UART0, FIRMWARE_ID, strlen(FIRMWARE_ID), NULL, NULL);
+	if (strlen(FIRMWARE_ID) > 5) {
+		snprintf(aa.UARTsendBuf, sizeof(aa.UARTsendBuf)-1, "^i;%s$\r\n", FIRMWARE_ID+5);
+	} else {
+		snprintf(aa.UARTsendBuf, sizeof(aa.UARTsendBuf)-1, "^i;0$\r\n");
+	}
+	uart_send(RULOS_UART0, aa.UARTsendBuf, strlen(aa.UARTsendBuf), NULL, NULL);
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);
