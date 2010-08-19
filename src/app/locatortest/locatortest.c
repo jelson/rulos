@@ -1,4 +1,5 @@
 #include "rocket.h"
+#include "hardware.h"
 
 struct locatorAct;
 typedef struct locatorAct locatorAct_t;
@@ -17,6 +18,9 @@ struct locatorAct {
 	PeripheralRecvCompleteFunc recvFunc;
 	uint8_t twiAddr;
 	uint8_t readLen;
+
+	uint8_t currUsState;
+	uint8_t currUsCount;
 };
 
 #define ACCEL_ADDR 0b0111000
@@ -29,6 +33,9 @@ struct locatorAct {
 
 #define FIRMWARE_ID "$Rev$"
 #define ID_OFFSET 6
+
+#define GPIO_10V_ENABLE GPIO_B0
+#define GPIO_US_XMIT    GPIO_D6
 
 /****************************************************/
 
@@ -113,6 +120,8 @@ void configLocator3(locatorAct_t *aa)
 // and writing it back.
 void configLocator2(locatorAct_t *aa, char *data, int len)
 {
+	uart_send(RULOS_UART0, "cs2\n\r", 5, NULL, NULL);
+
 	aa->TWIsendBuf[0] = 0x14;
 	aa->TWIsendBuf[1] =
 		(data[0] & 0b11100000) |
@@ -124,6 +133,17 @@ void configLocator2(locatorAct_t *aa, char *data, int len)
 
 void configLocator(locatorAct_t *aa)
 {
+	// turn off the us output switch
+	gpio_make_output(GPIO_US_XMIT);
+	gpio_clr(GPIO_US_XMIT);
+
+	// enable 10v voltage doubler
+	gpio_make_output(GPIO_10V_ENABLE);
+	gpio_clr(GPIO_10V_ENABLE);
+
+	aa->currUsState = 0;
+	aa->currUsCount = 0;
+
 	readFromPeripheral(aa, ACCEL_ADDR, 0x14, 1, configLocator2);
 }
 
@@ -171,6 +191,18 @@ void sampleLocator(locatorAct_t *aa)
 	// schedule reading of the next sample
 	schedule_us(50000, (Activation *) aa);
 
+	// maybe flip the us
+	aa->currUsCount++;
+	if (aa->currUsCount >= 70) {
+		aa->currUsState = !aa->currUsState;
+		if (aa->currUsState)
+			uart_send(RULOS_UART0, "on\n\r", 4, NULL, NULL);
+		else
+			uart_send(RULOS_UART0, "off\n\r", 5, NULL, NULL);
+		gpio_set_or_clr(GPIO_US_XMIT, aa->currUsState);
+		aa->currUsCount = 0;
+	}
+
 	// read 6 bytes from accelerometer starting from address 0x2
 	readFromPeripheral(aa, ACCEL_ADDR, 0x2, 6, sampleLocator2);
 }
@@ -185,6 +217,14 @@ int main()
 	hal_init(bc_audioboard);
 	init_clock(10000, TIMER1);
 
+#if 0
+	gpio_make_output(GPIO_C5);
+	gpio_set(GPIO_C5);
+	gpio_clr(GPIO_C5);
+	gpio_set(GPIO_C5);
+	gpio_clr(GPIO_C5);
+#endif
+
 	hal_twi_init(0, NULL);
 	uart_init(RULOS_UART0, 0);
 
@@ -192,6 +232,7 @@ int main()
 	aa.f = (ActivationFunc) sampleLocator;
 
 	configLocator(&aa);
+	//schedule_now((Activation *) &aa);
 
 	if (strlen(FIRMWARE_ID) > ID_OFFSET) {
 		snprintf(aa.UARTsendBuf, sizeof(aa.UARTsendBuf)-1, "^i;%s\r\n", FIRMWARE_ID+ID_OFFSET);
