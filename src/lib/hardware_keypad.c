@@ -39,9 +39,9 @@ void hal_init_keypad()
 
 char hal_read_keybuf()
 {
-	uint8_t k;
+	char k;
 
-	if (ByteQueue_pop((ByteQueue *) g_theKeypad.keypad_q, &k))
+	if (CharQueue_pop((CharQueue *) g_theKeypad.keypad_q, &k))
 		return k;
 	else
 		return 0;
@@ -55,7 +55,7 @@ char hal_read_keybuf()
 static void init_keypad(KeypadState *keypad)
 {
 	keypad->func = (ActivationFunc) keypad_update;
-	ByteQueue_init((ByteQueue *) keypad->keypad_q, sizeof(keypad->keypad_q));
+	CharQueue_init((CharQueue *) keypad->keypad_q, sizeof(keypad->keypad_q));
 	keypad->keypad_last = 0;
 	keypad->keypad_next_allowed_key_time = clock_time_us();
 
@@ -82,7 +82,7 @@ static void keypad_update(KeypadState *key)
 
 	// key was just pushed.  if refrac time has arrived, queue it
 	if (clock_time_us() >= key->keypad_next_allowed_key_time) {
-		ByteQueue_append((ByteQueue *)key->keypad_q, k);
+		CharQueue_append((CharQueue *)key->keypad_q, k);
 	}
 	
 }

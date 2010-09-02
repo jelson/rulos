@@ -23,6 +23,8 @@ struct locatorAct {
 	uint8_t currUsCount;
 };
 
+#define NO_ACCEL
+
 #define ACCEL_ADDR 0b0111000
 #define ACCEL_SAMPLING_RATE_BITS 0b001 // 50 hz
 #define ACCEL_RANGE_BITS 0b01 // +/- 4g
@@ -115,13 +117,12 @@ void configLocator3(locatorAct_t *aa)
 }
 
 
-// Configure the accelerometer by first reading config byte 0x14,
-// then setting the low bits (leaving the 3 highest bits untouched),
-// and writing it back.
+// Configure the accelerometer by first reading config byte 0x14, then
+// setting the low bits (leaving the 3 highest bits untouched), and
+// writing it back.  This callback is called when the initial read
+// completes.
 void configLocator2(locatorAct_t *aa, char *data, int len)
 {
-	uart_send(RULOS_UART0, "cs2\n\r", 5, NULL, NULL);
-
 	aa->TWIsendBuf[0] = 0x14;
 	aa->TWIsendBuf[1] =
 		(data[0] & 0b11100000) |
@@ -143,6 +144,11 @@ void configLocator(locatorAct_t *aa)
 
 	aa->currUsState = 0;
 	aa->currUsCount = 0;
+
+#ifdef NO_ACCEL
+	configLocator3(aa);
+	return;
+#endif
 
 	readFromPeripheral(aa, ACCEL_ADDR, 0x14, 1, configLocator2);
 }
@@ -177,6 +183,7 @@ void sampleLocator2(locatorAct_t *aa, char *data, int len)
 	// read 6 bytes from gyro starting from address 0x2
 	readFromPeripheral(aa, GYRO_ADDR, 0x1D, 6, sampleLocator3);
 
+#ifndef NO_ACCEL
 	// convert and send the data out of serial
 	int16_t x = convert_accel(data[0], data[1]);
 	int16_t y = convert_accel(data[2], data[3]);
@@ -184,6 +191,7 @@ void sampleLocator2(locatorAct_t *aa, char *data, int len)
 
 	snprintf(aa->UARTsendBuf, sizeof(aa->UARTsendBuf)-1, "^a;x=%5d;y=%5d;z=%5d$\r\n", x, y, z);
 	uart_send(RULOS_UART0, aa->UARTsendBuf, strlen(aa->UARTsendBuf), NULL, NULL);
+#endif
 }
 
 void sampleLocator(locatorAct_t *aa)
@@ -202,6 +210,11 @@ void sampleLocator(locatorAct_t *aa)
 		gpio_set_or_clr(GPIO_US_XMIT, aa->currUsState);
 		aa->currUsCount = 0;
 	}
+
+#ifdef NO_ACCEL
+	sampleLocator2(aa, NULL, 0);
+	return;
+#endif
 
 	// read 6 bytes from accelerometer starting from address 0x2
 	readFromPeripheral(aa, ACCEL_ADDR, 0x2, 6, sampleLocator2);

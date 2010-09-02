@@ -374,7 +374,7 @@ void hal_uart_init(UartState_t *u, uint16_t baud)
 
 r_bool g_keypad_enabled = FALSE;
 char keypad_buf[10];
-ByteQueue *keypad_q = (ByteQueue *) keypad_buf;
+CharQueue *keypad_q = (CharQueue *) keypad_buf;
 
 void hal_init_keypad()
 {
@@ -387,7 +387,7 @@ char hal_read_keybuf()
 
 	uint8_t k;
 
-	if (ByteQueue_pop(keypad_q, &k))
+	if (CharQueue_pop(keypad_q, &k))
 		return k;
 	else
 		return 0;
@@ -484,7 +484,7 @@ static void sim_poll_keyboard()
 
 	default:
 		if ((k = translate_to_keybuf(c)) != 0) {
-			ByteQueue_append(keypad_q, k);
+			CharQueue_append(keypad_q, k);
 		}
 		break;
 	}
@@ -616,7 +616,7 @@ void hal_init(BoardConfiguration bc)
 	}
 
 	/* init input buffers */
-	ByteQueue_init((ByteQueue *) keypad_buf, sizeof(keypad_buf));
+	CharQueue_init((CharQueue *) keypad_buf, sizeof(keypad_buf));
 	memset(recent_uart_buf, 0, sizeof(recent_uart_buf));
 
 	/* init curses */

@@ -4,9 +4,9 @@
 #include <inttypes.h>
 #include "util.h"
 
-typedef uint8_t Byte;
+typedef char Char;
 #include "queue.mh"
-QUEUE_DECLARE(Byte)
+QUEUE_DECLARE(Char)
 
 /* usage:
 declare storage

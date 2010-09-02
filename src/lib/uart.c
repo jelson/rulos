@@ -20,7 +20,7 @@ struct UartState_s
 	UartQueue_t recvQueue;
 
 	// send
-	uint8_t *out_buf;
+	char *out_buf;
 	uint8_t out_len;
 	uint8_t out_n;
 	UARTSendDoneFunc send_done_cb;
@@ -33,7 +33,7 @@ UartState_t *RULOS_UART0 = &uart0_g;
 
 
 // Upcall from HAL when new data arrives.  Happens at interrupt time.
-void _uart_receive(UartState_t *u, uint8_t c)
+void _uart_receive(UartState_t *u, char c)
 {
 	if (!u->initted)
 		return;
@@ -46,12 +46,12 @@ void _uart_receive(UartState_t *u, uint8_t c)
 		  precise_clock_time_us(), u->recvQueue.reception_time_us));
 
 	// safe because we're in interrupt time.
-	ByteQueue_append(u->recvQueue.q, c);
+	CharQueue_append(u->recvQueue.q, c);
 }
 
 // Upcall from hal when the next byte is needed for a send.  Happens
 // at interrupt time.
-r_bool _uart_get_next_character(UartState_t *u, uint8_t *c /* OUT */)
+r_bool _uart_get_next_character(UartState_t *u, char *c /* OUT */)
 {
 	assert(u != NULL);
 
@@ -76,10 +76,10 @@ r_bool _uart_get_next_character(UartState_t *u, uint8_t *c /* OUT */)
 //////////////////////////////////////////////////////////
 
 
-uint8_t uart_read(UartState_t *u, uint8_t *c /* OUT */)
+r_bool uart_read(UartState_t *u, char *c /* OUT */)
 {
 	uint8_t old_interrupts = hal_start_atomic();
-	uint8_t retval = ByteQueue_pop(u->recvQueue.q, c);
+	r_bool retval = CharQueue_pop(u->recvQueue.q, c);
 	hal_end_atomic(old_interrupts);
 	return retval;
 }
@@ -95,10 +95,10 @@ UartQueue_t *uart_recvq(UartState_t *u)
 void uart_reset_recvq(UartQueue_t *uq)
 {
 	uq->reception_time_us = 0;
-	ByteQueue_clear(uq->q);
+	CharQueue_clear(uq->q);
 }
 
-r_bool uart_send(UartState_t *u, uint8_t *c, uint8_t len,
+r_bool uart_send(UartState_t *u, char *c, uint8_t len,
 				 UARTSendDoneFunc callback, void *callback_data)
 {
 	assert(u->initted);
@@ -120,8 +120,8 @@ r_bool uart_send(UartState_t *u, uint8_t *c, uint8_t len,
 void uart_init(UartState_t *u, uint16_t baud)
 {
 	// initialize the queue
-	u->recvQueue.q = (ByteQueue *) u->recvQueueStore;
-	ByteQueue_init(u->recvQueue.q, sizeof(u->recvQueueStore));
+	u->recvQueue.q = (CharQueue *) u->recvQueueStore;
+	CharQueue_init(u->recvQueue.q, sizeof(u->recvQueueStore));
 	u->recvQueue.reception_time_us = 0;
 	hal_uart_init(u, baud);
 	u->initted = TRUE;

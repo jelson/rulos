@@ -1,6 +1,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "rocket.h"
 #include "uart.h"
@@ -20,10 +21,10 @@ int main()
 	UartQueue_t *recvQueue = uart_recvq(RULOS_UART0);
 
 	while (1) {
-		uint8_t uartSendBuf;
+		char uartSendBuf;
 
-		if (ByteQueue_pop(recvQueue->q, &uartSendBuf)) {
-			uartSendBuf++;
+		if (CharQueue_pop(recvQueue->q, &uartSendBuf)) {
+			uartSendBuf = toupper(uartSendBuf);
 			uart_send(RULOS_UART0, &uartSendBuf, 1, NULL, NULL);
 		}
 	}
