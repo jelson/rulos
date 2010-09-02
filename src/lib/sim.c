@@ -385,7 +385,7 @@ char hal_read_keybuf()
 {
 	if (!g_keypad_enabled) { return 0; }
 
-	uint8_t k;
+	char k;
 
 	if (CharQueue_pop(keypad_q, &k))
 		return k;
