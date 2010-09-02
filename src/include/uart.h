@@ -18,8 +18,8 @@ typedef struct {
 } UartQueue_t;
 
 // called by the HAL
-void _uart_receive(UartState_t *uart, char c); // character arrived on uart
-r_bool _uart_get_next_character(UartState_t *u, char *c /* OUT */); // need next character to send
+void _uart_receive(UartState_t *uart, uint8_t c); // character arrived on uart
+r_bool _uart_get_next_character(UartState_t *u, uint8_t *c /* OUT */); // need next character to send
 
 
 // called by applications
@@ -29,7 +29,7 @@ UartQueue_t *uart_recvq(UartState_t *uart);
 void uart_reset_recvq(UartQueue_t *uq);
 
 typedef void (*UARTSendDoneFunc)(void *callback_data);
-r_bool uart_send(UartState_t *uart, char *c, uint8_t len, UARTSendDoneFunc, void *callback_data);
+r_bool uart_send(UartState_t *uart, uint8_t *c, uint8_t len, UARTSendDoneFunc, void *callback_data);
 
 #endif
 

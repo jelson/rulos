@@ -112,7 +112,7 @@ void hal_uart_start_send(UartState_t *u)
 // Runs in interrupt context.
 void handle_send_ready(UartState_t *u)
 {
-	char c;
+	uint8_t c;
 
 	// If there is still data remaining to send, send it.  Otherwise,
 	// disable the send-ready interrupt.

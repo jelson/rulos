@@ -20,7 +20,7 @@ struct UartState_s
 	UartQueue_t recvQueue;
 
 	// send
-	char *out_buf;
+	uint8_t *out_buf;
 	uint8_t out_len;
 	uint8_t out_n;
 	UARTSendDoneFunc send_done_cb;
@@ -33,7 +33,7 @@ UartState_t *RULOS_UART0 = &uart0_g;
 
 
 // Upcall from HAL when new data arrives.  Happens at interrupt time.
-void _uart_receive(UartState_t *u, char c)
+void _uart_receive(UartState_t *u, uint8_t c)
 {
 	if (!u->initted)
 		return;
@@ -51,7 +51,7 @@ void _uart_receive(UartState_t *u, char c)
 
 // Upcall from hal when the next byte is needed for a send.  Happens
 // at interrupt time.
-r_bool _uart_get_next_character(UartState_t *u, char *c /* OUT */)
+r_bool _uart_get_next_character(UartState_t *u, uint8_t *c /* OUT */)
 {
 	assert(u != NULL);
 
@@ -98,7 +98,7 @@ void uart_reset_recvq(UartQueue_t *uq)
 	ByteQueue_clear(uq->q);
 }
 
-r_bool uart_send(UartState_t *u, char *c, uint8_t len,
+r_bool uart_send(UartState_t *u, uint8_t *c, uint8_t len,
 				 UARTSendDoneFunc callback, void *callback_data)
 {
 	assert(u->initted);
