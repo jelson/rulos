@@ -212,11 +212,11 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 /*
  * How long since the last interval timer?
  * 0 == the current interval just started.
- * 1000 = the next interval is about to start.
+ * 999 = the next interval is about to start.
  */
 uint16_t hal_elapsed_milliintervals()
 {
-	return 1000 * TCNT1 / OCR1A;
+	return (1000*(uint32_t) TCNT1) / OCR1A;
 }
 
 // Speed up or slow down the clock by a certain
