@@ -1,5 +1,8 @@
-#define TIME_DEBUG
+//#define TIME_DEBUG
 //#define MANUAL_US_TEST
+//#define NO_ACCEL
+#define NO_GYRO
+//#define NO_ANALOG
 
 #include <string.h>
 #include <avr/interrupt.h>
@@ -51,7 +54,6 @@ struct locatorAct {
 
 static locatorAct_t aa_g;
 
-#define NO_ACCEL
 
 #define ACCEL_ADDR 0b0111000
 #define ACCEL_SAMPLING_RATE_BITS 0b001 // 50 hz
@@ -177,6 +179,10 @@ void readFromPeripheral(locatorAct_t *aa,
 
 void start_sampling()
 {
+#ifdef NO_ANALOG
+	return;
+#endif
+
 	gpio_make_input_no_pullup(GPIO_US_RECV);
 
 	// At 8mhz, an ADC prescaler of 32 gives an ADC clock of 250 khz.
@@ -271,7 +277,7 @@ ISR(ADC_vect)
 			_delay_ms(US_CHIRP_RING_TIME_MS); // make sure we don't reply to our own ping
 			if (!aa_g.uartSending) {
 				snprintf(aa_g.UARTsendBuf, sizeof(aa_g.UARTsendBuf)-1,
-						 "sent chirp reply %ld\n\r", precise_clock_time_us());
+						 "^m;Sent chirp reply %ld$\n\r", precise_clock_time_us());
 				emit(&aa_g, aa_g.UARTsendBuf);
 			}
 		}
@@ -340,6 +346,11 @@ void configLocator4(locatorAct_t *aa)
 // sample-rate bits to register 0x16.
 void configLocator3(locatorAct_t *aa)
 {
+#ifdef NO_GYRO
+	configLocator4(aa);
+	return;
+#endif
+
 	aa->TWIsendBuf[0] = 0x16;
 	aa->TWIsendBuf[1] =
 		(GYRO_FS_SEL << 3) |
@@ -365,6 +376,7 @@ void configLocator2(locatorAct_t *aa, char *data, int len)
 
 void configLocator(locatorAct_t *aa)
 {
+#ifndef NO_ANALOG
 	// turn off the us output switch
 	gpio_make_output(GPIO_US_XMIT);
 	gpio_clr(GPIO_US_XMIT);
@@ -375,6 +387,7 @@ void configLocator(locatorAct_t *aa)
 
 	aa->trainingMode = US_QUIET_TRAINING_LEN;
 	start_sampling();
+#endif
 
 #ifdef NO_ACCEL
 	configLocator3(aa);
@@ -397,9 +410,9 @@ static inline int16_t convert_accel(char lsb, char msb)
 	return mag;
 }
 
+#ifndef NO_GYRO
 void sampleLocator3(locatorAct_t *aa, char *data, int len)
 {
-#if 0
 	// convert and send the data out of serial
 	int16_t x = ((int16_t) data[0]) << 8 | data[1];
 	int16_t y = ((int16_t) data[2]) << 8 | data[3];
@@ -409,16 +422,20 @@ void sampleLocator3(locatorAct_t *aa, char *data, int len)
 		snprintf(aa->UARTsendBuf, sizeof(aa->UARTsendBuf)-1, "^g;x=%5d;y=%5d;z=%5d$\r\n", x, y, z);
 		emit(aa, aa->UARTsendBuf);
 	}
-#endif
 }
+#endif
+
 
 void sampleLocator2(locatorAct_t *aa, char *data, int len)
 {
-	// read 6 bytes from gyro starting from address 0x2
+#ifndef NO_GYRO
+	// read 6 bytes from gyro over TWI starting from address 0x2
 	readFromPeripheral(aa, GYRO_ADDR, 0x1D, 6, sampleLocator3);
+#endif
 
 #ifndef NO_ACCEL
-	// convert and send the data out of serial
+	// convert and send the accelerometer data we just received out to
+	// the serial port
 	int16_t x = convert_accel(data[0], data[1]);
 	int16_t y = convert_accel(data[2], data[3]);
 	int16_t z = convert_accel(data[4], data[5]);
@@ -441,27 +458,30 @@ void sampleLocator(locatorAct_t *aa)
 	while (CharQueue_pop(uart_recvq(RULOS_UART0)->q, &cmd)) {
 		switch (cmd) {
 		case 'q':
+			emit(aa, "^m;entering quiet mode\n\r");
 			us_xmit_stop();
 			break;
+
 		case 'c':
 			us_xmit_start();
 			break;
+
 		case 's':
-			emit(aa, "chirping\n\r");
+			emit(aa, "^m;chirping$\n\r");
 			aa->rangingMode = 'q';
 			chirp(US_CHIRP_LEN_US);
 			_delay_ms(US_CHIRP_RING_TIME_MS);
 			aa->chirpSendTime = precise_clock_time_us();
-			//			emit(aa, "listening\n\r");
 			aa->rangingMode = 's';
+			return; // don't sample the periphs this time around
 			break;
+
 		case 'r':
+			emit(aa, "^m;entering reflector mode\n\r");
 			aa->rangingMode = 'r';
 			break;
 		}
 	}
-
-	return;
 
 #ifdef MANUAL_US_TEST
 	// maybe flip the us
@@ -505,7 +525,7 @@ int main()
 #endif
 
 	hal_twi_init(0, NULL);
-	uart_init(RULOS_UART0, 0);
+	uart_init(RULOS_UART0, 1); // 250kbps when processor is at 8mhz
 
 	memset(&aa_g, 0, sizeof(aa_g));
 	aa_g.f = (ActivationFunc) sampleLocator;
@@ -515,13 +535,13 @@ int main()
 	} else {
 		snprintf(aa_g.UARTsendBuf, sizeof(aa_g.UARTsendBuf)-1, "^i;0$\r\n");
 	}
-	//emit(&aa_g, aa_g.UARTsendBuf);
+	emit(&aa_g, aa_g.UARTsendBuf);
 
+#ifdef TIME_DEBUG
 	for (uint8_t i = 0; i < 10; i++)
 		recordTime(precise_clock_time_us());
 	printTimeRecords("res");
-
-	emit(&aa_g, "\n\rchirper starting\n\r");
+#endif
 
 	configLocator(&aa_g);
 
