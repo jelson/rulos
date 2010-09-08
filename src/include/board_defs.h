@@ -1,3 +1,19 @@
+/************************************************************************
+ *
+ * This file is part of RulOS, Ravenna Ultra-Low-Altitude Operating
+ * System -- the free, open-source operating system for microcontrollers.
+ *
+ * Written by Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com),
+ * May 2009.
+ *
+ * This operating system is in the public domain.  Copyright is waived.
+ * All source code is completely free to use by anyone for any purpose
+ * with no restrictions whatsoever.
+ *
+ * For more information about the project, see: www.jonh.net/rulos
+ *
+ ************************************************************************/
+
 #define B_MISSION_CLOCK		DBOARD("Mission Clock",			PG PG PG PG PG PG PY PY,  3,  0 )
 #define B_LUNAR_DISTANCE	DBOARD("Distance to Moon",		PR PR PR PR PR PR PR PR, 33,  4 )
 #define B_SPEED				DBOARD("Speed (fps)",			PY PY PY PY PY PG PG PG, 33,  8 )
