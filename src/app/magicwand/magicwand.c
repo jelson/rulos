@@ -1,6 +1,5 @@
 //#define TIME_DEBUG
 //#define MANUAL_US_TEST
-//#define NO_ACCEL
 #define NO_GYRO
 //#define NO_ANALOG
 
@@ -12,22 +11,29 @@
 
 #include "rocket.h"
 #include "hardware.h"
+#include "funcseq.h"
 
 struct locatorAct;
 typedef struct locatorAct locatorAct_t;
 
 typedef void (*PeripheralSendCompleteFunc)(locatorAct_t *aa);
 typedef void (*PeripheralRecvCompleteFunc)(locatorAct_t *aa, char *data, int len);
-static inline void chirp(uint16_t chirpLenUS);
-
-
 
 struct locatorAct {
 	ActivationFunc f;
 
+	FuncSeq funcseq;
+
 	// uart
 	char UARTsendBuf[48];
 	uint8_t uartSending;
+
+	struct wait_uart_act_t {
+		ActivationFunc f;
+		locatorAct_t *aa;
+	} wait_uart_act;
+
+	char debug_state;
 
 	// twi
 	char TWIsendBuf[10];
@@ -37,19 +43,6 @@ struct locatorAct {
 	PeripheralRecvCompleteFunc recvFunc;
 	uint8_t twiAddr;
 	uint8_t readLen;
-
-#ifdef MANUAL_US_TEST
-	uint8_t currUsState;
-	uint8_t currUsCount;
-#endif
-
-	// ultrasound
-	char rangingMode;
-	uint16_t trainingMode;
-	uint16_t noiseMin, noiseMax;
-	uint16_t threshMin, threshMax;
-	uint16_t runLength;
-	Time chirpSendTime;
 };
 
 static locatorAct_t aa_g;
@@ -174,226 +167,123 @@ void readFromPeripheral(locatorAct_t *aa,
 }
 
 
-///////////// Ultrasound ////////////////////////////////////
-
-void start_sampling()
-{
-#ifdef NO_ANALOG
-	return;
-#endif
-
-	gpio_make_input_no_pullup(GPIO_US_RECV);
-
-	// At 8mhz, an ADC prescaler of 32 gives an ADC clock of 250 khz.
-	// At 13 cycles per conversion, we're sampling at 19.2 khz.
-
-	ADCSRA = 
-		_BV(ADEN) | // enable ADC
-		_BV(ADATE) | // auto-trigger mode enable
-		_BV(ADIE)  | // enable interrupts
-		_BV(ADPS2) | _BV(ADPS1) // prescaler: 64
-		;
-
-	// configure adc channel, and also set other bits in the register
-	// to 0 (which uses aref, and sets adlar to 0)
-	ADMUX = US_RECV_CHANNEL;
-
-	// set to 'free running' mode
-	ADCSRB = 0;
-
-	// start conversions
-	reg_set(&ADCSRA, ADSC);
-}
-
-void stop_sampling()
-{
-	ADCSRA = 0;
-}
-
-void updateNoiseThresholds()
-{
-	uint16_t range = aa_g.noiseMax - aa_g.noiseMin;
-
-	// in case it happens to be very not-noisy when we train, enforce
-	// a minimum noise band
-	if (range < US_MIN_NOISE_RANGE)
-		range = US_MIN_NOISE_RANGE;
-	
-	aa_g.threshMin = aa_g.noiseMin - (range/2);
-	aa_g.threshMax = aa_g.noiseMax + (range/2);
-
-	if (!aa_g.uartSending) {
-		snprintf(aa_g.UARTsendBuf, sizeof(aa_g.UARTsendBuf)-1, "^t;l=%5d;h=%5d$\r\n",
-				 aa_g.noiseMin, aa_g.noiseMax);
-		emit(&aa_g, aa_g.UARTsendBuf);
-	}
-}
-
-
-// Called when the ADC has a sample ready for us.
-ISR(ADC_vect)
-{
-	uint16_t adcval = ADCL;
-	adcval |= ((uint16_t) ADCH << 8);
-
-	// If we're in training mode, see if the current ADC value is
-	// lower or higher than the previously computed noise threshold.
-	if (aa_g.trainingMode) {
-		aa_g.trainingMode--;
-		if (aa_g.noiseMin == 0 && aa_g.noiseMax == 0) {
-			aa_g.noiseMin = aa_g.noiseMax = adcval;
-			updateNoiseThresholds();
-		} else {
-			if (adcval < aa_g.noiseMin) {
-				aa_g.noiseMin = adcval;
-				updateNoiseThresholds();
-			}
-			if (adcval > aa_g.noiseMax) {
-				aa_g.noiseMax = adcval;
-				updateNoiseThresholds();
-			}
-		}
-		return;
-	}
-
-	// If we're not in training mode, see if the current ADC value is
-	// beyond the noise threshold.  If so, it's a chirp!
-	if (adcval < aa_g.threshMin || adcval > aa_g.threshMax)
-		aa_g.runLength++;
-	else
-		aa_g.runLength = 0;
-
-	if (aa_g.runLength > US_MIN_RUN_LENGTH) {
-		// US detected!
-
-		// reset the run-length detector
-		aa_g.runLength = 0;
-
-		// If we're in reflector mode, wait 500usec, then chirp back.
-		if (aa_g.rangingMode == 'r') {
-			_delay_ms(US_CHIRP_RING_TIME_MS + 10);
-			chirp(US_CHIRP_LEN_US);
-			_delay_ms(US_CHIRP_RING_TIME_MS); // make sure we don't reply to our own ping
-			if (!aa_g.uartSending) {
-				snprintf(aa_g.UARTsendBuf, sizeof(aa_g.UARTsendBuf)-1,
-						 "^m;Sent chirp reply %ld$\n\r", precise_clock_time_us());
-				emit(&aa_g, aa_g.UARTsendBuf);
-			}
-		}
-
-		// If we're in sender mode, and we got a chirp, report it and
-		// exit sender mode
-		if (aa_g.rangingMode == 's') {
-			aa_g.rangingMode = 'q';
-			Time end = precise_clock_time_us();
-			int32_t diff = end - aa_g.chirpSendTime;
-
-			if (!aa_g.uartSending) {
-				snprintf(aa_g.UARTsendBuf, sizeof(aa_g.UARTsendBuf)-1,
-						 //"^d;s=%ld,e=%ld,t=%ld$\r\n",
-						 "^d;t=%ld$\r\n",
-						 //aa_g.chirpSendTime, end,
-						 diff);
-				emit(&aa_g, aa_g.UARTsendBuf);
-			}
-		}
-	}
-}
-
-
-static inline void us_xmit_start()
-{
-	// We are using "fast pwm" mode, i.e., mode 7 (0b111), where TOP=OCR0A.
-
-	// Furthermore since the on and off intervals are the same, we'll use 
-
-	// atmega manual p.107: to have OC0A toggled on each compare match, set
-	//    COM0A[1:0] = 0b01
-	// running at 8mhz, getting a 40khz clock means switching every 200 cycles (prescaler=1)
-
-	gpio_make_input(GPIO_US_XMIT);
-	TCCR0A = _BV(COM0A0) | _BV(WGM01) | _BV(WGM00);
-	TCCR0B = _BV(WGM02) | _BV(CS00);
-	OCR0A = 100;
-	TCNT0 = 0;
-	gpio_make_output(GPIO_US_XMIT);
-}
-
-static inline void us_xmit_stop()
-{
-	TCCR0A = 0;
-}
-
-static inline void chirp(uint16_t chirpLenUS)
-{
-	us_xmit_start();
-	_delay_us(chirpLenUS);
-	us_xmit_stop();
-}
-
-
 /*************************************/
 
-// all done!  start sampling.
-void configLocator4(locatorAct_t *aa)
+static inline void seq_emit_done(void *cb_data)
 {
-	schedule_now((Activation *) aa);
+	locatorAct_t *aa = (locatorAct_t *) cb_data;
+	aa->uartSending = FALSE;
+	funcseq_next(&aa->funcseq);
+}
+
+static inline void seq_emit(locatorAct_t *aa, char *s)
+{
+	aa->uartSending = TRUE;
+	uart_send(RULOS_UART0, s, strlen(s), seq_emit_done, aa);
 }
 
 
-// Next configure the gyro by writing the full-scale deflection and
-// sample-rate bits to register 0x16.
-void configLocator3(locatorAct_t *aa)
+static void config_next(locatorAct_t *aa)
 {
-#ifdef NO_GYRO
-	configLocator4(aa);
-	return;
-#endif
-
-	aa->TWIsendBuf[0] = 0x16;
-	aa->TWIsendBuf[1] =
-		(GYRO_FS_SEL << 3) |
-		(GYRO_DLPF_CFG);
-	sendToPeripheral(aa, GYRO_ADDR, aa->TWIsendBuf, 2, configLocator4);
+	aa_g.debug_state = 'c';
+	funcseq_next(&aa->funcseq);
 }
 
+static inline void config_recv_next(locatorAct_t *aa, char *data, int len)
+{
+	// Just here to have matching parameter types;
+	// we let the receiver slurp the data directly out of the
+	// values already stashed in aa.
+	config_next(aa);
+}
+
+// This is a little clumsy, but keeps the sequencing code otherwise clean-ish.
+static inline char *last_read_data(locatorAct_t *aa)
+{
+	return aa->trs->data;
+}
 
 // Configure the accelerometer by first reading config byte 0x14, then
 // setting the low bits (leaving the 3 highest bits untouched), and
 // writing it back.  This callback is called when the initial read
 // completes.
-void configLocator2(locatorAct_t *aa, char *data, int len)
+
+
+void wait_uart_done(struct wait_uart_act_t *wua)
 {
-	aa->TWIsendBuf[0] = 0x14;
-	aa->TWIsendBuf[1] =
-		(data[0] & 0b11100000) |
-		(ACCEL_RANGE_BITS << 3) |
-		(ACCEL_SAMPLING_RATE_BITS);
-	sendToPeripheral(aa, ACCEL_ADDR, aa->TWIsendBuf, 2, configLocator3);
+	if (wua->aa->uartSending)
+	{
+		aa_g.debug_state = 'a';
+		schedule_us(1000, (Activation*) wua);
+	}
+	else
+	{
+		aa_g.debug_state = 'b';
+		config_next(wua->aa);
+	}
 }
 
-
-void configLocator(locatorAct_t *aa)
+void wait_uart(locatorAct_t *aa)
 {
-#ifndef NO_ANALOG
-	// turn off the us output switch
-	gpio_make_output(GPIO_US_XMIT);
-	gpio_clr(GPIO_US_XMIT);
+	aa_g.debug_state = 'B';
+	aa->wait_uart_act.f = (ActivationFunc) wait_uart_done;
+	aa->wait_uart_act.aa = aa;
+	schedule_us(1000, (Activation*) &aa->wait_uart_act);
+}
 
-	// enable 10v voltage doubler
-	gpio_make_output(GPIO_10V_ENABLE);
-	gpio_clr(GPIO_10V_ENABLE);
+void say1(locatorAct_t *aa)
+{
+	aa_g.debug_state = 'C';
+	seq_emit(aa, "Line 1!\r\n");
+}
 
-	aa->trainingMode = US_QUIET_TRAINING_LEN;
-	start_sampling();
-#endif
+void say2(locatorAct_t *aa)
+{
+	aa_g.debug_state = 'D';
+	seq_emit(aa, "Another thing!\r\n");
+}
 
-#ifdef NO_ACCEL
-	configLocator3(aa);
-	return;
-#endif
+void say3(locatorAct_t *aa)
+{
+	aa_g.debug_state = 'E';
+	seq_emit(aa, "A totally unrelated thing!\r\n");
+}
 
-	readFromPeripheral(aa, ACCEL_ADDR, 0x14, 1, configLocator2);
+void configLocator_acc1(void *v_aa)
+{
+	aa_g.debug_state = 'F';
+	locatorAct_t *aa = (locatorAct_t *) v_aa;
+	readFromPeripheral(aa, ACCEL_ADDR, 0x14, 1, config_recv_next);
+}
+
+void configLocator_acc2(void *v_aa)
+{
+	locatorAct_t *aa = (locatorAct_t *) v_aa;
+	aa->TWIsendBuf[0] = 0x14;
+	aa->TWIsendBuf[1] =
+		(last_read_data(aa)[0] & 0b11100000) |
+		(ACCEL_RANGE_BITS << 3) |
+		(ACCEL_SAMPLING_RATE_BITS);
+	sendToPeripheral(aa, ACCEL_ADDR, aa->TWIsendBuf, 2, config_next);
+}
+
+// Next configure the gyro by writing the full-scale deflection and
+// sample-rate bits to register 0x16.
+void configLocator_gyro(void *v_aa)
+{
+	locatorAct_t *aa = (locatorAct_t *) v_aa;
+	aa->TWIsendBuf[0] = 0x16;
+	aa->TWIsendBuf[1] =
+		(GYRO_FS_SEL << 3) |
+		(GYRO_DLPF_CFG);
+	sendToPeripheral(aa, GYRO_ADDR, aa->TWIsendBuf, 2, config_next);
+}
+
+// all done!  start sampling.
+void configLocator_done(void *v_aa)
+{
+	locatorAct_t *aa = (locatorAct_t *) v_aa;
+	schedule_now((Activation *) aa);
 }
 
 
@@ -432,7 +322,6 @@ void sampleLocator2(locatorAct_t *aa, char *data, int len)
 	readFromPeripheral(aa, GYRO_ADDR, 0x1D, 6, sampleLocator3);
 #endif
 
-#ifndef NO_ACCEL
 	// convert and send the accelerometer data we just received out to
 	// the serial port
 	int16_t x = convert_accel(data[0], data[1]);
@@ -443,7 +332,6 @@ void sampleLocator2(locatorAct_t *aa, char *data, int len)
 		snprintf(aa->UARTsendBuf, sizeof(aa->UARTsendBuf)-1, "^a;x=%5d;y=%5d;z=%5d$\r\n", x, y, z);
 		emit(aa, aa->UARTsendBuf);
 	}
-#endif
 }
 	
 	
@@ -456,57 +344,47 @@ void sampleLocator(locatorAct_t *aa)
 	char cmd;
 	while (CharQueue_pop(uart_recvq(RULOS_UART0)->q, &cmd)) {
 		switch (cmd) {
-		case 'q':
-			emit(aa, "^m;entering quiet mode\n\r");
-			us_xmit_stop();
-			break;
-
-		case 'c':
-			us_xmit_start();
-			break;
-
-		case 's':
-			emit(aa, "^m;chirping$\n\r");
-			aa->rangingMode = 'q';
-			chirp(US_CHIRP_LEN_US);
-			_delay_ms(US_CHIRP_RING_TIME_MS);
-			aa->chirpSendTime = precise_clock_time_us();
-			aa->rangingMode = 's';
-			return; // don't sample the periphs this time around
-			break;
-
-		case 'r':
-			emit(aa, "^m;entering reflector mode\n\r");
-			aa->rangingMode = 'r';
-			break;
 		}
 	}
-
-#ifdef MANUAL_US_TEST
-	// maybe flip the us
-	aa->currUsCount++;
-	if (aa->currUsCount >= 70) {
-		aa->currUsState = !aa->currUsState;
-		if (aa->currUsState)
-			emit(aa, "on\n\r");
-		else
-			emit(aa, "off\n\r");
-		gpio_set_or_clr(GPIO_US_XMIT, aa->currUsState);
-		aa->currUsCount = 0;
-	}
-#endif
-
-#ifdef NO_ACCEL
-	sampleLocator2(aa, NULL, 0);
-	return;
-#endif
 
 	// read 6 bytes from accelerometer starting from address 0x2
 	readFromPeripheral(aa, ACCEL_ADDR, 0x2, 6, sampleLocator2);
 }
 
+SequencableFunc func_array[] = {
+	(SequencableFunc) wait_uart,
+	(SequencableFunc) say1,
+	(SequencableFunc) wait_uart,
+	(SequencableFunc) say2,
+	(SequencableFunc) wait_uart,
+	(SequencableFunc) say3,
+	configLocator_acc1,
+	configLocator_acc2,
+	configLocator_gyro,
+	configLocator_done,
+	NULL
+	};
 
 
+typedef struct {
+	ActivationFunc f;
+} AliveAct;
+
+void alive_func(AliveAct *aa)
+{
+	snprintf(aa_g.UARTsendBuf, sizeof(aa_g.UARTsendBuf)-1,
+			 "alive! %c\r\n",
+			 aa_g.debug_state
+			 );
+	emit(&aa_g, aa_g.UARTsendBuf);
+	schedule_us(1000000, (Activation*) aa);
+}
+
+void alive_init(AliveAct *aa)
+{
+	aa->f = (ActivationFunc) alive_func;
+	schedule_us(1000000, (Activation*) aa);
+}
 
 int main()
 {
@@ -525,7 +403,6 @@ int main()
 
 	hal_twi_init(0, NULL);
 
-#define BAUD_8MHz_250000	1
 #define BAUD_8MHz_38461	12
 	uart_init(RULOS_UART0, BAUD_8MHz_38461);
 
@@ -545,7 +422,12 @@ int main()
 	printTimeRecords("res");
 #endif
 
-	configLocator(&aa_g);
+	AliveAct alive;
+	alive_init(&alive);
+
+	init_funcseq(&aa_g.funcseq, &aa_g, func_array);
+	aa_g.debug_state = 'A';
+	funcseq_next(&aa_g.funcseq);
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);

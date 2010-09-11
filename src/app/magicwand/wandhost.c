@@ -16,8 +16,19 @@
 int main(int argc, const char **argv)
 {
 	int rc;
-	assert(argc==2);
-	const char *port_path = argv[1];
+	const char *port_path;
+	if (argc==2)
+	{
+		port_path = argv[1];
+	}
+	else if (argc==1)
+	{
+		port_path = "/dev/ttyUSB0";
+	}
+	else
+	{
+		assert(FALSE);
+	}
 
 	int fd = open(port_path, O_RDWR|O_NOCTTY);
 	if (fd<0) {
@@ -37,7 +48,8 @@ int main(int argc, const char **argv)
 #if 0
 	serinfo.flags |= ASYNC_SPD_CUST;
 	serinfo.baud_base = 24000000;
-	serinfo.custom_divisor = 96;
+	serinfo.custom_divisor = 96;	// 250000
+	serinfo.custom_divisor = 336;	// 71428
 #else
 	serinfo.flags &= ~ASYNC_SPD_CUST;
 	serinfo.baud_base = 24000000;
