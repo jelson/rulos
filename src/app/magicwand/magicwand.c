@@ -1,6 +1,6 @@
 //#define TIME_DEBUG
 //#define MANUAL_US_TEST
-#define NO_GYRO
+//#define NO_GYRO
 //#define NO_ANALOG
 
 #include <string.h>
@@ -12,12 +12,53 @@
 #include "rocket.h"
 #include "hardware.h"
 #include "funcseq.h"
+#include "pov.h"
 
 struct locatorAct;
 typedef struct locatorAct locatorAct_t;
 
 typedef void (*PeripheralSendCompleteFunc)(locatorAct_t *aa);
 typedef void (*PeripheralRecvCompleteFunc)(locatorAct_t *aa, char *data, int len);
+
+typedef struct {
+	ActivationFunc f;
+	char *messages[5];
+	int cur_index;
+	PovAct *povAct;
+} MessageChangeAct;
+
+void message_change_func(MessageChangeAct *mca)
+{
+	mca->cur_index += 1;
+	char *msg = mca->messages[mca->cur_index];
+	if (msg==NULL)
+	{
+		mca->cur_index = 0;
+		msg = mca->messages[mca->cur_index];
+	}
+	pov_write(mca->povAct, msg);
+
+	schedule_us(1000000, (Activation*) mca);
+}
+
+void message_change_init(MessageChangeAct *mca, PovAct *povAct)
+{
+	mca->f = (ActivationFunc) message_change_func;
+	mca->messages[0] = " ACE";
+	mca->messages[1] = "  OF";
+	mca->messages[2] = "CLUBS";
+	mca->messages[3] = "";
+	mca->messages[4] = NULL;
+	mca->cur_index = 0;
+	mca->povAct = povAct;
+	schedule_us(1000000, (Activation*) mca);
+}
+
+typedef struct {
+	int16_t x;
+	int16_t y;
+	int16_t z;
+} Vect3D;
 
 struct locatorAct {
 	ActivationFunc f;
@@ -43,6 +84,12 @@ struct locatorAct {
 	PeripheralRecvCompleteFunc recvFunc;
 	uint8_t twiAddr;
 	uint8_t readLen;
+
+	Vect3D accel;
+	Vect3D gyro;
+
+	PovAct pov_act;
+	MessageChangeAct message_change;
 };
 
 static locatorAct_t aa_g;
@@ -85,33 +132,6 @@ static inline void emit(locatorAct_t *aa, char *s)
 	uart_send(RULOS_UART0, s, strlen(s), uartSendDone, aa);
 }
 
-
-/**** time-related debugging ****/
-
-#ifdef TIME_DEBUG
-
-#define MAX_TIME_RECORDS 30
-Time timerecord[MAX_TIME_RECORDS];
-uint8_t numTimeRecords = 0;
-
-void recordTime(Time t)
-{
-	if (numTimeRecords < MAX_TIME_RECORDS) {
-		timerecord[numTimeRecords++] = t;
-	}
-}
-void printTimeRecords(char *prefix)
-{
-	uint8_t i;
-
-	for (i = 0; i < numTimeRecords; i++) {
-		snprintf(aa_g.UARTsendBuf, sizeof(aa_g.UARTsendBuf)-1,
-				 "%s %d: %ld\r\n",
-				 prefix, i, timerecord[i]);
-		emit(&aa_g, aa_g.UARTsendBuf);
-	}
-}
-#endif
 
 
 /*** sending data to a locator peripheral ***/
@@ -166,6 +186,55 @@ void readFromPeripheral(locatorAct_t *aa,
 	sendToPeripheral(aa, twiAddr, aa->TWIsendBuf, 1, _readFromPeripheral2);
 }
 
+
+/*************************************/
+
+typedef struct {
+	ActivationFunc f;
+	Vect3D *accel;
+	// ugh. Very global-ish: your one stop shop for values, serial ifc, ...
+	locatorAct_t *la;
+} TiltyInputAct;
+
+#define abs(a)	((a)<0 ? (-(a)) : (a))
+
+void tilty_input_update(TiltyInputAct *tia)
+{
+	int16_t ax = abs(tia->accel->x);
+	int16_t ay = abs(tia->accel->y);
+	int16_t az = abs(tia->accel->z);
+
+	char max_name = 'x';
+	int16_t max_val = tia->accel->x;
+	int16_t max_aval = ax;
+	if (ay>max_aval)
+	{
+		max_name = 'y';
+		max_val = tia->accel->y;
+		max_aval = ay;
+	}
+	if (az>max_aval)
+	{
+		max_name = 'z';
+		max_val = tia->accel->z;
+		max_aval = az;
+	}
+
+	if (!tia->la->uartSending) {
+		snprintf(tia->la->UARTsendBuf, sizeof(tia->la->UARTsendBuf)-1, "dim: %c val: %d\r\n", max_name, max_val);
+		emit(tia->la, tia->la->UARTsendBuf);
+	}
+
+	schedule_us(100000, (Activation*) tia);
+}
+
+void tilty_input_init(TiltyInputAct *tia, Vect3D *accel, locatorAct_t *la)
+{
+	tia->f = (ActivationFunc) tilty_input_update;
+	tia->accel = accel;
+	tia->la = la;
+	schedule_us(100000, (Activation*) tia);
+}
 
 /*************************************/
 
@@ -299,46 +368,62 @@ static inline int16_t convert_accel(char lsb, char msb)
 	return mag;
 }
 
-#ifndef NO_GYRO
 void sampleLocator3(locatorAct_t *aa, char *data, int len)
 {
 	// convert and send the data out of serial
-	int16_t x = ((int16_t) data[0]) << 8 | data[1];
-	int16_t y = ((int16_t) data[2]) << 8 | data[3];
-	int16_t z = ((int16_t) data[4]) << 8 | data[5];
+	aa->gyro.x = ((int16_t) data[0]) << 8 | data[1];
+	aa->gyro.y = ((int16_t) data[2]) << 8 | data[3];
+	aa->gyro.z = ((int16_t) data[4]) << 8 | data[5];
 
+/*
 	if (!aa->uartSending) {
 		snprintf(aa->UARTsendBuf, sizeof(aa->UARTsendBuf)-1, "^g;x=%5d;y=%5d;z=%5d$\r\n", x, y, z);
 		emit(aa, aa->UARTsendBuf);
 	}
+*/
 }
-#endif
-
 
 void sampleLocator2(locatorAct_t *aa, char *data, int len)
 {
-#ifndef NO_GYRO
 	// read 6 bytes from gyro over TWI starting from address 0x2
 	readFromPeripheral(aa, GYRO_ADDR, 0x1D, 6, sampleLocator3);
-#endif
 
 	// convert and send the accelerometer data we just received out to
 	// the serial port
-	int16_t x = convert_accel(data[0], data[1]);
-	int16_t y = convert_accel(data[2], data[3]);
-	int16_t z = convert_accel(data[4], data[5]);
+	Vect3D *accel = &aa->accel;
+	accel->x = convert_accel(data[0], data[1]);
+	accel->y = convert_accel(data[2], data[3]);
+	accel->z = convert_accel(data[4], data[5]);
+
+	r_bool wave_positive = accel->x > 0;
+	char dbg_zcross = '_';
+	if (!(aa->pov_act.last_wave_positive) && wave_positive)
+	{
+		// zero-crossing.
+		pov_measure(&aa->pov_act);
+		dbg_zcross = 'Z';
+	}
+	aa->pov_act.last_wave_positive = wave_positive;
 
 	if (!aa->uartSending) {
-		snprintf(aa->UARTsendBuf, sizeof(aa->UARTsendBuf)-1, "^a;x=%5d;y=%5d;z=%5d$\r\n", x, y, z);
+/*
+		char *msg = aa_g.message_change.messages[aa_g.message_change.cur_index];
+		snprintf(aa->UARTsendBuf, sizeof(aa->UARTsendBuf)-1, "per %ld %c '%s'\r\n",
+			aa->pov_act.lastPeriod,
+			dbg_zcross,
+			msg
+			);
 		emit(aa, aa->UARTsendBuf);
+*/
 	}
+
 }
 	
 	
 void sampleLocator(locatorAct_t *aa)
 {
 	// schedule reading of the next sample
-	schedule_us(50000, (Activation *) aa);
+	schedule_us(5000, (Activation *) aa);
 
 	// see if we've received any serial commands
 	char cmd;
@@ -365,33 +450,12 @@ SequencableFunc func_array[] = {
 	NULL
 	};
 
-
-typedef struct {
-	ActivationFunc f;
-} AliveAct;
-
-void alive_func(AliveAct *aa)
-{
-	snprintf(aa_g.UARTsendBuf, sizeof(aa_g.UARTsendBuf)-1,
-			 "alive! %c\r\n",
-			 aa_g.debug_state
-			 );
-	emit(&aa_g, aa_g.UARTsendBuf);
-	schedule_us(1000000, (Activation*) aa);
-}
-
-void alive_init(AliveAct *aa)
-{
-	aa->f = (ActivationFunc) alive_func;
-	schedule_us(1000000, (Activation*) aa);
-}
-
 int main()
 {
 	heap_init();
 	util_init();
 	hal_init(bc_audioboard);
-	init_clock(10000, TIMER1);
+	init_clock(1000, TIMER1);
 
 #if 0
 	gpio_make_output(GPIO_C5);
@@ -422,8 +486,16 @@ int main()
 	printTimeRecords("res");
 #endif
 
+#if 0
 	AliveAct alive;
 	alive_init(&alive);
+#endif
+
+	pov_init(&aa_g.pov_act);
+	message_change_init(&aa_g.message_change, &aa_g.pov_act);
+
+	TiltyInputAct tia;
+	tilty_input_init(&tia, &aa_g.accel, &aa_g);
 
 	init_funcseq(&aa_g.funcseq, &aa_g, func_array);
 	aa_g.debug_state = 'A';

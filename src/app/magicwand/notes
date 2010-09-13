@@ -1,0 +1,77 @@
+hardware:
+	LED mapping:
+	LED A : PROG 1 : PB4
+	 nc   : PROG 2 : Vcc
+	LED B : PROG 3 : PB5
+	LED C : PROG 4 : PB3
+	LED D : PROG 5 : PC6 (Reset)
+	 gnd  : PROG 6 : Gnd
+	 nc   : cabl 7 : nc
+	LED E : cabl 8 : PD6
+
+oops. Reset is not a good output pin.
+
+LED D and LED E have changed. See source.
+
+------------------------------------------------------------------------------
+
+POV output:
+a positive zero crossing of the accelerometer -> a negative zero crossing
+of position.
+Thus image begins at 3/8 runs to 5/8,
+and can be displayed backwards from 7/8 to 9/8.
+
+(1) Measure period & phase of accelerometer zero crossings.
+	Sample it at some max rate.
+	Each zero crossing, record an 8MHz system clock as phase;
+		record difference with previous system clock as period.
+(2) Display at some max rate:
+	Position_time = (system clock - phase) / period << k+3
+	(Ugh, division... Precompute a table using remainders?)
+	pixel = Image_time & ((1<<k)-1)
+	phase_bits = (Position_time >> k) - 1
+	display_on = phase_bits & 2;
+	display_reverse = phase_bits & 4;
+	if (display_reverse) { pixel = ~pixel; }
+	Paint pixel.
+
+------------------------------------------------------------------------------
+
+Gesture input:
+
+(1) Use a twitchiness threshold on accelerometer to determine when wand is
+stable. Use gravity to orient (up to 1 dof) gyros. The missing dof is 'north',
+which we could correct with the compass, but no need; it can drift.
+
+(2) If the wand moves into an upright orientation (gravity mostly +Y,
+gyros agree), then enter POV display mode after a couple zero crossings.
+
+(3) Otherwise, parse 2D gyro motions to get semaphores.
+H/D/C/S sets suit
+AKQJ sets face card
+number values: #A ... #J
+
+Ugh, semaphores are painful.
+
+How about a state machine. Wand level (gravity mostly -Z) => at rest.
+A peak accelerometer reading indicates to read the (relative) gyros,
+giving one of the eight cardinal quadrants; the user inputs symbols one at
+a time.
+E-W-E-W means clear all; display blinks in response and clears.
+{NE,NW,SE,SW} inputs the suit; first light illuminates.
+{NE=1,NW=2,SE=3,SW=4} adds to face value, another light illuminates.
+{N+5,S+10} adds extra value, another light illuminates.
+This lets us reach A(1)-10, J(11), Q(12), K(13).
+	An invalid sum causes clear all.
+Once 2 or 3 lights are on, a card value is loaded.
+Now tilting the wand vertical places it in POV mode. "Is this your card?"
+
+Binary:
+y-neg for 2sec: turn on POV.
+z-pos for 2sec: turn off POV, enter input mode.
+Input mode:
+	suit: LL LR RL RR 	(L=x-neg, R=x-pos)
+	value: DDD1 ... UUDU (U=1, D=0; values A=1 through K=13)
+		U=y-neg, D=y-pos
+	Don't hold U for 2 sec, for that enters POV mode
+	Each input causes a strobe.

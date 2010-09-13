@@ -67,6 +67,8 @@ COMMON_OBJECTS = \
 	audio_driver.o \
 	quadknob.o \
 	potsticker.o \
+	funcseq.o \
+	pov.o \
 
 
 .PHONY: all

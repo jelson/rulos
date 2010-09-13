@@ -14,6 +14,9 @@
  *
  ************************************************************************/
 
+#ifndef _HARDWARE_H
+#define _HARDWARE_H
+
 #include <avr/io.h>
 
 #define GPIO_B0  (&DDRB), (&PORTB), (&PINB), (PORTB0)
@@ -178,3 +181,5 @@ void sensor_interrupt_register_handler(Handler handler);
 void hardware_assert(uint16_t line);
 void hardware_assign_timer_handler(uint8_t timer_id, Handler handler);
 void init_f_cpu(void);
+
+#endif // _HARDWARE_H
