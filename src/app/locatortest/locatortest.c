@@ -93,6 +93,19 @@ static inline void emit(locatorAct_t *aa, char *s)
 	uart_send(RULOS_UART0, s, strlen(s), uartSendDone, aa);
 }
 
+static inline uint8_t maybe_claim_serial(locatorAct_t *aa)
+{
+	uint8_t retval = FALSE;
+	cli(); // disable interrupts
+	if (aa->uartSending == FALSE) {
+		aa->uartSending = TRUE;
+		retval = TRUE;
+	}
+	sei();
+	return retval;
+}
+
+
 
 /**** time-related debugging ****/
 
@@ -223,7 +236,7 @@ void updateNoiseThresholds()
 	aa_g.threshMin = aa_g.noiseMin - (range/2);
 	aa_g.threshMax = aa_g.noiseMax + (range/2);
 
-	if (!aa_g.uartSending) {
+	if (maybe_claim_serial(&aa_g)) {
 		snprintf(aa_g.UARTsendBuf, sizeof(aa_g.UARTsendBuf)-1, "^t;l=%5d;h=%5d$\r\n",
 				 aa_g.noiseMin, aa_g.noiseMax);
 		emit(&aa_g, aa_g.UARTsendBuf);
@@ -275,7 +288,7 @@ ISR(ADC_vect)
 			_delay_ms(US_CHIRP_RING_TIME_MS + 10);
 			chirp(US_CHIRP_LEN_US);
 			_delay_ms(US_CHIRP_RING_TIME_MS); // make sure we don't reply to our own ping
-			if (!aa_g.uartSending) {
+			if (maybe_claim_serial(&aa_g)) {
 				snprintf(aa_g.UARTsendBuf, sizeof(aa_g.UARTsendBuf)-1,
 						 "^m;Sent chirp reply %ld$\n\r", precise_clock_time_us());
 				emit(&aa_g, aa_g.UARTsendBuf);
@@ -289,7 +302,7 @@ ISR(ADC_vect)
 			Time end = precise_clock_time_us();
 			int32_t diff = end - aa_g.chirpSendTime;
 
-			if (!aa_g.uartSending) {
+			if (maybe_claim_serial(&aa_g)) {
 				snprintf(aa_g.UARTsendBuf, sizeof(aa_g.UARTsendBuf)-1,
 						 //"^d;s=%ld,e=%ld,t=%ld$\r\n",
 						 "^d;t=%ld$\r\n",
@@ -418,7 +431,7 @@ void sampleLocator3(locatorAct_t *aa, char *data, int len)
 	int16_t y = ((int16_t) data[2]) << 8 | data[3];
 	int16_t z = ((int16_t) data[4]) << 8 | data[5];
 
-	if (!aa->uartSending) {
+	if (maybe_claim_serial(aa)) {
 		snprintf(aa->UARTsendBuf, sizeof(aa->UARTsendBuf)-1, "^g;x=%5d;y=%5d;z=%5d$\r\n", x, y, z);
 		emit(aa, aa->UARTsendBuf);
 	}
@@ -440,7 +453,7 @@ void sampleLocator2(locatorAct_t *aa, char *data, int len)
 	int16_t y = convert_accel(data[2], data[3]);
 	int16_t z = convert_accel(data[4], data[5]);
 
-	if (!aa->uartSending) {
+	if (maybe_claim_serial(aa)) {
 		snprintf(aa->UARTsendBuf, sizeof(aa->UARTsendBuf)-1, "^a;x=%5d;y=%5d;z=%5d$\r\n", x, y, z);
 		emit(aa, aa->UARTsendBuf);
 	}
