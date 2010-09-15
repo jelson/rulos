@@ -13,6 +13,8 @@
 #include "hardware.h"
 #include "funcseq.h"
 #include "pov.h"
+#include "vect3d.h"
+#include "tilty_input.h"
 
 struct locatorAct;
 typedef struct locatorAct locatorAct_t;
@@ -53,12 +55,6 @@ void message_change_init(MessageChangeAct *mca, PovAct *povAct)
 	mca->povAct = povAct;
 	schedule_us(1000000, (Activation*) mca);
 }
-
-typedef struct {
-	int16_t x;
-	int16_t y;
-	int16_t z;
-} Vect3D;
 
 struct locatorAct {
 	ActivationFunc f;
@@ -189,51 +185,103 @@ void readFromPeripheral(locatorAct_t *aa,
 
 /*************************************/
 
-typedef struct {
-	ActivationFunc f;
-	Vect3D *accel;
-	// ugh. Very global-ish: your one stop shop for values, serial ifc, ...
-	locatorAct_t *la;
-} TiltyInputAct;
-
-#define abs(a)	((a)<0 ? (-(a)) : (a))
-
-void tilty_input_update(TiltyInputAct *tia)
+void remote_debug(char *msg)
 {
-	int16_t ax = abs(tia->accel->x);
-	int16_t ay = abs(tia->accel->y);
-	int16_t az = abs(tia->accel->z);
-
-	char max_name = 'x';
-	int16_t max_val = tia->accel->x;
-	int16_t max_aval = ax;
-	if (ay>max_aval)
-	{
-		max_name = 'y';
-		max_val = tia->accel->y;
-		max_aval = ay;
+	if (!aa_g.uartSending) {
+		emit(&aa_g, msg);
 	}
-	if (az>max_aval)
-	{
-		max_name = 'z';
-		max_val = tia->accel->z;
-		max_aval = az;
-	}
-
-	if (!tia->la->uartSending) {
-		snprintf(tia->la->UARTsendBuf, sizeof(tia->la->UARTsendBuf)-1, "dim: %c val: %d\r\n", max_name, max_val);
-		emit(tia->la, tia->la->UARTsendBuf);
-	}
-
-	schedule_us(100000, (Activation*) tia);
 }
 
-void tilty_input_init(TiltyInputAct *tia, Vect3D *accel, locatorAct_t *la)
+typedef struct
 {
-	tia->f = (ActivationFunc) tilty_input_update;
-	tia->accel = accel;
-	tia->la = la;
-	schedule_us(100000, (Activation*) tia);
+	UIEventHandlerFunc func;
+	struct locatorAct *la;
+	PovAct *pov;
+	MessageChangeAct *mca;
+	uint8_t card_suit;
+	uint8_t card_value;
+	uint8_t *mode_ptr;
+} TiltyInputHandler;
+
+static char *card_value_names[] = {
+	"ZERO",
+	"ACE",
+	"TWO",
+	"THREE",
+	"FOUR",
+	"FIVE",
+	"SIX",
+	"SEVEN",
+	"EIGHT",
+	"NINE",
+	"TEN",
+	"JACK",
+	"KING",
+	"QUEEN",
+	"FORTN",
+	"FIFTN"
+	};
+static char *card_suit_names[] = {
+	"HEARTS",
+	"DIAMONDS",
+	"CLUBS",
+	"SPADES"
+	};
+
+void tih_handle(TiltyInputHandler *tih, UIEvent evt)
+{
+	switch (evt)
+	{
+		case ti_enter_pov:
+			tih->mca->messages[0] = card_value_names[tih->card_value];
+			tih->mca->messages[2] = card_suit_names[tih->card_suit];
+			pov_set_visible(tih->pov, TRUE);
+			break;
+		case ti_exit_pov:
+			pov_set_visible(tih->pov, FALSE);
+			tih->card_suit = 0;
+			tih->card_value = 0;
+			tih->mode_ptr = &tih->card_suit;
+			break;
+		case ti_up:
+			tih->mode_ptr = &tih->card_suit;
+			break;
+		case ti_down:
+			tih->mode_ptr = &tih->card_value;
+			break;
+		case ti_left:
+			(*(tih->mode_ptr)) = ((*(tih->mode_ptr))<<1) | 1;
+			break;
+		case ti_right:
+			(*(tih->mode_ptr)) = ((*(tih->mode_ptr))<<1) | 0;
+			break;
+	}
+
+	tih->card_value &= 0x0f;
+	tih->card_suit &= 0x03;
+
+
+	if (!tih->la->uartSending) {
+		static char buf[80];
+		snprintf(buf, sizeof(buf)-1, "Input event 0x%02x %d %s of %d %s mode %s\r\n",
+			evt,
+			tih->card_value, card_value_names[tih->card_value],
+			tih->card_suit, card_suit_names[tih->card_suit],
+			(tih->mode_ptr==&tih->card_suit) ? "suit" : "value"
+			);
+		emit(tih->la, buf);
+	}
+}
+
+void tih_init(TiltyInputHandler *tih, struct locatorAct *la, PovAct *pov, MessageChangeAct *mca)
+{
+	tih->func = (UIEventHandlerFunc) tih_handle;
+	tih->la = la;
+	tih->pov = pov;
+	tih->mca = mca;
+	tih->card_suit = 0;
+	tih->card_value = 0;
+	tih->mode_ptr = &tih->card_suit;
 }
 
 /*************************************/
@@ -494,9 +542,12 @@ int main()
 	pov_init(&aa_g.pov_act);
 	message_change_init(&aa_g.message_change, &aa_g.pov_act);
 
-	TiltyInputAct tia;
-	tilty_input_init(&tia, &aa_g.accel, &aa_g);
+	TiltyInputHandler tih;
+	tih_init(&tih, &aa_g, &aa_g.pov_act, &aa_g.message_change);
 
+	TiltyInputAct tia;
+	tilty_input_init(&tia, &aa_g.accel, (UIEventHandler*) &tih);
+	
 	init_funcseq(&aa_g.funcseq, &aa_g, func_array);
 	aa_g.debug_state = 'A';
 	funcseq_next(&aa_g.funcseq);

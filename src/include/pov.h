@@ -20,7 +20,7 @@
 #include "rocket.h"
 #include "hardware.h"
 
-#define POV_LG_DISPLAY_WIDTH	5
+#define POV_LG_DISPLAY_WIDTH	6
 #define POV_DISPLAY_WIDTH	(1<<POV_LG_DISPLAY_WIDTH)
 
 #define POVLEDA	GPIO_B4
@@ -41,6 +41,8 @@ typedef struct {
 	char debug_display_on;
 	char debug_reverse;
 
+	r_bool visible;
+
 	uint8_t message[POV_DISPLAY_WIDTH];
 } PovAct;
 
@@ -48,5 +50,8 @@ void pov_init(PovAct *povAct);
 void pov_measure(PovAct *povAct);
 void pov_display(PovAct *povAct);
 void pov_write(PovAct *povAct, char *msg);
+void pov_set_visible(PovAct *povAct, r_bool visible);
+
+void pov_paint(uint8_t bitmap);
 
 #endif // _POV_H

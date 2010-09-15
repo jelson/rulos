@@ -67,6 +67,7 @@ void pov_init(PovAct *povAct)
 	povAct->lastPhase = 0;
 	povAct->curPhase = 0;
 	povAct->lastPeriod = 1;
+	povAct->visible = FALSE;
 
 	gpio_make_output(POVLEDA);
 	gpio_make_output(POVLEDB);
@@ -89,6 +90,15 @@ void pov_measure(PovAct *povAct)
 		period = 1;
 	}
 	povAct->lastPeriod = period;
+}
+
+void pov_paint(uint8_t bitmap)
+{
+	gpio_set_or_clr(POVLEDA, (bitmap & 0x01));
+	gpio_set_or_clr(POVLEDB, (bitmap & 0x02));
+	gpio_set_or_clr(POVLEDC, (bitmap & 0x04));
+	gpio_set_or_clr(POVLEDD, (bitmap & 0x08));
+	gpio_set_or_clr(POVLEDE, (bitmap & 0x10));
 }
 
 void pov_display(PovAct *povAct)
@@ -119,25 +129,24 @@ void pov_display(PovAct *povAct)
 		}
 		bitmap = povAct->message[column & ((1<<POV_LG_DISPLAY_WIDTH)-1)];
 	}
-	gpio_set_or_clr(POVLEDA, (bitmap & 0x01));
-	gpio_set_or_clr(POVLEDB, (bitmap & 0x02));
-	gpio_set_or_clr(POVLEDC, (bitmap & 0x04));
-	gpio_set_or_clr(POVLEDD, (bitmap & 0x08));
-	gpio_set_or_clr(POVLEDE, (bitmap & 0x10));
+	if (povAct->visible)
+	{
+		pov_paint(bitmap);
+	}
 
 	schedule_us(1000, (Activation*) povAct);
 }
 
-void pov_write(PovAct *povAct, char *msg)
+uint8_t pov_write_count(PovAct *povAct, char *msg, uint8_t offset)
 {
-	uint8_t bit_p = 0;
+	uint8_t bit_p;
 	char *msg_p;
 	for (bit_p=0; bit_p<POV_DISPLAY_WIDTH; bit_p++)
 	{
 		povAct->message[bit_p] = 0;
 	}
 	//memset(povAct->message, POV_DISPLAY_WIDTH, 0);
-	for (msg_p = msg, bit_p=0; *msg_p!=0 && (bit_p < POV_DISPLAY_WIDTH); msg_p++)
+	for (msg_p = msg, bit_p=offset; *msg_p!=0 && (bit_p < POV_DISPLAY_WIDTH); msg_p++)
 	{
 		uint8_t column;
 		if (*msg_p==' ')
@@ -160,4 +169,22 @@ void pov_write(PovAct *povAct, char *msg)
 		}
 		bit_p += 2;
 	}
+
+	if (bit_p>=2)
+	{
+		bit_p -= 2;
+	}
+	return bit_p;
 }
+
+void pov_write(PovAct *povAct, char *msg)
+{
+	uint8_t width = pov_write_count(povAct, msg, 0);
+	pov_write_count(povAct, msg, (POV_DISPLAY_WIDTH - width)>>1);
+}
+
+void pov_set_visible(PovAct *povAct, r_bool visible)
+{
+	povAct->visible = visible;
+}
+
