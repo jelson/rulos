@@ -197,8 +197,6 @@ void readFromPeripheral(locatorAct_t *aa,
 
 void start_sampling()
 {
-	return;
-
 	gpio_make_input_no_pullup(GPIO_US_RECV);
 
 	// At 8mhz, an ADC prescaler of 32 gives an ADC clock of 250 khz.
