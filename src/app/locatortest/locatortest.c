@@ -477,7 +477,7 @@ void sampleLocator(locatorAct_t *aa)
 		switch (cmd) {
 #ifndef NO_ANALOG
 		case 'q':
-			emit(aa, "^m;entering quiet mode\n\r");
+			emit(aa, "^m;entering quiet mode$\n\r");
 			aa->rangingMode = 'q';
 			us_xmit_stop();
 			break;
@@ -497,7 +497,7 @@ void sampleLocator(locatorAct_t *aa)
 			break;
 
 		case 'r':
-			emit(aa, "^m;entering reflector mode\n\r");
+			emit(aa, "^m;entering reflector mode$\n\r");
 			aa->rangingMode = 'r';
 			break;
 #endif
