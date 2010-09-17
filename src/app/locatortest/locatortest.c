@@ -18,7 +18,10 @@ typedef struct locatorAct locatorAct_t;
 
 typedef void (*PeripheralSendCompleteFunc)(locatorAct_t *aa);
 typedef void (*PeripheralRecvCompleteFunc)(locatorAct_t *aa, char *data, int len);
+
+#ifndef NO_ANALOG
 static inline void chirp(uint16_t chirpLenUS);
+#endif
 
 
 
@@ -190,11 +193,11 @@ void readFromPeripheral(locatorAct_t *aa,
 
 ///////////// Ultrasound ////////////////////////////////////
 
+#ifndef NO_ANALOG
+
 void start_sampling()
 {
-#ifdef NO_ANALOG
 	return;
-#endif
 
 	gpio_make_input_no_pullup(GPIO_US_RECV);
 
@@ -315,6 +318,7 @@ ISR(ADC_vect)
 }
 
 
+
 static inline void us_xmit_start()
 {
 	// We are using "fast pwm" mode, i.e., mode 7 (0b111), where TOP=OCR0A.
@@ -345,6 +349,7 @@ static inline void chirp(uint16_t chirpLenUS)
 	us_xmit_stop();
 }
 
+#endif
 
 /*************************************/
 
@@ -470,8 +475,10 @@ void sampleLocator(locatorAct_t *aa)
 	char cmd;
 	while (CharQueue_pop(uart_recvq(RULOS_UART0)->q, &cmd)) {
 		switch (cmd) {
+#ifndef NO_ANALOG
 		case 'q':
 			emit(aa, "^m;entering quiet mode\n\r");
+			aa->rangingMode = 'q';
 			us_xmit_stop();
 			break;
 
@@ -493,6 +500,7 @@ void sampleLocator(locatorAct_t *aa)
 			emit(aa, "^m;entering reflector mode\n\r");
 			aa->rangingMode = 'r';
 			break;
+#endif
 		}
 	}
 
@@ -528,14 +536,6 @@ int main()
 	util_init();
 	hal_init(bc_audioboard);
 	init_clock(10000, TIMER1);
-
-#if 0
-	gpio_make_output(GPIO_C5);
-	gpio_set(GPIO_C5);
-	gpio_clr(GPIO_C5);
-	gpio_set(GPIO_C5);
-	gpio_clr(GPIO_C5);
-#endif
 
 	hal_twi_init(0, NULL);
 	uart_init(RULOS_UART0, 1); // 250kbps when processor is at 8mhz
