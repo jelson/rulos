@@ -53,6 +53,7 @@ struct locatorAct {
 	uint16_t threshMin, threshMax;
 	uint16_t runLength;
 	Time chirpSendTime;
+	Time chirpRTT;
 	uint8_t chirpTimeout;
 };
 
@@ -305,21 +306,12 @@ ISR(ADC_vect)
 			}
 		}
 
-		// If we're in sender mode, and we got a chirp, report it and
+		// If we're in sender mode, and we got a chirp, record it and
 		// exit sender mode
 		if (aa_g.rangingMode == 's') {
 			aa_g.rangingMode = 'q';
 			Time end = precise_clock_time_us();
-			int32_t diff = end - aa_g.chirpSendTime;
-
-			if (maybe_claim_serial(&aa_g)) {
-				snprintf(aa_g.UARTsendBuf, sizeof(aa_g.UARTsendBuf)-1,
-						 //"^d;s=%ld,e=%ld,t=%ld$\r\n",
-						 "^d;t=%ld$\r\n",
-						 //aa_g.chirpSendTime, end,
-						 diff);
-				emit(&aa_g, aa_g.UARTsendBuf);
-			}
+			aa_g.chirpRTT = end - aa_g.chirpSendTime;
 		}
 	}
 }
@@ -364,6 +356,7 @@ static inline void chirp(uint16_t chirpLenUS)
 void configLocator4(locatorAct_t *aa)
 {
 	schedule_now((Activation *) aa);
+	aa->trainingMode = US_QUIET_TRAINING_LEN;
 }
 
 
@@ -410,7 +403,8 @@ void configLocator(locatorAct_t *aa)
 	gpio_make_output(GPIO_10V_ENABLE);
 	gpio_clr(GPIO_10V_ENABLE);
 
-	aa->trainingMode = US_QUIET_TRAINING_LEN;
+	aa->rangingMode = 'q';
+	aa->trainingMode = 0;
 	start_sampling();
 #endif
 
@@ -477,6 +471,8 @@ void sampleLocator(locatorAct_t *aa)
 {
 	// schedule reading of the next sample
 	schedule_us(50000, (Activation *) aa);
+
+	// If we're in 's' mode waiting for a reply, possible time out
 	uint8_t timeout = FALSE;
 	uint8_t old_interrupts = hal_start_atomic();
 	if (aa->rangingMode == 's') {
@@ -494,6 +490,19 @@ void sampleLocator(locatorAct_t *aa)
 	if (timeout) {
 		wait_for_serial(aa);
 		emit(aa, "^m;ranging timeout$\n\r");
+	}
+
+	// If we were recently in 's' mode and sucessfully completed a
+	// ranging trial, print the result
+	if (aa->chirpRTT) {
+		wait_for_serial(aa);
+		snprintf(aa->UARTsendBuf, sizeof(aa->UARTsendBuf)-1,
+				 //"^d;s=%ld,e=%ld,t=%ld$\r\n",
+				 "^d;t=%ld$\r\n",
+				 //aa_g.chirpSendTime, end,
+				 aa->chirpRTT);
+		aa->chirpRTT = 0;
+		emit(aa, aa->UARTsendBuf);
 	}
 
 	// see if we've received any serial commands
@@ -520,6 +529,7 @@ void sampleLocator(locatorAct_t *aa)
 			_delay_ms(US_CHIRP_RING_TIME_MS);
 			aa->chirpSendTime = precise_clock_time_us();
 			aa->chirpTimeout = 0;
+			aa->chirpRTT = 0;
 			aa->rangingMode = 's';
 			return; // don't sample the periphs this time around
 			break;
