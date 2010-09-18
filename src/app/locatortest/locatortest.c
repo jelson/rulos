@@ -53,6 +53,7 @@ struct locatorAct {
 	uint16_t threshMin, threshMax;
 	uint16_t runLength;
 	Time chirpSendTime;
+	uint8_t chirpTimeout;
 };
 
 static locatorAct_t aa_g;
@@ -469,6 +470,17 @@ void sampleLocator(locatorAct_t *aa)
 	// schedule reading of the next sample
 	schedule_us(50000, (Activation *) aa);
 
+	cli();
+	if (aa->rangingMode == 's') {
+		aa->chirpTimeout++;
+
+		if (aa->chirpTimeout >= 3) {
+			aa->rangingMode = 'q';
+			emit(aa, "^m;ranging timeout$\n\r");
+		}
+	}
+	sei();
+
 	// see if we've received any serial commands
 	char cmd;
 	while (CharQueue_pop(uart_recvq(RULOS_UART0)->q, &cmd)) {
@@ -485,11 +497,12 @@ void sampleLocator(locatorAct_t *aa)
 			break;
 
 		case 's':
-			emit(aa, "^m;chirping$\n\r");
 			aa->rangingMode = 'q';
+			emit(aa, "^m;chirping$\n\r");
 			chirp(US_CHIRP_LEN_US);
 			_delay_ms(US_CHIRP_RING_TIME_MS);
 			aa->chirpSendTime = precise_clock_time_us();
+			aa->chirpTimeout = 0;
 			aa->rangingMode = 's';
 			return; // don't sample the periphs this time around
 			break;
