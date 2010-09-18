@@ -85,6 +85,7 @@ static locatorAct_t aa_g;
 
 /***** serial port helpers ******/
 
+// this is called at interrupt time
 static inline void uartSendDone(void *cb_data)
 {
 	locatorAct_t *aa = (locatorAct_t *) cb_data;
@@ -93,20 +94,26 @@ static inline void uartSendDone(void *cb_data)
 
 static inline void emit(locatorAct_t *aa, char *s)
 {
-	aa->uartSending = TRUE;
 	uart_send(RULOS_UART0, s, strlen(s), uartSendDone, aa);
 }
 
 static inline uint8_t maybe_claim_serial(locatorAct_t *aa)
 {
 	uint8_t retval = FALSE;
-	cli(); // disable interrupts
+	uint8_t old_interrupts = hal_start_atomic();
 	if (aa->uartSending == FALSE) {
 		aa->uartSending = TRUE;
 		retval = TRUE;
 	}
-	sei();
+	hal_end_atomic(old_interrupts);
 	return retval;
+}
+
+// warning -- don't use from within interrupt context!
+static inline void wait_for_serial(locatorAct_t *aa)
+{
+	while (!maybe_claim_serial(aa))
+		;
 }
 
 
@@ -130,6 +137,7 @@ void printTimeRecords(char *prefix)
 	uint8_t i;
 
 	for (i = 0; i < numTimeRecords; i++) {
+		wait_for_serial(&aa_g);
 		snprintf(aa_g.UARTsendBuf, sizeof(aa_g.UARTsendBuf)-1,
 				 "%s %d: %ld\r\n",
 				 prefix, i, timerecord[i]);
@@ -469,17 +477,24 @@ void sampleLocator(locatorAct_t *aa)
 {
 	// schedule reading of the next sample
 	schedule_us(50000, (Activation *) aa);
-
-	cli();
+	uint8_t timeout = FALSE;
+	uint8_t old_interrupts = hal_start_atomic();
 	if (aa->rangingMode == 's') {
 		aa->chirpTimeout++;
 
-		if (aa->chirpTimeout >= 3) {
+		if (aa->chirpTimeout >= 4) {
 			aa->rangingMode = 'q';
-			emit(aa, "^m;ranging timeout$\n\r");
+			timeout = TRUE;
 		}
 	}
-	sei();
+	hal_end_atomic(old_interrupts);
+
+	// we have to generate this message outside of the atomic section
+	// - otherwise the serial port claim will never work
+	if (timeout) {
+		wait_for_serial(aa);
+		emit(aa, "^m;ranging timeout$\n\r");
+	}
 
 	// see if we've received any serial commands
 	char cmd;
@@ -489,6 +504,7 @@ void sampleLocator(locatorAct_t *aa)
 		case 'q':
 			aa->rangingMode = 'q';
 			us_xmit_stop();
+			wait_for_serial(aa);
 			emit(aa, "^m;entering quiet mode$\n\r");
 			break;
 
@@ -498,6 +514,7 @@ void sampleLocator(locatorAct_t *aa)
 
 		case 's':
 			aa->rangingMode = 'q';
+			wait_for_serial(aa);
 			emit(aa, "^m;chirping$\n\r");
 			chirp(US_CHIRP_LEN_US);
 			_delay_ms(US_CHIRP_RING_TIME_MS);
@@ -509,6 +526,7 @@ void sampleLocator(locatorAct_t *aa)
 
 		case 'r':
 			aa->rangingMode = 'r';
+			wait_for_serial(aa);
 			emit(aa, "^m;entering reflector mode$\n\r");
 			break;
 #endif
@@ -520,10 +538,13 @@ void sampleLocator(locatorAct_t *aa)
 	aa->currUsCount++;
 	if (aa->currUsCount >= 70) {
 		aa->currUsState = !aa->currUsState;
-		if (aa->currUsState)
+		if (aa->currUsState) {
+			wait_for_serial(aa);
 			emit(aa, "on\n\r");
-		else
+		} else {
+			wait_for_serial(aa);
 			emit(aa, "off\n\r");
+		}
 		gpio_set_or_clr(GPIO_US_XMIT, aa->currUsState);
 		aa->currUsCount = 0;
 	}
@@ -559,6 +580,7 @@ int main()
 	} else {
 		snprintf(aa_g.UARTsendBuf, sizeof(aa_g.UARTsendBuf)-1, "^i;0$\r\n");
 	}
+	wait_for_serial(&aa_g);
 	emit(&aa_g, aa_g.UARTsendBuf);
 
 #ifdef TIME_DEBUG
