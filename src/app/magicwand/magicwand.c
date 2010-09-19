@@ -216,14 +216,14 @@ static char *card_value_names[] = {
 	"NINE",
 	"TEN",
 	"JACK",
-	"KING",
 	"QUEEN",
+	"KING",
 	"FORTN",
 	"FIFTN"
 	};
 static char *card_suit_names[] = {
-	"HEARTS",
-	"DIAMONDS",
+	"HARTS",
+	"DIAMND",
 	"CLUBS",
 	"SPADES"
 	};
@@ -241,13 +241,10 @@ void tih_handle(TiltyInputHandler *tih, UIEvent evt)
 			pov_set_visible(tih->pov, FALSE);
 			tih->card_suit = 0;
 			tih->card_value = 0;
-			tih->mode_ptr = &tih->card_suit;
-			break;
-		case ti_up:
-			tih->mode_ptr = &tih->card_suit;
+			tih->mode_ptr = &tih->card_value;
 			break;
 		case ti_down:
-			tih->mode_ptr = &tih->card_value;
+			tih->mode_ptr = &tih->card_suit;
 			break;
 		case ti_left:
 			(*(tih->mode_ptr)) = ((*(tih->mode_ptr))<<1) | 1;
@@ -261,6 +258,7 @@ void tih_handle(TiltyInputHandler *tih, UIEvent evt)
 	tih->card_suit &= 0x03;
 
 
+#if 1
 	if (!tih->la->uartSending) {
 		static char buf[80];
 		snprintf(buf, sizeof(buf)-1, "Input event 0x%02x %d %s of %d %s mode %s\r\n",
@@ -271,6 +269,7 @@ void tih_handle(TiltyInputHandler *tih, UIEvent evt)
 			);
 		emit(tih->la, buf);
 	}
+#endif
 }
 
 void tih_init(TiltyInputHandler *tih, struct locatorAct *la, PovAct *pov, MessageChangeAct *mca)
@@ -281,7 +280,7 @@ void tih_init(TiltyInputHandler *tih, struct locatorAct *la, PovAct *pov, Messag
 	tih->mca = mca;
 	tih->card_suit = 0;
 	tih->card_value = 0;
-	tih->mode_ptr = &tih->card_suit;
+	tih->mode_ptr = &tih->card_value;
 }
 
 /*************************************/

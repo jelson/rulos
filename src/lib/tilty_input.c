@@ -3,18 +3,21 @@
 
 #define G_QUIESCENT	50
 #define G_GRAVITY		100
+//#define DBG_CAT_ON
+#if DBG_CAT_ON
+#define DBG_CAT(x)	strcat(dbg_msg, x);
+#else
+#define DBG_CAT(x)	/**/
+#endif
 
-#define TI_POV_SWITCH_TIME	2000000
-#define TI_MIN_TOKEN_TIME   1000000
-#define TI_MAX_TOKEN_TIME   2000000
+#define TI_INPUT_DWELL_TIME   (((Time) 1)<<19)
 
-#define TI_SCAN_PERIOD		  50000
+#define TI_SCAN_PERIOD		 20000
+	// some weird bug prevents us from going faster.
+	// scan at 5ms, and it crashes pretty reliably
+	// seems to have to do with serial
 
-void _tilty_input_issue_event(TiltyInputAct *tia, TiltyInputState evt)
-{
-	(tia->event_handler->func)(tia->event_handler, evt);
-	tia->last_event_issued = evt;
-}
+void remote_debug(char *msg);
 
 static inline r_bool is_quiescent(int16_t value)
 {
@@ -51,110 +54,189 @@ static inline TiltyInputState accel_to_state(Vect3D *accel)
 	return ti_undef;
 }
 
+static inline void tia_start_leds(TiltyInputAct *tia, TiltyLEDPattern tlp)
+{
+	tia->led_pattern = tlp;
+	tia->led_anim_start = clock_time_us();
+}
+
+void tia_display_leds(TiltyInputAct *tia
+#if DBG_CAT_ON
+	, char *dbg_msg
+#endif // DBG_CAT_ON
+	)
+{
+	if (tia->curState == ti_up)
+	{
+		// don't paint on the LEDs; we're showing text.
+		return;
+	}
+
+	switch (tia->led_pattern)
+	{
+		case tia_led_click:
+		{
+			DBG_CAT("led_click\n");
+			// 1<<18 == ~1/4 sec total display time;
+			// 1<<16 leaves 2 bits of animation time.
+			Time td = (clock_time_us() - tia->led_anim_start) >> 16;
+			switch (td)
+			{
+				case 0: pov_paint(0x04); break;
+				case 1: pov_paint(0x0e); break;
+				case 2: pov_paint(0x0e); break;
+				case 3: pov_paint(0x1f); break;
+				default: pov_paint(0x00); break;
+			}
+			break;
+		}
+		case tia_led_proposal:
+		{
+			DBG_CAT("led_proposal\n");
+			// 1<<19 == ~1/2 sec total display time; (matches DWELL_TIME)
+			// 1<<17 leaves 2 bits of animation time.
+			Time td = (clock_time_us() - tia->led_anim_start) >> 17;
+			switch (td)
+			{
+				case 0: pov_paint(0x10); break;
+				case 1: pov_paint(0x18); break;
+				case 2: pov_paint(0x1c); break;
+				case 3: pov_paint(0x1e); break;
+				default: pov_paint(0x1f); break;
+			}
+			break;
+		}
+		case tia_led_black:
+		{
+			DBG_CAT("led_black\n");
+			pov_paint(0x00);
+			break;
+		}
+	}
+}
+
 void tilty_input_update(TiltyInputAct *tia)
 {
 	schedule_us(TI_SCAN_PERIOD, (Activation *) tia);
+#if DBG_CAT_ON
+	static char dbg_msg[200];
+	dbg_msg[0] = '\0';
+#endif // DBG_CAT_ON
+
+	if (tia->accelValue->z > G_GRAVITY*3)
+	{
+		DBG_CAT("WHACk!\n");
+	}
 
 	TiltyInputState newState = accel_to_state(tia->accelValue);
 
 	Time time_now = clock_time_us();
 
-	if (newState==ti_undef)
+#if DBG_CAT_ON
+	sprintf(dbg_msg+strlen(dbg_msg), "\n state cur: %3x new: %2x\n",
+		tia->curState, newState);
+#endif
+	if (ti_proposed & tia->curState)
 	{
-		return;
-		// yawn.
-	}
-
-	Time input_duration = time_now - tia->enterTime;
-
-	char *dbg_node = "_none_";
-	r_bool blink = FALSE;
-	if (newState==ti_neutral)
-	{
-		dbg_node = "ti_neutral";
-		if (tia->last_event_issued == ti_enter_pov)
+		DBG_CAT("proposed:\n");
+		if ((tia->curState & (~ti_proposed)) == newState)
 		{
-			dbg_node = "was_enter_pov";
-			if (tia->currentState == ti_neutral)
+			DBG_CAT("  new==cur\n");
+			// we're camping in a state. Have we been here long enough?
+			Time input_duration = time_now - tia->proposed_time;
+			if (input_duration > TI_INPUT_DWELL_TIME)
 			{
-				// be sure we're counting time in neutral state
-				dbg_node = "cs==ti_neutral";
-				// we were in POV state. Must hang out here long enough
-				// to clear that state before beginning a fresh input.
-				if (input_duration > TI_POV_SWITCH_TIME)
-				{
-					dbg_node = "exit_pov";
-					_tilty_input_issue_event(tia, ti_exit_pov);
-				}
-			}
-		}
-		else if (tia->currentState != ti_neutral)
-		{
-			dbg_node = "wasnt_enter_pov";
-			// we were in input state
-			if (input_duration > TI_MIN_TOKEN_TIME
-				&& input_duration < TI_MAX_TOKEN_TIME)
-			{
-				dbg_node = "click";
-				// hey, that's a "click"! Issue a keystroke for completed state.
-				_tilty_input_issue_event(tia, tia->currentState);
-				blink = TRUE;
-			}
-		}
-	}
-	else if (newState==ti_up && tia->currentState==ti_up)
-	{
-		dbg_node = "ti_up";
-		if (tia->last_event_issued != ti_enter_pov
-			&& input_duration > TI_POV_SWITCH_TIME)
-		{
-			dbg_node = "enter_pov";
-			_tilty_input_issue_event(tia, ti_enter_pov);
-		}
-	}
-
-	// provide LED feedback
-	if (tia->last_event_issued != ti_enter_pov)
-	{
-		if (blink)
-		{
-			pov_paint(0x1f);
-		}
-		else if (newState!=ti_undef && newState!=ti_neutral)
-		{
-			if (input_duration<TI_MIN_TOKEN_TIME)
-			{
-				pov_paint(0x04);
-			}
-			else if (input_duration<TI_MAX_TOKEN_TIME)
-			{
-				pov_paint(0x15);
-			}
-			else
-			{
-				pov_paint(0x00);
+				DBG_CAT("    DWELL\n");
+				tia->curState = newState;
+				TiltyInputState evt = newState;
+				if (newState==ti_up) { evt = ti_enter_pov; }
+				if (newState==ti_neutral) { evt = ti_exit_pov; }
+				(tia->event_handler->func)(tia->event_handler, evt);
+				tia_start_leds(tia, tia_led_click);
 			}
 		}
 		else
 		{
-			pov_paint(0x00);
+			DBG_CAT("  left proposed\n");
+			// we left the proposed state. Go back to the original
+			// state, and decide where to go next in the next sample.
+			if ((tia->curState & (~ti_proposed)) == ti_neutral)
+			{
+				tia->curState = ti_up;
+			}
+			else
+			{
+				tia->curState = ti_neutral;
+			}
+			tia_start_leds(tia, tia_led_black);
+		}
+	}
+	else
+	{
+		DBG_CAT("regular:\n");
+		if (tia->curState == ti_up)
+		{
+			DBG_CAT("  cur up:\n");
+			if (newState == ti_neutral)
+			{
+				DBG_CAT("    new neutral:\n");
+				tia->curState = newState | ti_proposed;
+				tia->proposed_time = time_now;
+				tia_start_leds(tia, tia_led_proposal);
+			}
+			else
+			{
+				DBG_CAT("    nonsense:\n");
+				// trying to enter some nonsense state.
+				// just sit here in ti_pov.
+			}
+		}
+		else if (tia->curState == ti_neutral)
+		{
+			DBG_CAT("  cur neutral:\n");
+			if (newState == ti_left || newState == ti_right || newState == ti_down || newState == ti_up)
+			{
+				DBG_CAT("    new lrdi:\n");
+				tia->curState = newState | ti_proposed;
+				tia->proposed_time = time_now;
+				tia_start_leds(tia, tia_led_proposal);
+			}
+			else
+			{
+				DBG_CAT("    undef:\n");
+				// trying to enter ti_undef? Meh, pretend we're still in
+				// ti_neutral, so we can pass through ti_undef on our
+				// way to where we're going.
+			}
+		}
+		else
+		{
+			DBG_CAT("  input-bit:\n");
+			// we're in an input-bit state, waiting to
+			// return to ti_neutral.
+			if (newState==ti_neutral)
+			{
+				DBG_CAT("    neutral:\n");
+				tia->curState = ti_neutral;
+			}
+			else
+			{
+				DBG_CAT("    nonsense:\n");
+				// Any other state is
+				// nonsense, so we'll ignore it until we pass
+				// through neutral.
+			}
 		}
 	}
 
-#if 0
-	{
-		void remote_debug(char *msg);
-		static char buf[80];
-		snprintf(buf, sizeof(buf)-1, "tiu: cs %02x newState %02x node %s dur %ld\n", tia->currentState, newState, dbg_node, input_duration);
-		remote_debug(buf);
-	}
-#endif
-
-	if (newState!=tia->currentState)
-	{
-		tia->currentState = newState;
-		tia->enterTime = time_now;
-	}
+	tia_display_leds(tia
+#if DBG_CAT_ON
+		, dbg_msg
+#endif // DBG_CAT_ON
+		);
+#if DBG_CAT_ON
+	remote_debug(dbg_msg);
+#endif // DBG_CAT_ON
 }
 
 void tilty_input_init(TiltyInputAct *tia, Vect3D *accelValue, UIEventHandler *event_handler)
@@ -164,9 +246,11 @@ void tilty_input_init(TiltyInputAct *tia, Vect3D *accelValue, UIEventHandler *ev
 	tia->accelValue = accelValue;
 	tia->event_handler = event_handler;
 
-	tia->currentState = ti_undef;
-	tia->enterTime = clock_time_us();
-	tia->last_event_issued = ti_neutral;
+	tia->curState = ti_undef;
+	tia->proposed_time = clock_time_us();
+
+	tia->led_pattern = tia_led_black;
+	tia->led_anim_start = clock_time_us();
 
 	schedule_us(TI_SCAN_PERIOD, (Activation *) tia);
 }

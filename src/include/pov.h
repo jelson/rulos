@@ -20,7 +20,7 @@
 #include "rocket.h"
 #include "hardware.h"
 
-#define POV_LG_DISPLAY_WIDTH	6
+#define POV_LG_DISPLAY_WIDTH	5
 #define POV_DISPLAY_WIDTH	(1<<POV_LG_DISPLAY_WIDTH)
 
 #define POVLEDA	GPIO_B4
