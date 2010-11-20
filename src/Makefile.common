@@ -68,7 +68,7 @@ COMMON_OBJECTS = \
 	quadknob.o \
 	potsticker.o \
 	funcseq.o \
-	pov.o \
+#	pov.o \
 	tilty_input.o \
 
 

@@ -51,7 +51,7 @@ BooRec boos[] = {
 	{ 5000000, "" },
 	{ 1000000, "Come see" },
 	{ 1000000, "our new " },
-	{ 1000000, "rocket! " },
+	{ 1000000, " rocket!" },
 	{ 0, NULL },
 };
 BooRec *booPtr = boos;
@@ -81,8 +81,8 @@ int main()
 {
 	heap_init();
 	util_init();
-	hal_init();
-	clock_init(10000);
+	hal_init(bc_chaseclock);
+	init_clock(10000, TIMER1);
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);	// includes slow calibration phase
@@ -91,11 +91,13 @@ int main()
 
 	board_buffer_module_init();
 
+/*
 	FocusManager fa;
 	focus_init(&fa);
+*/
 
-	InputControllerAct ia;
-	input_controller_init(&ia, (UIEventHandler*) &fa);
+	InputPollerAct ia;
+	input_poller_init(&ia, NULL);
 
 	board_buffer_init(&bbuf);
 	board_buffer_push(&bbuf, 0);
