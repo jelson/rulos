@@ -14,7 +14,12 @@
 
 ROCKET_ROOT := ../..
 
-MCU := atmega328p
+everything: avr-all serialhost
+
+serialhost: serialhost.c
+	gcc -o $@ -g $^
+
+MCU := atmega8
 BOARD := CUSTOM
 TARGET := serialecho
 
