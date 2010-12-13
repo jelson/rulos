@@ -71,6 +71,15 @@ int int_div_with_correct_truncation(int a, int b)
 
 char hexmap[16] = "0123456789ABCDEF";
 
+void debug_itoha(char *out, uint16_t i)
+{
+	out[0] = hexmap[(i>>(3*4)) & 0xf];
+	out[1] = hexmap[(i>>(2*4)) & 0xf];
+	out[2] = hexmap[(i>>(1*4)) & 0xf];
+	out[3] = hexmap[(i>>(0*4)) & 0xf];
+	out[4] = '\0';
+}
+
 void debug_msg_hex(uint8_t board, char *m, uint16_t hex)
 {
 	static char buf[9];

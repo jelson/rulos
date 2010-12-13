@@ -94,7 +94,7 @@ void hal_init_spi(HALSPIIfc *spi)
 	// TODO I'm blasting the port B DDR here; we may care
 	// about correct values for PB[0167].
 	DDR_SPI = (1<<DD_MOSI)|(1<<DD_SCK)|(1<<DD_SS);
-	SPCR = (1<<SPE) | (1<<MSTR) | (1<<SPR0);
+	SPCR = (1<<SPE) | (1<<MSTR) | (1<<CPHA) | (1<<SPR1) | (0<<SPR0);
 }
 
 void hal_spi_open()

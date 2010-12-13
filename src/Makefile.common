@@ -68,8 +68,9 @@ COMMON_OBJECTS = \
 	quadknob.o \
 	potsticker.o \
 	funcseq.o \
-#	pov.o \
 	tilty_input.o \
+	hardware_audio.o \
+#	pov.o \
 
 
 .PHONY: all

@@ -63,7 +63,7 @@ uint16_t hal_read_adc(uint8_t idx);
 void hal_init_joystick_button();
 r_bool hal_read_joystick_button();
 
-void hal_uart_init(UartState_t *s, uint16_t baud);
+void hal_uart_init(UartState_t *s, uint16_t baud, r_bool stop2);
 void hal_uart_start_send(UartState_t *u);
 
 /////////////// TWI ///////////////////////////////////////////////

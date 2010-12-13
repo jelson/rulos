@@ -137,14 +137,18 @@ r_bool uart_send(UartState_t *u, char *c, uint8_t len,
 	return TRUE;
 }
 
+r_bool uart_busy(UartState_t *u)
+{
+	return (u->out_buf != NULL);
+}
 
-void uart_init(UartState_t *u, uint16_t baud)
+void uart_init(UartState_t *u, uint16_t baud, r_bool stop2)
 {
 	// initialize the queue
 	u->recvQueue.q = (CharQueue *) u->recvQueueStore;
 	CharQueue_init(u->recvQueue.q, sizeof(u->recvQueueStore));
 	u->recvQueue.reception_time_us = 0;
-	hal_uart_init(u, baud);
+	hal_uart_init(u, baud, stop2);
 	u->initted = TRUE;
 }
 

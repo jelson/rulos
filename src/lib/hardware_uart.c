@@ -58,6 +58,7 @@
 # define _UDR      UDR
 # define _UDRE     UDRE
 # define _UDRIE    UDRIE
+# define _USBS     USBS
 #elif defined(MCUatmega328p)
 # define _UBRRH    UBRR0H
 # define _UBRRL    UBRR0L
@@ -73,18 +74,19 @@
 # define _UDR      UDR0
 # define _UDRE     UDRE0
 # define _UDRIE    UDRIE0
+# define _USBS     USBS0
 #else
 # error Hardware-specific UART code needs love
 #endif
 
 
-void hal_uart_init(UartState_t *s, uint16_t baud)
+void hal_uart_init(UartState_t *s, uint16_t baud, r_bool stop2)
 {
 	// disable interrupts
 	cli();
 
 	// set baud rate
-	_UBRRH = (unsigned char) baud >> 8;
+	_UBRRH = (unsigned char) (baud >> 8);
 	_UBRRL = (unsigned char) baud;
 
 	_UCSRB =
@@ -95,10 +97,12 @@ void hal_uart_init(UartState_t *s, uint16_t baud)
 
 	// set frame format: async, 8 bit data, 1 stop bit, no parity
 	_UCSRC =  _BV(_UCSZ1) | _BV(_UCSZ0)
+		| (stop2 ? _BV(_USBS) : 0)
 #ifdef MCUatmega8
 	  | _BV(URSEL)
 #endif
 	  ;
+	  
 
 	// enable interrupts, whether or not they'd been previously enabled
 	sei();
@@ -143,6 +147,10 @@ void handle_send_ready(UartState_t *u)
 ISR(USART_RXC_vect)
 {
 	_uart_receive(RULOS_UART0, UDR);
+}
+ISR(USART_UDRE_vect)
+{
+	handle_send_ready(RULOS_UART0);
 }
 
 #elif defined(MCUatmega328p)
