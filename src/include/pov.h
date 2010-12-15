@@ -18,7 +18,10 @@
 #define _POV_H
 
 #include "rocket.h"
+
+#ifndef SIM
 #include "hardware.h"
+#endif //SIM
 
 #define POV_LG_DISPLAY_WIDTH	5
 #define POV_DISPLAY_WIDTH	(1<<POV_LG_DISPLAY_WIDTH)

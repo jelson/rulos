@@ -380,7 +380,7 @@ void hal_uart_start_send(UartState_t *u)
 	LOGF((logfp, "Sent to uart: '%s'\n", buf));
 }
 
-void hal_uart_init(UartState_t *u, uint16_t baud)
+void hal_uart_init(UartState_t *s, uint16_t baud, r_bool stop2)
 {
 }
 
@@ -988,7 +988,7 @@ typedef enum {
 
 typedef struct s_sim_spi {
 	r_bool initted;
-	HALSPIIfc *spi_ifc;
+	HALSPIHandler *spi_handler;
 	FILE *fp;
 	SimSpiState state;
 	int addr_off;
@@ -998,17 +998,25 @@ typedef struct s_sim_spi {
 } SimSpi;
 SimSpi g_spi = { FALSE };
 
-void hal_init_spi(HALSPIIfc *spi)
+void hal_init_spi()
 {
-	g_spi.spi_ifc = spi;
+	g_spi.spi_handler = NULL;
 	g_spi.fp = fopen("obj.sim/spiflash.bin", "r");
 	assert(g_spi.fp != NULL);
 	g_spi.initted = TRUE;
 }
 
-void hal_spi_open()
+void hal_spi_select_slave(r_bool select)
 {
-	g_spi.state = sss_ready;
+	if (select)
+	{
+		g_spi.state = sss_ready;
+	}
+}
+
+void hal_spi_set_handler(HALSPIHandler *handler)
+{
+	g_spi.spi_handler = handler;
 }
 
 void hal_spi_send(uint8_t byte)
@@ -1057,7 +1065,7 @@ void hal_spi_send(uint8_t byte)
 	}
 	else
 	{
-		g_spi.spi_ifc->func(g_spi.spi_ifc, result);
+		g_spi.spi_handler->func(g_spi.spi_handler, result);
 	}
 	g_spi.recursions -= 1;
 }
@@ -1071,7 +1079,7 @@ void sim_spi_poke()
 	{
 		uint8_t result = g_spi.result;
 		g_spi.result = -1;
-		g_spi.spi_ifc->func(g_spi.spi_ifc, result);
+		g_spi.spi_handler->func(g_spi.spi_handler, result);
 	}
 }
 

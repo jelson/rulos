@@ -14,7 +14,7 @@
 
 ROCKET_ROOT := ../..
 
-MCU := atmega8
+MCU := atmega328p
 TARGET := chaseclock
 BOARD := PCB11
 

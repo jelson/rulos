@@ -20,7 +20,14 @@ AVR_ONLY_OBJECTS := \
 	hardware_keypad.o \
 	hardware_timers.o \
 	hardware_twi.o \
-	hardware_uart.o
+	hardware_uart.o \
+	hardware_audio.o \
+	tilty_input.o \
+	pov.o \
+	hardware_spi.o \
+
+# NB pov, tilty_input are parts of magic wand project; never compiled SIM.
+# a bit sloppy.
 
 ARCHTARG := $(TARGET).$(MCU).$(BOARD)
 
@@ -153,7 +160,7 @@ $(AVRCONFIG): /etc/avrdude.conf ../../avrdude-atmega328p.conf
 AVROPTS := -C $(AVRCONFIG) -p m328p
 endif
 
-program: $(ARCHTARG).hex $(AVRCONFIG)
+program: $(ARCHTARG).lss $(ARCHTARG).hex $(AVRCONFIG)
 	sudo avrdude -c usbtiny $(AVROPTS) -u -U flash:w:$(ARCHTARG).hex
 
 # Fuse byte documentation:

@@ -149,6 +149,7 @@ void uart_init(UartState_t *u, uint16_t baud, r_bool stop2)
 	CharQueue_init(u->recvQueue.q, sizeof(u->recvQueueStore));
 	u->recvQueue.reception_time_us = 0;
 	hal_uart_init(u, baud, stop2);
+	u->out_buf = NULL;
 	u->initted = TRUE;
 }
 

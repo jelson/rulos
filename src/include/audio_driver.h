@@ -19,7 +19,7 @@
 
 #include "rocket.h"
 #include "sound.h"
-#include "spiflash.h"
+//#include "spiflash.h"
 
 #define NUM_STREAMS	1
 #define AUDIO_STREAM_BURST_EFFECTS		0
@@ -46,10 +46,10 @@ typedef struct s_audio_driver {
 	AudioStream stream[NUM_STREAMS];
 
 	// Data comes from here
-	SPIFlash spif;
+	//SPIFlash spif;
 
 	// SPI read requests live here; we pass pointers in to SPIFlash.
-	SPIBuffer spibspace[2];
+	//SPIBuffer spibspace[2];
 	// We toggle back and forth between spare spaces with this index
 	uint8_t next_spib;
 

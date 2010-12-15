@@ -80,6 +80,19 @@ void debug_itoha(char *out, uint16_t i)
 	out[4] = '\0';
 }
 
+// places 6 bytes into out.
+void itoda(char *out, uint16_t v)
+{
+	out[5] = '\0';
+	uint8_t i;
+	for (i=0; i<5; i++)
+	{
+		uint16_t frac = v/10;
+		out[4-i] = '0' + (v - frac*10);
+		v = frac;
+	}
+}
+
 void debug_msg_hex(uint8_t board, char *m, uint16_t hex)
 {
 	static char buf[9];

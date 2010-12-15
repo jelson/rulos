@@ -55,7 +55,6 @@ COMMON_OBJECTS = \
 	screen4.o \
 	audio_server.o \
 	hpam.o \
-	spiflash.o \
 	autotype.o \
 	idle.o \
 	hobbs.o \
@@ -64,14 +63,14 @@ COMMON_OBJECTS = \
 	booster.o \
 	slow_boot.o \
 	ring_buffer.o \
-	audio_driver.o \
 	quadknob.o \
 	potsticker.o \
 	funcseq.o \
-	tilty_input.o \
-	hardware_audio.o \
-#	pov.o \
+	sdcard.o \
+	uart.o \
 
+#	spiflash.o \
+#	audio_driver.o \
 
 .PHONY: all
 all: sim-all avr-all

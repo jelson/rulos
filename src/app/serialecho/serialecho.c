@@ -21,7 +21,7 @@
 
 #include "rocket.h"
 #include "uart.h"
-#include "spiflash.h"
+//#include "spiflash.h"
 
 #include "hardware.h"	// sorry. Blinky LED.
 
@@ -140,8 +140,9 @@ void serial_echo_init(SerialCmdAct *sca, cmd_cb_f *cmd_cb)
 
 //////////////////////////////////////////////////////////////////////////////
 
-BlinkAct blink;
 char reply_buf[80];
+BlinkAct blink;
+#if 0
 
 typedef struct {
 	Activation act;
@@ -195,6 +196,7 @@ void sdtest_read(SDTest *sdt)
 }
 
 SDTest sdt;
+#endif
 
 void spi_test(void);
 
@@ -573,7 +575,7 @@ int main()
 	}
 #endif
 
-	sdtest_init(&sdt);
+	//sdtest_init(&sdt);
 
 	cpumon_main_loop();
 }

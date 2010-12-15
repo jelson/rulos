@@ -92,17 +92,19 @@ void hal_twi_read(Addr addr, TWIRecvSlot *trs);
 
 RingBuffer *hal_audio_init(uint16_t sample_period_us);
 
-struct s_hal_spi_ifc;
-typedef void (*HALSPIFunc)(struct s_hal_spi_ifc *ifc, uint8_t data);
-typedef struct s_hal_spi_ifc {
-	HALSPIFunc func;
-} HALSPIIfc;
+typedef struct s_HALSPIHandler {
+	void (*func)(struct s_HALSPIHandler *handler, uint8_t data);
+} HALSPIHandler;
 
 #define SPIFLASH_CMD_READ_DATA	(0x03)
 
-void hal_init_spi(HALSPIIfc *spi);
+void hal_init_spi();
+void hal_spi_select_slave(r_bool select);
+void hal_spi_set_handler(HALSPIHandler *handler);
+void hal_spi_send(uint8_t bte);
+
+
 void hal_spi_open();
-void hal_spi_send(uint8_t byte);
 void hal_spi_close();
 
 #endif // __hal_h__

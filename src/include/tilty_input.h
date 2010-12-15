@@ -18,7 +18,11 @@
 #define _TILTY_INPUT_H
 
 #include "rocket.h"
+
+#ifndef SIM
 #include "hardware.h"
+#endif
+
 #include "vect3d.h"
 
 

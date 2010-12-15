@@ -1,0 +1,3 @@
+readelf --string-dump=.data audioboard.atmega8.CUSTOM.elf | less
+in audioboard.atmega8.CUSTOM.map, /^\.data
+in audioboard.atmega8.CUSTOM.map, /^\.bss
