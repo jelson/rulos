@@ -194,7 +194,7 @@ void _st_issue_init(STAct *sta)
 void _st_issue_read(STAct *sta)
 {
 	sta->issued = ST_Read;
-	sdc_read(&sta->sdc, 0, sta->buf, sta->buflen, &sta->act);
+	sdc_read(&sta->sdc, 0, 0, sta->buf, sta->buflen, &sta->act);
 }
 
 void _st_update(Activation *act)
@@ -244,18 +244,35 @@ void st_read(STAct *sta)
 
 //////////////////////////////////////////////////////////////////////////////
 
+void noop_update(Activation *act)
+{
+}
+Activation noopact = { noop_update };
+
+typedef struct {
+	Activation act;
+	uint8_t databuf[16];
+} PrintMsgAct;
+
+void _pma_update(Activation *act)
+{
+	PrintMsgAct *pma = (PrintMsgAct *) act;
+	uart_send(RULOS_UART0, (char*) pma->databuf, sizeof(pma->databuf), NULL, NULL);
+	waitbusyuart();
+}
+
+void pma_init(PrintMsgAct *pma)
+{
+	pma->act.func = _pma_update;
+}
+
 typedef struct {
 	Activation act;
 //	STAct sta;
 	SDCard sdc;
 	SerialCmdAct sca;
-	uint8_t databuf[16];
+	PrintMsgAct pma;
 } CmdProc;
-
-void noop_update(Activation *act)
-{
-}
-Activation noopact = { noop_update };
 
 int flip = 0;
 void cmdproc_update(Activation *act)
@@ -271,10 +288,16 @@ void cmdproc_update(Activation *act)
 	{
 		sdc_initialize(&cp->sdc, &noopact);
 	}
-	else if (strcmp(buf, "read\n")==0)
+	else if (strncmp(buf, "read", 4)==0)
 	{
+		int halfoffset = buf[5]-'0';
+		uint32_t block_offset = ((uint32_t)(halfoffset>>1))<<9;
+		uint16_t skip = (halfoffset&1)<<8;
+		syncdebug(0, 'h', halfoffset);
+		syncdebug(0, 'b', block_offset);
+		syncdebug(0, 's', skip);
 		SYNCDEBUG();
-		sdc_read(&cp->sdc, (uint32_t) 0, cp->databuf, sizeof(cp->databuf), &noopact);
+		sdc_read(&cp->sdc, block_offset, skip, cp->pma.databuf, sizeof(cp->pma.databuf), &cp->pma.act);
 	}
 	else if (strcmp(buf, "led on\n")==0)
 	{
@@ -297,6 +320,7 @@ void cmdproc_update(Activation *act)
 void cmdproc_init(CmdProc *cp)
 {
 	serialcmd_init(&cp->sca, &cp->act);
+	pma_init(&cp->pma);
 	SYNCDEBUG();
 	cp->act.func = cmdproc_update;
 //	st_init(&cp->sta);
