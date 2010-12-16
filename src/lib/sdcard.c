@@ -96,7 +96,7 @@ void _spi_spif_handler(HALSPIHandler *h, uint8_t data)
 
 	SPI *spi = (SPI*) h;
 	spi->data = data;
-	schedule_us(1, &spi->spiact.act);
+	schedule_now(&spi->spiact.act);
 }
 
 #define READABLE(c)	(((c)>=' '&&(c)<127)?(c):'_')

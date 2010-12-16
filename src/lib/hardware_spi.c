@@ -65,6 +65,7 @@ void hal_spi_set_fast(r_bool fast)
 	uint8_t spcr = (1<<SPIE) | (1<<SPE) | (1<<MSTR);
 	spcr |= (fast ?  ((0<<SPR1) | (1<<SPR0)) : ((1<<SPR1) | (0<<SPR0)));
 	SPCR = spcr;
+	SPSR = (fast ? (1<<SPI2X) : (0<<SPI2X));
 }
 
 void hal_spi_select_slave(r_bool select)
