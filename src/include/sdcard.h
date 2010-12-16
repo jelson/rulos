@@ -20,6 +20,8 @@ typedef struct
 	uint8_t *cmd;
 	uint8_t cmdlen;
 	uint8_t cmd_expect_code;
+	uint16_t blocksize;
+	uint16_t skip;
 	uint8_t *replydata;
 	uint8_t replylen;
 	Activation *done_act;
@@ -36,8 +38,8 @@ typedef struct s_SPI
 	SPICmd *spic;
 	uint8_t cmd_i;
 	uint16_t cmd_wait;
-	uint16_t reply_i;
 	uint16_t reply_wait;
+	uint16_t reply_i;
 	r_bool cmd_acknowledged;
 	r_bool reply_started;
 
@@ -53,16 +55,18 @@ void spi_start(SPI *spi, SPICmd *spic);
 
 typedef struct {
 	Activation act;
+	uint16_t blocksize;
 	SPI spi;
 	SPICmd spic;
 	r_bool complete;
 	BunchaClocks bunchaClocks;
 	Activation *done_act;
 	uint8_t init_state;
+	uint8_t read_cmdseq[6];
 } SDCard;
 
 void sdc_init(SDCard *sdc);
 void sdc_initialize(SDCard *sdc, Activation *done_act);
-void sdc_read(SDCard *sdc, uint32_t offset, uint8_t *buf, uint16_t buflen, Activation *done_act);
+void sdc_read(SDCard *sdc, uint32_t offset, uint16_t skip, uint8_t *buf, uint16_t buflen, Activation *done_act);
 
 #endif // _SDCARD_H

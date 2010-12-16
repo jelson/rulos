@@ -244,26 +244,58 @@ void st_read(STAct *sta)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void noop_update(Activation *act)
-{
-}
-Activation noopact = { noop_update };
+int flip = 0;
 
 typedef struct {
 	Activation act;
+	SDCard *sdc;
+} StatusAct;
+
+void _sa_update(Activation *act)
+{
+	StatusAct *sa = (StatusAct*) act;
+	syncdebug(0, 's', sa->sdc->complete);
+}
+
+void sa_init(StatusAct *sa, SDCard *sdc)
+{
+	sa->act.func = _sa_update;
+	sa->sdc = sdc;
+}
+
+typedef struct {
+	Activation act;
+	SDCard *sdc;
+	Time start_time;
 	uint8_t databuf[16];
 } PrintMsgAct;
 
+#define READABLE(c)	(((c)>=' '&&(c)<127)?(c):'_')
+
 void _pma_update(Activation *act)
 {
+	flip = !flip;
+	audioled_set(flip, 0);
 	PrintMsgAct *pma = (PrintMsgAct *) act;
+	int i;
+	for (i=0; i<sizeof(pma->databuf); i++)
+	{
+		pma->databuf[i] = READABLE(pma->databuf[i]);
+	}
 	uart_send(RULOS_UART0, (char*) pma->databuf, sizeof(pma->databuf), NULL, NULL);
 	waitbusyuart();
+	Time end_time = clock_time_us();
+	uint16_t elapsed_us = ((end_time - pma->start_time)/100);
+	// tenths of ms
+	syncdebug(0, 'T', elapsed_us);
+
+	syncdebug(0, 's', pma->sdc->complete);
 }
 
-void pma_init(PrintMsgAct *pma)
+void pma_init(PrintMsgAct *pma, SDCard *sdc)
 {
 	pma->act.func = _pma_update;
+	pma->sdc = sdc;
 }
 
 typedef struct {
@@ -272,31 +304,32 @@ typedef struct {
 	SDCard sdc;
 	SerialCmdAct sca;
 	PrintMsgAct pma;
+	StatusAct sa;
 } CmdProc;
 
-int flip = 0;
 void cmdproc_update(Activation *act)
 {
 	CmdProc *cp = (CmdProc *) act;
 	char *buf = cp->sca.cmd;
 
-	flip = !flip;
-//	audioled_set(flip, 0);
 	SYNCDEBUG();
 
 	if (strcmp(buf, "init\n")==0)
 	{
-		sdc_initialize(&cp->sdc, &noopact);
+		sdc_initialize(&cp->sdc, &cp->sa.act);
 	}
 	else if (strncmp(buf, "read", 4)==0)
 	{
 		int halfoffset = buf[5]-'0';
 		uint32_t block_offset = ((uint32_t)(halfoffset>>1))<<9;
 		uint16_t skip = (halfoffset&1)<<8;
+#if 0
 		syncdebug(0, 'h', halfoffset);
 		syncdebug(0, 'b', block_offset);
 		syncdebug(0, 's', skip);
 		SYNCDEBUG();
+#endif
+		cp->pma.start_time = clock_time_us();
 		sdc_read(&cp->sdc, block_offset, skip, cp->pma.databuf, sizeof(cp->pma.databuf), &cp->pma.act);
 	}
 	else if (strcmp(buf, "led on\n")==0)
@@ -320,11 +353,12 @@ void cmdproc_update(Activation *act)
 void cmdproc_init(CmdProc *cp)
 {
 	serialcmd_init(&cp->sca, &cp->act);
-	pma_init(&cp->pma);
+	pma_init(&cp->pma, &cp->sdc);
 	SYNCDEBUG();
 	cp->act.func = cmdproc_update;
 //	st_init(&cp->sta);
 	sdc_init(&cp->sdc);
+	sa_init(&cp->sa, &cp->sdc);
 	SYNCDEBUG();
 }
 
@@ -342,7 +376,7 @@ int main()
 	heap_init();
 	util_init();
 	hal_init(bc_audioboard);
-	init_clock(1000, TIMER1);
+	init_clock(100, TIMER1);
 
 	audioled_init();
 
