@@ -52,6 +52,7 @@ void bunchaclocks_start(BunchaClocks *bc, int numclocks_bytes, Activation *done_
 
 void _spi_spif_handler(HALSPIHandler *h, uint8_t data);
 void _spi_update(Activation *act);
+void _spi_fastread(Activation *act);
 
 void spi_init(SPI *spi)
 {
@@ -123,7 +124,7 @@ void _spi_update(Activation *act)
 			for (i=0; i<6; i++)
 			{
 				syncdebug(2, 'a'+i, spic->cmd[i]);
-			]
+			}
 			syncdebug(2, 'I', spi->cmd_i);
 		}
 #endif
@@ -178,6 +179,10 @@ void _spi_update(Activation *act)
 			SYNCDEBUG();
 			spi->reply_started = TRUE;
 			// ask for first byte
+#define FASTREAD 0
+#if FASTREAD
+			spi->spiact.act.func = _spi_fastread;
+#endif // FASTREAD
 			hal_spi_send(0xff);
 		}
 		else if (spi->data & 0x80)
@@ -195,6 +200,9 @@ void _spi_update(Activation *act)
 	}
 	else if (spi->reply_i < spic->blocksize)
 	{
+#if FASTREAD
+		syncdebug(0, '@', __LINE__);
+#else
 		if (spi->reply_i >= spic->skip)
 		{
 			uint16_t buf_i = spi->reply_i - spic->skip;
@@ -205,6 +213,7 @@ void _spi_update(Activation *act)
 		}
 		spi->reply_i++;
 		hal_spi_send(0xff);
+#endif
 	}
 	else
 	{
@@ -212,6 +221,29 @@ void _spi_update(Activation *act)
 		SPIFINISH(TRUE);
 	}
 }
+
+#if FASTREAD
+void _spi_fastread(Activation *act)
+{
+	SPI *spi = ((SPIAct*) act)->spi;
+	SPICmd *spic = spi->spic;
+
+	if (spi->reply_i >= spic->skip)
+	{
+		uint16_t buf_i = spi->reply_i - spic->skip;
+		if (buf_i < spic->replylen)
+		{
+			spic->replydata[buf_i] = spi->data;
+		}
+	}
+	spi->reply_i++;
+	if (spi->reply_i == spic->blocksize)
+	{
+		spi->spiact.act.func = _spi_update;
+	}
+	hal_spi_send(0xff);
+}
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -279,6 +311,7 @@ void _sdc_init_update(Activation *act)
 	case 4:
 		SYNCDEBUG();
 		sdc->complete = TRUE;
+		hal_spi_set_fast(TRUE);
 		SCHEDULE_SOON(sdc->done_act);
 		return;
 	}
@@ -294,6 +327,7 @@ void sdc_initialize(SDCard *sdc, Activation *done_act)
 	sdc->init_state = 0;
 	sdc->complete = FALSE;
 
+	hal_spi_set_fast(FALSE);
 	sdc->spic.complete = TRUE;	// ensure first call doesn't quit
 	_sdc_init_update(&sdc->act);
 }

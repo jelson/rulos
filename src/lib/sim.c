@@ -1006,6 +1006,10 @@ void hal_init_spi()
 	g_spi.initted = TRUE;
 }
 
+void hal_spi_set_fast(r_bool fast)
+{
+}
+
 void hal_spi_select_slave(r_bool select)
 {
 	if (select)

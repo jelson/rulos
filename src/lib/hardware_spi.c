@@ -57,7 +57,14 @@ void hal_init_spi()
 	// about correct values for PB[0167].
 	DDR_SPI = (1<<DD_MOSI)|(1<<DD_SCK)|(1<<DD_SS)|(0<<DD_MISO);
 	// TODO probably should stop interrupts when configuring SPCR
-	SPCR = (1<<SPIE) | (1<<SPE) | (1<<MSTR) | (1<<SPR1) | (0<<SPR0);
+	hal_spi_set_fast(FALSE);
+}
+
+void hal_spi_set_fast(r_bool fast)
+{
+	uint8_t spcr = (1<<SPIE) | (1<<SPE) | (1<<MSTR);
+	spcr |= (fast ?  ((0<<SPR1) | (1<<SPR0)) : ((1<<SPR1) | (0<<SPR0)));
+	SPCR = spcr;
 }
 
 void hal_spi_select_slave(r_bool select)
