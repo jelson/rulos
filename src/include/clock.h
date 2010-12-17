@@ -50,7 +50,8 @@ void schedule_us(Time offset_us, Activation *act);
 	// schedule in the future. (asserts us>0)
 void schedule_now(Activation *act);
 	// Be very careful with schedule_now -- it can result in an infinite
-	// loop if you schedule yourself for now repeatedly.
+	// loop if you schedule yourself for now repeatedly (because the clock
+	// never advances past now until the queue empties).
 void schedule_absolute(Time at_time, Activation *act);
 
 #define Exp2Time(v)	(((Time)1)<<(v))

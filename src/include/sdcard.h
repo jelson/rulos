@@ -20,10 +20,8 @@ typedef struct
 	uint8_t *cmd;
 	uint8_t cmdlen;
 	uint8_t cmd_expect_code;
-	uint16_t blocksize;
-	uint16_t skip;
 	uint8_t *replydata;
-	uint8_t replylen;
+	uint16_t replylen;
 	Activation *done_act;
 	r_bool complete;
 } SPICmd;

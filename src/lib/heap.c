@@ -16,70 +16,69 @@
 
 #include "rocket.h"
 
-#define HEAP_CAPACITY 32
-HeapEntry heap[HEAP_CAPACITY];
-int heap_count;
-
-void heap_init()
+void heap_init(Heap *heap)
 {
-	heap_count = 0;
+	heap->heap_count = 0;
 }
 
-void heap_swap(int off0, int off1)
+void heap_swap(HeapEntry *he, int off0, int off1)
 {
-	HeapEntry tmp = heap[off0];
-	heap[off0] = heap[off1];
-	heap[off1] = tmp;
+	HeapEntry tmp = he[off0];
+	he[off0] = he[off1];
+	he[off1] = tmp;
 }
 
-void heap_bubble(int ptr)
+void heap_bubble(HeapEntry *he, int ptr)
 {
 	while (ptr > 0)
 	{
 		int parent = ptr >> 1;
-		if (later_than(heap[ptr].key, heap[parent].key)) { return; }	 // already correct
+		if (later_than(he[ptr].key, he[parent].key)) { return; }	 // already correct
 
-		heap_swap(parent, ptr);
+		heap_swap(he, parent, ptr);
 		ptr = parent;
 	}
 }
 
-void heap_insert(Time key, Activation *act)
+void heap_insert(Heap *heap, Time key, Activation *act)
 {
-	assert(heap_count < HEAP_CAPACITY);	// heap overflow
-	heap[heap_count].key = key;
-	heap[heap_count].activation = act;
-	heap_bubble(heap_count);
-	heap_count += 1;
+	int hc = heap->heap_count;
+	assert(hc < HEAP_CAPACITY);	// heap overflow
+	heap->heap[hc].key = key;
+	heap->heap[hc].activation = act;
+	heap_bubble(heap->heap, hc);
+	heap->heap_count = hc + 1;
 
 #if 0
-	LOGF((logfp, "heap_count %d this act func %08x period %d\n", heap_count, (unsigned) (act->func), key-_last_scheduler_run_us));
+	LOGF((logfp, "heap_count %d this act func %08x period %d\n", heap->heap_count, (unsigned) (act->func), key-_last_scheduler_run_us));
 #endif
 
 }
 
-int heap_peek(/*out*/ Time *key, /*out*/ Activation **act)
+int heap_peek(Heap *heap, /*out*/ Time *key, /*out*/ Activation **act)
 {
 	int retval = -1;
 
-	if (heap_count == 0)
+	if (heap->heap_count == 0)
 	{
 		goto done;
 	}
-	*key = heap[0].key;
-	*act = heap[0].activation;
+	*key = heap->heap[0].key;
+	*act = heap->heap[0].activation;
 	retval = 0;
 
  done:
 	return retval;
 }
 
-void heap_pop()
+void heap_pop(Heap *heap)
 {
-	assert(heap_count > 0);	// heap underflow
-	heap[0] = heap[heap_count-1];
-	heap_count -= 1;
+	assert(heap->heap_count > 0);	// heap underflow
+	heap->heap[0] = heap->heap[heap->heap_count-1];
+	heap->heap_count -= 1;
+	int hc = heap->heap_count;
 	
+	HeapEntry *he = heap->heap;
 	/* down-heap */
 	int ptr = 0;
 	while (1)
@@ -87,11 +86,11 @@ void heap_pop()
 		int c0 = ptr*2;
 		int c1 = c0 + 1;
 		int candidate = ptr;
-		if (c0 < heap_count && later_than(heap[candidate].key, heap[c0].key))
+		if (c0 < hc && later_than(he[candidate].key, he[c0].key))
 		{
 			candidate = c0;
 		}
-		if (c1 < heap_count && later_than(heap[candidate].key, heap[c1].key))
+		if (c1 < hc && later_than(he[candidate].key, he[c1].key))
 		{
 			candidate = c1;
 		}
@@ -99,7 +98,7 @@ void heap_pop()
 		{
 			goto done;	// down-heaped as far as it goes.
 		}
-		heap_swap(ptr, candidate);
+		heap_swap(he, ptr, candidate);
 		ptr = candidate;
 	}
  done:

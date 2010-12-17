@@ -35,10 +35,18 @@ typedef struct {
 	Activation *activation;
 } HeapEntry;
 
-void heap_init();
-void heap_insert(Time key, Activation *act);
-int heap_peek(/*out*/ Time *key, /*out*/ Activation **act);
+#define HEAP_CAPACITY 32
+typedef struct {
+	HeapEntry heap[HEAP_CAPACITY];
+	int heap_count;
+} Heap;
+
+void heap_init(Heap *heap);
+	// NB: got an old ref to heap_init() (no args) in your main()?
+	// Just discard it; it's now handeld by init_clock().
+void heap_insert(Heap *heap, Time key, Activation *act);
+int heap_peek(Heap *heap, /*out*/ Time *key, /*out*/ Activation **act);
 	/* rc nonzero => heap empty */
-void heap_pop();
+void heap_pop(Heap *heap);
 
 #endif // heap_h

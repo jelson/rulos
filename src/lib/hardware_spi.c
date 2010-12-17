@@ -62,10 +62,17 @@ void hal_init_spi()
 
 void hal_spi_set_fast(r_bool fast)
 {
+// 101 => fosc/8
+#define SLOW2 0
+#define SLOW1 1
+#define SLOW0 0
+#define FAST2 1
+#define FAST1 0
+#define FAST0 1
 	uint8_t spcr = (1<<SPIE) | (1<<SPE) | (1<<MSTR);
-	spcr |= (fast ?  ((0<<SPR1) | (1<<SPR0)) : ((1<<SPR1) | (0<<SPR0)));
+	spcr |= (fast ?  ((FAST1<<SPR1) | (FAST0<<SPR0)) : ((SLOW1<<SPR1) | (SLOW0<<SPR0)));
 	SPCR = spcr;
-	SPSR = (fast ? (1<<SPI2X) : (0<<SPI2X));
+	SPSR = (fast ? (FAST2<<SPI2X) : (SLOW2<<SPI2X));
 }
 
 void hal_spi_select_slave(r_bool select)

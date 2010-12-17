@@ -267,7 +267,7 @@ typedef struct {
 	Activation act;
 	SDCard *sdc;
 	Time start_time;
-	uint8_t databuf[16];
+	uint8_t databuf[514];
 } PrintMsgAct;
 
 #define READABLE(c)	(((c)>=' '&&(c)<127)?(c):'_')
@@ -277,14 +277,21 @@ void _pma_update(Activation *act)
 	flip = !flip;
 	audioled_set(flip, 0);
 	PrintMsgAct *pma = (PrintMsgAct *) act;
+	Time end_time = clock_time_us();
+
 	int i;
 	for (i=0; i<sizeof(pma->databuf); i++)
 	{
 		pma->databuf[i] = READABLE(pma->databuf[i]);
 	}
-	uart_send(RULOS_UART0, (char*) pma->databuf, sizeof(pma->databuf), NULL, NULL);
-	waitbusyuart();
-	Time end_time = clock_time_us();
+	for (i=0; i<sizeof(pma->databuf); i+=128)
+	{
+		int len = sizeof(pma->databuf) - i;
+		if (len>128) { len = 128; }
+		uart_send(RULOS_UART0, (char*) pma->databuf+i, len, NULL, NULL);
+		waitbusyuart();
+	}
+
 	uint16_t elapsed_us = ((end_time - pma->start_time)/100);
 	// tenths of ms
 	syncdebug(0, 'T', elapsed_us);
@@ -321,8 +328,8 @@ void cmdproc_update(Activation *act)
 	else if (strncmp(buf, "read", 4)==0)
 	{
 		int halfoffset = buf[5]-'0';
-		uint32_t block_offset = ((uint32_t)(halfoffset>>1))<<9;
-		uint16_t skip = (halfoffset&1)<<8;
+		uint32_t block_offset = ((uint32_t)(halfoffset))<<9;
+		//uint16_t skip = (halfoffset&1)<<8;
 #if 0
 		syncdebug(0, 'h', halfoffset);
 		syncdebug(0, 'b', block_offset);
@@ -330,7 +337,7 @@ void cmdproc_update(Activation *act)
 		SYNCDEBUG();
 #endif
 		cp->pma.start_time = clock_time_us();
-		sdc_read(&cp->sdc, block_offset, skip, cp->pma.databuf, sizeof(cp->pma.databuf), &cp->pma.act);
+		sdc_read(&cp->sdc, block_offset, 0, cp->pma.databuf, sizeof(cp->pma.databuf), &cp->pma.act);
 	}
 	else if (strcmp(buf, "led on\n")==0)
 	{
@@ -373,7 +380,6 @@ MainContext mc;
 int main()
 {
 	audioled_init();
-	heap_init();
 	util_init();
 	hal_init(bc_audioboard);
 	init_clock(100, TIMER1);

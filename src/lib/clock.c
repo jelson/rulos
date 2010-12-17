@@ -38,6 +38,13 @@ uint32_t _spin_counter;
 
 extern volatile uint8_t run_scheduler_now;
 
+#define NOW_QUEUE_CAPACITY 4
+typedef struct {
+	Heap heap;
+	Activation *now_queue[NOW_QUEUE_CAPACITY];
+	uint8_t now_queue_size;
+} SysClock;
+SysClock clock;
 
 // Returns true if a > b using rollover math, assuming 32-bit signed time values
 uint8_t later_than(Time a, Time b)
@@ -66,6 +73,9 @@ void clock_handler(void *data)
 
 void init_clock(Time interval_us, uint8_t timer_id)
 {
+	heap_init(&clock.heap);
+	clock.now_queue_size = 0;
+
 #ifdef TIMING_DEBUG
 	gpio_make_output(GPIO_D4);
 	gpio_make_output(GPIO_D5);
@@ -88,7 +98,19 @@ void schedule_us(Time offset_us, Activation *act)
 
 void schedule_now(Activation *act)
 {
-	schedule_us_internal(0, act);
+	uint8_t old_interrupts;
+	old_interrupts = hal_start_atomic();
+	if (clock.now_queue_size < NOW_QUEUE_CAPACITY)
+	{
+		clock.now_queue[clock.now_queue_size++] = act;
+	}
+	else
+	{
+		heap_insert(&clock.heap, clock_time_us(), act);
+	}
+	hal_end_atomic(old_interrupts);
+
+//	schedule_us_internal(0, act);
 	run_scheduler_now = TRUE;
 }
 
@@ -106,7 +128,7 @@ void schedule_absolute(Time at_time, Activation *act)
 #endif
 	uint8_t old_interrupts;
 	old_interrupts = hal_start_atomic();
-	heap_insert(at_time, act);
+	heap_insert(&clock.heap, at_time, act);
 	hal_end_atomic(old_interrupts);
 #ifdef TIMING_DEBUG
 	gpio_clr(GPIO_D6);
@@ -157,11 +179,25 @@ void scheduler_run_once()
 		gpio_set(GPIO_D6);
 #endif
 		old_interrupts = hal_start_atomic();
-		rc = heap_peek(&due_time, &act);
-		if (!rc && !later_than(due_time, _last_scheduler_run_us))
+		if (clock.now_queue_size > 0)
 		{
+			act = clock.now_queue[0];
+			uint8_t nqi;
+			for (nqi=1; nqi<clock.now_queue_size; nqi++)
+			{
+				clock.now_queue[nqi-1] = clock.now_queue[nqi];
+			}
+			clock.now_queue_size -= 1;
 			valid = TRUE;
-			heap_pop();
+		}
+		else
+		{
+			rc = heap_peek(&clock.heap, &due_time, &act);
+			if (!rc && !later_than(due_time, _last_scheduler_run_us))
+			{
+				valid = TRUE;
+				heap_pop(&clock.heap);
+			}
 		}
 		hal_end_atomic(old_interrupts);
 #ifdef TIMING_DEBUG

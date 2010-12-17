@@ -1,7 +1,7 @@
 #include "sdcard.h"
 
 //#define SYNCDEBUG()	syncdebug(0, 'S', __LINE__)
-#define SYNCDEBUG()	/*syncdebug(0, 'S', __LINE__)*/
+#define SYNCDEBUG()	{}
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 
 extern void audioled_set(r_bool red, r_bool yellow);
@@ -57,7 +57,6 @@ void _spi_fastread(Activation *act);
 void spi_init(SPI *spi)
 {
 	SYNCDEBUG();
-	spi->handler.func = _spi_spif_handler;
 	spi->spic = NULL;
 	hal_init_spi();
 }
@@ -81,6 +80,7 @@ void spi_start(SPI *spi, SPICmd *spic)
 	spi->spiact.spi = spi;
 
 	hal_spi_select_slave(TRUE);
+	spi->handler.func = _spi_spif_handler;
 	hal_spi_set_handler(&spi->handler);
 	// call handler in activation context to issue initial send.
 	_spi_spif_handler(&spi->handler, 0xff);
@@ -88,16 +88,34 @@ void spi_start(SPI *spi, SPICmd *spic)
 
 void _spi_spif_handler(HALSPIHandler *h, uint8_t data)
 {
-#if 0
-	static int count = 0;
-	count += 1;
-	audioled_set((count & 2)> 0, (count&1)>0);
-#endif
-
 	SPI *spi = (SPI*) h;
 	spi->data = data;
 	schedule_now(&spi->spiact.act);
 }
+
+#define SPIFFASTREAD 1
+#if SPIFFASTREAD
+void _spi_spif_fastread_handler(HALSPIHandler *h, uint8_t data)
+{
+	SPI *spi = (SPI*) h;
+	SPICmd *spic = spi->spic;
+
+	uint16_t reply_i = spi->reply_i;
+	if (reply_i < spic->replylen)
+	{
+		spic->replydata[reply_i] = data;
+		hal_spi_send(0xff);
+	}
+	else
+	{
+		// reads once too many, but avoids a compare in main loop
+		spi->handler.func = _spi_spif_handler;
+		_spi_spif_handler(h, data);
+	}
+	reply_i++;
+	spi->reply_i = reply_i;
+}
+#endif // SPIFFASTREAD
 
 #define READABLE(c)	(((c)>=' '&&(c)<127)?(c):'_')
 
@@ -119,14 +137,6 @@ void _spi_update(Activation *act)
 		hal_spi_send(out_val);
 #if 0
 		syncdebug(2, 'o', out_val);
-		{
-			int i;
-			for (i=0; i<6; i++)
-			{
-				syncdebug(2, 'a'+i, spic->cmd[i]);
-			}
-			syncdebug(2, 'I', spi->cmd_i);
-		}
 #endif
 		spi->cmd_i++;
 	}
@@ -180,9 +190,13 @@ void _spi_update(Activation *act)
 			spi->reply_started = TRUE;
 			// ask for first byte
 #define FASTREAD 0
+#if SPIFFASTREAD
+			spi->handler.func = _spi_spif_fastread_handler;
+#else
 #if FASTREAD
 			spi->spiact.act.func = _spi_fastread;
 #endif // FASTREAD
+#endif
 			hal_spi_send(0xff);
 		}
 		else if (spi->data & 0x80)
@@ -198,18 +212,14 @@ void _spi_update(Activation *act)
 			SPIFINISH(FALSE);
 		}
 	}
-	else if (spi->reply_i < spic->blocksize)
+	else if (spi->reply_i < spic->replylen)
 	{
 #if FASTREAD
 		syncdebug(0, '@', __LINE__);
 #else
-		if (spi->reply_i >= spic->skip)
+		if (spi->reply_i < spic->replylen)
 		{
-			uint16_t buf_i = spi->reply_i - spic->skip;
-			if (buf_i < spic->replylen)
-			{
-				spic->replydata[buf_i] = spi->data;
-			}
+			spic->replydata[spi->reply_i] = spi->data;
 		}
 		spi->reply_i++;
 		hal_spi_send(0xff);
@@ -228,19 +238,17 @@ void _spi_fastread(Activation *act)
 	SPI *spi = ((SPIAct*) act)->spi;
 	SPICmd *spic = spi->spic;
 
-	if (spi->reply_i >= spic->skip)
+	uint16_t reply_i = spi->reply_i;
+	if (reply_i < spic->replylen)
 	{
-		uint16_t buf_i = spi->reply_i - spic->skip;
-		if (buf_i < spic->replylen)
-		{
-			spic->replydata[buf_i] = spi->data;
-		}
+		spic->replydata[reply_i] = spi->data;
 	}
-	spi->reply_i++;
-	if (spi->reply_i == spic->blocksize)
+	else
 	{
 		spi->spiact.act.func = _spi_update;
 	}
+	reply_i++;
+	spi->reply_i = reply_i;
 	hal_spi_send(0xff);
 }
 #endif
@@ -374,9 +382,6 @@ void sdc_read(SDCard *sdc, uint32_t offset, uint16_t skip, uint8_t *buf, uint16_
 	sdc->spic.cmd = read_cmdseq;
 	sdc->spic.cmdlen = sizeof(sdc->read_cmdseq);
 	sdc->spic.cmd_expect_code = 0;
-	sdc->spic.blocksize = sdc->blocksize + 2;
-		// +2 to absorb the CRC
-	sdc->spic.skip = skip;
 	sdc->spic.replydata = buf;
 	sdc->spic.replylen = buflen;
 	sdc->spic.done_act = &sdc->act;
