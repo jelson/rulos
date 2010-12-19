@@ -191,22 +191,24 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 	{
 		find_prescaler(us, &_timer2, &actual_us_per_period, &cs, &ocr);
 
-		uint8_t tccr2 = _BV(WGM21);		// CTC Mode 2 (interrupt on count-up)
-		tccr2 |= (cs & 4) ? _BV(CS22) : 0;
-		tccr2 |= (cs & 2) ? _BV(CS21) : 0;
-		tccr2 |= (cs & 1) ? _BV(CS20) : 0;
+		uint8_t tccr2a = _BV(WGM21);	// CTC Mode 2 (interrupt on count-up)
+		uint8_t tccr2b = 0;
+		tccr2b |= (cs & 4) ? _BV(CS22) : 0;
+		tccr2b |= (cs & 2) ? _BV(CS21) : 0;
+		tccr2b |= (cs & 1) ? _BV(CS20) : 0;
 
 		timer2_handler = handler;
 		timer2_data = data;
 
 #if defined(MCUatmega8)
 		OCR2 = ocr;
-		TCCR2 = tccr2;
+		TCCR2 = tccr2a | tccr2b;
 		TIMSK  |= _BV(OCIE2); /* enable output-compare int. */
 #elif defined (MCUatmega328p)
 		OCR2A = ocr;
-		TCCR2A = tccr2;
-		TIMSK1 |= _BV(OCIE2A); /* enable output-compare int. */
+		TCCR2A = tccr2a;
+		TCCR2B = tccr2b;
+		TIMSK2 |= _BV(OCIE2A); /* enable output-compare int. */
 #else
 # error hardware-specific timer code needs help!
 #endif

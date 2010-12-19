@@ -7,6 +7,7 @@
    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
    xmlns:svg="http://www.w3.org/2000/svg"
    xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    width="2160"
@@ -187,6 +188,62 @@
        inkscape:vp_y="0 : 1000 : 0"
        inkscape:vp_x="0 : 0.5 : 1"
        sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective
+       id="perspective4047"
+       inkscape:persp3d-origin="0.5 : 0.33333333 : 1"
+       inkscape:vp_z="1 : 0.5 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_x="0 : 0.5 : 1"
+       sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective
+       id="perspective4061"
+       inkscape:persp3d-origin="0.5 : 0.33333333 : 1"
+       inkscape:vp_z="1 : 0.5 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_x="0 : 0.5 : 1"
+       sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective
+       id="perspective4075"
+       inkscape:persp3d-origin="0.5 : 0.33333333 : 1"
+       inkscape:vp_z="1 : 0.5 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_x="0 : 0.5 : 1"
+       sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective
+       id="perspective4093"
+       inkscape:persp3d-origin="0.5 : 0.33333333 : 1"
+       inkscape:vp_z="1 : 0.5 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_x="0 : 0.5 : 1"
+       sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective
+       id="perspective4107"
+       inkscape:persp3d-origin="0.5 : 0.33333333 : 1"
+       inkscape:vp_z="1 : 0.5 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_x="0 : 0.5 : 1"
+       sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective
+       id="perspective4121"
+       inkscape:persp3d-origin="0.5 : 0.33333333 : 1"
+       inkscape:vp_z="1 : 0.5 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_x="0 : 0.5 : 1"
+       sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective
+       id="perspective4135"
+       inkscape:persp3d-origin="0.5 : 0.33333333 : 1"
+       inkscape:vp_z="1 : 0.5 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_x="0 : 0.5 : 1"
+       sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective
+       id="perspective4162"
+       inkscape:persp3d-origin="0.5 : 0.33333333 : 1"
+       inkscape:vp_z="1 : 0.5 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_x="0 : 0.5 : 1"
+       sodipodi:type="inkscape:persp3d" />
   </defs>
   <sodipodi:namedview
      id="base"
@@ -198,17 +255,17 @@
      objecttolerance="10"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.55886255"
-     inkscape:cx="442.2019"
-     inkscape:cy="596.48101"
+     inkscape:zoom="0.39914483"
+     inkscape:cx="271.36004"
+     inkscape:cy="330.00939"
      inkscape:document-units="in"
      inkscape:current-layer="layer1"
      showgrid="true"
      units="in"
      inkscape:window-width="1541"
-     inkscape:window-height="988"
-     inkscape:window-x="210"
-     inkscape:window-y="34"
+     inkscape:window-height="987"
+     inkscape:window-x="299"
+     inkscape:window-y="126"
      inkscape:snap-intersection-grid-guide="false"
      inkscape:snap-bbox="true"
      inkscape:snap-nodes="false"
@@ -1777,6 +1834,91 @@
          sodipodi:role="line"
          id="tspan4027"
          x="-130.62245"
-         y="357.10312">adjust these labels</tspan></text>
+         y="357.10312">add compressor, audio labels</tspan><tspan
+         sodipodi:role="line"
+         x="-130.62245"
+         y="357.10312"
+         id="tspan4168" /></text>
+    <text
+       xml:space="preserve"
+       style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
+       x="-486.70285"
+       y="-36.553619"
+       id="text4029"><tspan
+         sodipodi:role="line"
+         id="tspan4031"
+         x="-486.70285"
+         y="-36.553619">pinch point</tspan><tspan
+         sodipodi:role="line"
+         x="-486.70285"
+         y="13.446381"
+         id="tspan4033">no step</tspan><tspan
+         sodipodi:role="line"
+         x="-486.70285"
+         y="63.446381"
+         id="tspan4035">stow ladder when not in use</tspan><tspan
+         sodipodi:role="line"
+         x="-486.70285"
+         y="113.44638"
+         id="tspan4037">clear area before opening</tspan></text>
+    <image
+       y="208.07529"
+       x="-528.76801"
+       id="image4049"
+       height="341"
+       width="442"
+       xlink:href="file:///home/jonh/jonh-svn/rocket/rocketsim/Panels/inkscape_pasted_image_20100320_085617.png" />
+    <image
+       y="910.51117"
+       x="-941.77747"
+       id="image4077"
+       height="269.19299"
+       width="536.99121"
+       xlink:href="file:///home/jonh/jonh-svn/rocket/rocketsim/Panels/inkscape_pasted_image_20100320_090303.png" />
+    <text
+       xml:space="preserve"
+       style="font-size:40px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
+       x="-128.83311"
+       y="-127.8104"
+       id="text4081"><tspan
+         sodipodi:role="line"
+         id="tspan4083"
+         x="-128.83311"
+         y="-127.8104">http://www.safetydecals.net/DECAL-PINCH-POINT-p1397.html</tspan></text>
+    <image
+       y="479.95117"
+       x="-569.28693"
+       id="image4095"
+       height="580.0271"
+       width="387.04749"
+       xlink:href="file:///home/jonh/jonh-svn/rocket/rocketsim/Panels/inkscape_pasted_image_20100320_091120.png" />
+    <image
+       y="858.97864"
+       x="100.3348"
+       id="image4109"
+       height="316.78833"
+       width="229.02533"
+       xlink:href="file:///home/jonh/jonh-svn/rocket/rocketsim/Panels/inkscape_pasted_image_20100320_091331.png" />
+    <image
+       y="1014.4047"
+       x="364.45901"
+       id="image4123"
+       height="234.97285"
+       width="469.94571"
+       xlink:href="file:///home/jonh/jonh-svn/rocket/rocketsim/Panels/inkscape_pasted_image_20100320_091502.png" />
+    <image
+       y="979.01355"
+       x="853.97186"
+       id="image4137"
+       height="164.39653"
+       width="394.02979"
+       xlink:href="file:///home/jonh/jonh-svn/rocket/rocketsim/Panels/inkscape_pasted_image_20100320_091737.png" />
+    <image
+       y="1197.1823"
+       x="-630.33466"
+       id="image4164"
+       height="461"
+       width="461"
+       xlink:href="file:///home/jonh/jonh-svn/rocket/rocketsim/Panels/inkscape_pasted_image_20100321_100311.png" />
   </g>
 </svg>

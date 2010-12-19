@@ -1,6 +1,23 @@
+/************************************************************************
+ *
+ * This file is part of RulOS, Ravenna Ultra-Low-Altitude Operating
+ * System -- the free, open-source operating system for microcontrollers.
+ *
+ * Written by Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com),
+ * May 2009.
+ *
+ * This operating system is in the public domain.  Copyright is waived.
+ * All source code is completely free to use by anyone for any purpose
+ * with no restrictions whatsoever.
+ *
+ * For more information about the project, see: www.jonh.net/rulos
+ *
+ ************************************************************************/
+
 #include "sdcard.h"
 
-//#define SYNCDEBUG()	syncdebug(0, 'S', __LINE__)
+#define R_SYNCDEBUG()	syncdebug(0, 'S', __LINE__)
+//#define SYNCDEBUG()	R_SYNCDEBUG()
 #define SYNCDEBUG()	{}
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 
@@ -155,7 +172,6 @@ void _spi_update(Activation *act)
 		}
 		else if (spi->data==spic->cmd_expect_code)
 		{
-			SYNCDEBUG();
 			spi->cmd_acknowledged = TRUE;
 			// NB we don't drop/reopen CS line, per
 			// SecureDigitalCard_1.9.doc page 31, page 3-6, sec 3.3.
@@ -165,6 +181,7 @@ void _spi_update(Activation *act)
 		}
 		else
 		{
+			R_SYNCDEBUG();
 			SYNCDEBUG();
 			syncdebug(3, 'g', spi->data);
 			syncdebug(3, 'e', spic->cmd_expect_code);
@@ -258,6 +275,7 @@ void _spi_fastread(Activation *act)
 void sdc_init(SDCard *sdc)
 {
 	sdc->act.func = NULL;	// varies depending on entry point.
+	sdc->busy = FALSE;
 	spi_init(&sdc->spi);
 }
 
@@ -347,7 +365,11 @@ void _sdc_read_update(Activation *act)
 	SYNCDEBUG();
 	sdc->complete = sdc->spic.complete;
 	audioled_set(0, 1);
-	SCHEDULE_SOON(sdc->done_act);
+	sdc->busy = FALSE;
+	if (sdc->done_act!=NULL)
+	{
+		SCHEDULE_SOON(sdc->done_act);
+	}
 }
 
 void fill_value(uint8_t *dst, uint32_t src)
@@ -358,9 +380,17 @@ void fill_value(uint8_t *dst, uint32_t src)
 	dst[3] = (src>>(0*8)) & 0xff;
 }
 
-void sdc_read(SDCard *sdc, uint32_t offset, uint16_t skip, uint8_t *buf, uint16_t buflen, Activation *done_act)
+void sdc_read(SDCard *sdc, uint32_t offset, uint8_t *buf, uint16_t buflen, Activation *done_act)
 {
 	SYNCDEBUG();
+	if (sdc->busy)
+	{
+		// TODO indicate that this failed. Right now,
+		// this path should only occur when being called in the blind
+		// by audio_streamer, who will just call again later.
+		return;
+	}
+	sdc->busy = TRUE;
 	sdc->act.func = _sdc_read_update;
 	sdc->done_act = done_act;
 	sdc->complete = FALSE;

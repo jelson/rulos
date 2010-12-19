@@ -68,6 +68,8 @@ COMMON_OBJECTS = \
 	funcseq.o \
 	sdcard.o \
 	uart.o \
+	audio_out.o \
+	audio_streamer.o \
 
 #	spiflash.o \
 #	audio_driver.o \

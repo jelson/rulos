@@ -25,46 +25,45 @@
 #include "board_defs.h"
 #include "hal.h"
 
+#define AUDIO_REGISTER_LATCH	GPIO_D6
+#define AUDIO_REGISTER_DATA		GPIO_D5
+#define AUDIO_REGISTER_SHIFT	GPIO_D7
 
-
-// TODO arrange for hardware to call audio_emit_sample once every 125us
-// (8kHz), either by speeding up the main clock (and only firing the clock
-// handler every n ticks), or by using a separate CPU clock (TIMER0)
-
-#define AUDIO_BUF_SIZE 32
-static struct s_hardware_audio {
-	RingBuffer *ring;
-	uint8_t _storage[sizeof(RingBuffer)+1+AUDIO_BUF_SIZE];
-} audio =
-	{ NULL };
-
-void audio_write_sample(uint8_t value)
+void hal_audio_init(void)
 {
-	// TODO send this out to the DAC
+	gpio_make_output(AUDIO_REGISTER_LATCH);
+	gpio_make_output(AUDIO_REGISTER_DATA);
+	gpio_make_output(AUDIO_REGISTER_SHIFT);
 }
 
-void audio_emit_sample()
+#if 0
+uint8_t g_audio_register_delay_constant = 1;
+void audio_register_delay()
 {
-	if (audio.ring==NULL)
+	uint8_t delay;
+	static volatile int x;
+	for (delay=0; delay<g_audio_register_delay_constant; delay++)
 	{
-		// not initialized.
-		return;
+		x = x+1;
 	}
+}
+#endif
 
-	// runs in interrupt context; atomic.
-	uint8_t sample = 0;
-	if (ring_remove_avail(audio.ring))
-	{
-		sample = ring_remove(audio.ring);
-	}
-	audio_write_sample(sample);
+void hal_audio_fire_latch(void)
+{
+	gpio_set(AUDIO_REGISTER_LATCH);
+	gpio_clr(AUDIO_REGISTER_LATCH);
 }
 
-RingBuffer *hal_audio_init(uint16_t sample_period_us)
+void hal_audio_shift_sample(uint8_t sample)
 {
-	assert(sample_period_us == 125);	// not that an assert in hardware.c helps...
-	audio.ring = (RingBuffer*) audio._storage;
-	init_ring_buffer(audio.ring, sizeof(audio._storage));
-	return audio.ring;
+	uint8_t i;
+	for (i=0; i<8; i++)
+	{
+		gpio_set_or_clr(AUDIO_REGISTER_DATA, sample&1);
+		gpio_set(AUDIO_REGISTER_SHIFT);
+		gpio_clr(AUDIO_REGISTER_SHIFT);
+		sample=sample>>1;
+	}
 }
 

@@ -825,6 +825,7 @@ void setnonblock(int fd)
 	assert(rc==0);
 }
 
+#if 0
 RingBuffer *hal_audio_init(uint16_t sample_period_us)
 {
 	assert(simAudioState == NULL);	// duplicate initialization
@@ -837,6 +838,7 @@ RingBuffer *hal_audio_init(uint16_t sample_period_us)
 
 	return simAudioState->ring;
 }
+#endif
 
 void start_audio_fork_shuttling_child(SimAudioState *sas)
 {
@@ -1114,4 +1116,16 @@ void hal_init_joystick_button()
 r_bool hal_read_joystick_button()
 {
 	return g_joystick_trigger_state;
+}
+
+void hal_audio_init(void)
+{
+}
+
+void hal_audio_fire_latch(void)
+{
+}
+
+void hal_audio_shift_sample(uint8_t sample)
+{
 }

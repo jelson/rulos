@@ -61,10 +61,11 @@ typedef struct {
 	Activation *done_act;
 	uint8_t init_state;
 	uint8_t read_cmdseq[6];
+	r_bool busy;
 } SDCard;
 
 void sdc_init(SDCard *sdc);
 void sdc_initialize(SDCard *sdc, Activation *done_act);
-void sdc_read(SDCard *sdc, uint32_t offset, uint16_t skip, uint8_t *buf, uint16_t buflen, Activation *done_act);
+void sdc_read(SDCard *sdc, uint32_t offset, uint8_t *buf, uint16_t buflen, Activation *done_act);
 
 #endif // _SDCARD_H

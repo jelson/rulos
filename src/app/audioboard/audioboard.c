@@ -25,6 +25,7 @@
 #include "sim.h"
 #include "audio_driver.h"
 #include "audio_server.h"
+#include "audio_streamer.h"
 #include "sdcard.h"
 
 #define AUDIOTEST 0
@@ -168,81 +169,6 @@ void audioled_set(r_bool red, r_bool yellow)
 
 //////////////////////////////////////////////////////////////////////////////
 
-typedef enum
-{
-	ST_None = 0,
-	ST_Initialize = 1,
-	ST_Read = 2,
-} STState;
-
-typedef struct
-{
-	Activation act;
-	SDCard sdc;
-	r_bool initialized;
-	STState issued;
-	uint8_t buf[20];
-	uint16_t buflen;
-} STAct;
-
-void _st_issue_init(STAct *sta)
-{
-	sta->issued = ST_Initialize;
-	sdc_initialize(&sta->sdc, &sta->act);
-}
-
-void _st_issue_read(STAct *sta)
-{
-	sta->issued = ST_Read;
-	sdc_read(&sta->sdc, 0, 0, sta->buf, sta->buflen, &sta->act);
-}
-
-void _st_update(Activation *act)
-{
-	STAct *sta = (STAct *) act;
-
-	if (sta->issued == ST_Initialize)
-	{
-		if (sta->sdc.complete)
-		{
-			sta->initialized = TRUE;
-			_st_issue_read(sta);
-		}
-		else
-		{
-			_st_issue_init(sta);
-			// TODO infinite loop
-		}
-	}
-	else if (sta->issued == ST_Read)
-	{
-		sta->issued = ST_None;
-		// TODO activate parent.
-	}
-}
-
-void st_init(STAct *sta)
-{
-	sta->act.func = _st_update;
-	sdc_init(&sta->sdc);
-	sta->initialized = FALSE;
-	sta->issued = ST_None;
-	sta->buflen = sizeof(sta->buf);
-}
-
-void st_read(STAct *sta)
-{
-	if (!sta->initialized)
-	{
-		_st_issue_init(sta);
-	}
-	else
-	{
-		_st_issue_read(sta);
-	}
-}
-
-//////////////////////////////////////////////////////////////////////////////
 
 int flip = 0;
 
@@ -267,7 +193,7 @@ typedef struct {
 	Activation act;
 	SDCard *sdc;
 	Time start_time;
-	uint8_t databuf[514];
+	uint8_t databuf[5];
 } PrintMsgAct;
 
 #define READABLE(c)	(((c)>=' '&&(c)<127)?(c):'_')
@@ -305,14 +231,47 @@ void pma_init(PrintMsgAct *pma, SDCard *sdc)
 	pma->sdc = sdc;
 }
 
+struct s_CmdProc;
+
 typedef struct {
+	Activation act;
+	struct s_CmdProc *cp;
+	int count;
+} StreamTest;
+
+typedef struct s_CmdProc {
 	Activation act;
 //	STAct sta;
 	SDCard sdc;
 	SerialCmdAct sca;
 	PrintMsgAct pma;
 	StatusAct sa;
+	StreamTest stream_test;
+	AudioStreamer audio_streamer;
 } CmdProc;
+
+void _streamtest_update(Activation *act)
+{
+	StreamTest *st = (StreamTest *) act;
+	if (st->count>0)
+	{
+		st->count--;
+		sdc_read(&st->cp->sdc, st->count<<9, st->cp->pma.databuf, sizeof(st->cp->pma.databuf), &st->act);
+	}
+	else
+	{
+		schedule_now(&st->cp->pma.act);
+	}
+}
+
+void streamtest_start(StreamTest *st, CmdProc *cp)
+{
+	st->act.func = _streamtest_update;
+	st->cp = cp;
+	st->count = 100;
+	st->cp->pma.start_time = clock_time_us();
+	schedule_now(&st->act);
+}
 
 void cmdproc_update(Activation *act)
 {
@@ -337,7 +296,40 @@ void cmdproc_update(Activation *act)
 		SYNCDEBUG();
 #endif
 		cp->pma.start_time = clock_time_us();
-		sdc_read(&cp->sdc, block_offset, 0, cp->pma.databuf, sizeof(cp->pma.databuf), &cp->pma.act);
+		sdc_read(&cp->sdc, block_offset, cp->pma.databuf, sizeof(cp->pma.databuf), &cp->pma.act);
+	}
+	else if (strcmp(buf, "stream\n")==0)
+	{
+		streamtest_start(&cp->stream_test, cp);
+	}
+	else if (strcmp(buf, "as\n")==0)
+	{
+		init_audio_streamer(&cp->audio_streamer, TIMER2);
+	}
+	else if (strncmp(buf, "v ", 2)==0)
+	{
+		uint8_t val = (buf[2]-'a')<<4;
+		syncdebug(0, 'v', val);
+	}
+	else if (strcmp(buf, "aodebug\n")==0)
+	{
+		syncdebug(0, 'i', cp->audio_streamer.audio_out.index);
+	}
+	else if (strcmp(buf, "tidebug\n")==0)
+	{
+#ifndef SIM
+		syncdebug(0, 't', TIFR2);
+		syncdebug(0, 'm', TIMSK2);
+		syncdebug(0, 'a', TCCR2A);
+		syncdebug(0, 'b', TCCR2B);
+		syncdebug(0, 'o', OCR2A);
+		syncdebug(0, 'n', TCNT2);
+		syncdebug(0, 'v', TOV2);
+#endif // SIM
+	}
+	else if (strncmp(buf, "play ", 5)==0)
+	{
+		SYNCDEBUG();
 	}
 	else if (strcmp(buf, "led on\n")==0)
 	{
@@ -382,7 +374,7 @@ int main()
 	audioled_init();
 	util_init();
 	hal_init(bc_audioboard);
-	init_clock(100, TIMER1);
+	init_clock(1000, TIMER1);
 
 	audioled_init();
 
@@ -408,7 +400,6 @@ int main()
 
 	cmdproc_init(&mc.cmdproc);
 
-	audioled_set(1, 0);
 #if 0
 	board_buffer_module_init();
 #endif
