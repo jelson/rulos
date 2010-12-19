@@ -1,3 +1,6 @@
+sdcard:
+	./compile_audio.py -sdcard ../include/sound.h . /dev/mmcblk0
+
 all: audio_sim lintest
 
 audio_sim: audio_sim.c
@@ -5,3 +8,4 @@ audio_sim: audio_sim.c
 
 lintest: lintest.c
 	gcc -g lintest.c -o lintest -lm
+

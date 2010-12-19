@@ -139,6 +139,12 @@ void syncdebug(uint8_t spaces, char f, uint16_t line)
 	waitbusyuart();
 }
 
+void syncdebug32(uint8_t spaces, char f, uint32_t line)
+{
+	syncdebug(spaces, f, line>>16);
+	syncdebug(spaces, '~', line&0x0ffff);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////
@@ -173,62 +179,53 @@ void audioled_set(r_bool red, r_bool yellow)
 int flip = 0;
 
 typedef struct {
-	Activation act;
-	SDCard *sdc;
-} StatusAct;
-
-void _sa_update(Activation *act)
-{
-	StatusAct *sa = (StatusAct*) act;
-	syncdebug(0, 's', sa->sdc->complete);
-}
-
-void sa_init(StatusAct *sa, SDCard *sdc)
-{
-	sa->act.func = _sa_update;
-	sa->sdc = sdc;
-}
+	uint32_t start_offset;
+	uint32_t end_offset;
+	uint16_t block_offset;
+	uint16_t padding;
+} AuIndexRec;
 
 typedef struct {
 	Activation act;
-	SDCard *sdc;
-	Time start_time;
-	uint8_t databuf[5];
-} PrintMsgAct;
+	AudioStreamer *as;
+	uint8_t au_index;
+} PlayAct;
 
-#define READABLE(c)	(((c)>=' '&&(c)<127)?(c):'_')
+void _play_proceed(Activation *act);
 
-void _pma_update(Activation *act)
+void play(PlayAct *pa, AudioStreamer *as, uint8_t au_index)
 {
-	flip = !flip;
-	audioled_set(flip, 0);
-	PrintMsgAct *pma = (PrintMsgAct *) act;
-	Time end_time = clock_time_us();
-
-	int i;
-	for (i=0; i<sizeof(pma->databuf); i++)
-	{
-		pma->databuf[i] = READABLE(pma->databuf[i]);
-	}
-	for (i=0; i<sizeof(pma->databuf); i+=128)
-	{
-		int len = sizeof(pma->databuf) - i;
-		if (len>128) { len = 128; }
-		uart_send(RULOS_UART0, (char*) pma->databuf+i, len, NULL, NULL);
-		waitbusyuart();
-	}
-
-	uint16_t elapsed_us = ((end_time - pma->start_time)/100);
-	// tenths of ms
-	syncdebug(0, 'T', elapsed_us);
-
-	syncdebug(0, 's', pma->sdc->complete);
+	SYNCDEBUG();
+	pa->act.func = _play_proceed;
+	pa->as = as;
+	pa->au_index = au_index;
+	sdc_read(&as->sdc, 0, &pa->act);
 }
 
-void pma_init(PrintMsgAct *pma, SDCard *sdc)
+void _play_proceed(Activation *act)
 {
-	pma->act.func = _pma_update;
-	pma->sdc = sdc;
+	SYNCDEBUG();
+	PlayAct *pa = (PlayAct *) act;
+	AuIndexRec *ai = (AuIndexRec*) pa->as->sdc.blockbuffer;
+#if 0
+	int i;
+	for (i=0; i<40; i++)
+	{
+		syncdebug(3, '\\', pa->as->sdc.blockbuffer[i]);
+	}
+#endif
+	AuIndexRec *airec = &ai[pa->au_index];
+#if 0
+	syncdebug(2, 'x', pa->au_index);
+	syncdebug(2, 't', 0xfeed);
+	void *x2 = airec;
+	void *x1 = ai;
+	syncdebug(2, 'r', (uint16_t) (x2-x1));
+	syncdebug32(2, 'o', airec->start_offset);
+	syncdebug(2, 'b', airec->block_offset);
+	syncdebug32(2, 'e', airec->end_offset);
+#endif
+	as_play(pa->as, airec->start_offset, airec->block_offset, airec->end_offset, NULL);
 }
 
 struct s_CmdProc;
@@ -241,37 +238,12 @@ typedef struct {
 
 typedef struct s_CmdProc {
 	Activation act;
-//	STAct sta;
-	SDCard sdc;
 	SerialCmdAct sca;
-	PrintMsgAct pma;
-	StatusAct sa;
 	StreamTest stream_test;
 	AudioStreamer audio_streamer;
+	PlayAct play_act;
 } CmdProc;
 
-void _streamtest_update(Activation *act)
-{
-	StreamTest *st = (StreamTest *) act;
-	if (st->count>0)
-	{
-		st->count--;
-		sdc_read(&st->cp->sdc, st->count<<9, st->cp->pma.databuf, sizeof(st->cp->pma.databuf), &st->act);
-	}
-	else
-	{
-		schedule_now(&st->cp->pma.act);
-	}
-}
-
-void streamtest_start(StreamTest *st, CmdProc *cp)
-{
-	st->act.func = _streamtest_update;
-	st->cp = cp;
-	st->count = 100;
-	st->cp->pma.start_time = clock_time_us();
-	schedule_now(&st->act);
-}
 
 void cmdproc_update(Activation *act)
 {
@@ -280,36 +252,9 @@ void cmdproc_update(Activation *act)
 
 	SYNCDEBUG();
 
-	if (strcmp(buf, "init\n")==0)
-	{
-		sdc_initialize(&cp->sdc, &cp->sa.act);
-	}
-	else if (strncmp(buf, "read", 4)==0)
-	{
-		int halfoffset = buf[5]-'0';
-		uint32_t block_offset = ((uint32_t)(halfoffset))<<9;
-		//uint16_t skip = (halfoffset&1)<<8;
-#if 0
-		syncdebug(0, 'h', halfoffset);
-		syncdebug(0, 'b', block_offset);
-		syncdebug(0, 's', skip);
-		SYNCDEBUG();
-#endif
-		cp->pma.start_time = clock_time_us();
-		sdc_read(&cp->sdc, block_offset, cp->pma.databuf, sizeof(cp->pma.databuf), &cp->pma.act);
-	}
-	else if (strcmp(buf, "stream\n")==0)
-	{
-		streamtest_start(&cp->stream_test, cp);
-	}
-	else if (strcmp(buf, "as\n")==0)
+	if (strcmp(buf, "as\n")==0)
 	{
 		init_audio_streamer(&cp->audio_streamer, TIMER2);
-	}
-	else if (strncmp(buf, "v ", 2)==0)
-	{
-		uint8_t val = (buf[2]-'a')<<4;
-		syncdebug(0, 'v', val);
 	}
 	else if (strcmp(buf, "aodebug\n")==0)
 	{
@@ -330,6 +275,9 @@ void cmdproc_update(Activation *act)
 	else if (strncmp(buf, "play ", 5)==0)
 	{
 		SYNCDEBUG();
+		uint8_t val = (buf[5]-'a');
+		syncdebug(0, 'v', val);
+		play(&cp->play_act, &cp->audio_streamer, val);
 	}
 	else if (strcmp(buf, "led on\n")==0)
 	{
@@ -352,12 +300,8 @@ void cmdproc_update(Activation *act)
 void cmdproc_init(CmdProc *cp)
 {
 	serialcmd_init(&cp->sca, &cp->act);
-	pma_init(&cp->pma, &cp->sdc);
 	SYNCDEBUG();
 	cp->act.func = cmdproc_update;
-//	st_init(&cp->sta);
-	sdc_init(&cp->sdc);
-	sa_init(&cp->sa, &cp->sdc);
 	SYNCDEBUG();
 }
 

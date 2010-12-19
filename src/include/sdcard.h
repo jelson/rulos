@@ -51,6 +51,11 @@ void spi_start(SPI *spi, SPICmd *spic);
 
 //////////////////////////////////////////////////////////////////////////////
 
+// Memory is too scarce to have separate callers with their own buffers;
+// so we allocate a single block buffer, and share it with all callers.
+#define SDBUFSIZE	512
+#define SDCRCSIZE	2
+
 typedef struct {
 	Activation act;
 	uint16_t blocksize;
@@ -62,10 +67,11 @@ typedef struct {
 	uint8_t init_state;
 	uint8_t read_cmdseq[6];
 	r_bool busy;
+	uint8_t blockbuffer[SDBUFSIZE+SDCRCSIZE];
 } SDCard;
 
 void sdc_init(SDCard *sdc);
 void sdc_initialize(SDCard *sdc, Activation *done_act);
-void sdc_read(SDCard *sdc, uint32_t offset, uint8_t *buf, uint16_t buflen, Activation *done_act);
+void sdc_read(SDCard *sdc, uint32_t offset, Activation *done_act);
 
 #endif // _SDCARD_H

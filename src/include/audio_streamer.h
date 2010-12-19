@@ -11,24 +11,31 @@ typedef struct
 {
 	Activation act;
 	struct s_AudioStreamer *as;
-} StartAudioAct;
+} InitializeCompleteAct;
 
-#define SDBUFSIZE	512
-#define SDCRCSIZE	2
+typedef struct
+{
+	Activation act;
+	struct s_AudioStreamer *as;
+} StartStreamingAct;
+	// when first sdc read completes, we can signal _fill to begin
+	// streaming data to DAC.
+
 // ugh; TODO clean up sdcard to hide fetch of stupid crc bytes
 
 typedef struct s_AudioStreamer
 {
 	Activation fill_act;
-	StartAudioAct start_audio_act;
+	InitializeCompleteAct initialize_complete;
+	StartStreamingAct start_streaming;
 	SDCard sdc;
 	AudioOut audio_out;
+	r_bool streaming;
 	uint8_t timer_id;
 	uint32_t block_address;
 		// 0 == playing silence
 	uint32_t end_address;
 	uint16_t block_offset;
-	uint8_t sdbuffer[SDBUFSIZE+SDCRCSIZE];
 	Activation *done_act;
 } AudioStreamer;
 

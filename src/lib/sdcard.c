@@ -21,8 +21,6 @@
 #define SYNCDEBUG()	{}
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 
-extern void audioled_set(r_bool red, r_bool yellow);
-
 //#define SCHEDULE_SOON(act)	schedule_us(1, act)
 #define SCHEDULE_SOON(act)	schedule_now(act)
 
@@ -364,7 +362,6 @@ void _sdc_read_update(Activation *act)
 
 	SYNCDEBUG();
 	sdc->complete = sdc->spic.complete;
-	audioled_set(0, 1);
 	sdc->busy = FALSE;
 	if (sdc->done_act!=NULL)
 	{
@@ -380,7 +377,7 @@ void fill_value(uint8_t *dst, uint32_t src)
 	dst[3] = (src>>(0*8)) & 0xff;
 }
 
-void sdc_read(SDCard *sdc, uint32_t offset, uint8_t *buf, uint16_t buflen, Activation *done_act)
+void sdc_read(SDCard *sdc, uint32_t offset, Activation *done_act)
 {
 	SYNCDEBUG();
 	if (sdc->busy)
@@ -412,8 +409,8 @@ void sdc_read(SDCard *sdc, uint32_t offset, uint8_t *buf, uint16_t buflen, Activ
 	sdc->spic.cmd = read_cmdseq;
 	sdc->spic.cmdlen = sizeof(sdc->read_cmdseq);
 	sdc->spic.cmd_expect_code = 0;
-	sdc->spic.replydata = buf;
-	sdc->spic.replylen = buflen;
+	sdc->spic.replydata = sdc->blockbuffer;
+	sdc->spic.replylen = sizeof(sdc->blockbuffer);
 	sdc->spic.done_act = &sdc->act;
 	spi_start(&sdc->spi, &sdc->spic);
 }

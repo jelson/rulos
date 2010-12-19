@@ -22,7 +22,6 @@
 
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 #define SYNCDEBUG()	syncdebug(0, 'O', __LINE__)
-extern void audioled_set(r_bool red, r_bool yellow);
 
 void _ao_handler(void *data);
 
@@ -55,13 +54,8 @@ void _ao_handler(void *data)
 	ao->index = (ao->index + 1) & AO_BUFMASK;
 	if ((ao->index & AO_HALFBUFMASK)==0)
 	{
-		audioled_set(0, 1);
 		uint8_t fill_index = (ao->index+AO_HALFBUFLEN) & AO_BUFMASK;
 		ao->fill_index = fill_index;
 		schedule_now(ao->fill_act);
-	}
-	else
-	{
-		audioled_set(1, 0);
 	}
 }
