@@ -16,6 +16,10 @@
 
 #include "audio_server.h"
 
+extern void syncdebug(uint8_t spaces, char f, uint16_t line);
+//#define SYNCDEBUG()	syncdebug(0, 'U', __LINE__)
+#define SYNCDEBUG()	{}
+
 void ac_send_complete(SendSlot *sendSlot);
 
 void init_audio_client(AudioClient *ac, Network *network)
@@ -70,60 +74,141 @@ r_bool ac_queue_loop_clip(AudioClient *ac, uint8_t stream_idx, SoundToken loop_t
 
 //////////////////////////////////////////////////////////////////////////////
 
-void as_update(AudioServer *as);
-void as_recv(RecvSlot *recvSlot, uint8_t payload_len);
-void as_update_display(AudioServer *as);
+void aserv_recv(RecvSlot *recvSlot, uint8_t payload_len);
+void _aserv_fetch_start(AudioServerAct *asa);
+void _aserv_fetch_complete(AudioServerAct *asa);
+void _aserv_start_play(AudioServerAct *asa);
+void _aserv_advance(AudioServerAct *asa);
 
-void init_audio_server(AudioServer *as, AudioDriver *ad, Network *network, uint8_t board0)
+typedef void (AservAct_f)(AudioServerAct *asa);
+static inline void _aserv_setup_act(AudioServer *aserv, AudioServerAct *act, AservAct_f *func)
 {
-	as->func = (ActivationFunc) as_update;
-	as->ad = ad;
-	as->recvSlot.func = as_recv;
-	as->recvSlot.port = AUDIO_PORT;
-	as->recvSlot.payload_capacity = sizeof(AudioRequestMessage);
-	as->recvSlot.msg_occupied = FALSE;
-	as->recvSlot.msg = (Message*) as->recv_msg_alloc;
-	as->recvSlot.user_data = as;
-
-	board_buffer_init(&as->bbuf DBG_BBUF_LABEL("audio_server"));
-	board_buffer_push(&as->bbuf, board0);
-
-	net_bind_receiver(network, &as->recvSlot);
-
-	schedule_us(1, (Activation*) as);
+	act->act.func = (ActivationFunc) func;
+	act->aserv = aserv;
 }
 
-void as_recv(RecvSlot *recvSlot, uint8_t payload_len)
+void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id)
 {
-	AudioServer *as = (AudioServer *) recvSlot->user_data;
+	_aserv_setup_act(aserv, &aserv->fetch_start, _aserv_fetch_start);
+	_aserv_setup_act(aserv, &aserv->fetch_complete, _aserv_fetch_complete);
+	_aserv_setup_act(aserv, &aserv->start_play, _aserv_start_play);
+	_aserv_setup_act(aserv, &aserv->advance, _aserv_advance);
+
+	aserv->recvSlot.func = aserv_recv;
+	aserv->recvSlot.port = AUDIO_PORT;
+	aserv->recvSlot.payload_capacity = sizeof(AudioRequestMessage);
+	aserv->recvSlot.msg_occupied = FALSE;
+	aserv->recvSlot.msg = (Message*) aserv->recv_msg_alloc;
+	aserv->recvSlot.user_data = aserv;
+
+	aserv->skip_token = sound_silence;
+	aserv->loop_token = sound_silence;
+
+	init_audio_streamer(&aserv->audio_streamer, timer_id);
+	aserv->index_ready = FALSE;
+	_aserv_fetch_start(&aserv->fetch_start);
+
+	net_bind_receiver(network, &aserv->recvSlot);
+}
+
+void _aserv_fetch_start(AudioServerAct *asa)
+{
+	AudioServer *aserv = asa->aserv;
+	SYNCDEBUG();
+	//syncdebug(2, 's', (int) &aserv->audio_streamer.sdc);
+	r_bool rc = sdc_read(&aserv->audio_streamer.sdc, 0, &aserv->fetch_complete.act);
+	if (!rc)
+	{
+		SYNCDEBUG();
+		schedule_us(1000, &aserv->fetch_start.act);
+	}
+}
+
+void _aserv_fetch_complete(AudioServerAct *asa)
+{
+	AudioServer *aserv = asa->aserv;
+	SYNCDEBUG();
+	memcpy(
+		aserv->index,
+		aserv->audio_streamer.sdc.blockbuffer+sizeof(AuIndexRec),
+		sizeof(aserv->index));
+	aserv->index_ready = TRUE;
+}
+
+void aserv_recv(RecvSlot *recvSlot, uint8_t payload_len)
+{
+	AudioServer *aserv = (AudioServer *) recvSlot->user_data;
+	assert(payload_len == sizeof(AudioRequestMessage));
 	AudioRequestMessage *arm = (AudioRequestMessage *) &recvSlot->msg->data;
 
-	assert(payload_len == sizeof(AudioRequestMessage));
-
-	if (arm->skip)
+	if (!aserv->index_ready)
 	{
-		ad_skip_to_clip(as->ad, arm->stream_idx, arm->skip_token, arm->loop_token);
+		SYNCDEBUG();
 	}
 	else
 	{
-		ad_queue_loop_clip(as->ad, arm->stream_idx, arm->loop_token);
+		SYNCDEBUG();
+		if (arm->skip)
+		{
+			_aserv_skip_to_clip(aserv, arm->skip_token, arm->loop_token);
+		}
+		else
+		{
+			aserv->loop_token = arm->loop_token;
+		}
 	}
-
-	as_update_display(as);
+	aserv->recvSlot.msg_occupied = FALSE;
 }
 
-void as_update(AudioServer *as)
+// factored into a function as an entry point for debugging.
+void _aserv_skip_to_clip(AudioServer *aserv, SoundToken skip_token, SoundToken loop_token)
 {
-	schedule_us(25000, (Activation*) as);
-	as_update_display(as);
+	SYNCDEBUG();
+	aserv->skip_token = skip_token;
+	aserv->loop_token = loop_token;
+	_aserv_start_play(&aserv->start_play);
 }
 
-void as_update_display(AudioServer *as)
+void _aserv_start_play(AudioServerAct *asa)
 {
-	char buf[9];
-	AudioStream *astream = &as->ad->stream[0];
-	int_to_string2(buf, 4, 0, astream->cur_token);
-	int_to_string2(buf+4, 4, 0, astream->loop_token);
-	ascii_to_bitmap_str(as->bbuf.buffer, 8, buf);
-	board_buffer_draw(&as->bbuf);
+	AudioServer *aserv = asa->aserv;
+	SYNCDEBUG();
+	if (aserv->skip_token==sound_silence)
+	{
+		SYNCDEBUG();
+		as_stop_streaming(&aserv->audio_streamer);
+	}
+	else if (aserv->skip_token<0 || aserv->skip_token>=sound_num_tokens)
+	{
+		// error: invalid token.
+		aserv->skip_token = sound_silence;
+		as_stop_streaming(&aserv->audio_streamer);
+		syncdebug(0, 'a', 0xfedc);
+	}
+	else
+	{
+		SYNCDEBUG();
+		AuIndexRec *airec = &aserv->index[aserv->skip_token];
+		r_bool rc = as_play(
+			&aserv->audio_streamer,
+			airec->start_offset,
+			airec->block_offset,
+			airec->end_offset,
+			&aserv->advance.act);
+		if (!rc)
+		{
+			SYNCDEBUG();
+			// Retry rapidly, so we can get ahold of sdc as soon as it's
+			// idle. (Yeah, I could have a callback from SD to alert the
+			// next waiter, but what a big project. This'll do.)
+			schedule_us(1, &aserv->start_play.act);
+		}
+	}
+}
+
+void _aserv_advance(AudioServerAct *asa)
+{
+	AudioServer *aserv = asa->aserv;
+	aserv->skip_token = aserv->loop_token;
+	_aserv_start_play(&aserv->start_play);
 }

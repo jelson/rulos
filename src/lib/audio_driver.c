@@ -14,6 +14,8 @@
  *
  ************************************************************************/
 
+#error DEPRECATED ; should svn rm
+
 #include "audio_driver.h"
 
 #define AUDIO_UPDATE_INTERVAL 1000

@@ -20,7 +20,10 @@
 #include "rocket.h"
 #include "network.h"
 #include "network_ports.h"
-#include "audio_driver.h"
+#include "audio_streamer.h"
+#include "sound.h"
+
+//////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
 	uint8_t stream_idx;
@@ -39,18 +42,39 @@ void init_audio_client(AudioClient *ac, Network *network);
 r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx, SoundToken cur_token, SoundToken loop_token);
 r_bool ac_queue_loop_clip(AudioClient *ac, uint8_t stream_idx, SoundToken loop_token);
 
+//////////////////////////////////////////////////////////////////////////////
+
+struct s_audio_server;
+typedef struct {
+	Activation act;
+	struct s_audio_server *aserv;
+} AudioServerAct;
 
 typedef struct s_audio_server {
-	ActivationFunc func;
+	Activation retry;
 
-	AudioDriver *ad;
+	AudioStreamer audio_streamer;
+
 	uint8_t recv_msg_alloc[sizeof(Message)+sizeof(AudioRequestMessage)];
-
 	RecvSlot recvSlot;
 
-	BoardBuffer bbuf;
+	AudioServerAct fetch_start;
+	AudioServerAct fetch_complete;
+	AudioServerAct start_play;
+	AudioServerAct advance;
+
+	SoundToken skip_token;
+	SoundToken loop_token;
+
+	r_bool index_ready;
+	AuIndexRec index[sound_num_tokens];
+	//AuIndexRec index[2];
 } AudioServer;
 
-void init_audio_server(AudioServer *as, AudioDriver *ad, Network *network, uint8_t board0);
+void init_audio_server(AudioServer *as, Network *network, uint8_t timer_id);
+void _aserv_skip_to_clip(AudioServer *aserv, SoundToken cur_token, SoundToken loop_token);
+
+// visibility for debugging
+void _aserv_fetch_start(AudioServerAct *asa);
 
 #endif // _audio_server_h

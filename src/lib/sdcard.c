@@ -136,6 +136,7 @@ void _spi_spif_fastread_handler(HALSPIHandler *h, uint8_t data)
 
 void _spi_update(Activation *act)
 {
+	SYNCDEBUG();
 	SPI *spi = ((SPIAct*) act)->spi;
 #define SPIFINISH(state)	{ \
 	spic->complete = state; \
@@ -201,6 +202,10 @@ void _spi_update(Activation *act)
 		}
 		else if (spi->data == 0xfe)
 		{
+			//syncdebug(2, 'i', spi->reply_i);
+			//syncdebug(2, 'l', spic->replylen);
+			//syncdebug(2, 'p', (int) spic->replydata);
+			//syncdebug(2, 't', (int) spi);
 			SYNCDEBUG();
 			spi->reply_started = TRUE;
 			// ask for first byte
@@ -334,6 +339,7 @@ void _sdc_init_update(Activation *act)
 		break;
 	case 4:
 		SYNCDEBUG();
+		sdc->busy = FALSE;
 		sdc->complete = TRUE;
 		hal_spi_set_fast(TRUE);
 		SCHEDULE_SOON(sdc->done_act);
@@ -345,6 +351,7 @@ void _sdc_init_update(Activation *act)
 
 void sdc_initialize(SDCard *sdc, Activation *done_act)
 {
+	sdc->busy = TRUE;
 	sdc->act.func = _sdc_init_update;
 	sdc->blocksize = 512;
 	sdc->done_act = done_act;
@@ -377,7 +384,7 @@ void fill_value(uint8_t *dst, uint32_t src)
 	dst[3] = (src>>(0*8)) & 0xff;
 }
 
-void sdc_read(SDCard *sdc, uint32_t offset, Activation *done_act)
+r_bool sdc_read(SDCard *sdc, uint32_t offset, Activation *done_act)
 {
 	SYNCDEBUG();
 	if (sdc->busy)
@@ -385,8 +392,10 @@ void sdc_read(SDCard *sdc, uint32_t offset, Activation *done_act)
 		// TODO indicate that this failed. Right now,
 		// this path should only occur when being called in the blind
 		// by audio_streamer, who will just call again later.
-		return;
+		SYNCDEBUG();
+		return FALSE;
 	}
+	SYNCDEBUG();
 	sdc->busy = TRUE;
 	sdc->act.func = _sdc_read_update;
 	sdc->done_act = done_act;
@@ -413,11 +422,6 @@ void sdc_read(SDCard *sdc, uint32_t offset, Activation *done_act)
 	sdc->spic.replylen = sizeof(sdc->blockbuffer);
 	sdc->spic.done_act = &sdc->act;
 	spi_start(&sdc->spi, &sdc->spic);
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void sd_init(SDCard *sdc)
-{
+	return TRUE;
 }
 

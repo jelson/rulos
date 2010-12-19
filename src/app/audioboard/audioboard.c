@@ -28,28 +28,6 @@
 #include "audio_streamer.h"
 #include "sdcard.h"
 
-#define AUDIOTEST 0
-
-#if AUDIOTEST
-typedef struct {
-	ActivationFunc func;
-	AudioDriver *ad;
-} AudioTest;
-
-void at_update(AudioTest *at)
-{
-	schedule_us(1000000, (Activation*) at);
-	ad_skip_to_clip(at->ad, 0, deadbeef_rand()%8, sound_silence);
-}
-
-void init_audio_test(AudioTest *at, AudioDriver *ad)
-{
-	at->func = (ActivationFunc) at_update;
-	at->ad = ad;
-	schedule_us(1, (Activation*)at);
-}
-#endif
-
 //////////////////////////////////////////////////////////////////////////////
 void audioled_init();
 void audioled_set(r_bool red, r_bool yellow);
@@ -176,74 +154,14 @@ void audioled_set(r_bool red, r_bool yellow)
 //////////////////////////////////////////////////////////////////////////////
 
 
-int flip = 0;
-
-typedef struct {
-	uint32_t start_offset;
-	uint32_t end_offset;
-	uint16_t block_offset;
-	uint16_t padding;
-} AuIndexRec;
-
-typedef struct {
-	Activation act;
-	AudioStreamer *as;
-	uint8_t au_index;
-} PlayAct;
-
-void _play_proceed(Activation *act);
-
-void play(PlayAct *pa, AudioStreamer *as, uint8_t au_index)
-{
-	SYNCDEBUG();
-	pa->act.func = _play_proceed;
-	pa->as = as;
-	pa->au_index = au_index;
-	sdc_read(&as->sdc, 0, &pa->act);
-}
-
-void _play_proceed(Activation *act)
-{
-	SYNCDEBUG();
-	PlayAct *pa = (PlayAct *) act;
-	AuIndexRec *ai = (AuIndexRec*) pa->as->sdc.blockbuffer;
-#if 0
-	int i;
-	for (i=0; i<40; i++)
-	{
-		syncdebug(3, '\\', pa->as->sdc.blockbuffer[i]);
-	}
-#endif
-	AuIndexRec *airec = &ai[pa->au_index];
-#if 0
-	syncdebug(2, 'x', pa->au_index);
-	syncdebug(2, 't', 0xfeed);
-	void *x2 = airec;
-	void *x1 = ai;
-	syncdebug(2, 'r', (uint16_t) (x2-x1));
-	syncdebug32(2, 'o', airec->start_offset);
-	syncdebug(2, 'b', airec->block_offset);
-	syncdebug32(2, 'e', airec->end_offset);
-#endif
-	as_play(pa->as, airec->start_offset, airec->block_offset, airec->end_offset, NULL);
-}
-
 struct s_CmdProc;
-
-typedef struct {
-	Activation act;
-	struct s_CmdProc *cp;
-	int count;
-} StreamTest;
 
 typedef struct s_CmdProc {
 	Activation act;
 	SerialCmdAct sca;
-	StreamTest stream_test;
-	AudioStreamer audio_streamer;
-	PlayAct play_act;
+	Network *network;
+	AudioServer *audio_server;
 } CmdProc;
-
 
 void cmdproc_update(Activation *act)
 {
@@ -252,32 +170,22 @@ void cmdproc_update(Activation *act)
 
 	SYNCDEBUG();
 
-	if (strcmp(buf, "as\n")==0)
+	if (strcmp(buf, "init\n")==0)
 	{
-		init_audio_streamer(&cp->audio_streamer, TIMER2);
+		init_audio_server(cp->audio_server, cp->network, TIMER2);
 	}
-	else if (strcmp(buf, "aodebug\n")==0)
+	else if (strcmp(buf, "fetch\n")==0)
 	{
-		syncdebug(0, 'i', cp->audio_streamer.audio_out.index);
-	}
-	else if (strcmp(buf, "tidebug\n")==0)
-	{
-#ifndef SIM
-		syncdebug(0, 't', TIFR2);
-		syncdebug(0, 'm', TIMSK2);
-		syncdebug(0, 'a', TCCR2A);
-		syncdebug(0, 'b', TCCR2B);
-		syncdebug(0, 'o', OCR2A);
-		syncdebug(0, 'n', TCNT2);
-		syncdebug(0, 'v', TOV2);
-#endif // SIM
+		_aserv_fetch_start(&cp->audio_server->fetch_start);
 	}
 	else if (strncmp(buf, "play ", 5)==0)
 	{
 		SYNCDEBUG();
-		uint8_t val = (buf[5]-'a');
-		syncdebug(0, 'v', val);
-		play(&cp->play_act, &cp->audio_streamer, val);
+		SoundToken skip = (buf[5]-'b');
+		SoundToken loop = (buf[6]-'b');
+		syncdebug(0, 's', skip);
+		syncdebug(0, 'l', loop);
+		_aserv_skip_to_clip(cp->audio_server, skip, loop);
 	}
 	else if (strcmp(buf, "led on\n")==0)
 	{
@@ -297,8 +205,10 @@ void cmdproc_update(Activation *act)
 	}
 }
 
-void cmdproc_init(CmdProc *cp)
+void cmdproc_init(CmdProc *cp, AudioServer *audio_server, Network *network)
 {
+	cp->audio_server = audio_server;
+	cp->network = network;
 	serialcmd_init(&cp->sca, &cp->act);
 	SYNCDEBUG();
 	cp->act.func = cmdproc_update;
@@ -309,6 +219,8 @@ void cmdproc_init(CmdProc *cp)
 
 typedef struct {
 	CpumonAct cpumon;
+	AudioServer aserv;
+	Network network;
 	CmdProc cmdproc;
 } MainContext;
 MainContext mc;
@@ -323,26 +235,17 @@ int main()
 	audioled_init();
 
 	audioled_set(0, 0);
-#if 0
-	AudioDriver ad;
-	init_audio_driver(&ad);
 
-	Network network;
-	init_network(&network);
+	// needs to be early, because it initializes uart, which at the
+	// moment I'm using for SYNCDEBUG(), including in init_audio_server.
+	cmdproc_init(&mc.cmdproc, &mc.aserv, &mc.network);
 
-	AudioServer as;
-	init_audio_server(&as, &ad, &network, 0);
+	init_network(&mc.network, AUDIO_ADDR);
 
-	ad_skip_to_clip(&ad, 0, sound_apollo_11_countdown, sound_apollo_11_countdown);
-#if AUDIOTEST
-	AudioTest at;
-	init_audio_test(&at, &ad);
-#endif
-#endif
+	init_audio_server(&mc.aserv, &mc.network, TIMER2);
 
 	cpumon_init(&mc.cpumon);	// includes slow calibration phase
 
-	cmdproc_init(&mc.cmdproc);
 
 #if 0
 	board_buffer_module_init();

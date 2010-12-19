@@ -62,6 +62,10 @@ typedef struct {
 	SPI spi;
 	SPICmd spic;
 	r_bool complete;
+		// TODO One ugly problem: this shared 'complete' variable
+		// is an thread-unsafe 'errno' -- if someone finds us !busy,
+		// and calls us before the first caller sees his complete,
+		// the first caller might incorrectly infer failure. Bummer.
 	BunchaClocks bunchaClocks;
 	Activation *done_act;
 	uint8_t init_state;
@@ -72,6 +76,7 @@ typedef struct {
 
 void sdc_init(SDCard *sdc);
 void sdc_initialize(SDCard *sdc, Activation *done_act);
-void sdc_read(SDCard *sdc, uint32_t offset, Activation *done_act);
+r_bool sdc_read(SDCard *sdc, uint32_t offset, Activation *done_act);
+	// FALSE if sdc was busy.
 
 #endif // _SDCARD_H

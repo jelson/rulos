@@ -17,7 +17,8 @@
 #include "audio_streamer.h"
 
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
-#define SYNCDEBUG()	syncdebug(0, 'R', __LINE__)
+//#define SYNCDEBUG()	syncdebug(0, 'R', __LINE__)
+#define SYNCDEBUG()	{}
 
 void _as_fill(Activation *act);
 void _as_initialize_complete(Activation *act);
@@ -95,12 +96,13 @@ void _as_fill(Activation *act)
 	uint8_t *fill_ptr = as->audio_out.buffer+as->audio_out.fill_index;
 	if (as->streaming)
 	{
+		SYNCDEBUG();
 		audioled_set(1, 0);
 		//memcpy(fill_ptr, &as->sdbuffer[as->block_offset], AO_HALFBUFLEN);
 		uint8_t *nextbuf = &as->sdc.blockbuffer[as->block_offset];
 		_ad_decode_ulaw_buf(fill_ptr, nextbuf, AO_HALFBUFLEN);
 		void syncdebug32(uint8_t spaces, char f, uint32_t line);
-		syncdebug(2, 'p', as->block_offset);
+		//syncdebug(2, 'p', as->block_offset);
 		as->block_offset += AO_HALFBUFLEN;
 		// NB here we assume SD block size is a multiple of AO_HALFBUFLEN,
 		// so that SD block requests stay aligned.
@@ -110,7 +112,7 @@ void _as_fill(Activation *act)
 			// sdbuffer empty; start refill
 			//syncdebug(1, 'd', (as->block_address)>>16);
 			//syncdebug(1, 'd', (as->block_address)&0xffff);
-			syncdebug32(2, 'f', as->block_address);
+			//syncdebug32(2, 'f', as->block_address);
 			sdc_read(&as->sdc, as->block_address, NULL);
 			as->block_offset = 0;
 			as->block_address+=SDBUFSIZE;
@@ -138,7 +140,7 @@ void _as_start_streaming(Activation *act)
 	ssa->as->streaming = TRUE;
 }
 
-void as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, uint32_t end_address, Activation *done_act)
+r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, uint32_t end_address, Activation *done_act)
 {
 	// what happens if we're already streaming?
 	// sdc->busy is true, so sdc_read does nothing, so we return,
@@ -147,10 +149,18 @@ void as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, u
 	// must set up suitable initial conditions to begin stream:
 	// need first block already in memory and preroll pointer pointing
 	// inside it before we expose it to _fill callback.
-	sdc_read(&as->sdc, block_address, &as->start_streaming.act);
+	r_bool ready = sdc_read(&as->sdc, block_address, &as->start_streaming.act);
+	if (!ready) { return FALSE; }
 
+	SYNCDEBUG();
 	as->block_address = block_address+SDBUFSIZE;
 	as->block_offset = block_offset;	// skip preroll bytes
 	as->end_address = end_address;
 	as->done_act = done_act;
+	return TRUE;
+}
+
+void as_stop_streaming(AudioStreamer *as)
+{
+	as->streaming = FALSE;
 }
