@@ -1,0 +1,16 @@
+audio decoupling transformer (hardware)
+
+discontinuous play of booster noise
+	(probably just an alignment problem)
+	..got better when I aligned, but I think we're slipping a frame.
+	meh.
+
+add disco noise (have to update ROCKET)
+uart network
+stream uart audio into rocket
+mic input (hardware)
+
+mounting:
+	space joystick cable off its board to clear audio board hardware
+	mount ROCKET0 programming header to plexi
+	add lots of screws to panels!

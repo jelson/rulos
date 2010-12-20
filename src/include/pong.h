@@ -18,7 +18,7 @@
 #define _pong_h
 
 #include "rocket.h"
-#include "audio_server.h"
+#include "audio_client.h"
 #include "screen4.h"
 
 #define PONG_HEIGHT 4

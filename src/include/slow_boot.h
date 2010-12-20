@@ -18,7 +18,7 @@
 #define _SLOW_BOOT_H
 
 #include "screenblanker.h"
-#include "audio_server.h"
+#include "audio_client.h"
 
 #define SLOW_MAX_BUFFERS 7
 #define BORROW_SCREENBLANKER_BUFS 1

@@ -17,62 +17,11 @@
 #include "audio_server.h"
 
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
-//#define SYNCDEBUG()	syncdebug(0, 'U', __LINE__)
-#define SYNCDEBUG()	{}
+#define SYNCDEBUG()	syncdebug(0, 'U', __LINE__)
+//#define SYNCDEBUG()	{}
 
 void ac_send_complete(SendSlot *sendSlot);
 
-void init_audio_client(AudioClient *ac, Network *network)
-{
-	ac->network = network;
-
-	ac->sendSlot.func = NULL;
-	ac->sendSlot.msg = (Message*) ac->send_msg_alloc;
-	ac->sendSlot.sending = FALSE;
-}
-
-
-r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx, SoundToken cur_token, SoundToken loop_token)
-{
-	if (ac->sendSlot.sending)
-	{
-		return FALSE;
-	}
-
-	ac->sendSlot.dest_addr = AUDIO_ADDR;
-	ac->sendSlot.msg->dest_port = AUDIO_PORT;
-	ac->sendSlot.msg->payload_len = sizeof(AudioRequestMessage);
-	AudioRequestMessage *arm = (AudioRequestMessage *) &ac->sendSlot.msg->data;
-	arm->stream_idx = stream_idx;
-	arm->skip = TRUE;
-	arm->skip_token = cur_token;
-	arm->loop_token = loop_token;
-	net_send_message(ac->network, &ac->sendSlot);
-
-	return TRUE;
-}
-
-r_bool ac_queue_loop_clip(AudioClient *ac, uint8_t stream_idx, SoundToken loop_token)
-{
-	if (ac->sendSlot.sending)
-	{
-		return FALSE;
-	}
-
-	ac->sendSlot.dest_addr = AUDIO_ADDR;
-	ac->sendSlot.msg->dest_port = AUDIO_PORT;
-	ac->sendSlot.msg->payload_len = sizeof(AudioRequestMessage);
-	AudioRequestMessage *arm = (AudioRequestMessage *) &ac->sendSlot.msg->data;
-	arm->stream_idx = stream_idx;
-	arm->skip = FALSE;
-	arm->skip_token = -1;
-	arm->loop_token = loop_token;
-	net_send_message(ac->network, &ac->sendSlot);
-
-	return TRUE;
-}
-
-//////////////////////////////////////////////////////////////////////////////
 
 void aserv_recv(RecvSlot *recvSlot, uint8_t payload_len);
 void _aserv_fetch_start(AudioServerAct *asa);
@@ -137,6 +86,7 @@ void _aserv_fetch_complete(AudioServerAct *asa)
 
 void aserv_recv(RecvSlot *recvSlot, uint8_t payload_len)
 {
+	SYNCDEBUG();
 	AudioServer *aserv = (AudioServer *) recvSlot->user_data;
 	assert(payload_len == sizeof(AudioRequestMessage));
 	AudioRequestMessage *arm = (AudioRequestMessage *) &recvSlot->msg->data;

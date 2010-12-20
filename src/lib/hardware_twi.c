@@ -14,12 +14,6 @@
  *
  ************************************************************************/
 
-/*
- * hardware.c: These functions are only needed for physical display hardware.
- *
- * This file is not compiled by the simulator.
- */
-
 #include <avr/boot.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -33,11 +27,13 @@ struct twiState;
 
 typedef struct {
 	ActivationFunc func;
-	struct twiState *twi;
+	struct s_TwiState *twi;
 } twiCallbackAct_t;
 
-typedef struct twiState
+typedef struct s_TwiState
 {
+	MediaStateIfc media;
+
 	uint8_t initted;
 	uint8_t have_bus;
 	uint8_t need_bus;
@@ -49,25 +45,23 @@ typedef struct twiState
 	uint8_t out_len;
 	uint8_t out_n;
 	uint8_t out_destaddr;
-	TWISendDoneFunc sendDoneCB;
+	MediaSendDoneFunc sendDoneCB;
 	void *sendDoneCBData;
 	twiCallbackAct_t sendCallbackAct;
 
 	// slave-receiver state
-	TWIRecvSlot *trs;
+	MediaRecvSlot *mrs;
 	uint8_t in_n;
 	uint8_t in_done;
 	twiCallbackAct_t recvCallbackAct;
 
 	// master-receiver state
-	TWIRecvSlot *mr_recvSlot;
+	MediaRecvSlot *mr_recvSlot;
 	uint8_t mr_addr;
 	uint8_t mr_n;
 	twiCallbackAct_t mrCallbackAct;
 	
-} twiState_t;
-
-twiState_t twiState_g = {FALSE};
+} TwiState;
 
 #define TWI_MAGIC 0x82
 
@@ -95,13 +89,13 @@ static void doSendCallback(twiCallbackAct_t *tca)
 	// one of our sanity checks upon receiving a new packet to
 	// transmit is that we don't have a pending callback.  However,
 	// the callback is often where new packets get scheduled.
-	twiState_t *twi = tca->twi;
-	TWISendDoneFunc cb = twi->sendDoneCB;
+	TwiState *twi = tca->twi;
+	MediaSendDoneFunc cb = twi->sendDoneCB;
 	twi->sendDoneCB = NULL;
 	cb(twi->sendDoneCBData);
 }
 
-static void end_xmit(twiState_t *twi)
+static void end_xmit(TwiState *twi)
 {
 	assert(twi->out_pkt != NULL);
 
@@ -110,7 +104,7 @@ static void end_xmit(twiState_t *twi)
 	schedule_now((Activation *) &twi->sendCallbackAct);
 }
 
-static void end_mr(twiState_t *twi)
+static void end_mr(TwiState *twi)
 {
 	assert(twi->mr_recvSlot != NULL);
 
@@ -118,43 +112,42 @@ static void end_mr(twiState_t *twi)
 	schedule_now((Activation *) &twi->mrCallbackAct);
 }
 
-
 // A trampoline function for the receive upcall.
 static void doRecvCallback(twiCallbackAct_t *tca)
 {
-	twiState_t *twi = tca->twi;
-	twi->trs->func(twi->trs, twi->in_n);
+	TwiState *twi = tca->twi;
+	twi->mrs->func(twi->mrs, twi->in_n);
 }
 
 static void doMrCallback(twiCallbackAct_t *tca)
 {
-	twiState_t *twi = tca->twi;
-	TWIRecvSlot *trs = twi->mr_recvSlot;
+	TwiState *twi = tca->twi;
+	MediaRecvSlot *mrs = twi->mr_recvSlot;
 	uint8_t size = twi->mr_n;
 
 	// free the stack to be able to receive the next packet before
 	// calling the callback
 	twi->mr_recvSlot = NULL;
-	trs->func(trs, size);
+	mrs->func(mrs, size);
 }
 
 
-static void abort_recv(twiState_t *twi)
+static void abort_recv(TwiState *twi)
 {
 	twi->in_n = -1;
 	twi->in_done = FALSE;
-	twi->trs->occupied = FALSE;
+	twi->mrs->occupied = FALSE;
 }
 
 
 
-static void mr_maybe_dont_ack(twiState_t *twi)
+static void mr_maybe_dont_ack(TwiState *twi)
 {
 	if (twi->mr_recvSlot && twi->mr_n == twi->mr_recvSlot->capacity-1)
 		twi->dont_ack = TRUE;
 }
 
-static void twi_set_control_register(twiState_t *twi, uint8_t bits)
+static void twi_set_control_register(TwiState *twi, uint8_t bits)
 {
 	bits |=
 		_BV(TWEN) | // enable twi
@@ -187,8 +180,7 @@ static void twi_set_control_register(twiState_t *twi, uint8_t bits)
 	TWCR = bits;
 }
 
-
-static void twi_update(twiState_t *twi, uint8_t status)
+static void twi_update(TwiState *twi, uint8_t status)
 {
 	assert(twi->initted == TWI_MAGIC);
 
@@ -271,9 +263,9 @@ static void twi_update(twiState_t *twi, uint8_t status)
 	case TW_SR_SLA_ACK:
 		// new packet arriving addressed to us.  If the receive buffer
 		// is available, start receiving.
-		if (twi->trs && !twi->trs->occupied)
+		if (twi->mrs && !twi->mrs->occupied)
 		{
-			twi->trs->occupied = TRUE;
+			twi->mrs->occupied = TRUE;
 			twi->in_done = FALSE;
 			twi->in_n = 0;
 		}
@@ -296,7 +288,7 @@ static void twi_update(twiState_t *twi, uint8_t status)
 		}
 
 		// overflowed the receive buffer?  if so, drop entire packet.
-		if (twi->trs->capacity < twi->in_n)
+		if (twi->mrs->capacity < twi->in_n)
 		{
 			LOGF((logfp, "dropping packet too long for local receive buffer"));
 			abort_recv(twi);
@@ -304,7 +296,7 @@ static void twi_update(twiState_t *twi, uint8_t status)
 		}
 
 		// store next byte
-		twi->trs->data[twi->in_n++] = TWDR;
+		twi->mrs->data[twi->in_n++] = TWDR;
 		break;
 
 	case TW_SR_DATA_NACK:
@@ -377,33 +369,41 @@ static void twi_update(twiState_t *twi, uint8_t status)
 	twi_set_control_register(twi, _BV(TWINT));
 }
 
+void _hal_twi_send(MediaStateIfc *media,
+	Addr dest_addr, char *data, uint8_t len,
+	MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
+
+TwiState _twiState_g;
 
 ISR(TWI_vect)
 {
-	twi_update(&twiState_g, TW_STATUS);
+	twi_update(&_twiState_g, TW_STATUS);
 }
 
-void hal_twi_init(Addr local_addr, TWIRecvSlot *trs)
+MediaStateIfc *hal_twi_init(Addr local_addr, MediaRecvSlot *mrs)
 {
+	TwiState *twi_state = &_twiState_g;
 	/* initialize our local state */
-	twiState_g.trs = trs;
-	twiState_g.have_bus = FALSE;
-	twiState_g.out_pkt = NULL;
-	twiState_g.out_len = 0;
-	twiState_g.sendDoneCB = NULL;
-	twiState_g.sendCallbackAct.func = (ActivationFunc) doSendCallback; 
-	twiState_g.sendCallbackAct.twi = &twiState_g;
+	twi_state->initted = 0;
+	twi_state->media.send = &_hal_twi_send;
+	twi_state->mrs = mrs;
+	twi_state->have_bus = FALSE;
+	twi_state->out_pkt = NULL;
+	twi_state->out_len = 0;
+	twi_state->sendDoneCB = NULL;
+	twi_state->sendCallbackAct.func = (ActivationFunc) doSendCallback; 
+	twi_state->sendCallbackAct.twi = twi_state;
 
-	twiState_g.in_n = -1;
-	twiState_g.recvCallbackAct.func = (ActivationFunc) doRecvCallback;
-	twiState_g.recvCallbackAct.twi = &twiState_g;
+	twi_state->in_n = -1;
+	twi_state->recvCallbackAct.func = (ActivationFunc) doRecvCallback;
+	twi_state->recvCallbackAct.twi = twi_state;
 
-	twiState_g.mr_recvSlot = NULL;
-	twiState_g.mr_n = -1;
-	twiState_g.mrCallbackAct.func = (ActivationFunc) doMrCallback;
-	twiState_g.mrCallbackAct.twi = &twiState_g;
+	twi_state->mr_recvSlot = NULL;
+	twi_state->mr_n = -1;
+	twi_state->mrCallbackAct.func = (ActivationFunc) doMrCallback;
+	twi_state->mrCallbackAct.twi = twi_state;
 
-	twiState_g.initted = TWI_MAGIC;
+	twi_state->initted = TWI_MAGIC;
 
 	/* set 100khz (assuming 8mhz local clock!  fix me...) */
 #ifdef CUSTOM_TWBR
@@ -427,41 +427,45 @@ void hal_twi_init(Addr local_addr, TWIRecvSlot *trs)
 	sei();
 
 	/* enable twi */
-	twi_set_control_register(&twiState_g, 0);
+	twi_set_control_register(twi_state, 0);
+	return &twi_state->media;
 }
 
 // Send a packet in master-transmitter mode.
-void hal_twi_send(Addr dest_addr, char *data, uint8_t len, 
-				  TWISendDoneFunc sendDoneCB, void *sendDoneCBData)
+void _hal_twi_send(MediaStateIfc *media, Addr dest_addr, char *data, uint8_t len, 
+				  MediaSendDoneFunc sendDoneCB, void *sendDoneCBData)
 {
+	TwiState *twi_state = (TwiState *)media;
 	uint8_t old_interrupts = hal_start_atomic();
 	assert(data != NULL);
 	assert(len > 0);
-	assert(twiState_g.initted == TWI_MAGIC);
-	assert(twiState_g.out_pkt == NULL);
-	assert(twiState_g.sendDoneCB == NULL);
+	assert(twi_state->initted == TWI_MAGIC);
+	assert(twi_state->out_pkt == NULL);
+	assert(twi_state->sendDoneCB == NULL);
 
-	twiState_g.out_pkt = data;
-	twiState_g.out_destaddr = dest_addr;
-	twiState_g.out_len = len;
-	twiState_g.sendDoneCB = sendDoneCB;
-	twiState_g.sendDoneCBData = sendDoneCBData;
+	twi_state->out_pkt = data;
+	twi_state->out_destaddr = dest_addr;
+	twi_state->out_len = len;
+	twi_state->sendDoneCB = sendDoneCB;
+	twi_state->sendDoneCBData = sendDoneCBData;
 
-	twiState_g.need_bus = TRUE;
-	twi_set_control_register(&twiState_g, 0);
+	twi_state->need_bus = TRUE;
+	twi_set_control_register(twi_state, 0);
 	hal_end_atomic(old_interrupts);
 }
 
+#if 0
 // Read a packet in master-receiver mode.
-void hal_twi_read(Addr addr, TWIRecvSlot *trs)
+void hal_twi_read(Addr addr, TWIRecvSlot *mrs)
 {
 	uint8_t old_interrupts = hal_start_atomic();
-	assert(trs != NULL);
-	twiState_g.mr_recvSlot = trs;
+	assert(mrs != NULL);
+	twiState_g.mr_recvSlot = mrs;
 	twiState_g.mr_addr = addr;
 
 	twiState_g.need_bus = TRUE;
 	twi_set_control_register(&twiState_g, 0);
 	hal_end_atomic(old_interrupts);
 }
+#endif
 

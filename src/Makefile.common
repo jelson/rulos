@@ -54,6 +54,7 @@ COMMON_OBJECTS = \
 	sound.o \
 	screen4.o \
 	audio_server.o \
+	audio_client.o \
 	hpam.o \
 	autotype.o \
 	idle.o \
@@ -70,6 +71,8 @@ COMMON_OBJECTS = \
 	uart.o \
 	audio_out.o \
 	audio_streamer.o \
+
+#	uart_net_media.o \
 
 #	spiflash.o \
 #	audio_driver.o \

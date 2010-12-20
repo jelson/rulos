@@ -667,11 +667,13 @@ void hal_init(BoardConfiguration bc)
 	sigaddset(&mask_set, SIGIO);
 }
 
-struct {
+typedef struct {
+	MediaStateIfc media;
 	r_bool initted;
-	TWIRecvSlot *trs;
+	MediaRecvSlot *mrs;
 	int udp_socket;
-} g_sim_twi_state = { FALSE };
+} SimTwiState;
+SimTwiState _g_sim_twi_state = { {NULL}, FALSE };
 
 
 void sim_sigio_handler()
@@ -680,38 +682,44 @@ void sim_sigio_handler()
 	sim_audio_poll("sigio");
 }
 
+void _sim_twi_send(MediaStateIfc *media,
+	Addr dest_addr, char *data, uint8_t len,
+	MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
 
-void hal_twi_init(Addr local_addr, TWIRecvSlot *trs)
+MediaStateIfc *hal_twi_init(Addr local_addr, MediaRecvSlot *mrs)
 {
 	signal(SIGIO, sim_sigio_handler);
 
-	g_sim_twi_state.trs = trs;
-	g_sim_twi_state.udp_socket = socket(PF_INET, SOCK_DGRAM, 0);
+	SimTwiState *twi_state = &_g_sim_twi_state;
+	twi_state->media.send = _sim_twi_send;
+	twi_state->mrs = mrs;
+	twi_state->udp_socket = socket(PF_INET, SOCK_DGRAM, 0);
 
 	int rc;
 	int on = 1;
-	int flags = fcntl(g_sim_twi_state.udp_socket, F_GETFL);
-	rc = fcntl(g_sim_twi_state.udp_socket, F_SETFL, flags | O_ASYNC);
+	int flags = fcntl(twi_state->udp_socket, F_GETFL);
+	rc = fcntl(twi_state->udp_socket, F_SETFL, flags | O_ASYNC);
 	assert(rc==0);
-	rc = ioctl(g_sim_twi_state.udp_socket, FIOASYNC, &on );
+	rc = ioctl(twi_state->udp_socket, FIOASYNC, &on );
 	assert(rc==0);
-	rc = ioctl(g_sim_twi_state.udp_socket, FIONBIO, &on);
+	rc = ioctl(twi_state->udp_socket, FIONBIO, &on);
 	assert(rc==0);
 	int flag = -getpid();
-	rc = ioctl(g_sim_twi_state.udp_socket, SIOCSPGRP, &flag);
+	rc = ioctl(twi_state->udp_socket, SIOCSPGRP, &flag);
 	assert(rc==0);
 
 	struct sockaddr_in sai;
 	sai.sin_family = AF_INET;
 	sai.sin_addr.s_addr = htonl(INADDR_ANY);
 	sai.sin_port = htons(SIM_TWI_PORT_BASE + local_addr);
-	bind(g_sim_twi_state.udp_socket, (struct sockaddr*)&sai, sizeof(sai));
-	g_sim_twi_state.initted = TRUE;
+	bind(twi_state->udp_socket, (struct sockaddr*)&sai, sizeof(sai));
+	twi_state->initted = TRUE;
+	return &twi_state->media;
 }
 
 typedef struct {
 	ActivationFunc f;
-	TWIRecvSlot *trs;
+	MediaRecvSlot *mrs;
 	uint8_t len;
 } recvCallbackAct_t;
 
@@ -719,12 +727,13 @@ recvCallbackAct_t recvCallbackAct_g;
 
 static void doRecvCallback(recvCallbackAct_t *rca)
 {
-	rca->trs->func(rca->trs, rca->len);
+	rca->mrs->func(rca->mrs, rca->len);
 }
 
 static void twi_poll(const char *source)
 {
-	if (!g_sim_twi_state.initted)
+	SimTwiState *twi_state = &_g_sim_twi_state;
+	if (!twi_state->initted)
 	{
 		return;
 	}
@@ -732,7 +741,7 @@ static void twi_poll(const char *source)
 	char buf[4096];
 
 	int rc = recv(
-		g_sim_twi_state.udp_socket,
+		twi_state->udp_socket,
 		buf,
 		sizeof(buf),
 		MSG_DONTWAIT);
@@ -745,23 +754,23 @@ static void twi_poll(const char *source)
 
 	assert(rc != 0);
 
-	if (g_sim_twi_state.trs->occupied)
+	if (twi_state->mrs->occupied)
 	{
 		LOGF((logfp, "TWI SIM: Packet arrived but network stack buffer busy; dropping\n"));
 		return;
 	}
 
-	if (rc > g_sim_twi_state.trs->capacity)
+	if (rc > twi_state->mrs->capacity)
 	{
 		LOGF((logfp, "TWI SIM: Discarding %d-byte packet; too long for net stack's buffer\n", rc));
 		return;
 	}
 
-	g_sim_twi_state.trs->occupied = TRUE;
-	memcpy(g_sim_twi_state.trs->data, buf, rc);
+	twi_state->mrs->occupied = TRUE;
+	memcpy(twi_state->mrs->data, buf, rc);
 
 	recvCallbackAct_g.f = (ActivationFunc) doRecvCallback;
-	recvCallbackAct_g.trs = g_sim_twi_state.trs;
+	recvCallbackAct_g.mrs = twi_state->mrs;
 	recvCallbackAct_g.len = rc;
 	schedule_now((Activation *) &recvCallbackAct_g);
 }
@@ -769,7 +778,7 @@ static void twi_poll(const char *source)
 
 typedef struct {
 	ActivationFunc f;
-	TWISendDoneFunc sendDoneCB;
+	MediaSendDoneFunc sendDoneCB;
 	void *sendDoneCBData;
 } sendCallbackAct_t;
 
@@ -780,9 +789,11 @@ static void doSendCallback(sendCallbackAct_t *sca)
 	sca->sendDoneCB(sca->sendDoneCBData);
 }
 
-void hal_twi_send(Addr dest_addr, char *data, uint8_t len,
-				  TWISendDoneFunc sendDoneCB, void *sendDoneCBData)
+void _sim_twi_send(MediaStateIfc *media,
+	Addr dest_addr, char *data, uint8_t len,
+	MediaSendDoneFunc sendDoneCB, void *sendDoneCBData)
 {
+	SimTwiState *twi_state = (SimTwiState *) media;
 /*
 	LOGF((logfp, "hal_twi_send_byte(%02x [%c])\n",
 		byte,
@@ -794,7 +805,7 @@ void hal_twi_send(Addr dest_addr, char *data, uint8_t len,
 	sai.sin_family = AF_INET;
 	sai.sin_addr.s_addr = htonl(0x7f000001);
 	sai.sin_port = htons(SIM_TWI_PORT_BASE + dest_addr);
-	sendto(g_sim_twi_state.udp_socket, data, len,
+	sendto(twi_state->udp_socket, data, len,
 		   0, (struct sockaddr*)&sai, sizeof(sai));
 
 	if (sendDoneCB)

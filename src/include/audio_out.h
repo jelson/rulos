@@ -3,7 +3,10 @@
 
 #include "rocket.h"
 
-#define AO_BUFLENLG2	(8)
+// 8 -> known good
+// 7 -> sounds good
+// 6 -> known bad
+#define AO_BUFLENLG2	(7)
 #define AO_BUFLEN		(1<<AO_BUFLENLG2)
 #define AO_HALFBUFLEN	(1<<(AO_BUFLENLG2-1))
 #define AO_BUFMASK		((1<<AO_BUFLENLG2)-1)

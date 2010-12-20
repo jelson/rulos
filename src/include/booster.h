@@ -19,7 +19,7 @@
 
 #include "rocket.h"
 #include "hpam.h"
-#include "audio_server.h"
+#include "audio_client.h"
 #include "screenblanker.h"
 
 typedef struct {

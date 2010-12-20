@@ -70,7 +70,8 @@ QUEUE_DECLARE(SendSlotPtr)
 typedef struct s_network {
 	RecvSlot *recvSlots[MAX_LISTENERS];
 	uint8_t sendQueue_storage[sizeof(SendSlotPtrQueue)+sizeof(SendSlotPtr)*SEND_QUEUE_SIZE];
-	char TWIRecvSlotStorage[sizeof(TWIRecvSlot) + sizeof(Message) + NET_MAX_PAYLOAD_SIZE];
+	char TWIRecvSlotStorage[sizeof(MediaRecvSlot) + sizeof(Message) + NET_MAX_PAYLOAD_SIZE];
+	MediaStateIfc *media;
 } Network;
 
 

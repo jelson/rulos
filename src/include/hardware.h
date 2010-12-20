@@ -181,5 +181,6 @@ void sensor_interrupt_register_handler(Handler handler);
 void hardware_assert(uint16_t line);
 void hardware_assign_timer_handler(uint8_t timer_id, Handler handler);
 void init_f_cpu(void);
+extern uint32_t hardware_f_cpu;
 
 #endif // _HARDWARE_H

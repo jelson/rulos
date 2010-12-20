@@ -20,9 +20,9 @@
 #include "rocket.h"
 
 typedef enum e_sound_token {
-	sound_silence = -1,
 // START_SOUND_TOKEN_ENUM
-	sound_pong_score = 0,
+	sound_silence = 0,
+	sound_pong_score,
 	sound_pong_paddle_bounce,
 	sound_pong_wall_bounce,
 	sound_apollo_11_countdown,

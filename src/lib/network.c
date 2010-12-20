@@ -47,10 +47,9 @@ static uint8_t net_compute_checksum(char *buf, int size)
 	return cksum;
 }
 
-
 //////////// Network Init ////////////////////////////////////
 
-static void net_recv_upcall(TWIRecvSlot *trs, uint8_t len);
+static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len);
 
 void init_network(Network *net, Addr local_addr)
 {
@@ -64,14 +63,14 @@ void init_network(Network *net, Addr local_addr)
 
 	// Initialize the receive slot for the underlying physical
 	// network.
-	TWIRecvSlot *trs = (TWIRecvSlot *) net->TWIRecvSlotStorage;
-	trs->func = net_recv_upcall;
-	trs->capacity = sizeof(Message) + NET_MAX_PAYLOAD_SIZE;
-	trs->occupied = FALSE;
-	trs->user_data = net;
+	MediaRecvSlot *mrs = (MediaRecvSlot *) net->TWIRecvSlotStorage;
+	mrs->func = net_recv_upcall;
+	mrs->capacity = sizeof(Message) + NET_MAX_PAYLOAD_SIZE;
+	mrs->occupied = FALSE;
+	mrs->user_data = net;
 
 	// Set up underlying physical network
-	hal_twi_init(local_addr, trs);
+	net->media = hal_twi_init(local_addr, mrs);
 }
 
 
@@ -119,10 +118,10 @@ void net_bind_receiver(Network *net, RecvSlot *recvSlot)
 
 
 // Called by the TWI code when a packet arrives in our receive slot.
-static void net_recv_upcall(TWIRecvSlot *trs, uint8_t len)
+static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 {
-	Network *net = (Network *) trs->user_data;
-	Message *msg = (Message *) trs->data;
+	Network *net = (Network *) mrs->user_data;
+	Message *msg = (Message *) mrs->data;
 
 	// make sure it's at least as long as we're expecting
 	if (len < sizeof(Message))
@@ -135,7 +134,7 @@ static void net_recv_upcall(TWIRecvSlot *trs, uint8_t len)
 	uint8_t incoming_checksum = msg->checksum;
 	msg->checksum = 0;
 
-	if (net_compute_checksum(trs->data, len) != incoming_checksum)
+	if (net_compute_checksum(mrs->data, len) != incoming_checksum)
 	{
 		LOGF((logfp, "netstack error: checksum mismatch\n"));
 		goto done;
@@ -173,12 +172,12 @@ static void net_recv_upcall(TWIRecvSlot *trs, uint8_t len)
 	
 	// everything seems good!  copy to the receive slot and call the callback
 	memcpy(rs->msg, msg, len);
-	trs->occupied = FALSE; // do this now in case the callback is slow
+	mrs->occupied = FALSE; // do this now in case the callback is slow
 	rs->func(rs, payload_len);
 	return;
 	
 done:
-	trs->occupied = FALSE;
+	mrs->occupied = FALSE;
 }
 
 /////////////// Sending ///////////////////////////////////////////////
@@ -229,12 +228,14 @@ static void net_send_next_message_down(Network *net)
 
 	// compute length and checksum.
 	uint8_t len = sizeof(Message) + sendSlot->msg->payload_len;
+	assert(len>0);
 	sendSlot->msg->checksum = 0;
 	sendSlot->msg->checksum = net_compute_checksum((char *) sendSlot->msg, len);
 
 	// send down
-	hal_twi_send(sendSlot->dest_addr, (char *) sendSlot->msg, len,
-				 net_twi_send_done, net);
+	(net->media->send)(net->media,
+		sendSlot->dest_addr, (char *) sendSlot->msg, len,
+		net_twi_send_done, net);
 }
 
 

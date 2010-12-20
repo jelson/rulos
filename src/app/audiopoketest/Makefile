@@ -18,10 +18,10 @@ MCU := atmega8
 #MCU := atmega328p
 BOARD := PCB11
 
-TARGET := boo
+TARGET := audiopoketest
 
 TARGET_OBJECTS := \
-	boo.o
+	audiopoketest.o
 
 include $(ROCKET_ROOT)/Makefile.common
 

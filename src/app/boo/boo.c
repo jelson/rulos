@@ -79,7 +79,6 @@ void boofunc(void *f)
 
 int main()
 {
-	heap_init();
 	util_init();
 	hal_init(bc_chaseclock);
 	init_clock(10000, TIMER1);

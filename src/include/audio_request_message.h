@@ -14,26 +14,17 @@
  *
  ************************************************************************/
 
-#ifndef _disco_h
-#define _disco_h
+#ifndef _audio_request_message_h
+#define _audio_request_message_h
 
 #include "rocket.h"
-#include "audio_client.h"
-#include "screenblanker.h"
+#include "sound.h"
 
-typedef struct s_disco_handler {
-	UIEventHandlerFunc func;
-	struct s_disco *disco;
-} DiscoHandler;
+typedef struct {
+	uint8_t stream_idx;
+	r_bool skip;
+	SoundToken skip_token;
+	SoundToken loop_token;
+} AudioRequestMessage;
 
-typedef struct s_disco {
-	ActivationFunc func;
-	ScreenBlanker *screenblanker;
-	DiscoHandler handler;
-	AudioClient *audioClient;
-	r_bool focused;
-} Disco;
-
-void disco_init(Disco *disco, AudioClient *audioClient, ScreenBlanker *screenblanker);
-
-#endif // _disco_h
+#endif // _audio_request_message_h

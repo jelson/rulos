@@ -14,26 +14,24 @@
  *
  ************************************************************************/
 
-#ifndef _disco_h
-#define _disco_h
+#ifndef _audio_client_h
+#define _audio_client_h
 
 #include "rocket.h"
-#include "audio_client.h"
-#include "screenblanker.h"
+#include "network.h"
+#include "network_ports.h"
+#include "audio_streamer.h"
+#include "sound.h"
+#include "audio_request_message.h"
 
-typedef struct s_disco_handler {
-	UIEventHandlerFunc func;
-	struct s_disco *disco;
-} DiscoHandler;
+typedef struct s_audio_client {
+	Network *network;
+	uint8_t send_msg_alloc[sizeof(Message)+sizeof(AudioRequestMessage)];
+	SendSlot sendSlot;
+} AudioClient;
 
-typedef struct s_disco {
-	ActivationFunc func;
-	ScreenBlanker *screenblanker;
-	DiscoHandler handler;
-	AudioClient *audioClient;
-	r_bool focused;
-} Disco;
+void init_audio_client(AudioClient *ac, Network *network);
+r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx, SoundToken cur_token, SoundToken loop_token);
+r_bool ac_queue_loop_clip(AudioClient *ac, uint8_t stream_idx, SoundToken loop_token);
 
-void disco_init(Disco *disco, AudioClient *audioClient, ScreenBlanker *screenblanker);
-
-#endif // _disco_h
+#endif // _audio_client_h

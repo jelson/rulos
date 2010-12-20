@@ -20,12 +20,12 @@
 void test_without_netstack()
 {
 	char inbuf[200];
-	TWIRecvSlot *trs = (TWIRecvSlot *) inbuf;
+	MediaRecvSlot *trs = (MediaRecvSlot *) inbuf;
 	trs->occupied = FALSE;
-	trs->capacity = sizeof(inbuf) - sizeof(TWIRecvSlot);
+	trs->capacity = sizeof(inbuf) - sizeof(MediaRecvSlot);
 	
-	hal_twi_init(0x8, trs);
-	hal_twi_send(0x1, "hello", 5, NULL, NULL);
+	MediaStateIfc *media = hal_twi_init(0x8, trs);
+	(media->send)(media, 0x1, "hello", 5, NULL, NULL);
 	while(1) {}
 
     //sprintf(buf, "hi%3d", i);
@@ -60,10 +60,12 @@ void sendMessage(sendAct_t *sa)
 
 	sa->i = (sa->i + 1) % 1000;
 
-	sprintf(buf, "sENd %3d", sa->i);
+	strcpy(buf, "sENd    ");
+	debug_itoha(&buf[4], sa->i);
 	board_say(buf);
 
-	sprintf(sa->sendSlot->msg->data, "HELLO%3d", sa->i);
+	strcpy(sa->sendSlot->msg->data, "HELO");
+	debug_itoha(&sa->sendSlot->msg->data[4], sa->i);
 	sa->sendSlot->msg->payload_len = strlen(sa->sendSlot->msg->data);
 
 	if (sa->sendSlot->sending)
@@ -77,23 +79,26 @@ void sendMessage(sendAct_t *sa)
 	}
 
 	schedule_us(1000000, (Activation *) sa);
-	
 }
 
 
 void test_netstack()
 {
 	Network net;
-	char data[30];
-	SendSlot sendSlot;
 
 	init_clock(10000, TIMER1);
 
+	char data[30];
+	SendSlot sendSlot;
+
+
 	sendSlot.func = NULL;
-	sendSlot.dest_addr = 0x1;
+	sendSlot.dest_addr = AUDIO_ADDR;
 	sendSlot.msg = (Message *) data;
 	sendSlot.msg->dest_port = 0x88;
 	sendSlot.sending = FALSE;
+
+	init_network(&net, 0x5);
 
 	sendAct_t sa;
 	sa.f = (ActivationFunc) sendMessage;
@@ -101,8 +106,8 @@ void test_netstack()
 	sa.sendSlot = &sendSlot;
 	sa.i = 0;
 	
-	init_network(&net, 0x5);
-	schedule_now((Activation *) &sa);
+
+	schedule_us(1000000, (Activation *) &sa);
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);
@@ -112,9 +117,8 @@ void test_netstack()
 
 int main()
 {
-	heap_init();
 	util_init();
-	hal_init(bc_audioboard);
+	hal_init(bc_chaseclock);
 
 	board_say("  InIt  ");
 	// test_without_netstack();
