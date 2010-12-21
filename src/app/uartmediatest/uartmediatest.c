@@ -27,97 +27,11 @@
 #include "audio_server.h"
 #include "audio_streamer.h"
 #include "sdcard.h"
+#include "uart_net_media.h"
 
 //////////////////////////////////////////////////////////////////////////////
 void audioled_init();
 void audioled_set(r_bool red, r_bool yellow);
-//////////////////////////////////////////////////////////////////////////////
-
-typedef struct {
-	Activation act;
-	UartState_t uart;
-	char cmd[80];
-	char *cmd_ptr;
-	Activation *cmd_act;
-} SerialCmdAct;
-
-void serialcmd_update(Activation *act)
-{
-	SerialCmdAct *sca = (SerialCmdAct *) act;
-
-	char rcv_chr;
-	if (CharQueue_pop(sca->uart.recvQueue.q, &rcv_chr)) {
-		*(sca->cmd_ptr) = rcv_chr;
-		sca->cmd_ptr += 1;
-		if (sca->cmd_ptr == &sca->cmd[sizeof(sca->cmd)-1])
-		{
-			// Buffer full!
-			rcv_chr = '\n';
-		}
-		if (rcv_chr == '\n')
-		{
-			*(sca->cmd_ptr) = '\0';
-			sca->cmd_ptr = sca->cmd;
-			(sca->cmd_act->func)(sca->cmd_act);
-		}
-	}
-
-	schedule_us(120, &sca->act);
-}
-
-SerialCmdAct *g_serialcmd = NULL;
-
-void serialcmd_init(SerialCmdAct *sca, Activation *cmd_act)
-{
-	uart_init(&sca->uart, 38400, TRUE);
-	sca->act.func = serialcmd_update;
-	sca->cmd_ptr = sca->cmd;
-	sca->cmd_act = cmd_act;
-
-	g_serialcmd = sca;
-
-	schedule_us(1000, &sca->act);
-}
-
-void serialcmd_sync_send(SerialCmdAct *act, char *buf, uint16_t buflen)
-{
-	uart_send(&act->uart, buf, buflen, NULL, NULL);
-	while (uart_busy(&act->uart)) { }
-}
-
-#define SYNCDEBUG()	syncdebug(0, 'A', __LINE__)
-void syncdebug(uint8_t spaces, char f, uint16_t line)
-{
-	char buf[16], hexbuf[6];
-	int i;
-	for (i=0; i<spaces; i++)
-	{
-		buf[i] = ' ';
-	}
-	buf[i++] = f;
-	buf[i++] = ':';
-	buf[i++] = '\0';
-	if (f >= 'a')	// lowercase -> hex value; so sue me
-	{
-		debug_itoha(hexbuf, line);
-	}
-	else
-	{
-		itoda(hexbuf, line);
-	}
-	strcat(buf, hexbuf);
-	strcat(buf, "\n");
-	serialcmd_sync_send(g_serialcmd, buf, strlen(buf));
-}
-
-void syncdebug32(uint8_t spaces, char f, uint32_t line)
-{
-	syncdebug(spaces, f, line>>16);
-	syncdebug(spaces, '~', line&0x0ffff);
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
 //////////////////////////////////////////////////////////////////////////////
 
 #define AUDIO_LED_RED		GPIO_D2
@@ -146,7 +60,7 @@ void audioled_set(r_bool red, r_bool yellow)
 
 //////////////////////////////////////////////////////////////////////////////
 
-
+#if 0
 struct s_CmdProc;
 
 typedef struct s_CmdProc {
@@ -207,16 +121,79 @@ void cmdproc_init(CmdProc *cp, AudioServer *audio_server, Network *network)
 	cp->act.func = cmdproc_update;
 	SYNCDEBUG();
 }
+#endif
+
+typedef struct {
+	UartMedia uart_media;
+	struct {
+		MediaRecvSlot mrs;
+		char mrs_buffer[20];
+	};	// must stay together
+	MediaStateIfc *media;
+	char send_buffer[20];
+} UartListener;
+
+void _uart_listener_recv_done(MediaRecvSlot *mrs, uint8_t len);
+
+void uart_listener_init(UartListener *ul)
+{
+	ul->mrs.func = _uart_listener_recv_done;
+	ul->mrs.capacity = sizeof(ul->mrs_buffer);
+	ul->mrs.occupied = FALSE;
+	ul->mrs.user_data = ul;
+	ul->media = uart_media_init(&ul->uart_media, &ul->mrs);
+}
+
+void _uart_listener_recv_done(MediaRecvSlot *mrs, uint8_t len)
+{
+	UartListener *ul = (UartListener *) mrs->user_data;
+	memcpy(ul->send_buffer, ul->mrs_buffer, len);
+	ul->mrs.occupied = FALSE;
+	(ul->media->send)(ul->media, 0x01, ul->send_buffer, len, NULL, NULL);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+typedef struct {
+	Activation act;
+	UartListener *ul;
+} Tick;
+
+void _tick_update(Activation *act);
+
+void tick_init(Tick *tick, UartListener *ul)
+{
+	tick->ul = ul;
+	tick->act.func = _tick_update;
+	schedule_us(1000000, &tick->act);
+}
+
+void tick_say(Tick *tick, char *msg)
+{
+	(tick->ul->media->send)(tick->ul->media, 0x02, msg, strlen(msg), NULL, NULL);
+}
+
+void _tick_update(Activation *act)
+{
+	Tick *tick = (Tick *) act;
+	tick_say(tick, "tick");
+	schedule_us(1000000, &tick->act);
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
 	CpumonAct cpumon;
-	AudioServer aserv;
-	Network network;
-	CmdProc cmdproc;
+//	CmdProc cmdproc;
+	UartListener uart_listener;
+	Tick tick;
 } MainContext;
 MainContext mc;
+
+void g_tick_say(char *msg)
+{
+	tick_say(&mc.tick, msg);
+}
 
 int main()
 {
@@ -225,17 +202,19 @@ int main()
 	hal_init(bc_audioboard);
 	init_clock(1000, TIMER1);
 
-	audioled_init();
-
 	audioled_set(0, 0);
+
+	uart_listener_init(&mc.uart_listener);
+
+	tick_init(&mc.tick, &mc.uart_listener);
+
+	g_tick_say("hiya!");
 
 	// needs to be early, because it initializes uart, which at the
 	// moment I'm using for SYNCDEBUG(), including in init_audio_server.
-	cmdproc_init(&mc.cmdproc, &mc.aserv, &mc.network);
+	//cmdproc_init(&mc.cmdproc, &mc.aserv, &mc.network);
 
-	init_twi_network(&mc.network, AUDIO_ADDR);
-
-	init_audio_server(&mc.aserv, &mc.network, TIMER2);
+	//init_audio_server(&mc.aserv, &mc.network, TIMER2);
 
 	cpumon_init(&mc.cpumon);	// includes slow calibration phase
 

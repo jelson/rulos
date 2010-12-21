@@ -20,41 +20,53 @@
 
 #include "rocket.h"
 #include "media.h"
-
-#define UM_PREAMBLE0	0xdc
-#define UM_PREAMBLE1	0x95
+#include "uart_net_media_preamble.h"
 
 struct s_UartMedia;
 
 typedef struct
 {
-	char p0;
-	char p1;
-	Addr dest_addr;
-	uint8_t len;
-} UartPreamble;
-
-typedef struct
-{
+	Activation done_act;
 	char *data;
 	uint8_t len;
 	MediaSendDoneFunc sendDoneCB;
 	void *sendDoneCBData;
-} UartSendingPacket;
+} UartMediaSendingPayload;
 
-typedef struct
-{
-	Activation act;
-	struct s_UartMedia *um;
-} UartDrainAct;
+typedef struct {
+	MediaStateIfc media;
+	struct s_UartMedia *uart_media;
+} UartMediaPtr;
+
+enum {
+	US_none = 17,
+	US_preamble,
+	US_packet
+} UartMedia_SendState;
+
+enum {
+	UR_sync0,
+	UR_sync1,
+	UR_addr,
+	UR_len,
+	UR_payload,
+} UartMedia_RecvState;
 
 typedef struct s_UartMedia
 {
-	MediaStateIfc media;
-	UartDrainAct drain;
-	UartQueue_t *recvQueue;
+	UartHandler uart_handler;
+	UartMediaPtr uart_media_ptr;
+
+	uint8_t send_which;
+	uint8_t send_dataidx;
 	UartPreamble sending_preamble;
-	UartSendingPacket sending_payload;
+	UartMediaSendingPayload sending_payload;
+
+	MediaRecvSlot *mrs;
+	uint8_t recv_state;
+	uint8_t recv_addr;	// TODO discarding addr info; will need for forwarding.
+	uint8_t recv_len;
+	uint8_t recv_dataidx;
 } UartMedia;
 
 

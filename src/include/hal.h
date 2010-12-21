@@ -65,8 +65,18 @@ uint16_t hal_read_adc(uint8_t idx);
 void hal_init_joystick_button();
 r_bool hal_read_joystick_button();
 
-void hal_uart_init(UartState_t *s, uint16_t baud, r_bool stop2);
-void hal_uart_start_send(UartState_t *u);
+/////////////// UART ///////////////////////////////////////////////
+
+struct s_UartHandler;
+typedef void (hal_uart_receive_fp)(struct s_UartHandler *u, char c);
+typedef r_bool (hal_uart_send_next_fp)(struct s_UartHandler *u, char *c /*OUT*/);
+typedef struct s_UartHandler {
+	hal_uart_receive_fp *recv;	// runs in interrupt context
+	hal_uart_send_next_fp *send;	// runs in interrupt context
+} UartHandler;
+
+void hal_uart_init(UartHandler *handler, uint16_t baud, r_bool stop2);
+void hal_uart_start_send(void);
 
 /////////////// TWI ///////////////////////////////////////////////
 

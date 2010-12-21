@@ -70,14 +70,23 @@ QUEUE_DECLARE(SendSlotPtr)
 typedef struct s_network {
 	RecvSlot *recvSlots[MAX_LISTENERS];
 	uint8_t sendQueue_storage[sizeof(SendSlotPtrQueue)+sizeof(SendSlotPtr)*SEND_QUEUE_SIZE];
-	char TWIRecvSlotStorage[sizeof(MediaRecvSlot) + sizeof(Message) + NET_MAX_PAYLOAD_SIZE];
+	union {
+		char MediaRecvSlotStorage
+			[sizeof(MediaRecvSlot) + sizeof(Message) + NET_MAX_PAYLOAD_SIZE];
+		MediaRecvSlot mrs;
+	};
 	MediaStateIfc *media;
 } Network;
 
 
+
 // Public API
-void init_network(Network *net, Addr local_addr);
+void init_network(Network *net, MediaStateIfc *media);
 void net_bind_receiver(Network *net, RecvSlot *recvSlot);
 r_bool net_send_message(Network *net, SendSlot *sendSlot);
+
+//////////////////////////////////////////////////////////////////////////////
+
+void init_twi_network(Network *network, Addr local_addr);
 
 #endif // _NETWORK_H

@@ -32,14 +32,13 @@
 #include "cursor.h"
 #include "focus.h"
 #include "cpumon.h"
-#include "uart.h"
 #include "hal.h"
 #include "clock.h"
 #include "twi.h"
 #include "network.h"
 #include "network_ports.h"
 #include "thruster_protocol.h"
-
+#include "uart.h"
 
 #endif /* __rocket_h__ */
 

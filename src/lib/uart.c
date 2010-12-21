@@ -14,43 +14,17 @@
  *
  ************************************************************************/
 
-// NOTE: This file is not included in the default compile to prevent
-// the UART interrupt handler (and all its consequent dependencies)
-// from being implicitly included in all programs.  If writing a
-// program that neds UART support, add uart.o to the list of
-// application-specific objects.
-#define __UART_C__
+// NOTE: To keep every app from pulling in the UART interrupt handler
+// (and all its consequent dependencies),
+// when you use this file, your app/Makefile will also need
+// to explicitly specify hardware_uart.o.
+
 #include "rocket.h"
 
-#ifndef UART_QUEUE_LEN
-#define UART_QUEUE_LEN 32
-#endif
-
-
-struct UartState_s
-{
-	uint8_t initted;
-
-	// receive
-	char recvQueueStore[UART_QUEUE_LEN];
-	UartQueue_t recvQueue;
-
-	// send
-	char *out_buf;
-	uint8_t out_len;
-	uint8_t out_n;
-	UARTSendDoneFunc send_done_cb;
-	void *send_done_cb_data;
-};
-
-// Global instance of the UART buffer state struct
-UartState_t uart0_g = {0};
-UartState_t *RULOS_UART0 = &uart0_g;
-
-
 // Upcall from HAL when new data arrives.  Happens at interrupt time.
-void _uart_receive(UartState_t *u, char c)
+void _uart_receive(UartHandler *handler, char c)
 {
+	UartState_t *u = (UartState_t *) handler;
 	if (!u->initted)
 		return;
 
@@ -67,8 +41,9 @@ void _uart_receive(UartState_t *u, char c)
 
 // Upcall from hal when the next byte is needed for a send.  Happens
 // at interrupt time.
-r_bool _uart_get_next_character(UartState_t *u, char *c /* OUT */)
+r_bool _uart_get_next_character(UartHandler *handler, char *c /* OUT */)
 {
+	UartState_t *u = (UartState_t *) handler;
 	assert(u != NULL);
 
 	if (u->out_buf == NULL)
@@ -133,7 +108,7 @@ r_bool uart_send(UartState_t *u, char *c, uint8_t len,
 	u->send_done_cb = callback;
 	u->send_done_cb_data = callback_data;
 
-	hal_uart_start_send(u);
+	hal_uart_start_send();
 	return TRUE;
 }
 
@@ -144,11 +119,14 @@ r_bool uart_busy(UartState_t *u)
 
 void uart_init(UartState_t *u, uint16_t baud, r_bool stop2)
 {
+	u->handler.send = _uart_get_next_character;
+	u->handler.recv = _uart_receive;
+
 	// initialize the queue
 	u->recvQueue.q = (CharQueue *) u->recvQueueStore;
 	CharQueue_init(u->recvQueue.q, sizeof(u->recvQueueStore));
 	u->recvQueue.reception_time_us = 0;
-	hal_uart_init(u, baud, stop2);
+	hal_uart_init(&u->handler, baud, stop2);
 	u->out_buf = NULL;
 	u->initted = TRUE;
 }

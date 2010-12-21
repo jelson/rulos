@@ -32,6 +32,7 @@ typedef enum e_sound_token {
 	sound_dock_clang,
 	sound_quindar_key_down,
 	sound_quindar_key_up,
+#include "../audio/disco/disco_index.h"
 // END_SOUND_TOKEN_ENUM
 	sound_num_tokens
 } SoundToken;
@@ -43,7 +44,7 @@ typedef struct {
 	uint32_t start_offset;
 	uint32_t end_offset;
 	uint16_t block_offset;
-	uint16_t padding;
+	uint16_t is_disco;
 } AuIndexRec;
 
 // The client code is written as if there are multiple channels (streams)

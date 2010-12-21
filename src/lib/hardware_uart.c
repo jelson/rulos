@@ -14,6 +14,9 @@
  *
  ************************************************************************/
 
+#include <rocket.h>
+void audioled_set(r_bool red, r_bool yellow);
+
 /*
  * hardware_uart.c: UART
  *
@@ -79,15 +82,24 @@
 # error Hardware-specific UART code needs love
 #endif
 
+UartHandler *g_uart_handler;
 
-void hal_uart_init(UartState_t *s, uint16_t baud, r_bool stop2)
+uint16_t baud_to_ubrr(uint16_t baud)
 {
+	return ((uint32_t) hardware_f_cpu) / 16 / baud - 1;
+}
+
+void hal_uart_init(UartHandler *handler, uint16_t baud, r_bool stop2)
+{
+	uint16_t ubrr = baud_to_ubrr(baud);
+	ubrr = (8000000 / 16 / 38400 - 1); // TODO back to variables
+
 	// disable interrupts
 	cli();
 
-	// set baud rate
-	_UBRRH = (unsigned char) (baud >> 8);
-	_UBRRL = (unsigned char) baud;
+	// set up baud rate
+	_UBRRH = (unsigned char) (ubrr >> 8);
+	_UBRRL = (unsigned char) ubrr;
 
 	_UCSRB =
 		_BV(_TXEN)  | // enable transmitter
@@ -102,8 +114,9 @@ void hal_uart_init(UartState_t *s, uint16_t baud, r_bool stop2)
 	  | _BV(URSEL)
 #endif
 	  ;
-	  
 
+	g_uart_handler = handler;
+	  
 	// enable interrupts, whether or not they'd been previously enabled
 	sei();
 }
@@ -111,15 +124,17 @@ void hal_uart_init(UartState_t *s, uint16_t baud, r_bool stop2)
 static inline void enable_sendready_interrupt(uint8_t enable)
 {
 	if (enable)
+	{
 		reg_set(&_UCSRB, _UDRIE);
+	}
 	else
+	{
 		reg_clr(&_UCSRB, _UDRIE);
+	}
 }
 
-
-
 // Runs in user context.
-void hal_uart_start_send(UartState_t *u)
+void hal_uart_start_send(void)
 {
 	// Just enable the send-ready interrupt.  It will fire as soon as
 	// the sender register is free.
@@ -128,39 +143,50 @@ void hal_uart_start_send(UartState_t *u)
 	hal_end_atomic(old_interrupts);
 }
 
+// Runs in interrupt context.
+static inline void _handle_recv_ready(char c)
+{
+	//audioled_set(0, 1);
+	(g_uart_handler->recv)(g_uart_handler, c);
+	//audioled_set(1, 0);
+}
 
 // Runs in interrupt context.
-void handle_send_ready(UartState_t *u)
+static inline void _handle_send_ready()
 {
 	char c;
 
 	// If there is still data remaining to send, send it.  Otherwise,
 	// disable the send-ready interrupt.
-	if (_uart_get_next_character(u, &c))
+	if ((g_uart_handler->send)(g_uart_handler, &c))
+	{
 		_UDR = c;
+	}
 	else
+	{
 		enable_sendready_interrupt(FALSE);
+	}
 }
 
 
 #if defined(MCUatmega8)
 ISR(USART_RXC_vect)
 {
-	_uart_receive(RULOS_UART0, UDR);
+	_handle_recv_ready(UDR);
 }
 ISR(USART_UDRE_vect)
 {
-	handle_send_ready(RULOS_UART0);
+	_handle_send_ready();
 }
 
 #elif defined(MCUatmega328p)
 ISR(USART_RX_vect)
 {
-	_uart_receive(RULOS_UART0, UDR0);
+	_handle_recv_ready(UDR0);
 }
 ISR(USART_UDRE_vect)
 {
-	handle_send_ready(RULOS_UART0);
+	_handle_send_ready();
 }
 #else
 #error need CPU love

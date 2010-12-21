@@ -71,8 +71,7 @@ COMMON_OBJECTS = \
 	uart.o \
 	audio_out.o \
 	audio_streamer.o \
-
-#	uart_net_media.o \
+	uart_net_media.o \
 
 #	spiflash.o \
 #	audio_driver.o \

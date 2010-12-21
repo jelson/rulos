@@ -94,7 +94,7 @@ typedef struct {
 void init_rocket0(Rocket0 *r0)
 {
 	drtc_init(&r0->dr, 0, clock_time_us()+20000000);
-	init_network(&r0->network, ROCKET_ADDR);
+	init_twi_network(&r0->network, ROCKET_ADDR);
 	lunar_distance_init(&r0->ld, 1, 2, SPEED_POT_CHANNEL);
 	init_audio_client(&r0->audio_client, &r0->network);
 	memset(&r0->thrusterUpdate, 0, sizeof(r0->thrusterUpdate));
@@ -134,7 +134,6 @@ static Rocket0 rocket0;	// allocate obj in .bss so it's easy to count
 
 int main()
 {
-	heap_init();
 	util_init();
 	hal_init(bc_rocket0);
 	hal_init_keypad();

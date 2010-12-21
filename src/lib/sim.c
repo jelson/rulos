@@ -49,6 +49,7 @@ void sim_audio_poll(const char *source);
 r_bool sim_audio_poll_once();
 void sim_spi_poke();
 r_bool g_joystick_trigger_state;
+UartHandler *g_sim_uart_handler;
 
 void start_audio_fork_shuttling_child();
 void audio_shuttling_child(int audiofd, int flowfd);
@@ -338,7 +339,7 @@ static void uart_simulator_input(int c)
 	draw_uart_input_window();
 
 	// upcall to the uart code
-	_uart_receive(RULOS_UART0, c);
+	(g_sim_uart_handler->recv)(g_sim_uart_handler, c);
 }
 
 static void uart_simulator_stop()
@@ -367,12 +368,12 @@ static void uart_simulator_start()
 	draw_uart_input_window();
 }
 
-void hal_uart_start_send(UartState_t *u)
+void hal_uart_start_send()
 {
 	char buf[256];
 	int i = 0;
 
-	while (_uart_get_next_character(u, &buf[i]))
+	while ((g_sim_uart_handler->send)(g_sim_uart_handler, &buf[i]))
 		i++;
 
 	buf[i+1] = '\0';
@@ -380,8 +381,9 @@ void hal_uart_start_send(UartState_t *u)
 	LOGF((logfp, "Sent to uart: '%s'\n", buf));
 }
 
-void hal_uart_init(UartState_t *s, uint16_t baud, r_bool stop2)
+void hal_uart_init(UartHandler *s, uint16_t baud, r_bool stop2)
 {
+	g_sim_uart_handler = s;
 }
 
 

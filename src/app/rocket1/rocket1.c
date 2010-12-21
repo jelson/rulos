@@ -54,7 +54,6 @@
 
 int main()
 {
-	heap_init();
 	util_init();
 	hal_init(bc_rocket1);
 	hal_init_keypad();
@@ -64,7 +63,7 @@ int main()
 	cpumon_init(&cpumon);	// includes slow calibration phase
 
 	Network network;
-	init_network(&network, ROCKET1_ADDR);
+	init_twi_network(&network, ROCKET1_ADDR);
 
 	//install_handler(ADC, adc_handler);
 

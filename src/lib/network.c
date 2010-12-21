@@ -51,7 +51,7 @@ static uint8_t net_compute_checksum(char *buf, int size)
 
 static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len);
 
-void init_network(Network *net, Addr local_addr)
+void init_network(Network *net, MediaStateIfc *media)
 {
 	int i;
 	for (i=0; i<MAX_LISTENERS; i++)
@@ -61,16 +61,14 @@ void init_network(Network *net, Addr local_addr)
 
 	SendSlotPtrQueue_init(SendQueue(net), sizeof(net->sendQueue_storage));
 
-	// Initialize the receive slot for the underlying physical
-	// network.
-	MediaRecvSlot *mrs = (MediaRecvSlot *) net->TWIRecvSlotStorage;
+	MediaRecvSlot *mrs = &net->mrs;
 	mrs->func = net_recv_upcall;
-	mrs->capacity = sizeof(Message) + NET_MAX_PAYLOAD_SIZE;
+	mrs->capacity = sizeof(net->MediaRecvSlotStorage) - sizeof(MediaRecvSlot);
 	mrs->occupied = FALSE;
 	mrs->user_data = net;
 
 	// Set up underlying physical network
-	net->media = hal_twi_init(local_addr, mrs);
+	net->media = media;
 }
 
 
@@ -117,7 +115,7 @@ void net_bind_receiver(Network *net, RecvSlot *recvSlot)
 }
 
 
-// Called by the TWI code when a packet arrives in our receive slot.
+// Called by the media layer when a packet arrives in our receive slot.
 static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 {
 	Network *net = (Network *) mrs->user_data;
@@ -183,7 +181,7 @@ done:
 /////////////// Sending ///////////////////////////////////////////////
 
 static void net_send_next_message_down(Network *net);
-static void net_twi_send_done(void *user_data);
+static void net_send_done_cb(void *user_data);
 
 // External visible API from above to launch a packet.
 r_bool net_send_message(Network *net, SendSlot *sendSlot)
@@ -235,13 +233,13 @@ static void net_send_next_message_down(Network *net)
 	// send down
 	(net->media->send)(net->media,
 		sendSlot->dest_addr, (char *) sendSlot->msg, len,
-		net_twi_send_done, net);
+		net_send_done_cb, net);
 }
 
 
-// Called when TWI has finished sending down the stack.
+// Called when media has finished sending down the stack.
 // Mark the SendSlot's buffer as free and call the callback.
-static void net_twi_send_done(void *user_data)
+static void net_send_done_cb(void *user_data)
 {
 	Network *net = (Network *) user_data;
 	SendSlot *sendSlot;
@@ -260,3 +258,9 @@ static void net_twi_send_done(void *user_data)
 	net_send_next_message_down(net);
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+void init_twi_network(Network *net, Addr local_addr)
+{
+	init_network(net, hal_twi_init(local_addr, &net->mrs));
+}

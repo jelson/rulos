@@ -1,6 +1,8 @@
 #ifndef _MEDIA_H
 #define _MEDIA_H
 
+#include <stdint.h>
+
 typedef uint8_t Addr;
 
 struct s_MediaRecvSlot;
