@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
 import sys
+import re
+import os.path
 
 AO_HALFBUFLEN = 128
 	# TODO fetch from source audio_out.h AO_HALFBUFLEN
@@ -9,7 +11,8 @@ index_size_blocks = 1
 MAGIC = "RULOSMAGICSD"
 
 class AudioClip:
-	def __init__(self, aubytes):
+	def __init__(self, fn, aubytes):
+		self.fn = fn
 		self.aubytes = aubytes
 
 	def __len__(self):
@@ -71,7 +74,8 @@ class IndexRecord:
 		record += avr_int32(self.offset)
 		record += avr_int32(self.end_offset())
 		record += avr_int16(self.clip.preroll())
-		record += avr_int16(0)
+		is_disco = self.clip.fn.startswith("../audio/disco")
+		record += avr_int16(is_disco)
 		return record
 
 class AudioDotCH:
@@ -83,7 +87,7 @@ class AudioDotCH:
 			# discard .au header
 			fp.read(24)
 			everything = fp.read(9999999)
-			self.clips.append(AudioClip(everything))
+			self.clips.append(AudioClip(aufilename, everything))
 
 	def checkCard(self, cardpath):
 		fd = open(cardpath, "r")
@@ -113,31 +117,51 @@ class AudioDotCH:
 			cardfd.write(clip.sdcardEncoding())
 		cardfd.close()
 
-def parseAudioFilenames(includeFile, audio_path):
-	fp = open(includeFile)
-	reading = False
-	names = []
-	while (True):
-		l = fp.readline()
-		if (l==""): break
-		l = l.strip()
-		if (l=="// START_SOUND_TOKEN_ENUM"):
-			reading = True
-			continue
-		if (l=="// END_SOUND_TOKEN_ENUM"):
-			break
-		if (reading):
-			name = l.split(",")[0].split(" ")[0]
-			names.append("%s/%s.au" % (audio_path, name))
-	sys.stderr.write("decoded names: %s\n"%names)
-	return names
+class ParseAudioFilenames:
+	def __init__(self, includeFile, audio_path):
+		self._names = []
+		self.process(includeFile, audio_path)
+
+	def names(self):
+		return self._names
+
+	def process(self, includeFile, audio_path, reading = False):
+		sys.stderr.write("processing %s\n" % includeFile)
+		fp = open(includeFile)
+		while (True):
+			l = fp.readline()
+			if (l==""): break
+			l = l.strip()
+
+			imo = re.compile('#include "(.*)"').search(l)
+			if (imo!=None):
+				if (not reading):
+					continue
+				include = imo.groups(1)[0]
+				path = os.path.dirname(include)
+#				path = path.split("/")
+#				path = path[2:]
+#				path = "/".join(path)
+				sys.stderr.write("including %s\n" % include)
+				self.process(include, path, reading = True)
+				continue
+			if (l=="// START_SOUND_TOKEN_ENUM"):
+				reading = True
+				continue
+			if (l=="// END_SOUND_TOKEN_ENUM"):
+				break
+			if (reading):
+				name = l.split(",")[0].split(" ")[0]
+				self._names.append("%s/%s.au" % (audio_path, name))
+		sys.stderr.write("decoded names: %s\n" % self._names)
+		fp.close()
 
 def main():
 	mode = sys.argv[1]
 	enum_include = sys.argv[2]
 	audio_path = sys.argv[3]
 	cardpath = sys.argv[4]
-	outfile = AudioDotCH(parseAudioFilenames(enum_include, audio_path))
+	outfile = AudioDotCH(ParseAudioFilenames(enum_include, audio_path).names())
 	if (mode=="-index"):
 		outfile.emitIndex()
 	elif (mode=="-spif"):
