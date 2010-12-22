@@ -19,6 +19,7 @@
 #include <string.h>
 
 #include "rocket.h"
+#include "queue.h"
 #include "uart.h"
 #include "sim.h"
 
@@ -192,15 +193,15 @@ static uint8_t ascii_digit(uint8_t c)
 
 static void check_uart(WallClockActivation_t *wca)
 {
-	uint8_t msg[8];
+	char msg[8];
 
 	uint8_t old_flags = hal_start_atomic();
 
-	if (ByteQueue_length(wca->recvQueue->q) == 0)
+	if (CharQueue_length(wca->recvQueue->q) == 0)
 		goto done;
 
 	// In case of framing error, clear the queue
-	if (ByteQueue_peek(wca->recvQueue->q, &msg[0]) && msg[0] != 'T') {
+	if (CharQueue_peek(wca->recvQueue->q, &msg[0]) && msg[0] != 'T') {
 		LOGF((logfp, "first char mismatch\n"));
 		uart_reset_recvq(wca->recvQueue);
 		goto done;
@@ -208,13 +209,13 @@ static void check_uart(WallClockActivation_t *wca)
 
 	// If there are fewer than 8 characters, it could just be that the
 	// message is still in transit; do nothing.
-	if (ByteQueue_length(wca->recvQueue->q) < 8) {
+	if (CharQueue_length(wca->recvQueue->q) < 8) {
 		goto done;
 	}
 
 	// There are (at least) 8 characters - great!  Copy them in and
 	// reset the queue.
-	ByteQueue_pop_n(wca->recvQueue->q, msg, 8);
+	CharQueue_pop_n(wca->recvQueue->q, msg, 8);
 	Time reception_time_us = wca->recvQueue->reception_time_us;
 	uart_reset_recvq(wca->recvQueue);
 
@@ -274,7 +275,6 @@ static void update(WallClockActivation_t *wca)
 
 int main()
 {
-	heap_init();
 	util_init();
 	hal_init(bc_wallclock);
 	board_buffer_module_init();
@@ -282,8 +282,9 @@ int main()
 	// start clock with 10 msec resolution
 	init_clock(WALLCLOCK_CALLBACK_INTERVAL, TIMER1);
 
-	// start the uart running at 34k baud (assumes 8mhz clock: fixme)
-	uart_init(RULOS_UART0, 12);
+	// start the uart running at 34k baud
+	UartState_t uart;
+	uart_init(&uart, 38400, TRUE);
 
 	// initialize our internal state
 	WallClockActivation_t wca;
@@ -293,7 +294,7 @@ int main()
 	wca.unhappy_timer = 0;
 	wca.unhappy_state = 0;
 	wca.last_redraw_time = clock_time_us();
-	wca.recvQueue = uart_recvq(RULOS_UART0);
+	wca.recvQueue = uart_recvq(&uart);
 
 	// init the board buffer
 	board_buffer_init(&wca.bbuf);
