@@ -1,3 +1,5 @@
+test runtime baud rate computation
+
 audio decoupling transformer (hardware)
 
 discontinuous play of booster noise
@@ -6,7 +8,11 @@ discontinuous play of booster noise
 	meh.
 
 add disco noise (have to update ROCKET)
+
 uart network
+	-- got board-side code done; need to create uartnetworkhost that actually
+	creates well-formed packets.
+
 stream uart audio into rocket
 mic input (hardware)
 
