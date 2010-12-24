@@ -1,17 +1,22 @@
 test runtime baud rate computation
 
-audio decoupling transformer (hardware)
+[] audio decoupling transformer (hardware)
+
+[] code STREAMING_AUDIO_PORT into a module for app/audioboard & test!
 
 discontinuous play of booster noise
 	(probably just an alignment problem)
 	..got better when I aligned, but I think we're slipping a frame.
 	meh.
 
-add disco noise (have to update ROCKET)
+add disco music invocations (have to update ROCKET)
+	it'd be nice to have an index with a turny knob, wouldn't it?
 
 uart network
 	-- got board-side code done; need to create uartnetworkhost that actually
 	creates well-formed packets.
+
+add uart_network debug message "stderr" path
 
 stream uart audio into rocket
 mic input (hardware)

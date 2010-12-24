@@ -25,9 +25,9 @@ TARGET_OBJECTS := \
 
 uartnetwork_all: all uartnetworkhost hostaudio
 
-HOSTTEST_OBJS=uartnetworkhost.o net_compute_checksum.o
+HOSTTEST_OBJS=uartnetworkhost.o net_compute_checksum.o host_uart_network.o
 
-HOSTAUDIO_OBJS=hostaudio.o linear2ulaw.o
+HOSTAUDIO_OBJS=hostaudio.o linear2ulaw.o net_compute_checksum.o host_uart_network.o host_audio_capture.o
 
 include $(ROCKET_ROOT)/Makefile.common
 
