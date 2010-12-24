@@ -62,7 +62,6 @@ r_bool _um_send_handler(struct s_UartHandler *u, char *c /*OUT*/)
 		if (um->send_dataidx == um->sending_payload.len)
 		{
 			um->send_which = US_none;
-			audioled_set(0,1);
 			schedule_now(&um->sending_payload.done_act);
 		}
 		return TRUE;
@@ -120,7 +119,6 @@ void _um_recv_handler(struct s_UartHandler *u, char c)
 	UartMedia *um = (UartMedia*) u;
 	if (um->mrs->occupied)
 	{
-		audioled_set(1, 1);
 		um->recv_state = UR_sync0;
 		return;
 	}
@@ -128,17 +126,14 @@ void _um_recv_handler(struct s_UartHandler *u, char c)
 	switch (um->recv_state)
 	{
 	case UR_sync0:
-		audioled_set(0, 0);
 		if (c==UM_PREAMBLE0) {
 			um->recv_state = UR_sync1;
 		}
 		break;
 	case UR_sync1:
-		audioled_set(0, 1);
 		if (c==UM_PREAMBLE1) {
 			um->recv_state = UR_addr;
 		} else {
-			audioled_set(1, 1);
 			um->recv_state = UR_sync0;
 		}
 		break;
@@ -163,7 +158,9 @@ void _um_recv_handler(struct s_UartHandler *u, char c)
 			if (um->recv_len <= um->mrs->capacity)
 			{
 				um->mrs->occupied = TRUE;
+		audioled_set(1, 0);
 				(um->mrs->func)(um->mrs, um->recv_len);
+		audioled_set(1, 1);
 			}
 			// else:
 			// received a too-long packet. Wanted to run whole
@@ -171,7 +168,6 @@ void _um_recv_handler(struct s_UartHandler *u, char c)
 			// mid-packet when we have a valid length field),
 			// but can't deliver a broken packet.
 			um->recv_state = UR_sync0;
-			audioled_set(1, 0);
 		}
 		break;
 	default:

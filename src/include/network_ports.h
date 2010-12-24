@@ -29,5 +29,6 @@
 #define REMOTE_SUBFOCUS_PORT0	(0x14)	/* remote_keyboard protocol */
 #define AUDIO_PORT				(0x15)
 #define SCREENBLANKER_PORT		(0x16)
+#define UARTNETWORKTEST_PORT	(0x17)
 
 #endif // _network_ports_h

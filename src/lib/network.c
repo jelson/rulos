@@ -15,6 +15,7 @@
  ************************************************************************/
 
 #include "rocket.h"
+#include "net_compute_checksum.h"
 
 #include "queue.mc"
 QUEUE_DEFINE(SendSlotPtr)
@@ -34,18 +35,6 @@ void net_log_buffer(uint8_t *buf, int len)
 	LOGF((logfp, "\n"));
 }
 #endif
-
-
-static uint8_t net_compute_checksum(char *buf, int size)
-{
-	int i;
-	uint8_t cksum = 0x67;
-	for (i=0; i<size; i++)
-	{
-		cksum = cksum*131 + buf[i];
-	}
-	return cksum;
-}
 
 //////////// Network Init ////////////////////////////////////
 
@@ -171,7 +160,7 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 	// everything seems good!  copy to the receive slot and call the callback
 	memcpy(rs->msg, msg, len);
 	mrs->occupied = FALSE; // do this now in case the callback is slow
-	rs->func(rs, payload_len);
+	(rs->func)(rs, payload_len);
 	return;
 	
 done:

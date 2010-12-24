@@ -73,6 +73,7 @@ COMMON_OBJECTS = \
 	audio_streamer.o \
 	uart_net_media.o \
 	audioled.o \
+	net_compute_checksum.o \
 
 #	spiflash.o \
 #	audio_driver.o \

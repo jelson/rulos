@@ -31,10 +31,6 @@
 #include "audioled.h"
 
 typedef struct {
-	struct {
-		MediaRecvSlot mrs;
-		char mrsData[40];	// ugh. duplicate buffer space. Avoidable?
-	};
 	UartMedia uart_media;
 	Network network;
 
@@ -57,7 +53,7 @@ void nl_send_str(NetworkListener *nl, char *str, uint8_t len);
 void network_listener_init(NetworkListener *nl)
 {
 	nl->recvSlot.func = _nl_recv_complete;
-	nl->recvSlot.port = 0x1;
+	nl->recvSlot.port = UARTNETWORKTEST_PORT;
 	nl->recvSlot.msg =  &nl->recvMessage;
 	nl->recvSlot.payload_capacity = sizeof(nl->recvData);
 	nl->recvSlot.msg_occupied = FALSE;
@@ -68,9 +64,7 @@ void network_listener_init(NetworkListener *nl)
 	nl->sendSlot.msg = &nl->sendMessage;
 	nl->sendSlot.sending = FALSE;
 
-	nl->mrs.capacity = sizeof(nl->mrsData);
-	nl->mrs.occupied = FALSE;
-	MediaStateIfc *media = uart_media_init(&nl->uart_media, &nl->mrs);
+	MediaStateIfc *media = uart_media_init(&nl->uart_media, &nl->network.mrs);
 	init_network(&nl->network, media);
 	net_bind_receiver(&nl->network, &nl->recvSlot);
 }

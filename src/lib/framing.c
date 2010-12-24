@@ -14,6 +14,8 @@
  *
  ************************************************************************/
 
+#error unused file delete me
+#if 0 // deprecated
 #define NET_SYNC 	(0xf3)
 
 void net_extract_received_message(Network *net);
@@ -129,3 +131,4 @@ void net_recv_discard(Network *net, uint8_t count, r_bool log)
 	net->recv_index -= count;
 }
 
+#endif

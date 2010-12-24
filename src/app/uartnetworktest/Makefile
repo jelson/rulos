@@ -23,10 +23,16 @@ TARGET := uartnetworktest
 TARGET_OBJECTS := \
 	uartnetworktest.o
 
-uartnetwork_all: all uartnetworkhost
+uartnetwork_all: all uartnetworkhost hostaudio
 
-uartnetworkhost: uartnetworkhost.c
-	gcc -g $^ -o $@ -I$(ROCKET_ROOT)/include -Wall
+HOSTTEST_OBJS=uartnetworkhost.o net_compute_checksum.o
+
+HOSTAUDIO_OBJS=hostaudio.o linear2ulaw.o
 
 include $(ROCKET_ROOT)/Makefile.common
 
+uartnetworkhost: $(patsubst %.o,$(SIM_OBJDIR)/%.o,$(HOSTTEST_OBJS))
+	gcc -g $^ -o $@ -I$(ROCKET_ROOT)/include -Wall
+
+hostaudio: $(patsubst %.o,$(SIM_OBJDIR)/%.o,$(HOSTAUDIO_OBJS))
+	gcc -g $^ -o $@ -I$(ROCKET_ROOT)/include -Wall -lasound

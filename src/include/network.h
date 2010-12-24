@@ -22,6 +22,8 @@
 # error Please include rocket.h instead of this file
 #endif
 
+#include "message.h"
+
 
 #define PORT_NONE 255
 #define SLOT_NONE 255
@@ -29,19 +31,6 @@
 #define SEND_QUEUE_SIZE 4
 #define NET_MAX_PAYLOAD_SIZE 10
 
-typedef uint8_t Port;
-
-// Wire format for packets.  Format:
-// Dest port
-// Checksum
-// Payload_Len
-// [Payload_Len * uint8_t]
-typedef struct s_message {
-	Port dest_port;
-	uint8_t checksum;
-	uint8_t payload_len;
-	char data[0];
-} Message, *MessagePtr;
 
 struct s_recv_slot;
 typedef void (*RecvCompleteFunc)(struct s_recv_slot *recv_slot, uint8_t payload_size);

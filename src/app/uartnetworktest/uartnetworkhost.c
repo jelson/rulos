@@ -9,6 +9,9 @@
 #include <linux/serial.h>
 #include <assert.h>
 #include "uart_net_media_preamble.h"
+#include "message.h"
+#include "network_ports.h"
+#include "net_compute_checksum.h"
 
 #define _POSIX_SOURCE 1         //POSIX compliant source
 #define FALSE 0
@@ -17,8 +20,9 @@
 typedef struct {
 	int fd;
 	int send_idx;
-	char send_buffer[250];
 	UartPreamble preamble;
+	Message messageHeader;
+	char send_buffer[250];
 } Serial;
 
 void serial_init(Serial *serial, const char *port_path)
@@ -29,28 +33,39 @@ void serial_init(Serial *serial, const char *port_path)
 		assert(0);
 	}
 
-	struct termios termios_p;
+	struct {
+		int magic0;
+		struct termios termios;
+		char overflow_buffer[3];
+			// there's some disagreement between header files and tcgetattr's
+			// idea of termios. magics let me detect it;
+			// this buffer gives enough space to work around it. Uck!
+		int magic1;
+	} check;
+	struct termios *termios_p = &check.termios;
+	check.magic0 = 0xdeadbeef;
+	check.magic1 = 0xdeadbeef;
 
 	int rc;
-	rc = tcgetattr(fd, &termios_p);
+	rc = tcgetattr(fd, termios_p);
 	assert(rc==0);
 
 	speed_t baud = B38400;
-	rc = cfsetispeed(&termios_p, baud);
+	rc = cfsetispeed(termios_p, baud);
 	assert(rc==0);
-	rc = cfsetospeed(&termios_p, baud);
+	rc = cfsetospeed(termios_p, baud);
 	assert(rc==0);
-	termios_p.c_cflag &= (~CRTSCTS);
+	termios_p->c_cflag &= (~CRTSCTS);
 
 	printf("CRTSCTS = %d\n", CRTSCTS);
 
-	rc = tcsetattr(fd, TCSANOW, &termios_p);
+	rc = tcsetattr(fd, TCSANOW, termios_p);
 	assert(rc==0);
 
 	rc = tcflush(fd, TCIOFLUSH);
 	assert(rc==0);
 
-	rc = tcgetattr(fd, &termios_p);
+	rc = tcgetattr(fd, termios_p);
 	assert(rc==0);
 
 	serial->send_idx = 0;
@@ -58,22 +73,47 @@ void serial_init(Serial *serial, const char *port_path)
 	serial->fd = fd;
 }
 
+void write_all(int fd, void *d, int len)
+{
+	int rc;
+	rc = write(fd, d, len);
+	assert(rc==len);
+}
+
+void display(char *token, char *buf, int len)
+{
+	int i;
+	for (i=0; i<len; i++)
+	{
+		char c = buf[i];
+		fprintf(stderr, "%s [%2x] '%c'\n",
+			token, c & 0xff, (c>=' ' && c<127) ? c : '_');
+	}
+}
+
 void serial_send_buffer(Serial *serial)
 {
+	uint8_t payload_len = serial->send_idx;
+	uint8_t message_len = sizeof(Message) + payload_len;
 	serial->preamble.p0 = UM_PREAMBLE0;
 	serial->preamble.p1 = UM_PREAMBLE1;
-	serial->preamble.dest_addr = 0x01;
-	serial->preamble.len = serial->send_idx;
-	int rc;
-	rc = write(serial->fd, &serial->preamble, sizeof(serial->preamble));
-	assert(rc==sizeof(serial->preamble));
-	rc = write(serial->fd, serial->send_buffer, serial->send_idx);
-	assert(rc==serial->send_idx);
+	serial->preamble.dest_addr = AUDIO_ADDR;
+	serial->preamble.len = message_len;
+	serial->messageHeader.dest_port = UARTNETWORKTEST_PORT;
+	serial->messageHeader.payload_len = payload_len;
+	serial->messageHeader.checksum = 0;
+	serial->messageHeader.checksum = net_compute_checksum(
+		(char*) &serial->messageHeader, message_len);
+
+	int len = sizeof(serial->preamble)+sizeof(serial->messageHeader)+payload_len;
+	write_all(serial->fd, &serial->preamble, len);
 
 	char buf[sizeof(serial->send_buffer)+1];
 	memcpy(buf, serial->send_buffer, serial->send_idx);
 	buf[serial->send_idx] = '\0';
+
 	fprintf(stderr, "sent: \"%s\"\n", buf);
+	display("SENT", (char*) &serial->preamble, len);
 
 	serial->send_idx = 0;
 }
@@ -119,8 +159,7 @@ void serial_loop(Serial *serial)
 			char c;
 			rc = read(fd, &c, 1);
 			assert(rc==1);
-			fprintf(stderr, "RECV [%2x] '%c'\n",
-				c & 0xff, (c>=' ' && c<127) ? c : '_');
+			display("RECV", &c, 1);
 		}
 	}
 }
