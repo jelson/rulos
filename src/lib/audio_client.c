@@ -45,8 +45,10 @@ r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx, SoundToken cur_token
 	AudioRequestMessage *arm = (AudioRequestMessage *) &ac->sendSlot.msg->data;
 	arm->stream_idx = stream_idx;
 	arm->skip = TRUE;
-	arm->skip_token = cur_token;
-	arm->loop_token = loop_token;
+	arm->skip_cmd.token = cur_token;
+	arm->skip_cmd.volume = 256;
+	arm->loop_cmd.token = loop_token;
+	arm->loop_cmd.volume = 256;
 	net_send_message(ac->network, &ac->sendSlot);
 
 	return TRUE;
@@ -65,8 +67,9 @@ r_bool ac_queue_loop_clip(AudioClient *ac, uint8_t stream_idx, SoundToken loop_t
 	AudioRequestMessage *arm = (AudioRequestMessage *) &ac->sendSlot.msg->data;
 	arm->stream_idx = stream_idx;
 	arm->skip = FALSE;
-	arm->skip_token = -1;
-	arm->loop_token = loop_token;
+	arm->skip_cmd.token = -1;
+	arm->loop_cmd.token = loop_token;
+	arm->loop_cmd.volume = 256;
 	net_send_message(ac->network, &ac->sendSlot);
 
 	return TRUE;

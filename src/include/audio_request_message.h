@@ -21,10 +21,15 @@
 #include "sound.h"
 
 typedef struct {
+	SoundToken token;
+	uint16_t volume;
+} SoundCmd;
+
+typedef struct {
 	uint8_t stream_idx;
 	r_bool skip;
-	SoundToken skip_token;
-	SoundToken loop_token;
+	SoundCmd skip_cmd;
+	SoundCmd loop_cmd;
 } AudioRequestMessage;
 
 #endif // _audio_request_message_h

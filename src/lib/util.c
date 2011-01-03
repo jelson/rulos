@@ -93,6 +93,35 @@ void itoda(char *out, uint16_t v)
 	}
 }
 
+uint16_t atoi_hex(char *in)
+{
+	uint16_t v = 0;
+	uint8_t u;
+	while (1)
+	{
+		char c = (*in);
+		if (c>='0' && c<='9')
+		{
+			u = c-'0';
+		}
+		else if (c>='A' && c<='F')
+		{
+			u = c-'A'+10;
+		}
+		else if (c>='a' && c<='f')
+		{
+			u = c-'a'+10;
+		}
+		else
+		{
+			break;
+		}
+		v = (v<<4) | u;
+		in++;
+	}
+	return v;
+}
+
 void debug_msg_hex(uint8_t board, char *m, uint16_t hex)
 {
 	static char buf[9];

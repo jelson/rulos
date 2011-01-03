@@ -43,8 +43,8 @@ typedef struct s_audio_server {
 	AudioServerAct start_play;
 	AudioServerAct advance;
 
-	SoundToken skip_token;
-	SoundToken loop_token;
+	SoundCmd skip_cmd;
+	SoundCmd loop_cmd;
 
 	r_bool index_ready;
 	AuIndexRec index[sound_num_tokens];
@@ -52,7 +52,7 @@ typedef struct s_audio_server {
 } AudioServer;
 
 void init_audio_server(AudioServer *as, Network *network, uint8_t timer_id);
-void _aserv_skip_to_clip(AudioServer *aserv, SoundToken cur_token, SoundToken loop_token);
+void _aserv_skip_to_clip(AudioServer *aserv, SoundCmd cur_cmd, SoundCmd loop_cmd);
 
 // visibility for debugging
 void _aserv_fetch_start(AudioServerAct *asa);

@@ -68,6 +68,7 @@ extern char hexmap[16];
 void debug_itoha(char *out, uint16_t i);
 void itoda(char *out, uint16_t v);
 	// places 6 bytes into out.
+uint16_t atoi_hex(char *in);
 void debug_msg_hex(uint8_t board, char *m, uint16_t hex);
 uint16_t stack_ptr();
 void debug_delay(int ms);

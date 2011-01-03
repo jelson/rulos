@@ -20,6 +20,7 @@ extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 //#define SYNCDEBUG()	syncdebug(0, 'R', __LINE__)
 #define SYNCDEBUG()	{}
 
+void _as_sd_complete(Activation *act);
 void _as_fill(Activation *act);
 void _as_initialize_complete(Activation *act);
 void _as_start_streaming(Activation *act);
@@ -35,6 +36,9 @@ void init_audio_streamer(AudioStreamer *as, uint8_t timer_id)
 	as->initialize_complete.as = as;
 	as->start_streaming.act.func = _as_start_streaming;
 	as->start_streaming.as = as;
+
+	as->sd_complete.act.func = _as_sd_complete;
+	as->sd_complete.as = as;
 
 	sdc_initialize(&as->sdc, &as->initialize_complete.act);
 }
@@ -80,12 +84,33 @@ static inline uint8_t _ad_decode_ulaw(uint8_t ulaw)
 	return _ad_pcm16s_to_pcm8u(_ad_ulaw2linear(ulaw));
 }
 
-void _ad_decode_ulaw_buf(uint8_t *dst, uint8_t *src, uint16_t len)
+void _ad_decode_ulaw_buf(uint8_t *dst, uint8_t *src, uint16_t len, uint16_t volume)
 {
 	uint8_t *end = src+len;
 	for (; src<end; src++, dst++)
 	{
-		*dst = _ad_decode_ulaw(*src);
+		int16_t vs = _ad_decode_ulaw(*src) - 128;
+		vs = ((vs * volume) >> 8) + 128;
+		*dst = vs & 0xff;
+	}
+}
+
+void _as_sd_complete(Activation *act)
+{
+	AudioStreamer *as = ((SDCompleteAct *) act)->as;
+	if (!as->sdc.complete)
+	{
+		SYNCDEBUG();
+		// sdcard failed. Stop streaming this sample,
+		as->streaming = FALSE;
+		// but restart the initialize sequence to see if we can recover.
+		sdc_initialize(&as->sdc, &as->initialize_complete.act);
+	}
+	else
+	{
+		// else let sdcard->complete stay TRUE, which will cause _as_fill
+		// to keep refilling more samples.
+		SYNCDEBUG();
 	}
 }
 
@@ -100,7 +125,7 @@ void _as_fill(Activation *act)
 		audioled_set(1, 0);
 		//memcpy(fill_ptr, &as->sdbuffer[as->block_offset], AO_HALFBUFLEN);
 		uint8_t *nextbuf = &as->sdc.blockbuffer[as->block_offset];
-		_ad_decode_ulaw_buf(fill_ptr, nextbuf, AO_HALFBUFLEN);
+		_ad_decode_ulaw_buf(fill_ptr, nextbuf, AO_HALFBUFLEN, as->volume);
 		void syncdebug32(uint8_t spaces, char f, uint32_t line);
 		//syncdebug(2, 'p', as->block_offset);
 		as->block_offset += AO_HALFBUFLEN;
@@ -113,7 +138,7 @@ void _as_fill(Activation *act)
 			//syncdebug(1, 'd', (as->block_address)>>16);
 			//syncdebug(1, 'd', (as->block_address)&0xffff);
 			//syncdebug32(2, 'f', as->block_address);
-			sdc_read(&as->sdc, as->block_address, NULL);
+			sdc_read(&as->sdc, as->block_address, &as->sd_complete.act);
 			as->block_offset = 0;
 			as->block_address+=SDBUFSIZE;
 			if (as->block_address >= as->end_address)
@@ -140,7 +165,7 @@ void _as_start_streaming(Activation *act)
 	ssa->as->streaming = TRUE;
 }
 
-r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, uint32_t end_address, Activation *done_act)
+r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, uint32_t end_address, uint16_t volume, Activation *done_act)
 {
 	// what happens if we're already streaming?
 	// sdc->busy is true, so sdc_read does nothing, so we return,
@@ -156,6 +181,7 @@ r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset,
 	as->block_address = block_address+SDBUFSIZE;
 	as->block_offset = block_offset;	// skip preroll bytes
 	as->end_address = end_address;
+	as->volume = volume;
 	as->done_act = done_act;
 	return TRUE;
 }

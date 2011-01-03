@@ -50,8 +50,8 @@ void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id)
 	aserv->recvSlot.msg = (Message*) aserv->recv_msg_alloc;
 	aserv->recvSlot.user_data = aserv;
 
-	aserv->skip_token = sound_silence;
-	aserv->loop_token = sound_silence;
+	aserv->skip_cmd.token = sound_silence;
+	aserv->loop_cmd.token = sound_silence;
 
 	init_audio_streamer(&aserv->audio_streamer, timer_id);
 	aserv->index_ready = FALSE;
@@ -100,22 +100,22 @@ void aserv_recv(RecvSlot *recvSlot, uint8_t payload_len)
 		SYNCDEBUG();
 		if (arm->skip)
 		{
-			_aserv_skip_to_clip(aserv, arm->skip_token, arm->loop_token);
+			_aserv_skip_to_clip(aserv, arm->skip_cmd, arm->loop_cmd);
 		}
 		else
 		{
-			aserv->loop_token = arm->loop_token;
+			aserv->loop_cmd = arm->loop_cmd;
 		}
 	}
 	aserv->recvSlot.msg_occupied = FALSE;
 }
 
 // factored into a function as an entry point for debugging.
-void _aserv_skip_to_clip(AudioServer *aserv, SoundToken skip_token, SoundToken loop_token)
+void _aserv_skip_to_clip(AudioServer *aserv, SoundCmd skip_cmd, SoundCmd loop_cmd)
 {
 	SYNCDEBUG();
-	aserv->skip_token = skip_token;
-	aserv->loop_token = loop_token;
+	aserv->skip_cmd = skip_cmd;
+	aserv->loop_cmd = loop_cmd;
 	_aserv_start_play(&aserv->start_play);
 }
 
@@ -123,27 +123,28 @@ void _aserv_start_play(AudioServerAct *asa)
 {
 	AudioServer *aserv = asa->aserv;
 	SYNCDEBUG();
-	if (aserv->skip_token==sound_silence)
+	if (aserv->skip_cmd.token==sound_silence)
 	{
 		SYNCDEBUG();
 		as_stop_streaming(&aserv->audio_streamer);
 	}
-	else if (aserv->skip_token<0 || aserv->skip_token>=sound_num_tokens)
+	else if (aserv->skip_cmd.token<0 || aserv->skip_cmd.token>=sound_num_tokens)
 	{
 		// error: invalid token.
-		aserv->skip_token = sound_silence;
+		aserv->skip_cmd.token = sound_silence;
 		as_stop_streaming(&aserv->audio_streamer);
 		syncdebug(0, 'a', 0xfedc);
 	}
 	else
 	{
 		SYNCDEBUG();
-		AuIndexRec *airec = &aserv->index[aserv->skip_token];
+		AuIndexRec *airec = &aserv->index[aserv->skip_cmd.token];
 		r_bool rc = as_play(
 			&aserv->audio_streamer,
 			airec->start_offset,
 			airec->block_offset,
 			airec->end_offset,
+			aserv->skip_cmd.volume,
 			&aserv->advance.act);
 		if (!rc)
 		{
@@ -159,6 +160,6 @@ void _aserv_start_play(AudioServerAct *asa)
 void _aserv_advance(AudioServerAct *asa)
 {
 	AudioServer *aserv = asa->aserv;
-	aserv->skip_token = aserv->loop_token;
+	aserv->skip_cmd = aserv->loop_cmd;
 	_aserv_start_play(&aserv->start_play);
 }

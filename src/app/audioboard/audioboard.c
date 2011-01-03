@@ -154,6 +154,7 @@ typedef struct s_CmdProc {
 	SerialCmdAct sca;
 	Network *network;
 	AudioServer *audio_server;
+	uint16_t volume;
 } CmdProc;
 
 void cmdproc_update(Activation *act)
@@ -174,11 +175,16 @@ void cmdproc_update(Activation *act)
 	else if (strncmp(buf, "play ", 5)==0)
 	{
 		SYNCDEBUG();
-		SoundToken skip = (buf[5]-'b');
-		SoundToken loop = (buf[6]-'b');
-		syncdebug(0, 's', skip);
-		syncdebug(0, 'l', loop);
+		SoundCmd skip = {(buf[5]-'b'), cp->volume};
+		SoundCmd loop = {(buf[6]-'b'), cp->volume};
+		syncdebug(0, 's', skip.token);
+		syncdebug(0, 'l', loop.token);
 		_aserv_skip_to_clip(cp->audio_server, skip, loop);
+	}
+	else if (strncmp(buf, "vol ", 4)==0)
+	{
+		cp->volume = atoi_hex(&buf[4]);
+		syncdebug(0, 'V', cp->volume);
 	}
 	else if (strcmp(buf, "led on\n")==0)
 	{
@@ -205,6 +211,7 @@ void cmdproc_init(CmdProc *cp, AudioServer *audio_server, Network *network)
 	serialcmd_init(&cp->sca, &cp->act);
 	SYNCDEBUG();
 	cp->act.func = cmdproc_update;
+	cp->volume = 256;
 	SYNCDEBUG();
 }
 
