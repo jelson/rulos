@@ -211,6 +211,36 @@ void cmdproc_init(CmdProc *cp, AudioServer *audio_server, Network *network)
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
+	Activation act;
+	uint8_t val;
+} DACTest;
+
+void _dt_update(Activation *act);
+
+void dt_init(DACTest *dt)
+{
+	dt->act.func = _dt_update;
+	dt->val = 0;
+	hal_audio_init();
+	schedule_us(1, &dt->act);
+}
+
+void _dt_update(Activation *act)
+{
+	DACTest *dt = (DACTest *) act;
+	hal_audio_fire_latch();
+	audioled_set((dt->val & 0x80)!=0, (dt->val & 0x40)!=0);
+	if (dt->val==0) { dt->val = 128; }
+	else if (dt->val==128) { dt->val = 255; }
+	else { dt->val = 0; }
+	schedule_us(1000000, &dt->act);
+	hal_audio_shift_sample(dt->val);
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+typedef struct {
 	CpumonAct cpumon;
 	AudioServer aserv;
 	Network network;
@@ -229,6 +259,7 @@ int main()
 
 	audioled_set(0, 0);
 
+#if 1
 	// needs to be early, because it initializes uart, which at the
 	// moment I'm using for SYNCDEBUG(), including in init_audio_server.
 	cmdproc_init(&mc.cmdproc, &mc.aserv, &mc.network);
@@ -236,6 +267,10 @@ int main()
 	init_twi_network(&mc.network, AUDIO_ADDR);
 
 	init_audio_server(&mc.aserv, &mc.network, TIMER2);
+#else
+	DACTest dt;
+	dt_init(&dt);
+#endif
 
 	cpumon_init(&mc.cpumon);	// includes slow calibration phase
 

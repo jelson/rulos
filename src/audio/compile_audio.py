@@ -9,10 +9,15 @@ AO_HALFBUFLEN = 128
 SDBLOCKSIZE = 512
 index_size_blocks = 1
 MAGIC = "RULOSMAGICSD"
+AUDIO_RATE=12000
+AUDIO_FILTERS={
+	'filter_none': '',
+	'filter_music': 'gain -6 bass -20',
+	}
 
 class AudioClip:
-	def __init__(self, fn, aubytes):
-		self.fn = fn
+	def __init__(self, token, aubytes):
+		self.token = token
 		self.aubytes = aubytes
 
 	def __len__(self):
@@ -74,20 +79,28 @@ class IndexRecord:
 		record += avr_int32(self.offset)
 		record += avr_int32(self.end_offset())
 		record += avr_int16(self.clip.preroll())
-		is_disco = self.clip.fn.startswith("../audio/disco")
+		is_disco = self.clip.token.label == "label_disco"
 		record += avr_int16(is_disco)
 		return record
 
-class AudioDotCH:
-	def __init__(self, aufilenames):
+class AudioIndexer:
+	def __init__(self, tokens):
 		self.clips = []
-		for aufilename in aufilenames:
-			sys.stderr.write("reading %s\n" % aufilename)
-			fp = open(aufilename)
+		for token in tokens:
+			sys.stderr.write("reading %s\n" % token.symbol)
+			fp = os.popen(self.filter(token), "r")
 			# discard .au header
 			fp.read(24)
 			everything = fp.read(9999999)
-			self.clips.append(AudioClip(aufilename, everything))
+			fp.close()
+			self.clips.append(AudioClip(token, everything))
+
+	def filter(self, token):
+		cmd = "sox %s --bits 8 --rate %s --channels 1 -t au - %s" % (
+			token.source_file_name,
+			AUDIO_RATE,
+			AUDIO_FILTERS[token.filter_name])
+		return cmd
 
 	def checkCard(self, cardpath):
 		fd = open(cardpath, "r")
@@ -117,13 +130,23 @@ class AudioDotCH:
 			cardfd.write(clip.sdcardEncoding())
 		cardfd.close()
 
+class Token:
+	def __init__(self, symbol, source_file_name, filter_name, label):
+		self.symbol = symbol
+		self.source_file_name = source_file_name
+		self.filter_name = filter_name
+		self.label = label
+
+	def __repr__(self):
+		return self.symbol
+
 class ParseAudioFilenames:
 	def __init__(self, includeFile, audio_path):
-		self._names = []
+		self._tokens = []
 		self.process(includeFile, audio_path)
 
-	def names(self):
-		return self._names
+	def tokens(self):
+		return self._tokens
 
 	def process(self, includeFile, audio_path, reading = False):
 		sys.stderr.write("processing %s\n" % includeFile)
@@ -133,27 +156,14 @@ class ParseAudioFilenames:
 			if (l==""): break
 			l = l.strip()
 
-			imo = re.compile('#include "(.*)"').search(l)
-			if (imo!=None):
-				if (not reading):
-					continue
-				include = imo.groups(1)[0]
-				path = os.path.dirname(include)
-#				path = path.split("/")
-#				path = path[2:]
-#				path = "/".join(path)
-				sys.stderr.write("including %s\n" % include)
-				self.process(include, path, reading = True)
+			mo = re.compile('SOUND\((.*)\)').search(l)
+			if (mo==None):
 				continue
-			if (l=="// START_SOUND_TOKEN_ENUM"):
-				reading = True
-				continue
-			if (l=="// END_SOUND_TOKEN_ENUM"):
-				break
-			if (reading):
-				name = l.split(",")[0].split(" ")[0]
-				self._names.append("%s/%s.au" % (audio_path, name))
-		sys.stderr.write("decoded names: %s\n" % self._names)
+			args = mo.groups(1)[0]
+			words = map(lambda s: s.strip(), args.split(','))
+			print words
+			self._tokens.append(Token(*words))
+		sys.stderr.write("decoded names: %s\n" % self._tokens)
 		fp.close()
 
 def main():
@@ -161,7 +171,7 @@ def main():
 	enum_include = sys.argv[2]
 	audio_path = sys.argv[3]
 	cardpath = sys.argv[4]
-	outfile = AudioDotCH(ParseAudioFilenames(enum_include, audio_path).names())
+	outfile = AudioIndexer(ParseAudioFilenames(enum_include, audio_path).tokens())
 	if (mode=="-index"):
 		outfile.emitIndex()
 	elif (mode=="-spif"):

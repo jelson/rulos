@@ -1,4 +1,9 @@
+svn commit -m "
+audioboard.c:DACTest
+sound.def,compile_audio.py: macro-based audio file index
 test runtime baud rate computation
+lib/audio_out.c:sample rate to 12kHz (need to factor into a .def file)
+"
 
 [] audio decoupling transformer (hardware)
 

@@ -19,21 +19,10 @@
 
 #include "rocket.h"
 
+#define SOUND(symbol,source_file_name,filter,label) symbol,
+
 typedef enum e_sound_token {
-// START_SOUND_TOKEN_ENUM
-	sound_silence = 0,
-	sound_pong_score,
-	sound_pong_paddle_bounce,
-	sound_pong_wall_bounce,
-	sound_apollo_11_countdown,
-	sound_booster_start,
-	sound_booster_running,
-	sound_booster_flameout,
-	sound_dock_clang,
-	sound_quindar_key_down,
-	sound_quindar_key_up,
-#include "../audio/disco/disco_index.h"
-// END_SOUND_TOKEN_ENUM
+#include "sound.def"
 	sound_num_tokens
 } SoundToken;
 

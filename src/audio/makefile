@@ -1,5 +1,5 @@
 sdcard:
-	./compile_audio.py -sdcard ../include/sound.h . /dev/mmcblk0
+	./compile_audio.py -sdcard ../include/sound.def . /dev/mmcblk0
 
 all: audio_sim lintest
 

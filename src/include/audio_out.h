@@ -6,11 +6,11 @@
 // 8 -> known good
 // 7 -> sounds good
 // 6 -> known bad
-#define AO_BUFLENLG2	(7)
-#define AO_BUFLEN		(1<<AO_BUFLENLG2)
-#define AO_HALFBUFLEN	(1<<(AO_BUFLENLG2-1))
-#define AO_BUFMASK		((1<<AO_BUFLENLG2)-1)
-#define AO_HALFBUFMASK	((1<<(AO_BUFLENLG2-1))-1)
+#define AO_BUFLENLG2	(8)
+#define AO_BUFLEN		(((uint16_t)1)<<AO_BUFLENLG2)
+#define AO_HALFBUFLEN	(((uint16_t)1)<<(AO_BUFLENLG2-1))
+#define AO_BUFMASK		((((uint16_t)1)<<AO_BUFLENLG2)-1)
+#define AO_HALFBUFMASK	((((uint16_t)1)<<(AO_BUFLENLG2-1))-1)
 
 typedef struct
 {

@@ -80,7 +80,7 @@ static inline uint8_t _ad_decode_ulaw(uint8_t ulaw)
 	return _ad_pcm16s_to_pcm8u(_ad_ulaw2linear(ulaw));
 }
 
-void _ad_decode_ulaw_buf(uint8_t *dst, uint8_t *src, uint8_t len)
+void _ad_decode_ulaw_buf(uint8_t *dst, uint8_t *src, uint16_t len)
 {
 	uint8_t *end = src+len;
 	for (; src<end; src++, dst++)

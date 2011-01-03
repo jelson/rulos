@@ -38,8 +38,8 @@ void init_audio_out(AudioOut *ao, uint8_t timer_id, Activation *fill_act)
 	ao->fill_index = 0;
 	ao->fill_act = fill_act;
 	hal_audio_init();
-	// 8kHz hardcoded for now
-	hal_start_clock_us(125, &_ao_handler, ao, timer_id);
+#define SAMPLE_RATE	12000
+	hal_start_clock_us(1000000/SAMPLE_RATE, &_ao_handler, ao, timer_id);
 	SYNCDEBUG();
 }
 
