@@ -155,6 +155,7 @@ typedef struct s_CmdProc {
 	Network *network;
 	AudioServer *audio_server;
 	uint16_t volume;
+	CpumonAct cpumon;
 } CmdProc;
 
 void cmdproc_update(Activation *act)
@@ -185,6 +186,10 @@ void cmdproc_update(Activation *act)
 	{
 		cp->volume = atoi_hex(&buf[4]);
 		syncdebug(0, 'V', cp->volume);
+	}
+	else if (strncmp(buf, "idle", 4)==0)
+	{
+		syncdebug(0, 'I', cpumon_get_idle_percentage(&cp->cpumon));
 	}
 	else if (strcmp(buf, "led on\n")==0)
 	{
@@ -248,7 +253,6 @@ void _dt_update(Activation *act)
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	CpumonAct cpumon;
 	AudioServer aserv;
 	Network network;
 	CmdProc cmdproc;
@@ -279,7 +283,7 @@ int main()
 	dt_init(&dt);
 #endif
 
-	cpumon_init(&mc.cpumon);	// includes slow calibration phase
+	cpumon_init(&mc.cmdproc.cpumon);	// includes slow calibration phase
 
 
 #if 0

@@ -1,24 +1,35 @@
 {hardware}
-[] bigger 5v caps to clean power supply
-[] with jer: figure if we can configure op-amp to do what LM386 does.
-[] with jer's scope: scope output on triangle wave & clean it up (/||\/\/\)
-[] ADC
+[ ] bigger 5v caps to clean power supply
+[ ] with jer: figure if we can configure op-amp to do what LM386 does.
+[ ] with jer's scope: scope output on triangle wave & clean it up (/||\/\/\)
+[ ] ADC
 
 {mounting}
-[] space joystick cable off its board to clear audio board hardware
-[] mount ROCKET0 programming header to plexi
-[] add lots of screws to panels!
+[ ] space joystick cable off its board to clear audio board hardware
+[ ] mount ROCKET0 programming header to plexi
+[ ] add lots of screws to panels!
 
 {software}
 [x] SPI error -> silence
-[] disco music control interface
-[] volume knob (output scaler)
-[] crank audioboard up to higher sample rate; fix 8-bit overflow bigger buffers
+[x] volume knob
+[ ] disco music control interface
+[ ] volume knob UI
+[ ] turn off volume prescaling in compile_audio
+[U] crank audioboard up to higher sample rate; fix 8-bit overflow bigger buffers
+	-- nope, AO_BUFLENG2==9 pushes RAM requirements to 2076; we just don't
+	have enough memory to use bigger buffers on this chip.
+	Why can't we move audio faster with small buffers? (not enough buffer
+	to wait for SPI overhead? What's max rate we can pump SPI?)
+Dang, BUFLENLG2=8 stopped working (ran out of RAM?); =7 too slow (due to volume?)
+	...although we're 43% idle. That's busy, but not so busy that I still
+	wonder why we're missing the deadline. Need to carefully analyze time
+	budget (with logic analyzer?).
+[ ] eliminate startup click (probably 0s to 127s)
 
-[] longer booster noise to avoid click/pop
+[ ] longer booster noise to avoid click/pop
 
-[] add uart_network debug message "stderr" path
-[] report idle % for audioboard
-[] intercom code
+[ ] add uart_network debug message "stderr" path
+[ ] report idle % for audioboard
+[ ] intercom code
 
-[] serial/eth adaptor
+[ ] serial/eth adaptor
