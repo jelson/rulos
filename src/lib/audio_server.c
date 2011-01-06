@@ -69,7 +69,7 @@ void _aserv_fetch_start(AudioServerAct *asa)
 	if (!rc)
 	{
 		SYNCDEBUG();
-		schedule_us(1000, &aserv->fetch_start.act);
+		schedule_us(10000, &aserv->fetch_start.act);
 	}
 }
 

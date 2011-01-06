@@ -48,6 +48,8 @@ void serialcmd_update(Activation *act)
 	char rcv_chr;
 	if (CharQueue_pop(sca->uart.recvQueue.q, &rcv_chr)) {
 		*(sca->cmd_ptr) = rcv_chr;
+		audioled_set(1, (((int)sca->cmd_ptr) & 1));
+
 		sca->cmd_ptr += 1;
 		if (sca->cmd_ptr == &sca->cmd[sizeof(sca->cmd)-1])
 		{
@@ -186,6 +188,10 @@ void cmdproc_update(Activation *act)
 	{
 		cp->volume = atoi_hex(&buf[4]);
 		syncdebug(0, 'V', cp->volume);
+	}
+	else if (strncmp(buf, "spiact", 4)==0)
+	{
+		syncdebug(3, 'a', (int) (cp->audio_server->audio_streamer.sdc.spi.spiact.act.func)<<1);
 	}
 	else if (strncmp(buf, "idle", 4)==0)
 	{
