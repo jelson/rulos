@@ -105,8 +105,6 @@ void spi_start(SPI *spi, SPICmd *spic)
 	spi->cmd_wait = SPI_CMD_WAIT_LIMIT;
 	spi->reply_i = 0;
 	spi->reply_wait = SPI_REPLY_WAIT_LIMIT;
-	spi->cmd_acknowledged = FALSE;
-	spi->reply_started = FALSE;
 	{
 		Activation *act = &spi->spiact.act;
 		SEQNEXT(SPIAct, update, 0_send_cmd);
@@ -259,6 +257,11 @@ SPIDEF(3_read_reply)
 
 //////////////////////////////////////////////////////////////////////////////
 
+SEQDECL(SDCard, init, 1_cmd0);
+SEQDECL(SDCard, init, 2_cmd1);
+SEQDECL(SDCard, init, 3_blocksize);
+SEQDECL(SDCard, init, 4_done);
+
 void sdc_init(SDCard *sdc)
 {
 	sdc->act.func = NULL;	// varies depending on entry point.
@@ -285,66 +288,53 @@ uint8_t _spicmd0[6] = { SPI_CMD(0), 0, 0, 0, 0, SPI_CMD0_CRC };
 uint8_t _spicmd1[6] = { SPI_CMD(1), 0, 0, 0, 0, SPI_DUMMY_CRC };
 uint8_t _spicmd16[6] = { SPI_CMD(16), 0, 0, 0x20, 0x00, SPI_DUMMY_CRC };
 
-void _sdc_init_update(Activation *act)
-{
-	SYNCDEBUG();
-	SDCard *sdc = (SDCard *) act;
-
-	if (sdc->spic.complete == FALSE)
-	{
-		SYNCDEBUG();
-		sdc->complete = FALSE;
-		SCHEDULE_SOON(sdc->done_act);
-		return;
+#define SDCINIT(i) \
+SEQDEF(SDCard, init, i, sdc) \
+	if (sdc->spic.complete == FALSE) \
+	{ \
+		SYNCDEBUG(); \
+		sdc->complete = FALSE; \
+		SCHEDULE_SOON(sdc->done_act); \
+		return; \
 	}
 
-	switch (sdc->init_state)
-	{
-	case 0:
-		SYNCDEBUG();
-		sdc->spic.complete = TRUE;
-			// NB yeah that was gross. We check this flag after each
-			// continuation, and bunchaclocks always succeeds, so we
-			// cheat by just setting it TRUE.
-		bunchaclocks_start(&sdc->bunchaClocks, 16, &sdc->act);
-		break;
-	case 1:
-		SYNCDEBUG();
-		_sdc_issue_spic_cmd(sdc, _spicmd0, 6, 1);
-		break;
-	case 2:
-		SYNCDEBUG();
-		_sdc_issue_spic_cmd(sdc, _spicmd1, 6, 1);
-		break;
-	case 3:
-		SYNCDEBUG();
-		fill_value(&_spicmd16[1], sdc->blocksize);
-		_sdc_issue_spic_cmd(sdc, _spicmd16, 6, 0);
-		break;
-	case 4:
-		SYNCDEBUG();
-		sdc->busy = FALSE;
-		sdc->complete = TRUE;
-		hal_spi_set_fast(TRUE);
-		SCHEDULE_SOON(sdc->done_act);
-		return;
-	}
-	// next time, do the next thing.
-	sdc->init_state += 1;
+SDCINIT(1_cmd0)
+	_sdc_issue_spic_cmd(sdc, _spicmd0, 6, 1);
+	SEQNEXT(SDCard, init, 2_cmd1);
+}
+
+SDCINIT(2_cmd1)
+	_sdc_issue_spic_cmd(sdc, _spicmd1, 6, 1);
+	SEQNEXT(SDCard, init, 3_blocksize);
+}
+
+SDCINIT(3_blocksize)
+	fill_value(&_spicmd16[1], sdc->blocksize);
+	_sdc_issue_spic_cmd(sdc, _spicmd16, 6, 0);
+	SEQNEXT(SDCard, init, 4_done);
+}
+
+SDCINIT(4_done)
+	sdc->busy = FALSE;
+	sdc->complete = TRUE;
+	hal_spi_set_fast(TRUE);
+	SCHEDULE_SOON(sdc->done_act);
 }
 
 void sdc_initialize(SDCard *sdc, Activation *done_act)
 {
 	sdc->busy = TRUE;
-	sdc->act.func = _sdc_init_update;
+
 	sdc->blocksize = 512;
 	sdc->done_act = done_act;
-	sdc->init_state = 0;
 	sdc->complete = FALSE;
 
 	hal_spi_set_fast(FALSE);
 	sdc->spic.complete = TRUE;	// ensure first call doesn't quit
-	_sdc_init_update(&sdc->act);
+	bunchaclocks_start(&sdc->bunchaClocks, 16, &sdc->act);
+
+	Activation *act = &sdc->act;
+	SEQNEXT(SDCard, init, 1_cmd0);
 }
 
 void _sdc_read_update(Activation *act)

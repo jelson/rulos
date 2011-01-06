@@ -38,8 +38,6 @@ typedef struct s_SPI
 	uint16_t cmd_wait;
 	uint16_t reply_wait;
 	uint16_t reply_i;
-	r_bool cmd_acknowledged;
-	r_bool reply_started;
 
 	// experiment: do most work out of interrupt handler
 	uint8_t data;
@@ -68,7 +66,6 @@ typedef struct {
 		// the first caller might incorrectly infer failure. Bummer.
 	BunchaClocks bunchaClocks;
 	Activation *done_act;
-	uint8_t init_state;
 	uint8_t read_cmdseq[6];
 	r_bool busy;
 	uint8_t blockbuffer[SDBUFSIZE+SDCRCSIZE];
