@@ -47,8 +47,11 @@ typedef struct s_audio_server {
 	SoundCmd loop_cmd;
 
 	r_bool index_ready;
+	AuIndexRec magic;
 	AuIndexRec index[sound_num_tokens];
 	//AuIndexRec index[2];
+
+	SDCard *borrowed_sdc;
 } AudioServer;
 
 void init_audio_server(AudioServer *as, Network *network, uint8_t timer_id);

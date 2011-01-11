@@ -27,15 +27,16 @@ void _ao_handler(void *data);
 
 void init_audio_out(AudioOut *ao, uint8_t timer_id, Activation *fill_act)
 {
-	memset(ao->buffer, 0, AO_BUFLEN);
+	memset(ao->buffers, 127, sizeof(ao->buffers));
 	int i;
-	for (i=0; i<AO_HALFBUFLEN; i++)
+	for (i=0; i<AO_BUFLEN; i++)
 	{
-		ao->buffer[i] = i*2;
-		ao->buffer[AO_BUFLEN-i] = i*2;
+		ao->buffers[0][i] = i*2;
+		ao->buffers[1][AO_BUFLEN-i] = i*2;
 	}
-	ao->index = 0;
-	ao->fill_index = 0;
+	ao->sample_index = 0;
+	ao->fill_buffer = 0;
+	ao->play_buffer = 0;
 	ao->fill_act = fill_act;
 	hal_audio_init();
 #define SAMPLE_RATE	12000
@@ -49,13 +50,17 @@ void _ao_handler(void *data)
 	val = 0x10+val;
 	hal_audio_fire_latch();
 	AudioOut *ao = (AudioOut *) data;
-	uint8_t sample = ao->buffer[ao->index];
+	uint8_t sample = ao->buffers[ao->play_buffer][ao->sample_index];
 	hal_audio_shift_sample(sample);
-	ao->index = (ao->index + 1) & AO_BUFMASK;
-	if ((ao->index & AO_HALFBUFMASK)==0)
+	ao->sample_index = (ao->sample_index + 1) & AO_BUFMASK;
+	if ((ao->sample_index & AO_BUFMASK)==0)
 	{
-		uint8_t fill_index = (ao->index+AO_HALFBUFLEN) & AO_BUFMASK;
-		ao->fill_index = fill_index;
+		ao->fill_buffer = ao->play_buffer;
+		ao->play_buffer += 1;
+		if (ao->play_buffer >= AO_NUMBUFS)
+		{
+			ao->play_buffer = 0;
+		}
 		schedule_now(ao->fill_act);
 	}
 }

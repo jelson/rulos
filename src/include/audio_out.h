@@ -8,15 +8,16 @@
 // 6 -> known bad
 #define AO_BUFLENLG2	(7)
 #define AO_BUFLEN		(((uint16_t)1)<<AO_BUFLENLG2)
-#define AO_HALFBUFLEN	(((uint16_t)1)<<(AO_BUFLENLG2-1))
 #define AO_BUFMASK		((((uint16_t)1)<<AO_BUFLENLG2)-1)
-#define AO_HALFBUFMASK	((((uint16_t)1)<<(AO_BUFLENLG2-1))-1)
+#define AO_NUMBUFS		2
 
 typedef struct
 {
-	uint8_t buffer[AO_BUFLEN];
-	uint8_t index;
-	uint8_t fill_index;
+	uint8_t buffers[AO_NUMBUFS][AO_BUFLEN];
+	uint8_t sample_index;
+	uint8_t play_buffer;
+
+	uint8_t fill_buffer;	// the one fill_act should populate when called.
 	Activation *fill_act;
 } AudioOut;
 

@@ -109,6 +109,9 @@ int main(int argc, const char **argv)
 	assert(rc==0);
 #endif
 
+	unlink("serialtee");
+	int teefd = open("serialtee", O_CREAT|O_WRONLY, 0644);
+
 	while (1)
 	{
 		fd_set readfds;
@@ -131,6 +134,9 @@ int main(int argc, const char **argv)
 			assert(rc==1);
 			write(fd, &c, 1);
 			assert(rc==1);
+
+			write(teefd, &c, 1);
+			assert(rc==1);
 		}
 		if (FD_ISSET(fd, &readfds))
 		{
@@ -138,6 +144,9 @@ int main(int argc, const char **argv)
 			rc = read(fd, &c, 1);
 			assert(rc==1);
 			write(1, &c, 1);
+			assert(rc==1);
+
+			write(teefd, &c, 1);
 			assert(rc==1);
 		}
 	}

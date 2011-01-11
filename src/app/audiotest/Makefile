@@ -14,7 +14,7 @@
 
 ROCKET_ROOT := ../..
 
-MCU := atmega8
+MCU := atmega328p
 BOARD := CUSTOM
 TARGET := audiotest
 #EXTRA_AVR_CFLAGS :=  -DCRYSTAL=12000000

@@ -24,6 +24,33 @@ Dang, BUFLENLG2=8 stopped working (ran out of RAM?); =7 too slow (due to volume?
 	...although we're 43% idle. That's busy, but not so busy that I still
 	wonder why we're missing the deadline. Need to carefully analyze time
 	budget (with logic analyzer?).
+[x] SPI DMA interface
+[ ] use linear, not ulaw. why waste cycles for an 8-bit dac!?
+Man, events suck.
+steady state:
+
+O==waiting for AO to empty.
+D==waiting for SDCard to fill a buffer
+OD -> Od -> od -> OD
+if no more sdcard data is available, we move to Ox==waiting for sdcard_done
+then to OD to wait for first buffer.
+To interrupt, we need to be able to close out an existing SDC transaction!
+So, SDC cycle:
+
+transaction:
+	reading:
+		: signal that this buffer can be sent to audio device
+		- done? start next transaction
+		- interrupted? close transaction
+		- start next buffer.
+	- interrupted? close transaction
+	- done? okay, don't do anything else
+	- start next transaction
+_as_play:
+	set up block pointers to new stream
+	if transaction already running, great, it'll stay so
+	else start a transaction.
+
 [ ] eliminate startup click (probably 0s to 127s)
 
 [ ] longer booster noise to avoid click/pop

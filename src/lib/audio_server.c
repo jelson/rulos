@@ -17,8 +17,8 @@
 #include "audio_server.h"
 
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
-#define SYNCDEBUG()	syncdebug(0, 'U', __LINE__)
-//#define SYNCDEBUG()	{}
+//#define SYNCDEBUG()	syncdebug(0, 'U', __LINE__)
+#define SYNCDEBUG()	{}
 
 void ac_send_complete(SendSlot *sendSlot);
 
@@ -63,13 +63,38 @@ void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id)
 void _aserv_fetch_start(AudioServerAct *asa)
 {
 	AudioServer *aserv = asa->aserv;
+
 	SYNCDEBUG();
-	//syncdebug(2, 's', (int) &aserv->audio_streamer.sdc);
-	r_bool rc = sdc_read(&aserv->audio_streamer.sdc, 0, &aserv->fetch_complete.act);
+
+	// try to borrow sdc object from audio_streamer
+	aserv->borrowed_sdc = as_borrow_sdc(&aserv->audio_streamer);
+	if (aserv->borrowed_sdc==NULL)
+	{
+		// sdc not initialized yet
+		SYNCDEBUG();
+		schedule_us(10000, &aserv->fetch_start.act);
+		return;
+	}
+
+	uint8_t *start_addr = (uint8_t*) &aserv->magic;
+	uint16_t count = sizeof(aserv->magic) + sizeof(aserv->index);
+	r_bool rc = sdc_start_transaction(
+		aserv->borrowed_sdc,
+		0,
+		start_addr,
+		count,
+		&aserv->fetch_complete.act);
+#if !SIM
+		syncdebug(4, 'a', (uint16_t) (aserv));
+		syncdebug(4, 'b', (uint16_t) (aserv->borrowed_sdc));
+		syncdebug(4, 's', (uint16_t) (start_addr));
+		syncdebug(4, 'c', (uint16_t) (count));
+#endif
 	if (!rc)
 	{
 		SYNCDEBUG();
 		schedule_us(10000, &aserv->fetch_start.act);
+		return;
 	}
 }
 
@@ -77,11 +102,13 @@ void _aserv_fetch_complete(AudioServerAct *asa)
 {
 	AudioServer *aserv = asa->aserv;
 	SYNCDEBUG();
-	memcpy(
-		aserv->index,
-		aserv->audio_streamer.sdc.blockbuffer+sizeof(AuIndexRec),
-		sizeof(aserv->index));
+#if !SIM
+	syncdebug(4, 'a', (uint16_t) (aserv));
+	syncdebug(4, 'b', (uint16_t) (&aserv->borrowed_sdc));
+	syncdebug(4, 'b', (uint16_t) (aserv->borrowed_sdc));
+#endif
 	aserv->index_ready = TRUE;
+	sdc_end_transaction(aserv->borrowed_sdc, NULL);
 }
 
 void aserv_recv(RecvSlot *recvSlot, uint8_t payload_len)
@@ -138,6 +165,10 @@ void _aserv_start_play(AudioServerAct *asa)
 	else
 	{
 		SYNCDEBUG();
+#if !SIM
+		syncdebug(4, 'd', (uint16_t) (&aserv->audio_streamer.sdc));
+#endif
+		syncdebug(4, 'o', aserv->audio_streamer.sdc.transaction_open);
 		AuIndexRec *airec = &aserv->index[aserv->skip_cmd.token];
 		r_bool rc = as_play(
 			&aserv->audio_streamer,

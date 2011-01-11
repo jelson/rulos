@@ -166,6 +166,9 @@ void cmdproc_update(Activation *act)
 	char *buf = cp->sca.cmd;
 
 	SYNCDEBUG();
+#if !SIM
+	syncdebug(4, 'd', (uint16_t) (&cp->audio_server->audio_streamer.sdc));
+#endif
 
 	if (strcmp(buf, "init\n")==0)
 	{

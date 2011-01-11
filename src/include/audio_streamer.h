@@ -4,6 +4,7 @@
 #include "rocket.h"
 #include "sdcard.h"
 #include "audio_out.h"
+#include "event.h"
 
 struct s_AudioStreamer;
 
@@ -11,38 +12,25 @@ typedef struct
 {
 	Activation act;
 	struct s_AudioStreamer *as;
-} InitializeCompleteAct;
-
-typedef struct
-{
-	Activation act;
-	struct s_AudioStreamer *as;
-} StartStreamingAct;
-	// when first sdc read completes, we can signal _fill to begin
-	// streaming data to DAC.
-
-// ugh; TODO clean up sdcard to hide fetch of stupid crc bytes
-
-typedef struct {
-	Activation act;
-	struct s_AudioStreamer *as;
-} SDCompleteAct;
+} ASStreamCard;
 
 typedef struct s_AudioStreamer
 {
 	Activation fill_act;
-	InitializeCompleteAct initialize_complete;
-	StartStreamingAct start_streaming;
+	ASStreamCard assc;
 	SDCard sdc;
+	r_bool sdc_initialized;
 	AudioOut audio_out;
-	r_bool streaming;
+	r_bool ulawbuf_full;
+	uint8_t ulawbuf[AO_BUFLEN];
 	uint8_t timer_id;
 	uint32_t block_address;
 		// 0 == playing silence
 	uint32_t end_address;
-	uint16_t block_offset;
+	uint16_t sector_offset;	// [0..SDBUFSIZE), in AO_BUFLEN increments
 	uint16_t volume;	// 256=> original volume. 257+ may clip.
-	SDCompleteAct sd_complete;
+	Event ulawbuf_empty_evt;
+	Event play_request_evt;
 	Activation *done_act;
 } AudioStreamer;
 
@@ -69,5 +57,7 @@ r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset,
 	//  done_act: called once we've queued the last buffer for this sound.
 
 void as_stop_streaming(AudioStreamer *as);
+
+SDCard *as_borrow_sdc(AudioStreamer *as);
 
 #endif // _AUDIO_STREAMER_H

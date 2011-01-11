@@ -15,44 +15,46 @@
  ************************************************************************/
 
 #include "audio_streamer.h"
+#include "event.h"
+#include "seqmacro.h"
 
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 //#define SYNCDEBUG()	syncdebug(0, 'R', __LINE__)
 #define SYNCDEBUG()	{}
+extern void audioled_set(r_bool red, r_bool yellow);
 
-void _as_sd_complete(Activation *act);
 void _as_fill(Activation *act);
-void _as_initialize_complete(Activation *act);
-void _as_start_streaming(Activation *act);
+SEQDECL(ASStreamCard, as_stream_card, 0_init_sdc);
+SEQDECL(ASStreamCard, as_stream_card, 1_loop);
+SEQDECL(ASStreamCard, as_stream_card, 2_start_tx);
+SEQDECL(ASStreamCard, as_stream_card, 3_more_frames);
+SEQDECL(ASStreamCard, as_stream_card, 4_read_more);
 
 void init_audio_streamer(AudioStreamer *as, uint8_t timer_id)
 {
 	as->fill_act.func = _as_fill;
 	as->timer_id = timer_id;
-	as->streaming = FALSE;
 	init_audio_out(&as->audio_out, as->timer_id, &as->fill_act);
+	as->sdc_initialized = FALSE;
 	sdc_init(&as->sdc);
-	as->initialize_complete.act.func = _as_initialize_complete;
-	as->initialize_complete.as = as;
-	as->start_streaming.act.func = _as_start_streaming;
-	as->start_streaming.as = as;
 
-	as->sd_complete.act.func = _as_sd_complete;
-	as->sd_complete.as = as;
+	event_init(&as->ulawbuf_empty_evt, FALSE);
+	event_init(&as->play_request_evt, TRUE);
 
-	sdc_initialize(&as->sdc, &as->initialize_complete.act);
-}
+	// allow the first read to proceed.
+	event_signal(&as->ulawbuf_empty_evt);
 
-void _as_initialize_complete(Activation *act)
-{
-	AudioStreamer *as = ((InitializeCompleteAct *) act)->as;
-	if (!as->sdc.complete)
+	// start the ASStreamCard thread
 	{
-		// try again
-		SYNCDEBUG();
-		sdc_initialize(&as->sdc, &as->initialize_complete.act);
+		as->assc.as = as;
+		Activation *act = &as->assc.act;
+		SEQNEXT(ASStreamCard, as_stream_card, 0_init_sdc);
+		schedule_now(act);
 	}
 }
+
+
+//////////////////////////////////////////////////////////////////////////////
 
 // based on sample code at:
 // http://www.speech.cs.cmu.edu/comp.speech/Section2/Q2.7.html
@@ -95,98 +97,157 @@ void _ad_decode_ulaw_buf(uint8_t *dst, uint8_t *src, uint16_t len, uint16_t volu
 	}
 }
 
-void _as_sd_complete(Activation *act)
-{
-	AudioStreamer *as = ((SDCompleteAct *) act)->as;
-	if (!as->sdc.complete)
-	{
-		SYNCDEBUG();
-		// sdcard failed. Stop streaming this sample,
-		as->streaming = FALSE;
-		// but restart the initialize sequence to see if we can recover.
-		sdc_initialize(&as->sdc, &as->initialize_complete.act);
-	}
-	else
-	{
-		// else let sdcard->complete stay TRUE, which will cause _as_fill
-		// to keep refilling more samples.
-		SYNCDEBUG();
-	}
-}
-
 void _as_fill(Activation *act)
 {
-	extern void audioled_set(r_bool red, r_bool yellow);
 	AudioStreamer *as = (AudioStreamer *) act;
-	uint8_t *fill_ptr = as->audio_out.buffer+as->audio_out.fill_index;
-	if (as->streaming)
+	uint8_t *fill_ptr = as->audio_out.buffers[as->audio_out.fill_buffer];
+//	SYNCDEBUG();
+//	syncdebug(0, 'f', (int) as->audio_out.fill_buffer);
+//	syncdebug(0, 'f', (int) fill_ptr);
+
+	audioled_set(0, 1);
+	// always clear buf in case we end up coming back around here
+	// before ASStreamCard gets a chance to fill it. Want to play
+	// silence, not stuttered audio.
+	memset(fill_ptr, 127, AO_BUFLEN);
+
+	if (!event_is_signaled(&as->ulawbuf_empty_evt))
 	{
-		SYNCDEBUG();
+		// invariant: ulawbuf_ready == sdc_ready waiting for it;
+		// not elsewise scheduled.
 		audioled_set(1, 0);
-		//memcpy(fill_ptr, &as->sdbuffer[as->block_offset], AO_HALFBUFLEN);
-		uint8_t *nextbuf = &as->sdc.blockbuffer[as->block_offset];
-		_ad_decode_ulaw_buf(fill_ptr, nextbuf, AO_HALFBUFLEN, as->volume);
-		void syncdebug32(uint8_t spaces, char f, uint32_t line);
-		//syncdebug(2, 'p', as->block_offset);
-		as->block_offset += AO_HALFBUFLEN;
-		// NB here we assume SD block size is a multiple of AO_HALFBUFLEN,
-		// so that SD block requests stay aligned.
-		if (as->block_offset >= as->sdc.blocksize)
-		{
-			audioled_set(1, 1);
-			// sdbuffer empty; start refill
-			//syncdebug(1, 'd', (as->block_address)>>16);
-			//syncdebug(1, 'd', (as->block_address)&0xffff);
-			//syncdebug32(2, 'f', as->block_address);
-			sdc_read(&as->sdc, as->block_address, &as->sd_complete.act);
-			as->block_offset = 0;
-			as->block_address+=SDBUFSIZE;
-			if (as->block_address >= as->end_address)
-			{
-				as->streaming = FALSE;
-				if (as->done_act != NULL)
-				{
-					schedule_now(as->done_act);
-				}
-			}
-		}
-	}
-	else
-	{
-		audioled_set(0, 1);
-		memset(fill_ptr, 127, AO_HALFBUFLEN);
+		SYNCDEBUG();
+		_ad_decode_ulaw_buf(fill_ptr, as->ulawbuf, AO_BUFLEN, as->volume);
+		event_signal(&as->ulawbuf_empty_evt);
 	}
 }
 
-void _as_start_streaming(Activation *act)
-{
-	SYNCDEBUG();
-	StartStreamingAct *ssa = (StartStreamingAct *) act;
-	ssa->as->streaming = TRUE;
+//////////////////////////////////////////////////////////////////////////////
+
+SEQDEF(ASStreamCard, as_stream_card, 0_init_sdc, assc)
+	AudioStreamer *as = assc->as;
+
+	sdc_reset_card(&as->sdc, act);
+	SEQNEXT(ASStreamCard, as_stream_card, 1_loop);	// implied
+	return;
 }
+
+SEQDEF(ASStreamCard, as_stream_card, 1_loop, assc)
+	AudioStreamer *as = assc->as;
+
+	as->sdc_initialized = TRUE;
+	if (as->block_address >= as->end_address)
+	{
+		// just finished an entire file. Tell caller, and wait
+		// for a new request.
+		if (as->done_act != NULL)
+		{
+			schedule_now(as->done_act);
+		}
+
+		SYNCDEBUG();
+		event_wait(&as->play_request_evt, act);
+		//SEQNEXT(ASStreamCard, as_stream_card, 1_loop);	// implied
+		return;
+	}
+
+	// ready to start a read. Get an empty buffer first.
+	SYNCDEBUG();
+	event_wait(&as->ulawbuf_empty_evt, act);
+	SEQNEXT(ASStreamCard, as_stream_card, 2_start_tx);
+	return;
+}
+
+SEQDEF(ASStreamCard, as_stream_card, 2_start_tx, assc)
+	AudioStreamer *as = assc->as;
+
+	r_bool rc = sdc_start_transaction(&as->sdc,
+		as->block_address,
+		as->ulawbuf,
+		AO_BUFLEN,
+		act);
+	if (!rc)
+	{
+		// dang, card was busy! the 'goto' didn't. try again in a millisecond.
+		SYNCDEBUG();
+		schedule_us(1000, act);
+		return;
+	}
+	SEQNEXT(ASStreamCard, as_stream_card, 3_more_frames);
+	return;
+}
+
+SEQDEF(ASStreamCard, as_stream_card, 3_more_frames, assc)
+	AudioStreamer *as = assc->as;
+
+	if (sdc_is_error(&as->sdc))
+	{
+		SYNCDEBUG();
+		sdc_end_transaction(&as->sdc, act);
+		SEQNEXT(ASStreamCard, as_stream_card, 0_init_sdc);
+		return;
+	}
+
+	event_reset(&as->ulawbuf_empty_evt);
+	as->sector_offset += AO_BUFLEN;
+	if (as->sector_offset < SDBUFSIZE)
+	{
+		// Wait for more space to put data into.
+		SYNCDEBUG();
+		event_wait(&as->ulawbuf_empty_evt, act);
+		SEQNEXT(ASStreamCard, as_stream_card, 4_read_more);
+		return;
+	}
+
+	// done reading sector; loop back around to read more
+	// (or a different sector, if redirected)
+	as->block_address += SDBUFSIZE;
+	as->sector_offset = 0;
+
+	SYNCDEBUG();
+	sdc_end_transaction(&as->sdc, act);
+	SEQNEXT(ASStreamCard, as_stream_card, 1_loop);
+	return;
+}
+
+SEQDEF(ASStreamCard, as_stream_card, 4_read_more, assc)
+	AudioStreamer *as = assc->as;
+
+	sdc_continue_transaction(&as->sdc,
+		as->ulawbuf,
+		AO_BUFLEN,
+		act);
+	SEQNEXT(ASStreamCard, as_stream_card, 3_more_frames);
+	return;
+}
+
+//////////////////////////////////////////////////////////////////////////////
 
 r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, uint32_t end_address, uint16_t volume, Activation *done_act)
 {
-	// what happens if we're already streaming?
-	// sdc->busy is true, so sdc_read does nothing, so we return,
-	// so we never start trying to read sdc buffer until it's safe.
-
-	// must set up suitable initial conditions to begin stream:
-	// need first block already in memory and preroll pointer pointing
-	// inside it before we expose it to _fill callback.
-	r_bool ready = sdc_read(&as->sdc, block_address, &as->start_streaming.act);
-	if (!ready) { return FALSE; }
-
 	SYNCDEBUG();
-	as->block_address = block_address+SDBUFSIZE;
-	as->block_offset = block_offset;	// skip preroll bytes
+	as->block_address = block_address;
+	as->sector_offset = 0;
+		// TODO reimplement preroll skippage
+		// Just assigning this wouldn't help; it would cause us to
+		// skip the END of the first block.
+		// Maybe the best strategy is to end early rather than
+		// start late.
 	as->end_address = end_address;
 	as->volume = volume;
 	as->done_act = done_act;
+		// TODO we just lose the previous callback in this case.
+		// hope that's okay.
+	event_signal(&as->play_request_evt);
 	return TRUE;
 }
 
 void as_stop_streaming(AudioStreamer *as)
 {
-	as->streaming = FALSE;
+	as->end_address = 0;
+}
+
+SDCard *as_borrow_sdc(AudioStreamer *as)
+{
+	return as->sdc_initialized ? &as->sdc : NULL;
 }

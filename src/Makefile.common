@@ -67,13 +67,15 @@ COMMON_OBJECTS = \
 	quadknob.o \
 	potsticker.o \
 	funcseq.o \
-	sdcard.o \
 	uart.o \
 	audio_out.o \
-	audio_streamer.o \
 	uart_net_media.o \
 	audioled.o \
 	net_compute_checksum.o \
+	sdcard.o \
+	audio_streamer.o \
+	event.o \
+	spi.o \
 
 #	spiflash.o \
 #	audio_driver.o \
