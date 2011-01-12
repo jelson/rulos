@@ -22,7 +22,7 @@
 
 typedef struct {
 	SoundToken token;
-	uint16_t volume;
+	uint8_t mlvolume;
 } SoundCmd;
 
 typedef struct {

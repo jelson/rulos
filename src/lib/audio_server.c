@@ -169,13 +169,18 @@ void _aserv_start_play(AudioServerAct *asa)
 		syncdebug(4, 'd', (uint16_t) (&aserv->audio_streamer.sdc));
 #endif
 		syncdebug(4, 'o', aserv->audio_streamer.sdc.transaction_open);
+
 		AuIndexRec *airec = &aserv->index[aserv->skip_cmd.token];
+		syncdebug(4, 's', airec->start_offset>>16);
+		syncdebug(4, 's', airec->start_offset&0xffff);
+		syncdebug(4, 'e', airec->end_offset>>16);
+		syncdebug(4, 'e', airec->end_offset&0xffff);
 		r_bool rc = as_play(
 			&aserv->audio_streamer,
 			airec->start_offset,
 			airec->block_offset,
 			airec->end_offset,
-			aserv->skip_cmd.volume,
+			aserv->skip_cmd.mlvolume,
 			&aserv->advance.act);
 		if (!rc)
 		{

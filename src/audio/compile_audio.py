@@ -88,6 +88,7 @@ class AudioIndexer:
 		self.clips = []
 		for token in tokens:
 			sys.stderr.write("reading %s\n" % token.symbol)
+			sys.stderr.write("cmd: %s\n" % self.filter(token))
 			fp = os.popen(self.filter(token), "r")
 			# discard .au header
 			fp.read(24)
@@ -96,7 +97,7 @@ class AudioIndexer:
 			self.clips.append(AudioClip(token, everything))
 
 	def filter(self, token):
-		cmd = "sox %s --bits 8 --rate %s --channels 1 -t au - %s" % (
+		cmd = "sox %s --bits 8 --rate %s --channels 1 -t au --bits 8 -e signed-integer - %s" % (
 			token.source_file_name,
 			AUDIO_RATE,
 			AUDIO_FILTERS[token.filter_name])

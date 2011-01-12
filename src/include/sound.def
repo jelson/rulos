@@ -19,3 +19,5 @@ SOUND(sound_the_diva_megamix,                     disco/sound_the_diva_megamix.o
 SOUND(sound_turn_the_beat_around,                 disco/sound_turn_the_beat_around.ogg,                   filter_music,   label_disco)
 SOUND(sound_upside_down,                          disco/sound_upside_down.ogg,                            filter_music,   label_disco)
 SOUND(sound_we_are_family,                        disco/sound_we_are_family.ogg,                          filter_music,   label_disco)
+SOUND(sound_440,                                  sine-440-1.0.au,                                        filter_none,    label_disco)
+SOUND(sound_440_atten,                            sine-440-1.0.au,                                        filter_music,   label_disco)

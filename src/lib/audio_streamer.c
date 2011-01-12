@@ -56,6 +56,7 @@ void init_audio_streamer(AudioStreamer *as, uint8_t timer_id)
 
 //////////////////////////////////////////////////////////////////////////////
 
+#if 0
 // based on sample code at:
 // http://www.speech.cs.cmu.edu/comp.speech/Section2/Q2.7.html
 static inline int16_t _ad_ulaw2linear(uint8_t ulawbyte)
@@ -85,15 +86,20 @@ static inline uint8_t _ad_decode_ulaw(uint8_t ulaw)
 {
 	return _ad_pcm16s_to_pcm8u(_ad_ulaw2linear(ulaw));
 }
+#endif
 
-void _ad_decode_ulaw_buf(uint8_t *dst, uint8_t *src, uint16_t len, uint16_t volume)
+void _ad_decode_ulaw_buf(uint8_t *dst, uint8_t *src, uint16_t len, uint8_t mlvolume)
 {
 	uint8_t *end = src+len;
 	for (; src<end; src++, dst++)
 	{
+#if 0
 		int16_t vs = _ad_decode_ulaw(*src) - 128;
 		vs = ((vs * volume) >> 8) + 128;
 		*dst = vs & 0xff;
+#endif
+		//*dst = (*src) - 1;
+		*dst = ((*src) + 128) >> mlvolume;
 	}
 }
 
@@ -117,7 +123,7 @@ void _as_fill(Activation *act)
 		// not elsewise scheduled.
 		audioled_set(1, 0);
 		SYNCDEBUG();
-		_ad_decode_ulaw_buf(fill_ptr, as->ulawbuf, AO_BUFLEN, as->volume);
+		_ad_decode_ulaw_buf(fill_ptr, as->ulawbuf, AO_BUFLEN, as->mlvolume);
 		event_signal(&as->ulawbuf_empty_evt);
 	}
 }
@@ -223,7 +229,7 @@ SEQDEF(ASStreamCard, as_stream_card, 4_read_more, assc)
 
 //////////////////////////////////////////////////////////////////////////////
 
-r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, uint32_t end_address, uint16_t volume, Activation *done_act)
+r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, uint32_t end_address, uint8_t mlvolume, Activation *done_act)
 {
 	SYNCDEBUG();
 	as->block_address = block_address;
@@ -234,7 +240,7 @@ r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset,
 		// Maybe the best strategy is to end early rather than
 		// start late.
 	as->end_address = end_address;
-	as->volume = volume;
+	as->mlvolume = mlvolume;
 	as->done_act = done_act;
 		// TODO we just lose the previous callback in this case.
 		// hope that's okay.

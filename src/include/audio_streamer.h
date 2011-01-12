@@ -28,7 +28,7 @@ typedef struct s_AudioStreamer
 		// 0 == playing silence
 	uint32_t end_address;
 	uint16_t sector_offset;	// [0..SDBUFSIZE), in AO_BUFLEN increments
-	uint16_t volume;	// 256=> original volume. 257+ may clip.
+	uint16_t mlvolume;	// 0=> original volume .. 8=> silent
 	Event ulawbuf_empty_evt;
 	Event play_request_evt;
 	Activation *done_act;
@@ -46,7 +46,7 @@ void init_audio_streamer(AudioStreamer *as, uint8_t timer_id);
 // An alternative: use 4 or 8 smaller AudioOut buffers, so that we can let
 // them almost drain out during the time we're waiting on the sd card.
 
-r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, uint32_t end_address, uint16_t volume, Activation *done_act);
+r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, uint32_t end_address, uint8_t mlvolume, Activation *done_act);
 	// block_address: multiple of SDCard blocksize (512)
 	// block_offset: multiple of AudioOut AO_HALFBUFLEN (128). Used if we
 	//   want to have sound durations of shorter than SD block length.
