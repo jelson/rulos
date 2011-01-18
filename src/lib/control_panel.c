@@ -55,9 +55,9 @@ void init_cc_pong(CCPong *ccp, Screen4 *s4, AudioClient *audioClient)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_cc_disco(CCDisco *ccp, AudioClient *audioClient, ScreenBlanker *screenblanker)
+void init_cc_disco(CCDisco *ccp, AudioClient *audioClient, ScreenBlanker *screenblanker, IdleAct *idle)
 {
-	disco_init(&ccp->disco, audioClient, screenblanker);
+	disco_init(&ccp->disco, audioClient, screenblanker, idle);
 	ccp->uie_handler = (UIEventHandler*) &ccp->disco.handler;
 	ccp->name = "disco";
 }
@@ -94,7 +94,7 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Ne
 	init_cc_pong(&cp->ccpong, &cp->s4, audioClient);
 
 	cp->children[cp->child_count++] = (ControlChild*) &cp->ccdisco;
-	init_cc_disco(&cp->ccdisco, audioClient, screenblanker);
+	init_cc_disco(&cp->ccdisco, audioClient, screenblanker, idle);
 
 	assert(cp->child_count <= CONTROL_PANEL_NUM_CHILDREN);
 

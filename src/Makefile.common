@@ -76,6 +76,7 @@ COMMON_OBJECTS = \
 	audio_streamer.o \
 	event.o \
 	spi.o \
+	volume_control.o \
 
 #	spiflash.o \
 #	audio_driver.o \

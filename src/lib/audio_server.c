@@ -23,7 +23,9 @@ extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 void ac_send_complete(SendSlot *sendSlot);
 
 
-void aserv_recv(RecvSlot *recvSlot, uint8_t payload_len);
+void aserv_recv_arm(RecvSlot *recvSlot, uint8_t payload_len);
+void aserv_recv_avm(RecvSlot *recvSlot, uint8_t payload_len);
+void aserv_recv_mcm(RecvSlot *recvSlot, uint8_t payload_len);
 void _aserv_fetch_start(AudioServerAct *asa);
 void _aserv_fetch_complete(AudioServerAct *asa);
 void _aserv_start_play(AudioServerAct *asa);
@@ -43,21 +45,44 @@ void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id)
 	_aserv_setup_act(aserv, &aserv->start_play, _aserv_start_play);
 	_aserv_setup_act(aserv, &aserv->advance, _aserv_advance);
 
-	aserv->recvSlot.func = aserv_recv;
-	aserv->recvSlot.port = AUDIO_PORT;
-	aserv->recvSlot.payload_capacity = sizeof(AudioRequestMessage);
-	aserv->recvSlot.msg_occupied = FALSE;
-	aserv->recvSlot.msg = (Message*) aserv->recv_msg_alloc;
-	aserv->recvSlot.user_data = aserv;
+	aserv->arm_recvSlot.func = aserv_recv_arm;
+	aserv->arm_recvSlot.port = AUDIO_PORT;
+	aserv->arm_recvSlot.payload_capacity = sizeof(AudioRequestMessage);
+	aserv->arm_recvSlot.msg_occupied = FALSE;
+	aserv->arm_recvSlot.msg = (Message*) aserv->arm_recv_msg_alloc;
+	aserv->arm_recvSlot.user_data = aserv;
+
+	aserv->avm_recvSlot.func = aserv_recv_avm;
+	aserv->avm_recvSlot.port = SET_VOLUME_PORT;
+	aserv->avm_recvSlot.payload_capacity = sizeof(AudioVolumeMessage);
+	aserv->avm_recvSlot.msg_occupied = FALSE;
+	aserv->avm_recvSlot.msg = (Message*) aserv->avm_recv_msg_alloc;
+	aserv->avm_recvSlot.user_data = aserv;
+
+	aserv->mcm_recvSlot.func = aserv_recv_mcm;
+	aserv->mcm_recvSlot.port = MUSIC_CONTROL_PORT;
+	aserv->mcm_recvSlot.payload_capacity = sizeof(AudioVolumeMessage);
+	aserv->mcm_recvSlot.msg_occupied = FALSE;
+	aserv->mcm_recvSlot.msg = (Message*) aserv->mcm_recv_msg_alloc;
+	aserv->mcm_recvSlot.user_data = aserv;
 
 	aserv->skip_cmd.token = sound_silence;
 	aserv->loop_cmd.token = sound_silence;
+
+	aserv->music_random_seeded = FALSE;
+	// none of these should be accessed until index ready,
+	// but might as well load sane-ish values
+	aserv->cur_music_token = 0;
+	aserv->num_music_tokens = 1;
+	aserv->music_token_offset = sound_silence;
 
 	init_audio_streamer(&aserv->audio_streamer, timer_id);
 	aserv->index_ready = FALSE;
 	_aserv_fetch_start(&aserv->fetch_start);
 
-	net_bind_receiver(network, &aserv->recvSlot);
+	net_bind_receiver(network, &aserv->arm_recvSlot);
+	net_bind_receiver(network, &aserv->avm_recvSlot);
+	net_bind_receiver(network, &aserv->mcm_recvSlot);
 }
 
 void _aserv_fetch_start(AudioServerAct *asa)
@@ -107,11 +132,30 @@ void _aserv_fetch_complete(AudioServerAct *asa)
 	syncdebug(4, 'b', (uint16_t) (&aserv->borrowed_sdc));
 	syncdebug(4, 'b', (uint16_t) (aserv->borrowed_sdc));
 #endif
+
+	int i;
+	for (i=0; i<sound_num_tokens; i++)
+	{
+		if (aserv->index[i].is_disco)
+		{
+			aserv->music_token_offset = i;
+			break;
+		}
+	}
+	for (i=aserv->music_token_offset; i<sound_num_tokens; i++)
+	{
+		if (!aserv->index[i].is_disco)
+		{
+			aserv->num_music_tokens = i-aserv->music_token_offset;
+			break;
+		}
+	}
+
 	aserv->index_ready = TRUE;
 	sdc_end_transaction(aserv->borrowed_sdc, NULL);
 }
 
-void aserv_recv(RecvSlot *recvSlot, uint8_t payload_len)
+void aserv_recv_arm(RecvSlot *recvSlot, uint8_t payload_len)
 {
 	SYNCDEBUG();
 	AudioServer *aserv = (AudioServer *) recvSlot->user_data;
@@ -134,7 +178,53 @@ void aserv_recv(RecvSlot *recvSlot, uint8_t payload_len)
 			aserv->loop_cmd = arm->loop_cmd;
 		}
 	}
-	aserv->recvSlot.msg_occupied = FALSE;
+	recvSlot->msg_occupied = FALSE;
+}
+
+void aserv_recv_avm(RecvSlot *recvSlot, uint8_t payload_len)
+{
+	SYNCDEBUG();
+	AudioServer *aserv = (AudioServer *) recvSlot->user_data;
+	assert(payload_len == sizeof(AudioVolumeMessage));
+	AudioVolumeMessage *avm = (AudioVolumeMessage *) &recvSlot->msg->data;
+
+	as_set_music_volume(&aserv->audio_streamer, avm->music_mlvolume);
+	recvSlot->msg_occupied = FALSE;
+}
+
+void aserv_recv_mcm(RecvSlot *recvSlot, uint8_t payload_len)
+{
+	SYNCDEBUG();
+	AudioServer *aserv = (AudioServer *) recvSlot->user_data;
+	assert(payload_len == sizeof(MusicControlMessage));
+	MusicControlMessage *mcm = (MusicControlMessage *) &recvSlot->msg->data;
+
+	if (!aserv->index_ready)
+	{
+		SYNCDEBUG();
+	}
+	else
+	{
+		if (!aserv->music_random_seeded)
+		{
+			// first use? jump to a random song. random seed is 1/10ths of sec since boot.
+			aserv->cur_music_token =
+				(clock_time_us()/100000)
+				% (aserv->num_music_tokens);
+			aserv->music_random_seeded = TRUE;
+		}
+		// now advance one or retreat one, based on request
+		aserv->cur_music_token =
+			(aserv->cur_music_token + mcm->advance + aserv->num_music_tokens)
+			% (aserv->num_music_tokens);
+		// and start it playin'
+		SoundCmd music_cmd;
+		music_cmd.token = aserv->cur_music_token + aserv->music_token_offset;
+		SoundCmd silence_cmd;
+		silence_cmd.token = sound_silence;
+		_aserv_skip_to_clip(aserv, music_cmd, silence_cmd);
+	}
+	recvSlot->msg_occupied = FALSE;
 }
 
 // factored into a function as an entry point for debugging.
@@ -180,7 +270,7 @@ void _aserv_start_play(AudioServerAct *asa)
 			airec->start_offset,
 			airec->block_offset,
 			airec->end_offset,
-			aserv->skip_cmd.mlvolume,
+			airec->is_disco,	/* is_music -> tells whether to apply music volume attenuation */
 			&aserv->advance.act);
 		if (!rc)
 		{

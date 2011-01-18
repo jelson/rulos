@@ -53,6 +53,8 @@
 #include "screenblanker.h"
 #include "slow_boot.h"
 #include "potsticker.h"
+#include "volume_control.h"
+#include "bss_canary.h"
 
 
 /************************************************************************************/
@@ -76,6 +78,8 @@ typedef struct {
 	ScreenBlankerSender screenblanker_sender;
 	SlowBoot slow_boot;
 	PotSticker potsticker;
+	VolumeControl volume_control;
+	BSSCanary bss_canary;
 } Rocket0;
 
 #define THRUSTER_X_CHAN	3
@@ -89,13 +93,13 @@ typedef struct {
 #endif
 
 #define POTSTICKER_CHANNEL 0
-#define SPEED_POT_CHANNEL 1
+#define VOLUME_POT_CHANNEL 1
 
 void init_rocket0(Rocket0 *r0)
 {
 	drtc_init(&r0->dr, 0, clock_time_us()+20000000);
 	init_twi_network(&r0->network, ROCKET_ADDR);
-	lunar_distance_init(&r0->ld, 1, 2, SPEED_POT_CHANNEL);
+	lunar_distance_init(&r0->ld, 1, 2 /*, SPEED_POT_CHANNEL*/);
 	init_audio_client(&r0->audio_client, &r0->network);
 	memset(&r0->thrusterUpdate, 0, sizeof(r0->thrusterUpdate));
 	init_hpam(&r0->hpam, 7, r0->thrusterUpdate);
@@ -128,6 +132,10 @@ void init_rocket0(Rocket0 *r0)
 		9,
 		'p',
 		'q');
+
+	volume_control_init(&r0->volume_control, &r0->audio_client, VOLUME_POT_CHANNEL, /*board*/ 0);
+
+	bss_canary_init(&r0->bss_canary);
 }
 
 static Rocket0 rocket0;	// allocate obj in .bss so it's easy to count

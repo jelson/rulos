@@ -31,5 +31,7 @@
 #define SCREENBLANKER_PORT		(0x16)
 #define UARTNETWORKTEST_PORT	(0x17)
 #define STREAMING_AUDIO_PORT	(0x18)
+#define SET_VOLUME_PORT			(0x19)
+#define MUSIC_CONTROL_PORT		(0x20)
 
 #endif // _network_ports_h

@@ -39,7 +39,7 @@ void init_audio_out(AudioOut *ao, uint8_t timer_id, Activation *fill_act)
 	ao->play_buffer = 0;
 	ao->fill_act = fill_act;
 	hal_audio_init();
-#define SAMPLE_RATE	12000
+#define SAMPLE_RATE	15000
 	hal_start_clock_us(1000000/SAMPLE_RATE, &_ao_handler, ao, timer_id);
 	SYNCDEBUG();
 }

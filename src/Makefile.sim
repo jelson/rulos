@@ -17,6 +17,8 @@ SIM_ONLY_OBJECTS :=  \
 	uart.o \
 	sim.o
 
+BSS_CANARY_OBJECT := bss_canary.o
+
 SIM_OBJDIR = obj.sim
 SIM_LIBNAME = rocket
 SIM_LIB_FILE = $(SIM_OBJDIR)/lib$(SIM_LIBNAME).a
@@ -30,7 +32,7 @@ SIM_LDFLAGS = -L$(SIM_OBJDIR) -l$(SIM_LIBNAME) -lm
 ############
 
 SIM_LIB_OBJECTS := $(patsubst %.o,$(SIM_OBJDIR)/%.o,$(COMMON_OBJECTS) \
-	$(SIM_ONLY_OBJECTS) )
+	$(SIM_ONLY_OBJECTS) $(BSS_CANARY_OBJECT) )
 
 SIM_TARGET_OBJECTS := $(patsubst %.o,$(SIM_OBJDIR)/%.o, \
 	$(TARGET_OBJECTS))

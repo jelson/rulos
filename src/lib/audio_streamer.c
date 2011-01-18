@@ -123,7 +123,8 @@ void _as_fill(Activation *act)
 		// not elsewise scheduled.
 		audioled_set(1, 0);
 		SYNCDEBUG();
-		_ad_decode_ulaw_buf(fill_ptr, as->ulawbuf, AO_BUFLEN, as->mlvolume);
+		_ad_decode_ulaw_buf(fill_ptr, as->ulawbuf, AO_BUFLEN,
+			as->is_music ? as->music_mlvolume : 0);
 		event_signal(&as->ulawbuf_empty_evt);
 	}
 }
@@ -229,7 +230,7 @@ SEQDEF(ASStreamCard, as_stream_card, 4_read_more, assc)
 
 //////////////////////////////////////////////////////////////////////////////
 
-r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, uint32_t end_address, uint8_t mlvolume, Activation *done_act)
+r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, uint32_t end_address, r_bool is_music, Activation *done_act)
 {
 	SYNCDEBUG();
 	as->block_address = block_address;
@@ -240,12 +241,17 @@ r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset,
 		// Maybe the best strategy is to end early rather than
 		// start late.
 	as->end_address = end_address;
-	as->mlvolume = mlvolume;
+	as->is_music = is_music;
 	as->done_act = done_act;
 		// TODO we just lose the previous callback in this case.
 		// hope that's okay.
 	event_signal(&as->play_request_evt);
 	return TRUE;
+}
+
+void as_set_music_volume(AudioStreamer *as, uint8_t music_mlvolume)
+{
+	as->music_mlvolume = music_mlvolume;
 }
 
 void as_stop_streaming(AudioStreamer *as)

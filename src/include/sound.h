@@ -21,6 +21,7 @@
 
 #define SOUND(symbol,source_file_name,filter,label) symbol,
 
+
 typedef enum e_sound_token {
 #include "sound.def"
 	sound_num_tokens
@@ -42,5 +43,10 @@ typedef struct {
 #define AUDIO_STREAM_BURST_EFFECTS		0
 #define AUDIO_STREAM_CONTINUOUS_EFFECTS	1
 #define AUDIO_STREAM_COUNTDOWN			2
+
+#define VOL_MAX (0)
+#define VOL_MIN (7)
+	// VOL_MIN==7: it's the largest integer value, but the quietest sound
+	// (because volume is minus logarithm; output = value >> volume).
 
 #endif // _sound_h

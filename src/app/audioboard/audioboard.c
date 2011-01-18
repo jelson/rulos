@@ -141,7 +141,7 @@ void audioled_init()
 void audioled_set(r_bool red, r_bool yellow)
 {
 #ifndef SIM
-	gpio_set_or_clr(AUDIO_LED_RED, !red);
+//	gpio_set_or_clr(AUDIO_LED_RED, !red);
 	gpio_set_or_clr(AUDIO_LED_YELLOW, !yellow);
 #endif // SIM
 }
@@ -181,8 +181,8 @@ void cmdproc_update(Activation *act)
 	else if (strncmp(buf, "play ", 5)==0)
 	{
 		SYNCDEBUG();
-		SoundCmd skip = {(buf[5]-'b'), cp->volume};
-		SoundCmd loop = {(buf[6]-'b'), cp->volume};
+		SoundCmd skip = {(buf[5]-'b')};
+		SoundCmd loop = {(buf[6]-'b')};
 		syncdebug(0, 's', skip.token);
 		syncdebug(0, 'l', loop.token);
 		_aserv_skip_to_clip(cp->audio_server, skip, loop);
@@ -227,6 +227,30 @@ void cmdproc_init(CmdProc *cp, AudioServer *audio_server, Network *network)
 	cp->act.func = cmdproc_update;
 	cp->volume = 256;
 	SYNCDEBUG();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+typedef struct {
+	Activation act;
+	uint8_t val;
+} BlinkAct;
+
+void _update_blink(Activation *act)
+{
+	BlinkAct *ba = (BlinkAct *) act;
+	ba->val = !ba->val;
+//	audioled_set(ba->val, 0);
+#ifndef SIM
+	gpio_set_or_clr(AUDIO_LED_RED, !ba->val);
+#endif //!SIM
+	schedule_us(1000000, &ba->act);
+}
+
+void blink_init(BlinkAct *ba)
+{
+	ba->act.func = _update_blink;
+	schedule_us(1000000, &ba->act);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -291,6 +315,9 @@ int main()
 	DACTest dt;
 	dt_init(&dt);
 #endif
+
+	BlinkAct ba;
+	blink_init(&ba);
 
 	cpumon_init(&mc.cmdproc.cpumon);	// includes slow calibration phase
 

@@ -22,7 +22,7 @@
 #include "screenblanker.h"
 
 typedef struct s_disco_handler {
-	UIEventHandlerFunc func;
+	UIEventHandler uieh;
 	struct s_disco *disco;
 } DiscoHandler;
 
@@ -34,6 +34,6 @@ typedef struct s_disco {
 	r_bool focused;
 } Disco;
 
-void disco_init(Disco *disco, AudioClient *audioClient, ScreenBlanker *screenblanker);
+void disco_init(Disco *disco, AudioClient *audioClient, ScreenBlanker *screenblanker, IdleAct *idle);
 
 #endif // _disco_h

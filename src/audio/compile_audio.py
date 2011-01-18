@@ -12,7 +12,8 @@ MAGIC = "RULOSMAGICSD"
 AUDIO_RATE=12000
 AUDIO_FILTERS={
 	'filter_none': '',
-	'filter_music': 'gain -6 bass -20',
+#	'filter_music': 'gain -6 bass -20',
+	'filter_music': 'bass -20',
 	}
 
 class AudioClip:
@@ -45,7 +46,7 @@ class AudioClip:
 
 	def sdcardEncoding(self):
 		postroll = self.aolen() - len(self)
-		return ("\0"*self.preroll()) + self.aubytes + ("\x7f"*postroll)
+		return ("\0"*self.preroll()) + self.aubytes + ("\0"*postroll)
 
 def avr_int32(x):
 	s = ""

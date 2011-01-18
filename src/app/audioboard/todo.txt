@@ -1,6 +1,6 @@
 {hardware}
 [ ] bigger 5v caps to clean power supply
-[ ] with jer: figure if we can configure op-amp to do what LM386 does.
+[ ] test a 9v in place of the voltage inverter? clean up output. (@jer's?)
 [ ] with jer's scope: scope output on triangle wave & clean it up (/||\/\/\)
 [ ] ADC
 
@@ -10,10 +10,14 @@
 [ ] add lots of screws to panels!
 
 {software}
+[ ] volume only affects disco
+[ ] reuse board buffer space of splash screen using union?
 [x] SPI error -> silence
 [x] volume knob
 [ ] disco music control interface
-[ ] volume knob UI
+[x] volume knob UI
+[ ] volume knob receive on audio board
+[ ] volume knob takes 228 bytes!!
 [ ] turn off volume prescaling in compile_audio
 [U] crank audioboard up to higher sample rate; fix 8-bit overflow bigger buffers
 	-- nope, AO_BUFLENG2==9 pushes RAM requirements to 2076; we just don't
@@ -25,7 +29,7 @@ Dang, BUFLENLG2=8 stopped working (ran out of RAM?); =7 too slow (due to volume?
 	wonder why we're missing the deadline. Need to carefully analyze time
 	budget (with logic analyzer?).
 [x] SPI DMA interface
-[ ] use linear, not ulaw. why waste cycles for an 8-bit dac!?
+[x] use linear, not ulaw. why waste cycles for an 8-bit dac!?
 Man, events suck.
 steady state:
 
@@ -60,3 +64,10 @@ _as_play:
 [ ] intercom code
 
 [ ] serial/eth adaptor
+
+Command for going to RC mode:
+	sudo avrdude -c usbtiny -p atmega328p -u -U lfuse:w:0xe2:m
+Command for going to "full swing crystal oscillator":
+	sudo avrdude -c usbtiny -p atmega328p -u -U lfuse:w:0xe6:m
+Command I actually sent, for going to internal 128kHz oscillator:
+	sudo avrdude -c usbtiny -p atmega328p -u -U lfuse:w:0xe3:m

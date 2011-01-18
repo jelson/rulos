@@ -22,14 +22,20 @@
 
 typedef struct {
 	SoundToken token;
-	uint8_t mlvolume;
 } SoundCmd;
 
 typedef struct {
-	uint8_t stream_idx;
 	r_bool skip;
 	SoundCmd skip_cmd;
 	SoundCmd loop_cmd;
 } AudioRequestMessage;
+
+typedef struct {
+	uint8_t music_mlvolume;
+} AudioVolumeMessage;
+
+typedef struct {
+	int8_t advance;	// +1: skip forward  -1: skip backward
+} MusicControlMessage;
 
 #endif // _audio_request_message_h

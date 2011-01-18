@@ -35,8 +35,12 @@ typedef struct s_audio_server {
 
 	AudioStreamer audio_streamer;
 
-	uint8_t recv_msg_alloc[sizeof(Message)+sizeof(AudioRequestMessage)];
-	RecvSlot recvSlot;
+	uint8_t arm_recv_msg_alloc[sizeof(Message)+sizeof(AudioRequestMessage)];
+	RecvSlot arm_recvSlot;
+	uint8_t avm_recv_msg_alloc[sizeof(Message)+sizeof(AudioVolumeMessage)];
+	RecvSlot avm_recvSlot;
+	uint8_t mcm_recv_msg_alloc[sizeof(Message)+sizeof(MusicControlMessage)];
+	RecvSlot mcm_recvSlot;
 
 	AudioServerAct fetch_start;
 	AudioServerAct fetch_complete;
@@ -50,6 +54,11 @@ typedef struct s_audio_server {
 	AuIndexRec magic;
 	AuIndexRec index[sound_num_tokens];
 	//AuIndexRec index[2];
+
+	r_bool music_random_seeded;
+	uint8_t cur_music_token; 	// ranges 0..num_music_tokens-1
+	uint8_t num_music_tokens;	// derived from index
+	uint8_t music_token_offset;	// offset into index where music starts.
 
 	SDCard *borrowed_sdc;
 } AudioServer;

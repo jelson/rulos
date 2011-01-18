@@ -92,7 +92,7 @@ uint16_t baud_to_ubrr(uint16_t baud)
 void hal_uart_init(UartHandler *handler, uint16_t baud, r_bool stop2)
 {
 	uint16_t ubrr = baud_to_ubrr(baud);
-	ubrr = (8000000 / 16 / 38400 - 1); // TODO back to variables
+//	ubrr = (8000000 / 16 / 38400 - 1); // TODO back to variables
 
 	// disable interrupts
 	cli();

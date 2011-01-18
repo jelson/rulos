@@ -26,6 +26,8 @@ AVR_ONLY_OBJECTS := \
 	pov.o \
 	hardware_spi.o \
 
+BSS_CANARY_OBJECT := bss_canary.o
+
 # NB pov, tilty_input are parts of magic wand project; never compiled SIM.
 # a bit sloppy.
 
@@ -73,7 +75,7 @@ HEX_EEPROM_FLAGS += --change-section-lma .eeprom=0 --no-change-warnings
 
 ## Objects that must be built in order to link
 AVR_LIB_OBJECTS := $(patsubst %.o,$(AVR_OBJDIR)/%.o,$(COMMON_OBJECTS) \
-	$(AVR_ONLY_OBJECTS) )
+	$(AVR_ONLY_OBJECTS) $(BSS_CANARY_OBJECT) )
 
 AVR_TARGET_OBJECTS := $(patsubst %.o,$(AVR_OBJDIR)/%.o, \
 	$(TARGET_OBJECTS))
@@ -122,7 +124,7 @@ $(ARCHTARG).elf: $(AVR_LIB_FILE) $(AVR_TARGET_OBJECTS)
 	avr-objcopy $(HEX_EEPROM_FLAGS) -O ihex $< $@ || exit 0
 
 %.lss: %.elf
-	avr-objdump -h -S $< > $@
+	avr-objdump -h -S --syms $< > $@
 
 .PHONY:
 $(ARCHTARG).size: $(ARCHTARG).elf

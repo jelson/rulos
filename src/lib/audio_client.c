@@ -43,12 +43,9 @@ r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx, SoundToken cur_token
 	ac->sendSlot.msg->dest_port = AUDIO_PORT;
 	ac->sendSlot.msg->payload_len = sizeof(AudioRequestMessage);
 	AudioRequestMessage *arm = (AudioRequestMessage *) &ac->sendSlot.msg->data;
-	arm->stream_idx = stream_idx;
 	arm->skip = TRUE;
 	arm->skip_cmd.token = cur_token;
-	arm->skip_cmd.mlvolume = 0;
 	arm->loop_cmd.token = loop_token;
-	arm->loop_cmd.mlvolume = 0;
 	net_send_message(ac->network, &ac->sendSlot);
 
 	return TRUE;
@@ -65,14 +62,45 @@ r_bool ac_queue_loop_clip(AudioClient *ac, uint8_t stream_idx, SoundToken loop_t
 	ac->sendSlot.msg->dest_port = AUDIO_PORT;
 	ac->sendSlot.msg->payload_len = sizeof(AudioRequestMessage);
 	AudioRequestMessage *arm = (AudioRequestMessage *) &ac->sendSlot.msg->data;
-	arm->stream_idx = stream_idx;
 	arm->skip = FALSE;
 	arm->skip_cmd.token = -1;
 	arm->loop_cmd.token = loop_token;
-	arm->loop_cmd.mlvolume = 0;
 	net_send_message(ac->network, &ac->sendSlot);
 
 	return TRUE;
 }
 
+r_bool ac_set_music_volume(AudioClient *ac, uint8_t mlvolume)
+{
+	if (ac->sendSlot.sending)
+	{
+		return FALSE;
+	}
+
+	ac->sendSlot.dest_addr = AUDIO_ADDR;
+	ac->sendSlot.msg->dest_port = SET_VOLUME_PORT;
+	ac->sendSlot.msg->payload_len = sizeof(AudioVolumeMessage);
+	AudioVolumeMessage *avm = (AudioVolumeMessage *) &ac->sendSlot.msg->data;
+	avm->music_mlvolume = mlvolume;
+	net_send_message(ac->network, &ac->sendSlot);
+
+	return TRUE;
+}
+
+r_bool ac_send_music_control(AudioClient *ac, int8_t advance)
+{
+	if (ac->sendSlot.sending)
+	{
+		return FALSE;
+	}
+
+	ac->sendSlot.dest_addr = AUDIO_ADDR;
+	ac->sendSlot.msg->dest_port = MUSIC_CONTROL_PORT;
+	ac->sendSlot.msg->payload_len = sizeof(MusicControlMessage);
+	MusicControlMessage *mcm = (MusicControlMessage *) &ac->sendSlot.msg->data;
+	mcm->advance = advance;
+	net_send_message(ac->network, &ac->sendSlot);
+
+	return TRUE;
+}
 

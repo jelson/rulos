@@ -22,15 +22,17 @@ void disco_paint_once(Disco *disco);
 UIEventDisposition disco_event_handler(
 	UIEventHandler *raw_handler, UIEvent evt);
 
-void disco_init(Disco *disco, AudioClient *audioClient, ScreenBlanker *screenblanker)
+void disco_init(Disco *disco, AudioClient *audioClient, ScreenBlanker *screenblanker, IdleAct *idle)
 {
 	disco->func = (ActivationFunc) disco_update;
-	disco->handler.func = (UIEventHandlerFunc) disco_event_handler;
+	disco->handler.uieh.func = (UIEventHandlerFunc) disco_event_handler;
 	disco->handler.disco = disco;
 
 	disco->audioClient = audioClient;
 	disco->screenblanker = screenblanker;
 	disco->focused = FALSE;
+
+	idle_add_handler(idle, &disco->handler.uieh);
 
 	schedule_us(1, (Activation*) disco);
 }
@@ -61,12 +63,27 @@ UIEventDisposition disco_event_handler(
 	switch (evt)
 	{
 		case uie_focus:
+			ac_send_music_control(disco->audioClient, +1);
 			disco->focused = TRUE;
 			break;
 		case uie_escape:
 			disco->focused = FALSE;
 			screenblanker_setmode(disco->screenblanker, sb_inactive);
 			result = uied_blur;
+			ac_skip_to_clip(disco->audioClient,
+				AUDIO_STREAM_CONTINUOUS_EFFECTS, sound_silence, sound_silence);
+			break;
+		case evt_idle_nowidle:
+			ac_skip_to_clip(disco->audioClient,
+				AUDIO_STREAM_CONTINUOUS_EFFECTS, sound_silence, sound_silence);
+			break;
+		case 'a':
+		case 'r':
+			ac_send_music_control(disco->audioClient, +1);
+			break;
+		case 'b':
+		case 's':
+			ac_send_music_control(disco->audioClient, -1);
 			break;
 	}
 	return result;

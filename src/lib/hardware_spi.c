@@ -62,17 +62,35 @@ void hal_init_spi()
 
 void hal_spi_set_fast(r_bool fast)
 {
-// 101 => fosc/8
-#define SLOW2 0
-#define SLOW1 1
-#define SLOW0 0
-#define FAST2 1
-#define FAST1 0
-#define FAST0 1
+// defs atmega328p page 174
+#define FOSC4	0
+#define FOSC16	1
+#define FOSC64	2
+#define FOSC128	3
+#define FOSC2	4
+#define FOSC8	5
+#define FOSC32	6
+#ifdef CRYSTAL
+	#if CRYSTAL==20000000
+		#define SLOW FOSC128
+		#define FAST FOSC16
+	#else
+		#error unimplemented crystal speed
+	#endif
+#else
+	// assume 8MHz internal RC
+	#define SLOW FOSC64
+	#define FAST FOSC8
+#endif
+
+#define SBIT(spd,bit)	(((spd)>>(bit))&1)
+
 	uint8_t spcr = (1<<SPIE) | (1<<SPE) | (1<<MSTR);
-	spcr |= (fast ?  ((FAST1<<SPR1) | (FAST0<<SPR0)) : ((SLOW1<<SPR1) | (SLOW0<<SPR0)));
+	spcr |= (fast ?
+			  ((SBIT(FAST,1)<<SPR1) | (SBIT(FAST,0)<<SPR0))
+			: ((SBIT(SLOW,1)<<SPR1) | (SBIT(SLOW,0)<<SPR0)));
 	SPCR = spcr;
-	SPSR = (fast ? (FAST2<<SPI2X) : (SLOW2<<SPI2X));
+	SPSR = (fast ? (SBIT(FAST,2)<<SPI2X) : (SBIT(SLOW,2)<<SPI2X));
 }
 
 void hal_spi_select_slave(r_bool select)

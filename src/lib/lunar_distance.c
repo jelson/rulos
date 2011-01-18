@@ -21,7 +21,7 @@ void lunar_distance_update(LunarDistance *ld);
 #define LD_CRUISE_SPEED (-237)
 #define LUNAR_DISTANCE 237674
 
-void lunar_distance_init(LunarDistance *ld, uint8_t dist_b0, uint8_t speed_b0, int adc_channel)
+void lunar_distance_init(LunarDistance *ld, uint8_t dist_b0, uint8_t speed_b0 /*, int adc_channel*/)
 {
 	ld->func = (ActivationFunc) lunar_distance_update;
 	drift_anim_init(&ld->da, 0, LUNAR_DISTANCE, 0, LUNAR_DISTANCE, 2376);
@@ -30,9 +30,10 @@ void lunar_distance_init(LunarDistance *ld, uint8_t dist_b0, uint8_t speed_b0, i
 	board_buffer_init(&ld->speed_board DBG_BBUF_LABEL("speed"));
 	board_buffer_push(&ld->speed_board, speed_b0);
 	da_set_velocity(&ld->da, 0);
-	ld->adc_channel = adc_channel;
+	/*ld->adc_channel = adc_channel;
 	hal_init_adc(10000);
 	hal_init_adc_channel(ld->adc_channel);
+	*/
 	schedule_us(1, (Activation*) ld);
 }
 
@@ -68,11 +69,13 @@ void lunar_distance_update(LunarDistance *ld)
 
 	int32_t fps = -ld->da.velocity * ((uint32_t)5280 * 1024 / 1000);
 
+/*
 	if (fps > 600)
 	{
 		// let user twiddle speed with pot
 		fps += (((int16_t) hal_read_adc(ld->adc_channel)) - 512)*20;
 	}
+*/
 
 	// add .03% noise to speed display
 	if (fps>100)
