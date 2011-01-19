@@ -1,4 +1,8 @@
+#include <stdbool.h>
 #include "momentary_display.h"
+
+void _momentary_display_update(Activation *act);
+void _momentary_display_recv(RecvSlot *recvSlot, uint8_t payload_len);
 
 void momentary_display_init(MomentaryDisplay *md, Time display_period, uint8_t board_num)
 {
@@ -46,6 +50,7 @@ void _momentary_display_recv(RecvSlot *recvSlot, uint8_t payload_len)
 	MomentaryDisplay *md = (MomentaryDisplay *) recvSlot->user_data;
 	assert(payload_len == sizeof(MomentaryDisplayMessage));
 	MomentaryDisplayMessage *mdm = (MomentaryDisplayMessage *) &recvSlot->msg->data;
-	board_buffer_ TODO LEFT OFF HERE drawing screen
+	ascii_to_bitmap_str(md->bbuf.buffer, NUM_DIGITS, mdm->ascii_message);
+	board_buffer_draw(&md->bbuf);
 	recvSlot->msg_occupied = FALSE;
 }

@@ -3,6 +3,7 @@
 
 #include "rocket.h"
 #include "network.h"
+#include "momentary_display_message.h"
 
 typedef struct {
 	Activation act;
@@ -16,6 +17,6 @@ typedef struct {
 	BoardBuffer bbuf;
 	r_bool is_visible;
 	Time last_display;
-}
+} MomentaryDisplay;
 
 #endif // _MOMENTARY_DISPLAY_H
