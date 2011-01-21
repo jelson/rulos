@@ -141,7 +141,7 @@ void audioled_init()
 void audioled_set(r_bool red, r_bool yellow)
 {
 #ifndef SIM
-//	gpio_set_or_clr(AUDIO_LED_RED, !red);
+	gpio_set_or_clr(AUDIO_LED_RED, !red);
 	gpio_set_or_clr(AUDIO_LED_YELLOW, !yellow);
 #endif // SIM
 }
@@ -156,7 +156,6 @@ typedef struct s_CmdProc {
 	SerialCmdAct sca;
 	Network *network;
 	AudioServer *audio_server;
-	uint16_t volume;
 	CpumonAct cpumon;
 } CmdProc;
 
@@ -189,8 +188,9 @@ void cmdproc_update(Activation *act)
 	}
 	else if (strncmp(buf, "vol ", 4)==0)
 	{
-		cp->volume = atoi_hex(&buf[4]);
-		syncdebug(0, 'V', cp->volume);
+		uint8_t v = atoi_hex(&buf[4]);
+		as_set_music_volume(&cp->audio_server->audio_streamer, v);
+		syncdebug(0, 'V', v);
 	}
 	else if (strncmp(buf, "spiact", 4)==0)
 	{
@@ -225,7 +225,6 @@ void cmdproc_init(CmdProc *cp, AudioServer *audio_server, Network *network)
 	serialcmd_init(&cp->sca, &cp->act);
 	SYNCDEBUG();
 	cp->act.func = cmdproc_update;
-	cp->volume = 256;
 	SYNCDEBUG();
 }
 
@@ -240,9 +239,9 @@ void _update_blink(Activation *act)
 {
 	BlinkAct *ba = (BlinkAct *) act;
 	ba->val = !ba->val;
-//	audioled_set(ba->val, 0);
+	audioled_set(ba->val, 0);
 #ifndef SIM
-	gpio_set_or_clr(AUDIO_LED_RED, !ba->val);
+//	gpio_set_or_clr(AUDIO_LED_RED, !ba->val);
 #endif //!SIM
 	schedule_us(1000000, &ba->act);
 }

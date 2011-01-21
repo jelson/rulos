@@ -71,3 +71,20 @@ Command for going to "full swing crystal oscillator":
 	sudo avrdude -c usbtiny -p atmega328p -u -U lfuse:w:0xe6:m
 Command I actually sent, for going to internal 128kHz oscillator:
 	sudo avrdude -c usbtiny -p atmega328p -u -U lfuse:w:0xe3:m
+
+Got keypad working: it was an initialization order problem (hal_init_keypad()
+must come after hal_init_clock()).
+Column 2 doesn't work; line INPUT1 (PD1) seems to be being held high,
+like it wasn't put into input state?
+
+Summary of learnings:
+- fixed 3/4 of keypad: an ordering dependency had been violated, and the
+poller's activation was getting lost b/c it was scheduled before clock started.
+- adding second board on usb 5V made audio on PC speakers scratchier
+- replacing -5V inverter with -12V wall wart solved that
+- yet big amp still sounds like poop. Will need scope and brain.
+- TWI was working, and then I tried the wall wart, and then it stopped working.
+I hope I didn't bake something. :v(
+- Volume code still harrably broken. (It sands harrable.)
+- Hmm. I just got one twi message through. Weird. Maybe bus power is wilting.
+- Sure sounds great on PC speakers!

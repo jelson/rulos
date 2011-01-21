@@ -136,6 +136,7 @@ void _aserv_fetch_complete(AudioServerAct *asa)
 	int i;
 	for (i=0; i<sound_num_tokens; i++)
 	{
+		syncdebug(0, 'i', i);
 		if (aserv->index[i].is_disco)
 		{
 			aserv->music_token_offset = i;
@@ -144,11 +145,16 @@ void _aserv_fetch_complete(AudioServerAct *asa)
 	}
 	for (i=aserv->music_token_offset; i<sound_num_tokens; i++)
 	{
+		syncdebug(0, 'j', i);
 		if (!aserv->index[i].is_disco)
 		{
 			aserv->num_music_tokens = i-aserv->music_token_offset;
 			break;
 		}
+	}
+	if (i==sound_num_tokens)
+	{
+		aserv->num_music_tokens = i-aserv->music_token_offset;
 	}
 
 	aserv->index_ready = TRUE;
@@ -207,6 +213,7 @@ void aserv_recv_mcm(RecvSlot *recvSlot, uint8_t payload_len)
 	{
 		if (!aserv->music_random_seeded)
 		{
+			syncdebug(0, 's', 0x5eed);
 			// first use? jump to a random song. random seed is 1/10ths of sec since boot.
 			aserv->cur_music_token =
 				(clock_time_us()/100000)
@@ -217,6 +224,9 @@ void aserv_recv_mcm(RecvSlot *recvSlot, uint8_t payload_len)
 		aserv->cur_music_token =
 			(aserv->cur_music_token + mcm->advance + aserv->num_music_tokens)
 			% (aserv->num_music_tokens);
+		syncdebug(0, 'd', mcm->advance);
+		syncdebug(0, 't', aserv->cur_music_token);
+		syncdebug(0, 'n', aserv->num_music_tokens);
 		// and start it playin'
 		SoundCmd music_cmd;
 		music_cmd.token = aserv->cur_music_token + aserv->music_token_offset;

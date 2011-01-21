@@ -154,12 +154,16 @@ AVROPTS := -p m8
 endif
 ifeq ($(MCU),atmega328p)
 #AVROPTS := -p m328p
-AVRCONFIG := ../../avrdude+atmega328p.conf
+AVRCONFIG := /etc/avrdude.conf
 
 $(AVRCONFIG): /etc/avrdude.conf ../../avrdude-atmega328p.conf
 	cat $^ > $@
 
 AVROPTS := -C $(AVRCONFIG) -p m328p
+endif
+ifeq ($(MCU),atmega1284p)
+AVRCONFIG := 
+AVROPTS := -p m1284p
 endif
 
 program: $(ARCHTARG).lss $(ARCHTARG).hex $(AVRCONFIG)

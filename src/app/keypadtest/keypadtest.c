@@ -17,6 +17,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "rocket.h"
 #include "uart.h"
@@ -29,6 +30,7 @@ typedef struct {
 	ActivationFunc f;
 	BoardBuffer bbuf_k;
 	BoardBuffer bbuf_u;
+	UartState_t uart;
 } KeyTestActivation_t;
 
 
@@ -49,7 +51,7 @@ static void update(KeyTestActivation_t *kta)
 		add_char_to_bbuf(&kta->bbuf_k, c);
 	}
 
-	while (uart_read(RULOS_UART0, &c)) {
+	while (uart_read(&kta->uart, (char*) &c)) {
 		LOGF((logfp, "got uart char %c\n", c));
 		add_char_to_bbuf(&kta->bbuf_u, c);
 	}
@@ -60,18 +62,17 @@ static void update(KeyTestActivation_t *kta)
 
 int main()
 {
-	heap_init();
 	util_init();
 	hal_init(bc_rocket0);
-	hal_init_keypad();
 	init_clock(10000, TIMER1);
+	hal_init_keypad();	// requires clock to be initted.
 	board_buffer_module_init();
-	uart_init(RULOS_UART0, 12);
 
-
-	uart_send(RULOS_UART0, TEST_STR, strlen(TEST_STR), NULL, NULL);
 
 	KeyTestActivation_t kta;
+	uart_init(&kta.uart, 38400, true);
+	uart_send(&kta.uart, TEST_STR, strlen(TEST_STR), NULL, NULL);
+
 	kta.f = (ActivationFunc) update;
 
 	board_buffer_init(&kta.bbuf_k);

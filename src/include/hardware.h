@@ -19,6 +19,14 @@
 
 #include <avr/io.h>
 
+#define GPIO_A0  (&DDRA), (&PORTA), (&PINA), (PORTA0)
+#define GPIO_A1  (&DDRA), (&PORTA), (&PINA), (PORTA1)
+#define GPIO_A2  (&DDRA), (&PORTA), (&PINA), (PORTA2)
+#define GPIO_A3  (&DDRA), (&PORTA), (&PINA), (PORTA3)
+#define GPIO_A4  (&DDRA), (&PORTA), (&PINA), (PORTA4)
+#define GPIO_A5  (&DDRA), (&PORTA), (&PINA), (PORTA5)
+#define GPIO_A6  (&DDRA), (&PORTA), (&PINA), (PORTA6)
+#define GPIO_A7  (&DDRA), (&PORTA), (&PINA), (PORTA7)
 #define GPIO_B0  (&DDRB), (&PORTB), (&PINB), (PORTB0)
 #define GPIO_B1  (&DDRB), (&PORTB), (&PINB), (PORTB1)
 #define GPIO_B2  (&DDRB), (&PORTB), (&PINB), (PORTB2)

@@ -62,7 +62,7 @@ void audioled_set(r_bool red, r_bool yellow);
 # define _UDRE     UDRE
 # define _UDRIE    UDRIE
 # define _USBS     USBS
-#elif defined(MCUatmega328p)
+#elif defined(MCUatmega328p) || defined(MCUatmega1284p)
 # define _UBRRH    UBRR0H
 # define _UBRRL    UBRR0L
 # define _UCSRA    UCSR0A
@@ -185,6 +185,15 @@ ISR(USART_RX_vect)
 	_handle_recv_ready(UDR0);
 }
 ISR(USART_UDRE_vect)
+{
+	_handle_send_ready();
+}
+#elif defined(MCUatmega1284p)
+ISR(USART0_RX_vect)
+{
+	_handle_recv_ready(UDR0);
+}
+ISR(USART0_UDRE_vect)
 {
 	_handle_send_ready();
 }

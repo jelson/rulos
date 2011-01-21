@@ -49,7 +49,7 @@ ISR(TIMER1_COMPA_vect)
 
 #if defined(MCUatmega8)
 ISR(TIMER2_COMP_vect)
-#elif defined (MCUatmega328p)
+#elif defined(MCUatmega328p) || defined(MCUatmega1284p)
 ISR(TIMER2_COMPA_vect)
 #else
 # error hardware-specific timer code needs help!
@@ -79,6 +79,10 @@ void init_f_cpu()
 # elif defined(MCUatmega328p)
 	// If we decide to do variable clock rates on 328p, see page 37
 	// for prescale configurations.
+	CLKPR = 0x80;
+	CLKPR = 0;
+	hardware_f_cpu = (uint32_t) 8000000;
+#elif defined (MCUatmega1284p)
 	CLKPR = 0x80;
 	CLKPR = 0;
 	hardware_f_cpu = (uint32_t) 8000000;
@@ -177,7 +181,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 		/* enable output-compare int. */
 #if defined(MCUatmega8)
 		TIMSK  |= _BV(OCIE1A);
-#elif defined (MCUatmega328p)
+#elif defined(MCUatmega328p) || defined(MCUatmega1284p)
 		TIMSK1 |= _BV(OCIE1A);
 #else
 # error hardware-specific timer code needs help!
@@ -203,7 +207,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 		OCR2 = ocr;
 		TCCR2 = tccr2a | tccr2b;
 		TIMSK  |= _BV(OCIE2); /* enable output-compare int. */
-#elif defined (MCUatmega328p)
+#elif defined(MCUatmega328p) || defined(MCUatmega1284p)
 		OCR2A = ocr;
 		TCCR2A = tccr2a;
 		TCCR2B = tccr2b;
