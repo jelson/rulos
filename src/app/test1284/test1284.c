@@ -27,6 +27,7 @@
 #include "audio_server.h"
 #include "audio_streamer.h"
 #include "sdcard.h"
+#include "serial_console.h"
 
 #if !SIM
 #include "hardware.h"
@@ -75,11 +76,33 @@ void blink_init(BlinkAct *ba)
 
 //////////////////////////////////////////////////////////////////////////////
 
+typedef struct {
+	Activation act;
+	SerialConsole console;
+} Shell;
+
+void shell_init(Shell *shell)
+{
+	shell->act.func = shell_func;
+	serial_console_init(&shell->console, &shell->act);
+}
+
+void shell_func(Activation *act)
+{
+	CmdProc *cp = (CmdProc *) act;
+	char *buf = cp->sca.cmd;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 int main()
 {
 	util_init();
 	hal_init(bc_audioboard);	// TODO need a "bc_custom"
 	init_clock(1000, TIMER1);
+	
+	Shell shell;
+	shell_init(&shell);
 
 	BlinkAct ba;
 	blink_init(&ba);

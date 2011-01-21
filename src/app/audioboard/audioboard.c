@@ -27,65 +27,15 @@
 #include "audio_server.h"
 #include "audio_streamer.h"
 #include "sdcard.h"
+#include "serial_console.h"
 
 //////////////////////////////////////////////////////////////////////////////
 void audioled_init();
 void audioled_set(r_bool red, r_bool yellow);
 //////////////////////////////////////////////////////////////////////////////
 
-typedef struct {
-	Activation act;
-	UartState_t uart;
-	char cmd[80];
-	char *cmd_ptr;
-	Activation *cmd_act;
-} SerialCmdAct;
+SerialConsole *g_serial_console = NULL;
 
-void serialcmd_update(Activation *act)
-{
-	SerialCmdAct *sca = (SerialCmdAct *) act;
-
-	char rcv_chr;
-	if (CharQueue_pop(sca->uart.recvQueue.q, &rcv_chr)) {
-		*(sca->cmd_ptr) = rcv_chr;
-		audioled_set(1, (((int)sca->cmd_ptr) & 1));
-
-		sca->cmd_ptr += 1;
-		if (sca->cmd_ptr == &sca->cmd[sizeof(sca->cmd)-1])
-		{
-			// Buffer full!
-			rcv_chr = '\n';
-		}
-		if (rcv_chr == '\n')
-		{
-			*(sca->cmd_ptr) = '\0';
-			sca->cmd_ptr = sca->cmd;
-			(sca->cmd_act->func)(sca->cmd_act);
-		}
-	}
-
-	schedule_us(120, &sca->act);
-}
-
-SerialCmdAct *g_serialcmd = NULL;
-
-void serialcmd_init(SerialCmdAct *sca, Activation *cmd_act)
-{
-	uart_init(&sca->uart, 38400, TRUE);
-	sca->act.func = serialcmd_update;
-	sca->cmd_ptr = sca->cmd;
-	sca->cmd_act = cmd_act;
-
-	g_serialcmd = sca;
-
-	schedule_us(1000, &sca->act);
-}
-
-void serialcmd_sync_send(SerialCmdAct *act, char *buf, uint16_t buflen)
-{
-	uart_send(&act->uart, buf, buflen, NULL, NULL);
-	while (uart_busy(&act->uart)) { }
-}
 
 #define SYNCDEBUG()	syncdebug(0, 'A', __LINE__)
 void syncdebug(uint8_t spaces, char f, uint16_t line)
@@ -109,7 +59,7 @@ void syncdebug(uint8_t spaces, char f, uint16_t line)
 	}
 	strcat(buf, hexbuf);
 	strcat(buf, "\n");
-	serialcmd_sync_send(g_serialcmd, buf, strlen(buf));
+	serial_console_sync_send(g_serial_console, buf, strlen(buf));
 }
 
 void syncdebug32(uint8_t spaces, char f, uint32_t line)
@@ -153,7 +103,7 @@ struct s_CmdProc;
 
 typedef struct s_CmdProc {
 	Activation act;
-	SerialCmdAct sca;
+	SerialConsole sca;
 	Network *network;
 	AudioServer *audio_server;
 	CpumonAct cpumon;
@@ -162,7 +112,7 @@ typedef struct s_CmdProc {
 void cmdproc_update(Activation *act)
 {
 	CmdProc *cp = (CmdProc *) act;
-	char *buf = cp->sca.cmd;
+	char *buf = cp->sca.line;
 
 	SYNCDEBUG();
 #if !SIM
@@ -214,7 +164,7 @@ void cmdproc_update(Activation *act)
 		strcpy(reply_buf, "error: \"");
 		strcat(reply_buf, buf);
 		strcat(reply_buf, "\"\n");
-		serialcmd_sync_send(&cp->sca, reply_buf, strlen(reply_buf));
+		serial_console_sync_send(&cp->sca, reply_buf, strlen(reply_buf));
 	}
 }
 
@@ -222,7 +172,8 @@ void cmdproc_init(CmdProc *cp, AudioServer *audio_server, Network *network)
 {
 	cp->audio_server = audio_server;
 	cp->network = network;
-	serialcmd_init(&cp->sca, &cp->act);
+	serial_console_init(&cp->sca, &cp->act);
+	g_serial_console = &cp->sca;
 	SYNCDEBUG();
 	cp->act.func = cmdproc_update;
 	SYNCDEBUG();

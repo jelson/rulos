@@ -78,6 +78,7 @@ COMMON_OBJECTS = \
 	spi.o \
 	volume_control.o \
 	momentary_display.o \
+	serial_console.o \
 
 #	spiflash.o \
 #	audio_driver.o \

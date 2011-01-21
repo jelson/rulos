@@ -1,0 +1,8 @@
+#ifndef _HARDWARE_GRAPHIC_LCD_12232_H
+#define _HARDWARE_GRAPHIC_LCD_12232_H
+
+typedef struct {
+	
+} GLCD;
+
+#endif // _HARDWARE_GRAPHIC_LCD_12232_H
