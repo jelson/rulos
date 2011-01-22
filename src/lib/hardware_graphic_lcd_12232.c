@@ -31,16 +31,19 @@ void glcd_complete_init(Activation *act);
 // kudos for reference code from:
 // http://en.radzio.dxp.pl/sed1520/sed1520.zip
 
-#define GLCD_EVENT_BUSY		0x80
-#define GLCD_EVENT_RESET	0x10
+#define GLCD_EVENT_BUSY				0x80
+#define GLCD_EVENT_RESET			0x10
 
-#define GLCD_CMD_DISPLAY_ON	0xAF
-#define GLCD_CMD_DISPLAY_OFF	0xAE
+#define GLCD_CMD_DISPLAY_ON			0xAF
+#define GLCD_CMD_DISPLAY_OFF		0xAE
 #define GLCD_CMD_DISPLAY_START_LINE	0xC0
-#define GLCD_CMD_RESET 0xE2
+#define GLCD_CMD_RESET				0xE2
+#define GLCD_CMD_SET_PAGE			0xb8
+#define GLCD_CMD_SET_COLUMN			0x00
 
 #define GLCD_READ       1
 #define GLCD_WRITE      0
+
 void glcd_set_bus_dir(r_bool dir)
 {
 	// TODO life would be faster if hardware had data bus aligned
@@ -142,18 +145,26 @@ static inline void glcd_strobe(uint8_t unit)
 	}
 }
 
-void glcd_write_cmd(uint8_t cmd, uint8_t unit)
+void glcd_write(uint8_t val, uint8_t unit, uint8_t a0)
 {
 	glcd_wait_status_event(GLCD_EVENT_BUSY, unit);
 
 	gpio_clr(GLCD_RW);	// write
-	gpio_clr(GLCD_A0);	// cmd
-	glcd_data_out(cmd);
+	gpio_set_or_clr(GLCD_A0, a0);
+	glcd_data_out(val);
 	glcd_strobe(unit);
 }
 
-#define F_CPU 8000000
-#include <util/delay.h>
+static void glcd_write_cmd(uint8_t cmd, uint8_t unit)
+{
+	glcd_write(cmd, unit, 0);
+}
+
+static void glcd_write_data(uint8_t data, uint8_t unit)
+{
+	glcd_write(data, unit, 1);
+}
+
 void glcd_init(GLCD *glcd, Activation *done_act)
 {
 	glcd->done_act = done_act;
@@ -166,30 +177,70 @@ void glcd_init(GLCD *glcd, Activation *done_act)
 	gpio_make_output(GLCD_A0);
 	gpio_make_output(GLCD_RESET);
 
-	// Hardware reset
+	// start hardware reset
 	gpio_clr(GLCD_RESET);
-	_delay_ms(10);
-	gpio_set(GLCD_RESET);
-	glcd_complete_init(&glcd->act);
-/*
+
+	// let rest of system run during 10ms delay
 	glcd->act.func = glcd_complete_init;
 	schedule_us(10000, &glcd->act);
-*/
 }
 
 void glcd_complete_init(Activation *act)
 {
+	// complete hardware reset
 	GLCD *glcd = (GLCD*) act;
 	gpio_set(GLCD_RESET);
 
+	// request software reset
 	glcd_write_cmd(GLCD_CMD_RESET, 0);
 	glcd_write_cmd(GLCD_CMD_RESET, 1);
 	glcd_wait_status_event(GLCD_EVENT_RESET, 0);
 	glcd_wait_status_event(GLCD_EVENT_RESET, 1);
+
 	glcd_write_cmd(GLCD_CMD_DISPLAY_ON, 0);
 	glcd_write_cmd(GLCD_CMD_DISPLAY_ON, 1);
+	/*
 	glcd_write_cmd(GLCD_CMD_DISPLAY_START_LINE | 0, 0);
 	glcd_write_cmd(GLCD_CMD_DISPLAY_START_LINE | 0, 1);
+	*/
+
+	{
+		glcd_clear_framebuffer(glcd);
+		glcd->framebuffer[0][3+0] = 0x80;
+		glcd->framebuffer[1][3+0] = 0xc0;
+		glcd->framebuffer[2][3+0] = 0xe0;
+		glcd->framebuffer[3][3+0] = 0xf0;
+		glcd->framebuffer[4][3+0] = 0xf8;
+		glcd->framebuffer[5][3+0] = 0xfc;
+		glcd->framebuffer[6][3+0] = 0xfe;
+		glcd->framebuffer[7][3+0] = 0xff;
+		glcd->framebuffer[8+0][3+1] = 0x80;
+		glcd->framebuffer[8+1][3+1] = 0xc0;
+		glcd->framebuffer[8+2][3+1] = 0xe0;
+		glcd->framebuffer[8+3][3+1] = 0xf0;
+		glcd->framebuffer[8+4][3+1] = 0xf8;
+		glcd->framebuffer[8+5][3+1] = 0xfc;
+		glcd->framebuffer[8+6][3+1] = 0xfe;
+		glcd->framebuffer[8+7][3+1] = 0xff;
+		glcd->framebuffer[16+0][3+2] = 0x80;
+		glcd->framebuffer[16+1][3+2] = 0xc0;
+		glcd->framebuffer[16+2][3+2] = 0xe0;
+		glcd->framebuffer[16+3][3+2] = 0xf0;
+		glcd->framebuffer[16+4][3+2] = 0xf8;
+		glcd->framebuffer[16+5][3+2] = 0xfc;
+		glcd->framebuffer[16+6][3+2] = 0xfe;
+		glcd->framebuffer[16+7][3+2] = 0xff;
+	}
+	glcd_draw_framebuffer(glcd);
+
+#if 0
+	// test pattern
+	int i;
+	for (i=0; i<32; i++)
+	{
+		GLCD_SetPixel(i, i, i&1);
+	}
+#endif
 
 	if (glcd->done_act!=NULL)
 	{
@@ -197,6 +248,81 @@ void glcd_complete_init(Activation *act)
 	}
 }
 
+#if 0
+void glcd_clear_screen(GLCD *glcd)
+{
+	uint8_t unit, page, column;
+	for (unit=0; unit<2; unit++)
+	{
+		for (page=0; page<4; page++)
+		{
+			glcd_write_cmd(GLCD_CMD_SET_PAGE | page, unit);
+			glcd_write_cmd(GLCD_CMD_SET_COLUMN | 0, unit);
+			for (column=0; column<122/2; column++)
+			{
+				glcd_write_data(0, unit);
+			}
+		}
+	}
+}
+#endif
+
+void syncdebug(uint8_t spaces, char f, uint16_t line);
+
+static uint8_t _glcd_fetch_column(GLCD *glcd, uint8_t page, uint8_t col)
+{
+	uint8_t y_base = page << 3;
+	uint8_t x_byte = col>>3;
+	uint8_t x_bit_shift = 7-(col&0x7);
+	return 0
+		| (((glcd->framebuffer[y_base+0][x_byte] >> x_bit_shift)&1)<< 0)
+		| (((glcd->framebuffer[y_base+1][x_byte] >> x_bit_shift)&1)<< 1)
+		| (((glcd->framebuffer[y_base+2][x_byte] >> x_bit_shift)&1)<< 2)
+		| (((glcd->framebuffer[y_base+3][x_byte] >> x_bit_shift)&1)<< 3)
+		| (((glcd->framebuffer[y_base+4][x_byte] >> x_bit_shift)&1)<< 4)
+		| (((glcd->framebuffer[y_base+5][x_byte] >> x_bit_shift)&1)<< 5)
+		| (((glcd->framebuffer[y_base+6][x_byte] >> x_bit_shift)&1)<< 6)
+		| (((glcd->framebuffer[y_base+7][x_byte] >> x_bit_shift)&1)<< 7)
+		;
+}
+
+void glcd_clear_framebuffer(GLCD *glcd)
+{
+	int r, b;
+	for (r=0; r<BITMAP_NUM_ROWS; r++)
+	{
+		for (b=0; b<BITMAP_ROW_LEN; b++)
+		{
+			glcd->framebuffer[r][b] = 0;
+		}
+	}
+}
+
+void glcd_draw_framebuffer(GLCD *glcd)
+{
+	uint8_t page, column;
+	for (page=0; page<4; page++)
+	{
+		syncdebug(2, 'p', page);
+		glcd_write_cmd(GLCD_CMD_SET_PAGE | page, 0);
+		glcd_write_cmd(GLCD_CMD_SET_COLUMN | 0, 0);
+		for (column=0; column<62; column++)
+		{
+			uint8_t colval = _glcd_fetch_column(glcd, page, column);
+			glcd_write_data(colval, 0);
+		}
+		glcd_write_cmd(GLCD_CMD_SET_PAGE | page, 1);
+		glcd_write_cmd(GLCD_CMD_SET_COLUMN | 0, 1);
+		for (column=62; column<122; column++)
+		{
+			uint8_t colval = _glcd_fetch_column(glcd, page, column);
+			glcd_write_data(colval, 1);
+		}
+	}
+}
+
+
+#if 0
 //////////////////////////////////////////////////////////////////////////////
 
 //-------------------------------------------------------------------------------------------------
@@ -244,28 +370,6 @@ void GLCD_WaitForStatus(unsigned char status, unsigned char controller)
 //-------------------------------------------------------------------------------------------------
 // Write command
 //-------------------------------------------------------------------------------------------------
-void GLCD_WriteCommand(unsigned char commandToWrite,unsigned char ctrl)
-{
-	GLCD_WaitForStatus(0x80, ctrl);
-
-	gpio_clr(GLCD_A0);
-	gpio_clr(GLCD_RW);
-
-	glcd_data_out(commandToWrite);
-
-	if(ctrl)
-	{
-		gpio_set(GLCD_CS2);
-		asm("nop");asm("nop");
-		gpio_clr(GLCD_CS2);
-	}
-	else
-	{
-		gpio_set(GLCD_CS1);
-		asm("nop");asm("nop");
-		gpio_clr(GLCD_CS1);
-	}
-}
 //-------------------------------------------------------------------------------------------------
 // Write data
 //-------------------------------------------------------------------------------------------------
@@ -363,7 +467,6 @@ unsigned char GLCD_ReadData(void)
 #define SCREEN_WIDTH	122
 
 void GLCD_WaitForStatus(unsigned char,unsigned char);
-void GLCD_WriteCommand(unsigned char,unsigned char);
 void GLCD_GoTo(unsigned char,unsigned char);
 void GLCD_WriteData(unsigned char);
 unsigned char GLCD_ReadData(void);
@@ -376,8 +479,6 @@ void GLCD_Bitmap(char * , unsigned char, unsigned char, unsigned char, unsigned 
 unsigned char lcd_x = 0, lcd_y = 0;
 //-------------------------------------------------------------------------------------------------
 extern void GLCD_WaitForStatus(unsigned char, unsigned char);
-extern void GLCD_WriteCommand(unsigned char, unsigned char);
-extern void GLCD_WriteDatta(unsigned char);
 extern unsigned char GLCD_ReadData(void);
 //-------------------------------------------------------------------------------------------------
 //
@@ -389,15 +490,15 @@ lcd_y = y;
 
 if(x < (SCREEN_WIDTH/2))
   {
-  GLCD_WriteCommand(COLUMN_ADDRESS_SET | lcd_x, 0);
-  GLCD_WriteCommand(PAGE_ADDRESS_SET | lcd_y, 0);
-  GLCD_WriteCommand(COLUMN_ADDRESS_SET | 0, 1);
-  GLCD_WriteCommand(PAGE_ADDRESS_SET | lcd_y, 1);
+  glcd_write_cmd(COLUMN_ADDRESS_SET | lcd_x, 0);
+  glcd_write_cmd(PAGE_ADDRESS_SET | lcd_y, 0);
+  glcd_write_cmd(COLUMN_ADDRESS_SET | 0, 1);
+  glcd_write_cmd(PAGE_ADDRESS_SET | lcd_y, 1);
   }
 else
   {
-  GLCD_WriteCommand(COLUMN_ADDRESS_SET | (lcd_x - (SCREEN_WIDTH/2)), 1);
-  GLCD_WriteCommand(PAGE_ADDRESS_SET | lcd_y, 1);
+  glcd_write_cmd(COLUMN_ADDRESS_SET | (lcd_x - (SCREEN_WIDTH/2)), 1);
+  glcd_write_cmd(PAGE_ADDRESS_SET | lcd_y, 1);
   }
 }
 //-------------------------------------------------------------------------------------------------
@@ -472,3 +573,4 @@ for(j = 0; j < dy / 8; j++)
 //-------------------------------------------------------------------------------------------------
 //
 //-------------------------------------------------------------------------------------------------
+#endif

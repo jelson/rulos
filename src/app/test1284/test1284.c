@@ -161,6 +161,14 @@ void shell_func(Activation *act)
 	if (strcmp(line, "test\n")==0)
 	{
 		SYNCDEBUG();
+#if 0
+		int i;
+		for (i=0; i<20; i++)
+		{
+			GLCD_SetPixel(20-i, i, i&1);
+		}
+#endif
+		
 		//glcd_init();
 		//GLCD_Init();
 	}
@@ -218,11 +226,6 @@ int main()
 	//glcd_init();
 	GLCD glcd;
 	glcd_init(&glcd, NULL);
-		int i;
-		for (i=0; i<20; i++)
-		{
-			GLCD_SetPixel(i, i, i&1);
-		}
 //	glcd_set_backlight(true);
 #endif
 	
