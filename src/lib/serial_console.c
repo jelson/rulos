@@ -54,6 +54,7 @@ void serial_console_init(SerialConsole *sca, Activation *line_act)
 
 void serial_console_sync_send(SerialConsole *act, char *buf, uint16_t buflen)
 {
+	while (uart_busy(&act->uart)) { }
 	uart_send(&act->uart, buf, buflen, NULL, NULL);
 	while (uart_busy(&act->uart)) { }
 }

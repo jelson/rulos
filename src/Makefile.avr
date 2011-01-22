@@ -25,6 +25,7 @@ AVR_ONLY_OBJECTS := \
 	tilty_input.o \
 	pov.o \
 	hardware_spi.o \
+	hardware_graphic_lcd_12232.o \
 
 BSS_CANARY_OBJECT := bss_canary.o
 

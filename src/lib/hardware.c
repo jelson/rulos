@@ -55,6 +55,12 @@ static void init_pins()
 	gpio_make_input(KEYPAD_COL2);
 	gpio_make_input(KEYPAD_COL3);
 #endif
+
+#ifdef MCUatmega1284p
+// Disable JTAG, which opens up PC2..PC5 as gpios (or their other features)
+	MCUCR |= _BV(JTD);
+	MCUCR |= _BV(JTD);
+#endif // MCUatmega1284p
 }
 
 
