@@ -158,46 +158,47 @@ void shell_func(Activation *act)
 #if !SIM
 	gpio_set_or_clr(GPIO_D3, shell->toggle);
 
-	if (strcmp(line, "init\n")==0)
+	if (strcmp(line, "test\n")==0)
 	{
 		SYNCDEBUG();
-		glcd_init();
+		//glcd_init();
+		//GLCD_Init();
 	}
 	else if (strncmp(line, "vbl", 3)==0)
 	{
 		uint8_t v = line[4]-'0';
-		glcd_set_backlight(v!=0);
+//		glcd_set_backlight(v!=0);
 		syncdebug(2, 'b', v!=0);
 	}
 	else if (strncmp(line, "status", 6)==0)
 	{
 		SYNCDEBUG();
-		uint8_t bias = line[7]-'0';
-		uint16_t v = glcd_read_status(bias);
-		syncdebug(2, 's', v);
+//		uint8_t bias = line[7]-'0';
+//		uint16_t v = glcd_read_status(bias);
+//		syncdebug(2, 's', v);
 	}
 	else if (strncmp(line, "display", 7)==0)
 	{
 		uint8_t v = line[8]-'0';
 		syncdebug(2, 'd', v!=0);
-		glcd_set_display_on(v!=0);
+//		glcd_set_display_on(v!=0);
 	}
 	else if (strncmp(line, "status", 6)==0)
 	{
 		SYNCDEBUG();
-		uint8_t bias = line[7]-'0';
-		uint16_t v = glcd_read_status(bias);
-		syncdebug(2, 's', v);
+//		uint8_t bias = line[7]-'0';
+//		uint16_t v = glcd_read_status(bias);
+//		syncdebug(2, 's', v);
 	}
 	else if (strcmp(line, "read\n")==0)
 	{
 		SYNCDEBUG();
-		glcd_read_test();
+//		glcd_read_test();
 	}
 	else if (strcmp(line, "write\n")==0)
 	{
 		SYNCDEBUG();
-		glcd_write_test();
+//		glcd_write_test();
 	}
 #else
 	line++;
@@ -214,8 +215,15 @@ int main()
 	init_clock(1000, TIMER1);
 
 #if !SIM
-	glcd_init();
-	glcd_set_backlight(true);
+	//glcd_init();
+	GLCD glcd;
+	glcd_init(&glcd, NULL);
+		int i;
+		for (i=0; i<20; i++)
+		{
+			GLCD_SetPixel(i, i, i&1);
+		}
+//	glcd_set_backlight(true);
 #endif
 	
 	Shell shell;
