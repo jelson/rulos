@@ -42,6 +42,7 @@
 #include "util.h"
 #include "display_controller.h"
 #include "uart.h"
+#include "graphic_lcd_12232.h"
 #include "sim.h"
 
 static void twi_poll(const char *source);
@@ -1142,3 +1143,19 @@ void hal_audio_fire_latch(void)
 void hal_audio_shift_sample(uint8_t sample)
 {
 }
+
+void glcd_init(GLCD *glcd, Activation *done_act)
+{}
+
+void glcd_draw_framebuffer(GLCD *glcd)
+{}
+
+void glcd_clear_framebuffer(GLCD *glcd)
+{}
+
+uint8_t glcd_paint_char(GLCD *glcd, char glyph, uint8_t dx0)
+{
+	return 0;
+}
+
+

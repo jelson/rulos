@@ -1,5 +1,8 @@
 #include "hardware_graphic_lcd_12232.h"
 
+#include <avr/pgmspace.h>
+#include "lcdrasters_auto.ch"
+
 //////////////////////////////////////////////////////////////////////////////
 // Board I/O mapping defs
 // These are in order down the right side (pins 40-21) of a 1284p PDIP.
@@ -30,6 +33,8 @@ void glcd_complete_init(Activation *act);
 //////////////////////////////////////////////////////////////////////////////
 // kudos for reference code from:
 // http://en.radzio.dxp.pl/sed1520/sed1520.zip
+
+#define DISPLAY_WIDTH				122
 
 #define GLCD_EVENT_BUSY				0x80
 #define GLCD_EVENT_RESET			0x10
@@ -204,6 +209,9 @@ void glcd_complete_init(Activation *act)
 	glcd_write_cmd(GLCD_CMD_DISPLAY_START_LINE | 0, 1);
 	*/
 
+	// turn on the backlight
+	gpio_set(GLCD_VBL);
+
 	{
 		glcd_clear_framebuffer(glcd);
 		glcd->framebuffer[0][3+0] = 0x80;
@@ -306,14 +314,14 @@ void glcd_draw_framebuffer(GLCD *glcd)
 		syncdebug(2, 'p', page);
 		glcd_write_cmd(GLCD_CMD_SET_PAGE | page, 0);
 		glcd_write_cmd(GLCD_CMD_SET_COLUMN | 0, 0);
-		for (column=0; column<62; column++)
+		for (column=0; column<(DISPLAY_WIDTH/2); column++)
 		{
 			uint8_t colval = _glcd_fetch_column(glcd, page, column);
 			glcd_write_data(colval, 0);
 		}
 		glcd_write_cmd(GLCD_CMD_SET_PAGE | page, 1);
 		glcd_write_cmd(GLCD_CMD_SET_COLUMN | 0, 1);
-		for (column=62; column<122; column++)
+		for (column=(DISPLAY_WIDTH/2); column<DISPLAY_WIDTH; column++)
 		{
 			uint8_t colval = _glcd_fetch_column(glcd, page, column);
 			glcd_write_data(colval, 1);
@@ -321,256 +329,49 @@ void glcd_draw_framebuffer(GLCD *glcd)
 	}
 }
 
-
-#if 0
-//////////////////////////////////////////////////////////////////////////////
-
-//-------------------------------------------------------------------------------------------------
-//
-//-------------------------------------------------------------------------------------------------
-
-#include <avr/io.h>
-
-#define SCREEN_WIDTH	122
-
-extern unsigned char lcd_x, lcd_y;
-//-------------------------------------------------------------------------------------------------
-//
-//-------------------------------------------------------------------------------------------------
-
-//-------------------------------------------------------------------------------------------------
-//
-//-------------------------------------------------------------------------------------------------
-void GLCD_WaitForStatus(unsigned char status, unsigned char controller)
+uint8_t _glcd_find_glyph_index(char glyph)
 {
-	uint8_t tmp;
-	gpio_clr(GLCD_A0);
-	gpio_set(GLCD_RW);
-	glcd_set_bus_dir(GLCD_READ);
-
-	do
+	uint8_t index;
+	for (index = 0; index<lcd_num_syms; index++)
 	{
-		if(controller == 0) 
+		uint8_t table_glyph = pgm_read_byte(lcd_index_to_sym+index);
+		if (table_glyph==glyph)
 		{
-			gpio_set(GLCD_CS1);
-			asm("nop");asm("nop"); 
-			tmp = glcd_data_in();
-			gpio_clr(GLCD_CS1);
-		} 
-		else 
-		{
-			gpio_set(GLCD_CS2);
-			asm("nop");asm("nop"); 
-			tmp = glcd_data_in();
-			gpio_clr(GLCD_CS2);
+			return index;
 		}
-	} while(tmp & status);
-	glcd_set_bus_dir(GLCD_WRITE);
+	}
+	return 0xff;
 }
-//-------------------------------------------------------------------------------------------------
-// Write command
-//-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
-// Write data
-//-------------------------------------------------------------------------------------------------
-void GLCD_WriteData(unsigned char dataToWrite)
+
+#define SYNCDEBUG()	syncdebug(0, 'G', __LINE__)
+
+uint8_t glcd_paint_char(GLCD *glcd, char glyph, uint8_t dx0)
 {
-	GLCD_WaitForStatus(0x80, 0);
-	GLCD_WaitForStatus(0x80, 1);
-
-	gpio_set(GLCD_A0);
-	gpio_clr(GLCD_RW);
-
-	glcd_data_out(dataToWrite);
-
-	if(lcd_x < 61) 
+	uint8_t index = _glcd_find_glyph_index(glyph);
+	syncdebug(0, 'i', index);
+	if (index==0xff)
 	{
-		gpio_set(GLCD_CS1);
-		asm("nop");asm("nop");
-		gpio_clr(GLCD_CS1);
+		syncdebug(16, 'f', 0xfefe);
+		return 0;
 	}
-	else
+
+	// glyph addresses
+	uint16_t gx0 = pgm_read_word(((uint16_t*)lcd_index_to_x)+index);
+	uint16_t gx1 = pgm_read_word(((uint16_t*)lcd_index_to_x)+(index+1));
+
+	uint16_t y, gx, dx;
+	uint8_t *dptr;
+	for (y=0; y<32; y++)
 	{
-		gpio_set(GLCD_CS2);
-		asm("nop");asm("nop");
-		gpio_clr(GLCD_CS2);
+		dptr = glcd->framebuffer[y];
+		uint16_t g_row_base = lcd_row_width_bytes * y;
+		for (gx=gx0, dx=dx0; gx<gx1 && dx<DISPLAY_WIDTH; gx++, dx++)
+		{
+			uint16_t g_byte = g_row_base + (gx>>3);
+			uint8_t g_data = ~pgm_read_byte(lcd_data+g_byte);
+			uint8_t bit = (g_data >> (7-(gx&7))) & 1;
+			dptr[dx>>3] |= (bit<<(7-(dx&7)));
+		}
 	}
-	lcd_x++;
-	if(lcd_x >= SCREEN_WIDTH)
-		lcd_x = 0;
+	return dx-dx0;
 }
-//-------------------------------------------------------------------------------------------------
-// Read data
-//-------------------------------------------------------------------------------------------------
-unsigned char GLCD_ReadData(void)
-{
-	unsigned char tmp;
-
-	GLCD_WaitForStatus(0x80, 0); 
-	GLCD_WaitForStatus(0x80, 1); 
-	gpio_set(GLCD_A0);
-	gpio_set(GLCD_RW);
-	glcd_set_bus_dir(GLCD_READ);
-	glcd_data_out(0xff);
-
-	if(lcd_x < 61)
-	{
-		gpio_set(GLCD_CS1);
-		asm("nop");asm("nop");
-		gpio_clr(GLCD_CS1);
-		asm("nop");asm("nop");
-		gpio_set(GLCD_CS1);
-		asm("nop");asm("nop");
-		tmp = glcd_data_in();
-		gpio_clr(GLCD_CS1);
-	}
-	else 
-	{	
-		gpio_set(GLCD_CS2);
-		asm("nop");asm("nop");
-		gpio_clr(GLCD_CS2);
-		asm("nop");asm("nop");
-		gpio_set(GLCD_CS2);
-		asm("nop");asm("nop");
-		tmp = glcd_data_in();
-		gpio_clr(GLCD_CS2);
-	}
-	glcd_set_bus_dir(GLCD_WRITE);
-	lcd_x++; 
-	if(lcd_x > 121)
-		lcd_x = 0;
-	return tmp;
-}
-//-------------------------------------------------------------------------------------------------
-//
-//-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
-//
-
-//-------------------------------------------------------------------------------------------------
-//
-//-------------------------------------------------------------------------------------------------
-
-
-#define PAGE_ADDRESS_SET 0xB8
-#define COLUMN_ADDRESS_SET 0x00
-#define ADC_CLOCKWISE 0xA0
-#define ADC_COUNTERCLOCKWISE 0xA1
-#define STATIC_DRIVE_ON 0xA5
-#define STATIC_DRIVE_OFF 0xA4
-#define DUTY_RATIO_16 0xA8
-#define DUTY_RATIO_32 0xA9
-#define READ_MODIFY_WRITE 0xE0
-#define END_READ_MODIFY 0xEE
-
-
-#define SCREEN_WIDTH	122
-
-void GLCD_WaitForStatus(unsigned char,unsigned char);
-void GLCD_GoTo(unsigned char,unsigned char);
-void GLCD_WriteData(unsigned char);
-unsigned char GLCD_ReadData(void);
-void GLCD_ClearScreen(void);
-void GLCD_WriteChar(char);
-void GLCD_WriteString(char *);
-void GLCD_SetPixel(unsigned char, unsigned char, unsigned char);
-void GLCD_Bitmap(char * , unsigned char, unsigned char, unsigned char, unsigned char);
-//-------------------------------------------------------------------------------------------------
-unsigned char lcd_x = 0, lcd_y = 0;
-//-------------------------------------------------------------------------------------------------
-extern void GLCD_WaitForStatus(unsigned char, unsigned char);
-extern unsigned char GLCD_ReadData(void);
-//-------------------------------------------------------------------------------------------------
-//
-//-------------------------------------------------------------------------------------------------
-void GLCD_GoTo(unsigned char x,unsigned char y)
-{
-lcd_x = x;
-lcd_y = y;
-
-if(x < (SCREEN_WIDTH/2))
-  {
-  glcd_write_cmd(COLUMN_ADDRESS_SET | lcd_x, 0);
-  glcd_write_cmd(PAGE_ADDRESS_SET | lcd_y, 0);
-  glcd_write_cmd(COLUMN_ADDRESS_SET | 0, 1);
-  glcd_write_cmd(PAGE_ADDRESS_SET | lcd_y, 1);
-  }
-else
-  {
-  glcd_write_cmd(COLUMN_ADDRESS_SET | (lcd_x - (SCREEN_WIDTH/2)), 1);
-  glcd_write_cmd(PAGE_ADDRESS_SET | lcd_y, 1);
-  }
-}
-//-------------------------------------------------------------------------------------------------
-// 
-//-------------------------------------------------------------------------------------------------
-void GLCD_ClearScreen(void)
-{
-char j, i;
-for(j = 0; j < 4; j++)
-  {
-  GLCD_GoTo(0, j);
-  for(i = 0; i < SCREEN_WIDTH; i++)
-    {
-	GLCD_WriteData(0);
-	}
-  }
-GLCD_GoTo(0, 0);
-}
-//-------------------------------------------------------------------------------------------------
-//
-//-------------------------------------------------------------------------------------------------
-void GLCD_WriteChar(char x)
-{
-char i; 
-x -= 32; 
-for(i = 0; i < 5; i++) 
-#if 0
-  GLCD_WriteData(pgm_read_byte(font5x7 + (5 * x) + i));
-#endif
-GLCD_WriteData(0x00);
-}
-//-------------------------------------------------------------------------------------------------
-//
-//-------------------------------------------------------------------------------------------------
-void GLCD_WriteString(char * s)
-{
-while(*s)
-  {
-  GLCD_WriteChar(*s++);
-  }
-}
-//-------------------------------------------------------------------------------------------------
-//
-//-------------------------------------------------------------------------------------------------
-void GLCD_SetPixel(unsigned char x, unsigned char y, unsigned char color)
-{
-unsigned char temp;  
-GLCD_GoTo(x, y/8); 
-temp = GLCD_ReadData(); 
-GLCD_GoTo(x, y/8); 
-if(color)
-  GLCD_WriteData(temp | (1 << (y % 8))); 
-else
-  GLCD_WriteData(temp & ~(1 << (y % 8))); 
-}
-//-------------------------------------------------------------------------------------------------
-//
-//-------------------------------------------------------------------------------------------------
-void GLCD_Bitmap(char * bmp, unsigned char x, unsigned char y, unsigned char dx, unsigned char dy)
-{
-unsigned char i, j;
-for(j = 0; j < dy / 8; j++)
-  {
-  GLCD_GoTo(x,y + j);
-  for(i = 0; i < dx; i++)
-    GLCD_WriteData(pgm_read_byte(bmp++)); 
-  }
-}
-//-------------------------------------------------------------------------------------------------
-//
-//-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
-//
-//-------------------------------------------------------------------------------------------------
-#endif

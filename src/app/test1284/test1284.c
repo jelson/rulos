@@ -30,9 +30,9 @@
 #include "sdcard.h"
 #include "serial_console.h"
 
+#include "graphic_lcd_12232.h"
 #if !SIM
 #include "hardware.h"
-#include "hardware_graphic_lcd_12232.h"
 #endif // !SIM
 
 //////////////////////////////////////////////////////////////////////////////
@@ -116,17 +116,6 @@ void blink_init(BlinkAct *ba)
 	gpio_make_output(GPIO_D4);
 	gpio_make_output(GPIO_D5);
 	gpio_make_output(GPIO_D6);
-
-#if 0
-	gpio_make_output(GPIO_C0);
-	gpio_make_output(GPIO_C1);
-	gpio_make_output(GPIO_C2);
-	gpio_make_output(GPIO_C3);
-	gpio_make_output(GPIO_C4);
-	gpio_make_output(GPIO_C5);
-	gpio_make_output(GPIO_C6);
-	gpio_make_output(GPIO_C7);
-#endif
 #endif // !SIM
 	schedule_us(100000, &ba->act);
 }
@@ -137,13 +126,15 @@ typedef struct {
 	Activation act;
 	SerialConsole console;
 	r_bool toggle;
+	GLCD *glcd;
 } Shell;
 
 void shell_func(Activation *act);
 
-void shell_init(Shell *shell)
+void shell_init(Shell *shell, GLCD *glcd)
 {
 	shell->act.func = shell_func;
+	shell->glcd = glcd;
 	serial_console_init(&shell->console, &shell->act);
 	g_console = &shell->console;
 	SYNCDEBUG();
@@ -158,19 +149,17 @@ void shell_func(Activation *act)
 #if !SIM
 	gpio_set_or_clr(GPIO_D3, shell->toggle);
 
-	if (strcmp(line, "test\n")==0)
+	if (strncmp(line, "glyph", 5)==0)
 	{
+		glcd_clear_framebuffer(shell->glcd);
 		SYNCDEBUG();
-#if 0
-		int i;
-		for (i=0; i<20; i++)
+		char *p;
+		uint8_t dx0 = 0;
+		for (p=&line[6]; *p!=0 && *p!='\n'; p++)
 		{
-			GLCD_SetPixel(20-i, i, i&1);
+			dx0+=glcd_paint_char(shell->glcd, *p, dx0);
 		}
-#endif
-		
-		//glcd_init();
-		//GLCD_Init();
+		glcd_draw_framebuffer(shell->glcd);
 	}
 	else if (strncmp(line, "vbl", 3)==0)
 	{
@@ -222,15 +211,11 @@ int main()
 	hal_init(bc_audioboard);	// TODO need a "bc_custom"
 	init_clock(1000, TIMER1);
 
-#if !SIM
-	//glcd_init();
 	GLCD glcd;
 	glcd_init(&glcd, NULL);
-//	glcd_set_backlight(true);
-#endif
 	
 	Shell shell;
-	shell_init(&shell);
+	shell_init(&shell, &glcd);
 
 	BlinkAct ba;
 	blink_init(&ba);
