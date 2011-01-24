@@ -54,6 +54,13 @@ static void init_pins()
 	gpio_make_input(KEYPAD_COL1);
 	gpio_make_input(KEYPAD_COL2);
 	gpio_make_input(KEYPAD_COL3);
+	// these row setups may be redundant on board defs that
+	// re-use the row outputs, but some boards have keypads without LEDs,
+	// and we need to set up the ports.
+	gpio_make_output(KEYPAD_ROW0);
+	gpio_make_output(KEYPAD_ROW1);
+	gpio_make_output(KEYPAD_ROW2);
+	gpio_make_output(KEYPAD_ROW3);
 #endif
 
 #ifdef MCUatmega1284p
@@ -64,7 +71,7 @@ static void init_pins()
 }
 
 
-#ifndef BOARD_CUSTOM
+#if BOARD_HAS_LEDS
 
 static uint8_t segmentRemapTables[4][8] = {
 #define SRT_SUBU	0
@@ -160,7 +167,7 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t 
 {
 	assert(FALSE);
 }
-#endif // BOARD_CUSTOM
+#endif // BOARD_HAS_LEDS
 
 
 
@@ -230,7 +237,7 @@ void hal_idle()
 
 void hal_init(BoardConfiguration bc)
 {
-#ifndef BOARD_CUSTOM
+#if BOARD_HAS_LEDS
 	// This code is static per binary; could save some code space
 	// by using #ifdefs instead of dynamic code.
 	int i;

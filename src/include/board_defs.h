@@ -53,6 +53,9 @@
 #ifndef SIM
 
 #if defined(BOARD_PROTO)
+
+#define BOARD_HAS_LEDS	1
+
 #define BOARDSEL0	GPIO_B2
 #define BOARDSEL1	GPIO_B3
 #define BOARDSEL2	GPIO_B4
@@ -69,6 +72,9 @@
 #define	ASSERT_TO_BOARD	1
 
 #elif defined(BOARD_PCB10)
+
+#define BOARD_HAS_LEDS	1
+
 #define BOARDSEL0	GPIO_B2
 #define BOARDSEL1	GPIO_B3
 #define BOARDSEL2	GPIO_B4
@@ -94,6 +100,9 @@
 #define	ASSERT_TO_BOARD	1
 
 #elif defined(BOARD_PCB11)
+
+#define BOARD_HAS_LEDS	1
+
 #define BOARDSEL0	GPIO_B0
 #define BOARDSEL1	GPIO_B1
 #define BOARDSEL2	GPIO_B2
@@ -120,7 +129,26 @@
 #define	AVAILABLE_ADCS	0x3f
 #define	ASSERT_TO_BOARD	1
 
+#elif defined(BOARD_FLASHCARD)
+
+#define BOARD_HAS_LEDS	0
+
+#define KEYPAD_ROW0 GPIO_B7
+#define KEYPAD_ROW1 GPIO_B0
+#define KEYPAD_ROW2 GPIO_B1
+#define KEYPAD_ROW3 GPIO_B3
+#define KEYPAD_COL0 GPIO_B2
+#define KEYPAD_COL1 GPIO_B4
+#define KEYPAD_COL2 GPIO_B5
+#define KEYPAD_COL3 GPIO_B6
+
+#define	AVAILABLE_ADCS	0x3f	// Good luck, board designer -- no safety check here
+
+#define	ASSERT_TO_BOARD	0
+
 #elif defined(BOARD_CUSTOM)
+
+#define BOARD_HAS_LEDS	0
 
 #define	AVAILABLE_ADCS	0x3f	// Good luck, board designer -- no safety check here
 #define	ASSERT_TO_BOARD	0

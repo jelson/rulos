@@ -1153,7 +1153,7 @@ void glcd_draw_framebuffer(GLCD *glcd)
 void glcd_clear_framebuffer(GLCD *glcd)
 {}
 
-uint8_t glcd_paint_char(GLCD *glcd, char glyph, uint8_t dx0)
+uint8_t glcd_paint_char(GLCD *glcd, char glyph, int16_t dx0, r_bool invert)
 {
 	return 0;
 }

@@ -311,7 +311,6 @@ void glcd_draw_framebuffer(GLCD *glcd)
 	uint8_t page, column;
 	for (page=0; page<4; page++)
 	{
-		syncdebug(2, 'p', page);
 		glcd_write_cmd(GLCD_CMD_SET_PAGE | page, 0);
 		glcd_write_cmd(GLCD_CMD_SET_COLUMN | 0, 0);
 		for (column=0; column<(DISPLAY_WIDTH/2); column++)
@@ -345,13 +344,11 @@ uint8_t _glcd_find_glyph_index(char glyph)
 
 #define SYNCDEBUG()	syncdebug(0, 'G', __LINE__)
 
-uint8_t glcd_paint_char(GLCD *glcd, char glyph, uint8_t dx0)
+uint8_t glcd_paint_char(GLCD *glcd, char glyph, int16_t dx0, r_bool invert)
 {
 	uint8_t index = _glcd_find_glyph_index(glyph);
-	syncdebug(0, 'i', index);
 	if (index==0xff)
 	{
-		syncdebug(16, 'f', 0xfefe);
 		return 0;
 	}
 
@@ -359,18 +356,26 @@ uint8_t glcd_paint_char(GLCD *glcd, char glyph, uint8_t dx0)
 	uint16_t gx0 = pgm_read_word(((uint16_t*)lcd_index_to_x)+index);
 	uint16_t gx1 = pgm_read_word(((uint16_t*)lcd_index_to_x)+(index+1));
 
-	uint16_t y, gx, dx;
+	uint16_t y, gx;
+	int16_t dx;
 	uint8_t *dptr;
 	for (y=0; y<32; y++)
 	{
 		dptr = glcd->framebuffer[y];
 		uint16_t g_row_base = lcd_row_width_bytes * y;
-		for (gx=gx0, dx=dx0; gx<gx1 && dx<DISPLAY_WIDTH; gx++, dx++)
+		for (gx=gx0, dx=dx0; gx<gx1; gx++, dx++)
 		{
 			uint16_t g_byte = g_row_base + (gx>>3);
 			uint8_t g_data = ~pgm_read_byte(lcd_data+g_byte);
+			if (invert)
+			{
+				g_data = ~g_data;
+			}
 			uint8_t bit = (g_data >> (7-(gx&7))) & 1;
-			dptr[dx>>3] |= (bit<<(7-(dx&7)));
+			if (dx>=0 && dx<DISPLAY_WIDTH)
+			{
+				dptr[dx>>3] |= (bit<<(7-(dx&7)));
+			}
 		}
 	}
 	return dx-dx0;

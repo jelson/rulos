@@ -60,6 +60,7 @@ uint8_t later_than(Time a, Time b)
 void clock_handler(void *data)
 {
 #ifdef TIMING_DEBUG
+	#error TIMING_DEBUG is on. Just wanted you to know.
 	gpio_set(GPIO_D5);
 #endif
 	// NB we assume this runs in interrupt context and is hence
