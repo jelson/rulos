@@ -145,6 +145,10 @@
 #define	AVAILABLE_ADCS	0x3f	// Good luck, board designer -- no safety check here
 
 #define	ASSERT_TO_BOARD	0
+#define	ASSERT_CUSTOM(line)	{ \
+	void syncdebug(uint8_t spaces, char f, uint16_t line); \
+	syncdebug(0, 'A', line); \
+	}
 
 #elif defined(BOARD_CUSTOM)
 

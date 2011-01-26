@@ -276,6 +276,9 @@ void hardware_assert(uint16_t line)
 #if ASSERT_TO_BOARD
 	board_debug_msg(line);
 #endif
+#ifdef ASSERT_CUSTOM
+ASSERT_CUSTOM(line);
+#endif
 
 	while (1) { }
 }

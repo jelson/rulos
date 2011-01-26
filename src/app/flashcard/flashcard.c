@@ -101,6 +101,245 @@ void blink_init(BlinkAct *ba)
 
 //////////////////////////////////////////////////////////////////////////////
 
+#include "starbitmaps.ch"
+uint8_t lma_question[] = { 0x3c, 0x42, 0x02, 0x04, 0x08, 0x08, 0x00, 0x08 };
+uint8_t lma_x[] = { 0x81, 0x42, 0x24, 0x18, 0x18, 0x24, 0x42, 0x81 };
+uint8_t lma_disc[] = { 0x3c, 0x7e, 0xff, 0xff, 0xff, 0xff, 0x7e, 0x3c };
+
+typedef enum {
+	lma_black,
+	lma_red_x,
+	lma_green_disc,
+	lma_blinky_question_over_score_bitmap,
+	lma_spinning_star
+} LMAMode;
+
+typedef struct {
+	Activation act;
+	LEDMatrixSingle lms;
+	LMSBitmap score_bitmap;
+	uint8_t star_index;
+	LMAMode mode;
+} LMAnimation;
+
+void _lma_update(Activation *act);
+
+void lma_init(LMAnimation *lma)
+{
+	lma->act.func = _lma_update;
+	lma->star_index = 0;
+	memset(&lma->score_bitmap, 0, sizeof(lma->score_bitmap));
+	lma->mode = lma_black;
+	led_matrix_single_init(&lma->lms, TIMER2);
+	schedule_us(1000, &lma->act);
+}
+
+void memor(uint8_t *dst, uint8_t *src, uint16_t len)
+{
+	for (; len>0; len--, dst++, src++)
+	{
+		*dst |= *src;
+	}
+}
+
+void _lma_update(Activation *act)
+{
+	LMAnimation *lma = (LMAnimation *) act;
+	LEDMatrixSingle *lms = &lma->lms;
+
+	switch (lma->mode)
+	{
+	case lma_black:
+		memset(&lms->bitmap, 0, sizeof(lms->bitmap));
+		break;
+	case lma_red_x:
+		memset(lms->bitmap.green, 0, sizeof(lms->bitmap.green));
+		memcpy(lms->bitmap.red, lma_x, sizeof(lms->bitmap.red));
+		break;
+	case lma_green_disc:
+		memcpy(lms->bitmap.green, lma_disc, sizeof(lms->bitmap.green));
+		memset(lms->bitmap.red, 0, sizeof(lms->bitmap.red));
+		break;
+	case lma_blinky_question_over_score_bitmap:
+		memcpy(&lms->bitmap, &lma->score_bitmap, sizeof(lms->bitmap));
+		memor(lms->bitmap.red, lma_question, sizeof(lms->bitmap.red));
+		memor(lms->bitmap.green, lma_question, sizeof(lms->bitmap.green));
+		break;
+	case lma_spinning_star:
+		lma->star_index += 1;
+		if (lma->star_index >= (sizeof(starbitmap)/sizeof(starbitmap[0])))
+		{
+			lma->star_index = 0;
+		}
+		memcpy(lms->bitmap.red, starbitmap[lma->star_index], sizeof(lms->bitmap.red));
+		memcpy(lms->bitmap.green, starbitmap[lma->star_index], sizeof(lms->bitmap.green));
+		break;
+	}
+
+	schedule_us(100000, &lma->act);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+typedef struct s_problem_set ProblemSet;
+typedef void (select_f)(ProblemSet *ps, uint8_t *operands, uint8_t *problem_reference);
+typedef r_bool (check_f)(ProblemSet *ps, uint8_t problem_reference, uint8_t answer);
+
+struct s_problem_set {
+	select_f *select;
+	check_f *check;
+	char operator;
+	uint8_t num_problems;
+	uint8_t num_problems_left;
+	uint8_t bits[0];
+};
+
+void _problem_set_init(ProblemSet *ps, select_f *select, check_f *check, char operator, uint8_t num_problems, r_bool storage)
+{
+	ps->select = select;
+	ps->check = check;
+	ps->operator = operator;
+	ps->num_problems = num_problems;
+	ps->num_problems_left = num_problems;
+	// NB magic assumption: caller allocates num_problems>>3 bytes of
+	// storage immediately following this header.
+	if (storage)
+	{
+		memset(ps->bits, 0, (num_problems+7)>>3);
+	}
+}
+
+uint8_t problem_select(ProblemSet *ps)
+{
+	//SYNCDEBUG();
+	deadbeef_srand(clock_time_us());
+	uint8_t which_problem = deadbeef_rand() % ps->num_problems_left;
+	uint8_t idx;
+
+	//SYNCDEBUG();
+	for (idx=0; idx<ps->num_problems; idx++)
+	{
+		//syncdebug(2, 'i', idx);
+		r_bool occupied = ((ps->bits[idx>>3]&(1<<(7-(idx&7)))) != 0);
+		//syncdebug(2, 'o', idx);
+		//syncdebug(2, 'w', which_problem);
+		if (!occupied)
+		{
+			if (which_problem==0)
+			{
+				break;
+			}
+			which_problem--;
+		}
+	}
+	//SYNCDEBUG();
+	assert(idx < ps->num_problems);
+	//syncdebug(2, 'i', idx);
+	//syncdebug(2, 'a', idx>>3);
+	//syncdebug(2, 'b', ps->bits[idx>>3]);
+	//syncdebug(2, 'm', (1<<(7-(idx&7))));
+	assert(!((ps->bits[idx>>3]&(1<<(7-(idx&7)))) != 0));
+
+	//SYNCDEBUG();
+	return idx;
+}
+
+typedef struct {
+	ProblemSet ps;
+	uint8_t bits[13];
+} TimesProblemSet;
+
+r_bool _times_check(ProblemSet *ps, uint8_t problem_reference, uint8_t answer);
+void _times_select(ProblemSet *ps, uint8_t *operands, uint8_t *problem_reference);
+
+void times_problem_set_init(TimesProblemSet *tps)
+{
+	_problem_set_init(&tps->ps, &_times_select, &_times_check, 't', 100, true);
+}
+
+void _times_select(ProblemSet *ps, uint8_t *operands, uint8_t *problem_reference)
+{
+	//SYNCDEBUG();
+	TimesProblemSet *tps = (TimesProblemSet *) ps;
+	//SYNCDEBUG();
+	uint8_t problem = problem_select(&tps->ps);
+	//SYNCDEBUG();
+	operands[0] = problem / 10;
+	operands[1] = problem - (operands[0]*10);
+	*problem_reference = problem;
+	//SYNCDEBUG();
+}
+
+r_bool _times_check(ProblemSet *ps, uint8_t problem_reference, uint8_t answer)
+{
+	//SYNCDEBUG();
+	uint8_t op0 = problem_reference / 10;
+	uint8_t op1 = problem_reference - (op0 * 10);
+
+	r_bool result;
+	if (op0*op1 != answer)
+	{
+		result = false;
+	}
+	else
+	{
+		uint8_t idx = problem_reference;
+		// TimesProblemSet *tps = (TimesProblemSet *) ps;
+		ps->bits[idx>>3] |= (1<<(7-(idx&7)));
+		assert((ps->bits[idx>>3]&(1<<(7-(idx&7)))) != 0);
+
+		ps->num_problems_left -= 1;
+		result = true;
+	}
+	//SYNCDEBUG();
+	return result;
+}
+
+// There are ~100*50 = 5000 sum problems with 2-digit answers. Hmm. How should
+// we reduce the space? No point, I guess; just select a random set of problems.
+
+typedef struct {
+	ProblemSet ps;
+} SumProblemSet;
+
+r_bool _sum_check(ProblemSet *ps, uint8_t problem_reference, uint8_t answer);
+void _sum_select(ProblemSet *ps, uint8_t *operands, uint8_t *problem_reference);
+
+void sum_problem_set_init(SumProblemSet *sps)
+{
+	_problem_set_init(&sps->ps, &_sum_select, &_sum_check, 'p', 100, false);
+}
+
+void _sum_select(ProblemSet *ps, uint8_t *operands, uint8_t *problem_reference)
+{
+	//SYNCDEBUG();
+	//SumProblemSet *sps = (SumProblemSet *) ps;
+	deadbeef_srand(clock_time_us());
+	operands[0] = deadbeef_rand() % 100;
+	operands[1] = deadbeef_rand() % (100-operands[0]);
+	*problem_reference = operands[0] + operands[1];
+	//SYNCDEBUG();
+}
+
+r_bool _sum_check(ProblemSet *ps, uint8_t problem_reference, uint8_t answer)
+{
+	//SYNCDEBUG();
+	r_bool result;
+	if (answer!=problem_reference)
+	{
+		result = false;
+	}
+	else
+	{
+		ps->num_problems_left -= 1;
+		result = true;
+	}
+	//SYNCDEBUG();
+	return result;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 struct s_flashcard;
 typedef struct s_flashcard Flashcard;
 
@@ -115,25 +354,83 @@ struct s_flashcard {
 	InputPollerAct ipoll;
 	FlashcardInjector fi;
 	uint8_t operand[2];
-	uint8_t operator;
 	uint8_t digit[2];
-	uint8_t goal_value;
+	uint8_t problem_reference;
+	r_bool game_over;
+	uint8_t num_incorrect;
 	r_bool displaying_result;
+	SumProblemSet sps;
+	TimesProblemSet tps;
+	ProblemSet *curProblem;
+	LMAnimation lma;
 };
 
 void _fl_new_problem(Flashcard *fl);
 void _flashcard_update(Activation *act);
 void _flashcard_do_input(InputInjectorIfc *iii, char key);
 void _flashcard_draw(Flashcard *fl);
+uint8_t _fl_num_problems_left(Flashcard *fl);
 
 void flashcard_init(Flashcard *fl)
 {
+//SYNCDEBUG();
 	fl->act.func = _flashcard_update;
 	input_poller_init(&fl->ipoll, &fl->fi.iii);
 	fl->fi.iii.func = _flashcard_do_input;
 	fl->fi.fl = fl;
+	fl->game_over = false;
+	fl->num_incorrect = 0;
+//SYNCDEBUG();
+	sum_problem_set_init(&fl->sps);
+//SYNCDEBUG();
+	times_problem_set_init(&fl->tps);
+//SYNCDEBUG();
 	_fl_new_problem(fl);
 	glcd_init(&fl->glcd, &fl->act);
+	lma_init(&fl->lma);
+//SYNCDEBUG();
+}
+
+void _flashcard_draw_score_bitmap(Flashcard *fl)
+{
+	uint8_t total = fl->tps.ps.num_problems + fl->sps.ps.num_problems;
+	uint8_t unsolved = _fl_num_problems_left(fl);
+	uint8_t correct = total - unsolved;
+	syncdebug(3, 't', total);
+	syncdebug(3, 'u', unsolved);
+	syncdebug(3, 'c', correct);
+	syncdebug(3, 'p', (((uint16_t)correct)*48));
+	uint8_t lit_greens = (((uint16_t)correct)*48)/total;
+	uint8_t lit_reds = fl->num_incorrect;
+	syncdebug(3, 'g', lit_greens);
+	syncdebug(3, 'r', lit_reds);
+
+	memset(&fl->lma.score_bitmap, 0, sizeof(fl->lma.score_bitmap));
+
+	int8_t col;
+	int8_t row;
+
+	SYNCDEBUG();
+	for (col=0; col<8 && lit_greens>0; col++)
+	{
+		for (row=7; row>=0 && lit_greens>0; row--, lit_greens--)
+		{
+			fl->lma.score_bitmap.green[row] |= (1<<(7-col));
+			syncdebug(0, 'r', row);
+			syncdebug(0, 'c', col);
+		}
+	}
+
+	SYNCDEBUG();
+	for (col=7; col>=0 && lit_reds>0; col--)
+	{
+		for (row=7; row>=0 && lit_reds>0; row--, lit_reds--)
+		{
+			fl->lma.score_bitmap.red[row] |= (1<<(7-col));
+			syncdebug(0, 'r', row);
+			syncdebug(0, 'c', col);
+		}
+	}
 }
 
 void _flashcard_update(Activation *act)
@@ -150,7 +447,13 @@ void _flashcard_update(Activation *act)
 	{
 		// that's an init completing.
 	}
-	_flashcard_draw(fl);
+
+	if (!fl->game_over)
+	{
+		_flashcard_draw_score_bitmap(fl);
+		fl->lma.mode = lma_blinky_question_over_score_bitmap;
+		_flashcard_draw(fl);
+	}
 }
 
 void _flashcard_itoa(Flashcard *fl, char **out, uint8_t v)
@@ -171,6 +474,7 @@ void _flashcard_paint(Flashcard *fl, char *s)
 	char *p;
 	int16_t width, dx;
 
+	SYNCDEBUG();
 	for (p=s, width=0; *p!=0 && *p!='\n'; p++)
 	{
 		width+=glcd_paint_char(&fl->glcd, (*p) & 0x7f, width, (*p)&0x80);
@@ -197,10 +501,11 @@ void _flashcard_paint(Flashcard *fl, char *s)
 
 void _flashcard_draw(Flashcard *fl)
 {
+	SYNCDEBUG();
 	char string[10];
 	char *p = string;
 	_flashcard_itoa(fl, &p, fl->operand[0]);
-	*(p++) = fl->operator;
+	*(p++) = fl->curProblem->operator;
 	_flashcard_itoa(fl, &p, fl->operand[1]);
 	*(p++) = 'e';
 	*(p++) = fl->digit[0] | 0x80;
@@ -209,29 +514,59 @@ void _flashcard_draw(Flashcard *fl)
 	_flashcard_paint(fl, string);
 }
 
+uint8_t _fl_num_problems_left(Flashcard *fl)
+{
+	return fl->sps.ps.num_problems_left + fl->tps.ps.num_problems_left;
+}
+
 void _fl_new_problem(Flashcard *fl)
 {
-	deadbeef_srand(clock_time_us());
-	uint8_t which_operator = (deadbeef_rand() & 0x400) > 0;
+	fl->displaying_result = false;
 
-	syncdebug(2, 'w', which_operator);
-	if (which_operator==0)
+	SYNCDEBUG();
+	r_bool sum_empty = (fl->sps.ps.num_problems_left==0);
+	r_bool times_empty = (fl->tps.ps.num_problems_left==0);
+	if (sum_empty && times_empty)
 	{
-		fl->operand[0] = deadbeef_rand() % 100;
-		fl->operand[1] = deadbeef_rand() % (100-fl->operand[0]);
-		fl->goal_value = fl->operand[0]+fl->operand[1];
-		fl->operator = 'p';
+		SYNCDEBUG();
+		// Display victory and spinning star
+		_flashcard_paint(fl, "V");
+		fl->lma.mode = lma_spinning_star;
+		// lock the keypad so we stay in this mode
+		fl->game_over = true;
+	}
+	else if (sum_empty)
+	{
+		//SYNCDEBUG();
+		fl->curProblem = &fl->tps.ps;
+	}
+	else if (times_empty)
+	{
+		//SYNCDEBUG();
+		fl->curProblem = &fl->sps.ps;
 	}
 	else
 	{
-		fl->operand[0] = deadbeef_rand() % 10;
-		fl->operand[1] = deadbeef_rand() % 10;
-		fl->goal_value = fl->operand[0]*fl->operand[1];
-		fl->operator = 't';
+		//SYNCDEBUG();
+		// choose one at random
+		deadbeef_srand(clock_time_us());
+		uint8_t which_operator = (deadbeef_rand() & 0x400) > 0;
+		if (which_operator==0)
+		{
+			fl->curProblem = &fl->sps.ps;
+		}
+		else
+		{
+			fl->curProblem = &fl->tps.ps;
+		}
 	}
+
+	SYNCDEBUG();
+	(fl->curProblem->select)(fl->curProblem, fl->operand, &fl->problem_reference);
+
 	fl->digit[0] = ' ';
 	fl->digit[1] = ' ';
-	fl->displaying_result = false;
+	//SYNCDEBUG();
 }
 
 inline static uint8_t digit_value(char digit)
@@ -250,17 +585,21 @@ void _flashcard_enter(Flashcard *fl)
 		+ digit_value(fl->digit[1]);
 	syncdebug(2, 'd', digit_value(fl->digit[1]));
 	syncdebug(3, 'd', digit_value(fl->digit[0]));
-	if (entered_value == fl->goal_value)
+	syncdebug(3, 'l', _fl_num_problems_left(fl));
+	r_bool correct = (fl->curProblem->check)(fl->curProblem, fl->problem_reference, entered_value);
+	if (correct)
 	{
 		_flashcard_paint(fl, "W");
+		fl->lma.mode = lma_green_disc;
 	}
 	else
 	{
-		syncdebug(2, 'E', entered_value);
-		syncdebug(2, 'G', fl->goal_value);
+		fl->num_incorrect += 1;
 		_flashcard_paint(fl, "L");
+		fl->lma.mode = lma_red_x;
 	}
 	fl->displaying_result = true;
+	SYNCDEBUG();
 	schedule_us(1000000, &fl->act);
 }
 
@@ -270,7 +609,7 @@ void _flashcard_do_input(InputInjectorIfc *iii, char key)
 
 	syncdebug(7, 'k', key);
 
-	if (fl->displaying_result)
+	if (fl->displaying_result || fl->game_over)
 	{
 		SYNCDEBUG();
 		return;
@@ -297,6 +636,11 @@ void _flashcard_do_input(InputInjectorIfc *iii, char key)
 			fl->digit[1] = ' ';
 			_flashcard_draw(fl);
 			break;
+		case 'b':
+			// debug cheat code
+			fl->tps.ps.num_problems_left = 1;
+			fl->sps.ps.num_problems_left = 1;
+			break;
 		case 'c':
 			_flashcard_enter(fl);
 			//explode();
@@ -306,6 +650,7 @@ void _flashcard_do_input(InputInjectorIfc *iii, char key)
 
 //////////////////////////////////////////////////////////////////////////////
 
+#if 0
 typedef struct {
 	Activation act;
 	uint16_t col;
@@ -346,6 +691,7 @@ void ledwalk_update(Activation *act)
 	}
 	schedule_us(50000, &lw->act);
 }
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -403,6 +749,7 @@ void _ledpoke_handler(InputInjectorIfc *iii, char key)
 #endif // !SIM
 }
 
+#endif
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
@@ -450,6 +797,25 @@ void shell_func(Activation *act)
 		syncdebug(2, 'c', shell->coldata);
 		_lms_configure_col(shell->coldata);
 	}
+	else if (strcmp(line, "t1\n")==0)
+	{
+		SYNCDEBUG();
+//		_lms_configure_col(0xf00f);
+		_lms_configure_row(0x40);
+	}
+	else if (strcmp(line, "t2\n")==0)
+	{
+		SYNCDEBUG();
+//		_lms_configure_col(0xf00f);
+		_lms_configure_row(0x80);
+	}
+	else if (strncmp(line, "pwm", 3)==0)
+	{
+		SYNCDEBUG();
+//		lms.pwm_enable = atoi_hex(&line[4]);
+//		void _lms_handler(void *arg);
+//		_lms_handler(&lms);
+	}
 #else
 	line++;
 #endif // !SIM
@@ -475,9 +841,6 @@ int main()
 
 	BlinkAct ba;
 	blink_init(&ba);
-
-	LEDMatrixSingle lms;
-	led_matrix_single_init(&lms);
 
 /*
 	LEDWalk lw;

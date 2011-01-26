@@ -26,3 +26,11 @@ TARGET_OBJECTS := \
 
 include $(ROCKET_ROOT)/Makefile.common
 
+$(SIM_OBJDIR)/flashcard.o: $(SIM_OBJDIR)/lcdrasters_auto.ch
+$(AVR_OBJDIR)/flashcard.o: $(AVR_OBJDIR)/lcdrasters_auto.ch
+
+$(SIM_OBJDIR)/flashcard.o: $(SIM_OBJDIR)/starbitmaps.ch
+$(AVR_OBJDIR)/flashcard.o: $(AVR_OBJDIR)/starbitmaps.ch
+
+%/starbitmaps.ch: star/*.png star/ledmaps.py
+	star/ledmaps.py $@ star
