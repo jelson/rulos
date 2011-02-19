@@ -1,0 +1,1 @@
+rsync -rave ssh website/ hilda:public_html/bike_computer_frob/
