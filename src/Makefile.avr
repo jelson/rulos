@@ -25,7 +25,10 @@ AVR_ONLY_OBJECTS := \
 	tilty_input.o \
 	pov.o \
 	hardware_spi.o \
-	hardware_graphic_lcd_12232.o \
+
+ifeq ($(MCU),atmega1284p)
+AVR_ONLY_OBJECTS += hardware_graphic_lcd_12232.o
+endif
 
 BSS_CANARY_OBJECT := bss_canary.o
 
@@ -73,15 +76,6 @@ HEX_EEPROM_FLAGS = -j .eeprom
 HEX_EEPROM_FLAGS += --set-section-flags=.eeprom="alloc,load"
 HEX_EEPROM_FLAGS += --change-section-lma .eeprom=0 --no-change-warnings
 
-
-## Objects that must be built in order to link
-AVR_LIB_OBJECTS := $(patsubst %.o,$(AVR_OBJDIR)/%.o,$(COMMON_OBJECTS) \
-	$(AVR_ONLY_OBJECTS) $(BSS_CANARY_OBJECT) )
-
-AVR_TARGET_OBJECTS := $(patsubst %.o,$(AVR_OBJDIR)/%.o, \
-	$(TARGET_OBJECTS))
-
-
 # Make sure MCU is defined
 .PHONY: mcu-defined-check
  
@@ -109,12 +103,18 @@ $(AVR_OBJDIR)/%.o: %.c
 	$(CC) $(AVR_CFLAGS) -c $< -o $@
 
 
-##Build library (to avoid linking dead objects)
+## Objects that must be built in order to link
+AVR_LIB_OBJECTS := $(patsubst %.o,$(AVR_OBJDIR)/%.o,$(COMMON_OBJECTS) \
+	$(AVR_ONLY_OBJECTS) $(BSS_CANARY_OBJECT) )
+
 $(AVR_LIB_FILE): $(AVR_LIB_OBJECTS)
 	rm -f $@
 	avr-ar r $@ $(AVR_LIB_OBJECTS)
 
 ##Link
+AVR_TARGET_OBJECTS := $(patsubst %.o,$(AVR_OBJDIR)/%.o, \
+	$(TARGET_OBJECTS))
+
 $(ARCHTARG).elf: $(AVR_LIB_FILE) $(AVR_TARGET_OBJECTS)
 	$(CC) $(AVR_TARGET_OBJECTS) $(AVR_LDFLAGS) -o $@
 
@@ -153,6 +153,7 @@ ifeq ($(MCU),atmega8)
 AVRCONFIG := 
 AVROPTS := -p m8
 endif
+
 ifeq ($(MCU),atmega328p)
 #AVROPTS := -p m328p
 AVRCONFIG := /etc/avrdude.conf
@@ -162,6 +163,7 @@ $(AVRCONFIG): /etc/avrdude.conf ../../avrdude-atmega328p.conf
 
 AVROPTS := -C $(AVRCONFIG) -p m328p
 endif
+
 ifeq ($(MCU),atmega1284p)
 AVRCONFIG := 
 AVROPTS := -p m1284p
