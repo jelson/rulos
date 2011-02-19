@@ -46,7 +46,6 @@ typedef struct {
 static KeypadState g_theKeypad;
 static void init_keypad(KeypadState *keypad);
 static void keypad_update(KeypadState *key);
-static char scan_keypad();
 
 void hal_init_keypad()
 {
@@ -82,7 +81,7 @@ static void keypad_update(KeypadState *key)
 {
 	schedule_us(KEY_SCAN_INTERVAL_US, (Activation *) key);
 
-	char k = scan_keypad();
+	char k = hal_scan_keypad();
 
 	// if the same key is down, or up, ignore it
 	if (k == key->keypad_last)
@@ -123,7 +122,7 @@ static uint8_t scan_row()
 #endif
 
 
-static char scan_keypad()
+char hal_scan_keypad()
 {
 #ifdef KEYPAD_ROW0
 	uint8_t col;

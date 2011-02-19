@@ -30,6 +30,7 @@
 #include "sdcard.h"
 #include "serial_console.h"
 #include "input_controller.h"
+#include "eeprom.h"
 
 #include "graphic_lcd_12232.h"
 #include "led_matrix_single.h"
@@ -45,6 +46,7 @@ SerialConsole *g_console;
 #define SYNCDEBUG()	syncdebug(0, 'T', __LINE__)
 void syncdebug(uint8_t spaces, char f, uint16_t line)
 {
+#if 0
 	char buf[32], hexbuf[6];
 	int i;
 	for (i=0; i<spaces; i++)
@@ -65,6 +67,7 @@ void syncdebug(uint8_t spaces, char f, uint16_t line)
 	strcat(buf, hexbuf);
 	strcat(buf, "\n");
 	serial_console_sync_send(g_console, buf, strlen(buf));
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -162,8 +165,11 @@ void _lma_update(Activation *act)
 		break;
 	case lma_blinky_question_over_score_bitmap:
 		memcpy(&lms->bitmap, &lma->score_bitmap, sizeof(lms->bitmap));
-		memor(lms->bitmap.red, lma_question, sizeof(lms->bitmap.red));
-		memor(lms->bitmap.green, lma_question, sizeof(lms->bitmap.green));
+		if ((clock_time_us() >> 19) & 1)
+		{
+			memor(lms->bitmap.red, lma_question, sizeof(lms->bitmap.red));
+			memor(lms->bitmap.green, lma_question, sizeof(lms->bitmap.green));
+		}
 		break;
 	case lma_spinning_star:
 		lma->star_index += 1;
@@ -340,6 +346,23 @@ r_bool _sum_check(ProblemSet *ps, uint8_t problem_reference, uint8_t answer)
 
 //////////////////////////////////////////////////////////////////////////////
 
+typedef struct {
+	r_bool game_over;
+	uint8_t num_incorrect;
+	SumProblemSet sps;
+	TimesProblemSet tps;
+} GameState;
+
+void game_state_init(GameState *game)
+{
+	game->game_over = false;
+	game->num_incorrect = 0;
+	sum_problem_set_init(&game->sps);
+	times_problem_set_init(&game->tps);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 struct s_flashcard;
 typedef struct s_flashcard Flashcard;
 
@@ -356,44 +379,107 @@ struct s_flashcard {
 	uint8_t operand[2];
 	uint8_t digit[2];
 	uint8_t problem_reference;
-	r_bool game_over;
-	uint8_t num_incorrect;
 	r_bool displaying_result;
-	SumProblemSet sps;
-	TimesProblemSet tps;
 	ProblemSet *curProblem;
 	LMAnimation lma;
+	r_bool asking_reset;
+	uint8_t reset_answer;
+
+	GameState game;
 };
 
 void _fl_new_problem(Flashcard *fl);
+void _flashcard_startup(Activation *act);
 void _flashcard_update(Activation *act);
 void _flashcard_do_input(InputInjectorIfc *iii, char key);
 void _flashcard_draw(Flashcard *fl);
 uint8_t _fl_num_problems_left(Flashcard *fl);
+void _flashcard_paint(Flashcard *fl, char *s);
 
 void flashcard_init(Flashcard *fl)
 {
 //SYNCDEBUG();
-	fl->act.func = _flashcard_update;
 	input_poller_init(&fl->ipoll, &fl->fi.iii);
 	fl->fi.iii.func = _flashcard_do_input;
 	fl->fi.fl = fl;
-	fl->game_over = false;
-	fl->num_incorrect = 0;
 //SYNCDEBUG();
-	sum_problem_set_init(&fl->sps);
-//SYNCDEBUG();
-	times_problem_set_init(&fl->tps);
-//SYNCDEBUG();
-	_fl_new_problem(fl);
-	glcd_init(&fl->glcd, &fl->act);
 	lma_init(&fl->lma);
+	fl->asking_reset = false;
+	fl->reset_answer = 0;
+
+	fl->act.func = _flashcard_startup;
+	glcd_init(&fl->glcd, &fl->act);
 //SYNCDEBUG();
+}
+
+void _flashcard_startup(Activation *act)
+{
+	Flashcard *fl = (Flashcard *) act;
+
+	r_bool valid;
+	if (fl->asking_reset)
+	{
+		SYNCDEBUG();
+		// we got awoken by input loop.
+		if (fl->reset_answer == 'a')
+		{
+			// that is just the initial request getting counted. Wait.
+			return;
+		}
+
+		fl->asking_reset = false;
+		if (fl->reset_answer == 'c')
+		{
+			syncdebug(2, 'k', fl->reset_answer);
+			SYNCDEBUG();
+			valid = false;
+		}
+		else
+		{
+			SYNCDEBUG();
+			valid = true;
+		}
+	}
+	else
+	{
+		SYNCDEBUG();
+		// we've just started up, and the LCD is ready.
+		// Read the eeprom.
+		valid = eeprom_read((uint8_t*) &fl->game, sizeof(fl->game));
+		if (valid)
+		{
+			SYNCDEBUG();
+			if (hal_scan_keypad()=='a')
+			{
+				SYNCDEBUG();
+				// we found valid data; stop and
+				// ask the user if he wishes to clear it.
+				// We'll reenter up at "if (fl->asking_reset)".
+				fl->displaying_result = false;
+				_flashcard_paint(fl, "R");
+				fl->asking_reset = true;
+				fl->reset_answer = 0;
+				return;
+			}
+		}
+	}
+
+	SYNCDEBUG();
+	if (!valid)
+	{
+		SYNCDEBUG();
+		game_state_init(&fl->game);
+	}
+
+	// Okay, we have a valid state, one way (eeprom) or another (initting it).
+	// reconfigure into run mode.
+	fl->act.func = _flashcard_update;
+	schedule_us(1, &fl->act);
 }
 
 void _flashcard_draw_score_bitmap(Flashcard *fl)
 {
-	uint8_t total = fl->tps.ps.num_problems + fl->sps.ps.num_problems;
+	uint8_t total = fl->game.tps.ps.num_problems + fl->game.sps.ps.num_problems;
 	uint8_t unsolved = _fl_num_problems_left(fl);
 	uint8_t correct = total - unsolved;
 	syncdebug(3, 't', total);
@@ -401,7 +487,7 @@ void _flashcard_draw_score_bitmap(Flashcard *fl)
 	syncdebug(3, 'c', correct);
 	syncdebug(3, 'p', (((uint16_t)correct)*48));
 	uint8_t lit_greens = (((uint16_t)correct)*48)/total;
-	uint8_t lit_reds = fl->num_incorrect;
+	uint8_t lit_reds = fl->game.num_incorrect;
 	syncdebug(3, 'g', lit_greens);
 	syncdebug(3, 'r', lit_reds);
 
@@ -409,17 +495,6 @@ void _flashcard_draw_score_bitmap(Flashcard *fl)
 
 	int8_t col;
 	int8_t row;
-
-	SYNCDEBUG();
-	for (col=0; col<8 && lit_greens>0; col++)
-	{
-		for (row=7; row>=0 && lit_greens>0; row--, lit_greens--)
-		{
-			fl->lma.score_bitmap.green[row] |= (1<<(7-col));
-			syncdebug(0, 'r', row);
-			syncdebug(0, 'c', col);
-		}
-	}
 
 	SYNCDEBUG();
 	for (col=7; col>=0 && lit_reds>0; col--)
@@ -431,6 +506,19 @@ void _flashcard_draw_score_bitmap(Flashcard *fl)
 			syncdebug(0, 'c', col);
 		}
 	}
+
+	// greens overwrite reds, so that even if you have a lot
+	// of lose, your successes never get lost.
+	SYNCDEBUG();
+	for (col=0; col<8 && lit_greens>0; col++)
+	{
+		for (row=7; row>=0 && lit_greens>0; row--, lit_greens--)
+		{
+			fl->lma.score_bitmap.green[row] |= (1<<(7-col));
+			syncdebug(0, 'r', row);
+			syncdebug(0, 'c', col);
+		}
+	}
 }
 
 void _flashcard_update(Activation *act)
@@ -438,17 +526,10 @@ void _flashcard_update(Activation *act)
 	Flashcard *fl = (Flashcard *) act;
 	SYNCDEBUG();
 
-	if (fl->displaying_result)
-	{
-		fl->displaying_result = false;
-		_fl_new_problem(fl);
-	}
-	else
-	{
-		// that's an init completing.
-	}
+	fl->displaying_result = false;
+	_fl_new_problem(fl);
 
-	if (!fl->game_over)
+	if (!fl->game.game_over)
 	{
 		_flashcard_draw_score_bitmap(fl);
 		fl->lma.mode = lma_blinky_question_over_score_bitmap;
@@ -474,6 +555,7 @@ void _flashcard_paint(Flashcard *fl, char *s)
 	char *p;
 	int16_t width, dx;
 
+	lms_enable(&fl->lma.lms, false);
 	SYNCDEBUG();
 	for (p=s, width=0; *p!=0 && *p!='\n'; p++)
 	{
@@ -496,7 +578,9 @@ void _flashcard_paint(Flashcard *fl, char *s)
 	{
 		dx+=glcd_paint_char(&fl->glcd, (*p) & 0x7f, dx, (*p)&0x80);
 	}
+
 	glcd_draw_framebuffer(&fl->glcd);
+	lms_enable(&fl->lma.lms, true);
 }
 
 void _flashcard_draw(Flashcard *fl)
@@ -516,7 +600,7 @@ void _flashcard_draw(Flashcard *fl)
 
 uint8_t _fl_num_problems_left(Flashcard *fl)
 {
-	return fl->sps.ps.num_problems_left + fl->tps.ps.num_problems_left;
+	return fl->game.sps.ps.num_problems_left + fl->game.tps.ps.num_problems_left;
 }
 
 void _fl_new_problem(Flashcard *fl)
@@ -524,8 +608,8 @@ void _fl_new_problem(Flashcard *fl)
 	fl->displaying_result = false;
 
 	SYNCDEBUG();
-	r_bool sum_empty = (fl->sps.ps.num_problems_left==0);
-	r_bool times_empty = (fl->tps.ps.num_problems_left==0);
+	r_bool sum_empty = (fl->game.sps.ps.num_problems_left==0);
+	r_bool times_empty = (fl->game.tps.ps.num_problems_left==0);
 	if (sum_empty && times_empty)
 	{
 		SYNCDEBUG();
@@ -533,17 +617,17 @@ void _fl_new_problem(Flashcard *fl)
 		_flashcard_paint(fl, "V");
 		fl->lma.mode = lma_spinning_star;
 		// lock the keypad so we stay in this mode
-		fl->game_over = true;
+		fl->game.game_over = true;
 	}
 	else if (sum_empty)
 	{
 		//SYNCDEBUG();
-		fl->curProblem = &fl->tps.ps;
+		fl->curProblem = &fl->game.tps.ps;
 	}
 	else if (times_empty)
 	{
 		//SYNCDEBUG();
-		fl->curProblem = &fl->sps.ps;
+		fl->curProblem = &fl->game.sps.ps;
 	}
 	else
 	{
@@ -553,11 +637,11 @@ void _fl_new_problem(Flashcard *fl)
 		uint8_t which_operator = (deadbeef_rand() & 0x400) > 0;
 		if (which_operator==0)
 		{
-			fl->curProblem = &fl->sps.ps;
+			fl->curProblem = &fl->game.sps.ps;
 		}
 		else
 		{
-			fl->curProblem = &fl->tps.ps;
+			fl->curProblem = &fl->game.tps.ps;
 		}
 	}
 
@@ -594,12 +678,14 @@ void _flashcard_enter(Flashcard *fl)
 	}
 	else
 	{
-		fl->num_incorrect += 1;
+		fl->game.num_incorrect += 1;
 		_flashcard_paint(fl, "L");
 		fl->lma.mode = lma_red_x;
 	}
+	eeprom_write((uint8_t*) &fl->game, sizeof(fl->game));
 	fl->displaying_result = true;
-	SYNCDEBUG();
+//	SYNCDEBUG();
+//	syncdebug(2, 'r', eeprom_read((uint8_t*) &fl->game, sizeof(fl->game)));
 	schedule_us(1000000, &fl->act);
 }
 
@@ -609,7 +695,14 @@ void _flashcard_do_input(InputInjectorIfc *iii, char key)
 
 	syncdebug(7, 'k', key);
 
-	if (fl->displaying_result || fl->game_over)
+	if (fl->asking_reset)
+	{
+		fl->reset_answer = key;
+		schedule_us(1, &fl->act);
+		return;
+	}
+
+	if (fl->displaying_result || fl->game.game_over)
 	{
 		SYNCDEBUG();
 		return;
@@ -636,11 +729,13 @@ void _flashcard_do_input(InputInjectorIfc *iii, char key)
 			fl->digit[1] = ' ';
 			_flashcard_draw(fl);
 			break;
+#if 0
 		case 'b':
 			// debug cheat code
-			fl->tps.ps.num_problems_left = 1;
-			fl->sps.ps.num_problems_left = 1;
+			fl->game.tps.ps.num_problems_left = 1;
+			fl->game.sps.ps.num_problems_left = 1;
 			break;
+#endif
 		case 'c':
 			_flashcard_enter(fl);
 			//explode();

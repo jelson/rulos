@@ -51,6 +51,20 @@
        x2="140.93835"
        y2="55"
        gradientUnits="userSpaceOnUse" />
+    <inkscape:perspective
+       id="perspective3104"
+       inkscape:persp3d-origin="0.5 : 0.33333333 : 1"
+       inkscape:vp_z="1 : 0.5 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_x="0 : 0.5 : 1"
+       sodipodi:type="inkscape:persp3d" />
+    <inkscape:perspective
+       id="perspective3104-5"
+       inkscape:persp3d-origin="0.5 : 0.33333333 : 1"
+       inkscape:vp_z="1 : 0.5 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_x="0 : 0.5 : 1"
+       sodipodi:type="inkscape:persp3d" />
   </defs>
   <sodipodi:namedview
      id="base"
@@ -62,16 +76,16 @@
      objecttolerance="10"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="2.9134649"
-     inkscape:cx="427.06728"
-     inkscape:cy="114.0013"
+     inkscape:zoom="1.1228758"
+     inkscape:cx="373.43714"
+     inkscape:cy="382.5"
      inkscape:document-units="in"
      inkscape:current-layer="layer1"
      showgrid="true"
-     inkscape:window-width="1600"
-     inkscape:window-height="1138"
-     inkscape:window-x="-8"
-     inkscape:window-y="-8"
+     inkscape:window-width="1920"
+     inkscape:window-height="1121"
+     inkscape:window-x="0"
+     inkscape:window-y="26"
      showguides="true"
      inkscape:guide-bbox="true"
      inkscape:window-maximized="1">
@@ -103,7 +117,7 @@
      id="layer1">
     <path
        sodipodi:nodetypes="ccc"
-       style="fill:none;fill-rule:evenodd;stroke:#0bad00;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;fill-rule:evenodd;stroke:#0bad00;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 391.05768,685.04508 L 571.05768,685.04508 L 571.05768,695.04508"
        id="path3678" />
     <rect
@@ -114,19 +128,19 @@
        id="rect3897"
        style="opacity:1;fill:#00ffff;fill-opacity:0.0745098;fill-rule:evenodd;stroke:#00ffff;stroke-width:2.59347105;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:7.78041281, 7.78041281;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
     <path
-       style="opacity:1;fill:#00ffff;fill-opacity:0.0745098;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.57410002;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:4.72230001, 4.72230001;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="opacity:1;fill:#00ffff;fill-opacity:0.07450980000000000;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.57410001999999993;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:4.72230000999999966, 4.72230000999999966;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 160.89973,604.88713 L 160.89973,755.20303 L 403.16738,755.20303 L 403.16738,654.99243 L 264.72872,654.99243 L 264.72872,604.88713 L 160.89973,604.88713 z"
        id="rect3899" />
     <path
-       style="fill:#00ffff;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:0.07450980000000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:5.66999987999999977, 5.66999987999999977;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="fill:#00ffff;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:0.07450980000000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:5.66999987999999977, 5.66999987999999977;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 130 25 L 130 225 L 240 225 L 240 95 L 360 95 L 360 25 L 130 25 z "
        id="rect3381" />
     <path
-       style="opacity:1;fill:#00ffff;fill-opacity:0.07450980000000000;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:5.66999987999999977, 5.66999987999999977;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;color:#000000"
+       style="opacity:1;fill:#00ffff;fill-opacity:0.07450980000000000;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:5.66999987999999977, 5.66999987999999977;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;color:#000000;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 290 235 L 290 285 L 290 305.09375 L 290 315 L 290 385 L 290 585 L 400 585 L 400 385 L 400 315 L 400 305.09375 L 400 285 L 400 235 L 290 235 z "
        id="rect3880" />
     <rect
-       style="fill:#00ffff;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:5.66999987999999977, 5.66999987999999977;stroke-dashoffset:0;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:0.07450980000000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="fill:#00ffff;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:5.66999987999999977, 5.66999987999999977;stroke-dashoffset:0;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:0.07450980000000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3828"
        width="130"
        height="100.21"
@@ -138,16 +152,16 @@
        height="100.21"
        width="109.70924"
        id="rect3895"
-       style="fill:#00ffff;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:5.66999987999999977, 5.66999987999999977;stroke-dashoffset:0;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:0.07450980000000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
+       style="fill:#00ffff;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:5.66999987999999977, 5.66999987999999977;stroke-dashoffset:0;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:0.07450980000000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <rect
        y="245"
        x="410"
        height="260"
        width="140"
        id="rect3893"
-       style="fill:#00ffff;fill-opacity:0.07450981;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:5.66999987999999977, 5.66999987999999977;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;opacity:1" />
+       style="fill:#00ffff;fill-opacity:0.07450981000000000;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:5.66999987999999977, 5.66999987999999977;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <path
-       style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.59426677;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.59426676999999994;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 150,167.2274 L 150,74.727404"
        id="path3960" />
     <rect
@@ -156,21 +170,21 @@
        height="48.988758"
        width="89.674911"
        id="rect3317"
-       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <rect
        y="277"
        x="702"
        height="48.988758"
        width="89.674911"
        id="rect3315"
-       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <rect
        y="271"
        x="576.32507"
        height="48.988758"
        width="89.674911"
        id="rect3299"
-       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <rect
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:3.99999976,1.99999988;stroke-dashoffset:0"
        id="rect3177"
@@ -181,14 +195,14 @@
     <flowRoot
        xml:space="preserve"
        id="flowRoot3225"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"><flowRegion
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"><flowRegion
          id="flowRegion3227"><rect
            id="rect3229"
            width="89.31472"
            height="47.569798"
            x="30.095179"
            y="36.890862"
-           style="font-size:12px" /></flowRegion><flowPara
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" /></flowRegion><flowPara
          id="flowPara3231">13.8VDC</flowPara><flowPara
          id="flowPara3233">supply</flowPara></flowRoot>    <rect
        y="36.011242"
@@ -196,21 +210,21 @@
        height="48.988758"
        width="89.674911"
        id="rect3235"
-       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1" />
+       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <flowRoot
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;color:#000000;fill-rule:nonzero;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        id="flowRoot3237"
        xml:space="preserve"
        transform="translate(110.33178,-9.4867706e-2)"><flowRegion
          id="flowRegion3239"><rect
-           style="font-size:12px"
+           style="font-size:14px;color:#000000;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
            y="36.890862"
            x="30.095179"
            height="47.569798"
            width="89.31472"
            id="rect3241" /></flowRegion><flowPara
          id="flowPara3245">power distribution</flowPara></flowRoot>    <rect
-       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3249"
        width="89.674911"
        height="48.988758"
@@ -220,14 +234,14 @@
        transform="translate(400.00669,229.90513)"
        xml:space="preserve"
        id="flowRoot3251"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"><flowRegion
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"><flowRegion
          id="flowRegion3253"><rect
            id="rect3255"
            width="89.31472"
            height="47.569798"
            x="30.095179"
            y="36.890862"
-           style="font-size:12px" /></flowRegion><flowPara
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" /></flowRegion><flowPara
          id="flowPara3261">thruster actuation</flowPara><flowPara
          id="flowPara2643">ID 7</flowPara></flowRoot>    <rect
        y="246.01125"
@@ -235,14 +249,14 @@
        height="48.988758"
        width="89.674911"
        id="rect3263"
-       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
+       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <flowRoot
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        id="flowRoot3265"
        xml:space="preserve"
        transform="translate(269.6816,209.90513)"><flowRegion
          id="flowRegion3267"><rect
-           style="font-size:12px"
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
            y="36.890862"
            x="30.095179"
            height="47.569798"
@@ -251,7 +265,7 @@
          id="flowPara3271">CPU0</flowPara><flowPara
          id="flowPara3275">mission clock</flowPara><flowPara
          id="flowPara2645">ID 0</flowPara></flowRoot>    <rect
-       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3283"
        width="89.674911"
        height="48.988758"
@@ -261,17 +275,17 @@
        transform="translate(539.19727,236.8032)"
        xml:space="preserve"
        id="flowRoot3285"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"><flowRegion
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"><flowRegion
          id="flowRegion3287"><rect
            id="rect3289"
            width="89.31472"
            height="47.569798"
            x="30.095179"
            y="36.890862"
-           style="font-size:12px" /></flowRegion><flowPara
-         id="flowPara3293">lunar dist (id 1)</flowPara><flowPara
-         id="flowPara2651">lunar spd (id 2)</flowPara></flowRoot>    <rect
-       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" /></flowRegion><flowPara
+         id="flowPara3293">lunar dist</flowPara><flowPara
+         id="flowPara2651">lunar spd</flowPara></flowRoot>    <rect
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3301"
        width="89.674911"
        height="48.988758"
@@ -283,14 +297,14 @@
        height="48.988758"
        width="89.674911"
        id="rect3303"
-       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <flowRoot
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        id="flowRoot3305"
        xml:space="preserve"
        transform="translate(659.68163,228.89389)"><flowRegion
          id="flowRegion3307"><rect
-           style="font-size:12px"
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
            y="36.890862"
            x="30.095179"
            height="47.569798"
@@ -299,7 +313,7 @@
          id="flowPara3313">raster</flowPara><flowPara
          id="flowPara3321">display</flowPara><flowPara
          id="flowPara2653">ID 3,4,5,6</flowPara></flowRoot>    <rect
-       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3325"
        width="89.674911"
        height="48.988758"
@@ -309,14 +323,14 @@
        transform="translate(419.6816,320.91637)"
        xml:space="preserve"
        id="flowRoot3327"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"><flowRegion
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"><flowRegion
          id="flowRegion3329"><rect
            id="rect3331"
            width="89.31472"
            height="47.569798"
            x="30.095179"
            y="36.890862"
-           style="font-size:12px" /></flowRegion><flowPara
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" /></flowRegion><flowPara
          id="flowPara3333" /><flowPara
          id="flowPara3335">HPAM0</flowPara></flowRoot>    <rect
        y="446.01123"
@@ -324,14 +338,14 @@
        height="48.988758"
        width="89.674911"
        id="rect3339"
-       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
+       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <flowRoot
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        id="flowRoot3341"
        xml:space="preserve"
        transform="translate(419.68162,409.90514)"><flowRegion
          id="flowRegion3343"><rect
-           style="font-size:12px"
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
            y="36.890862"
            x="30.095179"
            height="47.569798"
@@ -344,14 +358,14 @@
        height="48.988758"
        width="89.674911"
        id="rect3353"
-       style="fill:#ffffff;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
+       style="fill:#ffffff;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <flowRoot
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.99000001;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        id="flowRoot3355"
        xml:space="preserve"
        transform="translate(529.68157,340.91637)"><flowRegion
          id="flowRegion3357"><rect
-           style="font-size:12px;stroke-width:0.99000001;stroke-miterlimit:4;stroke-dasharray:none"
+           style="font-size:14px;stroke-width:0.99000001000000004;stroke-miterlimit:4;stroke-dasharray:none;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
            y="36.890862"
            x="30.095179"
            height="47.569798"
@@ -359,7 +373,7 @@
            id="rect3359" /></flowRegion><flowPara
          id="flowPara3363">booster</flowPara><flowPara
          id="flowPara3470">solenoid</flowPara></flowRoot>    <rect
-       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;opacity:1;color:#000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;opacity:1;color:#000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3383"
        width="89.674911"
        height="48.988758"
@@ -371,9 +385,9 @@
        height="48.988758"
        width="89.674911"
        id="rect3385"
-       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;opacity:1;color:#000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;opacity:1;color:#000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <rect
-       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;opacity:1;color:#000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;opacity:1;color:#000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3387"
        width="89.674911"
        height="48.988758"
@@ -383,36 +397,36 @@
        transform="translate(640.00667,340.91635)"
        xml:space="preserve"
        id="flowRoot3389"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.99000001;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;font-family:Bitstream Vera Sans"><flowRegion
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"><flowRegion
          id="flowRegion3391"><rect
            id="rect3393"
            width="89.31472"
            height="47.569798"
            x="30.095179"
            y="36.890862"
-           style="font-size:12px;stroke-width:0.99000001;stroke-miterlimit:4;stroke-dasharray:none" /></flowRegion><flowPara
+           style="font-size:14px;stroke-width:0.99000001000000004;stroke-miterlimit:4;stroke-dasharray:none;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" /></flowRegion><flowPara
          id="flowPara3401">thruster</flowPara><flowPara
          id="flowPara3474">solenoid</flowPara></flowRoot>    <rect
-       style="fill:#ffffff;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;writing-mode:lr-tb;text-anchor:middle;color:#000000;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT"
        id="rect3403"
        width="89.674911"
        height="48.988758"
        x="560"
-       y="466.01123" />
+       y="465.46576" />
     <rect
        y="36.011242"
        x="260"
        height="48.988758"
        width="89.674911"
        id="rect3423"
-       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
+       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <flowRoot
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT"
        id="flowRoot3425"
        xml:space="preserve"
-       transform="translate(229.68162,-9.4872833e-2)"><flowRegion
+       transform="translate(229.68162,-4.184218)"><flowRegion
          id="flowRegion3427"><rect
-           style="font-size:12px"
+           style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;writing-mode:lr-tb;text-anchor:middle;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT"
            y="36.890862"
            x="30.095179"
            height="47.569798"
@@ -420,7 +434,7 @@
            id="rect3429" /></flowRegion><flowPara
          id="flowPara3433" /><flowPara
          id="flowPara3437">switch panel</flowPara></flowRoot>    <rect
-       style="fill:#ffffff;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="fill:#ffffff;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3451"
        width="89.674911"
        height="48.988758"
@@ -430,38 +444,38 @@
        transform="translate(490.0067,29.905121)"
        xml:space="preserve"
        id="flowRoot3453"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"><flowRegion
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"><flowRegion
          id="flowRegion3455"><rect
            id="rect3457"
            width="89.31472"
            height="47.569798"
            x="30.095179"
            y="36.890862"
-           style="font-size:12px" /></flowRegion><flowPara
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" /></flowRegion><flowPara
          id="flowPara3461">water fill</flowPara><flowPara
          id="flowPara3469">solenoid</flowPara></flowRoot>    <flowRoot
-       transform="translate(525.56793,429.16163)"
+       transform="translate(525.56793,434.0203)"
        xml:space="preserve"
        id="flowRoot3405"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.99000001;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;font-family:Bitstream Vera Sans"><flowRegion
+       style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT"><flowRegion
          id="flowRegion3407"><rect
            id="rect3409"
            width="89.31472"
            height="47.569798"
            x="30.095179"
            y="36.890862"
-           style="font-size:12px;stroke-width:0.99000001;stroke-miterlimit:4;stroke-dasharray:none" /></flowRegion><flowPara
+           style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;writing-mode:lr-tb;text-anchor:middle;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT" /></flowRegion><flowPara
          id="flowPara3511">cockpit</flowPara><flowPara
          id="flowPara3419">lighting</flowPara><flowPara
          id="flowPara3513">1W LED</flowPara></flowRoot>    <rect
-       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3517"
        width="89.674911"
        height="48.988758"
        x="648.32507"
        y="83" />
     <rect
-       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3519"
        width="89.674911"
        height="48.988758"
@@ -473,9 +487,9 @@
        height="48.988758"
        width="89.674911"
        id="rect3521"
-       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <rect
-       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3523"
        width="89.674911"
        height="48.988758"
@@ -485,14 +499,14 @@
        transform="translate(600.00674,28.893876)"
        xml:space="preserve"
        id="flowRoot3525"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"><flowRegion
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"><flowRegion
          id="flowRegion3527"><rect
            id="rect3529"
            width="89.31472"
            height="47.569798"
            x="30.095179"
            y="36.890862"
-           style="font-size:12px" /></flowRegion><flowPara
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" /></flowRegion><flowPara
          id="flowPara3533">hardwired</flowPara><flowPara
          id="flowPara3537">lighting</flowPara><flowPara
          id="flowPara3539">(nav, guages)</flowPara></flowRoot>    <rect
@@ -501,9 +515,9 @@
        height="48.988758"
        width="105"
        id="rect3541"
-       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1.08207941px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1.08207940999999996px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <rect
-       style="opacity:1;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="opacity:1;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3543"
        width="89.674911"
        height="48.988758"
@@ -513,14 +527,14 @@
        transform="translate(520.60882,662.87033)"
        xml:space="preserve"
        id="flowRoot3545"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"><flowRegion
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"><flowRegion
          id="flowRegion3547"><rect
            id="rect3549"
            width="89.31472"
            height="47.569798"
            x="30.095179"
            y="36.890862"
-           style="font-size:12px" /></flowRegion><flowPara
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" /></flowRegion><flowPara
          id="flowPara3583">azimuth,</flowPara><flowPara
          id="flowPara3581">elevation</flowPara><flowPara
          id="flowPara2665">ID 0</flowPara></flowRoot>    <rect
@@ -529,14 +543,14 @@
        height="48.988758"
        width="89.674911"
        id="rect3555"
-       style="opacity:1;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
+       style="opacity:1;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <flowRoot
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        id="flowRoot3557"
        xml:space="preserve"
        transform="translate(404.64059,662.88498)"><flowRegion
          id="flowRegion3559"><rect
-           style="font-size:12px"
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
            y="36.890862"
            x="30.095179"
            height="47.569798"
@@ -545,56 +559,57 @@
          id="flowPara3565">H2 pressure</flowPara><flowPara
          id="flowPara3593">bar graph</flowPara><flowPara
          id="flowPara2661">ID 1</flowPara></flowRoot>    <rect
-       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1.08207941px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1.08207940999999996px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3567"
        width="105"
        height="48.988758"
        x="290"
        y="675.06165" />
     <flowRoot
-       transform="matrix(0.93762182,0,0,0.91100162,258.85212,645.20265)"
+       transform="matrix(0.93762182,0,0,0.91100162,258.85212,639.20265)"
        xml:space="preserve"
        id="flowRoot3569"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"><flowRegion
+       style="font-size:15.14797592px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT"><flowRegion
          id="flowRegion3571"><rect
            id="rect3573"
            width="120.13788"
            height="61.305939"
            x="30.095179"
            y="36.890862"
-           style="font-size:12px" /></flowRegion><flowPara
+           style="font-size:15.14797592px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;writing-mode:lr-tb;text-anchor:middle;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT" /></flowRegion><flowPara
          id="flowPara3577">CPU1</flowPara><flowPara
-         id="flowPara2657">flt computer 0 (id 2)</flowPara><flowPara
-         id="flowPara3097">flt computer 1 (id 3)</flowPara><flowPara
-         id="flowPara2655" /></flowRoot>    <path
-       style="fill:none;fill-rule:evenodd;stroke:#f80000;stroke-width:2.70000005;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:10.8, 2.7;stroke-dashoffset:0;stroke-opacity:1;display:inline"
+         id="flowPara2657">flt computer 0</flowPara><flowPara
+         id="flowPara2655">flt computer 1</flowPara></flowRoot>    <path
+       style="fill:none;fill-rule:evenodd;stroke:#f80000;stroke-width:2.70000004999999987;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:10.80000000000000071, 2.70000000000000018;stroke-dashoffset:0;stroke-opacity:1;display:inline;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 340,295 L 340,345 L 320,330 L 320,530"
        id="path3599"
        inkscape:connector-type="polyline"
        sodipodi:nodetypes="cccc" />
     <text
        xml:space="preserve"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        id="text3601"
-       transform="matrix(-1,0,0,-1,653.01562,860)"><textPath
+       transform="matrix(-1,0,0,-1,653.01562,860)"
+       sodipodi:linespacing="125%"><textPath
          xlink:href="#path3599"
          startOffset="50%"
          id="textPath3605"><tspan
-   id="tspan3603">TWI</tspan></textPath></text>
+   id="tspan3603"
+   style="-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%">TWI</tspan></textPath></text>
     <rect
        y="526.01123"
        x="300"
        height="48.988758"
        width="89.674911"
        id="rect3608"
-       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <flowRoot
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        id="flowRoot3610"
        xml:space="preserve"
        transform="translate(269.68158,489.90511)"><flowRegion
          id="flowRegion3612"><rect
-           style="font-size:12px"
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
            y="36.890862"
            x="30.095179"
            height="47.569798"
@@ -609,12 +624,12 @@
        id="rect3642"
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:3.99999976, 1.99999988;stroke-dashoffset:0;stroke-opacity:1" />
     <flowRoot
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        id="flowRoot3644"
        xml:space="preserve"
        transform="translate(6.6918896e-3,490.91641)"><flowRegion
          id="flowRegion3646"><rect
-           style="font-size:12px"
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
            y="36.890862"
            x="30.095179"
            height="47.569798"
@@ -629,115 +644,121 @@
        inkscape:connection-end="#rect3608" />
     <text
        xml:space="preserve"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        id="text3658"
-       transform="translate(2.3040619,-5)"><textPath
+       transform="translate(2.3040619,-5)"
+       sodipodi:linespacing="125%"><textPath
          xlink:href="#path3656"
          startOffset="50%"
          id="textPath3662"><tspan
-   id="tspan3660">UART</tspan></textPath></text>
+   id="tspan3660"
+   style="-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%">UART</tspan></textPath></text>
     <path
        sodipodi:nodetypes="ccc"
-       style="fill:none;fill-rule:evenodd;stroke:#0bad00;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;fill-rule:evenodd;stroke:#0bad00;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 390,255 L 740,255 L 740,265"
        id="path3665" />
     <path
-       style="fill:none;fill-rule:evenodd;stroke:#0bad00;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;fill-rule:evenodd;stroke:#0bad00;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 480,256.01124 L 480,266.01124"
        id="path3667" />
     <path
-       style="fill:none;fill-rule:evenodd;stroke:#0bad00;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;fill-rule:evenodd;stroke:#0bad00;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 620.00002,255.00001 L 620.00002,265.00001"
        id="path3669" />
     <path
-       style="fill:none;fill-rule:evenodd;stroke:#0bad00;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;fill-rule:evenodd;stroke:#0bad00;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 479.6191,685 L 479.6191,695"
        id="path3680" />
     <g
-       style="stroke:#0bad00;stroke-width:1.88999999;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="stroke:#0bad00;stroke-width:1.88999998999999996;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:13.57049452px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="g3701"
        transform="matrix(0.9973702,0,0,1.0671079,21.100903,405.60808)">
       <path
-         style="fill:none;fill-rule:evenodd;stroke:#c17e17;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         style="fill:none;fill-rule:evenodd;stroke:#c17e17;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:13.57049452px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
          d="M 420,-85 L 420,65 L 430,65"
          id="path3684" />
       <path
-         style="fill:none;fill-rule:evenodd;stroke:#c17e17;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         style="fill:none;fill-rule:evenodd;stroke:#c17e17;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:13.57049452px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
          d="M 420,-25 L 430,-25"
          id="path3686" />
       <text
          xml:space="preserve"
-         style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+         style="font-size:13.57049452px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
          id="text3692"
          transform="matrix(-1,0,0,-1,834.89844,-15)"><textPath
            xlink:href="#path3684"
            startOffset="50%"
            id="textPath3696"><tspan
-   id="tspan3694">HPAM DA</tspan></textPath></text>
+   id="tspan3694"
+   style="-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:13.57049452px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%">HPAM DA</tspan></textPath></text>
     </g>
     <text
        id="text3708"
        y="246.01125"
        x="533.05078"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;font-family:Bitstream Vera Sans"
-       xml:space="preserve"><tspan
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
+       xml:space="preserve"
+       sodipodi:linespacing="125%"><tspan
          y="246.01125"
          x="533.05078"
          id="tspan3710"
          sodipodi:role="line">Elson Display Bus</tspan></text>
     <text
        xml:space="preserve"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        x="499.54626"
        y="677.64661"
-       id="text3717"><tspan
+       id="text3717"
+       sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan3719"
          x="499.54626"
          y="677.64661">Elson Display Bus</tspan></text>
     <path
-       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 540,366.01124 L 720,366.01124 L 720,376.01124"
        id="path3733" />
     <path
-       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 610,366.01124 L 610,376.01124"
        id="path3735" />
     <path
        id="path3737"
        d="M 610,456.01124 L 610,466.01124"
-       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        sodipodi:nodetypes="cc" />
     <path
-       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 230.12184,55.485407 L 259.79675,55.485407"
        id="path3741" />
     <path
-       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.89;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:1.89,5.67;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999999999999990;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:1.88999999999999990, 5.66999999999999993;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 280,85 L 280,685 L 300,685"
        id="path3743"
        sodipodi:nodetypes="ccc" />
     <path
-       style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.89;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:1.89,5.67;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999999999999990;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:1.88999999999999990, 5.66999999999999993;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 280,265 L 300,265"
        id="path3745" />
     <text
        xml:space="preserve"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        x="-331.19531"
        y="270"
        id="text3749"
-       transform="matrix(0,-1,1,0,0,0)"><tspan
+       transform="matrix(0,-1,1,0,0,0)"
+       sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan3751"
          x="-331.19531"
          y="270">regulated 5VDC</tspan></text>
     <path
-       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 350,55 L 680,55 L 680,65"
        id="path3753" />
     <path
-       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 570,55 L 570,65"
        id="path3755" />
     <rect
@@ -746,14 +767,14 @@
        height="48.988758"
        width="89.674911"
        id="rect3757"
-       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
+       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <flowRoot
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        id="flowRoot3759"
        xml:space="preserve"
        transform="translate(141.06434,579.95026)"><flowRegion
          id="flowRegion3761"><rect
-           style="font-size:12px"
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
            y="36.890862"
            x="30.095179"
            height="47.569798"
@@ -761,7 +782,7 @@
            id="rect3763" /></flowRegion><flowPara
          id="flowPara3769" /><flowPara
          id="flowPara3776">keypad</flowPara></flowRoot>    <rect
-       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3778"
        width="89.674911"
        height="48.988758"
@@ -771,34 +792,34 @@
        transform="translate(141.07612,641.00793)"
        xml:space="preserve"
        id="flowRoot3780"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"><flowRegion
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"><flowRegion
          id="flowRegion3782"><rect
            id="rect3784"
            width="89.31472"
            height="47.569798"
            x="30.095179"
            y="36.890862"
-           style="font-size:12px" /></flowRegion><flowPara
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" /></flowRegion><flowPara
          id="flowPara3788">quad</flowPara><flowPara
          id="flowPara3792">knob</flowPara></flowRoot>    <rect
-       style="opacity:1;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="opacity:1;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.99000001000000004;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3794"
        width="89.674911"
        height="48.988758"
        x="300"
        y="315.93793" />
     <flowRoot
-       transform="translate(267.88662,267.72379)"
+       transform="translate(268.28374,259.57206)"
        xml:space="preserve"
        id="flowRoot3796"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"><flowRegion
+       style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT"><flowRegion
          id="flowRegion3798"><rect
            id="rect3800"
            width="92.018204"
            height="68.82328"
            x="30.095179"
            y="36.890862"
-           style="font-size:12px" /></flowRegion><flowPara
+           style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;writing-mode:lr-tb;text-anchor:middle;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT" /></flowRegion><flowPara
          id="flowPara3804" /><flowPara
          id="flowPara3808">joystick</flowPara><flowPara
          id="flowPara3467">interface /</flowPara><flowPara
@@ -819,15 +840,15 @@
        d="M 120.30809,55 L 140.30809,55"
        style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999987;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:1.88999994, 1.88999994;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
     <path
-       style="fill:none;fill-rule:evenodd;stroke:#f1ee00;stroke-width:1.8900001;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;fill-rule:evenodd;stroke:#f1ee00;stroke-width:1.89000009999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 355,315 L 355,295"
        id="path3854" />
     <path
-       style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#f1ee00;stroke-width:1.8900001;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#f1ee00;stroke-width:1.89000009999999996;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 261.05768,645.04508 L 271.05768,645.04508 L 271.05768,705.04508 L 301.05768,705.04508"
        id="path3856" />
     <path
-       style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#f1ee00;stroke-width:1.8900001;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#f1ee00;stroke-width:1.89000009999999996;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 271.05768,705.04508 L 261.05768,705.04508"
        id="path3858" />
     <rect
@@ -836,14 +857,14 @@
        height="49.135452"
        width="64.874268"
        id="rect3860"
-       style="opacity:1;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.84330606;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
+       style="opacity:1;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.84330605999999986;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <flowRoot
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        id="flowRoot3862"
        xml:space="preserve"
        transform="translate(285.47266,347.92624)"><flowRegion
          id="flowRegion3864"><rect
-           style="font-size:12px"
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
            y="36.890862"
            x="30.095179"
            height="47.569798"
@@ -851,11 +872,11 @@
            id="rect3866" /></flowRegion><flowPara
          id="flowPara3870">pot</flowPara><flowPara
          id="flowPara3878">knobs</flowPara></flowRoot>    <path
-       style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#f1ee00;stroke-width:1.8900001;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#f1ee00;stroke-width:1.89000009999999996;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 370,295 L 370,375"
        id="path3874" />
     <rect
-       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3908"
        width="89.674911"
        height="48.988758"
@@ -865,21 +886,21 @@
        transform="translate(420.00666,489.90511)"
        xml:space="preserve"
        id="flowRoot3910"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"><flowRegion
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"><flowRegion
          id="flowRegion3912"><rect
            id="rect3914"
            width="89.31472"
            height="47.569798"
            x="30.095179"
            y="36.890862"
-           style="font-size:12px" /></flowRegion><flowPara
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" /></flowRegion><flowPara
          id="flowPara3918">amp &amp; speaker</flowPara></flowRoot>    <path
-       style="fill:none;fill-rule:evenodd;stroke:#c8ff1b;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;fill-rule:evenodd;stroke:#c8ff1b;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 390,545 L 450,545"
        id="path3922"
        sodipodi:nodetypes="cc" />
     <rect
-       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999987999999995px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1"
+       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999987999999995px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3930"
        width="90.003624"
        height="18.37636"
@@ -889,35 +910,35 @@
        transform="translate(109.68161,79.905127)"
        xml:space="preserve"
        id="flowRoot3932"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"><flowRegion
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"><flowRegion
          id="flowRegion3934"><rect
            id="rect3936"
            width="89.31472"
            height="47.569798"
            x="30.095179"
            y="36.890862"
-           style="font-size:12px" /></flowRegion><flowPara
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" /></flowRegion><flowPara
          id="flowPara3938">ammeter</flowPara></flowRoot>    <rect
        y="156.62364"
        x="140"
        height="18.37636"
        width="90.003624"
        id="rect3940"
-       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999987999999995px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1" />
+       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999987999999995px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <flowRoot
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        id="flowRoot3942"
        xml:space="preserve"
        transform="translate(109.68161,120.51751)"><flowRegion
          id="flowRegion3944"><rect
-           style="font-size:12px"
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
            y="36.890862"
            x="30.095179"
            height="47.569798"
            width="89.31472"
            id="rect3946" /></flowRegion><flowPara
          id="flowPara3948">voltmeter</flowPara></flowRoot>    <rect
-       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999987999999995px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1"
+       style="fill:#ffffff;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999987999999995px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3950"
        width="90.003624"
        height="18.37636"
@@ -927,14 +948,14 @@
        transform="translate(109.67799,160.51751)"
        xml:space="preserve"
        id="flowRoot3952"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"><flowRegion
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"><flowRegion
          id="flowRegion3954"><rect
            id="rect3956"
            width="89.31472"
            height="47.569798"
            x="30.095179"
            y="36.890862"
-           style="font-size:12px" /></flowRegion><flowPara
+           style="font-size:14px;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" /></flowRegion><flowPara
          id="flowPara3958">hour meter</flowPara></flowRoot>    <path
        sodipodi:type="arc"
        style="opacity:1;fill:#dfffff;fill-opacity:1;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
@@ -965,15 +986,15 @@
        sodipodi:cy="250"
        sodipodi:cx="35"
        id="path3398"
-       style="opacity:1;fill:#dfffff;fill-opacity:1;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="opacity:1;fill:#dfffff;fill-opacity:1;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        sodipodi:type="arc" />
     <flowRoot
        transform="translate(252.77343,-9.6367788)"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        id="flowRoot3400"
        xml:space="preserve"><flowRegion
          id="flowRegion3402"><rect
-           style="fill:#000000;fill-opacity:1"
+           style="fill:#000000;fill-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
            y="232.99492"
            x="19.416245"
            height="33.978428"
@@ -981,7 +1002,7 @@
            id="rect3404" /></flowRegion><flowPara
          id="flowPara3406">2</flowPara></flowRoot>    <path
        sodipodi:type="arc"
-       style="opacity:1;fill:#dfffff;fill-opacity:1;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="opacity:1;fill:#dfffff;fill-opacity:1;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="path3408"
        sodipodi:cx="35"
        sodipodi:cy="250"
@@ -992,7 +1013,7 @@
     <flowRoot
        xml:space="preserve"
        id="flowRoot3410"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        transform="translate(504.96099,87.64453)"><flowRegion
          id="flowRegion3412"><rect
            id="rect3414"
@@ -1000,7 +1021,7 @@
            height="33.978428"
            x="19.416245"
            y="232.99492"
-           style="fill:#000000;fill-opacity:1" /></flowRegion><flowPara
+           style="fill:#000000;fill-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" /></flowRegion><flowPara
          id="flowPara3416">3</flowPara></flowRoot>    <path
        transform="translate(612.39448,91.142527)"
        d="M 50,250 A 15,15 0 1 1 20,250 A 15,15 0 1 1 50,250 z"
@@ -1009,15 +1030,15 @@
        sodipodi:cy="250"
        sodipodi:cx="35"
        id="path3418"
-       style="opacity:1;fill:#dfffff;fill-opacity:1;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="opacity:1;fill:#dfffff;fill-opacity:1;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        sodipodi:type="arc" />
     <flowRoot
        transform="translate(612.35547,98.787057)"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        id="flowRoot3420"
        xml:space="preserve"><flowRegion
          id="flowRegion3422"><rect
-           style="fill:#000000;fill-opacity:1"
+           style="fill:#000000;fill-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
            y="232.99492"
            x="19.416245"
            height="33.978428"
@@ -1025,7 +1046,7 @@
            id="rect3424" /></flowRegion><flowPara
          id="flowPara3426">4</flowPara></flowRoot>    <path
        sodipodi:type="arc"
-       style="opacity:1;fill:#dfffff;fill-opacity:1;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="opacity:1;fill:#dfffff;fill-opacity:1;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="path3430"
        sodipodi:cx="35"
        sodipodi:cy="250"
@@ -1036,7 +1057,7 @@
     <flowRoot
        xml:space="preserve"
        id="flowRoot3432"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        transform="translate(774.96099,107.64453)"><flowRegion
          id="flowRegion3434"><rect
            id="rect3436"
@@ -1044,7 +1065,7 @@
            height="33.978428"
            x="19.416245"
            y="232.99492"
-           style="fill:#000000;fill-opacity:1" /></flowRegion><flowPara
+           style="fill:#000000;fill-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" /></flowRegion><flowPara
          id="flowPara3438">5</flowPara></flowRoot>    <path
        transform="translate(367.83594,409.38574)"
        d="M 50,250 A 15,15 0 1 1 20,250 A 15,15 0 1 1 50,250 z"
@@ -1053,15 +1074,15 @@
        sodipodi:cy="250"
        sodipodi:cx="35"
        id="path3440"
-       style="opacity:1;fill:#dfffff;fill-opacity:1;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="opacity:1;fill:#dfffff;fill-opacity:1;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        sodipodi:type="arc" />
     <flowRoot
        transform="translate(367.95117,420.59812)"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        id="flowRoot3442"
        xml:space="preserve"><flowRegion
          id="flowRegion3444"><rect
-           style="fill:#000000;fill-opacity:1"
+           style="fill:#000000;fill-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
            y="232.99492"
            x="19.416245"
            height="33.978428"
@@ -1069,7 +1090,7 @@
            id="rect3446" /></flowRegion><flowPara
          id="flowPara3448">6</flowPara></flowRoot>    <path
        sodipodi:type="arc"
-       style="opacity:1;fill:#dfffff;fill-opacity:1;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="opacity:1;fill:#dfffff;fill-opacity:1;fill-rule:evenodd;stroke:#00ffff;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="path3460"
        sodipodi:cx="35"
        sodipodi:cy="250"
@@ -1080,7 +1101,7 @@
     <flowRoot
        xml:space="preserve"
        id="flowRoot3462"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;writing-mode:lr;line-height:125%"
        transform="translate(642.35547,428.78706)"><flowRegion
          id="flowRegion3464"><rect
            id="rect3466"
@@ -1088,30 +1109,30 @@
            height="33.978428"
            x="19.416245"
            y="232.99492"
-           style="fill:#000000;fill-opacity:1" /></flowRegion><flowPara
+           style="fill:#000000;fill-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" /></flowRegion><flowPara
          id="flowPara3468">7</flowPara></flowRoot>    <rect
-       style="opacity:1;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="opacity:1;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect3481"
        width="89.674911"
        height="48.988758"
        x="669.95355"
        y="465.46576" />
     <flowRoot
-       transform="translate(639.6351,429.35966)"
+       transform="translate(639.6351,435.41141)"
        xml:space="preserve"
        id="flowRoot3483"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.99000001;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;font-family:Bitstream Vera Sans"><flowRegion
+       style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT"><flowRegion
          id="flowRegion3485"><rect
            id="rect3487"
            width="89.31472"
            height="47.569798"
            x="30.095179"
            y="36.890862"
-           style="font-size:12px;stroke-width:0.99000001;stroke-miterlimit:4;stroke-dasharray:none" /></flowRegion><flowPara
+           style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;writing-mode:lr-tb;text-anchor:middle;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT" /></flowRegion><flowPara
          id="flowPara3491">clanger</flowPara><flowPara
          id="flowPara3495">solenoid</flowPara></flowRoot>    <path
        sodipodi:nodetypes="ccc"
-       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 540,455 L 719.99997,455 L 719.99997,465"
        id="path3497" />
     <text
@@ -1123,7 +1144,7 @@
          sodipodi:role="line"
          id="tspan2649" /></text>
     <rect
-       style="opacity:1;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="opacity:1;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7d7d7d;stroke-width:0.99999994000000003px;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        id="rect2667"
        width="89.674911"
        height="48.988758"
@@ -1131,35 +1152,45 @@
        y="465" />
     <path
        sodipodi:nodetypes="ccc"
-       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 647.50003,455 L 827.5,455 L 827.5,465"
        id="path2669" />
     <flowRoot
-       transform="translate(752.25195,438.16672)"
+       transform="translate(750.27239,434.94565)"
        xml:space="preserve"
        id="flowRoot2671"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.99000001;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;font-family:Bitstream Vera Sans"><flowRegion
+       style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT"><flowRegion
          id="flowRegion2673"><rect
            id="rect2675"
            width="89.31472"
            height="47.569798"
            x="30.095179"
            y="36.890862"
-           style="font-size:12px;stroke-width:0.99000001;stroke-miterlimit:4;stroke-dasharray:none" /></flowRegion><flowPara
-         id="flowPara2679">Hatch Solenoid (future)</flowPara></flowRoot>    <path
+           style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;writing-mode:lr-tb;text-anchor:middle;font-family:Futura Md BT;-inkscape-font-specification:Futura Md BT" /></flowRegion><flowPara
+         id="flowPara2679">hatch solenoid (future)</flowPara></flowRoot>    <path
        sodipodi:nodetypes="cccc"
        id="path3465"
        d="M 450,490 L 420,490 L 420,205 L 230,205"
-       style="fill:none;fill-rule:evenodd;stroke:#e418ed;stroke-width:1.89;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none" />
+       style="fill:none;fill-rule:evenodd;stroke:#e418ed;stroke-width:1.88999999999999990;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%" />
     <path
-       style="fill:none;fill-rule:evenodd;stroke:#f80000;stroke-width:2.70000005;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:10.8, 2.7;stroke-dashoffset:0;stroke-opacity:1;display:inline"
+       style="fill:none;fill-rule:evenodd;stroke:#f80000;stroke-width:2.70000004999999987;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:10.80000000000000071, 2.70000000000000018;stroke-dashoffset:0;stroke-opacity:1;display:inline;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 310,365 L 310,675"
        id="path3473"
        inkscape:connector-type="polyline"
        sodipodi:nodetypes="cc" />
     <path
-       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:1.88999999999999990, 5.66999999999999993;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="fill:none;fill-rule:evenodd;stroke:#bc00d7;stroke-width:1.88999998999999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;opacity:1;color:#000000;fill-opacity:1;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:1.88999999999999990, 5.66999999999999993;stroke-dashoffset:0;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;-inkscape-font-specification:Futura Md BT;font-family:Futura Md BT;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:14px;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"
        d="M 230,65 C 240,65 260,65 260,65"
        id="path3433" />
-  </g>
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot3182"
+       style="fill:black;stroke:none;stroke-opacity:1;stroke-width:1px;stroke-linejoin:miter;stroke-linecap:butt;fill-opacity:1;font-family:Futura Md BT;font-style:normal;font-weight:normal;font-size:14px;-inkscape-font-specification:Futura Md BT;font-stretch:normal;font-variant:normal;text-anchor:middle;text-align:center;writing-mode:lr;line-height:125%"><flowRegion
+         id="flowRegion3184"><rect
+           id="rect3186"
+           width="48.090805"
+           height="14.249126"
+           x="342.86963"
+           y="304.57507" /></flowRegion><flowPara
+         id="flowPara3188"></flowPara></flowRoot>  </g>
 </svg>

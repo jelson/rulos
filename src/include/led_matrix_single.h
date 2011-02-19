@@ -20,5 +20,6 @@ void _lms_configure_row(uint8_t rowdata);
 void _lms_configure_col(uint16_t coldata);
 void _lms_configure(uint8_t rowdata, uint16_t coldata);
 void lms_draw(LEDMatrixSingle *lms, LMSBitmap *bitmap);
+void lms_enable(LEDMatrixSingle *lms, r_bool enable);
 
 #endif // _LED_MATRIX_SINGLE_H

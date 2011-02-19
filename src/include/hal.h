@@ -53,6 +53,8 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 
 void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff);
 char hal_read_keybuf();
+char hal_scan_keypad();
+	// used for "hold a key at startup" check.
 uint16_t hal_elapsed_milliintervals();
 void hal_speedup_clock_ppm(int32_t ratio);
 void hal_delay_ms(uint16_t ms);

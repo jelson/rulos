@@ -6,6 +6,27 @@
 //////////////////////////////////////////////////////////////////////////////
 // Board I/O mapping defs
 // These are in order down the right side (pins 40-21) of a 1284p PDIP.
+#define FINAL_STRIPBOARD 1
+#if FINAL_STRIPBOARD
+#define GLCD_DB7	GPIO_A0
+#define GLCD_DB6	GPIO_A1
+#define GLCD_DB5	GPIO_A2
+#define GLCD_DB4	GPIO_A3
+#define GLCD_DB3	GPIO_A4
+#define GLCD_DB2	GPIO_A5
+#define GLCD_DB1	GPIO_A6
+#define GLCD_DB0	GPIO_A7
+// aref - nc - a0
+// gnd  - nc - nc
+// avcc - nc - rw
+#define GLCD_CS2	GPIO_C7
+#define GLCD_CS1	GPIO_C6
+#define GLCD_RESET	GPIO_C5
+#define GLCD_VBL	GPIO_C4
+#define GLCD_A0		GPIO_C3
+#define GLCD_RW		GPIO_C2
+
+#else	// original breadboard
 #define GLCD_RESET	GPIO_A0
 #define GLCD_CS1	GPIO_A1
 #define GLCD_CS2	GPIO_A2
@@ -24,8 +45,8 @@
 #define GLCD_DB2	GPIO_C3
 #define GLCD_DB3	GPIO_C2
 #define GLCD_DB4	GPIO_C1
-// nc - c0
-// nc - d7
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 
 void glcd_complete_init(Activation *act);
@@ -92,8 +113,24 @@ uint8_t glcd_data_in()
 	return val;
 }
 
+// TODO ever short on memory, share this table somewhere.
+// (it also appears as _lms_bitswap)
+uint8_t _lcd_bitswap[16] = {
+	0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe,
+	0x1, 0x9, 0x5, 0xd, 0x3, 0xb, 0x7, 0xf };
+
 void glcd_data_out(uint8_t v)
 {
+#if FINAL_STRIPBOARD
+	uint8_t swap_v = (_lcd_bitswap[v&0xf]<<4)|(_lcd_bitswap[(v>>4)&0xf]);
+	
+	/*
+	void syncdebug(uint8_t spaces, char f, uint16_t line);
+	syncdebug(4, 'v', v);
+	syncdebug(5, 's', swap_v);
+	*/
+	PORTA = swap_v;
+#else
 	gpio_set_or_clr(GLCD_DB0, (v & (1<<0)));
 	gpio_set_or_clr(GLCD_DB1, (v & (1<<1)));
 	gpio_set_or_clr(GLCD_DB2, (v & (1<<2)));
@@ -102,6 +139,7 @@ void glcd_data_out(uint8_t v)
 	gpio_set_or_clr(GLCD_DB5, (v & (1<<5)));
 	gpio_set_or_clr(GLCD_DB6, (v & (1<<6)));
 	gpio_set_or_clr(GLCD_DB7, (v & (1<<7)));
+#endif // FINAL_STRIPBOARD
 }
 
 void glcd_wait_status_event(uint8_t event, uint8_t unit)

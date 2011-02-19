@@ -80,6 +80,7 @@ COMMON_OBJECTS = \
 	momentary_display.o \
 	serial_console.o \
 	led_matrix_single.o \
+	eeprom.o \
 
 #	spiflash.o \
 #	audio_driver.o \

@@ -413,6 +413,11 @@ char hal_read_keybuf()
 
 }
 
+char hal_scan_keypad()
+{
+	return 0;
+}
+
 // translation from a key typed at the keyboard to the simulated
 // keypad input that should be enqueued
 char translate_to_keybuf(char c)
