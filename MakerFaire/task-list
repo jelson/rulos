@@ -6,11 +6,18 @@ Necessary:
 		-- many evenings
 
 	Decouple power supply.
+		* already a bolt-on.
 	Decouple water supply.
+		* just decouple from reservoir? Or find suitable fittings at HD?
 	Decouple air supply.
+		* need to braze in some sort of coupling joint. Flexible hose?
+		* add HF reservoir tank?
 	Decouple trench signal lines
+		* solder inline molex connectors
 	Investigate folding power panel up to top module.
 		-- weekend?
+		* have to unrivet hpde standoff; send it & breakout board with plexi
+		* have to remove cabling mounts
 
 	Crane / tackle for removing top module.
 
@@ -18,6 +25,8 @@ Important:
 
 	Couch repair
 		-- 1-2 hours
+
+	Glue/rivet cable tiedowns into place.
 
 	Complete audio hardware, software, reinstall
 		-- weekend
