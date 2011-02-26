@@ -28,15 +28,22 @@
 
 int main()
 {
-	heap_init();
-	util_init();
-	hal_init();
-	clock_init(10000);
-	board_buffer_module_init();
+  HPAM hpam;
+  ThrusterUpdate *thrusterUpdate[4];
 
-	ThrusterState_t ts;
-	thrusters_init(&ts, 7, 3, 2);
-	cpumon_main_loop();
-	return 0;
+  util_init();
+  hal_init(bc_rocket0);
+  init_clock(10000, TIMER1);
+  memset(thrusterUpdate, 0, sizeof(thrusterUpdate));
+  init_hpam(&hpam, 7, thrusterUpdate);
+  board_buffer_module_init();
+  
+  ThrusterState_t ts;
+  thrusters_init(&ts, 7, 3, 2, &hpam, NULL);
+  
+  CpumonAct cpumon;
+  cpumon_init(&cpumon);
+  cpumon_main_loop();
+  return 0;
 }
 

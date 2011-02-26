@@ -15,9 +15,13 @@
 ROCKET_ROOT := ../..
 
 #MCU := atmega328p
-MCU := atmega8
-BOARD := PCB11
+#MCU := atmega8
+MCU := atmega1284p
+
+#BOARD := PCB11
 #BOARD := CUSTOM
+BOARD := LPEM
+
 TARGET := twisendtest
 
 TARGET_OBJECTS := \

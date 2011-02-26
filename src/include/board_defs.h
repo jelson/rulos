@@ -129,6 +129,27 @@
 #define	AVAILABLE_ADCS	0x3f
 #define	ASSERT_TO_BOARD	1
 
+#elif defined(BOARD_LPEM)
+
+#define BOARD_HAS_LEDS	1
+
+#define BOARDSEL0	GPIO_C2
+#define BOARDSEL1	GPIO_C3
+#define BOARDSEL2	GPIO_C4
+#define DIGSEL0		GPIO_D2
+#define DIGSEL1		GPIO_D3
+#define DIGSEL2		GPIO_D5
+#define SEGSEL0		GPIO_C5
+#define SEGSEL1		GPIO_C6
+#define SEGSEL2		GPIO_C7
+#define DATA		GPIO_D6
+#define STROBE		GPIO_D7
+
+#define JOYSTICK_TRIGGER	GPIO_D4
+
+#define	AVAILABLE_ADCS	0x3f
+#define	ASSERT_TO_BOARD	1
+
 #elif defined(BOARD_FLASHCARD)
 
 #define BOARD_HAS_LEDS	0

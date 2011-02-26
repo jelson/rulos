@@ -76,7 +76,6 @@ static void update(BoardIDAct_t *ba)
 
 int main()
 {
-	heap_init();
 	util_init();
 	hal_init(bc_audioboard);
 	init_clock(100000, TIMER1);

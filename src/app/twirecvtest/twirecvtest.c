@@ -16,8 +16,11 @@
 
 #include "rocket.h"
 
-#define HAVE_AUDIOBOARD_UART 1
-#if HAVE_AUDIOBOARD_UART
+#define HAVE_AUDIOBOARD_UART 0
+
+#if !HAVE_AUDIOBOARD_UART
+# define SYNCDEBUG() {}
+#else
 
 #define SYNCDEBUG()	syncdebug(0, 'T', __LINE__)
 
@@ -104,7 +107,7 @@ void test_netstack()
 	recvSlot.msg_occupied = FALSE;
 
 	SYNCDEBUG();
-	init_network(&net, AUDIO_ADDR);
+	init_twi_network(&net, AUDIO_ADDR);
 	net_bind_receiver(&net, &recvSlot);
 	SYNCDEBUG();
 
@@ -117,7 +120,9 @@ int main()
 {
 	util_init();
 	hal_init(bc_audioboard);
+#if HAVE_AUDIOBOARD_UART
 	serial_init();
+#endif
 
 	test_netstack();
 	return 0;

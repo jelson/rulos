@@ -14,8 +14,10 @@
 
 ROCKET_ROOT := ../..
 
-MCU := atmega8
 TARGET := thrustertest
+
+MCU := atmega1284p
+BOARD := LPEM
 
 TARGET_OBJECTS := \
 	thrustertest.o

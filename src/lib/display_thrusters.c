@@ -79,7 +79,8 @@ static void thrusters_update(ThrusterState_t *ts)
 	if ((ts->joystick_state.state & (JOYSTICK_UP | JOYSTICK_LEFT | JOYSTICK_RIGHT | JOYSTICK_TRIGGER)) != 0)
 	{
 		//LOGF((logfp, "idle touch due to nonzero joystick: %d\n", ts->joystick_state.state));
-		idle_touch(ts->idle);
+		if (ts->idle != NULL)
+			idle_touch(ts->idle);
 	}
 
 	// draw digits

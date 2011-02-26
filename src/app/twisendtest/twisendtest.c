@@ -95,10 +95,10 @@ void test_netstack()
 	sendSlot.func = NULL;
 	sendSlot.dest_addr = AUDIO_ADDR;
 	sendSlot.msg = (Message *) data;
-	sendSlot.msg->dest_port = 0x88;
+	sendSlot.msg->dest_port = AUDIO_PORT;
 	sendSlot.sending = FALSE;
 
-	init_network(&net, 0x5);
+	init_twi_network(&net, 0x5);
 
 	sendAct_t sa;
 	sa.f = (ActivationFunc) sendMessage;
@@ -118,7 +118,7 @@ void test_netstack()
 int main()
 {
 	util_init();
-	hal_init(bc_chaseclock);
+	hal_init(bc_audioboard);
 
 	board_say("  InIt  ");
 	// test_without_netstack();
