@@ -182,4 +182,17 @@
 # error No board definition given
 #endif
 
+
+#if defined(MCUatmega1284) || defined(MCUatmega1284p)
+# define MCU1284_line
+#elif defined(MCUatmega88) || defined(MCUatmega88p) || defined(MCUatmega168) || defined(MCUatmega168p) || defined(MCUatmega328) || defined(MCUatmega328p)
+# define MCU328_line
+#elif defined (MCUatmega8) || defined(MCUatmega16) || defined (MCUatmega32)
+# define MCU8_line
+#else
+# error Unknown processor
+#endif
+
+
 #endif //SIM
+

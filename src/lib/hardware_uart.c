@@ -46,7 +46,7 @@ void audioled_set(r_bool red, r_bool yellow);
 // compare the UartState passed in to each function and change the
 // register names conditionally.
 
-#if defined(MCUatmega8)
+#if defined(MCU8_line)
 # define _UBRRH    UBRRH
 # define _UBRRL    UBRRL
 # define _UCSRA    UCSRA
@@ -62,7 +62,7 @@ void audioled_set(r_bool red, r_bool yellow);
 # define _UDRE     UDRE
 # define _UDRIE    UDRIE
 # define _USBS     USBS
-#elif defined(MCUatmega328p) || defined(MCUatmega1284p)
+#elif defined(MCU328_line) || defined(MCU1284_line)
 # define _UBRRH    UBRR0H
 # define _UBRRL    UBRR0L
 # define _UCSRA    UCSR0A
@@ -110,7 +110,7 @@ void hal_uart_init(UartHandler *handler, uint16_t baud, r_bool stop2)
 	// set frame format: async, 8 bit data, 1 stop bit, no parity
 	_UCSRC =  _BV(_UCSZ1) | _BV(_UCSZ0)
 		| (stop2 ? _BV(_USBS) : 0)
-#ifdef MCUatmega8
+#ifdef MCU8_line
 	  | _BV(URSEL)
 #endif
 	  ;
@@ -169,7 +169,7 @@ static inline void _handle_send_ready()
 }
 
 
-#if defined(MCUatmega8)
+#if defined(MCU8_line)
 ISR(USART_RXC_vect)
 {
 	_handle_recv_ready(UDR);
@@ -179,7 +179,7 @@ ISR(USART_UDRE_vect)
 	_handle_send_ready();
 }
 
-#elif defined(MCUatmega328p)
+#elif defined(MCU328_line)
 ISR(USART_RX_vect)
 {
 	_handle_recv_ready(UDR0);
@@ -188,7 +188,7 @@ ISR(USART_UDRE_vect)
 {
 	_handle_send_ready();
 }
-#elif defined(MCUatmega1284p)
+#elif defined(MCU1284_line)
 ISR(USART0_RX_vect)
 {
 	_handle_recv_ready(UDR0);

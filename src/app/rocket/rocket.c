@@ -86,10 +86,12 @@ typedef struct {
 
 #if defined(BOARD_PCB10)
 #define THRUSTER_Y_CHAN	4
-#elif defined(BOARD_PCB11)
+#elif defined(BOARD_PCB11) || defined(BOARD_LPEM)
 #define THRUSTER_Y_CHAN	2
 #elif SIM
 #define THRUSTER_Y_CHAN	2
+#else
+# error Thruster y chan not defined for this board
 #endif
 
 #define POTSTICKER_CHANNEL 0
@@ -145,7 +147,9 @@ int main()
 	util_init();
 	hal_init(bc_rocket0);
 	init_clock(10000, TIMER1);
+#if 0
 	hal_init_keypad();
+#endif
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);	// includes slow calibration phase
