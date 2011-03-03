@@ -28,7 +28,7 @@
 #include "board_defs.h"
 #include "hal.h"
 
-#define NUM_ADCS 6
+#define NUM_ADCS 8
 // #define RAW_ADC
 
 
