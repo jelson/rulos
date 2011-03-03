@@ -4,6 +4,7 @@
 //#define NO_ANALOG
 
 #include <string.h>
+#include <stdbool.h>
 #include <avr/interrupt.h>
 
 #define F_CPU 8000000UL
@@ -15,6 +16,7 @@
 #include "pov.h"
 #include "vect3d.h"
 #include "tilty_input.h"
+#include "serial_console.h"
 
 struct locatorAct;
 typedef struct locatorAct locatorAct_t;
@@ -62,6 +64,11 @@ struct locatorAct {
 	FuncSeq funcseq;
 
 	// uart
+	SerialConsole console;
+	struct s_serial_console_act {
+		Activation act;
+		struct locatorAct *aa;
+	} serial_console_act;
 	char UARTsendBuf[48];
 	uint8_t uartSending;
 
@@ -75,7 +82,9 @@ struct locatorAct {
 	// twi
 	char TWIsendBuf[10];
 	char TWIrecvBuf[10];
-	TWIRecvSlot *trs;
+	MediaRecvSlot *mrs;
+	MediaStateIfc *twiState;
+
 	PeripheralSendCompleteFunc sendFunc;
 	PeripheralRecvCompleteFunc recvFunc;
 	uint8_t twiAddr;
@@ -125,7 +134,7 @@ static inline void uartSendDone(void *cb_data)
 static inline void emit(locatorAct_t *aa, char *s)
 {
 	aa->uartSending = TRUE;
-	uart_send(RULOS_UART0, s, strlen(s), uartSendDone, aa);
+	uart_send(&aa->console.uart, s, strlen(s), uartSendDone, aa);
 }
 
 
@@ -145,28 +154,18 @@ void sendToPeripheral(locatorAct_t *aa,
 					  PeripheralSendCompleteFunc f)
 {
 	aa->sendFunc = f;
-	hal_twi_send(twiAddr, data, len, _peripheralSendComplete, aa);
+	(aa->twiState->send)(aa->twiState, twiAddr, data, len, _peripheralSendComplete, aa);
 }
 
 
 /*** receiving data from a locator peripheral, using the
 	 write-address-then-read protocol ***/
 
-void _locatorReadComplete(TWIRecvSlot *trs, uint8_t len)
+void _locatorReadComplete(MediaRecvSlot *mrs, uint8_t len)
 {
-	locatorAct_t *aa = (locatorAct_t *) trs->user_data;
-	aa->recvFunc(aa, trs->data, aa->readLen);
+	locatorAct_t *aa = (locatorAct_t *) mrs->user_data;
+	aa->recvFunc(aa, mrs->data, aa->readLen);
 }
-
-void _readFromPeripheral2(locatorAct_t *aa)
-{
-	aa->trs = (TWIRecvSlot *) aa->TWIrecvBuf;
-	aa->trs->func = _locatorReadComplete;
-	aa->trs->capacity = aa->readLen;
-	aa->trs->user_data = aa;
-	hal_twi_read(aa->twiAddr, aa->trs);
-}
-
 
 void readFromPeripheral(locatorAct_t *aa,
 						uint8_t twiAddr,
@@ -179,7 +178,7 @@ void readFromPeripheral(locatorAct_t *aa,
 
 	aa->twiAddr = twiAddr;
 	aa->TWIsendBuf[0] = baseAddr;
-	sendToPeripheral(aa, twiAddr, aa->TWIsendBuf, 1, _readFromPeripheral2);
+	sendToPeripheral(aa, twiAddr, aa->TWIsendBuf, 1, NULL);
 }
 
 
@@ -295,13 +294,13 @@ static inline void seq_emit_done(void *cb_data)
 static inline void seq_emit(locatorAct_t *aa, char *s)
 {
 	aa->uartSending = TRUE;
-	uart_send(RULOS_UART0, s, strlen(s), seq_emit_done, aa);
+	uart_send(&aa->console.uart, s, strlen(s), seq_emit_done, aa);
 }
 
 
 static void config_next(locatorAct_t *aa)
 {
-	aa_g.debug_state = 'c';
+	aa->debug_state = 'c';
 	funcseq_next(&aa->funcseq);
 }
 
@@ -316,7 +315,7 @@ static inline void config_recv_next(locatorAct_t *aa, char *data, int len)
 // This is a little clumsy, but keeps the sequencing code otherwise clean-ish.
 static inline char *last_read_data(locatorAct_t *aa)
 {
-	return aa->trs->data;
+	return aa->mrs->data;
 }
 
 // Configure the accelerometer by first reading config byte 0x14, then
@@ -466,18 +465,18 @@ void sampleLocator2(locatorAct_t *aa, char *data, int len)
 
 }
 	
+void serial_console_input_handler(Activation *act)
+{
+	locatorAct_t *aa = ((struct s_serial_console_act *)act)->aa;
+	(void) aa;
+	// see if we've received any serial commands
+	// do nothing.
+}
 	
 void sampleLocator(locatorAct_t *aa)
 {
 	// schedule reading of the next sample
 	schedule_us(5000, (Activation *) aa);
-
-	// see if we've received any serial commands
-	char cmd;
-	while (CharQueue_pop(uart_recvq(RULOS_UART0)->q, &cmd)) {
-		switch (cmd) {
-		}
-	}
 
 	// read 6 bytes from accelerometer starting from address 0x2
 	readFromPeripheral(aa, ACCEL_ADDR, 0x2, 6, sampleLocator2);
@@ -499,7 +498,6 @@ SequencableFunc func_array[] = {
 
 int main()
 {
-	heap_init();
 	util_init();
 	hal_init(bc_audioboard);
 	init_clock(1000, TIMER1);
@@ -512,20 +510,29 @@ int main()
 	gpio_clr(GPIO_C5);
 #endif
 
-	hal_twi_init(0, NULL);
+	struct locatorAct *aa = &aa_g;
 
-#define BAUD_8MHz_38461	12
-	uart_init(RULOS_UART0, BAUD_8MHz_38461);
+	aa->mrs = (MediaRecvSlot *) aa->TWIrecvBuf;
+	aa->mrs->func = _locatorReadComplete;
+	aa->mrs->capacity = aa->readLen;
+	aa->mrs->occupied = false;
+	aa->mrs->user_data = aa;
+	aa->twiState = hal_twi_init(0, aa->mrs);
+
+	aa->serial_console_act.act.func = serial_console_input_handler;
+	aa->serial_console_act.aa = aa;
+	// 38400-N-2 presently hardcoded into serial console; hope you like it.
+	serial_console_init(&aa->console, &aa->serial_console_act.act);
 
 	memset(&aa_g, 0, sizeof(aa_g));
-	aa_g.f = (ActivationFunc) sampleLocator;
+	aa->f = (ActivationFunc) sampleLocator;
 
 	if (strlen(FIRMWARE_ID) > ID_OFFSET) {
-		snprintf(aa_g.UARTsendBuf, sizeof(aa_g.UARTsendBuf)-1, "^i;%s\r\n", FIRMWARE_ID+ID_OFFSET);
+		snprintf(aa->UARTsendBuf, sizeof(aa->UARTsendBuf)-1, "^i;%s\r\n", FIRMWARE_ID+ID_OFFSET);
 	} else {
-		snprintf(aa_g.UARTsendBuf, sizeof(aa_g.UARTsendBuf)-1, "^i;0$\r\n");
+		snprintf(aa->UARTsendBuf, sizeof(aa->UARTsendBuf)-1, "^i;0$\r\n");
 	}
-	emit(&aa_g, aa_g.UARTsendBuf);
+	emit(&aa_g, aa->UARTsendBuf);
 
 #ifdef TIME_DEBUG
 	for (uint8_t i = 0; i < 10; i++)
@@ -538,18 +545,18 @@ int main()
 	alive_init(&alive);
 #endif
 
-	pov_init(&aa_g.pov_act);
-	message_change_init(&aa_g.message_change, &aa_g.pov_act);
+	pov_init(&aa->pov_act);
+	message_change_init(&aa->message_change, &aa->pov_act);
 
 	TiltyInputHandler tih;
-	tih_init(&tih, &aa_g, &aa_g.pov_act, &aa_g.message_change);
+	tih_init(&tih, &aa_g, &aa->pov_act, &aa->message_change);
 
 	TiltyInputAct tia;
-	tilty_input_init(&tia, &aa_g.accel, (UIEventHandler*) &tih);
+	tilty_input_init(&tia, &aa->accel, (UIEventHandler*) &tih);
 	
-	init_funcseq(&aa_g.funcseq, &aa_g, func_array);
-	aa_g.debug_state = 'A';
-	funcseq_next(&aa_g.funcseq);
+	init_funcseq(&aa->funcseq, &aa_g, func_array);
+	aa->debug_state = 'A';
+	funcseq_next(&aa->funcseq);
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);
