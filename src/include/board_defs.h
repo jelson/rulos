@@ -147,7 +147,7 @@
 
 #define JOYSTICK_TRIGGER	GPIO_D4
 
-#define	AVAILABLE_ADCS	0x3f
+#define	AVAILABLE_ADCS	0xff
 #define	ASSERT_TO_BOARD	1
 
 #elif defined(BOARD_FLASHCARD)
@@ -163,7 +163,7 @@
 #define KEYPAD_COL2 GPIO_B5
 #define KEYPAD_COL3 GPIO_B6
 
-#define	AVAILABLE_ADCS	0x3f	// Good luck, board designer -- no safety check here
+#define	AVAILABLE_ADCS	0xff
 
 #define	ASSERT_TO_BOARD	0
 #define	ASSERT_CUSTOM(line)	{ \
@@ -174,9 +174,8 @@
 #elif defined(BOARD_CUSTOM)
 
 #define BOARD_HAS_LEDS	0
-
-#define	AVAILABLE_ADCS	0x3f	// Good luck, board designer -- no safety check here
 #define	ASSERT_TO_BOARD	0
+#define	AVAILABLE_ADCS	0xff	// Good luck, board designer -- no safety check here
 
 #else
 # error No board definition given
