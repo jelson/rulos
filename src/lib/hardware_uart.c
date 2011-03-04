@@ -84,15 +84,14 @@ void audioled_set(r_bool red, r_bool yellow);
 
 UartHandler *g_uart_handler;
 
-uint16_t baud_to_ubrr(uint16_t baud)
+uint16_t baud_to_ubrr(uint32_t baud)
 {
 	return ((uint32_t) hardware_f_cpu) / 16 / baud - 1;
 }
 
-void hal_uart_init(UartHandler *handler, uint16_t baud, r_bool stop2)
+void hal_uart_init(UartHandler *handler, uint32_t baud, r_bool stop2)
 {
 	uint16_t ubrr = baud_to_ubrr(baud);
-//	ubrr = (8000000 / 16 / 38400 - 1); // TODO back to variables
 
 	// disable interrupts
 	cli();

@@ -171,14 +171,16 @@
 	syncdebug(0, 'A', line); \
 	}
 
-#elif defined(BOARD_CUSTOM)
+#else
+
+#ifndef BOARD_CUSTOM
+/* # warning "No recognized board" */
+#endif
 
 #define BOARD_HAS_LEDS	0
 #define	ASSERT_TO_BOARD	0
 #define	AVAILABLE_ADCS	0xff	// Good luck, board designer -- no safety check here
 
-#else
-# error No board definition given
 #endif
 
 

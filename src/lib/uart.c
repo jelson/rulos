@@ -117,7 +117,7 @@ r_bool uart_busy(UartState_t *u)
 	return (u->out_buf != NULL);
 }
 
-void uart_init(UartState_t *u, uint16_t baud, r_bool stop2)
+void uart_init(UartState_t *u, uint32_t baud, r_bool stop2)
 {
 	u->handler.send = _uart_get_next_character;
 	u->handler.recv = _uart_receive;

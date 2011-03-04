@@ -14,3 +14,15 @@
  *
  ************************************************************************/
 
+#ifndef __TWI_H__
+#define __TWI_H__
+
+#include "media.h"
+
+struct s_TwiState;
+typedef struct s_TwiState TwiState;
+
+void hal_twi_start_master_read(TwiState *twiState, Addr addr, MediaRecvSlot *mrs);
+
+
+#endif // __TWI_H__

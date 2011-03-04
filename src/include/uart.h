@@ -48,7 +48,7 @@ typedef struct
 } UartState_t;
 
 ///////////////// application API
-void uart_init(UartState_t *uart, uint16_t baud, r_bool stop2);
+void uart_init(UartState_t *uart, uint32_t baud, r_bool stop2);
 r_bool uart_read(UartState_t *uart, char *c);
 UartQueue_t *uart_recvq(UartState_t *uart);
 void uart_reset_recvq(UartQueue_t *uq);

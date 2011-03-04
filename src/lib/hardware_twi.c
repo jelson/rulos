@@ -21,7 +21,7 @@
 
 #include "rocket.h"
 #include "hardware.h"
-
+#include "twi.h"
 
 struct twiState;
 
@@ -30,7 +30,7 @@ typedef struct {
 	struct s_TwiState *twi;
 } twiCallbackAct_t;
 
-typedef struct s_TwiState
+struct s_TwiState
 {
 	MediaStateIfc media;
 
@@ -61,7 +61,7 @@ typedef struct s_TwiState
 	uint8_t mr_n;
 	twiCallbackAct_t mrCallbackAct;
 	
-} TwiState;
+};
 
 #define TWI_MAGIC 0x82
 
@@ -454,18 +454,17 @@ void _hal_twi_send(MediaStateIfc *media, Addr dest_addr, char *data, uint8_t len
 	hal_end_atomic(old_interrupts);
 }
 
-#if 0
 // Read a packet in master-receiver mode.
-void hal_twi_read(Addr addr, TWIRecvSlot *mrs)
+void hal_twi_start_master_read(TwiState *twiState, Addr addr, MediaRecvSlot *mrs)
 {
 	uint8_t old_interrupts = hal_start_atomic();
 	assert(mrs != NULL);
-	twiState_g.mr_recvSlot = mrs;
-	twiState_g.mr_addr = addr;
+	twiState->mr_recvSlot = mrs;
+	twiState->mr_addr = addr;
 
-	twiState_g.need_bus = TRUE;
-	twi_set_control_register(&twiState_g, 0);
+	twiState->need_bus = TRUE;
+	twi_set_control_register(twiState, 0);
 	hal_end_atomic(old_interrupts);
 }
-#endif
+
 

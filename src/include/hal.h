@@ -77,7 +77,7 @@ typedef struct s_UartHandler {
 	hal_uart_send_next_fp *send;	// runs in interrupt context
 } UartHandler;
 
-void hal_uart_init(UartHandler *handler, uint16_t baud, r_bool stop2);
+void hal_uart_init(UartHandler *handler, uint32_t baud, r_bool stop2);
 void hal_uart_start_send(void);
 
 /////////////// TWI ///////////////////////////////////////////////

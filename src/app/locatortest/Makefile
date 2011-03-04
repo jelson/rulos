@@ -15,7 +15,7 @@
 ROCKET_ROOT := ../..
 
 MCU := atmega328p
-BOARD := CUSTOM
+BOARD := REVC
 TARGET := locatortest
 
 # Set twi to 500mhz (assuming 8 mhz processor)
