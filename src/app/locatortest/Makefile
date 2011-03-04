@@ -17,6 +17,7 @@ ROCKET_ROOT := ../..
 MCU := atmega328p
 BOARD := REVC
 TARGET := locatortest
+EXTRA_AVR_CFLAGS += -DCRYSTAL=20000000
 
 # Set twi to 500mhz (assuming 8 mhz processor)
 EXTRA_AVR_CFLAGS += -DCUSTOM_TWBR=32

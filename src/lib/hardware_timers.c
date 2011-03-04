@@ -124,11 +124,15 @@ static void find_prescaler(uint32_t req_us_per_period, TimerDef *timerDef,
 	uint16_t *out_ocr	// count limit
 	)
 {
-#define HS_FACTOR 48
+#define HS_FACTOR 120
+	// Units: 120hs = 1us.
+	// jelson changed from 16 to 48 because of my 12mhz crystal
+	// 3/4/2011: jelson changed from 48 to 120 because of my 20mhz crystal.
+	// LCM[1,8,12,20] = 120
+
 	uint8_t cs;
 	for (cs=1; cs<8; cs++)
 	{
-		// Units: 48hs = 1us.  jelson changed from 16 to 48 because of my 12mhz crystal
 		if (timerDef->prescaler_bits[cs] == 0xff) { continue; }
 		uint32_t hs_per_cpu_tick = (HS_FACTOR*1000000) / hardware_f_cpu;
 		uint32_t hs_per_prescale_tick = hs_per_cpu_tick << (timerDef->prescaler_bits[cs]);

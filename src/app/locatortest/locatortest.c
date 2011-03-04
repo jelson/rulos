@@ -10,6 +10,10 @@
 #define F_CPU 8000000UL
 #include <util/delay.h>
 
+#define SAMPLING_PERIOD 25000
+#define SCHED_QUANTUM   5000
+
+
 #include "rocket.h"
 #include "hardware.h"
 #include "uart.h"
@@ -541,10 +545,15 @@ void process_serial_command(locatorAct_t *locatorAct, char cmd)
 void sampleLocator(locatorAct_t *locatorAct)
 {
 	// schedule reading of the next sample
-	schedule_us(50000, (Activation *) locatorAct);
-
+	schedule_us(SAMPLING_PERIOD, (Activation *) locatorAct);
 	locatorAct->debug++;
 	gpio_set_or_clr(GPIO_LED_2, locatorAct->debug & 1);
+
+#ifdef TEST_TIME_ONLY
+	snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf)-1, "%d\r\n", locatorAct->debug);
+	emit(locatorAct, locatorAct->UARTsendBuf);
+	return;
+#endif
 
 	// Check for serial commands
 	char cmd;
@@ -625,7 +634,7 @@ int main()
 {
 	util_init();
 	hal_init(bc_audioboard);
-	init_clock(10000, TIMER1);
+	init_clock(SCHED_QUANTUM, TIMER1);
 
 	memset(&locatorAct_g, 0, sizeof(locatorAct_g));
 	locatorAct_g.f = (ActivationFunc) sampleLocator;
