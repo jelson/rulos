@@ -2,15 +2,17 @@
 //#define MANUAL_US_TEST
 //#define NO_ACCEL
 //#define NO_GYRO
-#define NO_ANALOG
+//#define NO_ANALOG
 
 #include <string.h>
 #include <avr/interrupt.h>
 
-#define F_CPU 8000000UL
+#ifdef BOARD_REVC
+#define F_CPU 20000000UL
+#endif
 #include <util/delay.h>
 
-#define SAMPLING_PERIOD 25000
+#define SAMPLING_PERIOD 50000
 #define SCHED_QUANTUM   5000
 
 
@@ -30,6 +32,13 @@ static inline void chirp(uint16_t chirpLenUS);
 #endif
 
 
+typedef struct {
+	uint16_t noiseMin, noiseMax;
+	uint16_t threshMin, threshMax;
+} usState_t;
+
+#define US_TOP 0
+#define US_BOT 1
 
 struct locatorAct {
 	ActivationFunc f;
@@ -57,9 +66,9 @@ struct locatorAct {
 	// ultrasound
 	uint8_t debug;
 	char rangingMode;
-	uint16_t trainingMode;
-	uint16_t noiseMin, noiseMax;
-	uint16_t threshMin, threshMax;
+	uint8_t trainingMode;
+	uint8_t topOrBot;
+	usState_t usState[2];
 	uint16_t runLength;
 	Time chirpSendTime;
 	Time chirpRTT;
@@ -83,8 +92,7 @@ static locatorAct_t locatorAct_g;
 #if defined(BOARD_REVB)
 # define GPIO_10V_ENABLE GPIO_B0
 # define GPIO_US_XMIT    GPIO_D6
-# define GPIO_US_RECV    GPIO_C0
-# define US_RECV_CHANNEL 0
+# define US_TOP_CHAN     0
 #elif defined(BOARD_REVC)
 # define GPIO_10V_ENABLE     GPIO_B0
 # define GPIO_US_XMIT        GPIO_D6
@@ -92,10 +100,8 @@ static locatorAct_t locatorAct_g;
 # define GPIO_LED_1          GPIO_D4
 # define GPIO_LED_2          GPIO_D3
 
-# define GPIO_US_RECV_TOP    GPIO_C2
-# define GPIO_US_RECV_BOT    GPIO_C3
-# define US_TOP_RECV_CHANNEL 2
-# define US_BOT_RECV_CHANNEL 3
+# define US_TOP_CHAN         2
+# define US_BOT_CHAN         3
 #endif
 
 #define US_QUIET_TRAINING_LEN 2000
@@ -137,7 +143,7 @@ static inline uint8_t maybe_claim_serial(locatorAct_t *locatorAct)
 static inline void wait_for_serial(locatorAct_t *locatorAct)
 {
 	while (!maybe_claim_serial(locatorAct))
-		;
+		_delay_us(100); // 32 microseconds per 8-bit character at 250kbit/sec
 }
 
 
@@ -195,9 +201,9 @@ void sendToPeripheral(locatorAct_t *locatorAct,
 
 void _locatorReadComplete(MediaRecvSlot *mrs, uint8_t len)
 {
-	gpio_clr(GPIO_LED_1);
 	locatorAct_t *locatorAct = (locatorAct_t *) mrs->user_data;
 	locatorAct->recvFunc(locatorAct, mrs->data, locatorAct->readLen);
+	gpio_clr(GPIO_LED_1);
 }
 
 void _readFromPeripheral2(locatorAct_t *locatorAct)
@@ -222,21 +228,33 @@ void readFromPeripheral(locatorAct_t *locatorAct,
 	locatorAct->twiAddr = twiAddr;
 	locatorAct->TWIsendBuf[0] = baseAddr;
 	sendToPeripheral(locatorAct, twiAddr, locatorAct->TWIsendBuf, 1, _readFromPeripheral2);
+
 }
 
 
 ///////////// Ultrasound ////////////////////////////////////
 
 #ifndef NO_ANALOG
+#if 0
 
-void start_sampling()
+void start_sampling(locatorAct_t *locatorAct, uint8_t topOrBot)
 {
-#if defined(GPIO_US_RECV)
-	gpio_make_input_no_pullup(GPIO_US_RECV);
-#elif defined(GPIO_US_RECV_TOP)
-	gpio_make_input_no_pullup(GPIO_US_RECV_TOP);
-	gpio_make_input_no_pullup(GPIO_US_RECV_BOT);
+	uint8_t adcChan;
+
+	locatorAct->topOrBot = topOrBot;
+
+	if (topOrBot == US_TOP)
+		adcChan = US_TOP_CHAN;
+#ifdef US_BOT_CHAN
+	else if (topOrBot == US_BOT)
+		adcChan = US_BOT_CHAN;
 #endif
+	else {
+		emit(locatorAct, "invalid channel sent to start_sampling");
+		return;
+	}
+
+	hal_init_adc_channel(adcChan);
 
 	// At 8mhz, an ADC prescaler of 32 gives an ADC clock of 250 khz.
 	// At 13 cycles per conversion, we're sampling at 19.2 khz.
@@ -250,7 +268,7 @@ void start_sampling()
 
 	// configure adc channel, and also set other bits in the register
 	// to 0 (which uses aref, and sets adlar to 0)
-	ADMUX = US_RECV_CHANNEL;
+	ADMUX = adcChan;
 
 	// set to 'free running' mode
 	ADCSRB = 0;
@@ -264,25 +282,93 @@ void stop_sampling()
 	ADCSRA = 0;
 }
 
-void updateNoiseThresholds()
+void updateNoiseThresholds(usState_t *usState, locatorAct_t *locatorAct)
 {
-	uint16_t range = locatorAct_g.noiseMax - locatorAct_g.noiseMin;
+	uint16_t range = usState->noiseMax - usState->noiseMin;
 
 	// in case it happens to be very not-noisy when we train, enforce
 	// a minimum noise band
 	if (range < US_MIN_NOISE_RANGE)
 		range = US_MIN_NOISE_RANGE;
 	
-	locatorAct_g.threshMin = locatorAct_g.noiseMin - (range/2);
-	locatorAct_g.threshMax = locatorAct_g.noiseMax + (range/2);
+	usState->threshMin = usState->noiseMin - (range/2);
+	usState->threshMax = usState->noiseMax + (range/2);
 
-	if (maybe_claim_serial(&locatorAct_g)) {
-		snprintf(locatorAct_g.UARTsendBuf, sizeof(locatorAct_g.UARTsendBuf)-1, "^t;l=%5d;h=%5d$\r\n",
-				 locatorAct_g.noiseMin, locatorAct_g.noiseMax);
-		emit(&locatorAct_g, locatorAct_g.UARTsendBuf);
+	if (maybe_claim_serial(locatorAct)) { // can't use wait_for_serial; in interrupt context!
+		snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf)-1,
+				 "^t;side=%d;l=%5d;h=%5d$\r\n",
+				 locatorAct->topOrBot,
+				 usState->noiseMin,
+				 usState->noiseMax);
+		emit(locatorAct, locatorAct->UARTsendBuf);
 	}
 }
 
+void trainUltrasound(uint16_t adcval, usState_t *usState, locatorAct_t *locatorAct)
+{
+	// If we're in training mode, see if the current ADC value is
+	// lower or higher than the previously computed noise threshold.
+	if (usState->noiseMin == 0 && usState->noiseMax == 0) {
+		usState->noiseMin = usState->noiseMax = adcval;
+		updateNoiseThresholds(usState, locatorAct);
+	} else {
+		if (adcval < usState->noiseMin) {
+			usState->noiseMin = adcval;
+			updateNoiseThresholds(usState, locatorAct);
+		}
+		if (adcval > usState->noiseMax) {
+			usState->noiseMax = adcval;
+			updateNoiseThresholds(usState, locatorAct);
+		}
+	}
+}
+
+void detectChirp(uint16_t adcval, usState_t *usState, locatorAct_t *locatorAct)
+{
+	// See if the current ADC value is beyond the noise threshold.
+	// If so, increase the run length.  If not, set runlength to 0 and return.
+	if (adcval >= usState->threshMin && adcval <= usState->threshMax) {
+		locatorAct->runLength = 0;
+		return;
+	}
+
+	// Increment the run length and see if it exceeds our threshold
+	if (++locatorAct->runLength > US_MIN_RUN_LENGTH) {
+		// US detected!
+
+		// reset the run-length detector
+		locatorAct->runLength = 0;
+
+		// If we're in reflector mode, wait 500usec, then chirp back.
+		if (locatorAct->rangingMode == 'r') {
+			_delay_ms(US_CHIRP_RING_TIME_MS + 10);
+			chirp(US_CHIRP_LEN_US);
+			_delay_ms(US_CHIRP_RING_TIME_MS); // make sure we don't reply to our own ping
+			if (maybe_claim_serial(locatorAct)) { // can't use wait_for_serial; in interrupt context!
+				snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf)-1,
+						 "^m;Sent chirp reply %ld$\n\r", precise_clock_time_us());
+				emit(locatorAct, locatorAct->UARTsendBuf);
+			}
+		}
+
+		// If we're in sender mode (waiting for a reflection), and we
+		// got a chirp, record it and exit sender mode
+		if (locatorAct->rangingMode == 's') {
+			locatorAct->rangingMode = 'q';
+			Time end = precise_clock_time_us();
+			locatorAct->chirpRTT = end - locatorAct->chirpSendTime;
+			// note, we don't just print the message here because we
+			// wan this message to be reliable, meaning we have to
+			// potentially wait until the serial port is free.  We
+			// can't wait for the serial port to be free here in
+			// interrupt context, so we store the chirpRTT and return.
+			// The scheduled callback that runs in normal mode prints
+			// the time.  The "sent chirp reply" message above isn't
+			// critical, so we just send it here; if the serial port
+			// is busy it'll be dropped, but that's not too bad.
+		}
+	}
+}
 
 // Called when the ADC has a sample ready for us.
 ISR(ADC_vect)
@@ -290,65 +376,20 @@ ISR(ADC_vect)
 	uint16_t adcval = ADCL;
 	adcval |= ((uint16_t) ADCH << 8);
 
-	// If we're in training mode, see if the current ADC value is
-	// lower or higher than the previously computed noise threshold.
 	if (locatorAct_g.trainingMode) {
-		locatorAct_g.trainingMode--;
-		if (locatorAct_g.noiseMin == 0 && locatorAct_g.noiseMax == 0) {
-			locatorAct_g.noiseMin = locatorAct_g.noiseMax = adcval;
-			updateNoiseThresholds();
-		} else {
-			if (adcval < locatorAct_g.noiseMin) {
-				locatorAct_g.noiseMin = adcval;
-				updateNoiseThresholds();
-			}
-			if (adcval > locatorAct_g.noiseMax) {
-				locatorAct_g.noiseMax = adcval;
-				updateNoiseThresholds();
-			}
-		}
-		return;
-	}
-
-	// If we're not in training mode, see if the current ADC value is
-	// beyond the noise threshold.  If so, it's a chirp!
-	if (adcval < locatorAct_g.threshMin || adcval > locatorAct_g.threshMax)
-		locatorAct_g.runLength++;
-	else
-		locatorAct_g.runLength = 0;
-
-	if (locatorAct_g.runLength > US_MIN_RUN_LENGTH) {
-		// US detected!
-
-		// reset the run-length detector
-		locatorAct_g.runLength = 0;
-
-		// If we're in reflector mode, wait 500usec, then chirp back.
-		if (locatorAct_g.rangingMode == 'r') {
-			_delay_ms(US_CHIRP_RING_TIME_MS + 10);
-			chirp(US_CHIRP_LEN_US);
-			_delay_ms(US_CHIRP_RING_TIME_MS); // make sure we don't reply to our own ping
-			if (maybe_claim_serial(&locatorAct_g)) {
-				snprintf(locatorAct_g.UARTsendBuf, sizeof(locatorAct_g.UARTsendBuf)-1,
-						 "^m;Sent chirp reply %ld$\n\r", precise_clock_time_us());
-				emit(&locatorAct_g, locatorAct_g.UARTsendBuf);
-			}
-		}
-
-		// If we're in sender mode, and we got a chirp, record it and
-		// exit sender mode
-		if (locatorAct_g.rangingMode == 's') {
-			locatorAct_g.rangingMode = 'q';
-			Time end = precise_clock_time_us();
-			locatorAct_g.chirpRTT = end - locatorAct_g.chirpSendTime;
-		}
+		// Are we in training mode?
+		trainUltrasound(adcval, &locatorAct_g.usState[locatorAct_g.topOrBot], &locatorAct_g);
+	} else {
+		// Otherwise, detect
+		detectChirp(adcval, &locatorAct_g.usState[locatorAct_g.topOrBot], &locatorAct_g);
 	}
 }
-
+#endif
 
 
 static inline void us_xmit_start()
 {
+#ifdef BOARD_REVB
 	// We are using "fast pwm" mode, i.e., mode 7 (0b111), where TOP=OCR0A.
 
 	// Furthermore since the on and off intervals are the same, we'll use 
@@ -363,6 +404,10 @@ static inline void us_xmit_start()
 	OCR0A = 100;
 	TCNT0 = 0;
 	gpio_make_output(GPIO_US_XMIT);
+#elif BOARD_REVC
+#else
+# error "Don't know how to chrip on this board; sorry"
+#endif
 }
 
 static inline void us_xmit_stop()
@@ -384,8 +429,21 @@ static inline void chirp(uint16_t chirpLenUS)
 // all done!  start sampling.
 void configLocator4(locatorAct_t *locatorAct)
 {
+#ifndef NO_ANALOG
+	locatorAct->trainingMode = 1;
+	//	start_sampling(locatorAct, US_TOP);
+	_delay_ms(400);
+	//	stop_sampling();
+# ifdef US_BOT_CHAN
+	locatorAct->trainingMode = 1;
+	//	start_sampling(locatorAct, US_BOT);
+	//_delay_ms(400);
+	//	stop_sampling();
+# endif
+#endif
+
+	emit(locatorAct, "^m;Initialization complete\n\r");
 	schedule_now((Activation *) locatorAct);
-	locatorAct->trainingMode = US_QUIET_TRAINING_LEN;
 }
 
 
@@ -425,6 +483,7 @@ void configLocator2(locatorAct_t *locatorAct, char *data, int len)
 void configLocator(locatorAct_t *locatorAct)
 {
 #ifndef NO_ANALOG
+#if 0
 	// turn off the us output switch
 	gpio_make_output(GPIO_US_XMIT);
 	gpio_clr(GPIO_US_XMIT);
@@ -432,10 +491,10 @@ void configLocator(locatorAct_t *locatorAct)
 	// enable 10v voltage doubler
 	gpio_make_output(GPIO_10V_ENABLE);
 	gpio_clr(GPIO_10V_ENABLE);
+#endif
 
 	locatorAct->rangingMode = 'q';
 	locatorAct->trainingMode = 0;
-	start_sampling();
 #endif
 
 #ifdef BOARD_REVC
@@ -504,6 +563,7 @@ void sampleLocator2(locatorAct_t *locatorAct, char *data, int len)
 
 void process_serial_command(locatorAct_t *locatorAct, char cmd)
 {
+	return;
 	switch (cmd) {
 #ifndef NO_ANALOG
 	case 'q':
@@ -560,6 +620,7 @@ void sampleLocator(locatorAct_t *locatorAct)
 	while (CharQueue_pop(locatorAct->uart.recvQueue.q, &cmd))
 		process_serial_command(locatorAct, cmd);
 
+#if 0
 	// If we're in 's' mode waiting for a reply, don't sample the
 	// peripherals.  Just check for a timeout and then end.  This must
 	// be done in an atomic block because the interrupt-driven analog
@@ -593,13 +654,12 @@ void sampleLocator(locatorAct_t *locatorAct)
 	if (locatorAct->chirpRTT) {
 		wait_for_serial(locatorAct);
 		snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf)-1,
-				 //"^d;s=%ld,e=%ld,t=%ld$\r\n",
 				 "^d;t=%ld$\r\n",
-				 //locatorAct_g.chirpSendTime, end,
 				 locatorAct->chirpRTT);
 		locatorAct->chirpRTT = 0;
 		emit(locatorAct, locatorAct->UARTsendBuf);
 	}
+#endif
 
 #ifdef MANUAL_US_TEST
 	// maybe flip the us
