@@ -1,4 +1,10 @@
+default: studiorocket.elf
+
 include Makefile
 
-.DEFAULT_GOAL: avr-all
-studiorocket: avr-all
+
+.PHONY: studiorocket
+studiorocket: studiorocket.elf
+
+studiorocket.elf: $(ARCHTARG).elf
+	cp $< $@
