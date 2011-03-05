@@ -1,0 +1,4 @@
+include Makefile
+
+.DEFAULT_GOAL: avr-all
+studiorocket: avr-all
