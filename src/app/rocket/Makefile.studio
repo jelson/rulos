@@ -1,10 +1,30 @@
-default: studiorocket.elf
+default: studiorocket
 
 include Makefile
 
 
 .PHONY: studiorocket
-studiorocket: studiorocket.elf
+
+studiorocket: \
+	studiorocket.eep \
+	studiorocket.elf \
+	studiorocket.hex \
+	studiorocket.lss \
+	studiorocket.map \
+
+studiorocket.eep: $(ARCHTARG).eep
+	cp $< $@
 
 studiorocket.elf: $(ARCHTARG).elf
 	cp $< $@
+
+studiorocket.hex: $(ARCHTARG).hex
+	cp $< $@
+
+studiorocket.lss: $(ARCHTARG).lss
+	cp $< $@
+
+studiorocket.map: $(ARCHTARG).map
+	cp $< $@
+
+
