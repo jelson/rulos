@@ -23,7 +23,8 @@
 #include "hardware.h"
 #include "twi.h"
 
-struct twiState;
+
+#define NEED_BUS(twi) ((twi->out_pkt != NULL) || (twi->masterRecvSlot != NULL))
 
 typedef struct {
 	ActivationFunc func;
@@ -36,8 +37,6 @@ struct s_TwiState
 
 	uint8_t initted;
 	uint8_t have_bus;
-	uint8_t need_bus;
-	uint8_t done_with_bus;
 	uint8_t dont_ack;
 
 	// master-transmitter state
@@ -50,17 +49,18 @@ struct s_TwiState
 	twiCallbackAct_t sendCallbackAct;
 
 	// slave-receiver state
-	MediaRecvSlot *mrs;
-	uint8_t in_n;
-	uint8_t in_done;
-	twiCallbackAct_t recvCallbackAct;
+	MediaRecvSlot *slaveRecvSlot;
+	uint8_t slaveRecvLen;
 
 	// master-receiver state
-	MediaRecvSlot *mr_recvSlot;
-	uint8_t mr_addr;
-	uint8_t mr_n;
-	twiCallbackAct_t mrCallbackAct;
-	
+	MediaRecvSlot *masterRecvSlot;
+	uint8_t masterRecvAddr;
+	uint8_t masterRecvLen;
+
+	// receive upcalls
+	twiCallbackAct_t recvUpcallAct;
+	MediaRecvSlot *recvUpcallSlot;
+	uint8_t recvUpcallLen;
 };
 
 #define TWI_MAGIC 0x82
@@ -99,55 +99,52 @@ static void end_xmit(TwiState *twi)
 {
 	assert(twi->out_pkt != NULL);
 	assert(twi->have_bus == TRUE);
-	assert(twi->done_with_bus == FALSE);
 
 	twi->out_pkt = NULL;
-	twi->need_bus = FALSE;
-	twi->done_with_bus = TRUE;
 	schedule_now((Activation *) &twi->sendCallbackAct);
 }
 
-static void end_mr(TwiState *twi)
-{
-	assert(twi->mr_recvSlot != NULL);
 
-	twi->done_with_bus = TRUE;
-	schedule_now((Activation *) &twi->mrCallbackAct);
+static void initiateRecvCallback(TwiState *twi, MediaRecvSlot *recvSlot, uint8_t len)
+{
+	if (twi->recvUpcallSlot != NULL) {
+		LOGF((logfp, "Dropping received packet; buffer full"));
+		return;
+	}
+
+	twi->recvUpcallSlot = recvSlot;
+	twi->recvUpcallLen = len;
+	schedule_now((Activation *) &twi->recvUpcallAct);
 }
 
-// A trampoline function for the receive upcall.
+// A trampoline function for the receive upcall.  Scheduled by initiateRecvCallback, above.
 static void doRecvCallback(twiCallbackAct_t *tca)
 {
 	TwiState *twi = tca->twi;
-	twi->mrs->func(twi->mrs, twi->in_n);
+	assert(twi->recvUpcallSlot != NULL);
+	twi->recvUpcallSlot->func(twi->recvUpcallSlot, twi->recvUpcallLen);
+	twi->recvUpcallSlot = NULL;
 }
 
-static void doMrCallback(twiCallbackAct_t *tca)
+
+static void abortSlaveRecv(TwiState *twi)
 {
-	TwiState *twi = tca->twi;
-	MediaRecvSlot *mrs = twi->mr_recvSlot;
-	uint8_t size = twi->mr_n;
-
-	// free the stack to be able to receive the next packet before
-	// calling the callback
-	twi->mr_recvSlot = NULL;
-	mrs->func(mrs, size);
+	twi->slaveRecvLen = -1;
+	twi->slaveRecvSlot->occupied = FALSE;
 }
-
-
-static void abort_recv(TwiState *twi)
-{
-	twi->in_n = -1;
-	twi->in_done = FALSE;
-	twi->mrs->occupied = FALSE;
-}
-
 
 
 static void mr_maybe_dont_ack(TwiState *twi)
 {
-	if (twi->mr_recvSlot && twi->mr_n == twi->mr_recvSlot->capacity-1)
+	if (twi->masterRecvSlot && twi->masterRecvLen == twi->masterRecvSlot->capacity-1)
 		twi->dont_ack = TRUE;
+}
+
+static void end_mr(TwiState *twi)
+{
+	assert(twi->masterRecvSlot != NULL);
+	initiateRecvCallback(twi, twi->masterRecvSlot, twi->masterRecvLen);
+	twi->masterRecvSlot = NULL;
 }
 
 static void twi_set_control_register(TwiState *twi, uint8_t bits)
@@ -166,18 +163,17 @@ static void twi_set_control_register(TwiState *twi, uint8_t bits)
 	// If we have a packet to master-transmit or master-receive, and
 	// we're not in the start state, tell the CPU we want it to
 	// acquire the bus.
-	if (twi->need_bus && !twi->have_bus)
+	if (NEED_BUS(twi) && !twi->have_bus)
 	{
 		bits |= _BV(TWSTA);
-		twi->done_with_bus = FALSE;
 	}
 
 	// Conversely, if we're done with the bus and still have it, send
 	// the stop state
-	if (twi->have_bus && twi->done_with_bus)
+	if (!NEED_BUS(twi) && twi->have_bus)
 	{
 		bits |= _BV(TWSTO);
-		twi->have_bus = twi->done_with_bus = FALSE;
+		twi->have_bus = FALSE;
 	}
 
 	TWCR = bits;
@@ -199,7 +195,7 @@ static void twi_update(TwiState *twi, uint8_t status)
 		// if we just acquired the bus, decide if we're going into
 		// master transmit or master receive mode.
 
-		assert(twi->out_pkt != NULL || twi->mr_recvSlot != NULL);
+		assert(twi->out_pkt != NULL || twi->masterRecvSlot != NULL);
 
 		if (twi->out_pkt != NULL)
 		{
@@ -208,11 +204,11 @@ static void twi_update(TwiState *twi, uint8_t status)
 			twi->out_n = 0;
 			twi->have_bus = 1;
 		}
-		else if (twi->mr_recvSlot != NULL)
+		else if (twi->masterRecvSlot != NULL)
 		{
 			// master receive
-			TWDR = twi->mr_addr << 1 | TW_READ;
-			twi->mr_n = 0;
+			TWDR = twi->masterRecvAddr << 1 | TW_READ;
+			twi->masterRecvLen = 0;
 			twi->have_bus = 1;
 		}
 		else
@@ -233,7 +229,7 @@ static void twi_update(TwiState *twi, uint8_t status)
 		break;
 
 	case TW_MT_ARB_LOST:
-    // note -- master receiver arb lost does the same thing
+		// note -- master receiver arb lost does the same thing.
 		// we were in the middle of a transmission and something bad
 		// happened.  Re-acquire the bus.
 		twi->have_bus = 0;
@@ -269,17 +265,15 @@ static void twi_update(TwiState *twi, uint8_t status)
 	case TW_SR_SLA_ACK:
 		// new packet arriving addressed to us.  If the receive buffer
 		// is available, start receiving.
-		if (twi->mrs != NULL && !twi->mrs->occupied)
+		if (twi->slaveRecvSlot != NULL && !twi->slaveRecvSlot->occupied)
 		{
-			twi->mrs->occupied = TRUE;
-			twi->in_done = FALSE;
-			twi->in_n = 0;
+			twi->slaveRecvSlot->occupied = TRUE;
+			twi->slaveRecvLen = 0;
 		}
 		else
 		{
 			LOGF((logfp, "dropping packet because receive buffer is busy"));
-			// don't set in_n to -1!  there might be a valid packet
-			// still on its way up the stack.
+			twi->slaveRecvLen = -1;
 		}
 		break;
 
@@ -288,34 +282,34 @@ static void twi_update(TwiState *twi, uint8_t status)
 		// one byte was received and acked.  If we're in "drop the
 		// rest of this packet" mode, do nothing.  If we've overrun
 		// the buffer, drop packet (including this byte).
-		if (twi->in_n == -1)
+		if (twi->slaveRecvLen == -1)
 		{
 			break;
 		}
 
 		// overflowed the receive buffer?  if so, drop entire packet.
-		if (twi->mrs->capacity < twi->in_n)
+		if (twi->slaveRecvSlot->capacity < twi->slaveRecvLen)
 		{
 			LOGF((logfp, "dropping packet too long for local receive buffer"));
-			abort_recv(twi);
+			abortSlaveRecv(twi);
 			break;
 		}
 
 		// store next byte
-		twi->mrs->data[twi->in_n++] = TWDR;
+		twi->slaveRecvSlot->data[twi->slaveRecvLen++] = TWDR;
 		break;
 
 	case TW_SR_DATA_NACK:
 		// we didn't ack a byte for some reason; abandon the packet
-		abort_recv(twi);
+		abortSlaveRecv(twi);
 		break;
 
 	case TW_SR_STOP:
 		// end of packet, yay!  upcall into network stack
-		if (!twi->in_done && twi->in_n > 0)
+		if (twi->slaveRecvLen > 0)
 		{
-			twi->in_done = TRUE;
-			schedule_now((Activation *) &twi->recvCallbackAct);
+			initiateRecvCallback(twi, twi->slaveRecvSlot, twi->slaveRecvLen);
+			twi->slaveRecvLen = -1;
 		}
 		break;
 
@@ -346,16 +340,16 @@ static void twi_update(TwiState *twi, uint8_t status)
 	case TW_MR_DATA_ACK:
 	case TW_MR_DATA_NACK:
 		// received a byte -- that we might have acked, or not acked
-		if (twi->mr_recvSlot && twi->mr_n < twi->mr_recvSlot->capacity)
+		if (twi->masterRecvSlot && twi->masterRecvLen < twi->masterRecvSlot->capacity)
 		{
-			twi->mr_recvSlot->data[twi->mr_n++] = TWDR;
+			twi->masterRecvSlot->data[twi->masterRecvLen++] = TWDR;
 
 			// if this was the next-to-the-last byte, don't ack
 			mr_maybe_dont_ack(twi);
 
 			// if we've received the entire packet, send a NACK and
 			// send the packet up.
-			if (twi->mr_n == twi->mr_recvSlot->capacity)
+			if (twi->masterRecvLen == twi->masterRecvSlot->capacity)
 			{
 				end_mr(twi);
 			}
@@ -379,37 +373,36 @@ void _hal_twi_send(MediaStateIfc *media,
 	Addr dest_addr, char *data, uint8_t len,
 	MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
 
-TwiState _twiState_g;
+TwiState _twi_g;
 
 ISR(TWI_vect)
 {
-	twi_update(&_twiState_g, TW_STATUS);
+	twi_update(&_twi_g, TW_STATUS);
 }
 
-MediaStateIfc *hal_twi_init(Addr local_addr, MediaRecvSlot *mrs)
+MediaStateIfc *hal_twi_init(Addr local_addr, MediaRecvSlot *slaveRecvSlot)
 {
-	TwiState *twi_state = &_twiState_g;
+	TwiState *twi = &_twi_g;
 
 	/* initialize our local state */
-	memset(twi_state, 0, sizeof(*twi_state));
-	twi_state->media.send = &_hal_twi_send;
-	twi_state->mrs = mrs;
-	twi_state->out_pkt = NULL;
-	twi_state->out_len = 0;
-	twi_state->sendDoneCB = NULL;
-	twi_state->sendCallbackAct.func = (ActivationFunc) doSendCallback; 
-	twi_state->sendCallbackAct.twi = twi_state;
+	memset(twi, 0, sizeof(*twi));
+	twi->media.send = &_hal_twi_send;
+	twi->slaveRecvSlot = slaveRecvSlot;
+	twi->slaveRecvLen = -1;
 
-	twi_state->in_n = -1;
-	twi_state->recvCallbackAct.func = (ActivationFunc) doRecvCallback;
-	twi_state->recvCallbackAct.twi = twi_state;
+	twi->out_pkt = NULL;
+	twi->out_len = 0;
+	twi->sendDoneCB = NULL;
+	twi->sendCallbackAct.func = (ActivationFunc) doSendCallback; 
+	twi->sendCallbackAct.twi = twi;
 
-	twi_state->mr_recvSlot = NULL;
-	twi_state->mr_n = -1;
-	twi_state->mrCallbackAct.func = (ActivationFunc) doMrCallback;
-	twi_state->mrCallbackAct.twi = twi_state;
+	twi->recvUpcallAct.func = (ActivationFunc) doRecvCallback;
+	twi->recvUpcallAct.twi = twi;
 
-	twi_state->initted = TWI_MAGIC;
+	twi->masterRecvSlot = NULL;
+	twi->masterRecvLen = -1;
+
+	twi->initted = TWI_MAGIC;
 
 	/* set 100khz (assuming 8mhz local clock!  fix me...) */
 #ifdef CUSTOM_TWBR
@@ -433,47 +426,46 @@ MediaStateIfc *hal_twi_init(Addr local_addr, MediaRecvSlot *mrs)
 	sei();
 
 	/* enable twi */
-	twi_set_control_register(twi_state, 0);
-	return &twi_state->media;
+	twi_set_control_register(twi, 0);
+	return &twi->media;
 }
 
 // Send a packet in master-transmitter mode.
 void _hal_twi_send(MediaStateIfc *media, Addr dest_addr, char *data, uint8_t len, 
 				  MediaSendDoneFunc sendDoneCB, void *sendDoneCBData)
 {
-	TwiState *twi_state = (TwiState *)media;
-	assert(twi_state->initted == TWI_MAGIC);
+	TwiState *twi = (TwiState *)media;
+	assert(twi->initted == TWI_MAGIC);
 
 	uint8_t old_interrupts = hal_start_atomic();
 	assert(data != NULL);
 	assert(len > 0);
-	assert(twi_state->out_pkt == NULL);
-	assert(twi_state->sendDoneCB == NULL);
-	assert(twi_state->have_bus == FALSE);
+	assert(twi->out_pkt == NULL);
+	assert(twi->sendDoneCB == NULL);
+	assert(twi->have_bus == FALSE);
 
-	twi_state->out_pkt = data;
-	twi_state->out_destaddr = dest_addr;
-	twi_state->out_len = len;
-	twi_state->sendDoneCB = sendDoneCB;
-	twi_state->sendDoneCBData = sendDoneCBData;
+	twi->out_pkt = data;
+	twi->out_destaddr = dest_addr;
+	twi->out_len = len;
+	twi->sendDoneCB = sendDoneCB;
+	twi->sendDoneCBData = sendDoneCBData;
 
-	twi_state->need_bus = TRUE;
-	twi_set_control_register(twi_state, 0);
+	twi_set_control_register(twi, 0);
 	hal_end_atomic(old_interrupts);
 }
 
 // Read a packet in master-receiver mode.
-void hal_twi_start_master_read(TwiState *twiState, Addr addr, MediaRecvSlot *mrs)
+void hal_twi_start_master_read(TwiState *twi, Addr addr, MediaRecvSlot *masterRecvSlot)
 {
-	assert(twiState->initted == TWI_MAGIC);
-	assert(mrs != NULL);
+	assert(twi->initted == TWI_MAGIC);
+	assert(masterRecvSlot != NULL);
 
 	uint8_t old_interrupts = hal_start_atomic();
-	twiState->mr_recvSlot = mrs;
-	twiState->mr_addr = addr;
+	assert(twi->masterRecvSlot == NULL);
 
-	twiState->need_bus = TRUE;
-	twi_set_control_register(twiState, 0);
+	twi->masterRecvSlot = masterRecvSlot;
+	twi->masterRecvAddr = addr;
+	twi_set_control_register(twi, 0);
 	hal_end_atomic(old_interrupts);
 }
 
