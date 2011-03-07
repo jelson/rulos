@@ -102,6 +102,7 @@ static void end_xmit(TwiState *twi)
 	assert(twi->done_with_bus == FALSE);
 
 	twi->out_pkt = NULL;
+	twi->need_bus = FALSE;
 	twi->done_with_bus = TRUE;
 	schedule_now((Activation *) &twi->sendCallbackAct);
 }
