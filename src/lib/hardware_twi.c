@@ -98,6 +98,8 @@ static void doSendCallback(twiCallbackAct_t *tca)
 static void end_xmit(TwiState *twi)
 {
 	assert(twi->out_pkt != NULL);
+	assert(twi->have_bus == TRUE);
+	assert(twi->done_with_bus == FALSE);
 
 	twi->out_pkt = NULL;
 	twi->done_with_bus = TRUE;
@@ -149,6 +151,8 @@ static void mr_maybe_dont_ack(TwiState *twi)
 
 static void twi_set_control_register(TwiState *twi, uint8_t bits)
 {
+	assert(!(twi->done_with_bus && twi->need_bus));
+
 	bits |=
 		_BV(TWEN) | // enable twi
 		_BV(TWIE)   // enable twi interrupts;
@@ -183,6 +187,9 @@ static void twi_set_control_register(TwiState *twi, uint8_t bits)
 static void twi_update(TwiState *twi, uint8_t status)
 {
 	assert(twi->initted == TWI_MAGIC);
+
+	// Mask off the prescaler bits
+	status &= 0b11111000;
 
 	//print_status(status);
 
@@ -263,7 +270,7 @@ static void twi_update(TwiState *twi, uint8_t status)
 	case TW_SR_SLA_ACK:
 		// new packet arriving addressed to us.  If the receive buffer
 		// is available, start receiving.
-		if (twi->mrs && !twi->mrs->occupied)
+		if (twi->mrs != NULL && !twi->mrs->occupied)
 		{
 			twi->mrs->occupied = TRUE;
 			twi->in_done = FALSE;
@@ -388,6 +395,7 @@ MediaStateIfc *hal_twi_init(Addr local_addr, MediaRecvSlot *mrs)
 	twi_state->media.send = &_hal_twi_send;
 	twi_state->mrs = mrs;
 	twi_state->have_bus = FALSE;
+	twi_state->done_with_bus = FALSE;
 	twi_state->out_pkt = NULL;
 	twi_state->out_len = 0;
 	twi_state->sendDoneCB = NULL;
@@ -436,12 +444,14 @@ void _hal_twi_send(MediaStateIfc *media, Addr dest_addr, char *data, uint8_t len
 				  MediaSendDoneFunc sendDoneCB, void *sendDoneCBData)
 {
 	TwiState *twi_state = (TwiState *)media;
+	assert(twi_state->initted == TWI_MAGIC);
+
 	uint8_t old_interrupts = hal_start_atomic();
 	assert(data != NULL);
 	assert(len > 0);
-	assert(twi_state->initted == TWI_MAGIC);
 	assert(twi_state->out_pkt == NULL);
 	assert(twi_state->sendDoneCB == NULL);
+	assert(twi_state->have_bus == FALSE);
 
 	twi_state->out_pkt = data;
 	twi_state->out_destaddr = dest_addr;
@@ -457,8 +467,10 @@ void _hal_twi_send(MediaStateIfc *media, Addr dest_addr, char *data, uint8_t len
 // Read a packet in master-receiver mode.
 void hal_twi_start_master_read(TwiState *twiState, Addr addr, MediaRecvSlot *mrs)
 {
-	uint8_t old_interrupts = hal_start_atomic();
+	assert(twiState->initted == TWI_MAGIC);
 	assert(mrs != NULL);
+
+	uint8_t old_interrupts = hal_start_atomic();
 	twiState->mr_recvSlot = mrs;
 	twiState->mr_addr = addr;
 
