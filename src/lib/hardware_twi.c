@@ -151,8 +151,6 @@ static void mr_maybe_dont_ack(TwiState *twi)
 
 static void twi_set_control_register(TwiState *twi, uint8_t bits)
 {
-	assert(!(twi->done_with_bus && twi->need_bus));
-
 	bits |=
 		_BV(TWEN) | // enable twi
 		_BV(TWIE)   // enable twi interrupts;
@@ -390,12 +388,11 @@ ISR(TWI_vect)
 MediaStateIfc *hal_twi_init(Addr local_addr, MediaRecvSlot *mrs)
 {
 	TwiState *twi_state = &_twiState_g;
+
 	/* initialize our local state */
-	twi_state->initted = 0;
+	memset(twi_state, 0, sizeof(*twi_state));
 	twi_state->media.send = &_hal_twi_send;
 	twi_state->mrs = mrs;
-	twi_state->have_bus = FALSE;
-	twi_state->done_with_bus = FALSE;
 	twi_state->out_pkt = NULL;
 	twi_state->out_len = 0;
 	twi_state->sendDoneCB = NULL;
