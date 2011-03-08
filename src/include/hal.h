@@ -82,7 +82,7 @@ void hal_uart_start_send(void);
 
 /////////////// TWI ///////////////////////////////////////////////
 
-MediaStateIfc *hal_twi_init(Addr local_addr, MediaRecvSlot *trs);
+MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr, MediaRecvSlot *trs);
 
 ////////////////// Audio ////////////////////////////////////////////
 

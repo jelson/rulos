@@ -380,7 +380,7 @@ ISR(TWI_vect)
 	twi_update(&_twi_g, TW_STATUS);
 }
 
-MediaStateIfc *hal_twi_init(Addr local_addr, MediaRecvSlot *slaveRecvSlot)
+MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr, MediaRecvSlot *slaveRecvSlot)
 {
 	TwiState *twi = &_twi_g;
 
@@ -404,22 +404,16 @@ MediaStateIfc *hal_twi_init(Addr local_addr, MediaRecvSlot *slaveRecvSlot)
 
 	twi->initted = TWI_MAGIC;
 
-	/* set 100khz (assuming 8mhz local clock!  fix me...) */
-#ifdef CUSTOM_TWBR
-	TWBR = CUSTOM_TWBR;
-#else
-	TWBR = 32;
-#endif
+	/* convert khz to TWBR */
+	TWBR = ((uint32_t) hardware_f_cpu - 16000 * speed_khz) / (2000 * speed_khz);
 
 	/* configure the local address */
 	TWAR = local_addr << 1;
 
 	/* set the mask to be all 0, meaning all bits of the address are
-	 * significant */
-#if defined(MCUatmega328p)
+	 * significant.  not all platforms support this. */
+#if defined(TWAMR)
 	TWAMR = 0;
-#elif defined(MCUatmega8)
-
 #endif
 
 	/* enable interrupts */
