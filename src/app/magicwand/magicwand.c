@@ -517,7 +517,7 @@ int main()
 	aa->mrs->capacity = aa->readLen;
 	aa->mrs->occupied = false;
 	aa->mrs->user_data = aa;
-	aa->twiState = hal_twi_init(0, aa->mrs);
+	aa->twiState = hal_twi_init(100, 0, aa->mrs);
 
 	aa->serial_console_act.act.func = serial_console_input_handler;
 	aa->serial_console_act.aa = aa;

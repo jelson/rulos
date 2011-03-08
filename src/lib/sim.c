@@ -694,7 +694,7 @@ void _sim_twi_send(MediaStateIfc *media,
 	Addr dest_addr, char *data, uint8_t len,
 	MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
 
-MediaStateIfc *hal_twi_init(Addr local_addr, MediaRecvSlot *mrs)
+MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr, MediaRecvSlot *mrs)
 {
 	signal(SIGIO, sim_sigio_handler);
 

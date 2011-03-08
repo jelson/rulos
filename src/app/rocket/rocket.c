@@ -100,7 +100,7 @@ typedef struct {
 void init_rocket0(Rocket0 *r0)
 {
 	drtc_init(&r0->dr, 0, clock_time_us()+20000000);
-	init_twi_network(&r0->network, ROCKET_ADDR);
+	init_twi_network(&r0->network, 100, ROCKET_ADDR);
 	lunar_distance_init(&r0->ld, 1, 2 /*, SPEED_POT_CHANNEL*/);
 	init_audio_client(&r0->audio_client, &r0->network);
 	memset(&r0->thrusterUpdate, 0, sizeof(r0->thrusterUpdate));

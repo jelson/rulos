@@ -249,7 +249,7 @@ static void net_send_done_cb(void *user_data)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_twi_network(uint32_t speed_khz, Network *net, Addr local_addr)
+void init_twi_network(Network *net, uint32_t speed_khz, Addr local_addr)
 {
 	init_network(net, hal_twi_init(speed_khz, local_addr, &net->mrs));
 }

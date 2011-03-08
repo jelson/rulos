@@ -24,7 +24,7 @@ void test_without_netstack()
 	trs->occupied = FALSE;
 	trs->capacity = sizeof(inbuf) - sizeof(MediaRecvSlot);
 	
-	MediaStateIfc *media = hal_twi_init(0x8, trs);
+	MediaStateIfc *media = hal_twi_init(100, 0x8, trs);
 	(media->send)(media, 0x1, "hello", 5, NULL, NULL);
 	while(1) {}
 
@@ -98,7 +98,7 @@ void test_netstack()
 	sendSlot.msg->dest_port = AUDIO_PORT;
 	sendSlot.sending = FALSE;
 
-	init_twi_network(&net, 0x5);
+	init_twi_network(&net, 100, 0x5);
 
 	sendAct_t sa;
 	sa.f = (ActivationFunc) sendMessage;

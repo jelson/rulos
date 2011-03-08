@@ -258,7 +258,7 @@ int main()
 	// moment I'm using for SYNCDEBUG(), including in init_audio_server.
 	cmdproc_init(&mc.cmdproc, &mc.aserv, &mc.network);
 
-	init_twi_network(&mc.network, AUDIO_ADDR);
+	init_twi_network(&mc.network, 100, AUDIO_ADDR);
 
 	init_audio_server(&mc.aserv, &mc.network, TIMER2);
 #else

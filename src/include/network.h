@@ -76,6 +76,6 @@ r_bool net_send_message(Network *net, SendSlot *sendSlot);
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_twi_network(uint32_t speed_khz, Network *network, Addr local_addr);
+void init_twi_network(Network *network, uint32_t speed_khz, Addr local_addr);
 
 #endif // _NETWORK_H

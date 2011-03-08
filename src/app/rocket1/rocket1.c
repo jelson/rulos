@@ -63,7 +63,7 @@ int main()
 	cpumon_init(&cpumon);	// includes slow calibration phase
 
 	Network network;
-	init_twi_network(&network, ROCKET1_ADDR);
+	init_twi_network(&network, 100, ROCKET1_ADDR);
 
 	//install_handler(ADC, adc_handler);
 

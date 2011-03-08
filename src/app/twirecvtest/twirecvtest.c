@@ -107,7 +107,7 @@ void test_netstack()
 	recvSlot.msg_occupied = FALSE;
 
 	SYNCDEBUG();
-	init_twi_network(&net, AUDIO_ADDR);
+	init_twi_network(&net, 100, AUDIO_ADDR);
 	net_bind_receiver(&net, &recvSlot);
 	SYNCDEBUG();
 
