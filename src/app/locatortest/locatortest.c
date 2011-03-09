@@ -2,7 +2,7 @@
 //#define MANUAL_US_TEST
 //#define NO_ACCEL
 //#define NO_GYRO
-//#define NO_ANALOG
+#define NO_ULTRASOUND
 
 #include <string.h>
 #include <avr/interrupt.h>
@@ -27,7 +27,7 @@ typedef struct locatorAct locatorAct_t;
 typedef void (*PeripheralSendCompleteFunc)(locatorAct_t *aa);
 typedef void (*PeripheralRecvCompleteFunc)(locatorAct_t *aa, char *data, int len);
 
-#ifndef NO_ANALOG
+#ifndef NO_ULTRASOUND
 static inline void chirp(uint16_t chirpLenUS);
 #endif
 
@@ -57,14 +57,15 @@ struct locatorAct {
 	PeripheralRecvCompleteFunc recvFunc;
 	uint8_t twiAddr;
 	uint8_t readLen;
+	uint8_t debug;
 
 #ifdef MANUAL_US_TEST
 	uint8_t currUsState;
 	uint8_t currUsCount;
 #endif
 
+#ifndef NO_ULTRASOUND
 	// ultrasound
-	uint8_t debug;
 	char rangingMode;
 	uint8_t trainingMode;
 	uint8_t topOrBot;
@@ -73,6 +74,7 @@ struct locatorAct {
 	Time chirpSendTime;
 	Time chirpRTT;
 	uint8_t chirpTimeout;
+#endif
 };
 
 static locatorAct_t locatorAct_g;
@@ -234,8 +236,7 @@ void readFromPeripheral(locatorAct_t *locatorAct,
 
 ///////////// Ultrasound ////////////////////////////////////
 
-#ifndef NO_ANALOG
-#if 0
+#ifndef NO_ULTRASOUND
 
 void start_sampling(locatorAct_t *locatorAct, uint8_t topOrBot)
 {
@@ -384,7 +385,6 @@ ISR(ADC_vect)
 		detectChirp(adcval, &locatorAct_g.usState[locatorAct_g.topOrBot], &locatorAct_g);
 	}
 }
-#endif
 
 
 static inline void us_xmit_start()
@@ -422,23 +422,29 @@ static inline void chirp(uint16_t chirpLenUS)
 	us_xmit_stop();
 }
 
-#endif
+#endif // NO_ULTRASOUND
 
 /*************************************/
 
+// work around stupid bug that causes hang with _delay_ms(x) for x > ~30
+static inline void long_delay_ms(uint16_t t)
+{
+	for (int i = 0; i < t/30; i++)
+		_delay_ms(30);
+}
 // all done!  start sampling.
 void configLocator4(locatorAct_t *locatorAct)
 {
-#ifndef NO_ANALOG
+#ifndef NO_ULTRASOUND
 	locatorAct->trainingMode = 1;
-	//	start_sampling(locatorAct, US_TOP);
-	_delay_ms(400);
+	start_sampling(locatorAct, US_TOP);
+	long_delay_ms(40);
 	//	stop_sampling();
 # ifdef US_BOT_CHAN
 	locatorAct->trainingMode = 1;
-	//	start_sampling(locatorAct, US_BOT);
-	//_delay_ms(400);
-	//	stop_sampling();
+	start_sampling(locatorAct, US_BOT);
+	long_delay_ms(400);
+	stop_sampling();
 # endif
 #endif
 
@@ -482,8 +488,7 @@ void configLocator2(locatorAct_t *locatorAct, char *data, int len)
 
 void configLocator(locatorAct_t *locatorAct)
 {
-#ifndef NO_ANALOG
-#if 0
+#ifndef NO_ULTRASOUND
 	// turn off the us output switch
 	gpio_make_output(GPIO_US_XMIT);
 	gpio_clr(GPIO_US_XMIT);
@@ -491,6 +496,11 @@ void configLocator(locatorAct_t *locatorAct)
 	// enable 10v voltage doubler
 	gpio_make_output(GPIO_10V_ENABLE);
 	gpio_clr(GPIO_10V_ENABLE);
+
+	// for Rev C and after, put output driver into high impedance
+#ifdef GPIO_US_XMIT_ENABLE
+	gpio_make_output(GPIO_US_XMIT_ENABLE);
+	gpio_clr(GPIO_US_XMIT_ENABLE);
 #endif
 
 	locatorAct->rangingMode = 'q';
@@ -563,9 +573,8 @@ void sampleLocator2(locatorAct_t *locatorAct, char *data, int len)
 
 void process_serial_command(locatorAct_t *locatorAct, char cmd)
 {
-	return;
 	switch (cmd) {
-#ifndef NO_ANALOG
+#ifndef NO_ULTRASOUND
 	case 'q':
 		locatorAct->rangingMode = 'q';
 		us_xmit_stop();
