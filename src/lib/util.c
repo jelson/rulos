@@ -142,11 +142,13 @@ void debug_msg_hex(uint8_t board, char *m, uint16_t hex)
 	program_board(board, bm);
 }
 
+#if 0
 uint16_t stack_ptr()
 {
 	uint8_t a, *b=&a;
 	return (unsigned) b;
 }
+#endif
 
 void debug_delay(int ms)
 {
