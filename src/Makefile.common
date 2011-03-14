@@ -12,6 +12,7 @@
  # For more information about the project, see: www.jonh.net/rulos
  #
 
+
 COMMON_OBJECTS = \
 	board_buffer.o \
 	calculator.o \
@@ -85,6 +86,16 @@ COMMON_OBJECTS = \
 #	spiflash.o \
 #	audio_driver.o \
 
+UNAME := $(shell uname)
+
+ifeq ($(UNAME), Linux)
+PYTHON := python
+else
+PYTHON := c:\python27\python.exe
+endif
+
+
+
 .PHONY: all-platforms
 all-platforms: sim-all avr-all
 
@@ -104,19 +115,19 @@ $(AVR_OBJDIR)/laserfont.o: $(AVR_OBJDIR)/laserfont.ch
 FONTZIPS=$(glob $(ROCKET_ROOT)/bitmaps/*.zip)
 
 %/laserfont.ch: $(ROCKET_ROOT)/util/ttf_to_bitmap.py $(FONTZIPS)
-	$(ROCKET_ROOT)/util/ttf_to_bitmap.py $(ROCKET_ROOT)/bitmaps > $@
+	$(PYTHON) $(ROCKET_ROOT)/util/ttf_to_bitmap.py $(ROCKET_ROOT)/bitmaps > $@
 
 %/sevseg_bitmaps.ch: $(ROCKET_ROOT)/util/sevseg_convert.py $(ROCKET_ROOT)/lib/sevseg_artwork.txt
-	$(ROCKET_ROOT)/util/sevseg_convert.py $(ROCKET_ROOT)/lib/sevseg_artwork.txt > $@
+	$(PYTHON) $(ROCKET_ROOT)/util/sevseg_convert.py $(ROCKET_ROOT)/lib/sevseg_artwork.txt > $@
 
 $(SIM_OBJDIR)/audio_driver.o: $(SIM_OBJDIR)/audio_index.ch $(SIM_OBJDIR)/spiflash.bin
 $(AVR_OBJDIR)/audio_driver.o: $(AVR_OBJDIR)/audio_index.ch $(AVR_OBJDIR)/spiflash.bin
 
 %/audio_index.ch: $(ROCKET_ROOT)/audio/compile_audio.py $(ROCKET_ROOT)/include/sound.h
-	$(ROCKET_ROOT)/audio/compile_audio.py -index $(ROCKET_ROOT)/include/sound.h $(ROCKET_ROOT)/audio/ > $@
+	$(PYTHON) $(ROCKET_ROOT)/audio/compile_audio.py -index $(ROCKET_ROOT)/include/sound.h $(ROCKET_ROOT)/audio/ > $@
 
 %/spiflash.bin: $(ROCKET_ROOT)/audio/compile_audio.py $(ROCKET_ROOT)/include/sound.h
-	$(ROCKET_ROOT)/audio/compile_audio.py -spif $(ROCKET_ROOT)/include/sound.h $(ROCKET_ROOT)/audio/ > $@
+	$(PYTHON) $(ROCKET_ROOT)/audio/compile_audio.py -spif $(ROCKET_ROOT)/include/sound.h $(ROCKET_ROOT)/audio/ > $@
 
 # Generate rasters
 $(SIM_OBJDIR)/rasters.o: $(SIM_OBJDIR)/rasters_auto.ch
@@ -126,7 +137,7 @@ $(SIM_OBJDIR)/rasters.o: $(SIM_OBJDIR)/lcdrasters_auto.ch
 $(AVR_OBJDIR)/rasters.o: $(AVR_OBJDIR)/lcdrasters_auto.ch
 
 %/rasters_auto.ch: $(ROCKET_ROOT)/util/bitmaploader.py $(ROCKET_ROOT)/bitmaps/*.png
-	$(ROCKET_ROOT)/util/bitmaploader.py $@ $(ROCKET_ROOT)/bitmaps > /dev/null
+	$(PYTHON) $(ROCKET_ROOT)/util/bitmaploader.py $@ $(ROCKET_ROOT)/bitmaps > /dev/null
 
 %/lcdrasters_auto.ch: $(ROCKET_ROOT)/util/lcdbitmaploader.py $(ROCKET_ROOT)/lcdbitmaps/*.png
-	$(ROCKET_ROOT)/util/lcdbitmaploader.py $@ $(ROCKET_ROOT)/lcdbitmaps > /dev/null
+	$(PYTHON) $(ROCKET_ROOT)/util/lcdbitmaploader.py $@ $(ROCKET_ROOT)/lcdbitmaps > /dev/null
