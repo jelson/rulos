@@ -1,14 +1,14 @@
 //#define TIME_DEBUG
 //#define MANUAL_US_TEST
 //#define NO_ACCEL
-//#define NO_GYRO
-#define NO_ULTRASOUND
+#define NO_GYRO
+//#define NO_ULTRASOUND
 
 #include <string.h>
 #include <avr/interrupt.h>
 
 #ifdef BOARD_REVC
-#define F_CPU 20000000UL
+#define F_CPU 8000000UL
 #endif
 #include <util/delay.h>
 
@@ -45,7 +45,7 @@ struct locatorAct {
 
 	// uart
 	UartState_t uart;
-	char UARTsendBuf[48];
+	char UARTsendBuf[80];
 	uint8_t uartSending;
 
 	// twi
@@ -374,7 +374,7 @@ void detectChirp(uint16_t adcval, usState_t *usState, locatorAct_t *locatorAct)
 // Called when the ADC has a sample ready for us.
 ISR(ADC_vect)
 {
-	uint16_t adcval = ADCL;
+ 	uint16_t adcval = ADCL;
 	adcval |= ((uint16_t) ADCH << 8);
 
 	if (locatorAct_g.trainingMode) {
@@ -426,29 +426,31 @@ static inline void chirp(uint16_t chirpLenUS)
 
 /*************************************/
 
-// work around stupid bug that causes hang with _delay_ms(x) for x > ~30
-static inline void long_delay_ms(uint16_t t)
-{
-	for (int i = 0; i < t/30; i++)
-		_delay_ms(30);
-}
 // all done!  start sampling.
 void configLocator4(locatorAct_t *locatorAct)
 {
 #ifndef NO_ULTRASOUND
 	locatorAct->trainingMode = 1;
 	start_sampling(locatorAct, US_TOP);
-	long_delay_ms(40);
-	//	stop_sampling();
+	_delay_ms(400);
+	stop_sampling();
 # ifdef US_BOT_CHAN
 	locatorAct->trainingMode = 1;
 	start_sampling(locatorAct, US_BOT);
-	long_delay_ms(400);
+	_delay_ms(400);
 	stop_sampling();
 # endif
 #endif
-
+	_delay_ms(100);
+	wait_for_serial(locatorAct);
 	emit(locatorAct, "^m;Initialization complete\n\r");
+#if 0
+	xxx
+	while(1) {
+	  _delay_ms(500);
+	  emit(locatorAct, "p\n\r");
+	};
+#endif
 	schedule_now((Activation *) locatorAct);
 }
 
@@ -573,6 +575,7 @@ void sampleLocator2(locatorAct_t *locatorAct, char *data, int len)
 
 void process_serial_command(locatorAct_t *locatorAct, char cmd)
 {
+  return;
 	switch (cmd) {
 #ifndef NO_ULTRASOUND
 	case 'q':
