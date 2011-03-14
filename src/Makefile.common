@@ -91,7 +91,7 @@ UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)
 PYTHON := python
 else
-PYTHON := c:\python27\python.exe
+PYTHON := c:\\python27\\python.exe
 endif
 
 
