@@ -1,0 +1,27 @@
+default: studiooutput
+
+.PHONY: studiooutput
+
+studiooutput: \
+	studiooutput.eep \
+	studiooutput.elf \
+	studiooutput.hex \
+	studiooutput.lss \
+	studiooutput.map \
+
+studiooutput.eep: $(ARCHTARG).eep
+	cp $< $@
+
+studiooutput.elf: $(ARCHTARG).elf
+	cp $< $@
+
+studiooutput.hex: $(ARCHTARG).hex
+	cp $< $@
+
+studiooutput.lss: $(ARCHTARG).lss
+	cp $< $@
+
+studiooutput.map: $(ARCHTARG).map
+	cp $< $@
+
+

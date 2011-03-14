@@ -85,13 +85,14 @@ COMMON_OBJECTS = \
 #	spiflash.o \
 #	audio_driver.o \
 
-.PHONY: all
-all: sim-all avr-all
+.PHONY: all-platforms
+all-platforms: sim-all avr-all
 
 clean: sim-clean avr-clean
 
 include $(ROCKET_ROOT)/Makefile.sim
 include $(ROCKET_ROOT)/Makefile.avr
+include $(ROCKET_ROOT)/Makefile.studio
 
 # Generate the sevseg bitmaps from the artwork file
 $(SIM_OBJDIR)/display_controller.o: $(SIM_OBJDIR)/sevseg_bitmaps.ch
