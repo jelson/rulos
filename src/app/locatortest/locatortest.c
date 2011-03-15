@@ -1,7 +1,6 @@
 //#define TIME_DEBUG
-//#define MANUAL_US_TEST
 //#define NO_ACCEL
-#define NO_GYRO
+//#define NO_GYRO
 //#define NO_ULTRASOUND
 
 #include <string.h>
@@ -50,7 +49,7 @@ struct locatorAct {
 
 	// twi
 	char TWIsendBuf[10];
-	char TWIrecvBuf[10];
+	char TWIrecvBuf[16];
 	MediaRecvSlot *mrs;
 	MediaStateIfc *twiState;
 	PeripheralSendCompleteFunc sendFunc;
@@ -58,11 +57,6 @@ struct locatorAct {
 	uint8_t twiAddr;
 	uint8_t readLen;
 	uint8_t debug;
-
-#ifdef MANUAL_US_TEST
-	uint8_t currUsState;
-	uint8_t currUsCount;
-#endif
 
 #ifndef NO_ULTRASOUND
 	// ultrasound
@@ -188,10 +182,10 @@ void _peripheralSendComplete(void *user_data)
 }
 
 void sendToPeripheral(locatorAct_t *locatorAct,
-					  uint8_t twiAddr,
-					  char *data,
-					  uint8_t len,
-					  PeripheralSendCompleteFunc f)
+		      uint8_t twiAddr,
+		      char *data,
+		      uint8_t len,
+		      PeripheralSendCompleteFunc f)
 {
 	locatorAct->sendFunc = f;
 	(locatorAct->twiState->send)(locatorAct->twiState, twiAddr, data, len, _peripheralSendComplete, locatorAct);
@@ -205,7 +199,6 @@ void _locatorReadComplete(MediaRecvSlot *mrs, uint8_t len)
 {
 	locatorAct_t *locatorAct = (locatorAct_t *) mrs->user_data;
 	locatorAct->recvFunc(locatorAct, mrs->data, locatorAct->readLen);
-	gpio_clr(GPIO_LED_1);
 }
 
 void _readFromPeripheral2(locatorAct_t *locatorAct)
@@ -226,6 +219,7 @@ void readFromPeripheral(locatorAct_t *locatorAct,
 {
 	locatorAct->recvFunc = f;
 	locatorAct->readLen = len;
+	assert(len + sizeof(MediaRecvSlot) < sizeof(locatorAct->TWIrecvBuf));
 
 	locatorAct->twiAddr = twiAddr;
 	locatorAct->TWIsendBuf[0] = baseAddr;
@@ -247,6 +241,7 @@ void start_sampling(locatorAct_t *locatorAct, uint8_t topOrBot)
 	if (topOrBot == US_TOP)
 		adcChan = US_TOP_CHAN;
 #ifdef US_BOT_CHAN
+
 	else if (topOrBot == US_BOT)
 		adcChan = US_BOT_CHAN;
 #endif
@@ -441,17 +436,10 @@ void configLocator4(locatorAct_t *locatorAct)
 	stop_sampling();
 # endif
 #endif
-	_delay_ms(100);
 	wait_for_serial(locatorAct);
 	emit(locatorAct, "^m;Initialization complete\n\r");
-#if 0
-	xxx
-	while(1) {
-	  _delay_ms(500);
-	  emit(locatorAct, "p\n\r");
-	};
-#endif
-	schedule_now((Activation *) locatorAct);
+
+	schedule_us(1, (Activation *) locatorAct);
 }
 
 
@@ -497,7 +485,8 @@ void configLocator(locatorAct_t *locatorAct)
 
 	// enable 10v voltage doubler
 	gpio_make_output(GPIO_10V_ENABLE);
-	gpio_clr(GPIO_10V_ENABLE);
+	//	gpio_clr(GPIO_10V_ENABLE);
+	gpio_set(GPIO_10V_ENABLE);
 
 	// for Rev C and after, put output driver into high impedance
 #ifdef GPIO_US_XMIT_ENABLE
@@ -512,8 +501,8 @@ void configLocator(locatorAct_t *locatorAct)
 #ifdef BOARD_REVC
 	gpio_make_output(GPIO_LED_1);
 	gpio_make_output(GPIO_LED_2);
-	gpio_set(GPIO_LED_1);
-	gpio_set(GPIO_LED_2);
+	gpio_clr(GPIO_LED_1);
+	gpio_clr(GPIO_LED_2);
 #endif
 
 #ifdef NO_ACCEL
@@ -575,12 +564,12 @@ void sampleLocator2(locatorAct_t *locatorAct, char *data, int len)
 
 void process_serial_command(locatorAct_t *locatorAct, char cmd)
 {
-  return;
 	switch (cmd) {
 #ifndef NO_ULTRASOUND
 	case 'q':
 		locatorAct->rangingMode = 'q';
 		us_xmit_stop();
+
 		wait_for_serial(locatorAct);
 		emit(locatorAct, "^m;entering quiet mode$\n\r");
 		break;
@@ -618,8 +607,14 @@ void sampleLocator(locatorAct_t *locatorAct)
 {
 	// schedule reading of the next sample
 	schedule_us(SAMPLING_PERIOD, (Activation *) locatorAct);
-	locatorAct->debug++;
-	gpio_set_or_clr(GPIO_LED_2, locatorAct->debug & 1);
+
+	// set debug leds
+	if (locatorAct->rangingMode == 'r') {
+		gpio_set(GPIO_LED_1);
+	} else {
+		locatorAct->debug++;
+		gpio_set_or_clr(GPIO_LED_1, locatorAct->debug & 1);
+	}
 
 #ifdef TEST_TIME_ONLY
 	snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf)-1, "%d\r\n", locatorAct->debug);
@@ -632,7 +627,7 @@ void sampleLocator(locatorAct_t *locatorAct)
 	while (CharQueue_pop(locatorAct->uart.recvQueue.q, &cmd))
 		process_serial_command(locatorAct, cmd);
 
-#if 0
+#ifndef NO_ULTRASOUND
 	// If we're in 's' mode waiting for a reply, don't sample the
 	// peripherals.  Just check for a timeout and then end.  This must
 	// be done in an atomic block because the interrupt-driven analog
@@ -671,24 +666,7 @@ void sampleLocator(locatorAct_t *locatorAct)
 		locatorAct->chirpRTT = 0;
 		emit(locatorAct, locatorAct->UARTsendBuf);
 	}
-#endif
-
-#ifdef MANUAL_US_TEST
-	// maybe flip the us
-	locatorAct->currUsCount++;
-	if (locatorAct->currUsCount >= 70) {
-		locatorAct->currUsState = !locatorAct->currUsState;
-		if (locatorAct->currUsState) {
-			wait_for_serial(locatorAct);
-			emit(locatorAct, "on\n\r");
-		} else {
-			wait_for_serial(locatorAct);
-			emit(locatorAct, "off\n\r");
-		}
-		gpio_set_or_clr(GPIO_US_XMIT, locatorAct->currUsState);
-		locatorAct->currUsCount = 0;
-	}
-#endif
+#endif // NO_ULTRASOUND
 
 #ifdef NO_ACCEL
 	sampleLocator2(locatorAct, NULL, 0);
