@@ -22,7 +22,8 @@ BOARD := FLASHCARD
 TARGET := flashcard
 
 TARGET_OBJECTS := \
-	flashcard.o
+	flashcard.o \
+	rasters.o \
 
 include $(ROCKET_ROOT)/Makefile.common
 
