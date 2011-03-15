@@ -15,6 +15,7 @@
  ************************************************************************/
 
 #include <rocket.h>
+
 void audioled_set(r_bool red, r_bool yellow);
 
 /*
@@ -198,4 +199,27 @@ ISR(USART0_UDRE_vect)
 }
 #else
 #error need CPU love
+#endif
+
+
+
+#ifdef ASSERT_TO_SERIAL
+
+void uart_assert(uint16_t lineNum)
+{
+	char buf[9];
+	buf[0] = 'a';
+	buf[1] = 's';
+	buf[2] = 'r';
+	int_to_string2(&buf[3], 5, 0, lineNum);
+	buf[8] = 0;
+
+	cli();
+	for (int i = 0; i < sizeof(buf); i++) {
+	  while (!(_UCSRA  & _BV(_UDRE)))
+	    ;
+	  _UDR = buf[i];
+	}
+}
+
 #endif

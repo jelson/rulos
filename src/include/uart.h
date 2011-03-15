@@ -56,5 +56,9 @@ void uart_reset_recvq(UartQueue_t *uq);
 r_bool uart_send(UartState_t *uart, char *c, uint8_t len, UARTSendDoneFunc, void *callback_data);
 r_bool uart_busy(UartState_t *u);
 
+#ifdef ASSERT_TO_SERIAL
+void uart_assert(uint16_t lineNum);
+#endif
+
 #endif
 

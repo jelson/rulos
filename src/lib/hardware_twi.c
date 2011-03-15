@@ -33,7 +33,7 @@ typedef struct {
 
 struct s_TwiState
 {
-	MediaStateIfc media;
+	MediaStateIfc media;  // this must be first... :-(
 
 	uint8_t initted;
 	uint8_t have_bus;
@@ -90,6 +90,7 @@ static void doSendCallback(twiCallbackAct_t *tca)
 	// transmit is that we don't have a pending callback.  However,
 	// the callback is often where new packets get scheduled.
 	TwiState *twi = tca->twi;
+	assert(twi->initted == TWI_MAGIC);
 	MediaSendDoneFunc cb = twi->sendDoneCB;
 	twi->sendDoneCB = NULL;
 	cb(twi->sendDoneCBData);
@@ -121,6 +122,7 @@ static void initiateRecvCallback(TwiState *twi, MediaRecvSlot *recvSlot, uint8_t
 static void doRecvCallback(twiCallbackAct_t *tca)
 {
 	TwiState *twi = tca->twi;
+	assert(twi->initted == TWI_MAGIC);
 	assert(twi->recvUpcallSlot != NULL);
 	twi->recvUpcallSlot->func(twi->recvUpcallSlot, twi->recvUpcallLen);
 	twi->recvUpcallSlot = NULL;
@@ -385,7 +387,7 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr, MediaRecvSlot *
 	TwiState *twi = &_twi_g;
 
 	/* initialize our local state */
-	memset(twi, 0, sizeof(*twi));
+	memset(twi, 0, sizeof(TwiState));
 	twi->media.send = &_hal_twi_send;
 	twi->slaveRecvSlot = slaveRecvSlot;
 	twi->slaveRecvLen = -1;
@@ -426,7 +428,7 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr, MediaRecvSlot *
 
 // Send a packet in master-transmitter mode.
 void _hal_twi_send(MediaStateIfc *media, Addr dest_addr, char *data, uint8_t len, 
-				  MediaSendDoneFunc sendDoneCB, void *sendDoneCBData)
+		   MediaSendDoneFunc sendDoneCB, void *sendDoneCBData)
 {
 	TwiState *twi = (TwiState *)media;
 	assert(twi->initted == TWI_MAGIC);
