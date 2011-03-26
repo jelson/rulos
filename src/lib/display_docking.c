@@ -29,7 +29,7 @@ void ddock_update(DDockAct *act);
 uint32_t ddock_compute_dx(int yc, int r, int y);
 void ddock_paint_axes(DDockAct *act);
 void ddock_thruster_update(DockThrusterUpdate *dtu, ThrusterPayload *tp);
-void dd_bump(DDockAct *act, uint8_t thruster_bit, uint32_t xscale, uint32_t yscale);
+void dd_bump(DDockAct *act, HPAMIndex thruster_index, uint32_t xscale, uint32_t yscale);
 void ddock_hide(DDockAct *dd);
 void ddock_show(DDockAct *dd);
 

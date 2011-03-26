@@ -17,6 +17,7 @@
 AVR_ONLY_OBJECTS := \
 	hardware.o \
 	hardware_adc.o \
+	hardware_6matrix.o \
 	hardware_keypad.o \
 	hardware_timers.o \
 	hardware_twi.o \

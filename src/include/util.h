@@ -33,12 +33,14 @@ typedef uint8_t r_bool;
 
 #include <stdio.h>
 #include <assert.h>
+#include <unistd.h>
 
 #define say(x)	{ fprintf(stderr, "say: %s\n", x); }
 extern FILE *logfp;
 #define LOGF(x)	{ fprintf x; fflush(logfp); }
 #define CONDSIMARG(x)	, x
-
+#define _delay_us(x) do { usleep(x); } while(0);
+#define _delay_ms(x) _delay_us((x) * 1000)
 #define PROGMEM	/**/
 #define pgm_read_byte(addr)	(*((uint8_t*)addr))
 

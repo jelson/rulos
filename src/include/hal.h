@@ -37,6 +37,7 @@ typedef enum {
 	bc_chaseclock,
 } BoardConfiguration;
 
+void hal_generic_init();
 void hal_init(BoardConfiguration bc);
 
 // block interrupts/signals; returns previous state of interrupts

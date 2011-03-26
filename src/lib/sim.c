@@ -545,6 +545,11 @@ static void sim_clock_handler()
 
 uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t timer_id)
 {
+	/* init clock stuff */
+	sigemptyset(&mask_set);
+	sigaddset(&mask_set, SIGALRM);
+	sigaddset(&mask_set, SIGIO);
+
 	struct itimerval ivalue, ovalue;
 	ivalue.it_interval.tv_sec = us/1000000;
 	ivalue.it_interval.tv_usec = (us%1000000);
@@ -616,8 +621,10 @@ void sensor_interrupt_register_handler(Handler handler, void *data)
 	_sensor_interrupt_data = data;
 }
 
+
 void hal_init(BoardConfiguration bc)
 {
+
 	switch (bc)
 	{
 		case bc_rocket0:
@@ -668,11 +675,6 @@ void hal_init(BoardConfiguration bc)
 			program_cell(board, digit, value);
 		}
 	}
-
-	/* init clock stuff */
-	sigemptyset(&mask_set);
-	sigaddset(&mask_set, SIGALRM);
-	sigaddset(&mask_set, SIGIO);
 }
 
 typedef struct {

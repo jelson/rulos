@@ -126,9 +126,9 @@ static inline void gpio_make_input_no_pullup(volatile uint8_t *ddr,
  * assert an output pin HIGH
  */
 static inline void gpio_set(volatile uint8_t *ddr,
-							volatile uint8_t *port,
-							volatile uint8_t *pin,
-							uint8_t bit)
+			    volatile uint8_t *port,
+			    volatile uint8_t *pin,
+			    uint8_t bit)
 {
 	reg_set(port, bit);
 }
