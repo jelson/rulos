@@ -31,7 +31,7 @@ void init_slow_boot(SlowBoot *slowboot, ScreenBlanker *screenblanker, AudioClien
 
 #else // BORROW_SCREENBLANKER_BUFS
 	// Ahem. Memory's a little tight, see, so we're turning the
-	// screenblanker on and borrowing *it's* board buffers, which
+	// screenblanker on and borrowing *its* board buffers, which
 	// otherwise would cost us 7*13 = 91 bytes of .bss. Cough cough.
 
 	screenblanker_setmode(slowboot->screenblanker, sb_black);
