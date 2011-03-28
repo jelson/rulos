@@ -25,7 +25,7 @@
 #define NUM_COLUMN_BYTES_4BIT (NUM_COLUMNS/2)
 #define NUM_ROWS    16
 
-void hal_ledmatrix_init();
-void hal_ledmatrix_setRow(uint8_t *colBytes, uint8_t rowNum);
+void hal_6matrix_init();
+void hal_6matrix_setRow(uint8_t *colBytes, uint8_t rowNum);
 
 

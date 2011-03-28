@@ -79,8 +79,8 @@ void boofunc(void *f)
 
 int main()
 {
-	util_init();
-	hal_init(bc_chaseclock);
+	hal_init();
+	hal_init_rocketpanel(bc_chaseclock);
 	init_clock(10000, TIMER1);
 
 	CpumonAct cpumon;

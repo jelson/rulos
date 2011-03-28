@@ -528,9 +528,7 @@ void spi_test(void)
 
 int main()
 {
-	heap_init();
-	util_init();
-	hal_init(bc_audioboard);
+	hal_init();
 
 	// start clock with 10 msec resolution
 	init_clock(10000, TIMER1);

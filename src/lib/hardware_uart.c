@@ -83,7 +83,7 @@ void audioled_set(r_bool red, r_bool yellow);
 # error Hardware-specific UART code needs love
 #endif
 
-UartHandler *g_uart_handler;
+UartHandler *g_uart_handler = NULL;
 
 uint16_t baud_to_ubrr(uint32_t baud)
 {
@@ -103,9 +103,13 @@ void hal_uart_init(UartHandler *handler, uint32_t baud, r_bool stop2)
 
 	_UCSRB =
 		_BV(_TXEN)  | // enable transmitter
-		_BV(_RXEN)  |  // enable receiver
-		_BV(_RXCIE)   // enable receiver interrupt
-		;
+		_BV(_RXEN)   // enable receiver
+	  ;
+
+	if (handler != NULL) {
+	  _UCSRB |=
+		  _BV(_RXCIE);   // enable receiver interrupt
+	}
 
 	// set frame format: async, 8 bit data, 1 stop bit, no parity
 	_UCSRC =  _BV(_UCSZ1) | _BV(_UCSZ0)
@@ -202,8 +206,17 @@ ISR(USART0_UDRE_vect)
 #endif
 
 
+void hal_uart_sync_send(char *s, uint8_t len)
+{
+	for (uint8_t i = 0; i < len; i++) {
+		while (!(_UCSRA  & _BV(_UDRE)))
+			;
+		_UDR = s[i];
+	}
+}
 
 #ifdef ASSERT_TO_SERIAL
+
 
 void uart_assert(uint16_t lineNum)
 {
@@ -215,11 +228,7 @@ void uart_assert(uint16_t lineNum)
 	buf[8] = 0;
 
 	cli();
-	for (int i = 0; i < sizeof(buf); i++) {
-	  while (!(_UCSRA  & _BV(_UDRE)))
-	    ;
-	  _UDR = buf[i];
-	}
+	uart_sync_send(buf, sizeof(buf));
 }
 
 #endif

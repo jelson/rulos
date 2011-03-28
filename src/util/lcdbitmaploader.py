@@ -76,7 +76,7 @@ class ImageCat:
 		fp.write("uint16_t %s_row_width_bytes = %d;\n" % (symname, self.getcatsize()[0]/8))
 		fp.write("uint16_t %s_num_rows = %d;\n" % (symname, self.getcatsize()[1]/8))
 
-		self.image.save("catimage.png")
+		#self.image.save("catimage.png")
 		
 def main():
 	flist = glob.glob("%s/*.png" % (sys.argv[2]))

@@ -81,6 +81,7 @@ COMMON_OBJECTS = \
 	serial_console.o \
 	led_matrix_single.o \
 	eeprom.o \
+	rasters.o \
 
 #	spiflash.o \
 #	audio_driver.o \

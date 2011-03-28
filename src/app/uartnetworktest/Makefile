@@ -23,7 +23,7 @@ TARGET := uartnetworktest
 TARGET_OBJECTS := \
 	uartnetworktest.o
 
-uartnetwork_all: all uartnetworkhost hostaudio
+uartnetwork_all: uartnetworkhost hostaudio
 
 HOSTTEST_OBJS=uartnetworkhost.o net_compute_checksum.o host_uart_network.o
 

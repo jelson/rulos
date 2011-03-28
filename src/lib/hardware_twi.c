@@ -23,7 +23,6 @@
 #include "hardware.h"
 #include "twi.h"
 
-
 #define NEED_BUS(twi) ((twi->out_pkt != NULL) || (twi->masterRecvSlot != NULL))
 
 typedef struct {
@@ -50,17 +49,17 @@ struct s_TwiState
 
 	// slave-receiver state
 	MediaRecvSlot *slaveRecvSlot;
-	uint8_t slaveRecvLen;
+	int8_t slaveRecvLen; // we use -1 as a sentinel so must be signed
 
 	// master-receiver state
 	MediaRecvSlot *masterRecvSlot;
 	uint8_t masterRecvAddr;
-	uint8_t masterRecvLen;
+	int8_t masterRecvLen; // we use -1 as a sentinel so must be signed
 
 	// receive upcalls
 	twiCallbackAct_t recvUpcallAct;
 	MediaRecvSlot *recvUpcallSlot;
-	uint8_t recvUpcallLen;
+	volatile int8_t recvUpcallLen; // we use -1 as a sentinel so must be signed
 };
 
 #define TWI_MAGIC 0x82
@@ -108,13 +107,21 @@ static void end_xmit(TwiState *twi)
 
 static void initiateRecvCallback(TwiState *twi, MediaRecvSlot *recvSlot, uint8_t len)
 {
-	if (twi->recvUpcallSlot != NULL) {
+	if (twi->recvUpcallLen != -1) {
 		LOGF((logfp, "Dropping received packet; buffer full"));
+		recvSlot->occupied = FALSE;
+#ifdef DEBUG_STACK_WITH_UART
+		hal_uart_sync_send("D", 1);
+#endif
 		return;
 	}
 
 	twi->recvUpcallSlot = recvSlot;
 	twi->recvUpcallLen = len;
+
+#ifdef DEBUG_STACK_WITH_UART
+	hal_uart_sync_send("S", 1);
+#endif
 	schedule_now((Activation *) &twi->recvUpcallAct);
 }
 
@@ -124,8 +131,28 @@ static void doRecvCallback(twiCallbackAct_t *tca)
 	TwiState *twi = tca->twi;
 	assert(twi->initted == TWI_MAGIC);
 	assert(twi->recvUpcallSlot != NULL);
-	twi->recvUpcallSlot->func(twi->recvUpcallSlot, twi->recvUpcallLen);
+	assert(twi->recvUpcallSlot->func != NULL);
+	assert(twi->recvUpcallLen != -1);
+
+#ifdef DEBUG_STACK_WITH_UART
+	hal_uart_sync_send("U", 1);
+#endif
+
+	// Store the upcall info and immediately receive so that
+	// a subsequent arriving packet may be scheduled.
+	// (The receive slot itself will be marked free as soon as
+	// the data is copied elsewhere.)
+	uint8_t oldInterrupts = hal_start_atomic();
+	MediaRecvSlot *upSlot = twi->recvUpcallSlot;
+	int8_t upLen = twi->recvUpcallLen;
 	twi->recvUpcallSlot = NULL;
+	twi->recvUpcallLen = -1;
+	hal_end_atomic(oldInterrupts);
+
+	upSlot->func(upSlot, upLen);
+#ifdef DEBUG_STACK_WITH_UART
+	hal_uart_sync_send("u", 1);
+#endif
 }
 
 
@@ -188,7 +215,14 @@ static void twi_update(TwiState *twi, uint8_t status)
 	// Mask off the prescaler bits
 	status &= 0b11111000;
 
-	//print_status(status);
+#ifdef DEBUG_STACK_WITH_UART
+	char c = twi->slaveRecvSlot->occupied;
+	hal_uart_sync_send(&c, 1);
+	if (twi->recvUpcallLen == -1)
+		hal_uart_sync_send("_", 1);
+	else
+		hal_uart_sync_send("^", 1);
+#endif
 
 	switch (status) {
 
@@ -267,7 +301,7 @@ static void twi_update(TwiState *twi, uint8_t status)
 	case TW_SR_SLA_ACK:
 		// new packet arriving addressed to us.  If the receive buffer
 		// is available, start receiving.
-		if (twi->slaveRecvSlot != NULL && !twi->slaveRecvSlot->occupied)
+		if (twi->slaveRecvSlot != NULL && twi->slaveRecvSlot->occupied == FALSE)
 		{
 			twi->slaveRecvSlot->occupied = TRUE;
 			twi->slaveRecvLen = 0;
@@ -276,6 +310,7 @@ static void twi_update(TwiState *twi, uint8_t status)
 		{
 			LOGF((logfp, "dropping packet because receive buffer is busy"));
 			twi->slaveRecvLen = -1;
+			twi->dont_ack = TRUE;
 		}
 		break;
 
@@ -286,6 +321,7 @@ static void twi_update(TwiState *twi, uint8_t status)
 		// the buffer, drop packet (including this byte).
 		if (twi->slaveRecvLen == -1)
 		{
+			twi->dont_ack = TRUE;
 			break;
 		}
 
@@ -294,6 +330,7 @@ static void twi_update(TwiState *twi, uint8_t status)
 		{
 			LOGF((logfp, "dropping packet too long for local receive buffer"));
 			abortSlaveRecv(twi);
+			twi->dont_ack = TRUE;
 			break;
 		}
 
@@ -386,6 +423,10 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr, MediaRecvSlot *
 {
 	TwiState *twi = &_twi_g;
 
+#ifdef DEBUG_STACK_WITH_UART
+	hal_uart_init(NULL, 250000, 0);
+#endif
+
 	/* initialize our local state */
 	memset(twi, 0, sizeof(TwiState));
 	twi->media.send = &_hal_twi_send;
@@ -400,6 +441,7 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr, MediaRecvSlot *
 
 	twi->recvUpcallAct.func = (ActivationFunc) doRecvCallback;
 	twi->recvUpcallAct.twi = twi;
+	twi->recvUpcallLen = -1;
 
 	twi->masterRecvSlot = NULL;
 	twi->masterRecvLen = -1;

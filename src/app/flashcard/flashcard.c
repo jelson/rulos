@@ -921,8 +921,7 @@ void shell_func(Activation *act)
 
 int main()
 {
-	util_init();
-	hal_init(bc_audioboard);	// TODO need a "bc_custom"
+	hal_init();
 	init_clock(1000, TIMER1);
 	hal_init_keypad();
 

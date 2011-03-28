@@ -15,11 +15,11 @@
 ROCKET_ROOT := ../..
 
 #MCU := atmega8
-#MCU := atmega328p
-MCU := atmega1284p
+MCU := atmega328p
+BOARD := PCB11
 
-#BOARD := PCB11
-BOARD := LPEM
+#MCU := atmega1284p
+#BOARD := LPEM
 
 TARGET := boardid
 

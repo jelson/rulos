@@ -14,6 +14,7 @@
  *
  ************************************************************************/
 
+#ifdef AUDIO_REGISTER_LATCH
 
 #include <avr/boot.h>
 #include <avr/io.h>
@@ -24,10 +25,6 @@
 #include "hardware.h"
 #include "board_defs.h"
 #include "hal.h"
-
-#define AUDIO_REGISTER_LATCH	GPIO_D6
-#define AUDIO_REGISTER_DATA		GPIO_D5
-#define AUDIO_REGISTER_SHIFT	GPIO_D7
 
 void hal_audio_init(void)
 {
@@ -67,3 +64,5 @@ void hal_audio_shift_sample(uint8_t sample)
 	}
 }
 
+
+#endif // AUDIO_REGISTER_LATCH

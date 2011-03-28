@@ -498,8 +498,7 @@ SequencableFunc func_array[] = {
 
 int main()
 {
-	util_init();
-	hal_init(bc_audioboard);
+	hal_init();
 	init_clock(1000, TIMER1);
 
 #if 0

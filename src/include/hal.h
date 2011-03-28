@@ -32,13 +32,12 @@ typedef void (*Handler)(void *data);
 typedef enum {
 	bc_rocket0,
 	bc_rocket1,
-	bc_audioboard,
 	bc_wallclock,
 	bc_chaseclock,
 } BoardConfiguration;
 
-void hal_generic_init();
-void hal_init(BoardConfiguration bc);
+void hal_init();
+void hal_init_rocketpanel(BoardConfiguration bc);
 
 // block interrupts/signals; returns previous state of interrupts
 uint8_t hal_start_atomic(void);
@@ -80,6 +79,7 @@ typedef struct s_UartHandler {
 
 void hal_uart_init(UartHandler *handler, uint32_t baud, r_bool stop2);
 void hal_uart_start_send(void);
+void hal_uart_sync_send(char *s, uint8_t len);
 
 /////////////// TWI ///////////////////////////////////////////////
 

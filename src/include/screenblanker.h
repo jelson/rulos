@@ -28,7 +28,7 @@ struct s_screenblanker_sender;
 
 typedef enum
 {
-	sb_inactive,	// not operating.
+	sb_inactive=1,	// not operating.
 	sb_blankdots,	// all digits showing only SB_DECIMAL
 	sb_black,		// all LED segments off; lights unaffected
 	sb_disco,		// flicker panels & lights by color

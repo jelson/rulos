@@ -62,7 +62,7 @@ void init_screenblanker(ScreenBlanker *screenblanker, BoardConfiguration bc, HPA
 	screenblanker->disco_color = DISCO_RED;
 	screenblanker->hpam = hpam;
 
-	int i;
+	uint8_t i;
 	for (i=0; i<screenblanker->num_buffers; i++)
 	{
 		// hpam_max_alpha keeps us, while doodling with our alphas,
@@ -109,7 +109,7 @@ UIEventDisposition screenblanker_handler(ScreenBlanker *screenblanker, UIEvent e
 
 void screenblanker_setmode(ScreenBlanker *screenblanker, ScreenBlankerMode newmode)
 {
-	int i;
+	uint8_t i;
 
 	if (newmode==screenblanker->mode)
 	{
@@ -172,7 +172,7 @@ void screenblanker_update(ScreenBlankerClockAct *act)
 
 void screenblanker_update_once(ScreenBlanker *sb)
 {
-	int i, j;
+	uint8_t i, j;
 
 	// always exclude hpam digits, na mattar whaat
 	for (i=0; i<sb->num_buffers; i++) {

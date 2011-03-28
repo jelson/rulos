@@ -57,7 +57,7 @@ struct {
 };
 #define GPIO_ROW(x) (row_power[x].ddr), (row_power[x].port), (row_power[x].pin), (row_power[x].bit)
 
-void hal_ledmatrix_init()
+void hal_6matrix_init()
 {
 	gpio_make_output(COLLATCH_CLK);
 	gpio_make_output(COLLATCH_OE);
@@ -99,7 +99,7 @@ static void assertRow(uint8_t *colBytes, uint8_t oldRowNum, uint8_t newRowNum)
 }
 
 
-void hal_ledmatrix_setRow(uint8_t *colBytes, uint8_t rowNum)
+void hal_6matrix_setRow(uint8_t *colBytes, uint8_t rowNum)
 {
 	// temporary for now.  eventually this will copy into a frame buffer
 	assertRow(colBytes, 0, 0);

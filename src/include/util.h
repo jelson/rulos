@@ -23,8 +23,14 @@
 
 #include <inttypes.h>
 
-#define FALSE 0
-#define TRUE 1
+#ifndef FALSE
+# define FALSE 0
+#endif
+
+#ifndef TRUE
+# define TRUE 1
+#endif
+
 typedef uint8_t r_bool;
 	// "r_bool" for ROCKET bool! ncurses and other libraries define
 	// incompatible bools, so I want to avoid (rather than battle) collisions.

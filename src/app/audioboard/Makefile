@@ -16,7 +16,7 @@ ROCKET_ROOT := ../..
 
 #MCU := atmega8
 MCU := atmega328p
-BOARD := CUSTOM
+BOARD := ROCKETAUDIO
 EXTRA_AVR_CFLAGS += -DCRYSTAL=20000000
 
 TARGET := audioboard

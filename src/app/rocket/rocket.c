@@ -96,6 +96,7 @@ typedef struct {
 
 #define POTSTICKER_CHANNEL 0
 #define VOLUME_POT_CHANNEL 1
+//#define USE_LOCAL_KEYPAD
 
 void init_rocket0(Rocket0 *r0)
 {
@@ -116,8 +117,13 @@ void init_rocket0(Rocket0 *r0)
 	init_control_panel(&r0->cp, 3, 1, &r0->network, &r0->hpam, &r0->audio_client, &r0->idle, &r0->screenblanker, &r0->ts.joystick_state);
 	r0->cp.ccl.launch.main_rtc = &r0->dr;
 	r0->cp.ccl.launch.lunar_distance = &r0->ld;
-	// Both local poller and remote receiver inject keyboard events.
+
+	// Local input poller
+#ifdef USE_LOCAL_KEYPAD
 	input_poller_init(&r0->ip, (InputInjectorIfc*) &r0->cp.direct_injector);
+#endif
+
+	// Remote receiver
 	init_remote_keyboard_recv(&r0->rkr, &r0->network, (InputInjectorIfc*) &r0->cp.direct_injector, REMOTE_KEYBOARD_PORT);
 
 	r0->thrusterUpdate[1] = (ThrusterUpdate*) &r0->cp.ccdock.dock.thrusterUpdate;
@@ -144,12 +150,9 @@ static Rocket0 rocket0;	// allocate obj in .bss so it's easy to count
 
 int main()
 {
-	util_init();
-	hal_init(bc_rocket0);
+	hal_init();
+	hal_init_rocketpanel(bc_rocket0);
 	init_clock(10000, TIMER1);
-#if 0
-	hal_init_keypad();
-#endif
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);	// includes slow calibration phase

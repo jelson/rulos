@@ -21,6 +21,7 @@
 #include "audio_client.h"
 
 #define SLOW_MAX_BUFFERS 7
+
 #define BORROW_SCREENBLANKER_BUFS 1
 
 typedef struct s_slow_boot {

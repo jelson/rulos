@@ -46,18 +46,16 @@ void makeBarGraph(uint8_t numCols, uint8_t *output)
 	}
 }
 
-int main(int argc, char *argv[])
+int main()
 {
-	util_init();
-	//	hal_init(bc_audioboard);
-	hal_ledmatrix_init(&argc, &argv);
+	hal_6matrix_init();
 
 	uint8_t testPattern[NUM_COLUMN_BYTES_1BIT];
 	uint8_t numCols = 0;
 
 	while (1) {
 		makeBarGraph(numCols, testPattern);
-		hal_ledmatrix_setRow(testPattern, 0);
+		hal_6matrix_setRow(testPattern, 0);
 		_delay_ms(350);
 		numCols++;
 		if (numCols > NUM_COLUMNS)

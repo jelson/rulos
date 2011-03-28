@@ -33,6 +33,8 @@
 
 ///////// HAL functions (public interface) ////////////////////////
 
+#ifdef KEYPAD_COL0
+
 #define KEY_SCAN_INTERVAL_US 10000
 #define KEY_REFRACTORY_TIME_US 30000
 
@@ -69,6 +71,18 @@ char hal_read_keybuf()
 
 static void init_keypad(KeypadState *keypad)
 {
+	gpio_make_input(KEYPAD_COL0);
+	gpio_make_input(KEYPAD_COL1);
+	gpio_make_input(KEYPAD_COL2);
+	gpio_make_input(KEYPAD_COL3);
+	// these row setups may be redundant on board defs that
+	// re-use the row outputs, but some boards have keypads without LEDs,
+	// and we need to set up the ports.
+	gpio_make_output(KEYPAD_ROW0);
+	gpio_make_output(KEYPAD_ROW1);
+	gpio_make_output(KEYPAD_ROW2);
+	gpio_make_output(KEYPAD_ROW3);
+
 	keypad->func = (ActivationFunc) keypad_update;
 	CharQueue_init((CharQueue *) keypad->keypad_q, sizeof(keypad->keypad_q));
 	keypad->keypad_last = 0;
@@ -102,9 +116,6 @@ static void keypad_update(KeypadState *key)
 	
 }
 
-
-#ifdef KEYPAD_ROW0
-
 static uint8_t scan_row()
 {
 	/*
@@ -119,12 +130,10 @@ static uint8_t scan_row()
 
 	return 0;
 }
-#endif
 
 
 char hal_scan_keypad()
 {
-#ifdef KEYPAD_ROW0
 	uint8_t col;
 
 	/* Scan first row */
@@ -170,8 +179,8 @@ char hal_scan_keypad()
 	if (col == 2)			return '0';
 	if (col == 3)			return 'p';
 	if (col == 4)			return 'd';
-#endif
 
 	return 0;
 }
 
+#endif // KEYPAD_COL0

@@ -682,8 +682,7 @@ void sampleLocator(locatorAct_t *locatorAct)
 
 int main()
 {
-	util_init();
-	hal_init(bc_audioboard);
+	hal_init();
 	init_clock(SCHED_QUANTUM, TIMER1);
 
 	memset(&locatorAct_g, 0, sizeof(locatorAct_g));

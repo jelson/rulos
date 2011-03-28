@@ -39,6 +39,7 @@
 #include "network_ports.h"
 #include "thruster_protocol.h"
 #include "uart.h"
+#include "6matrix.h"
 
 #endif /* __rocket_h__ */
 

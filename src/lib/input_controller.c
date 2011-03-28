@@ -21,6 +21,7 @@ void input_poller_update(InputPollerAct *ip);
 
 void input_poller_init(InputPollerAct *ip, InputInjectorIfc *injector)
 {
+	hal_init_keypad();
 	ip->func = (ActivationFunc) input_poller_update;
 	ip->injector = injector;
 	schedule_us(1, (Activation*) ip);
@@ -35,6 +36,7 @@ void input_poller_update(InputPollerAct *ip)
 	}
 	schedule_us(50000, (Activation*) ip);
 }
+
 
 //////////////////////////////////////////////////////////////////////////////
 

@@ -54,10 +54,10 @@
 
 int main()
 {
-	util_init();
-	hal_init(bc_rocket1);
+
+	hal_init();
+	hal_init_rocketpanel(bc_rocket1);
 	init_clock(10000, TIMER1);
-	hal_init_keypad();
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);	// includes slow calibration phase

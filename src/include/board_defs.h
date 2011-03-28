@@ -54,8 +54,6 @@
 
 #if defined(BOARD_PROTO)
 
-#define BOARD_HAS_LEDS	1
-
 #define BOARDSEL0	GPIO_B2
 #define BOARDSEL1	GPIO_B3
 #define BOARDSEL2	GPIO_B4
@@ -72,8 +70,6 @@
 #define	ASSERT_TO_BOARD	1
 
 #elif defined(BOARD_PCB10)
-
-#define BOARD_HAS_LEDS	1
 
 #define BOARDSEL0	GPIO_B2
 #define BOARDSEL1	GPIO_B3
@@ -101,8 +97,6 @@
 
 #elif defined(BOARD_PCB11)
 
-#define BOARD_HAS_LEDS	1
-
 #define BOARDSEL0	GPIO_B0
 #define BOARDSEL1	GPIO_B1
 #define BOARDSEL2	GPIO_B2
@@ -129,9 +123,13 @@
 #define	AVAILABLE_ADCS	0x3f
 #define	ASSERT_TO_BOARD	1
 
-#elif defined(BOARD_LPEM)
+#elif defined(BOARD_ROCKETAUDIO)
 
-#define BOARD_HAS_LEDS	1
+#define AUDIO_REGISTER_LATCH	GPIO_D6
+#define AUDIO_REGISTER_DATA	GPIO_D5
+#define AUDIO_REGISTER_SHIFT	GPIO_D7
+
+#elif defined(BOARD_LPEM)
 
 #define BOARDSEL0	GPIO_C2
 #define BOARDSEL1	GPIO_C3
@@ -151,8 +149,6 @@
 #define	ASSERT_TO_BOARD	1
 
 #elif defined(BOARD_FLASHCARD)
-
-#define BOARD_HAS_LEDS	0
 
 #define KEYPAD_ROW0 GPIO_B7
 #define KEYPAD_ROW1 GPIO_B0
@@ -177,7 +173,6 @@
 /* # warning "No recognized board" */
 #endif
 
-#define BOARD_HAS_LEDS	0
 #define	ASSERT_TO_BOARD	0
 #define	AVAILABLE_ADCS	0xff	// Good luck, board designer -- no safety check here
 

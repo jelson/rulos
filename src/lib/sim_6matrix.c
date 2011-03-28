@@ -3,7 +3,7 @@
 #include <inttypes.h>
 #include <gtk/gtk.h>
 
-#include "6matrix.h"
+#include "rocket.h"
 
 #define X_LEDS 24
 #define Y_LEDS 16
@@ -120,18 +120,19 @@ static void start_gui()
 	gdk_threads_leave();
 }
 
-void hal_ledmatrix_init()
+void hal_6matrix_init()
 {
 	g_thread_init(NULL);
 	gdk_threads_init();
 	ready = FALSE;
 	g_thread_create((GThreadFunc) start_gui, NULL, FALSE, NULL);
 	while (!ready) {
+		usleep(10000);
 	}
 }
 
 
-void hal_ledmatrix_setRow(uint8_t *colBytes, uint8_t rowNum)
+void hal_6matrix_setRow(uint8_t *colBytes, uint8_t rowNum)
 {
 	printf("row %d: 0x%04o 0x%04o 0x%04o 0x%04o 0x%04o 0x%04o\n",
 	      rowNum,

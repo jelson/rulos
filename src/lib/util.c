@@ -16,19 +16,6 @@
 
 #include "rocket.h"
 
-#if SIM
-
-FILE *logfp = NULL;
-
-void util_init()
-{
-	logfp = fopen("log", "w");
-}
-#else //!SIM
-void util_init()
-{
-}
-#endif
 
 int32_t bound(int32_t v, int32_t l, int32_t h)
 {

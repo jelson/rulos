@@ -114,6 +114,9 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 	if (len < sizeof(Message))
 	{
 		LOGF((logfp, "netstack error: got short pkt only %d bytes\n", len));
+#ifdef DEBUG_STACK_WITH_UART
+		hal_uart_sync_send("drp1", 4);
+#endif
 		goto done;
 	}
 
@@ -121,9 +124,13 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 	uint8_t incoming_checksum = msg->checksum;
 	msg->checksum = 0;
 
-	if (net_compute_checksum(mrs->data, len) != incoming_checksum)
+	if (net_compute_checksum((char *) msg, len) != incoming_checksum)
 	{
 		LOGF((logfp, "netstack error: checksum mismatch\n"));
+#ifdef DEBUG_STACK_WITH_UART
+		hal_uart_sync_send("drp2", 4);
+		hal_uart_sync_send((char *)msg, len);
+#endif
 		goto done;
 	}
 
@@ -134,6 +141,9 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 	{
 		LOGF((logfp, "netstack error: dropped packet to port %d (0x%x) with no listener\n",
 			  msg->dest_port, msg->dest_port));
+#ifdef DEBUG_STACK_WITH_UART
+		hal_uart_sync_send("drp3", 4);
+#endif
 		goto done;
 	}
 
@@ -144,6 +154,9 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 	{
 		LOGF((logfp, "netstack error: dropped packet to port %d (0x%x) with full buffer\n",
 			  msg->dest_port, msg->dest_port));
+#ifdef DEBUG_STACK_WITH_UART
+		hal_uart_sync_send("drp4", 4);
+#endif
 		goto done;
 	}
 
@@ -154,13 +167,22 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 	{
 		LOGF((logfp, "netstack error: port %d got payload of len %d, only had capacity for %d\n",
 			  msg->dest_port, payload_len, rs->payload_capacity));
+#ifdef DEBUG_STACK_WITH_UART
+		hal_uart_sync_send("drp5", 4);
+#endif
 		goto done;
 	}
 	
 	// everything seems good!  copy to the receive slot and call the callback
 	memcpy(rs->msg, msg, len);
 	mrs->occupied = FALSE; // do this now in case the callback is slow
+#ifdef DEBUG_STACK_WITH_UART
+	hal_uart_sync_send("P", 1);
+#endif
 	(rs->func)(rs, payload_len);
+#ifdef DEBUG_STACK_WITH_UART
+	hal_uart_sync_send("p", 1);
+#endif
 	return;
 	
 done:
