@@ -79,7 +79,6 @@ typedef struct {
 	SlowBoot slow_boot;
 	PotSticker potsticker;
 	VolumeControl volume_control;
-	uint8_t bss_canary;
 } Rocket0;
 
 #define THRUSTER_X_CHAN	3
@@ -147,7 +146,7 @@ void init_rocket0(Rocket0 *r0)
 
 	volume_control_init(&r0->volume_control, &r0->audio_client, VOLUME_POT_CHANNEL, /*board*/ 0);
 
-	bss_canary_init(&r0->bss_canary);
+	bss_canary_init();
 }
 
 static Rocket0 rocket0;	// allocate obj in .bss so it's easy to count

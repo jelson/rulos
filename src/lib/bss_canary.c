@@ -1,7 +1,7 @@
 #include "bss_canary.h"
 
 #if SIM
-void bss_canary_init(uint8_t *bss_end)
+void bss_canary_init()
 {
 }
 #else
@@ -10,16 +10,18 @@ void bss_canary_init(uint8_t *bss_end)
 
 void _bss_canary_update(void *data);
 
-void bss_canary_init(uint8_t *bss_end)
+uint8_t bss_end[0];
+
+void bss_canary_init()
 {
 	bss_end[0] = BSS_CANARY_MAGIC;
 
-	schedule_us(250000, _bss_canary_update, bss_end);
+	schedule_us(250000, _bss_canary_update, NULL);
 }
 
 void _bss_canary_update(void *data)
 {
 	assert(bss_end[0] == BSS_CANARY_MAGIC);
-	schedule_us(250000, _bss_canary_update, bss_end);
+	schedule_us(250000, _bss_canary_update, NULL);
 }
 #endif

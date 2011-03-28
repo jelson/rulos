@@ -3,6 +3,6 @@
 
 #include <rocket.h>
 
-void bss_canary_init(uint8_t *bss_end);
+void bss_canary_init();
 
 #endif // _BSS_CANARY_H

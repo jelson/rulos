@@ -105,7 +105,8 @@ $(AVR_OBJDIR)/%.o: %.c
 	$(CC) $(AVR_CFLAGS) -c $< -o $@
 
 
-## Objects that must be built in order to link
+## Objects that must be built in order to link.  Note: bss_canary
+## must be last
 AVR_LIB_OBJECTS := $(patsubst %.o,$(AVR_OBJDIR)/%.o,$(COMMON_OBJECTS) \
 	$(AVR_ONLY_OBJECTS) $(BSS_CANARY_OBJECT) )
 
