@@ -4,12 +4,11 @@
 #define VOLUME_DISPLAY_PERSISTENCE	(4*1000000)
 
 void _volume_input(InputInjectorIfc *ii, char key);
-void _volume_update(Activation *act);
+void _volume_update(VolumeControl *vc);
 
 void volume_control_init(VolumeControl *vc, AudioClient *ac, uint8_t adc_channel, uint8_t boardnum)
 {
 #if DISPLAY_VOLUME_ADJUSTMENTS
-	vc->act.func = _volume_update;
 #endif // DISPLAY_VOLUME_ADJUSTMENTS
 	vc->injector.iii.func = _volume_input;
 	vc->injector.vc = vc;
@@ -29,7 +28,7 @@ void volume_control_init(VolumeControl *vc, AudioClient *ac, uint8_t adc_channel
 	vc->boardnum = boardnum;
 	board_buffer_init(&vc->bbuf DBG_BBUF_LABEL("volume_control"));
 
-	schedule_us(1, &vc->act);
+	schedule_us(1, (ActivationFuncPtr) _volume_update, vc);
 #endif //DISPLAY_VOLUME_ADJUSTMENTS
 }
 
@@ -55,11 +54,9 @@ void _volume_input(InputInjectorIfc *ii, char key)
 	ac_set_music_volume(vc->ac, vc->cur_vol);
 }
 
-void _volume_update(Activation *act)
+void _volume_update(VolumeControl *vc)
 {
 #if DISPLAY_VOLUME_ADJUSTMENTS
-	VolumeControl *vc = (VolumeControl *)act;
-
 	Time elapsed = clock_time_us() - vc->lastTouch;
 	r_bool display_should_be_visible = (elapsed>0 && elapsed<VOLUME_DISPLAY_PERSISTENCE);
 	if (vc->visible && !display_should_be_visible)
@@ -80,6 +77,6 @@ void _volume_update(Activation *act)
 		ascii_to_bitmap_str(vc->bbuf.buffer, 8, str);
 		board_buffer_draw(&vc->bbuf);
 	}
-	schedule_us(100000, &vc->act);
+	schedule_us(100000, (ActivationFuncPtr) _volume_update, vc);
 #endif // DISPLAY_VOLUME_ADJUSTMENTS
 }

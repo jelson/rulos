@@ -25,7 +25,7 @@ extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 
 void _ao_handler(void *data);
 
-void init_audio_out(AudioOut *ao, uint8_t timer_id, Activation *fill_act)
+void init_audio_out(AudioOut *ao, uint8_t timer_id, ActivationFuncPtr fill_func, void *fill_data)
 {
 	memset(ao->buffers, 127, sizeof(ao->buffers));
 	int i;
@@ -37,7 +37,8 @@ void init_audio_out(AudioOut *ao, uint8_t timer_id, Activation *fill_act)
 	ao->sample_index = 0;
 	ao->fill_buffer = 0;
 	ao->play_buffer = 0;
-	ao->fill_act = fill_act;
+	ao->fill_act.func = fill_func;
+	ao->fill_act.data = fill_data;
 	hal_audio_init();
 #define SAMPLE_RATE	15000
 	hal_start_clock_us(1000000/SAMPLE_RATE, &_ao_handler, ao, timer_id);
@@ -61,6 +62,6 @@ void _ao_handler(void *data)
 		{
 			ao->play_buffer = 0;
 		}
-		schedule_now(ao->fill_act);
+		schedule_now(ao->fill_act.func, ao->fill_act.data);
 	}
 }

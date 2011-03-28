@@ -40,12 +40,13 @@ void heap_bubble(HeapEntry *he, int ptr)
 	}
 }
 
-void heap_insert(Heap *heap, Time key, Activation *act)
+void heap_insert(Heap *heap, Time key, ActivationFuncPtr func, void *data)
 {
 	int hc = heap->heap_count;
 	assert(hc < HEAP_CAPACITY);	// heap overflow
 	heap->heap[hc].key = key;
-	heap->heap[hc].activation = act;
+	heap->heap[hc].activation.func = func;
+	heap->heap[hc].activation.data = data;
 	heap_bubble(heap->heap, hc);
 	heap->heap_count = hc + 1;
 
@@ -55,7 +56,7 @@ void heap_insert(Heap *heap, Time key, Activation *act)
 
 }
 
-int heap_peek(Heap *heap, /*out*/ Time *key, /*out*/ Activation **act)
+int heap_peek(Heap *heap, /*out*/ Time *key, /*out*/ ActivationRecord *act)
 {
 	int retval = -1;
 

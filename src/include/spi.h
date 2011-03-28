@@ -12,14 +12,9 @@ typedef struct
 	uint8_t cmd_expect_code;
 	uint8_t *reply_buffer;
 	uint16_t reply_buflen;
-	Activation *done_act;
 	r_bool error;
 } SPICmd;
 
-typedef struct {
-	Activation act;
-	struct s_SPI *spi;
-} SPIAct;
 typedef struct s_SPI
 {
 	HALSPIHandler handler;
@@ -30,7 +25,6 @@ typedef struct s_SPI
 
 	// do most work out of interrupt handler (in an activation)
 	uint8_t data;
-	SPIAct spiact;
 } SPI;
 
 void spi_init(SPI *spi);

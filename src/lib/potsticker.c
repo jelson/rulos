@@ -46,13 +46,11 @@ void ps_update(PotSticker *ps)
 	program_board(2, bm);
 #endif // DEBUG_BRUTE_DISPLAY
 
-	schedule_us(100, (Activation*) ps);
+	schedule_us(100, (ActivationFuncPtr) ps_update, ps);
 }
 
 void init_potsticker(PotSticker *ps, uint8_t adc_channel, InputInjectorIfc *ifi, uint8_t detents, char fwd, char back)
 {
-	ps->func = (ActivationFunc) ps_update;
-
 	ps->adc_channel = adc_channel;
 	hal_init_adc_channel(ps->adc_channel);
 	ps->ifi = ifi;
@@ -63,5 +61,5 @@ void init_potsticker(PotSticker *ps, uint8_t adc_channel, InputInjectorIfc *ifi,
 
 	ps->last_digital_value = hal_read_adc(ps->adc_channel) / ps->detents;
 
-	schedule_us(1, (Activation*) ps);
+	schedule_us(1, (ActivationFuncPtr) ps_update, ps);
 }

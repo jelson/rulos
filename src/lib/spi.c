@@ -17,6 +17,8 @@
 #include "sdcard.h"
 #include "seqmacro.h"
 
+#if JON_PLEASE_FIX
+
 #define R_SYNCDEBUG()	syncdebug(0, 'I', __LINE__)
 //#define SYNCDEBUG()	R_SYNCDEBUG()
 #define SYNCDEBUG()	{}
@@ -216,3 +218,5 @@ void spi_finish(SPI *spi)
 	SPIFINISH(FALSE);
 }
 
+
+#endif

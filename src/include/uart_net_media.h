@@ -26,7 +26,6 @@ struct s_UartMedia;
 
 typedef struct
 {
-	Activation done_act;
 	char *data;
 	uint8_t len;
 	MediaSendDoneFunc sendDoneCB;

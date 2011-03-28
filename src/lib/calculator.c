@@ -31,7 +31,7 @@ char *operator_strs[] = {
 
 UIEventDisposition calculator_notify(UIEventHandler *notify, UIEvent evt);
 UIEventDisposition calculator_notify_internal(Calculator *calc, UIEvent evt);
-void calculator_timeout_func(struct s_decoration_timeout *calc_decoration_timeout);
+void calculator_timeout_func(Calculator *calc);
 
 void calculator_init(
 	Calculator *calc, int board0, FocusManager *fa,
@@ -70,12 +70,9 @@ void calculator_init(
 	knob_set_value(&calc->operator, op_div);
 	calculator_notify((UIEventHandler*) calc, evt_notify);
 
-
-	calc->decorationTimeout.func = (ActivationFunc) calculator_timeout_func;
-	calc->decorationTimeout.calc = calc;
 	calc->decorationTimeout.last_activity = clock_time_us();
 	calc->decorationTimeout.fetchDecorationValuesObj = fetchDecorationValuesObj;
-	schedule_us(1, (Activation*) &calc->decorationTimeout);
+	schedule_us(1, (ActivationFuncPtr) calculator_timeout_func, calc);
 }
 
 char *err_overflow = "Ovrf";
@@ -238,10 +235,9 @@ done:
 #define DECORATION_TIMEOUT 			7000000	/* 3 sec */
 #define DECORATION_UPDATE_INTERVAL   500000	/* 0.5 sec */
 
-void calculator_timeout_func(struct s_decoration_timeout *calc_decoration_timeout)
+void calculator_timeout_func(Calculator *calc)
 {
-	schedule_us(DECORATION_UPDATE_INTERVAL, (Activation*) calc_decoration_timeout);
-	Calculator *calc = calc_decoration_timeout->calc;
+	schedule_us(DECORATION_UPDATE_INTERVAL, (ActivationFuncPtr) calculator_timeout_func, calc);
 //	LOGF((logfp, "calc: calculator_timeout_func\n"));
 
 	if (focus_is_active(&calc->focus))
@@ -249,19 +245,19 @@ void calculator_timeout_func(struct s_decoration_timeout *calc_decoration_timeou
 		// focus means activity.
 		calc->decorationTimeout.last_activity = clock_time_us();
 	}
-	else if (later_than(clock_time_us(), calc_decoration_timeout->last_activity + DECORATION_TIMEOUT))
+	else if (later_than(clock_time_us(), calc->decorationTimeout.last_activity + DECORATION_TIMEOUT))
 	{
 //		LOGF((logfp, "calc: timed out\n"));
 		// update last_activity to keep it from rolling over
-		calc_decoration_timeout->last_activity =
+		calc->decorationTimeout.last_activity =
 			clock_time_us() - DECORATION_TIMEOUT - 1;
 
 		// fetch values from source
-		if (calc_decoration_timeout->fetchDecorationValuesObj != NULL)
+		if (calc->decorationTimeout.fetchDecorationValuesObj != NULL)
 		{
 			DecimalFloatingPoint op0, op1;
-			calc_decoration_timeout->fetchDecorationValuesObj->func(
-				calc_decoration_timeout->fetchDecorationValuesObj, &op0, &op1);
+			calc->decorationTimeout.fetchDecorationValuesObj->func(
+				calc->decorationTimeout.fetchDecorationValuesObj, &op0, &op1);
 			numeric_input_set_value(&calc->operands[0], op0);
 			numeric_input_set_value(&calc->operands[1], op1);
 			calculator_notify_internal(calc, evt_notify);

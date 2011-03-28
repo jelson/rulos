@@ -27,7 +27,6 @@ typedef struct s_disco_handler {
 } DiscoHandler;
 
 typedef struct s_disco {
-	ActivationFunc func;
 	ScreenBlanker *screenblanker;
 	DiscoHandler handler;
 	AudioClient *audioClient;

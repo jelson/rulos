@@ -25,12 +25,7 @@
 
 #define NEED_BUS(twi) ((twi->out_pkt != NULL) || (twi->masterRecvSlot != NULL))
 
-typedef struct {
-	ActivationFunc func;
-	struct s_TwiState *twi;
-} twiCallbackAct_t;
-
-struct s_TwiState
+typedef struct
 {
 	MediaStateIfc media;  // this must be first... :-(
 
@@ -45,7 +40,6 @@ struct s_TwiState
 	uint8_t out_destaddr;
 	MediaSendDoneFunc sendDoneCB;
 	void *sendDoneCBData;
-	twiCallbackAct_t sendCallbackAct;
 
 	// slave-receiver state
 	MediaRecvSlot *slaveRecvSlot;
@@ -55,12 +49,7 @@ struct s_TwiState
 	MediaRecvSlot *masterRecvSlot;
 	uint8_t masterRecvAddr;
 	int8_t masterRecvLen; // we use -1 as a sentinel so must be signed
-
-	// receive upcalls
-	twiCallbackAct_t recvUpcallAct;
-	MediaRecvSlot *recvUpcallSlot;
-	volatile int8_t recvUpcallLen; // we use -1 as a sentinel so must be signed
-};
+} TwiState;
 
 #define TWI_MAGIC 0x82
 
@@ -82,13 +71,12 @@ static void print_status(uint16_t status)
 
 // This is a little trampoline function so that the send-done callback
 // can be sent during schedule-time, rather than interrupt-time.
-static void doSendCallback(twiCallbackAct_t *tca)
+static void doSendCallback(TwiState *twi)
 {
 	// We store the callback and null it out before calling, because
 	// one of our sanity checks upon receiving a new packet to
 	// transmit is that we don't have a pending callback.  However,
 	// the callback is often where new packets get scheduled.
-	TwiState *twi = tca->twi;
 	assert(twi->initted == TWI_MAGIC);
 	MediaSendDoneFunc cb = twi->sendDoneCB;
 	twi->sendDoneCB = NULL;
@@ -101,7 +89,7 @@ static void end_xmit(TwiState *twi)
 	assert(twi->have_bus == TRUE);
 
 	twi->out_pkt = NULL;
-	schedule_now((Activation *) &twi->sendCallbackAct);
+	schedule_now((ActivationFuncPtr) doSendCallback, twi);
 }
 
 

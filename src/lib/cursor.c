@@ -21,11 +21,10 @@
 
 char cursor_label_white[0];
 void cursor_update_once(CursorAct *act);
-void cursor_update(CursorAct *act);
+void cursor_update(void *data);
 
 void cursor_init(CursorAct *act)
 {
-	act->func = (ActivationFunc) cursor_update;
 	int i;
 	for (i=0; i<MAX_HEIGHT; i++)
 	{
@@ -33,7 +32,7 @@ void cursor_init(CursorAct *act)
 	}
 	act->visible = FALSE;
 	act->label = NULL;
-	schedule_us(1, (Activation*) act);
+	schedule_us(1, cursor_update, act);
 }
 
 void cursor_hide(CursorAct *act)
@@ -118,10 +117,10 @@ void cursor_update_once(CursorAct *act)
 	}
 }
 
-void cursor_update(CursorAct *act)
+void cursor_update(void *data)
 {
-	cursor_update_once(act);
-	schedule_us(Exp2Time(BLINK2), (Activation*) act);
+	cursor_update_once((CursorAct *) data);
+	schedule_us(Exp2Time(BLINK2), cursor_update, data);
 }
 
 void cursor_set_label(CursorAct *act, char *label)

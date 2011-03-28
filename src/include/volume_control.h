@@ -42,7 +42,6 @@ typedef struct
 typedef struct s_volume_control
 {
 #if DISPLAY_VOLUME_ADJUSTMENTS
-	Activation act;
 #endif // DISPLAY_VOLUME_ADJUSTMENTS
 	VolumeControlInjector injector;
 	PotSticker potsticker;

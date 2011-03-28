@@ -20,7 +20,6 @@ void slowboot_update(SlowBoot *slowboot);
 
 void init_slow_boot(SlowBoot *slowboot, ScreenBlanker *screenblanker, AudioClient *audioClient)
 {
-	slowboot->func = (ActivationFunc) slowboot_update;
 	slowboot->screenblanker = screenblanker;
 	slowboot->audioClient = audioClient;
 
@@ -46,7 +45,7 @@ void init_slow_boot(SlowBoot *slowboot, ScreenBlanker *screenblanker, AudioClien
 
 	slowboot->startTime = clock_time_us();
 
-	schedule_us(1, (Activation*) slowboot);
+	schedule_us(1, (ActivationFuncPtr) slowboot_update, slowboot);
 }
 
 #define SB_ANIM_INTERVAL 100000
@@ -142,5 +141,5 @@ void slowboot_update(SlowBoot *slowboot)
 	return;
 
 exit:
-	schedule_us(SB_ANIM_INTERVAL, (Activation*) slowboot);
+	schedule_us(SB_ANIM_INTERVAL, (ActivationFuncPtr) slowboot_update, slowboot);
 }

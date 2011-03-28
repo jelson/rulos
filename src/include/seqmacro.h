@@ -18,7 +18,7 @@
 #define _SEQMACRO_H
 
 #define SEQDECL(T,f,i)	\
-void T##_##f##_##i(Activation *act)
+void T##_##f##_##i(void *data)
 
 #define SEQDEF(T,f,i,t)	\
 SEQDECL(T,f,i) \

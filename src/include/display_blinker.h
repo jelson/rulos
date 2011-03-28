@@ -21,7 +21,6 @@
 #include "clock.h"
 
 typedef struct {
-	ActivationFunc func;
 	uint16_t period;
 	const char **msg;
 	uint8_t cur_line;

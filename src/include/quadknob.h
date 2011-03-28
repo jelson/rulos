@@ -25,7 +25,6 @@
 #endif // SIM
 
 typedef struct s_quadknob {
-	ActivationFunc func;
 	uint8_t oldState;
 	InputInjectorIfc *ifi;
 

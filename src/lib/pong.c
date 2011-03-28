@@ -37,7 +37,6 @@ UIEventDisposition pong_event_handler(
 
 void pong_init(Pong *pong, Screen4 *s4, AudioClient *audioClient)
 {
-	pong->func = (ActivationFunc) pong_update;
 	pong->s4 = s4;
 #if 0
 	pong->board0 = b0;
@@ -70,7 +69,7 @@ void pong_init(Pong *pong, Screen4 *s4, AudioClient *audioClient)
 
 	pong->focused = FALSE;
 
-	schedule_us(1, (Activation*) pong);
+	schedule_us(1, (ActivationFuncPtr) pong_update, pong);
 }
 
 void pong_serve(Pong *pong, uint8_t from_player)
@@ -154,7 +153,7 @@ void pong_score_one(Pong *pong, uint8_t player)
 
 void pong_update(Pong *pong)
 {
-	schedule_us(1000000/PONG_FREQ, (Activation*) pong);
+	schedule_us(1000000/PONG_FREQ, (ActivationFuncPtr) pong_update, pong);
 	if (!pong_is_paused(pong) && pong->focused)
 	{
 		pong_advance_ball(pong);

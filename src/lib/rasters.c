@@ -117,17 +117,16 @@ void raster_paint_pixel_v(RectRegion *rrect, int x, int y, r_bool on)
 
 void raster_big_digit_init(RasterBigDigit *digit, Screen4 *s4)
 {
-	digit->func = (ActivationFunc) raster_big_digit_update;
 	digit->startTime = clock_time_us();
 	digit->s4 = s4;
 	digit->focused = FALSE;
 
-	schedule_us(1, (Activation*) digit);
+	schedule_us(1, 	(ActivationFuncPtr) raster_big_digit_update, digit);
 }
 
 void raster_big_digit_update(RasterBigDigit *digit)
 {
-	schedule_us(100000, (Activation*) digit);
+	schedule_us(100000, (ActivationFuncPtr) raster_big_digit_update, digit);
 
 	if (!digit->focused)
 	{

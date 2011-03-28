@@ -25,16 +25,16 @@ void event_init(Event *evt, r_bool auto_reset)
 {
 	evt->auto_reset = auto_reset;
 	evt->signaled = false;
-	evt->waiter = NULL;
+	evt->waiter_func = NULL;
 }
 
 void event_signal(Event *evt)
 {
-	if (evt->waiter != NULL)
+	if (evt->waiter_func != NULL)
 	{
 		SYNCDEBUG();
-		schedule_now(evt->waiter);
-		evt->waiter = NULL;
+		schedule_now(evt->waiter_func, evt->waiter_data);
+		evt->waiter_func = NULL;
 	}
 	else
 	{
@@ -48,12 +48,12 @@ void event_reset(Event *evt)
 	evt->signaled = false;
 }
 
-void event_wait(Event *evt, Activation *act)
+void event_wait(Event *evt, ActivationFuncPtr func, void *data)
 {
 	if (evt->signaled)
 	{
 		SYNCDEBUG();
-		schedule_now(act);
+		schedule_now(func, data);
 		if (evt->auto_reset)
 		{
 			evt->signaled = false;
@@ -62,7 +62,8 @@ void event_wait(Event *evt, Activation *act)
 	else
 	{
 		SYNCDEBUG();
-		evt->waiter = act;
+		evt->waiter_func = func;
+		evt->waiter_data = data;
 	}
 }
 

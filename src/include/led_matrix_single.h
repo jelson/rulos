@@ -9,7 +9,6 @@ typedef struct {
 } LMSBitmap;
 
 typedef struct {
-	Activation act;
 	LMSBitmap bitmap;
 	uint8_t row;
 	r_bool pwm_enable;

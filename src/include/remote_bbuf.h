@@ -30,7 +30,6 @@ typedef struct {
 } BBufMessage;
 
 typedef struct s_remote_bbuf_send {
-	ActivationFunc func;
 	Network *network;
 	uint8_t send_msg_alloc[sizeof(Message)+sizeof(BBufMessage)];
 	SendSlot sendSlot;

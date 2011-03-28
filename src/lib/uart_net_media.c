@@ -24,7 +24,6 @@ void _um_send(MediaStateIfc *media,
 
 void _um_recv_handler(struct s_UartHandler *u, char c);
 r_bool _um_send_handler(struct s_UartHandler *u, char *c /*OUT*/);
-void _um_send_complete(Activation *act);
 
 MediaStateIfc *uart_media_init(UartMedia *um, MediaRecvSlot *mrs)
 {
@@ -32,7 +31,6 @@ MediaStateIfc *uart_media_init(UartMedia *um, MediaRecvSlot *mrs)
 	um->uart_handler.recv = _um_recv_handler;
 	um->uart_media_ptr.media.send = _um_send;
 	um->uart_media_ptr.uart_media = um;
-	um->sending_payload.done_act.func = _um_send_complete;
 	um->send_which = US_none;
 
 	um->mrs = mrs;
@@ -42,9 +40,8 @@ MediaStateIfc *uart_media_init(UartMedia *um, MediaRecvSlot *mrs)
 	return &um->uart_media_ptr.media;
 }
 
-void _um_send_complete(Activation *act)
+void _um_send_complete(UartMediaSendingPayload *usp)
 {
-	UartMediaSendingPayload *usp = (UartMediaSendingPayload *) act;
 	usp->data = NULL;
 	if (usp->sendDoneCB!=NULL)
 	{
@@ -62,7 +59,7 @@ r_bool _um_send_handler(struct s_UartHandler *u, char *c /*OUT*/)
 		if (um->send_dataidx == um->sending_payload.len)
 		{
 			um->send_which = US_none;
-			schedule_now(&um->sending_payload.done_act);
+			schedule_now((ActivationFuncPtr) _um_send_complete, &um->sending_payload);
 		}
 		return TRUE;
 	}
@@ -117,7 +114,7 @@ void _um_send(MediaStateIfc *media,
 void _um_recv_handler(struct s_UartHandler *u, char c)
 {
 	UartMedia *um = (UartMedia*) u;
-	if (um->mrs->occupied)
+	if (um->mrs->occupied_len > 0)
 	{
 		um->recv_state = UR_sync0;
 		return;
@@ -157,10 +154,10 @@ void _um_recv_handler(struct s_UartHandler *u, char c)
 			// end of packet.
 			if (um->recv_len <= um->mrs->capacity)
 			{
-				um->mrs->occupied = TRUE;
-		audioled_set(1, 0);
+				um->mrs->occupied_len = um->recv_len;
+				audioled_set(1, 0);
 				(um->mrs->func)(um->mrs, um->recv_len);
-		audioled_set(1, 1);
+				audioled_set(1, 1);
 			}
 			// else:
 			// received a too-long packet. Wanted to run whole

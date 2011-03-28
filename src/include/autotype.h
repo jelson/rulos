@@ -21,7 +21,6 @@
 #include "input_controller.h"
 
 typedef struct s_autotype {
-	ActivationFunc func;
 	InputInjectorIfc *iii;
 	Time period;
 	char *str;

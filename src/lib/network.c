@@ -53,7 +53,7 @@ void init_network(Network *net, MediaStateIfc *media)
 	MediaRecvSlot *mrs = &net->mrs;
 	mrs->func = net_recv_upcall;
 	mrs->capacity = sizeof(net->MediaRecvSlotStorage) - sizeof(MediaRecvSlot);
-	mrs->occupied = FALSE;
+	mrs->occupied_len = 0;
 	mrs->user_data = net;
 
 	// Set up underlying physical network
@@ -175,7 +175,7 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 	
 	// everything seems good!  copy to the receive slot and call the callback
 	memcpy(rs->msg, msg, len);
-	mrs->occupied = FALSE; // do this now in case the callback is slow
+	mrs->occupied_len = 0; // do this now in case the callback is slow
 #ifdef DEBUG_STACK_WITH_UART
 	hal_uart_sync_send("P", 1);
 #endif
@@ -186,7 +186,7 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 	return;
 	
 done:
-	mrs->occupied = FALSE;
+	mrs->occupied_len = 0;
 }
 
 /////////////// Sending ///////////////////////////////////////////////

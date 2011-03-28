@@ -40,9 +40,8 @@ void _hpam_init_port(HPAM *hpam, HPAMIndex idx, uint8_t rest_time_secs, uint8_t 
 	hpam->hpam_ports[idx].resting = FALSE;
 }
 
-void init_hpam(HPAM *hpam, uint8_t board0, ThrusterUpdate **thrusterUpdates)
+void init_hpam(HPAM *hpam, uint8_t board0, ThrusterUpdate *thrusterUpdates)
 {
-	hpam->func = (ActivationFunc) hpam_update;
 	_hpam_init_port(hpam, hpam_hobbs, REST_NONE, board0, HPAM_DIGIT_0, 0);
 	_hpam_init_port(hpam, hpam_clanger, REST_NONE, board0, HPAM_DIGIT_0, 1);
 		// HPAM 0 slot 2
@@ -75,12 +74,12 @@ void init_hpam(HPAM *hpam, uint8_t board0, ThrusterUpdate **thrusterUpdates)
 		hpam_set_port(hpam, idx, FALSE);
 	}
 
-	schedule_us(1, (Activation*) hpam);
+	schedule_us(1, (ActivationFuncPtr) hpam_update, hpam);
 }
 
 void hpam_update(HPAM *hpam)
 {
-	schedule_us(1000000, (Activation *) hpam);
+	schedule_us(1000000, (ActivationFuncPtr) hpam_update, hpam);
 
 	// check that no valve stays open more than max_time.
 	HPAMIndex idx;
@@ -150,10 +149,10 @@ void hpam_set_port(HPAM *hpam, HPAMIndex idx, r_bool status)
 	hpam->thrusterPayload.thruster_bits =
 		(hpam->thrusterPayload.thruster_bits & ~thruster_bits_mask)
 		| (status ? thruster_bits_mask : 0);
-	ThrusterUpdate **tu = hpam->thrusterUpdates;
-	while (tu[0]!=NULL)
+	ThrusterUpdate *tu = hpam->thrusterUpdates;
+	while (tu[0].func !=NULL)
 	{
-		tu[0]->func(tu[0], &hpam->thrusterPayload);
+		tu[0].func(tu[0].data, &hpam->thrusterPayload);
 		tu++;
 	}
 

@@ -31,7 +31,6 @@ void dtg_recv_func(RecvSlot *recvSlot, uint8_t payload_len);
 
 void dtg_init(DThrusterGraph *dtg, uint8_t board, Network *network)
 {
-	dtg->func = (ActivationFunc) dtg_update;
 	board_buffer_init(&dtg->bbuf DBG_BBUF_LABEL("thrustergraph"));
 	board_buffer_push(&dtg->bbuf, board);
 
@@ -45,12 +44,12 @@ void dtg_init(DThrusterGraph *dtg, uint8_t board, Network *network)
 
 	net_bind_receiver(dtg->network, &dtg->recvSlot);
 
-	schedule_us(1, (Activation*) dtg);
+	schedule_us(1, (ActivationFuncPtr) dtg_update, dtg);
 }
 
 void dtg_update(DThrusterGraph *dtg)
 {
-	schedule_us(Exp2Time(16), (Activation*) dtg);
+	schedule_us(Exp2Time(16), (ActivationFuncPtr) dtg_update, dtg);
 
 	int d;
 	for (d=0; d<NUM_DIGITS; d++) { dtg->bbuf.buffer[d] = 0; }

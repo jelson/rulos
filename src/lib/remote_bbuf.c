@@ -24,7 +24,6 @@ void rbr_recv(RecvSlot *recvSlot, uint8_t payload_len);
 
 void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network)
 {
-	rbs->func = (ActivationFunc) rbs_update;
 	rbs->network = network;
 	rbs->sendSlot.func = NULL;
 	rbs->sendSlot.msg = (Message*) rbs->send_msg_alloc;
@@ -33,7 +32,7 @@ void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network)
 	memset(rbs->changed, FALSE, REMOTE_BBUF_NUM_BOARDS*sizeof(r_bool));
 	rbs->last_index = 0;
 
-	schedule_us(1, (Activation*) rbs);
+	schedule_us(1, (ActivationFuncPtr) rbs_update, rbs);
 }
 
 void send_remote_bbuf(RemoteBBufSend *rbs, SSBitmap *bm, uint8_t index, uint8_t mask)
@@ -69,7 +68,7 @@ int rbs_find_changed_index(RemoteBBufSend *rbs)
 
 void rbs_update(RemoteBBufSend *rbs)
 {
-	schedule_us(REMOTE_BBUF_SEND_RATE, (Activation*) rbs);
+	schedule_us(REMOTE_BBUF_SEND_RATE, (ActivationFuncPtr) rbs_update, rbs);
 
 	if (rbs->sendSlot.sending)
 	{

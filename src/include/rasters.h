@@ -36,7 +36,6 @@ void raster_paint_pixel_v(RectRegion *rrect, int x, int y, r_bool on);
 	// x in [0,32), y in [0,24)
 
 typedef struct {
-	ActivationFunc func;
 	Screen4 *s4;
 	Time startTime;
 	r_bool focused;

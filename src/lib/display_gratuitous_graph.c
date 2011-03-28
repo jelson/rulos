@@ -25,7 +25,6 @@ void draw_fat_bars(DGratuitousGraph *dgg, DriftAnim *da, SSBitmap bm0, SSBitmap 
 void dgg_init(DGratuitousGraph *dgg,
 	uint8_t board, char *name, Time impulse_frequency_us)
 {
-	dgg->func = (ActivationFunc) dgg_update;
 	board_buffer_init(&dgg->bbuf DBG_BBUF_LABEL("dgg"));
 	board_buffer_push(&dgg->bbuf, board);
 	int i;
@@ -36,12 +35,12 @@ void dgg_init(DGratuitousGraph *dgg,
 	dgg->name = name;
 	dgg->impulse_frequency_us = impulse_frequency_us;
 	dgg->last_impulse = 0;
-	schedule_us(1, (Activation*) dgg);
+	schedule_us(1, (ActivationFuncPtr) dgg_update, dgg);
 }
 
 void dgg_update(DGratuitousGraph *dgg)
 {
-	schedule_us(Exp2Time(16), (Activation*) dgg);
+	schedule_us(Exp2Time(16), (ActivationFuncPtr) dgg_update, dgg);
 	Time t = clock_time_us();
 	if (t - dgg->last_impulse > dgg->impulse_frequency_us)
 	{

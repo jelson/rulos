@@ -21,7 +21,6 @@
 #include "cpumon.h"
 
 typedef struct {
-	ActivationFunc func;
 	DScrollMsgAct *scrollAct;
 	CpumonAct *cpumonAct;
 	char msg[16];

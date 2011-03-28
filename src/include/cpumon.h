@@ -25,7 +25,6 @@ typedef enum {
 } CpumonPhase;
 
 typedef struct s_cpumon_act {
-	ActivationFunc func;
 	CpumonPhase phase;
 	uint8_t num_calibrations;
 	uint32_t last_spin_counter;

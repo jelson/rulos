@@ -86,7 +86,7 @@ static void thrusters_update(ThrusterState_t *ts)
 	// draw digits
 	board_buffer_draw(&ts->bbuf);
 
-	schedule_us(10000, (Activation *) ts);
+	schedule_us(10000, (ActivationFuncPtr) thrusters_update, ts);
 }
 
 void thrusters_init(ThrusterState_t *ts,
@@ -101,7 +101,6 @@ void thrusters_init(ThrusterState_t *ts,
 	ts->joystick_state.y_adc_channel = y_adc_channel;
 	joystick_init(&ts->joystick_state);
 
-	ts->func = (ActivationFunc) thrusters_update;
 	board_buffer_init(&ts->bbuf DBG_BBUF_LABEL("thrusters"));
 	// mask off HPAM digits, so HPAM 'display' shows through
 	board_buffer_set_alpha(&ts->bbuf, 0x77);
@@ -110,5 +109,5 @@ void thrusters_init(ThrusterState_t *ts,
 	ts->hpam = hpam;
 	ts->idle = idle;
 
-	schedule_us(1, (Activation *) ts);
+	schedule_us(1, (ActivationFuncPtr) thrusters_update, ts);
 }

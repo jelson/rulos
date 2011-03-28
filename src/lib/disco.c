@@ -24,7 +24,6 @@ UIEventDisposition disco_event_handler(
 
 void disco_init(Disco *disco, AudioClient *audioClient, ScreenBlanker *screenblanker, IdleAct *idle)
 {
-	disco->func = (ActivationFunc) disco_update;
 	disco->handler.uieh.func = (UIEventHandlerFunc) disco_event_handler;
 	disco->handler.disco = disco;
 
@@ -34,12 +33,12 @@ void disco_init(Disco *disco, AudioClient *audioClient, ScreenBlanker *screenbla
 
 	idle_add_handler(idle, &disco->handler.uieh);
 
-	schedule_us(1, (Activation*) disco);
+	schedule_us(1, (ActivationFuncPtr) disco_update, disco);
 }
 
 void disco_update(Disco *disco)
 {
-	schedule_us(100000, (Activation*) disco);
+	schedule_us(100000, (ActivationFuncPtr) disco_update, disco);
 	disco_paint_once(disco);
 }
 

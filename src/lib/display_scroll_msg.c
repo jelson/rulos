@@ -20,19 +20,18 @@
 #include "rocket.h"
 #include "display_scroll_msg.h"
 
-void dscrlmsg_update(struct s_dscrollmsgact *act);
+void dscrlmsg_update(DScrollMsgAct *act);
 
-void dscrlmsg_init(struct s_dscrollmsgact *act,
+void dscrlmsg_init(DScrollMsgAct *act,
 	uint8_t board, char *msg, uint8_t speed_ms)
 {
-	act->func = (ActivationFunc) dscrlmsg_update;
 	board_buffer_init(&act->bbuf DBG_BBUF_LABEL("scrlmsg"));
 	board_buffer_push(&act->bbuf, board);
 	act->len = 0;
 	act->speed_ms = speed_ms;
 	act->index = 0;
 	dscrlmsg_set_msg(act, msg);
-	schedule_us(1, (Activation*) act);
+	schedule_us(1, (ActivationFuncPtr) dscrlmsg_update, act);
 }
 
 int dscrlmsg_nexti(DScrollMsgAct *act, int i)
@@ -62,7 +61,7 @@ void dscrlmsg_update(DScrollMsgAct *act)
 {
 	if (act->speed_ms > 0)
 	{
-		schedule_us(((Time) act->speed_ms)*1000, (Activation*) act);
+		schedule_us(((Time) act->speed_ms)*1000, (ActivationFuncPtr) dscrlmsg_update, act);
 		if (act->len > NUM_DIGITS)
 		{
 			act->index = dscrlmsg_nexti(act, act->index);

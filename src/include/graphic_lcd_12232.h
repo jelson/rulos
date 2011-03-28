@@ -7,12 +7,11 @@
 #define BITMAP_NUM_ROWS	32
 
 typedef struct {
-	Activation act;
-	Activation *done_act;
+	ActivationRecord done_act;
 	uint8_t framebuffer[BITMAP_NUM_ROWS][BITMAP_ROW_LEN];
 } GLCD;
 
-void glcd_init(GLCD *glcd, Activation *done_act);
+void glcd_init(GLCD *glcd, ActivationFuncPtr done_func, void *done_data);
 //void glcd_clear_screen(GLCD *glcd);
 void glcd_draw_framebuffer(GLCD *glcd);
 void glcd_clear_framebuffer(GLCD *glcd);

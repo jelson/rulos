@@ -65,7 +65,7 @@ typedef struct {
 	Network network;
 	LunarDistance ld;
 	AudioClient audio_client;
-	ThrusterUpdate *thrusterUpdate[4];
+	ThrusterUpdate thrusterUpdate[4];
 	HPAM hpam;
 	ControlPanel cp;
 	InputPollerAct ip;
@@ -79,7 +79,7 @@ typedef struct {
 	SlowBoot slow_boot;
 	PotSticker potsticker;
 	VolumeControl volume_control;
-	BSSCanary bss_canary;
+	uint8_t bss_canary;
 } Rocket0;
 
 #define THRUSTER_X_CHAN	3
@@ -108,7 +108,8 @@ void init_rocket0(Rocket0 *r0)
 	init_hpam(&r0->hpam, 7, r0->thrusterUpdate);
 	init_idle(&r0->idle);
 	thrusters_init(&r0->ts, 7, THRUSTER_X_CHAN, THRUSTER_Y_CHAN, &r0->hpam, &r0->idle);
-	//r0->thrusterUpdate[2] = (ThrusterUpdate*) &r0->idle.thrusterListener;
+	//r0->thrusterUpdate[2].func = idle_thruster_listener_func;
+	//r0->thrusterUpdate[2].data = &r0->idle;
 
 	init_screenblanker(&r0->screenblanker, bc_rocket0, &r0->hpam, &r0->idle);
 	init_screenblanker_sender(&r0->screenblanker_sender, &r0->network);
@@ -126,9 +127,12 @@ void init_rocket0(Rocket0 *r0)
 	// Remote receiver
 	init_remote_keyboard_recv(&r0->rkr, &r0->network, (InputInjectorIfc*) &r0->cp.direct_injector, REMOTE_KEYBOARD_PORT);
 
-	r0->thrusterUpdate[1] = (ThrusterUpdate*) &r0->cp.ccdock.dock.thrusterUpdate;
+	r0->thrusterUpdate[1].func = (ThrusterUpdateFunc) ddock_thruster_update;
+	r0->thrusterUpdate[1].data = &r0->cp.ccdock.dock;
+
 	init_thruster_send_network(&r0->tsn, &r0->network);
-	r0->thrusterUpdate[0] = (ThrusterUpdate*) &r0->tsn;
+	r0->thrusterUpdate[0].func = (ThrusterUpdateFunc) tsn_update;
+	r0->thrusterUpdate[0].data = &r0->tsn;
 
 	init_hobbs(&r0->hobbs, &r0->hpam, &r0->idle);
 

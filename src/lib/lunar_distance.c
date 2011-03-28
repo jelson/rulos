@@ -23,7 +23,6 @@ void lunar_distance_update(LunarDistance *ld);
 
 void lunar_distance_init(LunarDistance *ld, uint8_t dist_b0, uint8_t speed_b0 /*, int adc_channel*/)
 {
-	ld->func = (ActivationFunc) lunar_distance_update;
 	drift_anim_init(&ld->da, 0, LUNAR_DISTANCE, 0, LUNAR_DISTANCE, 2376);
 	board_buffer_init(&ld->dist_board DBG_BBUF_LABEL("dist"));
 	board_buffer_push(&ld->dist_board, dist_b0);
@@ -34,7 +33,7 @@ void lunar_distance_init(LunarDistance *ld, uint8_t dist_b0, uint8_t speed_b0 /*
 	hal_init_adc(10000);
 	hal_init_adc_channel(ld->adc_channel);
 	*/
-	schedule_us(1, (Activation*) ld);
+	schedule_us(1, (ActivationFuncPtr) lunar_distance_update, ld);
 }
 
 void lunar_distance_reset(LunarDistance *ld)
@@ -50,7 +49,7 @@ void lunar_distance_set_velocity_256ths(LunarDistance *ld, uint16_t frac)
 
 void lunar_distance_update(LunarDistance *ld)
 {
-	schedule_us(100000, (Activation*) ld);
+	schedule_us(100000, (ActivationFuncPtr) lunar_distance_update, ld);
 
 	if (da_read(&ld->da)==0)
 	{

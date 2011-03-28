@@ -24,15 +24,8 @@
 #include "sound.h"
 #include "audio_request_message.h"
 
-struct s_audio_server;
-typedef struct {
-	Activation act;
-	struct s_audio_server *aserv;
-} AudioServerAct;
 
 typedef struct s_audio_server {
-	Activation retry;
-
 	AudioStreamer audio_streamer;
 
 	uint8_t arm_recv_msg_alloc[sizeof(Message)+sizeof(AudioRequestMessage)];
@@ -41,11 +34,6 @@ typedef struct s_audio_server {
 	RecvSlot avm_recvSlot;
 	uint8_t mcm_recv_msg_alloc[sizeof(Message)+sizeof(MusicControlMessage)];
 	RecvSlot mcm_recvSlot;
-
-	AudioServerAct fetch_start;
-	AudioServerAct fetch_complete;
-	AudioServerAct start_play;
-	AudioServerAct advance;
 
 	SoundCmd skip_cmd;
 	SoundCmd loop_cmd;
@@ -67,6 +55,6 @@ void init_audio_server(AudioServer *as, Network *network, uint8_t timer_id);
 void _aserv_skip_to_clip(AudioServer *aserv, SoundCmd cur_cmd, SoundCmd loop_cmd);
 
 // visibility for debugging
-void _aserv_fetch_start(AudioServerAct *asa);
+void _aserv_fetch_start(AudioServer *as);
 
 #endif // _audio_server_h

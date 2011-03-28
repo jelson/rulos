@@ -28,7 +28,6 @@ void ddock_update_once(DDockAct *act);
 void ddock_update(DDockAct *act);
 uint32_t ddock_compute_dx(int yc, int r, int y);
 void ddock_paint_axes(DDockAct *act);
-void ddock_thruster_update(DockThrusterUpdate *dtu, ThrusterPayload *tp);
 void dd_bump(DDockAct *act, HPAMIndex thruster_index, uint32_t xscale, uint32_t yscale);
 void ddock_hide(DDockAct *dd);
 void ddock_show(DDockAct *dd);
@@ -44,7 +43,6 @@ void ddock_show(DDockAct *dd);
 
 void ddock_init(DDockAct *act, Screen4 *s4, uint8_t auxboard_base, AudioClient *audioClient, Booster *booster, JoystickState_t *joystick)
 {
-	act->func = (ActivationFunc) ddock_update;
 	//init_screen4(&act->s4, b0);
 	act->s4 = s4;
 
@@ -52,9 +50,6 @@ void ddock_init(DDockAct *act, Screen4 *s4, uint8_t auxboard_base, AudioClient *
 
 	act->handler.func = (UIEventHandlerFunc) ddock_event_handler;
 	act->handler.act = act;
-
-	act->thrusterUpdate.func = (ThrusterUpdateFunc) ddock_thruster_update;
-	act->thrusterUpdate.act = act;
 
 	act->booster = booster;
 	act->joystick = joystick;
@@ -77,7 +72,7 @@ void ddock_init(DDockAct *act, Screen4 *s4, uint8_t auxboard_base, AudioClient *
 
 	ddock_hide(act);
 
-	schedule_us(1, (Activation*) act);
+	schedule_us(1, (ActivationFuncPtr) ddock_update, act);
 }
 
 void ddock_hide(DDockAct *dd)
@@ -120,7 +115,7 @@ void ddock_reset(DDockAct *dd)
 
 void ddock_update(DDockAct *act)
 {
-	schedule_us(Exp2Time(17), (Activation*) act);
+	schedule_us(Exp2Time(17), (ActivationFuncPtr) ddock_update, act);
 
 	ddock_update_once(act);
 
@@ -367,8 +362,8 @@ UIEventDisposition ddock_event_handler(
 	return result;
 }
 
-void ddock_thruster_update(DockThrusterUpdate *dtu, ThrusterPayload *tp)
+void ddock_thruster_update(DDockAct *act, ThrusterPayload *tp)
 {
 	//LOGF((logfp, "ddock_thruster_update %02x\n", tp->thruster_bits));
-	dtu->act->thrusterPayload.thruster_bits = tp->thruster_bits;
+	act->thrusterPayload.thruster_bits = tp->thruster_bits;
 }

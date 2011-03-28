@@ -46,13 +46,13 @@ static inline Time get_interrupt_driven_jiffy_clock() {
 // expensive but more accurate
 Time precise_clock_time_us(); 
 
-void schedule_us(Time offset_us, Activation *act);
+void schedule_us(Time offset_us, ActivationFuncPtr func, void *data);
 	// schedule in the future. (asserts us>0)
-void schedule_now(Activation *act);
+void schedule_now(ActivationFuncPtr func, void *data);
 	// Be very careful with schedule_now -- it can result in an infinite
 	// loop if you schedule yourself for now repeatedly (because the clock
 	// never advances past now until the queue empties).
-void schedule_absolute(Time at_time, Activation *act);
+void schedule_absolute(Time at_time, ActivationFuncPtr func, void *data);
 
 #define Exp2Time(v)	(((Time)1)<<(v))
 //#define schedule_ms(ms,act) { schedule_us(ms*1000, act); }

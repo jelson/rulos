@@ -30,7 +30,6 @@ typedef struct {
 } DCompassHandler;
 
 typedef struct s_dcompassact {
-	ActivationFunc func;
 	BoardBuffer bbuf;
 	BoardBuffer *btable;	// needed for RectRegion
 	DCompassHandler handler;

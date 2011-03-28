@@ -26,7 +26,6 @@
 extern char cursor_label_white[0];
 
 typedef struct s_cursor_act {
-	ActivationFunc func;
 	BoardBuffer bbuf[MAX_HEIGHT];
 	uint8_t visible;
 	RectRegion rr;

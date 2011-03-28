@@ -33,7 +33,6 @@
 
 
 typedef struct {
-	ActivationFunc func;
 	r_bool enable[NUM_ADCS];
 	volatile uint16_t value[NUM_ADCS];
 	Time scan_period;
@@ -120,7 +119,6 @@ static void init_adc(ADCState *adc, Time scan_period)
 	}
 	else
 	{
-		adc->func = (ActivationFunc) adc_update;
 		adc->scan_period = scan_period;
 		uint8_t idx;
 		for (idx=0; idx<NUM_ADCS; idx++)
@@ -132,14 +130,14 @@ static void init_adc(ADCState *adc, Time scan_period)
 
 		initted = TRUE;
 
-		schedule_us(1, (Activation*) adc);
+		schedule_us(1, (ActivationFuncPtr) adc_update, adc);
 	}
 }
 
 
 static void adc_update(ADCState *adc)
 {
-	schedule_us(adc->scan_period, (Activation *) adc);
+	schedule_us(adc->scan_period, (ActivationFuncPtr) adc_update, adc);
 
 	uint8_t adc_channel;
 

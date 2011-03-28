@@ -33,7 +33,6 @@ typedef struct s_pong_handler {
 } PongHandler;
 
 typedef struct s_pong {
-	ActivationFunc func;
 //	BoardBuffer bbuf[PONG_HEIGHT];
 //	BoardBuffer *btable[PONG_HEIGHT];
 //	RectRegion rrect;

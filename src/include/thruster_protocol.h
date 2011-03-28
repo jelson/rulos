@@ -23,31 +23,25 @@ typedef struct {
 	uint8_t thruster_bits;
 } ThrusterPayload;
 
-struct s_thruster_update;
 typedef void (*ThrusterUpdateFunc)(
-	struct s_thruster_update *tu,
-	ThrusterPayload *payload);
+				   void *data,
+				   ThrusterPayload *payload);
 
-typedef struct s_thruster_update
-{
+// Record of someone who wants to be notified when thurster status changes
+typedef struct {
 	ThrusterUpdateFunc func;
+	void *data;
 } ThrusterUpdate;
 
-typedef struct {
-	ActivationFunc func;
-	struct s_thruster_send_network *tsn;
-} ThrusterUpdateTimer;
-
 typedef struct s_thruster_send_network {
-	ThrusterUpdateFunc func;
 	Network *network;
 	uint8_t thruster_message_storage[sizeof(Message)+sizeof(ThrusterPayload)];
 	SendSlot sendSlot;
 	ThrusterPayload last_state;
 	r_bool state_changed;
-	ThrusterUpdateTimer timer;
 } ThrusterSendNetwork;
 
 void init_thruster_send_network(ThrusterSendNetwork *tsn, Network *network);
+void tsn_update(ThrusterSendNetwork *tsn, ThrusterPayload *payload);
 
 #endif // _thruster_protocol_h

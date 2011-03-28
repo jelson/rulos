@@ -40,16 +40,9 @@ typedef struct {
 	struct s_ddockact *act;
 } DDockHandler;
 
-typedef struct {
-	ThrusterUpdateFunc func;
-	struct s_ddockact *act;
-} DockThrusterUpdate;
-
 typedef struct s_ddockact {
-	ActivationFunc func;
 	Screen4 *s4;
 	DDockHandler handler;
-	DockThrusterUpdate thrusterUpdate;
 	uint8_t focused;
 	DriftAnim xd, yd, rd;
 	uint32_t last_impulse_time;
@@ -64,5 +57,6 @@ typedef struct s_ddockact {
 
 void ddock_init(DDockAct *act, Screen4 *s4, uint8_t auxboard_base, AudioClient *audioClient, Booster *booster, JoystickState_t *joystick);
 void ddock_reset(DDockAct *dd);
+void ddock_thruster_update(DDockAct *act, ThrusterPayload *tp);
 
 #endif // display_docking_h

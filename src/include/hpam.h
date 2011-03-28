@@ -45,14 +45,13 @@ typedef enum {
 // Future: gauges on a 12V HPAM.
 
 typedef struct {
-	ActivationFunc func;
 	HPAMPort hpam_ports[hpam_end];
-	ThrusterUpdate **thrusterUpdates;
+	ThrusterUpdate *thrusterUpdates;
 	BoardBuffer bbuf;
 	ThrusterPayload thrusterPayload;
 } HPAM;
 
-void init_hpam(HPAM *hpam, uint8_t board0, ThrusterUpdate **thrusterUpdates);
+void init_hpam(HPAM *hpam, uint8_t board0, ThrusterUpdate *thrusterUpdates);
 void hpam_set_port(HPAM *hpam, HPAMIndex idx, r_bool status);
 r_bool hpam_get_port(HPAM *hpam, HPAMIndex idx);
 

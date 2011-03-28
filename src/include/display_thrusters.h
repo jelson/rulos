@@ -20,7 +20,6 @@
 #include "idle.h"
 
 typedef struct {
-	ActivationFunc func;
 	JoystickState_t joystick_state;
 	BoardBuffer bbuf;
 	ThrusterPayload payload;

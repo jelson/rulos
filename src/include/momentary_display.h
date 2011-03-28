@@ -6,8 +6,6 @@
 #include "momentary_display_message.h"
 
 typedef struct {
-	Activation act;
-
 	Time display_period;
 	uint8_t board_num;
 

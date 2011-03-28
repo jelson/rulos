@@ -23,7 +23,6 @@
 #include "network.h"
 
 typedef struct s_d_thruster_graph {
-	ActivationFunc func;
 	BoardBuffer bbuf;
 	Network *network;
 	uint8_t thruster_message_storage[sizeof(Message)+sizeof(ThrusterPayload)];

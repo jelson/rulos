@@ -21,7 +21,6 @@
 #include "input_controller.h"
 
 typedef struct s_potsticker {
-	ActivationFunc func;
 	uint8_t adc_channel;
 	InputInjectorIfc *ifi;
 	uint8_t detents;

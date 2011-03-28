@@ -21,7 +21,6 @@
 #include "board_buffer.h"
 
 typedef struct s_dscrollmsgact {
-	ActivationFunc func;
 	BoardBuffer bbuf;
 	uint8_t len;
 	uint8_t speed_ms;

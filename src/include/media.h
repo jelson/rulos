@@ -10,7 +10,7 @@ typedef void (*MediaRecvDoneFunc)(struct s_MediaRecvSlot *recvSlot, uint8_t len)
 typedef struct s_MediaRecvSlot {
 	MediaRecvDoneFunc func;
 	uint8_t capacity;
-	uint8_t occupied;
+	uint8_t occupied_len;
 	void *user_data; // storage for a pointer back to your state structure
 	char data[0];
 } MediaRecvSlot;

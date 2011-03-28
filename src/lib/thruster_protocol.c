@@ -16,13 +16,11 @@
 
 #include "rocket.h"
 
-void tsn_update(ThrusterSendNetwork *tsn, ThrusterPayload *payload);
-void tsn_timer_func(ThrusterUpdateTimer *tut);
+void tsn_timer_func(ThrusterSendNetwork *tsn);
 void thruster_message_sent(SendSlot *sendSlot);
 
 void init_thruster_send_network(ThrusterSendNetwork *tsn, Network *network)
 {
-	tsn->func = (ThrusterUpdateFunc) tsn_update;
 	tsn->network = network;
 
 	tsn->sendSlot.func = NULL;
@@ -34,10 +32,8 @@ void init_thruster_send_network(ThrusterSendNetwork *tsn, Network *network)
 
 	tsn->last_state.thruster_bits = 0;
 	tsn->state_changed = TRUE;
-	tsn->timer.func = (ActivationFunc) tsn_timer_func;
-	tsn->timer.tsn = tsn;
 
-	schedule_us(1, (Activation*) &tsn->timer);
+	schedule_us(1, (ActivationFuncPtr) tsn_timer_func, tsn);
 }
 
 // To be sure messages are eventually sent (even if they're delayed
@@ -55,10 +51,9 @@ void tsn_update(ThrusterSendNetwork *tsn, ThrusterPayload *payload)
 	}
 }
 
-void tsn_timer_func(ThrusterUpdateTimer *tut)
+void tsn_timer_func(ThrusterSendNetwork *tsn)
 {
-	ThrusterSendNetwork *tsn = tut->tsn;
-	schedule_us(1000000/20, (Activation*) &tsn->timer);
+	schedule_us(1000000/20, (ActivationFuncPtr) tsn_timer_func, tsn);
 
 	if (tsn->state_changed && !tsn->sendSlot.sending)
 	{

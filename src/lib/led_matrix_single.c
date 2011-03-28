@@ -37,7 +37,7 @@ void _lms_configure(uint8_t rowdata, uint16_t coldata);
 #include "hardware.h"
 
 //void _lms_handler(void *arg);
-void _lms_update(Activation *act);
+void _lms_update(LEDMatrixSingle *lms);
 
 #define SYNCDEBUG()	syncdebug(0, 'M', __LINE__)
 void syncdebug(uint8_t spaces, char f, uint16_t line);
@@ -66,8 +66,7 @@ void led_matrix_single_init(LEDMatrixSingle *lms, uint8_t timer_id)
 	SYNCDEBUG();
 	lms->pwm_enable = true;
 //	hal_start_clock_us(1000000, &_lms_handler, lms, timer_id);
-	lms->act.func = _lms_update;
-	schedule_us(10000, &lms->act);
+	schedule_us(10000, (ActivationFuncPtr) _lms_update, lms);
 	SYNCDEBUG();
 
 	_lms_configure(0x20, 0x33f3);
@@ -138,9 +137,8 @@ uint8_t _lms_bitswap[16] = {
 	0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe,
 	0x1, 0x9, 0x5, 0xd, 0x3, 0xb, 0x7, 0xf };
 //void _lms_handler(void *arg)
-void _lms_update(Activation *act)
+void _lms_update(LEDMatrixSingle *lms)
 {
-	LEDMatrixSingle *lms = (LEDMatrixSingle *) act;
 	if (lms->pwm_enable)
 	{
 		// note that we draw a row's red and its green right after each
@@ -169,7 +167,7 @@ void _lms_update(Activation *act)
 //		syncdebug(8, 'c', col_val);
 		lms->row = (lms->row+1) & 0xf;
 	}
-	schedule_us(400, &lms->act);
+	schedule_us(400, (ActivationFuncPtr) _lms_update, lms);
 }
 
 

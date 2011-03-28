@@ -27,15 +27,13 @@
 #define LAUNCH_CLOCK_PERIOD 10000
 
 void launch_configure_state(Launch *launch, LaunchState newState);
-void launch_clock_update(LaunchClockAct *launchClockAct);
+void launch_clock_update(Launch *launch);
 void launch_configure_lunar_distance(Launch *launch);
 UIEventDisposition launch_uie_handler(Launch *launch, UIEvent event);
 
 void launch_init(Launch *launch, Screen4 *s4, Booster *booster, AudioClient *audioClient, struct s_screen_blanker *screenblanker)
 {
 	launch->func = (UIEventHandlerFunc) launch_uie_handler;
-	launch->clock_act.func = (ActivationFunc) launch_clock_update;
-	launch->clock_act.launch = launch;
 
 	launch->booster = booster;
 	launch->audioClient = audioClient;
@@ -58,7 +56,7 @@ void launch_init(Launch *launch, Screen4 *s4, Booster *booster, AudioClient *aud
 	launch->screenblanker = screenblanker;
 
 	launch_configure_state(launch, launch_state_hidden);
-	schedule_us(1, (Activation*) &launch->clock_act);
+	schedule_us(1, (ActivationFuncPtr) launch_clock_update, launch);
 }
 
 void launch_configure_state(Launch *launch, LaunchState newState)
@@ -204,10 +202,9 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 	}
 }
 
-void launch_clock_update(LaunchClockAct *launchClockAct)
+void launch_clock_update(Launch *launch)
 {
-	Launch *launch = launchClockAct->launch;
-	schedule_us(LAUNCH_CLOCK_PERIOD, (Activation*) &launch->clock_act);
+	schedule_us(LAUNCH_CLOCK_PERIOD, (ActivationFuncPtr) launch_clock_update, launch);
 
 	// animation elements -- evaluate every tick
 	launch_configure_lunar_distance(launch);

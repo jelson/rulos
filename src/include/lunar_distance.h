@@ -21,7 +21,6 @@
 #include "drift_anim.h"
 
 typedef struct {
-	ActivationFunc func;
 	DriftAnim da;
 	BoardBuffer dist_board;
 	BoardBuffer speed_board;

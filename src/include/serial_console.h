@@ -20,14 +20,13 @@
 #include "rocket.h"
 
 typedef struct {
-	Activation act;
 	UartState_t uart;
 	char line[40];
 	char *line_ptr;
-	Activation *line_act;
+	ActivationRecord line_act;
 } SerialConsole;
 
-void serial_console_init(SerialConsole *sca, Activation *line_act);
+void serial_console_init(SerialConsole *sca, ActivationFuncPtr line_func, void *line_data);
 void serial_console_sync_send(SerialConsole *act, char *buf, uint16_t buflen);
 
 #endif //_SERIAL_CONSOLE_H

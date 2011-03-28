@@ -25,7 +25,6 @@
 #define BORROW_SCREENBLANKER_BUFS 1
 
 typedef struct s_slow_boot {
-	ActivationFunc func;
 	ScreenBlanker *screenblanker;
 #if BORROW_SCREENBLANKER_BUFS
 	BoardBuffer *buffer;

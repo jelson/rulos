@@ -28,7 +28,6 @@ typedef struct s_input_injector_ifc {
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	ActivationFunc func;
 	InputInjectorIfc *injector;
 } InputPollerAct;
 

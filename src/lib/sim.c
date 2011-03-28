@@ -251,17 +251,10 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr, MediaRecvSlot *
 	return &twi_state->media;
 }
 
-typedef struct {
-	ActivationFunc f;
-	MediaRecvSlot *mrs;
-	uint8_t len;
-} recvCallbackAct_t;
 
-recvCallbackAct_t recvCallbackAct_g;
-
-static void doRecvCallback(recvCallbackAct_t *rca)
+static void doRecvCallback(MediaRecvSlot *mrs)
 {
-	rca->mrs->func(rca->mrs, rca->len);
+	mrs->func(mrs, mrs->occupied_len);
 }
 
 static void sim_twi_poll(void *data)
@@ -288,7 +281,7 @@ static void sim_twi_poll(void *data)
 
 	assert(rc != 0);
 
-	if (twi_state->mrs->occupied)
+	if (twi_state->mrs->occupied_len > 0)
 	{
 		LOGF((logfp, "TWI SIM: Packet arrived but network stack buffer busy; dropping\n"));
 		return;
@@ -300,18 +293,13 @@ static void sim_twi_poll(void *data)
 		return;
 	}
 
-	twi_state->mrs->occupied = TRUE;
+	twi_state->mrs->occupied_len = rc;
 	memcpy(twi_state->mrs->data, buf, rc);
-
-	recvCallbackAct_g.f = (ActivationFunc) doRecvCallback;
-	recvCallbackAct_g.mrs = twi_state->mrs;
-	recvCallbackAct_g.len = rc;
-	schedule_now((Activation *) &recvCallbackAct_g);
+	schedule_now((ActivationFuncPtr) doRecvCallback, twi_state->mrs);
 }
 
 
 typedef struct {
-	ActivationFunc f;
 	MediaSendDoneFunc sendDoneCB;
 	void *sendDoneCBData;
 } sendCallbackAct_t;
@@ -344,10 +332,9 @@ static void _sim_twi_send(MediaStateIfc *media,
 
 	if (sendDoneCB)
 	{
-		sendCallbackAct_g.f = (ActivationFunc) doSendCallback;
 		sendCallbackAct_g.sendDoneCB = sendDoneCB;
 		sendCallbackAct_g.sendDoneCBData = sendDoneCBData;
-		schedule_now((Activation *) &sendCallbackAct_g);
+		schedule_now((ActivationFuncPtr) doSendCallback, &sendCallbackAct_g);
 	}
 }
 

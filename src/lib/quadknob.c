@@ -61,7 +61,7 @@ void qk_update(QuadKnob *qk)
 		qk->ifi->func(qk->ifi, qk->fwd);
 	}
 	
-	schedule_us(50, (Activation*) qk);
+	schedule_us(50, (ActivationFuncPtr) qk_update, qk);
 }
 
 void init_quadknob(QuadKnob *qk,
@@ -73,8 +73,6 @@ void init_quadknob(QuadKnob *qk,
 	char fwd,
 	char back)
 {
-	qk->func = (ActivationFunc) qk_update;
-
 	qk->ifi = ifi;
 	qk->fwd = fwd;
 	qk->back = back;
@@ -86,5 +84,5 @@ void init_quadknob(QuadKnob *qk,
 	gpio_make_input(PINUSE(*pin1));
 #endif //SIM
 
-	schedule_us(1, (Activation*) qk);
+	schedule_us(1, (ActivationFuncPtr) qk_update, qk);
 }

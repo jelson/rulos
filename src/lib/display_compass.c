@@ -19,13 +19,12 @@
 #include "focus.h"
 
 void dcompass_update_once(DCompassAct *act);
-void dcompass_update(DCompassAct *act);
+void dcompass_update(void *data);
 UIEventDisposition dcompass_event_handler(
 	UIEventHandler *raw_handler, UIEvent evt);
 
 void dcompass_init(DCompassAct *act, uint8_t board, FocusManager *focus)
 {
-	act->func = (ActivationFunc) dcompass_update;
 	board_buffer_init(&act->bbuf DBG_BBUF_LABEL("compass"));
 	board_buffer_push(&act->bbuf, board);
 	int32_t range = ((int32_t)1)<<24;
@@ -37,13 +36,14 @@ void dcompass_init(DCompassAct *act, uint8_t board, FocusManager *focus)
 	act->btable = &act->bbuf;
 	RectRegion rr = { &act->btable, 1, 0, 7};
 	focus_register(focus, (UIEventHandler*) &act->handler, rr, "compass");
-	schedule_us(1, (Activation*) act);
+	schedule_us(1, dcompass_update, act);
 }
 
 static char *compass_display = "N.,.3.,.S.,.E.,.N.,.3.,.S.,.E.,.";
 
-void dcompass_update(DCompassAct *act)
+void dcompass_update(void *data)
 {
+	DCompassAct *act = (DCompassAct *) data;
 	dcompass_update_once(act);
 	uint32_t interval_us;
 	if (act->focused)
@@ -54,7 +54,7 @@ void dcompass_update(DCompassAct *act)
 	{
 		interval_us = (300+(deadbeef_rand() & 0x0ff)) * 1000;
 	}
-	schedule_us(interval_us, (Activation*) act);
+	schedule_us(interval_us, dcompass_update, act);
 }
 
 void dcompass_update_once(DCompassAct *act)

@@ -54,18 +54,10 @@ typedef enum {
 	launch_state_complete,
 } LaunchState;
 
-struct s_launch;
-
-typedef struct {
-	ActivationFunc func;
-	struct s_launch *launch;
-} LaunchClockAct;
-
 struct s_screen_blanker;
 
 typedef struct s_launch {
 	UIEventHandlerFunc func;
-	LaunchClockAct clock_act;
 
 	LaunchState state;
 

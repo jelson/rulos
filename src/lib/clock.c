@@ -22,7 +22,7 @@
 # include "hardware.h"
 #endif
 
-void schedule_us_internal(Time offset_us, Activation *act);
+void schedule_us_internal(Time offset_us, ActivationFuncPtr func, void *data);
 
 // usec between timer interrupts
 Time _rtc_interval_us;
@@ -41,7 +41,7 @@ extern volatile uint8_t run_scheduler_now;
 #define NOW_QUEUE_CAPACITY 4
 typedef struct {
 	Heap heap;
-	Activation *now_queue[NOW_QUEUE_CAPACITY];
+	ActivationRecord now_queue[NOW_QUEUE_CAPACITY];
 	uint8_t now_queue_size;
 } SysClock;
 SysClock clock;
@@ -89,38 +89,38 @@ void init_clock(Time interval_us, uint8_t timer_id)
 	_spin_counter = 0;
 }
 
-void schedule_us(Time offset_us, Activation *act)
+void schedule_us(Time offset_us, ActivationFuncPtr func, void *data)
 {
 	// never schedule anything for "now", or we might stick the scheduler
 	// in a loop at "now".
 	assert(offset_us > 0);
-	schedule_us_internal(offset_us, act);
+	schedule_us_internal(offset_us, func, data);
 }
 
-void schedule_now(Activation *act)
+void schedule_now(ActivationFuncPtr func, void *data)
 {
 	uint8_t old_interrupts;
 	old_interrupts = hal_start_atomic();
 	if (clock.now_queue_size < NOW_QUEUE_CAPACITY)
 	{
-		clock.now_queue[clock.now_queue_size++] = act;
+		clock.now_queue[clock.now_queue_size].func = func;
+		clock.now_queue[clock.now_queue_size].data = data;
+		clock.now_queue_size++;
 	}
 	else
 	{
-		heap_insert(&clock.heap, clock_time_us(), act);
+		heap_insert(&clock.heap, clock_time_us(), func, data);
 	}
 	hal_end_atomic(old_interrupts);
-
-//	schedule_us_internal(0, act);
 	run_scheduler_now = TRUE;
 }
 
-void schedule_us_internal(Time offset_us, Activation *act)
+void schedule_us_internal(Time offset_us, ActivationFuncPtr func, void *data)
 {
-	schedule_absolute(clock_time_us() + offset_us, act);
+	schedule_absolute(clock_time_us() + offset_us, func, data);
 }
 
-void schedule_absolute(Time at_time, Activation *act)
+void schedule_absolute(Time at_time, ActivationFuncPtr func, void *data)
 {
 	//LOGF((logfp, "scheduling act %08x func %08x\n", (int) act, (int) act->func));
 
@@ -129,7 +129,7 @@ void schedule_absolute(Time at_time, Activation *act)
 #endif
 	uint8_t old_interrupts;
 	old_interrupts = hal_start_atomic();
-	heap_insert(&clock.heap, at_time, act);
+	heap_insert(&clock.heap, at_time, func, data);
 	hal_end_atomic(old_interrupts);
 #ifdef TIMING_DEBUG
 	gpio_clr(GPIO_D6);
@@ -170,7 +170,7 @@ void scheduler_run_once()
 	while (1)	// run until nothing to do for this time
 	{
 		Time due_time;
-		Activation *act;
+		ActivationRecord act;
 		int rc;
 		uint8_t old_interrupts;
 
@@ -212,7 +212,7 @@ void scheduler_run_once()
 
 		//LOGF((logfp, "popping act %08x func %08x\n", (uint32_t) act, (uint32_t) act->func));
 
-		act->func(act);
+		act.func(act.data);
 		//LOGF((logfp, "returned act %08x func %08x\n", (uint32_t) act, (uint32_t) act->func));
 	}
 }

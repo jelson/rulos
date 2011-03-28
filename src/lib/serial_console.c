@@ -16,10 +16,8 @@
 
 #include "serial_console.h"
 
-void serial_console_update(Activation *act)
+void serial_console_update(SerialConsole *sca)
 {
-	SerialConsole *sca = (SerialConsole *) act;
-
 	char rcv_chr;
 	if (CharQueue_pop(sca->uart.recvQueue.q, &rcv_chr)) {
 		*(sca->line_ptr) = rcv_chr;
@@ -34,22 +32,21 @@ void serial_console_update(Activation *act)
 		{
 			*(sca->line_ptr) = '\0';
 			sca->line_ptr = sca->line;
-			(sca->line_act->func)(sca->line_act);
+			(sca->line_act.func)(sca->line_act.data);
 		}
 	}
 
-	schedule_us(120, &sca->act);
+	schedule_us(120, (ActivationFuncPtr) serial_console_update, sca);
 }
 
 
-void serial_console_init(SerialConsole *sca, Activation *line_act)
+void serial_console_init(SerialConsole *sca, ActivationFuncPtr line_func, void *line_data)
 {
 	uart_init(&sca->uart, 38400, TRUE);
-	sca->act.func = serial_console_update;
-	sca->line_ptr = sca->line;
-	sca->line_act = line_act;
+	sca->line_act.func = line_func;
+	sca->line_act.data = line_data;
 
-	schedule_us(1000, &sca->act);
+	schedule_us(1000, (ActivationFuncPtr) serial_console_update, sca);
 }
 
 void serial_console_sync_send(SerialConsole *act, char *buf, uint16_t buflen)

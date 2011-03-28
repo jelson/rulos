@@ -50,7 +50,7 @@ static uint32_t t_rocket1[] = { T_ROCKET1 };
 //////////////////////////////////////////////////////////////////////////////
 
 UIEventDisposition screenblanker_handler(ScreenBlanker *screenblanker, UIEvent evt);
-void screenblanker_update(ScreenBlankerClockAct *act);
+void screenblanker_update(ScreenBlanker *sb);
 void screenblanker_update_once(ScreenBlanker *sb);
 
 void init_screenblanker(ScreenBlanker *screenblanker, BoardConfiguration bc, HPAM *hpam, IdleAct *idle)
@@ -83,9 +83,7 @@ void init_screenblanker(ScreenBlanker *screenblanker, BoardConfiguration bc, HPA
 
 	screenblanker->screenblanker_sender = NULL;
 
-	screenblanker->clock_act.func = (ActivationFunc) screenblanker_update;
-	screenblanker->clock_act.sb = screenblanker;
-	schedule_us(1, (Activation*) &screenblanker->clock_act);
+	schedule_us(1, (ActivationFuncPtr) screenblanker_update, screenblanker);
 
 	if (idle!=NULL)
 	{
@@ -157,15 +155,14 @@ void screenblanker_setdisco(ScreenBlanker *screenblanker, DiscoColor disco_color
 	screenblanker_update_once(screenblanker);
 }
 
-void screenblanker_update(ScreenBlankerClockAct *act)
+void screenblanker_update(ScreenBlanker *sb)
 {
-	ScreenBlanker *sb = act->sb;
 	Time interval = 100000;	// update 0.1s when not doing animation
 	if (sb->mode==sb_flicker || sb->mode==sb_flicker)
 	{
-		interval =   40000;	// update 0.01s when animating
+		interval = 40000;	// update 0.01s when animating
 	}
-	schedule_us(interval, (Activation*) act);
+	schedule_us(interval, (ActivationFuncPtr) screenblanker_update, sb);
 
 	screenblanker_update_once(sb);
 }

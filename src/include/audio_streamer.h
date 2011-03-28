@@ -6,18 +6,9 @@
 #include "audio_out.h"
 #include "event.h"
 
-struct s_AudioStreamer;
-
-typedef struct
-{
-	Activation act;
-	struct s_AudioStreamer *as;
-} ASStreamCard;
 
 typedef struct s_AudioStreamer
 {
-	Activation fill_act;
-	ASStreamCard assc;
 	SDCard sdc;
 	r_bool sdc_initialized;
 	AudioOut audio_out;
@@ -32,7 +23,8 @@ typedef struct s_AudioStreamer
 	r_bool is_music;
 	Event ulawbuf_empty_evt;
 	Event play_request_evt;
-	Activation *done_act;
+	ActivationFuncPtr done_func;
+	void *done_data;
 } AudioStreamer;
 
 void init_audio_streamer(AudioStreamer *as, uint8_t timer_id);
@@ -47,7 +39,14 @@ void init_audio_streamer(AudioStreamer *as, uint8_t timer_id);
 // An alternative: use 4 or 8 smaller AudioOut buffers, so that we can let
 // them almost drain out during the time we're waiting on the sd card.
 
-r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, uint32_t end_address, r_bool is_music, Activation *done_act);
+r_bool as_play(
+	       AudioStreamer *as,
+	       uint32_t block_address,
+	       uint16_t block_offset,
+	       uint32_t end_address,
+	       r_bool is_music,
+	       ActivationFuncPtr done_func,
+	       void *done_data);
 	// block_address: multiple of SDCard blocksize (512)
 	// block_offset: multiple of AudioOut AO_HALFBUFLEN (128). Used if we
 	//   want to have sound durations of shorter than SD block length.

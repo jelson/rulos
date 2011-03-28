@@ -23,7 +23,6 @@
 #include "calculator_decoration.h"
 
 typedef struct s_d_aer {
-	ActivationFunc func;
 	BoardBuffer bbuf;
 	DriftAnim azimuth;
 	DriftAnim elevation;

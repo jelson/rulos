@@ -22,7 +22,6 @@
 #include "drift_anim.h"
 
 typedef struct s_d_gratuitous_graph {
-	ActivationFunc func;
 	BoardBuffer bbuf;
 	DriftAnim drift[3];
 	char *name;

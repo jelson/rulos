@@ -38,9 +38,9 @@ typedef struct
 	uint8_t play_buffer;
 
 	uint8_t fill_buffer;	// the one fill_act should populate when called.
-	Activation *fill_act;
+	ActivationRecord fill_act;
 } AudioOut;
 
-void init_audio_out(AudioOut *ao, uint8_t timer_id, Activation *fill_act);
+void init_audio_out(AudioOut *ao, uint8_t timer_id, ActivationFuncPtr fill_func, void *fill_data);
 
 #endif // _AUDIO_OUT_H

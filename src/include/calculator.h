@@ -34,8 +34,6 @@ typedef struct s_calculator {
 	FocusManager focus;
 
 	struct s_decoration_timeout {
-		ActivationFunc func;
-		struct s_calculator *calc;
 		Time last_activity;
 		FetchCalcDecorationValuesIfc *fetchDecorationValuesObj;
 	} decorationTimeout;

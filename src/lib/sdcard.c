@@ -17,6 +17,8 @@
 #include "sdcard.h"
 #include "seqmacro.h"
 
+#if JON_PLEASE_FIX
+
 #define R_SYNCDEBUG()	syncdebug(0, 'S', __LINE__)
 //#define SYNCDEBUG()	R_SYNCDEBUG()
 #define SYNCDEBUG()	{}
@@ -39,7 +41,7 @@ void _bunchaclocks_handler(HALSPIHandler *h, uint8_t data)
 	BunchaClocks *bc = (BunchaClocks *) h;
 	if (bc->numclocks_bytes == 0)
 	{
-		schedule_us(1000, bc->done_act);
+		schedule_us(1000, bc->done_func, bc->done_data);
 	}
 	else
 	{
@@ -48,12 +50,13 @@ void _bunchaclocks_handler(HALSPIHandler *h, uint8_t data)
 	}
 }
 
-void bunchaclocks_start(BunchaClocks *bc, int numclocks_bytes, Activation *done_act)
+void bunchaclocks_start(BunchaClocks *bc, int numclocks_bytes, ActivationFuncPtr done_func, void *done_data)
 {
 	SYNCDEBUG();
 	bc->handler.func = _bunchaclocks_handler;
 	bc->numclocks_bytes = numclocks_bytes-1;
-	bc->done_act = done_act;
+	bc->done_func = done_func;
+	bc->done_data = done_data;
 	hal_spi_set_handler(&bc->handler);
 
 	hal_spi_send(0xff);
@@ -64,7 +67,6 @@ void bunchaclocks_start(BunchaClocks *bc, int numclocks_bytes, Activation *done_
 
 void sdc_init(SDCard *sdc)
 {
-	sdc->act.func = NULL;	// varies depending on entry point.
 	sdc->transaction_open = FALSE;
 	spi_init(&sdc->spi);
 }
@@ -82,7 +84,7 @@ void _sdc_issue_spic_cmd(SDCard *sdc, uint8_t *cmd, uint8_t cmdlen, uint8_t cmd_
 	sdc->spic.cmd_expect_code = cmd_expect_code;
 	sdc->spic.reply_buffer = NULL;
 	sdc->spic.reply_buflen = 0;
-	sdc->spic.done_act = &sdc->act;
+	sdc->spic.done_func = ??;
 	spi_start(&sdc->spi, &sdc->spic);
 }
 
@@ -94,13 +96,14 @@ uint8_t _spicmd0[6] = { SPI_CMD(0), 0, 0, 0, 0, SPI_CMD0_CRC };
 uint8_t _spicmd1[6] = { SPI_CMD(1), 0, 0, 0, 0, SPI_DUMMY_CRC };
 uint8_t _spicmd16[6] = { SPI_CMD(16), 0, 0, 0x20, 0x00, SPI_DUMMY_CRC };
 
-void sdc_reset_card(SDCard *sdc, Activation *done_act)
+void sdc_reset_card(SDCard *sdc, ActivationFuncPtr done_func, void *done_data)
 {
 	SYNCDEBUG();
 	sdc->transaction_open = TRUE;
 
 	sdc->blocksize = 512;
-	sdc->done_act = done_act;
+	sdc->done_func = done_func;
+	sdc->done_data = done_data;
 	sdc->error = TRUE;
 
 	hal_spi_set_fast(FALSE);
@@ -115,7 +118,7 @@ void sdc_reset_card(SDCard *sdc, Activation *done_act)
 	SYNCDEBUG(); \
 	sdc->error = errorval; \
 	sdc->transaction_open = FALSE; \
-	SCHEDULE_SOON(sdc->done_act); \
+	SCHEDULE_SOON(sdc->done_func, sdc->done_data);		\
 	return;
 
 #define SDCRESET(i) \
@@ -160,7 +163,7 @@ void fill_value(uint8_t *dst, uint32_t src)
 	dst[3] = (src>>(0*8)) & 0xff;
 }
 
-r_bool sdc_start_transaction(SDCard *sdc, uint32_t offset, uint8_t *buffer, uint16_t buflen, Activation *done_act)
+r_bool sdc_start_transaction(SDCard *sdc, uint32_t offset, uint8_t *buffer, uint16_t buflen, ActivationFuncPtr done_func, void *done_data)
 {
 	if (sdc->transaction_open)
 	{
@@ -182,7 +185,8 @@ r_bool sdc_start_transaction(SDCard *sdc, uint32_t offset, uint8_t *buffer, uint
 
 	sdc->spic.reply_buffer = buffer;
 	sdc->spic.reply_buflen = buflen;
-	sdc->done_act = done_act;
+	sdc->done_func = done_func;
+	sdc->done_data = done_data;
 	{
 		Activation *act = &sdc->act;
 		sdc->spic.done_act = act;
@@ -198,7 +202,7 @@ SEQDEF(SDCard, read, 1_readmore, sdc)
 		SYNCDEBUG();
 		sdc->error = TRUE;
 	}
-	sdc->done_act->func(sdc->done_act);
+	sdc->done_func(sdc->done_data);
 }
 
 r_bool sdc_is_error(SDCard *sdc)
@@ -206,9 +210,10 @@ r_bool sdc_is_error(SDCard *sdc)
 	return sdc->error;
 }
 
-void sdc_continue_transaction(SDCard *sdc, uint8_t *buffer, uint16_t buflen, Activation *done_act)
+void sdc_continue_transaction(SDCard *sdc, uint8_t *buffer, uint16_t buflen, ActivationFucnPtr done_func, void *done_data)
 {
-	sdc->done_act = done_act;
+	sdc->done_func = done_func;
+	sdc->done_data = done_data;
 
 	{
 		Activation *act = &sdc->act;
@@ -217,17 +222,19 @@ void sdc_continue_transaction(SDCard *sdc, uint8_t *buffer, uint16_t buflen, Act
 	}
 }
 
-void sdc_end_transaction(SDCard *sdc, Activation *done_act)
+void sdc_end_transaction(SDCard *sdc, ActivationFuncPtr done_func, void *done_data)
 {
 	// could clock out CRC bytes, but why?
 	// finish spi on "separate thread".
-	sdc->spic.done_act = NULL;
+	sdc->spic.done_func = NULL;
+	sdc->spic.done_done = NULL;
 	spi_finish(&sdc->spi);
 
 	sdc->transaction_open = FALSE;
-	if (done_act!=NULL)
+	if (done_func!=NULL)
 	{
-		schedule_now(done_act);
+		schedule_now(done_func, done_data);
 	}
 	SYNCDEBUG();
 }
+#endif

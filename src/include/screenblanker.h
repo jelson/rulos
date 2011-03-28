@@ -44,17 +44,11 @@ typedef enum {
 	DISCO_WHITE=5,
 } DiscoColor;
 
-typedef struct {
-	ActivationFunc func;
-	struct s_screen_blanker *sb;
-} ScreenBlankerClockAct;
-
 typedef struct s_screen_blanker {
 	UIEventHandlerFunc func;
 	BoardBuffer buffer[SB_MAX_BUFFERS];
 	uint8_t hpam_max_alpha[SB_MAX_BUFFERS];
 	uint8_t num_buffers;
-	ScreenBlankerClockAct clock_act;
 	ScreenBlankerMode mode;
 	HPAM *hpam;
 	uint32_t *tree;

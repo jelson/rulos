@@ -39,7 +39,6 @@
 #define KEY_REFRACTORY_TIME_US 30000
 
 typedef struct {
-	ActivationFunc func;
 	char keypad_q[20];
 	char keypad_last;
 	Time keypad_next_allowed_key_time;
@@ -83,17 +82,16 @@ static void init_keypad(KeypadState *keypad)
 	gpio_make_output(KEYPAD_ROW2);
 	gpio_make_output(KEYPAD_ROW3);
 
-	keypad->func = (ActivationFunc) keypad_update;
 	CharQueue_init((CharQueue *) keypad->keypad_q, sizeof(keypad->keypad_q));
 	keypad->keypad_last = 0;
 	keypad->keypad_next_allowed_key_time = clock_time_us();
 
-	schedule_us(1, (Activation *) keypad);
+	schedule_us(1, (ActivationFuncPtr) keypad_update, keypad);
 }
 
 static void keypad_update(KeypadState *key)
 {
-	schedule_us(KEY_SCAN_INTERVAL_US, (Activation *) key);
+	schedule_us(KEY_SCAN_INTERVAL_US, (ActivationFuncPtr) keypad_update, key);
 
 	char k = hal_scan_keypad();
 

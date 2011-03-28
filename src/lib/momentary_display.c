@@ -1,12 +1,11 @@
 #include <stdbool.h>
 #include "momentary_display.h"
 
-void _momentary_display_update(Activation *act);
+void _momentary_display_update(MomentaryDisplay *md);
 void _momentary_display_recv(RecvSlot *recvSlot, uint8_t payload_len);
 
 void momentary_display_init(MomentaryDisplay *md, Time display_period, uint8_t board_num)
 {
-	md->act.func = &_momentary_display_update;
 	md->display_period = display_period;
 	md->board_num = board_num;
 
@@ -22,12 +21,11 @@ void momentary_display_init(MomentaryDisplay *md, Time display_period, uint8_t b
 	md->is_visible = false;
 	md->last_display = clock_time_us() - display_period;
 
-	schedule_us(1, &md->act);
+	schedule_us(1, (ActivationFuncPtr) _momentary_display_update, md);
 }
 
-void _momentary_display_update(Activation *act)
+void _momentary_display_update(MomentaryDisplay *md)
 {
-	MomentaryDisplay *md = (MomentaryDisplay *) act;
 	Time delta = (clock_time_us() - md->last_display);
 	r_bool want_visible = (delta>0 && delta < md->display_period);
 		// yeah, time will wrap, occasionally causing a spurious display.
@@ -42,7 +40,7 @@ void _momentary_display_update(Activation *act)
 	}
 	md->is_visible = want_visible;
 
-	schedule_us(100000, &md->act);
+	schedule_us(100000, (ActivationFuncPtr) _momentary_display_update, md);
 }
 
 void _momentary_display_recv(RecvSlot *recvSlot, uint8_t payload_len)

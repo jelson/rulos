@@ -18,12 +18,14 @@
 #include "event.h"
 #include "seqmacro.h"
 
+#if JON_PLEASE_FIX
+
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 //#define SYNCDEBUG()	syncdebug(0, 'R', __LINE__)
 #define SYNCDEBUG()	{}
 extern void audioled_set(r_bool red, r_bool yellow);
 
-void _as_fill(Activation *act);
+void _as_fill(AudioStreamer *as);
 SEQDECL(ASStreamCard, as_stream_card, 0_init_sdc);
 SEQDECL(ASStreamCard, as_stream_card, 1_loop);
 SEQDECL(ASStreamCard, as_stream_card, 2_start_tx);
@@ -32,9 +34,8 @@ SEQDECL(ASStreamCard, as_stream_card, 4_read_more);
 
 void init_audio_streamer(AudioStreamer *as, uint8_t timer_id)
 {
-	as->fill_act.func = _as_fill;
 	as->timer_id = timer_id;
-	init_audio_out(&as->audio_out, as->timer_id, &as->fill_act);
+	init_audio_out(&as->audio_out, as->timer_id, (ActivationFuncPtr) _as_fill, as);
 	as->sdc_initialized = FALSE;
 	sdc_init(&as->sdc);
 
@@ -103,9 +104,8 @@ void _ad_decode_ulaw_buf(uint8_t *dst, uint8_t *src, uint16_t len, uint8_t mlvol
 	}
 }
 
-void _as_fill(Activation *act)
+void _as_fill(AudioStreamer *as)
 {
-	AudioStreamer *as = (AudioStreamer *) act;
 	uint8_t *fill_ptr = as->audio_out.buffers[as->audio_out.fill_buffer];
 //	SYNCDEBUG();
 //	syncdebug(0, 'f', (int) as->audio_out.fill_buffer);
@@ -147,9 +147,9 @@ SEQDEF(ASStreamCard, as_stream_card, 1_loop, assc)
 	{
 		// just finished an entire file. Tell caller, and wait
 		// for a new request.
-		if (as->done_act != NULL)
+		if (as->done_func != NULL)
 		{
-			schedule_now(as->done_act);
+			schedule_now(as->done_func, as->done_data);
 		}
 
 		SYNCDEBUG();
@@ -230,7 +230,7 @@ SEQDEF(ASStreamCard, as_stream_card, 4_read_more, assc)
 
 //////////////////////////////////////////////////////////////////////////////
 
-r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, uint32_t end_address, r_bool is_music, Activation *done_act)
+r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, uint32_t end_address, r_bool is_music, ActivationFuncPtr done_func, void *done_data)
 {
 	SYNCDEBUG();
 	as->block_address = block_address;
@@ -242,7 +242,8 @@ r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset,
 		// start late.
 	as->end_address = end_address;
 	as->is_music = is_music;
-	as->done_act = done_act;
+	as->done_func = done_func;
+	as->done_data = done_data;
 		// TODO we just lose the previous callback in this case.
 		// hope that's okay.
 	event_signal(&as->play_request_evt);
@@ -263,3 +264,5 @@ SDCard *as_borrow_sdc(AudioStreamer *as)
 {
 	return as->sdc_initialized ? &as->sdc : NULL;
 }
+
+#endif

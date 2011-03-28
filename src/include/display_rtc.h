@@ -21,7 +21,6 @@
 #include "board_buffer.h"
 
 typedef struct {
-	ActivationFunc func;
 	Time base_time;
 	BoardBuffer bbuf;
 } DRTCAct;

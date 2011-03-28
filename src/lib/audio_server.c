@@ -26,25 +26,13 @@ void ac_send_complete(SendSlot *sendSlot);
 void aserv_recv_arm(RecvSlot *recvSlot, uint8_t payload_len);
 void aserv_recv_avm(RecvSlot *recvSlot, uint8_t payload_len);
 void aserv_recv_mcm(RecvSlot *recvSlot, uint8_t payload_len);
-void _aserv_fetch_start(AudioServerAct *asa);
-void _aserv_fetch_complete(AudioServerAct *asa);
-void _aserv_start_play(AudioServerAct *asa);
-void _aserv_advance(AudioServerAct *asa);
-
-typedef void (AservAct_f)(AudioServerAct *asa);
-static inline void _aserv_setup_act(AudioServer *aserv, AudioServerAct *act, AservAct_f *func)
-{
-	act->act.func = (ActivationFunc) func;
-	act->aserv = aserv;
-}
+void _aserv_fetch_start(AudioServer *as);
+void _aserv_fetch_complete(AudioServer *as);
+void _aserv_start_play(AudioServer *as);
+void _aserv_advance(AudioServer *as);
 
 void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id)
 {
-	_aserv_setup_act(aserv, &aserv->fetch_start, _aserv_fetch_start);
-	_aserv_setup_act(aserv, &aserv->fetch_complete, _aserv_fetch_complete);
-	_aserv_setup_act(aserv, &aserv->start_play, _aserv_start_play);
-	_aserv_setup_act(aserv, &aserv->advance, _aserv_advance);
-
 	aserv->arm_recvSlot.func = aserv_recv_arm;
 	aserv->arm_recvSlot.port = AUDIO_PORT;
 	aserv->arm_recvSlot.payload_capacity = sizeof(AudioRequestMessage);
@@ -78,17 +66,15 @@ void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id)
 
 	init_audio_streamer(&aserv->audio_streamer, timer_id);
 	aserv->index_ready = FALSE;
-	_aserv_fetch_start(&aserv->fetch_start);
+	_aserv_fetch_start(aserv);
 
 	net_bind_receiver(network, &aserv->arm_recvSlot);
 	net_bind_receiver(network, &aserv->avm_recvSlot);
 	net_bind_receiver(network, &aserv->mcm_recvSlot);
 }
 
-void _aserv_fetch_start(AudioServerAct *asa)
+void _aserv_fetch_start(AudioServer *aserv)
 {
-	AudioServer *aserv = asa->aserv;
-
 	SYNCDEBUG();
 
 	// try to borrow sdc object from audio_streamer
@@ -97,7 +83,7 @@ void _aserv_fetch_start(AudioServerAct *asa)
 	{
 		// sdc not initialized yet
 		SYNCDEBUG();
-		schedule_us(10000, &aserv->fetch_start.act);
+		schedule_us(10000, (ActivationFuncPtr) _aserv_fetch_start, aserv);
 		return;
 	}
 
@@ -108,7 +94,8 @@ void _aserv_fetch_start(AudioServerAct *asa)
 		0,
 		start_addr,
 		count,
-		&aserv->fetch_complete.act);
+		(ActivationFuncPtr) _aserv_fetch_complete,
+		aserv);
 #if !SIM
 		syncdebug(4, 'a', (uint16_t) (aserv));
 		syncdebug(4, 'b', (uint16_t) (aserv->borrowed_sdc));
@@ -118,14 +105,13 @@ void _aserv_fetch_start(AudioServerAct *asa)
 	if (!rc)
 	{
 		SYNCDEBUG();
-		schedule_us(10000, &aserv->fetch_start.act);
+		schedule_us(10000, (ActivationFuncPtr) _aserv_fetch_start, aserv);
 		return;
 	}
 }
 
-void _aserv_fetch_complete(AudioServerAct *asa)
+void _aserv_fetch_complete(AudioServer *aserv)
 {
-	AudioServer *aserv = asa->aserv;
 	SYNCDEBUG();
 #if !SIM
 	syncdebug(4, 'a', (uint16_t) (aserv));
@@ -158,7 +144,7 @@ void _aserv_fetch_complete(AudioServerAct *asa)
 	}
 
 	aserv->index_ready = TRUE;
-	sdc_end_transaction(aserv->borrowed_sdc, NULL);
+	sdc_end_transaction(aserv->borrowed_sdc, NULL, NULL);
 }
 
 void aserv_recv_arm(RecvSlot *recvSlot, uint8_t payload_len)
@@ -243,12 +229,11 @@ void _aserv_skip_to_clip(AudioServer *aserv, SoundCmd skip_cmd, SoundCmd loop_cm
 	SYNCDEBUG();
 	aserv->skip_cmd = skip_cmd;
 	aserv->loop_cmd = loop_cmd;
-	_aserv_start_play(&aserv->start_play);
+	_aserv_start_play(aserv);
 }
 
-void _aserv_start_play(AudioServerAct *asa)
+void _aserv_start_play(AudioServer *aserv)
 {
-	AudioServer *aserv = asa->aserv;
 	SYNCDEBUG();
 	if (aserv->skip_cmd.token==sound_silence)
 	{
@@ -281,21 +266,21 @@ void _aserv_start_play(AudioServerAct *asa)
 			airec->block_offset,
 			airec->end_offset,
 			airec->is_disco,	/* is_music -> tells whether to apply music volume attenuation */
-			&aserv->advance.act);
+			(ActivationFuncPtr) _aserv_advance,
+			aserv);
 		if (!rc)
 		{
 			SYNCDEBUG();
 			// Retry rapidly, so we can get ahold of sdc as soon as it's
 			// idle. (Yeah, I could have a callback from SD to alert the
 			// next waiter, but what a big project. This'll do.)
-			schedule_us(1, &aserv->start_play.act);
+			schedule_us(1, (ActivationFuncPtr) _aserv_start_play, aserv);
 		}
 	}
 }
 
-void _aserv_advance(AudioServerAct *asa)
+void _aserv_advance(AudioServer *aserv)
 {
-	AudioServer *aserv = asa->aserv;
 	aserv->skip_cmd = aserv->loop_cmd;
-	_aserv_start_play(&aserv->start_play);
+	_aserv_start_play(aserv);
 }
