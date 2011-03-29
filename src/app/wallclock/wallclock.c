@@ -28,7 +28,6 @@
 #define WALLCLOCK_CALLBACK_INTERVAL 10000
 
 typedef struct {
-	ActivationFunc f;
 	BoardBuffer bbuf;
 	Time last_redraw_time;
 	int hour;
@@ -269,7 +268,7 @@ static void update(WallClockActivation_t *wca)
 	board_buffer_draw(&wca->bbuf);
 
 	// schedule the next callback
-	schedule_us(WALLCLOCK_CALLBACK_INTERVAL, (Activation *) wca);
+	schedule_us(WALLCLOCK_CALLBACK_INTERVAL, (ActivationFuncPtr) update, wca);
 }
 
 
@@ -289,7 +288,6 @@ int main()
 	// initialize our internal state
 	WallClockActivation_t wca;
 	memset(&wca, 0, sizeof(wca));
-	wca.f = (ActivationFunc) update;
 	wca.hour = -1;
 	wca.unhappy_timer = 0;
 	wca.unhappy_state = 0;
@@ -301,7 +299,7 @@ int main()
 	board_buffer_push(&wca.bbuf, 0);
 
 	// have the callback get called immediately
-	schedule_us(1, (Activation *) &wca);
+	schedule_us(1, (ActivationFuncPtr) update, &wca);
 
 	cpumon_main_loop();
 	return 0;

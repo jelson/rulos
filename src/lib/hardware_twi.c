@@ -25,7 +25,7 @@
 
 #define NEED_BUS(twi) ((twi->out_pkt != NULL) || (twi->masterRecvSlot != NULL))
 
-typedef struct
+struct s_TwiState
 {
 	MediaStateIfc media;  // this must be first... :-(
 
@@ -49,7 +49,7 @@ typedef struct
 	MediaRecvSlot *masterRecvSlot;
 	uint8_t masterRecvAddr;
 	int8_t masterRecvLen; // we use -1 as a sentinel so must be signed
-} TwiState;
+};
 
 #define TWI_MAGIC 0x82
 
@@ -69,75 +69,36 @@ static void print_status(uint16_t status)
 #endif
 
 
-// This is a little trampoline function so that the send-done callback
-// can be sent during schedule-time, rather than interrupt-time.
-static void doSendCallback(TwiState *twi)
-{
-	// We store the callback and null it out before calling, because
-	// one of our sanity checks upon receiving a new packet to
-	// transmit is that we don't have a pending callback.  However,
-	// the callback is often where new packets get scheduled.
-	assert(twi->initted == TWI_MAGIC);
-	MediaSendDoneFunc cb = twi->sendDoneCB;
-	twi->sendDoneCB = NULL;
-	cb(twi->sendDoneCBData);
-}
-
 static void end_xmit(TwiState *twi)
 {
 	assert(twi->out_pkt != NULL);
 	assert(twi->have_bus == TRUE);
 
 	twi->out_pkt = NULL;
-	schedule_now((ActivationFuncPtr) doSendCallback, twi);
-}
 
-
-static void initiateRecvCallback(TwiState *twi, MediaRecvSlot *recvSlot, uint8_t len)
-{
-	if (twi->recvUpcallLen != -1) {
-		LOGF((logfp, "Dropping received packet; buffer full"));
-		recvSlot->occupied = FALSE;
-#ifdef DEBUG_STACK_WITH_UART
-		hal_uart_sync_send("D", 1);
-#endif
-		return;
+	if (twi->sendDoneCB != NULL) {
+		// NB, the callback should run after sendDoneCB gets nulled out.
+		// One of our sanity checks upon receiving a new packet to
+		// transmit is that we don't have a pending callback.  However,
+		// the callback is often where new packets get scheduled.
+		schedule_now((ActivationFuncPtr) twi->sendDoneCB, twi->sendDoneCBData);
+		twi->sendDoneCB = NULL;
+		twi->sendDoneCBData = NULL;
 	}
-
-	twi->recvUpcallSlot = recvSlot;
-	twi->recvUpcallLen = len;
-
-#ifdef DEBUG_STACK_WITH_UART
-	hal_uart_sync_send("S", 1);
-#endif
-	schedule_now((Activation *) &twi->recvUpcallAct);
 }
+
 
 // A trampoline function for the receive upcall.  Scheduled by initiateRecvCallback, above.
-static void doRecvCallback(twiCallbackAct_t *tca)
+static void doRecvCallback(MediaRecvSlot *mrs)
 {
-	TwiState *twi = tca->twi;
-	assert(twi->initted == TWI_MAGIC);
-	assert(twi->recvUpcallSlot != NULL);
-	assert(twi->recvUpcallSlot->func != NULL);
-	assert(twi->recvUpcallLen != -1);
+	assert(mrs != NULL);
+	assert(mrs->func != NULL);
+	assert(mrs->occupied_len > 0);
 
 #ifdef DEBUG_STACK_WITH_UART
 	hal_uart_sync_send("U", 1);
 #endif
-
-	// Store the upcall info and immediately receive so that
-	// a subsequent arriving packet may be scheduled.
-	// (The receive slot itself will be marked free as soon as
-	// the data is copied elsewhere.)
-	uint8_t oldInterrupts = hal_start_atomic();
-	MediaRecvSlot *upSlot = twi->recvUpcallSlot;
-	int8_t upLen = twi->recvUpcallLen;
-	twi->recvUpcallSlot = NULL;
-	twi->recvUpcallLen = -1;
-	hal_end_atomic(oldInterrupts);
-
-	upSlot->func(upSlot, upLen);
+	mrs->func(mrs, mrs->occupied_len);
 #ifdef DEBUG_STACK_WITH_UART
 	hal_uart_sync_send("u", 1);
 #endif
@@ -147,7 +108,7 @@ static void doRecvCallback(twiCallbackAct_t *tca)
 static void abortSlaveRecv(TwiState *twi)
 {
 	twi->slaveRecvLen = -1;
-	twi->slaveRecvSlot->occupied = FALSE;
+	twi->slaveRecvSlot->occupied_len = 0;
 }
 
 
@@ -160,8 +121,10 @@ static void mr_maybe_dont_ack(TwiState *twi)
 static void end_mr(TwiState *twi)
 {
 	assert(twi->masterRecvSlot != NULL);
-	initiateRecvCallback(twi, twi->masterRecvSlot, twi->masterRecvLen);
+	twi->masterRecvSlot->occupied_len = twi->masterRecvLen;
+	schedule_now((ActivationFuncPtr) doRecvCallback, twi->masterRecvSlot);
 	twi->masterRecvSlot = NULL;
+	twi->masterRecvLen = -1;
 }
 
 static void twi_set_control_register(TwiState *twi, uint8_t bits)
@@ -204,12 +167,8 @@ static void twi_update(TwiState *twi, uint8_t status)
 	status &= 0b11111000;
 
 #ifdef DEBUG_STACK_WITH_UART
-	char c = twi->slaveRecvSlot->occupied;
+	char c = twi->slaveRecvSlot->occupied_len;
 	hal_uart_sync_send(&c, 1);
-	if (twi->recvUpcallLen == -1)
-		hal_uart_sync_send("_", 1);
-	else
-		hal_uart_sync_send("^", 1);
 #endif
 
 	switch (status) {
@@ -289,9 +248,8 @@ static void twi_update(TwiState *twi, uint8_t status)
 	case TW_SR_SLA_ACK:
 		// new packet arriving addressed to us.  If the receive buffer
 		// is available, start receiving.
-		if (twi->slaveRecvSlot != NULL && twi->slaveRecvSlot->occupied == FALSE)
+		if (twi->slaveRecvSlot != NULL && twi->slaveRecvSlot->occupied_len == 0 && twi->slaveRecvLen == -1)
 		{
-			twi->slaveRecvSlot->occupied = TRUE;
 			twi->slaveRecvLen = 0;
 		}
 		else
@@ -335,8 +293,9 @@ static void twi_update(TwiState *twi, uint8_t status)
 		// end of packet, yay!  upcall into network stack
 		if (twi->slaveRecvLen > 0)
 		{
-			initiateRecvCallback(twi, twi->slaveRecvSlot, twi->slaveRecvLen);
+			twi->slaveRecvSlot->occupied_len = twi->slaveRecvLen;
 			twi->slaveRecvLen = -1;
+			schedule_now((ActivationFuncPtr) doRecvCallback, twi->slaveRecvSlot);
 		}
 		break;
 
@@ -424,12 +383,6 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr, MediaRecvSlot *
 	twi->out_pkt = NULL;
 	twi->out_len = 0;
 	twi->sendDoneCB = NULL;
-	twi->sendCallbackAct.func = (ActivationFunc) doSendCallback; 
-	twi->sendCallbackAct.twi = twi;
-
-	twi->recvUpcallAct.func = (ActivationFunc) doRecvCallback;
-	twi->recvUpcallAct.twi = twi;
-	twi->recvUpcallLen = -1;
 
 	twi->masterRecvSlot = NULL;
 	twi->masterRecvLen = -1;

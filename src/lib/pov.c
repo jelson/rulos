@@ -63,7 +63,7 @@ Glyph alphabet[] = {
 
 void pov_init(PovAct *povAct)
 {
-	povAct->pov_display_func_ptr = (ActivationFunc) pov_display;
+
 	povAct->lastPhase = 0;
 	povAct->curPhase = 0;
 	povAct->lastPeriod = 1;
@@ -77,7 +77,7 @@ void pov_init(PovAct *povAct)
 
 	pov_write(povAct, "HELLO WORLD");
 	
-	schedule_us(1000, (Activation*) povAct);
+	schedule_us(1, (ActivationFuncPtr) pov_display, povAct);
 }
 
 void pov_measure(PovAct *povAct)
@@ -134,7 +134,7 @@ void pov_display(PovAct *povAct)
 		pov_paint(bitmap);
 	}
 
-	schedule_us(1000, (Activation*) povAct);
+	schedule_us(1000, (ActivationFuncPtr) pov_display, povAct);
 }
 
 uint8_t pov_write_count(PovAct *povAct, char *msg, uint8_t offset)

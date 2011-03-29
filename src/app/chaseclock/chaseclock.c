@@ -64,7 +64,6 @@ uint8_t days_in_month[12] = {
 
 
 typedef struct {
-	ActivationFunc func;
 	Time last_run;
 	BoardBuffer bbuf;
 	uint32_t secs;
@@ -76,7 +75,6 @@ void update_time_vals(ChaseClockActivation_t *cc);
 
 void init_chase_clock(ChaseClockActivation_t *cc)
 {
-	cc->func = (ActivationFunc) update_chase_clock;
 	cc->last_run = clock_time_us();
 	cc->secs = 0;
 	cc->time = initTime;
@@ -84,13 +82,13 @@ void init_chase_clock(ChaseClockActivation_t *cc)
 	board_buffer_init(&cc->bbuf);
 	board_buffer_push(&cc->bbuf, 0);
 
-	schedule_us((Time) 1, (Activation*) cc);
+	schedule_us(1, (ActivationFuncPtr) update_chase_clock, cc);
 }
 
 void update_chase_clock(ChaseClockActivation_t *cc)
 {
 	cc->last_run += (Time) 1000000;
-	schedule_absolute(cc->last_run, (Activation*) cc);
+	schedule_absolute(cc->last_run, (ActivationFuncPtr) update_chase_clock, cc);
 
 	cc->secs += 1;
 	update_time_vals(cc);

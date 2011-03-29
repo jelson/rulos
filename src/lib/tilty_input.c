@@ -117,7 +117,7 @@ void tia_display_leds(TiltyInputAct *tia
 
 void tilty_input_update(TiltyInputAct *tia)
 {
-	schedule_us(TI_SCAN_PERIOD, (Activation *) tia);
+	schedule_us(TI_SCAN_PERIOD, (ActivationFuncPtr) tilty_input_update, tia);
 #if DBG_CAT_ON
 	static char dbg_msg[200];
 	dbg_msg[0] = '\0';
@@ -241,8 +241,6 @@ void tilty_input_update(TiltyInputAct *tia)
 
 void tilty_input_init(TiltyInputAct *tia, Vect3D *accelValue, UIEventHandler *event_handler)
 {
-	tia->tilty_input_func_ptr = (ActivationFunc) tilty_input_update;
-
 	tia->accelValue = accelValue;
 	tia->event_handler = event_handler;
 
@@ -252,5 +250,5 @@ void tilty_input_init(TiltyInputAct *tia, Vect3D *accelValue, UIEventHandler *ev
 	tia->led_pattern = tia_led_black;
 	tia->led_anim_start = clock_time_us();
 
-	schedule_us(TI_SCAN_PERIOD, (Activation *) tia);
+	schedule_us(1, (ActivationFuncPtr) tilty_input_update, tia);
 }

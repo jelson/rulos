@@ -73,13 +73,11 @@ void syncdebug(uint8_t spaces, char f, uint16_t line)
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	Activation act;
 	uint8_t val;
 } BlinkAct;
 
-void _update_blink(Activation *act)
+void _update_blink(BlinkAct *ba)
 {
-	BlinkAct *ba = (BlinkAct *) act;
 	ba->val += 1;
 #if 0
 	gpio_set_or_clr(GPIO_D3, ((ba->val>>0)&0x1)==0);
@@ -88,18 +86,17 @@ void _update_blink(Activation *act)
 	if ((ba->val & 0xf)==0) {
 //		SYNCDEBUG();
 	}
-	schedule_us(100000, &ba->act);
+	schedule_us(100000, (ActivationFuncPtr) _update_blink, ba);
 }
 
 void blink_init(BlinkAct *ba)
 {
-	ba->act.func = _update_blink;
 	ba->val = 0;
 #if 0
 	gpio_make_output(GPIO_D3);
 	gpio_make_output(GPIO_D4);
 #endif // !SIM
-	schedule_us(100000, &ba->act);
+	schedule_us(100000, (ActivationFuncPtr) _update_blink, ba);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -118,23 +115,21 @@ typedef enum {
 } LMAMode;
 
 typedef struct {
-	Activation act;
 	LEDMatrixSingle lms;
 	LMSBitmap score_bitmap;
 	uint8_t star_index;
 	LMAMode mode;
 } LMAnimation;
 
-void _lma_update(Activation *act);
+void _lma_update(LMAnimation *lma);
 
 void lma_init(LMAnimation *lma)
 {
-	lma->act.func = _lma_update;
 	lma->star_index = 0;
 	memset(&lma->score_bitmap, 0, sizeof(lma->score_bitmap));
 	lma->mode = lma_black;
 	led_matrix_single_init(&lma->lms, TIMER2);
-	schedule_us(1000, &lma->act);
+	schedule_us(1000, (ActivationFuncPtr) _lma_update, lma);
 }
 
 void memor(uint8_t *dst, uint8_t *src, uint16_t len)
@@ -145,9 +140,8 @@ void memor(uint8_t *dst, uint8_t *src, uint16_t len)
 	}
 }
 
-void _lma_update(Activation *act)
+void _lma_update(LMAnimation *lma)
 {
-	LMAnimation *lma = (LMAnimation *) act;
 	LEDMatrixSingle *lms = &lma->lms;
 
 	switch (lma->mode)
@@ -182,7 +176,7 @@ void _lma_update(Activation *act)
 		break;
 	}
 
-	schedule_us(100000, &lma->act);
+	schedule_us(100000, (ActivationFuncPtr) _lma_update, lma);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -372,7 +366,6 @@ typedef struct {
 } FlashcardInjector;
 
 struct s_flashcard {
-	Activation act;
 	GLCD glcd;
 	InputPollerAct ipoll;
 	FlashcardInjector fi;
@@ -389,8 +382,8 @@ struct s_flashcard {
 };
 
 void _fl_new_problem(Flashcard *fl);
-void _flashcard_startup(Activation *act);
-void _flashcard_update(Activation *act);
+void _flashcard_startup(Flashcard *fl);
+void _flashcard_update(Flashcard *fl);
 void _flashcard_do_input(InputInjectorIfc *iii, char key);
 void _flashcard_draw(Flashcard *fl);
 uint8_t _fl_num_problems_left(Flashcard *fl);
@@ -407,15 +400,12 @@ void flashcard_init(Flashcard *fl)
 	fl->asking_reset = false;
 	fl->reset_answer = 0;
 
-	fl->act.func = _flashcard_startup;
-	glcd_init(&fl->glcd, &fl->act);
+	glcd_init(&fl->glcd, (ActivationFuncPtr) _flashcard_startup, fl);
 //SYNCDEBUG();
 }
 
-void _flashcard_startup(Activation *act)
+void _flashcard_startup(Flashcard *fl)
 {
-	Flashcard *fl = (Flashcard *) act;
-
 	r_bool valid;
 	if (fl->asking_reset)
 	{
@@ -473,8 +463,7 @@ void _flashcard_startup(Activation *act)
 
 	// Okay, we have a valid state, one way (eeprom) or another (initting it).
 	// reconfigure into run mode.
-	fl->act.func = _flashcard_update;
-	schedule_us(1, &fl->act);
+	schedule_us(1, (ActivationFuncPtr) _flashcard_update, fl);
 }
 
 void _flashcard_draw_score_bitmap(Flashcard *fl)
@@ -521,9 +510,8 @@ void _flashcard_draw_score_bitmap(Flashcard *fl)
 	}
 }
 
-void _flashcard_update(Activation *act)
+void _flashcard_update(Flashcard *fl)
 {
-	Flashcard *fl = (Flashcard *) act;
 	SYNCDEBUG();
 
 	fl->displaying_result = false;
@@ -686,7 +674,7 @@ void _flashcard_enter(Flashcard *fl)
 	fl->displaying_result = true;
 //	SYNCDEBUG();
 //	syncdebug(2, 'r', eeprom_read((uint8_t*) &fl->game, sizeof(fl->game)));
-	schedule_us(1000000, &fl->act);
+	schedule_us(1000000, (ActivationFuncPtr) _flashcard_update, fl);
 }
 
 void _flashcard_do_input(InputInjectorIfc *iii, char key)
@@ -698,7 +686,7 @@ void _flashcard_do_input(InputInjectorIfc *iii, char key)
 	if (fl->asking_reset)
 	{
 		fl->reset_answer = key;
-		schedule_us(1, &fl->act);
+		schedule_us(1, (ActivationFuncPtr) _flashcard_update, fl);
 		return;
 	}
 
@@ -747,24 +735,21 @@ void _flashcard_do_input(InputInjectorIfc *iii, char key)
 
 #if 0
 typedef struct {
-	Activation act;
 	uint16_t col;
 	uint8_t row;
 } LEDWalk;
 
-void ledwalk_update(Activation *act);
+void ledwalk_update(LEDWalk *lw);
 
 void ledwalk_init(LEDWalk *lw)
 {
-	lw->act.func = ledwalk_update;
 	lw->col = 1;
 	lw->row = 1;
-	schedule_us(50000, &lw->act);
+	schedule_us(50000, (ActivationFuncPtr) ledwalk_update, lw);
 }
 
-void ledwalk_update(Activation *act)
+void ledwalk_update(LEDWalk *lw)
 {
-	LEDWalk *lw = (LEDWalk *)act;
 	if (lw->col==0x8000)
 	{
 		if (lw->row==0x80)
@@ -784,7 +769,7 @@ void ledwalk_update(Activation *act)
 		lw->col = lw->col << 1;
 		_lms_configure_col(lw->col);
 	}
-	schedule_us(50000, &lw->act);
+	schedule_us(50000, (ActivationFuncPtr) ledwalk_update, lw);
 }
 
 
@@ -848,27 +833,24 @@ void _ledpoke_handler(InputInjectorIfc *iii, char key)
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	Activation act;
 	SerialConsole console;
 	Flashcard *fl;
 	uint8_t rowdata;
 	uint16_t coldata;
 } Shell;
 
-void shell_func(Activation *act);
+void shell_func(Shell *shell);
 
 void shell_init(Shell *shell, Flashcard *fl)
 {
-	shell->act.func = shell_func;
 	shell->fl = fl;
-	serial_console_init(&shell->console, &shell->act);
+	serial_console_init(&shell->console, (ActivationFuncPtr) shell_func, shell);
 	g_console = &shell->console;
 	SYNCDEBUG();
 }
 
-void shell_func(Activation *act)
+void shell_func(Shell *shell)
 {
-	Shell *shell = (Shell *) act;
 	char *line = shell->console.line;
 
 #if !SIM

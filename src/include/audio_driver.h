@@ -39,8 +39,6 @@ typedef struct s_audio_stream {
 } AudioStream;
 
 typedef struct s_audio_driver {
-	ActivationFunc func;
-
 	// Streams tell what addresses to fetch, and carry ring buffers to
 	// hold fetched data for compositing
 	AudioStream stream[NUM_STREAMS];

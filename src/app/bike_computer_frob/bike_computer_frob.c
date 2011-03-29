@@ -92,19 +92,16 @@ void syncdebug(uint8_t spaces, char f, uint16_t line)
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	Activation act;
 	uint8_t val;
 	Time period;
 	uint32_t revs_remaining;
 } BlinkAct;
 
-void _update_blink(Activation *act)
+void _update_blink(BlinkAct *ba)
 {
-	BlinkAct *ba = (BlinkAct *) act;
-
 	if (ba->revs_remaining>0)
 	{
-		schedule_us(ba->period, &ba->act);
+		schedule_us(ba->period, (ActivationFuncPtr) _update_blink, ba);
 	}
 
 	ba->val += 1;
@@ -119,7 +116,6 @@ void _update_blink(Activation *act)
 
 void blink_init(BlinkAct *ba)
 {
-	ba->act.func = _update_blink;
 	ba->val = 0;
 	ba->period = REV_HALF_PERIOD;
 	ba->revs_remaining = RUN_REVS;
@@ -135,23 +131,21 @@ void blink_init(BlinkAct *ba)
 	gpio_make_output(GPIO_C7);
 #endif // !SIM
 
-	schedule_us(100000, &ba->act);
+	schedule_us(100000, (ActivationFuncPtr) _update_blink, ba);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 typedef struct {
-	Activation act;
 	SerialConsole console;
 	BlinkAct ba;
 } Shell;
 
-void shell_func(Activation *act);
+void shell_func(Shell *shell);
 void print_func(Shell *shell);
 
 void shell_init(Shell *shell)
 {
-	shell->act.func = shell_func;
-	serial_console_init(&shell->console, &shell->act);
+	serial_console_init(&shell->console, (ActivationFuncPtr) shell_func, shell);
 	g_console = &shell->console;
 	print_func(shell);
 	blink_init(&shell->ba);
@@ -178,9 +172,8 @@ void print_func(Shell *shell)
 	print32(REV_HALF_PERIOD);
 }
 
-void shell_func(Activation *act)
+void shell_func(Shell *shell)
 {
-	Shell *shell = (Shell *) act;
 	char *line = shell->console.line;
 
 	if (strncmp(line, "per ", 4)==0)

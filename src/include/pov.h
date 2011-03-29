@@ -33,8 +33,6 @@
 #define POVLEDE	GPIO_B0
 
 typedef struct {
-	ActivationFunc pov_display_func_ptr;
-
 	// written by measurement func; read by display func
 	r_bool last_wave_positive;
 	Time lastPhase;

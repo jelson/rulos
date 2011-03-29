@@ -224,7 +224,6 @@ void servo_set_pwm(ServoAct *servo, uint16_t desired_position, uint8_t push_stat
  */
 
 typedef struct s_quadrature {
-	ActivationFunc func;
 	uint16_t threshhold;
 	uint8_t oldState;
 	int16_t position;
@@ -235,11 +234,10 @@ static void quadrature_handler(Quadrature *quad);
 
 void init_quadrature(Quadrature *quad)
 {
-	quad->func = (ActivationFunc) quadrature_handler;
 	quad->threshhold = 400;
 	quad->oldState = 0;
 	quad->position = 0;
-	schedule_us(1, (Activation*) quad);
+	schedule_us(1, (ActivationFuncPtr) quadrature_handler, quad);
 }
 
 #define XX	0	/* invalid transition */
@@ -264,7 +262,7 @@ static int8_t quad_state_machine[16] = {
 	
 static void quadrature_handler(Quadrature *quad)
 {
-	schedule_us(QUADRATURE_PERIOD, (Activation*) quad);
+	schedule_us(QUADRATURE_PERIOD, (ActivationFuncPtr) quadrature_handler, quad);
 
 	r_bool c0 = hal_read_adc(OPT0_ADC_CHANNEL) > quad->threshhold;
 	r_bool c1 = hal_read_adc(OPT1_ADC_CHANNEL) > quad->threshhold;
@@ -364,7 +362,6 @@ typedef enum {
 } ControlMode;
 
 typedef struct s_control_act {
-	ActivationFunc func;
 	ControlMode mode;
 	Quadrature quad;
 	Config config;
@@ -402,7 +399,6 @@ void init_control(ControlAct *ctl)
 	gpio_set(LED1);
 	gpio_set(LED2);
 
-	ctl->func = (ActivationFunc) control_update;
 	init_quadrature(&ctl->quad);
 	r_bool valid = init_config(&ctl->config);
 	if (valid)
@@ -424,7 +420,7 @@ void init_control(ControlAct *ctl)
 	ctl->pan_pos = 0x8fff;
 	ctl->last_movement_time = 0;
 	ctl->last_position = 0;
-	schedule_us(100, (Activation*) ctl);
+	schedule_us(100, (ActivationFuncPtr) control_update, ctl);
 }
 
 #if USE_POT
@@ -491,7 +487,7 @@ static uint8_t control_run_mode(ControlAct *ctl)
 
 static void control_update(ControlAct *ctl)
 {
-	schedule_us(100, (Activation*) ctl);
+	schedule_us(100, (ActivationFuncPtr) control_update, ctl);
 
 	if (clock_time_us() - ctl->lastPanTime > PAN_PERIOD)
 	{
@@ -626,7 +622,6 @@ static UIEventDisposition control_handler(
 /****************************************************************************/
 
 typedef struct s_btn_act {
-	ActivationFunc func;
 	r_bool lastState;
 	Time lastStateTime;
 	UIEventHandler *handler;
@@ -636,19 +631,19 @@ static void button_update(ButtonAct *button);
 
 void init_button(ButtonAct *button, UIEventHandler *handler)
 {
-	button->func = (ActivationFunc) button_update;
+
 	button->lastState = FALSE;
 	button->lastStateTime = clock_time_us();
 	button->handler = handler;
 
 	gpio_make_input(SET_BTN);
 
-	schedule_us(1, (Activation*) button);
+	schedule_us(1, (ActivationFuncPtr) button_update, button);
 }
 
 void button_update(ButtonAct *button)
 {
-	schedule_us(BUTTON_SCAN_PERIOD, (Activation*) button);
+	schedule_us(BUTTON_SCAN_PERIOD, (ActivationFuncPtr) button_update, button);
 
 	r_bool buttondown = READ_BUTTON(SET_BTN);
 
@@ -672,13 +667,12 @@ void button_update(ButtonAct *button)
 /****************************************************************************/
 
 typedef struct s_blink_act {
-	ActivationFunc func;
 	r_bool state;
 } BlinkAct;
 
 void blink_update(BlinkAct *act)
 {
-	schedule_us(((Time)1)<<18, (Activation*) act);
+	schedule_us(((Time)1)<<18, (ActivationFuncPtr) blink_update, act);
 
 	act->state = !act->state;
 	gpio_set_or_clr(LED0, act->state);
@@ -686,11 +680,10 @@ void blink_update(BlinkAct *act)
 
 void init_blink(BlinkAct *act)
 {
-	act->func = (ActivationFunc) blink_update;
 	act->state = TRUE;
 	gpio_make_output(LED0);
 
-	schedule_us(((Time)1)<<18, (Activation*) act);
+	schedule_us(((Time)1)<<18, (ActivationFuncPtr) blink_update, act);
 }
 
 /****************************************************************************/

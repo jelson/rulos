@@ -49,7 +49,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-void glcd_complete_init(Activation *act);
+void glcd_complete_init(GLCD *glcd);
 
 //////////////////////////////////////////////////////////////////////////////
 // kudos for reference code from:
@@ -208,9 +208,10 @@ static void glcd_write_data(uint8_t data, uint8_t unit)
 	glcd_write(data, unit, 1);
 }
 
-void glcd_init(GLCD *glcd, Activation *done_act)
+void glcd_init(GLCD *glcd, ActivationFuncPtr done_func, void *done_data)
 {
-	glcd->done_act = done_act;
+	glcd->done_act.func = done_func;
+	glcd->done_act.data = done_data;
 
 	// set up fixed I/O pins
 	glcd_set_bus_dir(GLCD_WRITE);
@@ -224,14 +225,12 @@ void glcd_init(GLCD *glcd, Activation *done_act)
 	gpio_clr(GLCD_RESET);
 
 	// let rest of system run during 10ms delay
-	glcd->act.func = glcd_complete_init;
-	schedule_us(10000, &glcd->act);
+	schedule_us(10000, (ActivationFuncPtr) glcd_complete_init, glcd);
 }
 
-void glcd_complete_init(Activation *act)
+void glcd_complete_init(GLCD *glcd)
 {
 	// complete hardware reset
-	GLCD *glcd = (GLCD*) act;
 	gpio_set(GLCD_RESET);
 
 	// request software reset
@@ -288,9 +287,9 @@ void glcd_complete_init(Activation *act)
 	}
 #endif
 
-	if (glcd->done_act!=NULL)
+	if (glcd->done_act.func != NULL)
 	{
-		schedule_now(glcd->done_act);
+		schedule_now(glcd->done_act.func, glcd->done_act.data);
 	}
 }
 

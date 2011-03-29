@@ -137,6 +137,18 @@ BoardLayout chaseclock_tree_def[] = {
 	B_END
 }, *chaseclock_tree = chaseclock_tree_def;
 
+BoardLayout default_tree_def[] = {
+	{ "board0", {PG PG PG PG PG PG PG PG }, 15, 0 },
+	{ "board1", {PG PG PG PG PG PG PG PG }, 15, 4 },
+	{ "board2", {PG PG PG PG PG PG PG PG }, 15, 8 },
+	{ "board3", {PG PG PG PG PG PG PG PG }, 15, 12 },
+	{ "board4", {PG PG PG PG PG PG PG PG }, 15, 16 },
+	{ "board5", {PG PG PG PG PG PG PG PG }, 15, 20 },
+	{ "board6", {PG PG PG PG PG PG PG PG }, 15, 24 },
+	{ "board7", {PG PG PG PG PG PG PG PG }, 15, 28 },
+	B_END
+}, *default_tree = default_tree_def;
+
 BoardLayout *g_sim_theTree = NULL;
 
 void sim_configure_tree(BoardLayout *tree)
@@ -525,7 +537,8 @@ void hal_init_rocketpanel(BoardConfiguration bc)
 			sim_configure_tree(chaseclock_tree);
 			break;
 		default:
-			assert(FALSE);	// configuration not defined in simulator
+			sim_configure_tree(default_tree);
+			break;
 	}
 
 	/* init input buffers */

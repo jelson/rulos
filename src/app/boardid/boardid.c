@@ -25,7 +25,6 @@
 /************************************************************************************/
 
 typedef struct {
-	ActivationFunc f;
 	int stage;
 	BoardBuffer b[8];
 	SSBitmap b_bitmap, d_bitmap;
@@ -69,7 +68,7 @@ static void update(BoardIDAct_t *ba)
 	if (++(ba->stage) == 12)
 		ba->stage = 0;
 
-	schedule_us(1000000, (Activation *)ba);
+	schedule_us(1000000, (ActivationFuncPtr) update, ba);
 	return;
 }
 
@@ -77,12 +76,11 @@ static void update(BoardIDAct_t *ba)
 int main()
 {
 	hal_init();
-	hal_init_rocketpanel(bc_wallclock);
+	hal_init_rocketpanel(-1);
 	init_clock(100000, TIMER1);
 	board_buffer_module_init();
 
 	BoardIDAct_t ba;
-	ba.f = (ActivationFunc) update;
 	ba.stage = 0;
 	ba.b_bitmap = ascii_to_bitmap('b');
 	ba.d_bitmap = ascii_to_bitmap('d');
@@ -93,7 +91,7 @@ int main()
 		board_buffer_push(&ba.b[board], board);
 	}
 
-	schedule_now((Activation *) &ba);
+	schedule_us(1, (ActivationFuncPtr) update, &ba);
 
 	//	KeyTestActivation_t kta;
 	//	display_keytest_init(&kta, 7);

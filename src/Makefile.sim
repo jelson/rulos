@@ -17,6 +17,7 @@ SIM_ONLY_OBJECTS +=  \
 	uart.o \
 	sim_6matrix.o \
 	sim_rocketpanel.o \
+	sim_glcd.o \
 	sim.o
 
 BSS_CANARY_OBJECT := bss_canary.o

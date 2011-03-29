@@ -228,7 +228,7 @@ void uart_assert(uint16_t lineNum)
 	buf[8] = 0;
 
 	cli();
-	uart_sync_send(buf, sizeof(buf));
+	hal_uart_sync_send(buf, sizeof(buf));
 }
 
 #endif

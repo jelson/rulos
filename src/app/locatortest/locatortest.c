@@ -25,6 +25,7 @@ typedef struct locatorAct locatorAct_t;
 
 typedef void (*PeripheralSendCompleteFunc)(locatorAct_t *aa);
 typedef void (*PeripheralRecvCompleteFunc)(locatorAct_t *aa, char *data, int len);
+void sampleLocator(locatorAct_t *locatorAct);
 
 #ifndef NO_ULTRASOUND
 static inline void chirp(uint16_t chirpLenUS);
@@ -40,8 +41,6 @@ typedef struct {
 #define US_BOT 1
 
 struct locatorAct {
-	ActivationFunc f;
-
 	// uart
 	UartState_t uart;
 	char UARTsendBuf[80];
@@ -439,7 +438,7 @@ void configLocator4(locatorAct_t *locatorAct)
 	wait_for_serial(locatorAct);
 	emit(locatorAct, "^m;Initialization complete\n\r");
 
-	schedule_us(1, (Activation *) locatorAct);
+	schedule_us(1, (ActivationFuncPtr) sampleLocator, locatorAct);
 }
 
 
@@ -606,7 +605,7 @@ void process_serial_command(locatorAct_t *locatorAct, char cmd)
 void sampleLocator(locatorAct_t *locatorAct)
 {
 	// schedule reading of the next sample
-	schedule_us(SAMPLING_PERIOD, (Activation *) locatorAct);
+	schedule_us(SAMPLING_PERIOD, (ActivationFuncPtr) sampleLocator, locatorAct);
 
 	// set debug leds
 	if (locatorAct->rangingMode == 'r') {
@@ -686,7 +685,6 @@ int main()
 	init_clock(SCHED_QUANTUM, TIMER1);
 
 	memset(&locatorAct_g, 0, sizeof(locatorAct_g));
-	locatorAct_g.f = (ActivationFunc) sampleLocator;
 	locatorAct_g.twiState = hal_twi_init(100, 0, NULL);
 	uart_init(&locatorAct_g.uart, 250000, 1);
 

@@ -50,8 +50,6 @@ typedef enum {
 } TiltyLEDPattern;
 
 typedef struct {
-	ActivationFunc tilty_input_func_ptr;
-
 	Vect3D *accelValue;
 	UIEventHandler *event_handler;
 

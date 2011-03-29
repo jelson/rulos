@@ -177,7 +177,7 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 	memcpy(rs->msg, msg, len);
 	mrs->occupied_len = 0; // do this now in case the callback is slow
 #ifdef DEBUG_STACK_WITH_UART
-	hal_uart_sync_send("P", 1);
+	hal_uart_sync_send("CP", 2);
 #endif
 	(rs->func)(rs, payload_len);
 #ifdef DEBUG_STACK_WITH_UART

@@ -57,11 +57,6 @@ BooRec boos[] = {
 BooRec *booPtr = boos;
 BoardBuffer bbuf;
 
-typedef struct {
-	ActivationFunc func;
-} BooAct;
-BooAct booAct;
-
 void boofunc(void *f)
 {
 	booPtr += 1;
@@ -69,7 +64,7 @@ void boofunc(void *f)
 	memset(bbuf.buffer, 0, 8);
 	ascii_to_bitmap_str(bbuf.buffer, 8, booPtr->msg);
 	LOGF((logfp, "msg: %s", booPtr->msg));
-	schedule_us(booPtr->time, (Activation*) &booAct);
+	schedule_us(booPtr->time, (ActivationFuncPtr) boofunc, NULL);
 	board_buffer_draw(&bbuf);
 }
 
@@ -100,8 +95,7 @@ int main()
 
 	board_buffer_init(&bbuf);
 	board_buffer_push(&bbuf, 0);
-	booAct.func = (ActivationFunc) boofunc;
-	schedule_us(1, (Activation*) &booAct);
+	schedule_us(1, boofunc, NULL);
 
 	DRTCAct dr;
 	drtc_init(&dr, 1, clock_time_us()+20000000);
