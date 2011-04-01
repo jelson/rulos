@@ -63,7 +63,7 @@ r_bool ac_queue_loop_clip(AudioClient *ac, uint8_t stream_idx, SoundToken loop_t
 	ac->sendSlot.msg->payload_len = sizeof(AudioRequestMessage);
 	AudioRequestMessage *arm = (AudioRequestMessage *) &ac->sendSlot.msg->data;
 	arm->skip = FALSE;
-	arm->skip_cmd.token = -1;
+	arm->skip_cmd.token = (SoundToken) -1;
 	arm->loop_cmd.token = loop_token;
 	net_send_message(ac->network, &ac->sendSlot);
 

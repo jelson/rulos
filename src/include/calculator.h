@@ -29,7 +29,7 @@ typedef struct s_calculator {
 	BoardBuffer bbuf[2];
 	BoardBuffer *btable[2];
 	NumericInputAct operands[2];
-	Knob operator;
+	Knob op;
 	NumericInputAct result;
 	FocusManager focus;
 

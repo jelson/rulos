@@ -22,6 +22,13 @@
 #include "drift_anim.h"
 #include "calculator_decoration.h"
 
+struct s_d_aer;
+
+typedef struct s_decoration_ifc {
+	FetchCalcDecorationValuesFunc func;
+	struct s_d_aer *daer;
+} decoration_ifc_t;
+
 typedef struct s_d_aer {
 	BoardBuffer bbuf;
 	DriftAnim azimuth;
@@ -29,11 +36,7 @@ typedef struct s_d_aer {
 	DriftAnim roll;
 	Time impulse_frequency_us;
 	Time last_impulse;
-
-	struct s_decoration_ifc {
-		FetchCalcDecorationValuesFunc func;
-		struct s_d_aer *daer;
-	} decoration_ifc;
+	decoration_ifc_t decoration_ifc;
 } DAER;
 
 void daer_init(DAER *daer, uint8_t board, Time impulse_frequency_us);

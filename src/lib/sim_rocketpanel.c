@@ -38,8 +38,6 @@
 r_bool g_joystick_trigger_state;
 UartHandler *g_sim_uart_handler = NULL;
 
-void start_audio_fork_shuttling_child();
-void audio_shuttling_child(int audiofd, int flowfd);
 
 /*
    __
@@ -66,7 +64,7 @@ static WINDOW *mainwnd;
 struct segment_def_s {
   int xoff;
   int yoff;
-  char *s;
+  const char *s;
 } segment_defs[] =  {
   { 1, 0, "__" },
   { 3, 1, "|" },
@@ -597,6 +595,9 @@ void setnonblock(int fd)
 	rc = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 	assert(rc==0);
 }
+
+void start_audio_fork_shuttling_child(SimAudioState *sas);
+void audio_shuttling_child(int audiofd, int flowfd);
 
 void hal_audio_init()
 {

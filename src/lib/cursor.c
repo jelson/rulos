@@ -123,7 +123,7 @@ void cursor_update(void *data)
 	schedule_us(Exp2Time(BLINK2), cursor_update, data);
 }
 
-void cursor_set_label(CursorAct *act, char *label)
+void cursor_set_label(CursorAct *act, const char *label)
 {
 	act->label = label;
 	cursor_update_once(act);

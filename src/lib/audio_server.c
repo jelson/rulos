@@ -215,7 +215,7 @@ void aserv_recv_mcm(RecvSlot *recvSlot, uint8_t payload_len)
 		syncdebug(0, 'n', aserv->num_music_tokens);
 		// and start it playin'
 		SoundCmd music_cmd;
-		music_cmd.token = aserv->cur_music_token + aserv->music_token_offset;
+		music_cmd.token = (SoundToken) (aserv->cur_music_token + aserv->music_token_offset);
 		SoundCmd silence_cmd;
 		silence_cmd.token = sound_silence;
 		_aserv_skip_to_clip(aserv, music_cmd, silence_cmd);

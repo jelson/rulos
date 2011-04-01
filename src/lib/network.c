@@ -109,7 +109,11 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 {
 	Network *net = (Network *) mrs->user_data;
 	Message *msg = (Message *) mrs->data;
-
+	uint8_t incoming_checksum;
+	uint8_t slotIdx;
+	uint8_t payload_len;
+	RecvSlot *rs;
+	
 	// make sure it's at least as long as we're expecting
 	if (len < sizeof(Message))
 	{
@@ -121,7 +125,7 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 	}
 
 	// make sure the checksum matches
-	uint8_t incoming_checksum = msg->checksum;
+	incoming_checksum = msg->checksum;
 	msg->checksum = 0;
 
 	if (net_compute_checksum((char *) msg, len) != incoming_checksum)
@@ -135,7 +139,7 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 	}
 
 	// find the receive slot, if any 
-	uint8_t slotIdx = net_find_receive_slot(net, msg->dest_port);
+	slotIdx = net_find_receive_slot(net, msg->dest_port);
 
 	if (slotIdx == SLOT_NONE)
 	{
@@ -147,7 +151,7 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 		goto done;
 	}
 
-	RecvSlot *rs = net->recvSlots[slotIdx];
+	rs = net->recvSlots[slotIdx];
 
 	// if slot is occupied, drop
 	if (rs->msg_occupied)
@@ -160,7 +164,7 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 		goto done;
 	}
 
-	uint8_t payload_len = len - sizeof(Message);
+	payload_len = len - sizeof(Message);
 
 	// make sure slot has enough space
 	if (rs->payload_capacity < payload_len)

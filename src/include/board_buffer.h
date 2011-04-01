@@ -42,8 +42,6 @@ typedef struct s_board_buffer {
 #define NUM_AUX_BOARDS 4
 #define NUM_PSEUDO_BOARDS (NUM_BOARDS + NUM_AUX_BOARDS)
 
-BoardBuffer *foreground[NUM_PSEUDO_BOARDS];
-
 void board_buffer_module_init();
 struct s_remote_bbuf_send;
 void install_remote_bbuf_send(struct s_remote_bbuf_send *rbs);

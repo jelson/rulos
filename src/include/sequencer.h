@@ -46,7 +46,8 @@
 #include "audio_server.h"
 
 typedef enum {
-	launch_state_hidden,
+	launch_state_init=-1,
+	launch_state_hidden=0,
 	launch_state_enter_code,
 	launch_state_wrong_code,
 	launch_state_countdown,

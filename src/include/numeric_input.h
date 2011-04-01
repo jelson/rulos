@@ -41,11 +41,11 @@ typedef struct s_numeric_input_act {
 	DecimalFloatingPoint cur_value;
 	uint8_t decimal_present;
 	UIEventHandler *notify;
-	char *msg;
+	const char *msg;
 } NumericInputAct;
 
-void numeric_input_init(NumericInputAct *act, RowRegion region, UIEventHandler *notify, FocusManager *fa, char *label);
+void numeric_input_init(NumericInputAct *act, RowRegion region, UIEventHandler *notify, FocusManager *fa, const char *label);
 void numeric_input_set_value(NumericInputAct *act, DecimalFloatingPoint new_value);
-void numeric_input_set_msg(NumericInputAct *act, char *msg);
+void numeric_input_set_msg(NumericInputAct *act, const char *msg);
 
 #endif // numeric_input_h

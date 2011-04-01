@@ -26,7 +26,7 @@ enum {
 	op_mul = 2,
 	op_div = 3
 	};
-char *operator_strs[] = {
+const char *operator_strs[] = {
 	"add", "sub", "mul", "div" };
 
 UIEventDisposition calculator_notify(UIEventHandler *notify, UIEvent evt);
@@ -59,7 +59,7 @@ void calculator_init(
 	RowRegion region1 = { &calc->bbuf[0], 4, 4 };
 	numeric_input_init(&calc->operands[1], region1, (UIEventHandler*) calc, &calc->focus, "o2");
 	RowRegion region2 = { &calc->bbuf[1], 0, 4 };
-	knob_init(&calc->operator, region2, operator_strs, 4, (UIEventHandler*) calc, &calc->focus, "op");
+	knob_init(&calc->op, region2, operator_strs, 4, (UIEventHandler*) calc, &calc->focus, "op");
 	RowRegion region3 = { &calc->bbuf[1], 4, 4 };
 	numeric_input_init(&calc->result, region3, NULL /*unfocusable*/, NULL /* no notify */, NULL /* label */);
 
@@ -67,7 +67,7 @@ void calculator_init(
 	DecimalFloatingPoint op1 = { 659, 2 };
 	numeric_input_set_value(&calc->operands[0], op0);
 	numeric_input_set_value(&calc->operands[1], op1);
-	knob_set_value(&calc->operator, op_div);
+	knob_set_value(&calc->op, op_div);
 	calculator_notify((UIEventHandler*) calc, evt_notify);
 
 	calc->decorationTimeout.last_activity = clock_time_us();
@@ -75,9 +75,9 @@ void calculator_init(
 	schedule_us(1, (ActivationFuncPtr) calculator_timeout_func, calc);
 }
 
-char *err_overflow = "Ovrf";
-char *err_divzero = "div0";
-char *err_negative = "Neg ";
+const char *err_overflow = "Ovrf";
+const char *err_divzero = "div0";
+const char *err_negative = "Neg ";
 
 UIEventDisposition calculator_notify(UIEventHandler *notify, UIEvent evt)
 {
@@ -93,13 +93,13 @@ UIEventDisposition calculator_notify_internal(Calculator *calc, UIEvent evt)
 {
 	assert(evt==evt_notify);
 	DecimalFloatingPoint out;
-	char *error = NULL;
+	const char *error = NULL;
 	DecimalFloatingPoint op0 = calc->operands[0].cur_value;
 	DecimalFloatingPoint op1 = calc->operands[1].cur_value;
 //	LOGF((logfp, "start  op0 %3de%d o1 %3de%d\n",
 //		op0.mantissa, op0.neg_exponent, op1.mantissa, op1.neg_exponent));
 	uint32_t mantissa = 0;
-	switch (calc->operator.selected)
+	switch (calc->op.selected)
 	{
 		case op_mul:
 		{
@@ -167,7 +167,7 @@ UIEventDisposition calculator_notify_internal(Calculator *calc, UIEvent evt)
 				m1 = tmp;
 			}
 			// now operate
-			switch (calc->operator.selected)
+			switch (calc->op.selected)
 			{
 				case op_add:
 					mantissa = m0 + m1;

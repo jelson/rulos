@@ -21,6 +21,8 @@
 
 #define BBUF_UNMAPPED_INDEX (0xff)
 
+BoardBuffer *foreground[NUM_PSEUDO_BOARDS];
+
 #if BBDEBUG && SIM
 void dump(char *prefix)
 {

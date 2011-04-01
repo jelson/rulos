@@ -67,11 +67,11 @@ void init_hpam(HPAM *hpam, uint8_t board0, ThrusterUpdate *thrusterUpdates)
 	board_buffer_set_alpha(&hpam->bbuf, 0x88);	// hard-code hpam digits 0,4
 	board_buffer_push(&hpam->bbuf, board0);
 
-	HPAMIndex idx;
+	int idx;
 	for (idx = 0; idx<hpam_end; idx++)
 	{
-		hpam_set_port(hpam, idx, TRUE);	// force a state change
-		hpam_set_port(hpam, idx, FALSE);
+		hpam_set_port(hpam, (HPAMIndex) idx, TRUE);	// force a state change
+		hpam_set_port(hpam, (HPAMIndex) idx, FALSE);
 	}
 
 	schedule_us(1, (ActivationFuncPtr) hpam_update, hpam);
@@ -82,7 +82,7 @@ void hpam_update(HPAM *hpam)
 	schedule_us(1000000, (ActivationFuncPtr) hpam_update, hpam);
 
 	// check that no valve stays open more than max_time.
-	HPAMIndex idx;
+	int idx;
 	for (idx = 0; idx<hpam_end; idx++)
 	{
 		HPAMPort *port = &hpam->hpam_ports[idx];
@@ -91,7 +91,7 @@ void hpam_update(HPAM *hpam)
 			&& port->rest_time_secs > 0
 			&& later_than(clock_time_us(), port->expire_time))
 		{
-			hpam_set_port(hpam, idx, FALSE);
+			hpam_set_port(hpam, (HPAMIndex) idx, FALSE);
 
 			port->resting = TRUE;
 			// 33% duty cycle: rest expires two timeouts from now

@@ -23,7 +23,7 @@
 void dscrlmsg_update(DScrollMsgAct *act);
 
 void dscrlmsg_init(DScrollMsgAct *act,
-	uint8_t board, char *msg, uint8_t speed_ms)
+	uint8_t board, const char *msg, uint8_t speed_ms)
 {
 	board_buffer_init(&act->bbuf DBG_BBUF_LABEL("scrlmsg"));
 	board_buffer_push(&act->bbuf, board);
@@ -74,7 +74,7 @@ void dscrlmsg_update(DScrollMsgAct *act)
 	dscrlmsg_update_once(act);
 }
 
-void dscrlmsg_set_msg(DScrollMsgAct *act, char *msg)
+void dscrlmsg_set_msg(DScrollMsgAct *act, const char *msg)
 {
 	act->msg = msg;
 	act->len = strlen(act->msg);

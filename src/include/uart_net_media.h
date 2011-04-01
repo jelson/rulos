@@ -37,13 +37,13 @@ typedef struct {
 	struct s_UartMedia *uart_media;
 } UartMediaPtr;
 
-enum {
+typedef enum {
 	US_none = 17,
 	US_preamble,
 	US_packet
 } UartMedia_SendState;
 
-enum {
+typedef enum {
 	UR_sync0,
 	UR_sync1,
 	UR_addr,

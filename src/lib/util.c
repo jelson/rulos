@@ -56,7 +56,7 @@ int int_div_with_correct_truncation(int a, int b)
 	}
 }
 
-char hexmap[16] = "0123456789ABCDEF";
+const char hexmap[] = "0123456789ABCDEF";
 
 void debug_itoha(char *out, uint16_t i)
 {

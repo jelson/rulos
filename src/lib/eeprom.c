@@ -30,7 +30,7 @@
 #define SYNCDEBUG()	syncdebug(0, 'E', __LINE__)
 void syncdebug(uint8_t spaces, char f, uint16_t line);
 
-const void *EEPROM_BASE = (void*) 4;
+const char *EEPROM_BASE = (const char *) 4;
 const uint16_t EEPROM_MAGIC = (0xee10);
 
 uint16_t _eeprom_checksum(uint8_t *buf, int len)

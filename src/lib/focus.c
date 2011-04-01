@@ -29,7 +29,7 @@ void focus_init(FocusManager *act)
 	act->children_size = 0;
 }
 
-void focus_register(FocusManager *act, UIEventHandler *handler, RectRegion rr, char *label)
+void focus_register(FocusManager *act, UIEventHandler *handler, RectRegion rr, const char *label)
 {
 	uint8_t idx = act->children_size;
 	assert(idx<NUM_CHILDREN);

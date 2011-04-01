@@ -18,7 +18,7 @@
 #define _SIM_H
 
 typedef struct s_board_layout {
-	char *label;
+	const char *label;
 	short colors[8];
 	short x, y;
 } BoardLayout;

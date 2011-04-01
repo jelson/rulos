@@ -31,6 +31,7 @@ SIM_CFLAGS = -Wall -Werror -g -DSIM -I$(ROCKET_ROOT)/include -I$(SIM_OBJDIR)
 SIM_CFLAGS += -MD -MP -MT $(SIM_OBJDIR)/$(*F).o -MF $(SIM_OBJDIR)/$(@F).d
 
 SIM_LDFLAGS = -L$(SIM_OBJDIR) -l$(SIM_LIBNAME) -lm `pkg-config --libs gtk+-2.0`
+SIM_GCC := g++
 
 ############
 
@@ -42,21 +43,21 @@ SIM_TARGET_OBJECTS := $(patsubst %.o,$(SIM_OBJDIR)/%.o, \
 
 # For lib objects
 $(SIM_OBJDIR)/sim_6matrix.o: $(ROCKET_ROOT)/lib/sim_6matrix.c
-	gcc $(SIM_CFLAGS) `pkg-config --cflags gtk+-2.0` -c $< -o $@
+	$(SIM_GCC) $(SIM_CFLAGS) `pkg-config --cflags gtk+-2.0` -c $< -o $@
 
 $(SIM_OBJDIR)/%.o: $(ROCKET_ROOT)/lib/%.c
-	gcc $(SIM_CFLAGS) -c $< -o $@
+	$(SIM_GCC) $(SIM_CFLAGS) -c $< -o $@
 
 # For local app objects
 $(SIM_OBJDIR)/%.o: %.c
-	gcc $(SIM_CFLAGS) -c $< -o $@
+	$(SIM_GCC) $(SIM_CFLAGS) -c $< -o $@
 
 $(SIM_LIB_FILE): $(SIM_LIB_OBJECTS)
 	rm -f $@
 	ar r $@ $(SIM_LIB_OBJECTS)
 
 $(TARGET)sim: $(SIM_LIB_FILE) $(SIM_TARGET_OBJECTS)
-	gcc $(SIM_TARGET_OBJECTS) $(SIM_LDFLAGS) -o $@ -lncurses
+	$(SIM_GCC) $(SIM_TARGET_OBJECTS) $(SIM_LDFLAGS) -o $@ -lncurses
 
 sim-all: $(TARGET)sim
 

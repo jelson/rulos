@@ -41,43 +41,44 @@ typedef struct s_control_child {
 
 typedef struct {
 	UIEventHandler *uie_handler;
-	char *name;
+	const char *name;
 	RemoteKeyboardSend rks;
 	RemoteUIE ruie;
 } CCRemoteCalc;
 
 typedef struct {
 	UIEventHandler *uie_handler;
-	char *name;
+	const char *name;
 	Launch launch;
 } CCLaunch;
 
 typedef struct {
 	UIEventHandler *uie_handler;
-	char *name;
+	const char *name;
 	DDockAct dock;
 } CCDock;
 
 typedef struct {
 	UIEventHandler *uie_handler;
-	char *name;
+	const char *name;
 	Pong pong;
 } CCPong;
 
 typedef struct {
 	UIEventHandler *uie_handler;
-	char *name;
+	const char *name;
 	Disco disco;
 } CCDisco;
+
+typedef struct s_direct_injector {
+	InputInjectorFunc injector_func;
+	struct s_control_panel *cp;
+} direct_injector_t;
 
 typedef struct s_control_panel {
 	UIEventHandlerFunc handler_func;
 	Screen4 s4;
-
-	struct s_direct_injector {
-		InputInjectorFunc injector_func;
-		struct s_control_panel *cp;
-	} direct_injector;
+	direct_injector_t direct_injector;
 	
 	ControlChild *children[CONTROL_PANEL_NUM_CHILDREN];
 	uint8_t child_count;

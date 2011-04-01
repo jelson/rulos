@@ -43,7 +43,7 @@
 
 typedef struct {
 	Time time;
-	char *msg;
+	const char *msg;
 } BooRec;
 BooRec boos[] = {
 	{ 5000000, "" },

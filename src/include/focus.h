@@ -24,7 +24,7 @@
 struct s_focus_handler;
 typedef uint8_t UIEvent;
 
-enum {
+typedef enum {
 	uie_focus = 0x81,
 	uie_select = 'c',
 	uie_escape = 'd',
@@ -53,7 +53,7 @@ struct s_focus_act;
 typedef struct {
 	RectRegion rr;
 	UIEventHandler *handler;
-	char *label;
+	const char *label;
 } FocusChild;
 #define NUM_CHILDREN 8
 
@@ -67,7 +67,7 @@ typedef struct s_focus_act {
 } FocusManager;
 
 void focus_init(FocusManager *act);
-void focus_register(FocusManager *act, UIEventHandler *handler, RectRegion rr, char *label);
+void focus_register(FocusManager *act, UIEventHandler *handler, RectRegion rr, const char *label);
 r_bool focus_is_active(FocusManager *act);
 
 #endif // focus_h

@@ -49,7 +49,7 @@ void disco_paint_once(Disco *disco)
 		screenblanker_setmode(disco->screenblanker, sb_disco);
 		uint8_t disco_color = deadbeef_rand() % 6;
 		//LOGF((logfp, "disco color %x\n", disco_color));
-		screenblanker_setdisco(disco->screenblanker, disco_color);
+		screenblanker_setdisco(disco->screenblanker, (DiscoColor) disco_color);
 	}
 }
 

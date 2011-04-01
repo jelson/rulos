@@ -216,7 +216,7 @@ void screenblanker_update_once(ScreenBlanker *sb)
 	{
 		for (i=0; i<sb->num_buffers; i++) {
 			for (j=0; j<NUM_DIGITS; j++) {
-				sb->buffer[i].buffer[j] = ((sb->tree[i]>>(4*(NUM_DIGITS-1-j)))&0x0f)==sb->disco_color ? 0xff : 0;
+			  sb->buffer[i].buffer[j] = ((sb->tree[i]>>(4*(NUM_DIGITS-1-j)))&0x0f)==(uint8_t) sb->disco_color ? 0xff : 0;
 			}
 		}
 		if (sb->hpam!=NULL)

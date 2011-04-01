@@ -39,7 +39,7 @@ void dcompass_init(DCompassAct *act, uint8_t board, FocusManager *focus)
 	schedule_us(1, dcompass_update, act);
 }
 
-static char *compass_display = "N.,.3.,.S.,.E.,.N.,.3.,.S.,.E.,.";
+static const char *compass_display = "N.,.3.,.S.,.E.,.N.,.3.,.S.,.E.,.";
 
 void dcompass_update(void *data)
 {

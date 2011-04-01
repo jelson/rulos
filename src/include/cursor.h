@@ -30,7 +30,7 @@ typedef struct s_cursor_act {
 	uint8_t visible;
 	RectRegion rr;
 	uint8_t alpha;
-	char *label;
+	const char *label;
 } CursorAct;
 
 void cursor_init(CursorAct *act);
@@ -38,6 +38,6 @@ void cursor_init(CursorAct *act);
 void cursor_hide(CursorAct *act);
 void cursor_show(CursorAct *act, RectRegion rr);
 	// addresses are inclusive
-void cursor_set_label(CursorAct *act, char *label);
+void cursor_set_label(CursorAct *act, const char *label);
 
 #endif // _cursor_h

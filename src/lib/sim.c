@@ -93,12 +93,12 @@ static void sim_generic_fire_handlers(SimActivation_t *handlerList, int numHandl
 	hal_end_atomic(oldInt);
 }
 
-void sim_clock_handler()
+void sim_clock_handler(int signo)
 {
 	sim_generic_fire_handlers(simClockHandlers, numSimClockHandlers);
 }
 
-void sim_sigio_handler()
+void sim_sigio_handler(int signo)
 {
 	sim_generic_fire_handlers(simSIGIOHandlers, numSimSIGIOHandlers);
 }

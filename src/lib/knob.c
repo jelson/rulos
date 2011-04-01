@@ -20,7 +20,7 @@
 UIEventDisposition knob_handler(UIEventHandler *raw_handler, UIEvent evt);
 void knob_update_once(Knob *knob);
 
-void knob_init(Knob *knob, RowRegion region, char **msgs, uint8_t len, UIEventHandler *notify, FocusManager *fa, char *label)
+void knob_init(Knob *knob, RowRegion region, const char **msgs, uint8_t len, UIEventHandler *notify, FocusManager *fa, const char *label)
 {
 	knob->func = knob_handler;
 	knob->msgs = msgs;

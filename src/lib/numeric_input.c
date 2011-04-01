@@ -57,7 +57,7 @@ void ni_accept_input(NumericInputAct *act);
 void ni_cancel_input(NumericInputAct *act);
 void ni_add_digit(NumericInputAct *act, uint8_t digit);
 
-void numeric_input_init(NumericInputAct *act, RowRegion region, UIEventHandler *notify, FocusManager *fa, char *label)
+void numeric_input_init(NumericInputAct *act, RowRegion region, UIEventHandler *notify, FocusManager *fa, const char *label)
 {
 	act->region = region;
 	act->handler.func = numeric_input_handler;
@@ -189,7 +189,7 @@ void numeric_input_set_value(NumericInputAct *act, DecimalFloatingPoint new_valu
 	ni_update_once(act);
 }
 
-void numeric_input_set_msg(NumericInputAct *act, char *msg)
+void numeric_input_set_msg(NumericInputAct *act, const char *msg)
 {
 	act->msg = msg;
 	ni_update_once(act);

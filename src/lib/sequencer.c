@@ -38,7 +38,7 @@ void launch_init(Launch *launch, Screen4 *s4, Booster *booster, AudioClient *aud
 	launch->booster = booster;
 	launch->audioClient = audioClient;
 
-	launch->state = -1;	// force configuration
+	launch->state = launch_state_init;	// force configuration
 
 	launch->s4 = s4;
 	dscrlmsg_init(&launch->dscrlmsg, s4->board0, "", 120);
@@ -217,6 +217,7 @@ void launch_clock_update(Launch *launch)
 
 	switch (launch->state)
 	{
+		case launch_state_init:
 		case launch_state_hidden:
 		case launch_state_enter_code:
 		case launch_state_complete:
@@ -318,6 +319,7 @@ UIEventDisposition launch_uie_handler(Launch *launch, UIEvent event)
 						}
 						break;
 				}
+			case launch_state_init:
 			case launch_state_launching:
 			case launch_state_complete:
 				break;

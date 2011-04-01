@@ -19,7 +19,7 @@
 
 typedef struct {
 	UIEventHandlerFunc func;
-	char **msgs;
+	const char **msgs;
 	uint8_t len;
 	uint8_t selected;
 	RowRegion region;
@@ -27,7 +27,7 @@ typedef struct {
 	UIEventHandler *notify;
 } Knob;
 
-void knob_init(Knob *knob, RowRegion region, char **msgs, uint8_t len, UIEventHandler *notify, FocusManager *fa, char *label);
+void knob_init(Knob *knob, RowRegion region, const char **msgs, uint8_t len, UIEventHandler *notify, FocusManager *fa, const char *label);
 
 void knob_set_value(Knob *knob, uint8_t value);
 
