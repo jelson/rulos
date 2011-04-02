@@ -133,8 +133,7 @@ $(AVR_OBJDIR)/audio_driver.o: $(AVR_OBJDIR)/audio_index.ch $(AVR_OBJDIR)/spiflas
 $(SIM_OBJDIR)/rasters.o: $(SIM_OBJDIR)/rasters_auto.ch
 $(AVR_OBJDIR)/rasters.o: $(AVR_OBJDIR)/rasters_auto.ch
 
-$(SIM_OBJDIR)/rasters.o: $(SIM_OBJDIR)/lcdrasters_auto.ch
-$(AVR_OBJDIR)/rasters.o: $(AVR_OBJDIR)/lcdrasters_auto.ch
+$(AVR_OBJDIR)/hardware_graphic_lcd_12232.o: $(AVR_OBJDIR)/lcdrasters_auto.ch
 
 %/rasters_auto.ch: $(ROCKET_ROOT)/util/bitmaploader.py $(ROCKET_ROOT)/bitmaps/*.png
 	$(PYTHON) $(ROCKET_ROOT)/util/bitmaploader.py $@ $(ROCKET_ROOT)/bitmaps > /dev/null
