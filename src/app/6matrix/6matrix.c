@@ -21,17 +21,17 @@
 #include "rocket.h"
 #include "6matrix.h"
 
-#ifndef SIM
-#define F_CPU 8000000L
-#include <util/delay.h>
-#endif
+typedef struct {
+	int cycle;
+	SixMatrix_Context_t matrix;
+} drawCtx;
 
 
-void makeBarGraph(uint8_t numCols, uint8_t *output)
+void makeBarGraph_2bit(uint8_t numCols, uint8_t *output)
 {
 	uint8_t *currPtr = output;
 
-	memset(output, 0, NUM_COLUMN_BYTES_1BIT);
+	memset(output, 0, NUM_COL_BYTES_2BIT);
 	
 	while (numCols >= 8) {
 		*currPtr = 0xff;
@@ -46,21 +46,78 @@ void makeBarGraph(uint8_t numCols, uint8_t *output)
 	}
 }
 
+
+#define MAKE_COLOR(r, g) (((r & 0b1111) << 4) | (g & 0b1111))
+
+
+void update_matrix(drawCtx *draw)
+{
+	uint8_t colBytes[NUM_COLS];
+	uint8_t colNum, rowNum;
+	uint8_t red, green;
+
+	schedule_us(100000, (ActivationFuncPtr) update_matrix, draw);
+
+	for (rowNum = 0, red = draw->cycle; rowNum < 16; rowNum++, red++) {
+		if (red >= 16)
+			red = 0;
+
+		for (colNum = 0, green = draw->cycle; colNum < NUM_COLS; colNum++, green++) {
+			if (green >= 16)
+				green = 0;
+			colBytes[colNum] = MAKE_COLOR(red, green);
+		}
+		hal_6matrix_setRow_8bit(&(draw->matrix), colBytes, rowNum);
+	}
+	draw->cycle++;
+
+	if (draw->cycle > 16)
+		draw->cycle = 0;
+}
+
+void one_gradient_row(drawCtx *draw)
+{
+	uint8_t bytes[NUM_COLS];
+	uint8_t i;
+	uint8_t color = 0;
+	for (i = 0; i < NUM_COLS; i++) {
+		bytes[i] = MAKE_COLOR(color, 0);
+		color++;
+		if (color == 16)
+			color = 0;
+	}
+	hal_6matrix_setRow_8bit(&(draw->matrix), bytes, 0);
+}
+
+drawCtx draw;
+
 int main()
 {
-	hal_6matrix_init();
+	hal_init();
+	init_clock(10000, TIMER2);
 
-	uint8_t testPattern[NUM_COLUMN_BYTES_1BIT];
+	draw.cycle = 0;
+	hal_6matrix_init(&draw.matrix);
+	one_gradient_row(&draw);
+	while (1) {};
+
+#if 0
+	schedule_us(1, (ActivationFuncPtr) update_matrix, &draw);
+#endif
+
+
+
+#if 0
 	uint8_t numCols = 0;
-
 	while (1) {
 		makeBarGraph(numCols, testPattern);
 		hal_6matrix_setRow(testPattern, 0);
 		_delay_ms(350);
 		numCols++;
-		if (numCols > NUM_COLUMNS)
+		if (numCols > NUM_COLS)
 			numCols = 0;
 	}
+#endif
 
 #if 0
 	uint8_t rowNum = 0, lastRowNum = 0;
@@ -74,18 +131,10 @@ int main()
 #endif
 
 #if 0
-#ifdef USE_SCHEDULER
-	ma.f = (ActivationFunc) assert_next_column;
-	init_clock(USEC_PER_COL, TIMER1);
-	schedule_now((Activation *) &ma);
-#else
-	hal_start_clock_us(USEC_PER_COL, (Handler) assert_next_column, &ma, TIMER2);
-#endif
-
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);
 	cpumon_main_loop();
+	assert(FALSE);
 #endif
-	return 0;
 }
 

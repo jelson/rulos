@@ -154,6 +154,9 @@ static void find_prescaler(uint32_t req_us_per_period, TimerDef *timerDef,
 
 uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t timer_id)
 {
+	extern uint8_t hal_initted;
+	assert(hal_initted == HAL_MAGIC);
+
 	uint32_t actual_us_per_period;
 		// may not equal what we asked for, because of prescaler rounding.
 	uint8_t cs;

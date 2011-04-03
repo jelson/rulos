@@ -47,6 +47,8 @@ void hal_end_atomic(uint8_t old_interrupts);
 
 void hal_idle();			// hw: spin. sim: sleep
 
+#define HAL_MAGIC 0x74
+
 #define TIMER1	(1)
 #define TIMER2	(2)
 uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t timer_id);

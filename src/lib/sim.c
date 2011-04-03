@@ -41,7 +41,7 @@
 #include "sim.h"
 
 uint32_t f_cpu = 4000000;
-
+uint8_t hal_initted = 0;
 
 /**************** clock ****************/
 
@@ -106,6 +106,8 @@ void sim_sigio_handler(int signo)
 
 uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t timer_id)
 {
+	assert(hal_initted == HAL_MAGIC); // did you forget to call hal_init()?
+	
 	/* init clock stuff */
 	sigemptyset(&mask_set);
 	sigaddset(&mask_set, SIGALRM);
@@ -355,4 +357,5 @@ void hal_init()
 {
 	logfp = fopen("log", "w");
 	signal(SIGIO, sim_sigio_handler);
+	hal_initted = HAL_MAGIC;
 }

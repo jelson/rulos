@@ -14,18 +14,32 @@
  *
  ************************************************************************/
 
+#pragma once
+
 /*
  * This file has the defines for the Lectrobox LED Matrix Display
  */
 
 #include <inttypes.h>
 
-#define NUM_COLUMNS 48
-#define NUM_COLUMN_BYTES_1BIT (NUM_COLUMNS/8)
-#define NUM_COLUMN_BYTES_4BIT (NUM_COLUMNS/2)
-#define NUM_ROWS    16
+#define NUM_COLS 24
+#define NUM_ROWS 16
+#define NUM_COL_BYTES_2BIT (NUM_COLS/4)
+#define NUM_COL_BYTES_8BIT (NUM_COLS)
 
-void hal_6matrix_init();
-void hal_6matrix_setRow(uint8_t *colBytes, uint8_t rowNum);
+typedef enum {
+	sixmatrix_2bit,
+	sixmatrix_8bit
+} SixMatrix_mode;
 
+typedef struct {
+	uint8_t frameBuffer[NUM_ROWS][NUM_COL_BYTES_8BIT];
+	SixMatrix_mode mode;
+	uint8_t lastRowPainted;
+	uint8_t cycle;
+} SixMatrix_Context_t;
+
+void hal_6matrix_init(SixMatrix_Context_t *matrixCtx);
+void hal_6matrix_setRow_2bit(SixMatrix_Context_t *matrixCtx, uint8_t *colBytes, uint8_t rowNum);
+void hal_6matrix_setRow_8bit(SixMatrix_Context_t *matrixCtx, uint8_t *colBytes, uint8_t rowNum);
 

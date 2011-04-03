@@ -26,7 +26,7 @@ SIM_OBJDIR = obj.sim
 SIM_LIBNAME = rocket
 SIM_LIB_FILE = $(SIM_OBJDIR)/lib$(SIM_LIBNAME).a
 
-SIM_CFLAGS = -Wall -Werror -g -DSIM -I$(ROCKET_ROOT)/include -I$(SIM_OBJDIR)
+SIM_CFLAGS = -Wall -Werror -g -O3 -DSIM -I$(ROCKET_ROOT)/include -I$(SIM_OBJDIR)
 #SIM_CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 SIM_CFLAGS += -MD -MP -MT $(SIM_OBJDIR)/$(*F).o -MF $(SIM_OBJDIR)/$(@F).d
 

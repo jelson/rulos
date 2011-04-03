@@ -31,6 +31,8 @@
 #include "hal.h"
 
 
+uint8_t hal_initted = 0;
+
 //////////////////////////////////////////////////////////////////////////////
 
 
@@ -90,6 +92,7 @@ void hal_init()
 #endif // MCUatmega1284p
 
 	init_f_cpu();
+	hal_initted = HAL_MAGIC;
 }
 
 void hardware_assert(uint16_t line)

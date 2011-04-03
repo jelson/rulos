@@ -17,7 +17,7 @@
 #include "rocket.h"
 
 // offset 32
-uint8_t sevseg_ascii[] PROGMEM = {
+const uint8_t sevseg_ascii[] PROGMEM = {
 #include "sevseg_bitmaps.ch"
 };
 

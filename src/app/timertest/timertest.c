@@ -17,30 +17,40 @@
 #include "rocket.h"
 #include "hardware.h"
 
-#define FREQ_USEC 100000
-#define TEST_PIN GPIO_D7
+#define FREQ_USEC 50000
+#define TEST_PIN GPIO_B5
 #define TOTAL 20
+#define TEST_HAL
 
-Activation a;
-
-void test_func(Activation *a)
+#if TEST_SCHEDULER
+void test_func(void *data)
 {
 	gpio_set(TEST_PIN);
 	schedule_us(FREQ_USEC, a);
 	gpio_clr(TEST_PIN);
 }
+#endif
 
+void hal_test_func(void *data)
+{
+	gpio_set(TEST_PIN);
+	gpio_clr(TEST_PIN);
+}
 
 int main()
 {
-	heap_init();
-	util_init();
-	hal_init(bc_audioboard);
-	init_clock(FREQ_USEC, TIMER1);
-
+	hal_init();
 	gpio_make_output(TEST_PIN);
 	gpio_clr(TEST_PIN);
 
+#ifdef TEST_HAL
+	hal_start_clock_us(FREQ_USEC, hal_test_func, NULL, TIMER1);
+	while(1) { } ;
+
+#endif
+
+#ifdef TEST_SCHEDULER
+	init_clock(FREQ_USEC, TIMER1);
 
 	a.func = test_func;
 
@@ -53,4 +63,5 @@ int main()
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);
 	cpumon_main_loop();
+#endif
 }

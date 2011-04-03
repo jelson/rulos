@@ -62,8 +62,6 @@ static void drawLed(int x, int y, int rColor, int gColor)
 				 xCoord, yCoord,
 				 LED_RADIUS, LED_RADIUS,
 				 0, 360*64);
-
-	gtk_widget_draw(drawing_area, NULL);
 }
 
 static void initCanvas()
@@ -120,7 +118,7 @@ static void start_gui()
 	gdk_threads_leave();
 }
 
-void hal_6matrix_init()
+void hal_6matrix_init(SixMatrix_Context_t *mat)
 {
 	g_thread_init(NULL);
 	gdk_threads_init();
@@ -132,24 +130,28 @@ void hal_6matrix_init()
 }
 
 
-void hal_6matrix_setRow(uint8_t *colBytes, uint8_t rowNum)
+static void sim_printrow(uint8_t *colBytes, uint8_t numBytes, uint8_t rowNum)
 {
-	printf("row %d: 0x%04o 0x%04o 0x%04o 0x%04o 0x%04o 0x%04o\n",
-	      rowNum,
-	      colBytes[0],
-	      colBytes[1],
-	      colBytes[2],
-	      colBytes[3],
-	      colBytes[4],
-	      colBytes[5]
-	      );
+	return;
+	printf("row %d:", rowNum);
+
+	int i = 0;
+	for (i = 0; i < numBytes; i++) {
+		printf(" 0o%04o", colBytes[i]);
+	}
+	printf("\n");
+}
+
+void hal_6matrix_setRow_2bit(SixMatrix_Context_t *mat, uint8_t *colBytes, uint8_t rowNum)
+{
+	sim_printrow(colBytes, NUM_COL_BYTES_2BIT, rowNum);
 
 	gdk_threads_enter();
 
 	int byteNum;
 	int colNum = 0;
 
-	for (byteNum = 0; byteNum < NUM_COLUMN_BYTES_1BIT; byteNum++, colBytes++) {
+	for (byteNum = 0; byteNum < NUM_COL_BYTES_2BIT; byteNum++, colBytes++) {
 		uint8_t currByte = *colBytes;
 		int i;
 
@@ -164,6 +166,27 @@ void hal_6matrix_setRow(uint8_t *colBytes, uint8_t rowNum)
 			currByte <<= 2;
 		}
 	}
+	gtk_widget_draw(drawing_area, NULL);
+	gdk_threads_leave();
+}
 
+void hal_6matrix_setRow_8bit(SixMatrix_Context_t *mat, uint8_t *colBytes, uint8_t rowNum)
+{
+	sim_printrow(colBytes, NUM_COL_BYTES_8BIT, rowNum);
+
+	gdk_threads_enter();
+
+	int colNum;
+
+	for (colNum = 0; colNum < NUM_COL_BYTES_8BIT; colNum++) {
+		drawLed(
+			colNum,
+			rowNum,
+			(colBytes[colNum] & 0b11110000) >> 4,
+			(colBytes[colNum] & 0b00001111)
+			);
+	}
+
+	gtk_widget_draw(drawing_area, NULL);
 	gdk_threads_leave();
 }
