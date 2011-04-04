@@ -83,9 +83,6 @@ COMMON_OBJECTS = \
 	eeprom.o \
 	rasters.o \
 
-#	spiflash.o \
-#	audio_driver.o \
-
 UNAME := $(shell uname)
 
 ifeq ($(UNAME), Linux)
@@ -120,14 +117,8 @@ FONTZIPS=$(glob $(ROCKET_ROOT)/bitmaps/*.zip)
 %/sevseg_bitmaps.ch: $(ROCKET_ROOT)/util/sevseg_convert.py $(ROCKET_ROOT)/lib/sevseg_artwork.txt
 	$(PYTHON) $(ROCKET_ROOT)/util/sevseg_convert.py $(ROCKET_ROOT)/lib/sevseg_artwork.txt > $@
 
-$(SIM_OBJDIR)/audio_driver.o: $(SIM_OBJDIR)/audio_index.ch $(SIM_OBJDIR)/spiflash.bin
-$(AVR_OBJDIR)/audio_driver.o: $(AVR_OBJDIR)/audio_index.ch $(AVR_OBJDIR)/spiflash.bin
-
 %/audio_index.ch: $(ROCKET_ROOT)/audio/compile_audio.py $(ROCKET_ROOT)/include/sound.h
-	$(PYTHON) $(ROCKET_ROOT)/audio/compile_audio.py -index $(ROCKET_ROOT)/include/sound.h $(ROCKET_ROOT)/audio/ > $@
-
-%/spiflash.bin: $(ROCKET_ROOT)/audio/compile_audio.py $(ROCKET_ROOT)/include/sound.h
-	$(PYTHON) $(ROCKET_ROOT)/audio/compile_audio.py -spif $(ROCKET_ROOT)/include/sound.h $(ROCKET_ROOT)/audio/ > $@
+	$(PYTHON) $(ROCKET_ROOT)/audio/compile_audio.py -index $(ROCKET_ROOT)/include/sound.def $(ROCKET_ROOT)/audio/ > $@
 
 # Generate rasters
 $(SIM_OBJDIR)/rasters.o: $(SIM_OBJDIR)/rasters_auto.ch

@@ -22,7 +22,8 @@
 #include <potsticker.h>
 #include <audio_client.h>
 
-#define DISPLAY_VOLUME_ADJUSTMENTS	0
+#define DISPLAY_VOLUME_ADJUSTMENTS 1
+
 	// TODO drawing volume on the display burns 21 bytes of bss;
 	// here's where to reclaim them.
 

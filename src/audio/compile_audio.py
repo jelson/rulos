@@ -13,7 +13,8 @@ AUDIO_RATE=12000
 AUDIO_FILTERS={
 	'filter_none': '',
 #	'filter_music': 'gain -6 bass -20',
-	'filter_music': 'bass -20',
+#	'filter_music': 'bass -20',
+	'filter_music': 'highpass 340',
 	}
 
 class AudioClip:
@@ -172,7 +173,12 @@ def main():
 	mode = sys.argv[1]
 	enum_include = sys.argv[2]
 	audio_path = sys.argv[3]
-	cardpath = sys.argv[4]
+
+	try:
+		cardpath = sys.argv[4]
+	except:
+		cardpath = None
+
 	outfile = AudioIndexer(ParseAudioFilenames(enum_include, audio_path).tokens())
 	if (mode=="-index"):
 		outfile.emitIndex()

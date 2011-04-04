@@ -15,9 +15,6 @@
  ************************************************************************/
 
 #include "sdcard.h"
-#include "seqmacro.h"
-
-#if JON_PLEASE_FIX
 
 #define R_SYNCDEBUG()	syncdebug(0, 'I', __LINE__)
 //#define SYNCDEBUG()	R_SYNCDEBUG()
@@ -35,13 +32,11 @@ extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 //////////////////////////////////////////////////////////////////////////////
 
 void _spi_spif_handler(HALSPIHandler *h, uint8_t data);
-SEQDECL(SPIAct, update, 0_send_cmd);
-SEQDECL(SPIAct, update, 1_wait_cmd_ack);
-SEQDECL(SPIAct, update, 2_wait_reply);
-SEQDECL(SPIAct, update, 3_wait_buffer);
 
-
-void _spi_fastread(Activation *act);
+void spi_0_send_cmd(SPI *spi);
+void spi_1_wait_cmd_ack(SPI *spi);
+void spi_2_wait_reply(SPI *spi);
+void spi_3_wait_buffer(SPI *spi);
 
 void spi_init(SPI *spi)
 {
@@ -62,24 +57,33 @@ void spi_start(SPI *spi, SPICmd *spic)
 	spi->cmd_i = 0;
 	spi->cmd_wait = SPI_CMD_WAIT_LIMIT;
 	spi->reply_wait = SPI_REPLY_WAIT_LIMIT;
-	{
-		Activation *act = &spi->spiact.act;
-		SEQNEXT(SPIAct, update, 0_send_cmd);
-	}
-	spi->spiact.spi = spi;
 
 	hal_spi_select_slave(TRUE);
 	spi->handler.func = _spi_spif_handler;
 	hal_spi_set_handler(&spi->handler);
-	// call handler in activation context to issue initial send.
-	_spi_spif_handler(&spi->handler, 0xff);
+
+	spi_0_send_cmd(spi);
 }
+
+#define DBG_DATA_TRACE 0
+#if DBG_DATA_TRACE
+void _spi_debug_data(SPI *spi)
+{
+	syncdebug(4, 'd', spi->data);
+	syncdebug(4, 'h', ((int) spi->handler.func) << 1);
+	(spi->resume)(spi);
+}
+#endif
 
 void _spi_spif_handler(HALSPIHandler *h, uint8_t data)
 {
 	SPI *spi = (SPI*) h;
 	spi->data = data;
-	schedule_now(&spi->spiact.act);
+#if DBG_DATA_TRACE
+	schedule_now((ActivationFuncPtr) _spi_debug_data, spi);
+#else
+	schedule_now((ActivationFuncPtr) spi->resume, spi);
+#endif
 }
 
 void _spi_spif_fastread_handler(HALSPIHandler *h, uint8_t data)
@@ -108,37 +112,59 @@ void _spi_spif_fastread_handler(HALSPIHandler *h, uint8_t data)
 { \
 	spic->error = result; \
 	hal_spi_select_slave(FALSE); \
-	if (spic->done_act!=NULL) { \
-		schedule_now(spic->done_act); \
+	if (spic->done_rec.func!=NULL) { \
+		schedule_now(spic->done_rec.func, spic->done_rec.data); \
 	} \
 }
 
-#define SPIDEF(i) \
-SEQDEF(SPIAct, update, i, spiact) \
-	SPI *spi = spiact->spi; \
+void spi_0_send_cmd(SPI *spi)
+{
 	SPICmd *spic = spi->spic;
+	SYNCDEBUG();
 
-SPIDEF(0_send_cmd)
 	uint8_t out_val = spic->cmd[spi->cmd_i];
-	hal_spi_send(out_val);
-//	syncdebug(4, 'o', out_val);
+#if DBG_DATA_TRACE
+	syncdebug(4, 'o', out_val);
+	syncdebug(4, 'i', spi->cmd_i);
+	syncdebug(4, 'l', spic->cmdlen);
+#endif // DBG_DATA_TRACE
 	spi->cmd_i++;
 	if (spi->cmd_i >= spic->cmdlen)
 	{
-		SEQNEXT(SPIAct, update, 1_wait_cmd_ack);
+		SYNCDEBUG();
+		spi->resume = spi_1_wait_cmd_ack;
 	}
+	else
+	{
+		spi->resume = spi_0_send_cmd;
+	}
+	// Be careful to send spi message only after we've configured
+	// resume, as it may get read out and stuffed into the clock
+	// heap before we realize it.
+	hal_spi_send(out_val);
 }
 
-SPIDEF(1_wait_cmd_ack)
-//	syncdebug(4, 'd', spi->data);
+void spi_1_wait_cmd_ack(SPI *spi)
+{
+	SPICmd *spic = spi->spic;
+	SYNCDEBUG();
+
+#if DBG_DATA_TRACE
+	syncdebug(5, 'd', spi->data);
+#endif // DBG_DATA_TRACE
 	if (spi->data == spic->cmd_expect_code)
 	{
-		SEQNEXT(SPIAct, update, 2_wait_reply);
+		// arrange to process future incoming bytes in 2_wait_reply
+		spi->resume = spi_2_wait_reply;
+
+		// process a fake byte in 2_wait_reply, so we can decide
+		// whether to stop here, happy, or request more (data) bytes
+		spi->data = 0xff;
+		spi_2_wait_reply(spi);
+
 		// NB we don't drop/reopen CS line, per
 		// SecureDigitalCard_1.9.doc page 31, page 3-6, sec 3.3.
 		// recurse to start looking for the data block
-		// Pretend we just heard "keep asking".
-		_spi_spif_handler(&spi->handler, 0xff);
 	}
 	else if (spi->cmd_wait==0)
 	{
@@ -147,7 +173,7 @@ SPIDEF(1_wait_cmd_ack)
 	}
 	else if (spi->data & 0x80)
 	{
-		SYNCDEBUG();
+		//SYNCDEBUG();
 		hal_spi_send(0xff);
 		spi->cmd_wait -= 1;
 	}
@@ -161,7 +187,11 @@ SPIDEF(1_wait_cmd_ack)
 	}
 }
 
-SPIDEF(2_wait_reply)
+void spi_2_wait_reply(SPI *spi)
+{
+	SPICmd *spic = spi->spic;
+	SYNCDEBUG();
+
 	if (spic->reply_buflen==0) // not expecting any data
 	{
 		SYNCDEBUG();
@@ -172,7 +202,7 @@ SPIDEF(2_wait_reply)
 		SYNCDEBUG();
 		// assumes we have a buffer ready right now,
 		// so this first byte has somewhere to go.
-		SEQNEXT(SPIAct, update, 3_wait_buffer);
+		spi->resume = spi_3_wait_buffer;
 		spi->handler.func = _spi_spif_fastread_handler;
 		hal_spi_send(0xff);
 	}
@@ -196,9 +226,13 @@ SPIDEF(2_wait_reply)
 	}
 }
 
-SPIDEF(3_wait_buffer)
+void spi_3_wait_buffer(SPI *spi)
+{
+	SPICmd *spic = spi->spic;
+	SYNCDEBUG();
+
 	// prompt caller for more buffer space
-	spic->done_act->func(spic->done_act);
+	schedule_now(spic->done_rec.func, spic->done_rec.data);
 }
 
 void spi_resume_transfer(SPI *spi, uint8_t *reply_buffer, uint16_t reply_buflen)
@@ -217,6 +251,3 @@ void spi_finish(SPI *spi)
 	SYNCDEBUG();
 	SPIFINISH(FALSE);
 }
-
-
-#endif

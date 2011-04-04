@@ -14,15 +14,20 @@
  *
  ************************************************************************/
 
+#error THIS IS DEAD CODE.
+// It was written intending to talk to a 4MB DIP flash chip;
+// we ended up never even soldering it together, in favor of
+// GB-range SD cards.
+
 #include "spiflash.h"
 
 void _spif_start(SPIFlash *spif);
-void _spiflash_receive(SPIFlash *spif, uint8_t byte);
+void _spiflash_receive(HALSPIHandler *hdlr, uint8_t byte);
 
 void init_spiflash(SPIFlash *spif)
 {
-	spif->func = (HALSPIFunc) _spiflash_receive;
-	hal_init_spi((HALSPIIfc *) spif);
+	spif->handler.func = _spiflash_receive;
+	hal_init_spi();
 
 	spif->zero_buf.start_addr = 0;
 	spif->zero_buf.count = 0;		// keeps us from trying to write into rb

@@ -3,7 +3,6 @@
 
 #include "rocket.h"
 #include "hardware_audio.h"
-#include "seqmacro.h"
 #include "spi.h"
 
 // Memory is too scarce to have separate callers with their own buffers;
@@ -15,8 +14,7 @@ typedef struct
 {
 	HALSPIHandler handler;
 	int numclocks_bytes;
-	ActivationFuncPtr done_func;
-	void *done_data;
+	ActivationRecord done_rec;
 } BunchaClocks;
 
 typedef struct {
@@ -27,6 +25,7 @@ typedef struct {
 	uint8_t read_cmdseq[6];
 	r_bool transaction_open;
 	r_bool error;
+	ActivationRecord done_rec;
 } SDCard;
 
 void sdc_init(SDCard *sdc);

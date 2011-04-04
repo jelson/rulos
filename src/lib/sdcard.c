@@ -15,24 +15,18 @@
  ************************************************************************/
 
 #include "sdcard.h"
-#include "seqmacro.h"
-
-#if JON_PLEASE_FIX
 
 #define R_SYNCDEBUG()	syncdebug(0, 'S', __LINE__)
 //#define SYNCDEBUG()	R_SYNCDEBUG()
 #define SYNCDEBUG()	{}
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 
-//#define SCHEDULE_SOON(act)	schedule_us(1, act)
-#define SCHEDULE_SOON(act)	schedule_now(act)
-
 void fill_value(uint8_t *dst, uint32_t src);
 
-SEQDECL(SDCard, reset_card, 1_cmd0);
-SEQDECL(SDCard, reset_card, 2_cmd1);
-SEQDECL(SDCard, reset_card, 3_blocksize);
-SEQDECL(SDCard, reset_card, 4_done);
+void sdc_reset_card_cmd0(SDCard *sdc);
+void sdc_reset_card_cmd1(SDCard *sdc);
+void sdc_reset_card_cmd16(SDCard *sdc);
+void sdc_reset_card_fini(SDCard *sdc);
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -41,7 +35,7 @@ void _bunchaclocks_handler(HALSPIHandler *h, uint8_t data)
 	BunchaClocks *bc = (BunchaClocks *) h;
 	if (bc->numclocks_bytes == 0)
 	{
-		schedule_us(1000, bc->done_func, bc->done_data);
+		schedule_us(10000, bc->done_rec.func, bc->done_rec.data);
 	}
 	else
 	{
@@ -55,8 +49,8 @@ void bunchaclocks_start(BunchaClocks *bc, int numclocks_bytes, ActivationFuncPtr
 	SYNCDEBUG();
 	bc->handler.func = _bunchaclocks_handler;
 	bc->numclocks_bytes = numclocks_bytes-1;
-	bc->done_func = done_func;
-	bc->done_data = done_data;
+	bc->done_rec.func = done_func;
+	bc->done_rec.data = done_data;
 	hal_spi_set_handler(&bc->handler);
 
 	hal_spi_send(0xff);
@@ -76,7 +70,7 @@ void sdc_init(SDCard *sdc)
 // Reset card transaction
 //////////////////////////////////////////////////////////////////////////////
 
-void _sdc_issue_spic_cmd(SDCard *sdc, uint8_t *cmd, uint8_t cmdlen, uint8_t cmd_expect_code)
+void _sdc_issue_spic_cmd(SDCard *sdc, uint8_t *cmd, uint8_t cmdlen, uint8_t cmd_expect_code, ActivationFuncPtr done_func)
 {
 	SYNCDEBUG();
 	sdc->spic.cmd = cmd;
@@ -84,7 +78,8 @@ void _sdc_issue_spic_cmd(SDCard *sdc, uint8_t *cmd, uint8_t cmdlen, uint8_t cmd_
 	sdc->spic.cmd_expect_code = cmd_expect_code;
 	sdc->spic.reply_buffer = NULL;
 	sdc->spic.reply_buflen = 0;
-	sdc->spic.done_func = ??;
+	sdc->spic.done_rec.func = done_func;
+	sdc->spic.done_rec.data = sdc;
 	spi_start(&sdc->spi, &sdc->spic);
 }
 
@@ -102,49 +97,53 @@ void sdc_reset_card(SDCard *sdc, ActivationFuncPtr done_func, void *done_data)
 	sdc->transaction_open = TRUE;
 
 	sdc->blocksize = 512;
-	sdc->done_func = done_func;
-	sdc->done_data = done_data;
+	sdc->done_rec.func = done_func;
+	sdc->done_rec.data = done_data;
 	sdc->error = TRUE;
 
 	hal_spi_set_fast(FALSE);
-	{
-		Activation *act = &sdc->act;
-		SEQNEXT(SDCard, reset_card, 1_cmd0);
-		bunchaclocks_start(&sdc->bunchaClocks, 16, act);
-	}
+	bunchaclocks_start(&sdc->bunchaClocks, 16+16, (ActivationFuncPtr) sdc_reset_card_cmd0, sdc);
 }
 
 #define SDCRESET_END(errorval) \
 	SYNCDEBUG(); \
 	sdc->error = errorval; \
 	sdc->transaction_open = FALSE; \
-	SCHEDULE_SOON(sdc->done_func, sdc->done_data);		\
+	schedule_now(sdc->done_rec.func, sdc->done_rec.data);		\
 	return;
 
-#define SDCRESET(i) \
-SEQDEF(SDCard, reset_card, i, sdc) \
+#define SDC_CHECK_SPI() \
+	SYNCDEBUG(); \
 	if (sdc->spic.error == TRUE) \
 	{ \
+		syncdebug(1, 'f', 0); \
 		SDCRESET_END(TRUE); \
 	}
 
-SEQDEF(SDCard, reset_card, 1_cmd0, sdc)
-	_sdc_issue_spic_cmd(sdc, _spicmd0, 6, 1);
-	SEQNEXT(SDCard, reset_card, 2_cmd1);
+void sdc_reset_card_cmd0(SDCard *sdc)
+{
+	// No CHECK_SPI() because we haven't issued any yet;
+	// error=TRUE right now just in case SPI doesn't set it.
+	SYNCDEBUG();
+	_sdc_issue_spic_cmd(sdc, _spicmd0, 6, 1, (ActivationFuncPtr) sdc_reset_card_cmd1);
 }
 
-SDCRESET(2_cmd1)
-	_sdc_issue_spic_cmd(sdc, _spicmd1, 6, 1);
-	SEQNEXT(SDCard, reset_card, 3_blocksize);
+void sdc_reset_card_cmd1(SDCard *sdc)
+{
+	SDC_CHECK_SPI();
+	_sdc_issue_spic_cmd(sdc, _spicmd1, 6, 1, (ActivationFuncPtr) sdc_reset_card_cmd16);
 }
 
-SDCRESET(3_blocksize)
+void sdc_reset_card_cmd16(SDCard *sdc)
+{
+	SDC_CHECK_SPI();
 	fill_value(&_spicmd16[1], sdc->blocksize);
-	_sdc_issue_spic_cmd(sdc, _spicmd16, 6, 0);
-	SEQNEXT(SDCard, reset_card, 4_done);
+	_sdc_issue_spic_cmd(sdc, _spicmd16, 6, 0, (ActivationFuncPtr) sdc_reset_card_fini);
 }
 
-SDCRESET(4_done)
+void sdc_reset_card_fini(SDCard *sdc)
+{
+	SDC_CHECK_SPI();
 	hal_spi_set_fast(TRUE);
 	SDCRESET_END(FALSE);
 }
@@ -153,8 +152,6 @@ SDCRESET(4_done)
 // Read transaction
 //////////////////////////////////////////////////////////////////////////////
 
-SEQDECL(SDCard, read, 1_readmore);
-
 void fill_value(uint8_t *dst, uint32_t src)
 {
 	dst[0] = (src>>(3*8)) & 0xff;
@@ -162,6 +159,8 @@ void fill_value(uint8_t *dst, uint32_t src)
 	dst[2] = (src>>(1*8)) & 0xff;
 	dst[3] = (src>>(0*8)) & 0xff;
 }
+
+void sdcard_readmore(SDCard *sdc);
 
 r_bool sdc_start_transaction(SDCard *sdc, uint32_t offset, uint8_t *buffer, uint16_t buflen, ActivationFuncPtr done_func, void *done_data)
 {
@@ -182,27 +181,26 @@ r_bool sdc_start_transaction(SDCard *sdc, uint32_t offset, uint8_t *buffer, uint
 	sdc->spic.cmd = read_cmdseq;
 	sdc->spic.cmdlen = sizeof(sdc->read_cmdseq);
 	sdc->spic.cmd_expect_code = 0;
+	sdc->spic.done_rec.func = (ActivationFuncPtr) sdcard_readmore;
+	sdc->spic.done_rec.data = sdc;
 
 	sdc->spic.reply_buffer = buffer;
 	sdc->spic.reply_buflen = buflen;
-	sdc->done_func = done_func;
-	sdc->done_data = done_data;
-	{
-		Activation *act = &sdc->act;
-		sdc->spic.done_act = act;
-		SEQNEXT(SDCard, read, 1_readmore);
-		spi_start(&sdc->spi, &sdc->spic);
-	}
+	sdc->done_rec.func = done_func;
+	sdc->done_rec.data = done_data;
+
+	spi_start(&sdc->spi, &sdc->spic);
 	return TRUE;
 }
 
-SEQDEF(SDCard, read, 1_readmore, sdc)
+void sdcard_readmore(SDCard *sdc)
+{
 	if (sdc->spic.error)
 	{
 		SYNCDEBUG();
 		sdc->error = TRUE;
 	}
-	sdc->done_func(sdc->done_data);
+	sdc->done_rec.func(sdc->done_rec.data);
 }
 
 r_bool sdc_is_error(SDCard *sdc)
@@ -210,24 +208,26 @@ r_bool sdc_is_error(SDCard *sdc)
 	return sdc->error;
 }
 
-void sdc_continue_transaction(SDCard *sdc, uint8_t *buffer, uint16_t buflen, ActivationFucnPtr done_func, void *done_data)
+void sdc_continue_transaction(SDCard *sdc, uint8_t *buffer, uint16_t buflen, ActivationFuncPtr done_func, void *done_data)
 {
-	sdc->done_func = done_func;
-	sdc->done_data = done_data;
+	// record the "return address" passed in here
+	sdc->done_rec.func = done_func;
+	sdc->done_rec.data = done_data;
 
-	{
-		Activation *act = &sdc->act;
-		SEQNEXT(SDCard, read, 1_readmore);
-		spi_resume_transfer(&sdc->spi, buffer, buflen);
-	}
+	// tell spic how to return to me
+	sdc->spic.done_rec.func = (ActivationFuncPtr) sdcard_readmore;
+	sdc->spic.done_rec.data = sdc;
+
+	// ...and ask it to pick up reading where it left off
+	spi_resume_transfer(&sdc->spi, buffer, buflen);
 }
 
 void sdc_end_transaction(SDCard *sdc, ActivationFuncPtr done_func, void *done_data)
 {
 	// could clock out CRC bytes, but why?
 	// finish spi on "separate thread".
-	sdc->spic.done_func = NULL;
-	sdc->spic.done_done = NULL;
+	sdc->spic.done_rec.func = NULL;
+	sdc->spic.done_rec.data = NULL;
 	spi_finish(&sdc->spi);
 
 	sdc->transaction_open = FALSE;
@@ -237,4 +237,3 @@ void sdc_end_transaction(SDCard *sdc, ActivationFuncPtr done_func, void *done_da
 	}
 	SYNCDEBUG();
 }
-#endif

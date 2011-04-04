@@ -14,11 +14,14 @@
  *
  ************************************************************************/
 
+#include <stdbool.h>
 #include "audio_server.h"
 
+#define FETCH_RETRY_TIME	1000000
+
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
-//#define SYNCDEBUG()	syncdebug(0, 'U', __LINE__)
-#define SYNCDEBUG()	{}
+#define SYNCDEBUG()	syncdebug(0, 'U', __LINE__)
+//#define SYNCDEBUG()	{}
 
 void ac_send_complete(SendSlot *sendSlot);
 
@@ -83,7 +86,7 @@ void _aserv_fetch_start(AudioServer *aserv)
 	{
 		// sdc not initialized yet
 		SYNCDEBUG();
-		schedule_us(10000, (ActivationFuncPtr) _aserv_fetch_start, aserv);
+		schedule_us(FETCH_RETRY_TIME, (ActivationFuncPtr) _aserv_fetch_start, aserv);
 		return;
 	}
 
@@ -105,7 +108,7 @@ void _aserv_fetch_start(AudioServer *aserv)
 	if (!rc)
 	{
 		SYNCDEBUG();
-		schedule_us(10000, (ActivationFuncPtr) _aserv_fetch_start, aserv);
+		schedule_us(FETCH_RETRY_TIME, (ActivationFuncPtr) _aserv_fetch_start, aserv);
 		return;
 	}
 }
@@ -119,32 +122,45 @@ void _aserv_fetch_complete(AudioServer *aserv)
 	syncdebug(4, 'b', (uint16_t) (aserv->borrowed_sdc));
 #endif
 
-	int i;
-	for (i=0; i<sound_num_tokens; i++)
+	bool success = !aserv->borrowed_sdc->error;
+	if (success)
 	{
-		syncdebug(0, 'i', i);
-		if (aserv->index[i].is_disco)
+		int i;
+		for (i=0; i<sound_num_tokens; i++)
 		{
-			aserv->music_token_offset = i;
-			break;
+			syncdebug(0, 'i', i);
+			syncdebug(2, 'o', aserv->index[i].start_offset);
+			if (aserv->index[i].is_disco)
+			{
+				aserv->music_token_offset = i;
+				break;
+			}
 		}
-	}
-	for (i=aserv->music_token_offset; i<sound_num_tokens; i++)
-	{
-		syncdebug(0, 'j', i);
-		if (!aserv->index[i].is_disco)
+		for (i=aserv->music_token_offset; i<sound_num_tokens; i++)
+		{
+			syncdebug(0, 'j', i);
+			if (!aserv->index[i].is_disco)
+			{
+				aserv->num_music_tokens = i-aserv->music_token_offset;
+				break;
+			}
+		}
+		if (i==sound_num_tokens)
 		{
 			aserv->num_music_tokens = i-aserv->music_token_offset;
-			break;
 		}
-	}
-	if (i==sound_num_tokens)
-	{
-		aserv->num_music_tokens = i-aserv->music_token_offset;
+
+		aserv->index_ready = TRUE;
 	}
 
-	aserv->index_ready = TRUE;
 	sdc_end_transaction(aserv->borrowed_sdc, NULL, NULL);
+
+	if (!success)
+	{
+		SYNCDEBUG();
+		schedule_us(FETCH_RETRY_TIME, (ActivationFuncPtr) _aserv_fetch_start, aserv);
+	}
+	SYNCDEBUG();
 }
 
 void aserv_recv_arm(RecvSlot *recvSlot, uint8_t payload_len)

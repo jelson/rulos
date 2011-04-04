@@ -14,7 +14,8 @@
  *
  ************************************************************************/
 
-#include <inttypes.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -28,11 +29,8 @@
 #include "audio_streamer.h"
 #include "sdcard.h"
 #include "serial_console.h"
+#include "audioled.h"
 
-//////////////////////////////////////////////////////////////////////////////
-void audioled_init();
-void audioled_set(r_bool red, r_bool yellow);
-//////////////////////////////////////////////////////////////////////////////
 
 SerialConsole *g_serial_console = NULL;
 
@@ -70,49 +68,17 @@ void syncdebug32(uint8_t spaces, char f, uint32_t line)
 
 //////////////////////////////////////////////////////////////////////////////
 
-//////////////////////////////////////////////////////////////////////////////
-
-#define AUDIO_LED_RED		GPIO_D2
-#define AUDIO_LED_YELLOW	GPIO_D3
-
-#ifndef SIM
-#include "hardware.h"
-#endif // SIM
-
-
-void audioled_init()
-{
-#ifndef SIM
-	gpio_make_output(AUDIO_LED_RED);
-	gpio_make_output(AUDIO_LED_YELLOW);
-#endif // SIM
-}
-
-void audioled_set(r_bool red, r_bool yellow)
-{
-#ifndef SIM
-	gpio_set_or_clr(AUDIO_LED_RED, !red);
-	gpio_set_or_clr(AUDIO_LED_YELLOW, !yellow);
-#endif // SIM
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-
-struct s_CmdProc;
-
-typedef struct s_CmdProc {
-	Activation act;
+typedef struct {
 	SerialConsole sca;
 	Network *network;
 	AudioServer *audio_server;
 	CpumonAct cpumon;
 } CmdProc;
 
-void cmdproc_update(Activation *act)
+void cmdproc_update(CmdProc *cp)
 {
-	CmdProc *cp = (CmdProc *) act;
 	char *buf = cp->sca.line;
+	audioled_set(1, 0);
 
 	SYNCDEBUG();
 #if !SIM
@@ -125,13 +91,13 @@ void cmdproc_update(Activation *act)
 	}
 	else if (strcmp(buf, "fetch\n")==0)
 	{
-		_aserv_fetch_start(&cp->audio_server->fetch_start);
+		_aserv_fetch_start(cp->audio_server);
 	}
 	else if (strncmp(buf, "play ", 5)==0)
 	{
 		SYNCDEBUG();
-		SoundCmd skip = {(buf[5]-'b')};
-		SoundCmd loop = {(buf[6]-'b')};
+		SoundCmd skip = {(SoundToken) (buf[5]-'b')};
+		SoundCmd loop = {(SoundToken) (buf[6]-'b')};
 		syncdebug(0, 's', skip.token);
 		syncdebug(0, 'l', loop.token);
 		_aserv_skip_to_clip(cp->audio_server, skip, loop);
@@ -142,10 +108,12 @@ void cmdproc_update(Activation *act)
 		as_set_music_volume(&cp->audio_server->audio_streamer, v);
 		syncdebug(0, 'V', v);
 	}
+#if 0
 	else if (strncmp(buf, "spiact", 4)==0)
 	{
 		syncdebug(3, 'a', (int) (cp->audio_server->audio_streamer.sdc.spi.spiact.act.func)<<1);
 	}
+#endif
 	else if (strncmp(buf, "idle", 4)==0)
 	{
 		syncdebug(0, 'I', cpumon_get_idle_percentage(&cp->cpumon));
@@ -160,75 +128,106 @@ void cmdproc_update(Activation *act)
 	}
 	else
 	{
+
 		char reply_buf[80];
 		strcpy(reply_buf, "error: \"");
 		strcat(reply_buf, buf);
 		strcat(reply_buf, "\"\n");
+#if 0
+		SYNCDEBUG();
+		char stack[0];
+		syncdebug(3, 's', (uint16_t) (int) &stack);
+		syncdebug(3, 'b', uart_busy(&cp->sca.uart));
+		syncdebug(3, 'c', (int) cp);
+		syncdebug(3, 'u', (int) &cp->sca.uart);
+		syncdebug(3, 'o', (int) &cp->sca.uart.out_buf);
+		syncdebug(3, 'c', (int) cp->sca.uart.out_buf[0]);
+		syncdebug(3, 'c', (int) cp->sca.uart.out_buf[1]);
+		syncdebug(3, 'c', (int) cp->sca.uart.out_buf[2]);
+		syncdebug(3, 'c', (int) cp->sca.uart.out_buf[3]);
+
+		bool x=true;
+		while (uart_busy(&cp->sca.uart)) { x=!x; audioled_set(x, 0); }
+		audioled_set(0, 0);
+		int y=uart_busy(&cp->sca.uart);
+		audioled_set(1, 1);
+		syncdebug(3, 'b', y);
+		audioled_set(1, 0);
+#endif
 		serial_console_sync_send(&cp->sca, reply_buf, strlen(reply_buf));
+#if 0
+		char *foo = (char*) "foo\n";
+		serial_console_sync_send(&cp->sca, foo, strlen(foo));
+		syncdebug(3, 'b', uart_busy(&cp->sca.uart));
+#endif
 	}
+	audioled_set(1, 1);
+	SYNCDEBUG();
 }
 
 void cmdproc_init(CmdProc *cp, AudioServer *audio_server, Network *network)
 {
 	cp->audio_server = audio_server;
 	cp->network = network;
-	serial_console_init(&cp->sca, &cp->act);
+
+	serial_console_init(&cp->sca, (ActivationFuncPtr) cmdproc_update, cp);
 	g_serial_console = &cp->sca;
-	SYNCDEBUG();
-	cp->act.func = cmdproc_update;
 	SYNCDEBUG();
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	Activation act;
 	uint8_t val;
 } BlinkAct;
 
-void _update_blink(Activation *act)
+void _update_blink(BlinkAct *ba)
 {
-	BlinkAct *ba = (BlinkAct *) act;
 	ba->val = !ba->val;
 	audioled_set(ba->val, 0);
 #ifndef SIM
 //	gpio_set_or_clr(AUDIO_LED_RED, !ba->val);
 #endif //!SIM
-	schedule_us(1000000, &ba->act);
+#if 0
+	SYNCDEBUG();
+
+#if !SIM
+	extern uint8_t bss_end[0];
+	syncdebug(10, 'b', bss_end[0]);
+#endif // !SIM
+#endif
+
+	schedule_us(500000, (ActivationFuncPtr) _update_blink, ba);
 }
 
 void blink_init(BlinkAct *ba)
 {
-	ba->act.func = _update_blink;
-	schedule_us(1000000, &ba->act);
+	schedule_us(100000, (ActivationFuncPtr) _update_blink, ba);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	Activation act;
 	uint8_t val;
 } DACTest;
 
-void _dt_update(Activation *act);
+void _dt_update(DACTest *dt);
 
 void dt_init(DACTest *dt)
 {
-	dt->act.func = _dt_update;
 	dt->val = 0;
 	hal_audio_init();
-	schedule_us(1, &dt->act);
+	schedule_us(1, (ActivationFuncPtr) _dt_update, &dt);
 }
 
-void _dt_update(Activation *act)
+void _dt_update(DACTest *dt)
 {
-	DACTest *dt = (DACTest *) act;
 	hal_audio_fire_latch();
 	audioled_set((dt->val & 0x80)!=0, (dt->val & 0x40)!=0);
 	if (dt->val==0) { dt->val = 128; }
 	else if (dt->val==128) { dt->val = 255; }
 	else { dt->val = 0; }
-	schedule_us(1000000, &dt->act);
+	schedule_us(1000000, (ActivationFuncPtr) _dt_update, &dt);
 	hal_audio_shift_sample(dt->val);
 }
 
@@ -239,8 +238,28 @@ typedef struct {
 	AudioServer aserv;
 	Network network;
 	CmdProc cmdproc;
+	int foo;
 } MainContext;
 MainContext mc;
+
+void init_audio_server_delayed_start(void *state)
+{
+	MainContext *mc = (MainContext *) state;
+
+	SYNCDEBUG();
+	mc->foo--;
+	if (mc->foo==0)
+	{
+		SYNCDEBUG();
+		init_audio_server(&mc->aserv, &mc->network, TIMER2);
+	}
+	else
+	{
+		SYNCDEBUG();
+		syncdebug(2, 'f', mc->foo);
+		schedule_us(1000000, init_audio_server_delayed_start, mc);
+	}
+}
 
 int main()
 {
@@ -248,22 +267,17 @@ int main()
 	hal_init();
 	init_clock(1000, TIMER1);
 
-	audioled_init();
-
 	audioled_set(0, 0);
 
-#if 1
 	// needs to be early, because it initializes uart, which at the
 	// moment I'm using for SYNCDEBUG(), including in init_audio_server.
 	cmdproc_init(&mc.cmdproc, &mc.aserv, &mc.network);
 
 	init_twi_network(&mc.network, 100, AUDIO_ADDR);
 
-	init_audio_server(&mc.aserv, &mc.network, TIMER2);
-#else
-	DACTest dt;
-	dt_init(&dt);
-#endif
+	mc.foo = 2;
+	schedule_us(1000000, init_audio_server_delayed_start, &mc);
+	SYNCDEBUG();
 
 	BlinkAct ba;
 	blink_init(&ba);

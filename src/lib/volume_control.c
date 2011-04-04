@@ -35,6 +35,10 @@ void volume_control_init(VolumeControl *vc, AudioClient *ac, uint8_t adc_channel
 void _volume_input(InputInjectorIfc *ii, char key)
 {
 	VolumeControl *vc = ((VolumeControlInjector *) ii)->vc;
+//#define VOL_UP_KEY 't'
+//#define VOL_DN_KEY 'u'
+#define VOL_UP_KEY '9'
+#define VOL_DN_KEY '7'
 	if (key=='u' && (vc->cur_vol<VOL_MIN))
 	{
 		vc->cur_vol += 1;

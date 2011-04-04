@@ -17,6 +17,8 @@
 #ifndef _SEQMACRO_H
 #define _SEQMACRO_H
 
+#error DEPRECATED. svn rm me.
+
 #define SEQDECL(T,f,i)	\
 void T##_##f##_##i(void *data)
 

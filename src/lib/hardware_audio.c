@@ -14,6 +14,8 @@
  *
  ************************************************************************/
 
+#include "board_defs.h"
+
 #ifdef AUDIO_REGISTER_LATCH
 
 #include <avr/boot.h>

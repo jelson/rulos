@@ -34,7 +34,8 @@ typedef struct s_spiflash_buffer {
 } SPIBuffer;
 
 typedef struct s_spiflash {
-	HALSPIFunc func;
+	HALSPIHandler handler;
+		// one of those goofy superclass-interface-inheritance things, must-be-first.
 		// scheduled to indicate the current spif request has completed.
 	SPIFState state;
 	uint8_t addr[3];

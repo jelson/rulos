@@ -43,7 +43,7 @@ void booster_set(Booster *booster, r_bool status)
 	{
 		booster->status = FALSE;
 		hpam_set_port(booster->hpam, hpam_booster, FALSE);
-		ac_skip_to_clip(booster->audioClient, AUDIO_STREAM_CONTINUOUS_EFFECTS, sound_booster_flameout, sound_silence);
+		ac_skip_to_clip(booster->audioClient, AUDIO_STREAM_CONTINUOUS_EFFECTS, sound_booster_flameout_cutoff, sound_space_background);
 		screenblanker_setmode(booster->screenblanker, sb_inactive);
 	}
 }

@@ -16,21 +16,21 @@
 
 #include "audio_streamer.h"
 #include "event.h"
-#include "seqmacro.h"
-
-#if JON_PLEASE_FIX
 
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
-//#define SYNCDEBUG()	syncdebug(0, 'R', __LINE__)
-#define SYNCDEBUG()	{}
+#define R_SYNCDEBUG()	syncdebug(0, 'R', __LINE__)
+#define SYNCDEBUG()	{R_SYNCDEBUG();}
+//#define SYNCDEBUG()	{}
 extern void audioled_set(r_bool red, r_bool yellow);
 
 void _as_fill(AudioStreamer *as);
-SEQDECL(ASStreamCard, as_stream_card, 0_init_sdc);
-SEQDECL(ASStreamCard, as_stream_card, 1_loop);
-SEQDECL(ASStreamCard, as_stream_card, 2_start_tx);
-SEQDECL(ASStreamCard, as_stream_card, 3_more_frames);
-SEQDECL(ASStreamCard, as_stream_card, 4_read_more);
+
+void as_1_init_sdc(AudioStreamer *as);
+void as_2_check_reset(AudioStreamer *as);
+void as_3_loop(AudioStreamer *as);
+void as_4_start_tx(AudioStreamer *as);
+void as_5_more_frames(AudioStreamer *as);
+void as_6_read_more(AudioStreamer *as);
 
 void init_audio_streamer(AudioStreamer *as, uint8_t timer_id)
 {
@@ -46,61 +46,19 @@ void init_audio_streamer(AudioStreamer *as, uint8_t timer_id)
 	event_signal(&as->ulawbuf_empty_evt);
 
 	// start the ASStreamCard thread
-	{
-		as->assc.as = as;
-		Activation *act = &as->assc.act;
-		SEQNEXT(ASStreamCard, as_stream_card, 0_init_sdc);
-		schedule_now(act);
-	}
+	schedule_now((ActivationFuncPtr) as_1_init_sdc, as);
 }
-
-
-//////////////////////////////////////////////////////////////////////////////
-
-#if 0
-// based on sample code at:
-// http://www.speech.cs.cmu.edu/comp.speech/Section2/Q2.7.html
-static inline int16_t _ad_ulaw2linear(uint8_t ulawbyte)
-{
-  static int32_t exp_lut[8] = {0,132,396,924,1980,4092,8316,16764};
-  int8_t sign;
-  uint8_t exponent;
-  int32_t mantissa;
-  int32_t sample;
-
-  ulawbyte = ~ulawbyte;
-  sign = (ulawbyte & 0x80);
-  exponent = (ulawbyte >> 4) & 0x07;
-  mantissa = ulawbyte & 0x0F;
-  sample = exp_lut[exponent] + (mantissa << (exponent + 3));
-  if (sign != 0) { sample = -sample; }
-
-  return sample;
-}
-
-static inline uint8_t _ad_pcm16s_to_pcm8u(int16_t s)
-{
-	return (s>>8)+127;
-}
-
-static inline uint8_t _ad_decode_ulaw(uint8_t ulaw)
-{
-	return _ad_pcm16s_to_pcm8u(_ad_ulaw2linear(ulaw));
-}
-#endif
 
 void _ad_decode_ulaw_buf(uint8_t *dst, uint8_t *src, uint16_t len, uint8_t mlvolume)
 {
+	uint8_t *srcp = src;
 	uint8_t *end = src+len;
-	for (; src<end; src++, dst++)
+
+	end = src+len;
+	for (; srcp<end; srcp++, dst++)
 	{
-#if 0
-		int16_t vs = _ad_decode_ulaw(*src) - 128;
-		vs = ((vs * volume) >> 8) + 128;
-		*dst = vs & 0xff;
-#endif
-		//*dst = (*src) - 1;
-		*dst = ((*src) + 128) >> mlvolume;
+		uint8_t v = (*srcp) + 128;
+		*dst = v >> mlvolume;
 	}
 }
 
@@ -111,7 +69,7 @@ void _as_fill(AudioStreamer *as)
 //	syncdebug(0, 'f', (int) as->audio_out.fill_buffer);
 //	syncdebug(0, 'f', (int) fill_ptr);
 
-	audioled_set(0, 1);
+//	audioled_set(0, 1);
 	// always clear buf in case we end up coming back around here
 	// before ASStreamCard gets a chance to fill it. Want to play
 	// silence, not stuttered audio.
@@ -121,7 +79,7 @@ void _as_fill(AudioStreamer *as)
 	{
 		// invariant: ulawbuf_ready == sdc_ready waiting for it;
 		// not elsewise scheduled.
-		audioled_set(1, 0);
+//		audioled_set(1, 0);
 		SYNCDEBUG();
 		_ad_decode_ulaw_buf(fill_ptr, as->ulawbuf, AO_BUFLEN,
 			as->is_music ? as->music_mlvolume : 0);
@@ -131,17 +89,30 @@ void _as_fill(AudioStreamer *as)
 
 //////////////////////////////////////////////////////////////////////////////
 
-SEQDEF(ASStreamCard, as_stream_card, 0_init_sdc, assc)
-	AudioStreamer *as = assc->as;
-
-	sdc_reset_card(&as->sdc, act);
-	SEQNEXT(ASStreamCard, as_stream_card, 1_loop);	// implied
+void as_1_init_sdc(AudioStreamer *as)
+{
+	SYNCDEBUG();
+	sdc_reset_card(&as->sdc, (ActivationFuncPtr) as_2_check_reset, as);
 	return;
 }
 
-SEQDEF(ASStreamCard, as_stream_card, 1_loop, assc)
-	AudioStreamer *as = assc->as;
+void as_2_check_reset(AudioStreamer *as)
+{
+	SYNCDEBUG();
+	if (as->sdc.error)
+	{
+		R_SYNCDEBUG();
+		schedule_now((ActivationFuncPtr) as_1_init_sdc, as);
+	}
+	else
+	{
+		schedule_now((ActivationFuncPtr) as_3_loop, as);
+	}
+}
 
+void as_3_loop(AudioStreamer *as)
+{
+	SYNCDEBUG();
 	as->sdc_initialized = TRUE;
 	if (as->block_address >= as->end_address)
 	{
@@ -153,45 +124,44 @@ SEQDEF(ASStreamCard, as_stream_card, 1_loop, assc)
 		}
 
 		SYNCDEBUG();
-		event_wait(&as->play_request_evt, act);
-		//SEQNEXT(ASStreamCard, as_stream_card, 1_loop);	// implied
+		event_wait(&as->play_request_evt, (ActivationFuncPtr) as_3_loop, as);
+		//SEQNEXT(ASStreamCard, as_stream_card, 2_loop);	// implied
 		return;
 	}
 
 	// ready to start a read. Get an empty buffer first.
 	SYNCDEBUG();
-	event_wait(&as->ulawbuf_empty_evt, act);
-	SEQNEXT(ASStreamCard, as_stream_card, 2_start_tx);
+	event_wait(&as->ulawbuf_empty_evt, (ActivationFuncPtr) as_4_start_tx, as);
 	return;
 }
 
-SEQDEF(ASStreamCard, as_stream_card, 2_start_tx, assc)
-	AudioStreamer *as = assc->as;
-
+void as_4_start_tx(AudioStreamer *as)
+{
+	SYNCDEBUG();
 	r_bool rc = sdc_start_transaction(&as->sdc,
 		as->block_address,
 		as->ulawbuf,
 		AO_BUFLEN,
-		act);
+		(ActivationFuncPtr) as_5_more_frames,
+		as);
+
 	if (!rc)
 	{
-		// dang, card was busy! the 'goto' didn't. try again in a millisecond.
+		// dang, card was busy! the 'goto' didn't (sdc hasn't taken
+		// responsibility to call the continuation we passed in).
+		// try again in a millisecond.
 		SYNCDEBUG();
-		schedule_us(1000, act);
-		return;
+		schedule_us(1000, (ActivationFuncPtr) as_4_start_tx, as);
 	}
-	SEQNEXT(ASStreamCard, as_stream_card, 3_more_frames);
-	return;
 }
 
-SEQDEF(ASStreamCard, as_stream_card, 3_more_frames, assc)
-	AudioStreamer *as = assc->as;
-
+void as_5_more_frames(AudioStreamer *as)
+{
+	SYNCDEBUG();
 	if (sdc_is_error(&as->sdc))
 	{
 		SYNCDEBUG();
-		sdc_end_transaction(&as->sdc, act);
-		SEQNEXT(ASStreamCard, as_stream_card, 0_init_sdc);
+		sdc_end_transaction(&as->sdc, (ActivationFuncPtr) as_1_init_sdc, as);
 		return;
 	}
 
@@ -201,8 +171,7 @@ SEQDEF(ASStreamCard, as_stream_card, 3_more_frames, assc)
 	{
 		// Wait for more space to put data into.
 		SYNCDEBUG();
-		event_wait(&as->ulawbuf_empty_evt, act);
-		SEQNEXT(ASStreamCard, as_stream_card, 4_read_more);
+		event_wait(&as->ulawbuf_empty_evt, (ActivationFuncPtr) as_6_read_more, as);
 		return;
 	}
 
@@ -212,19 +181,17 @@ SEQDEF(ASStreamCard, as_stream_card, 3_more_frames, assc)
 	as->sector_offset = 0;
 
 	SYNCDEBUG();
-	sdc_end_transaction(&as->sdc, act);
-	SEQNEXT(ASStreamCard, as_stream_card, 1_loop);
+	sdc_end_transaction(&as->sdc, (ActivationFuncPtr) as_3_loop, as);
 	return;
 }
 
-SEQDEF(ASStreamCard, as_stream_card, 4_read_more, assc)
-	AudioStreamer *as = assc->as;
-
+void as_6_read_more(AudioStreamer *as)
+{
 	sdc_continue_transaction(&as->sdc,
 		as->ulawbuf,
 		AO_BUFLEN,
-		act);
-	SEQNEXT(ASStreamCard, as_stream_card, 3_more_frames);
+		(ActivationFuncPtr) as_5_more_frames,
+		as);
 	return;
 }
 
@@ -264,5 +231,3 @@ SDCard *as_borrow_sdc(AudioStreamer *as)
 {
 	return as->sdc_initialized ? &as->sdc : NULL;
 }
-
-#endif

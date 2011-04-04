@@ -3,7 +3,6 @@
 
 #include "rocket.h"
 #include "hardware_audio.h"
-#include "seqmacro.h"
 
 typedef struct
 {
@@ -13,7 +12,12 @@ typedef struct
 	uint8_t *reply_buffer;
 	uint16_t reply_buflen;
 	r_bool error;
+	ActivationRecord done_rec;
 } SPICmd;
+
+struct s_SPI;
+
+typedef void (_SPIResumeFunc)(struct s_SPI *spi);
 
 typedef struct s_SPI
 {
@@ -23,7 +27,10 @@ typedef struct s_SPI
 	uint16_t cmd_wait;
 	uint16_t reply_wait;
 
-	// do most work out of interrupt handler (in an activation)
+	// do most work out of interrupt handler (in an activation);
+	// our hal_spi handler jumps into resume to continue.
+	_SPIResumeFunc *resume;
+
 	uint8_t data;
 } SPI;
 
