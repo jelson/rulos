@@ -36,6 +36,7 @@ typedef enum {
 } SixMatrix_mode;
 
 typedef struct {
+	uint16_t subframeOcr[SIXMATRIX_BITS_PER_COL];
 	uint8_t subframeData[SIXMATRIX_BITS_PER_COL][SIXMATRIX_NUM_ROWS][SIXMATRIX_NUM_COL_BYTES_2BIT];
 	uint8_t subframeNum;
 	SixMatrix_mode mode;

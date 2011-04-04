@@ -30,7 +30,7 @@
 #define COLLATCH_LE   GPIO_B2
 #define COLLATCH_SDI  GPIO_B3
 
-#define USEC_PER_ROW 500000
+#define SHORTEST_SUBFRAME_USEC 85
 
 #define DEBUG
 
@@ -129,8 +129,8 @@ void paint_next_row(SixMatrix_Context_t *mat)
 
 	// Compute which row to paint.  If we've reached the end of the row, 
 	// move to the first row of the next subframe.
-	//	if (prevRow == SIXMATRIX_NUM_ROWS-1) {
-	if (1) {
+	if (prevRow == SIXMATRIX_NUM_ROWS-1) {
+		//if (1) {
 		currRow = 0;
 
 		if (currSubframe == SIXMATRIX_BITS_PER_COL-1) {
@@ -140,6 +140,10 @@ void paint_next_row(SixMatrix_Context_t *mat)
 		}
 		
 		mat->subframeNum = currSubframe;
+
+		// reconfigure the time we spend on each subframe
+		OCR1A = mat->subframeOcr[currSubframe];
+
 	} else {
 		currRow = prevRow+1;
 	}
@@ -170,6 +174,11 @@ void paint_next_row(SixMatrix_Context_t *mat)
 
 void hal_6matrix_setRow_8bit(SixMatrix_Context_t *mat, uint8_t *colBytes, uint8_t rowNum)
 {
+#ifdef DEBUG
+	gpio_set(GPIO_B5);
+	gpio_clr(GPIO_B5);
+	gpio_set(GPIO_B5);
+#endif
 	// The 0-15 brightness values in each of the red and green channels
 	// are displayed by keeping the LED on for 0/15ths through 15/15ths of the total time.
 	// We display 4 "subframes" for each refresh -- of lengths 1, 2, 4, and 8.
@@ -298,6 +307,11 @@ void hal_6matrix_setRow_8bit(SixMatrix_Context_t *mat, uint8_t *colBytes, uint8_
 		mat->subframeData[3][rowNum][outCtr] = outByte8;
 		outCtr++;
 	}
+#ifdef DEBUG
+	gpio_clr(GPIO_B5);
+	gpio_set(GPIO_B5);
+	gpio_clr(GPIO_B5);
+#endif
 }
 
 void hal_6matrix_init(SixMatrix_Context_t *mat)
@@ -313,6 +327,16 @@ void hal_6matrix_init(SixMatrix_Context_t *mat)
 		gpio_make_output(GPIO_ROW(i));
 		gpio_clr(GPIO_ROW(i));
 	}
-	hal_start_clock_us(USEC_PER_ROW, (Handler) paint_next_row, mat, TIMER1);
+	hal_start_clock_us(SHORTEST_SUBFRAME_USEC*8, (Handler) paint_next_row, mat, TIMER1);
+
+	// hal_start_clock_us finds the correct prescale value and
+	// counter value for the longest subframe -- 8 times the
+	// shortest, assuming 4 bits per frame.  Now, compute
+	// the OCR value for the shorter subframes.
+	uint16_t ocr = OCR1A;
+	mat->subframeOcr[3] = ocr;  ocr >>= 1;
+	mat->subframeOcr[2] = ocr;  ocr >>= 1;
+	mat->subframeOcr[1] = ocr;  ocr >>= 1;
+	mat->subframeOcr[0] = ocr;
 }
 

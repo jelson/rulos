@@ -82,12 +82,12 @@ void one_gradient_row(drawCtx *draw)
 	uint8_t color = 0;
 	for (i = 0; i < SIXMATRIX_NUM_COLS; i++) {
 		bytes[i] = MAKE_COLOR(color, 0);
-		color++;
-		if (color == 16)
-			color = 0;
+
+		if (color < 15)
+			color++;
 	}
 	hal_6matrix_setRow_8bit(&(draw->matrix), bytes, 0);
-	schedule_us(1000000, (ActivationFuncPtr) update_matrix, draw);
+	//schedule_us(1000000, (ActivationFuncPtr) one_gradient_row, draw);
 }
 
 void one_led(drawCtx *draw)
@@ -124,11 +124,10 @@ int main()
 
 	hal_6matrix_init(&draw.matrix);
 
-	//one_gradient_row(&draw);
-
 	draw.cycle = 0;
+	schedule_us(1, (ActivationFuncPtr) one_gradient_row, &draw);
 	//schedule_us(1, (ActivationFuncPtr) update_matrix, &draw);
-	schedule_us(1, (ActivationFuncPtr) one_led, &draw);
+	//schedule_us(1, (ActivationFuncPtr) one_led, &draw);
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);
