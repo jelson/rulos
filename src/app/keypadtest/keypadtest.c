@@ -27,7 +27,6 @@
 
 
 typedef struct {
-	ActivationFunc f;
 	BoardBuffer bbuf_k;
 	BoardBuffer bbuf_u;
 	UartState_t uart;
@@ -43,7 +42,7 @@ void add_char_to_bbuf(BoardBuffer *bbuf, char c)
 
 static void update(KeyTestActivation_t *kta)
 {
-	schedule_us(50000, (Activation *) kta);
+	schedule_us(50000, (ActivationFuncPtr) update, kta);
 
 	uint8_t c;
 
@@ -62,8 +61,7 @@ static void update(KeyTestActivation_t *kta)
 
 int main()
 {
-	util_init();
-	hal_init(bc_rocket0);
+	hal_init();
 	init_clock(10000, TIMER1);
 	hal_init_keypad();	// requires clock to be initted.
 	board_buffer_module_init();
@@ -71,16 +69,14 @@ int main()
 
 	KeyTestActivation_t kta;
 	uart_init(&kta.uart, 38400, true);
-	uart_send(&kta.uart, TEST_STR, strlen(TEST_STR), NULL, NULL);
-
-	kta.f = (ActivationFunc) update;
+	uart_send(&kta.uart, (char*) TEST_STR, strlen((char*) TEST_STR), NULL, NULL);
 
 	board_buffer_init(&kta.bbuf_k);
 	board_buffer_push(&kta.bbuf_k, 0);
 
 	board_buffer_init(&kta.bbuf_u);
 	board_buffer_push(&kta.bbuf_u, 1);
-	schedule_us(1, (Activation *) &kta);
+	schedule_us(1, (ActivationFuncPtr) update, &kta);
 
 	add_char_to_bbuf(&kta.bbuf_k, 'I');
 	add_char_to_bbuf(&kta.bbuf_k, 'n');

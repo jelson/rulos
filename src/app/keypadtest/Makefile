@@ -14,9 +14,9 @@
 
 ROCKET_ROOT := ../..
 
-MCU := atmega328p
+MCU := atmega1284p
 TARGET := keypadtest
-BOARD := PCB11
+BOARD := LPEM
 
 TARGET_OBJECTS := \
 	uart.o \
