@@ -161,8 +161,8 @@ ifeq ($(MCU),atmega328p)
 #AVROPTS := -p m328p
 AVRCONFIG := /etc/avrdude.conf
 
-$(AVRCONFIG): /etc/avrdude.conf ../../avrdude-atmega328p.conf
-	cat $^ > $@
+#$(AVRCONFIG): /etc/avrdude.conf ../../avrdude-atmega328p.conf
+#	cat $^ > $@
 
 AVROPTS := -C $(AVRCONFIG) -p m328p
 endif
