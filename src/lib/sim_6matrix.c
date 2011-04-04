@@ -144,14 +144,14 @@ static void sim_printrow(uint8_t *colBytes, uint8_t numBytes, uint8_t rowNum)
 
 void hal_6matrix_setRow_2bit(SixMatrix_Context_t *mat, uint8_t *colBytes, uint8_t rowNum)
 {
-	sim_printrow(colBytes, NUM_COL_BYTES_2BIT, rowNum);
+	sim_printrow(colBytes, SIXMATRIX_NUM_COL_BYTES_2BIT, rowNum);
 
 	gdk_threads_enter();
 
 	int byteNum;
 	int colNum = 0;
 
-	for (byteNum = 0; byteNum < NUM_COL_BYTES_2BIT; byteNum++, colBytes++) {
+	for (byteNum = 0; byteNum < SIXMATRIX_NUM_COL_BYTES_2BIT; byteNum++, colBytes++) {
 		uint8_t currByte = *colBytes;
 		int i;
 
@@ -172,13 +172,13 @@ void hal_6matrix_setRow_2bit(SixMatrix_Context_t *mat, uint8_t *colBytes, uint8_
 
 void hal_6matrix_setRow_8bit(SixMatrix_Context_t *mat, uint8_t *colBytes, uint8_t rowNum)
 {
-	sim_printrow(colBytes, NUM_COL_BYTES_8BIT, rowNum);
+	sim_printrow(colBytes, SIXMATRIX_NUM_COL_BYTES_8BIT, rowNum);
 
 	gdk_threads_enter();
 
 	int colNum;
 
-	for (colNum = 0; colNum < NUM_COL_BYTES_8BIT; colNum++) {
+	for (colNum = 0; colNum < SIXMATRIX_NUM_COL_BYTES_8BIT; colNum++) {
 		drawLed(
 			colNum,
 			rowNum,

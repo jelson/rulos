@@ -30,7 +30,7 @@
 #define COLLATCH_LE   GPIO_B2
 #define COLLATCH_SDI  GPIO_B3
 
-#define USEC_PER_ROW 1000
+#define USEC_PER_ROW 500000
 
 #define DEBUG
 
@@ -59,25 +59,34 @@ static const struct {
 };
 #define GPIO_ROW(x) (row_power[x].ddr), (row_power[x].port), (row_power[x].pin), (row_power[x].bit)
 
-
-void shift_row_2bit(uint8_t *colBytes)
+void gpio_row_power(uint8_t rowNum, uint8_t onoff)
 {
-	// shift in the new data for each column
-	for (uint8_t byteNum = 0; byteNum < NUM_COL_BYTES_2BIT; byteNum++, colBytes++) {
-		uint8_t currByte = *colBytes;
-		for (uint8_t i = 0; i < 8; i++) {
-			gpio_set_or_clr(COLLATCH_SDI, currByte & (uint8_t) 0b10000000);
-			currByte <<= 1;
-			gpio_set(COLLATCH_CLK);
-			gpio_clr(COLLATCH_CLK);
-		}
+	switch (rowNum) {
+	case  0: gpio_set_or_clr(GPIO_D2, onoff); break;
+	case  1: gpio_set_or_clr(GPIO_D1, onoff); break;
+	case  2: gpio_set_or_clr(GPIO_D0, onoff); break;
+	case  3: gpio_set_or_clr(GPIO_C3, onoff); break;
+	case  4: gpio_set_or_clr(GPIO_D5, onoff); break;
+	case  5: gpio_set_or_clr(GPIO_D6, onoff); break;
+	case  6: gpio_set_or_clr(GPIO_D7, onoff); break;
+	case  7: gpio_set_or_clr(GPIO_B4, onoff); break;
+	case  8: gpio_set_or_clr(GPIO_D3, onoff); break;
+	case  9: gpio_set_or_clr(GPIO_D4, onoff); break;
+	case 10: gpio_set_or_clr(GPIO_B6, onoff); break;
+	case 11: gpio_set_or_clr(GPIO_B7, onoff); break;
+	case 12: gpio_set_or_clr(GPIO_C2, onoff); break;
+	case 13: gpio_set_or_clr(GPIO_C1, onoff); break;
+	case 14: gpio_set_or_clr(GPIO_C0, onoff); break;
+	case 15: gpio_set_or_clr(GPIO_B5, onoff); break;
 	}
 }
 
-void shift_row_2bit_unrolled(uint8_t *colBytes)
+
+
+void shift_subframe(uint8_t *colBytes)
 {
 	// shift in the new data for each column
-	for (uint8_t byteNum = 0; byteNum < NUM_COL_BYTES_2BIT; byteNum++, colBytes++) {
+	for (uint8_t byteNum = 0; byteNum < SIXMATRIX_NUM_COL_BYTES_2BIT; byteNum++, colBytes++) {
 		uint8_t currByte = *colBytes;
 		gpio_set_or_clr(COLLATCH_SDI, currByte & (uint8_t) 0b10000000);
 		gpio_set(COLLATCH_CLK);
@@ -106,36 +115,6 @@ void shift_row_2bit_unrolled(uint8_t *colBytes)
 	}
 }
 
-void shift_row_8bit(uint8_t *colBytes, uint8_t cycleNum)
-{
-	for (uint8_t byteNum = 0; byteNum < NUM_COL_BYTES_8BIT; byteNum++, colBytes++) {
-		uint8_t tmp = *colBytes;
-		// warning - don't tinker with this without ensuring the compiler
-		// is still generating 8-bit comparisons.  It really wanted 16-bit comparisons.
-		// AVR-GCC faq says bitwise operators promote to 16-bit by default.
-		uint8_t tmp2 = tmp;
-		tmp2 &= (uint8_t) 0xf0; 
-		tmp2 >>= 4;
-		if (tmp2 > cycleNum)
-			gpio_set(COLLATCH_SDI);
-		else
-			gpio_clr(COLLATCH_SDI);
-
-		gpio_set(COLLATCH_CLK);
-		gpio_clr(COLLATCH_CLK);
-
-		tmp &= (uint8_t) 0x0f; 
-		if (tmp > cycleNum)
-			gpio_set(COLLATCH_SDI);
-		else
-			gpio_clr(COLLATCH_SDI);
-
-		gpio_set(COLLATCH_CLK);
-		gpio_clr(COLLATCH_CLK);
-	}
-
-		
-}
 
 void paint_next_row(SixMatrix_Context_t *mat)
 {
@@ -144,23 +123,23 @@ void paint_next_row(SixMatrix_Context_t *mat)
 #endif
 
 	// Using the extra local copies for speed; ptr redirects are slow
-	uint8_t prevRow   = mat->lastRowPainted;
-	uint8_t currCycle = mat->cycle;
+	uint8_t prevRow      = mat->lastRowPainted;
+	uint8_t currSubframe = mat->subframeNum;
 	uint8_t currRow;
 
 	// Compute which row to paint.  If we've reached the end of the row, 
-	if (prevRow == NUM_ROWS-1) {
+	// move to the first row of the next subframe.
+	//	if (prevRow == SIXMATRIX_NUM_ROWS-1) {
+	if (1) {
 		currRow = 0;
 
-		// Reached the bottom of the display?  Increment the
-		// PWM cycle number.
-		currCycle++;
-
-		if (currCycle == 16) {
-			currCycle = 0;
+		if (currSubframe == SIXMATRIX_BITS_PER_COL-1) {
+			currSubframe = 0;
+		} else {
+			currSubframe++;
 		}
-
-		mat->cycle = currCycle;
+		
+		mat->subframeNum = currSubframe;
 	} else {
 		currRow = prevRow+1;
 	}
@@ -168,17 +147,11 @@ void paint_next_row(SixMatrix_Context_t *mat)
 	// shift new row's data into the registers
 	gpio_clr(COLLATCH_LE);
 	gpio_clr(COLLATCH_CLK);
-
-	if (mat->mode == sixmatrix_2bit) {
-		shift_row_2bit_unrolled(mat->frameBuffer[currRow]);
-	} else {
-		shift_row_8bit(mat->frameBuffer[currRow], currCycle);
-	}
-
+	shift_subframe(mat->subframeData[currSubframe][currRow]);
 
 	// turn off old row
 	gpio_set(COLLATCH_OE);
-	gpio_clr(GPIO_ROW(prevRow));
+	gpio_row_power(prevRow, 0);
 
 	// assert new row's columns
 	gpio_set(COLLATCH_LE);
@@ -186,7 +159,7 @@ void paint_next_row(SixMatrix_Context_t *mat)
 
 	// turn on new row
 	gpio_clr(COLLATCH_OE);
-	gpio_set(GPIO_ROW(currRow));
+	gpio_row_power(currRow, 1);
 
 	mat->lastRowPainted = currRow;
 
@@ -197,8 +170,134 @@ void paint_next_row(SixMatrix_Context_t *mat)
 
 void hal_6matrix_setRow_8bit(SixMatrix_Context_t *mat, uint8_t *colBytes, uint8_t rowNum)
 {
-	memcpy(mat->frameBuffer[rowNum], colBytes, NUM_COL_BYTES_8BIT);
-	mat->mode = sixmatrix_8bit;
+	// The 0-15 brightness values in each of the red and green channels
+	// are displayed by keeping the LED on for 0/15ths through 15/15ths of the total time.
+	// We display 4 "subframes" for each refresh -- of lengths 1, 2, 4, and 8.
+	// Each bit of the brightness value corresponds to whether the LED should be on
+	// during that subframe.
+	// In this function we construct the 4 subframes:
+	// (ra1 rb1 rc1 rd1,ga1 gb1 gc1 gd1),(ra2 rb2 rc2 rd2 ,ga2 gb2 gc2 gd2)... to
+	// (ra1 ga1 ra2 ga2 ra3 ga3...)  (rb1 gb1 rb2 gb2 rb3 gb3...).
+	// Here, 1 2 3 4 is the column number, and A B C D is the brightness bit number.
+	//
+	// We are constructing the bitstream that is to be shifted in, and the MSB of 
+	// what we construct ends up being the LSB on the hardware (since we read the
+	// shifted bytes left-to-right), so we also reverse the order of the modules.
+	//
+	// HARDWARE DESCRIPTION (pcb 1.x):
+	//   1st shifted bit is the left-most  green LED of the right-most module.
+	//   2nd                               red
+	//   3rd                    second     green
+	//   4th                               red
+	// [...]
+	//   9th                    right-most red
+	//   10th                              green
+	//   11th                   7th        red
+	//   12th                              green
+	// [...]
+	//   17th                   left-most  green            middle
+
+	uint8_t outByte1 = 0;
+	uint8_t outByte2 = 0;
+	uint8_t outByte4 = 0;
+	uint8_t outByte8 = 0;
+	uint8_t outCtr = 0;
+
+	int8_t module, col;
+	for (module = 2; module >= 0; module--) {
+
+		// left-side columns are green-first
+		for (col = 0; col < 4; col++) {
+			uint8_t tmp = colBytes[module*8 + col];
+
+			outByte8 <<= 1;
+			if (tmp & 0b00001000) // green bit 4
+				outByte8 |= 1;
+
+			outByte8 <<= 1;
+			if (tmp & 0b10000000) // red bit 4
+				outByte8 |= 1;
+
+		
+			outByte4 <<= 1;
+			if (tmp & 0b00000100) // green bit 3
+				outByte4 |= 1;
+
+			outByte4 <<= 1;
+			if (tmp & 0b01000000) // red bit 3
+				outByte4 |= 1;
+
+
+			outByte2 <<= 1;
+			if (tmp & 0b00000010) // green bit 2
+				outByte2 |= 1;
+
+			outByte2 <<= 1;
+			if (tmp & 0b00100000) // red bit 2
+				outByte2 |= 1;
+
+
+			outByte1 <<= 1;
+			if (tmp & 0b00000001) // green bit 1
+				outByte1 |= 1;
+
+			outByte1 <<= 1;
+			if (tmp & 0b00010000) // red bit 1
+				outByte1 |= 1;
+		}
+
+		mat->subframeData[0][rowNum][outCtr] = outByte1;
+		mat->subframeData[1][rowNum][outCtr] = outByte2;
+		mat->subframeData[2][rowNum][outCtr] = outByte4;
+		mat->subframeData[3][rowNum][outCtr] = outByte8;
+		outCtr++;
+
+		// right 4 columns are wired red-first, and MSB-LSB reversed.
+		for (col = 7; col >= 4; col--) {
+			uint8_t tmp = colBytes[module*8 + col];
+
+			outByte8 <<= 1;
+			if (tmp & 0b10000000) // red bit 4
+				outByte8 |= 1;
+
+			outByte8 <<= 1;
+			if (tmp & 0b00001000) // green bit 4
+				outByte8 |= 1;
+
+			
+			outByte4 <<= 1;
+			if (tmp & 0b01000000) // red bit 3
+				outByte4 |= 1;
+
+			outByte4 <<= 1;
+			if (tmp & 0b00000100) // green bit 3
+				outByte4 |= 1;
+
+
+			outByte2 <<= 1;
+			if (tmp & 0b00100000) // red bit 2
+				outByte2 |= 1;
+
+			outByte2 <<= 1;
+			if (tmp & 0b00000010) // green bit 2
+				outByte2 |= 1;
+
+
+			outByte1 <<= 1;
+			if (tmp & 0b00010000) // red bit 1
+				outByte1 |= 1;
+
+			outByte1 <<= 1;
+			if (tmp & 0b00000001) // green bit 1
+				outByte1 |= 1;
+		}
+
+		mat->subframeData[0][rowNum][outCtr] = outByte1;
+		mat->subframeData[1][rowNum][outCtr] = outByte2;
+		mat->subframeData[2][rowNum][outCtr] = outByte4;
+		mat->subframeData[3][rowNum][outCtr] = outByte8;
+		outCtr++;
+	}
 }
 
 void hal_6matrix_init(SixMatrix_Context_t *mat)
@@ -210,9 +309,10 @@ void hal_6matrix_init(SixMatrix_Context_t *mat)
 	gpio_make_output(COLLATCH_LE);
 	gpio_make_output(COLLATCH_SDI);
 
-	for (uint8_t i = 0; i < NUM_ROWS; i++) {
+	for (uint8_t i = 0; i < SIXMATRIX_NUM_ROWS; i++) {
 		gpio_make_output(GPIO_ROW(i));
 		gpio_clr(GPIO_ROW(i));
 	}
 	hal_start_clock_us(USEC_PER_ROW, (Handler) paint_next_row, mat, TIMER1);
 }
+

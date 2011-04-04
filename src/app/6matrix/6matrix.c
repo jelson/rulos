@@ -31,7 +31,7 @@ void makeBarGraph_2bit(uint8_t numCols, uint8_t *output)
 {
 	uint8_t *currPtr = output;
 
-	memset(output, 0, NUM_COL_BYTES_2BIT);
+	memset(output, 0, SIXMATRIX_NUM_COL_BYTES_2BIT);
 	
 	while (numCols >= 8) {
 		*currPtr = 0xff;
@@ -52,7 +52,7 @@ void makeBarGraph_2bit(uint8_t numCols, uint8_t *output)
 
 void update_matrix(drawCtx *draw)
 {
-	uint8_t colBytes[NUM_COLS];
+	uint8_t colBytes[SIXMATRIX_NUM_COLS];
 	uint8_t colNum, rowNum;
 	uint8_t red, green;
 
@@ -62,7 +62,7 @@ void update_matrix(drawCtx *draw)
 		if (red >= 16)
 			red = 0;
 
-		for (colNum = 0, green = draw->cycle; colNum < NUM_COLS; colNum++, green++) {
+		for (colNum = 0, green = draw->cycle; colNum < SIXMATRIX_NUM_COLS; colNum++, green++) {
 			if (green >= 16)
 				green = 0;
 			colBytes[colNum] = MAKE_COLOR(red, green);
@@ -77,16 +77,42 @@ void update_matrix(drawCtx *draw)
 
 void one_gradient_row(drawCtx *draw)
 {
-	uint8_t bytes[NUM_COLS];
+	uint8_t bytes[SIXMATRIX_NUM_COLS];
 	uint8_t i;
 	uint8_t color = 0;
-	for (i = 0; i < NUM_COLS; i++) {
+	for (i = 0; i < SIXMATRIX_NUM_COLS; i++) {
 		bytes[i] = MAKE_COLOR(color, 0);
 		color++;
 		if (color == 16)
 			color = 0;
 	}
 	hal_6matrix_setRow_8bit(&(draw->matrix), bytes, 0);
+	schedule_us(1000000, (ActivationFuncPtr) update_matrix, draw);
+}
+
+void one_led(drawCtx *draw)
+{
+	uint8_t bytes[SIXMATRIX_NUM_COLS];
+	uint8_t i;
+	uint8_t color = 0;
+
+	schedule_us(2500000, (ActivationFuncPtr) one_led, draw);
+
+	if (draw->cycle < SIXMATRIX_NUM_COLS)
+		color = MAKE_COLOR(0xf, 0);
+	else
+		color = MAKE_COLOR(0, 0xf);
+
+	for (i = 0; i < SIXMATRIX_NUM_COLS; i++) {
+		if (i == draw->cycle || i+SIXMATRIX_NUM_COLS == draw->cycle)
+			bytes[i] = color;
+		else
+			bytes[i] = 0;
+	}
+
+	hal_6matrix_setRow_8bit(&(draw->matrix), bytes, 0);
+	if (++draw->cycle == 2*SIXMATRIX_NUM_COLS)
+		draw->cycle = 0;
 }
 
 drawCtx draw;
@@ -96,16 +122,18 @@ int main()
 	hal_init();
 	init_clock(10000, TIMER2);
 
-	draw.cycle = 0;
 	hal_6matrix_init(&draw.matrix);
-	one_gradient_row(&draw);
-	while (1) {};
 
-#if 0
-	schedule_us(1, (ActivationFuncPtr) update_matrix, &draw);
-#endif
+	//one_gradient_row(&draw);
 
+	draw.cycle = 0;
+	//schedule_us(1, (ActivationFuncPtr) update_matrix, &draw);
+	schedule_us(1, (ActivationFuncPtr) one_led, &draw);
 
+	CpumonAct cpumon;
+	cpumon_init(&cpumon);
+	cpumon_main_loop();
+	assert(FALSE);
 
 #if 0
 	uint8_t numCols = 0;
@@ -128,13 +156,6 @@ int main()
 		rowNum = (rowNum + 1) % NUM_ROWS;
 		_delay_ms(1000);
 	}
-#endif
-
-#if 0
-	CpumonAct cpumon;
-	cpumon_init(&cpumon);
-	cpumon_main_loop();
-	assert(FALSE);
 #endif
 }
 

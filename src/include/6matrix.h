@@ -22,10 +22,13 @@
 
 #include <inttypes.h>
 
-#define NUM_COLS 24
-#define NUM_ROWS 16
-#define NUM_COL_BYTES_2BIT (NUM_COLS/4)
-#define NUM_COL_BYTES_8BIT (NUM_COLS)
+#define SIXMATRIX_NUM_COLS 24
+#define SIXMATRIX_NUM_ROWS 16
+#define SIXMATRIX_BITS_PER_COL 4
+
+#define SIXMATRIX_NUM_COL_BYTES_2BIT (SIXMATRIX_NUM_COLS/4)
+#define SIXMATRIX_NUM_COL_BYTES_8BIT (SIXMATRIX_NUM_COLS)
+
 
 typedef enum {
 	sixmatrix_2bit,
@@ -33,10 +36,10 @@ typedef enum {
 } SixMatrix_mode;
 
 typedef struct {
-	uint8_t frameBuffer[NUM_ROWS][NUM_COL_BYTES_8BIT];
+	uint8_t subframeData[SIXMATRIX_BITS_PER_COL][SIXMATRIX_NUM_ROWS][SIXMATRIX_NUM_COL_BYTES_2BIT];
+	uint8_t subframeNum;
 	SixMatrix_mode mode;
 	uint8_t lastRowPainted;
-	uint8_t cycle;
 } SixMatrix_Context_t;
 
 void hal_6matrix_init(SixMatrix_Context_t *matrixCtx);
