@@ -125,9 +125,9 @@ int main()
 	hal_6matrix_init(&draw.matrix);
 
 	draw.cycle = 0;
-	schedule_us(1, (ActivationFuncPtr) one_gradient_row, &draw);
+	//schedule_us(1, (ActivationFuncPtr) one_gradient_row, &draw);
 	//schedule_us(1, (ActivationFuncPtr) update_matrix, &draw);
-	//schedule_us(1, (ActivationFuncPtr) one_led, &draw);
+	schedule_us(1, (ActivationFuncPtr) one_led, &draw);
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);
