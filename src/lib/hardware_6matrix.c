@@ -342,6 +342,37 @@ void paint_next_row(SixMatrix_Context_t *mat)
 #endif
 }
 
+typedef struct {
+	uint8_t bin1Val:1;
+	uint8_t bin2Val:1;
+	uint8_t bin3Val:1;
+	uint8_t bin4Val:1;
+	uint8_t bin5Val:1;
+	uint8_t bin6Val:1;
+	uint8_t bin7Val:1;
+	uint8_t bin8Val:1;
+} binSpec;
+
+static const binSpec binSpecs[] = {
+	{ 0, 0, 0, 0, 0, 0, 0, 0 }, // brightness 0: no bins
+	{ 1, 0, 0, 0, 0, 0, 0, 0 }, // brightness 1: bin 1 only
+	{ 0, 1, 0, 0, 0, 0, 0, 0 }, // brightness 2: bin 2 only
+	{ 1, 1, 0, 0, 0, 0, 0, 0 }, // brightness 3: bin 1 and 2
+	{ 0, 0, 1, 0, 0, 0, 0, 0 }, // 4
+	{ 1, 1, 1, 0, 0, 0, 0, 0 }, // 5
+	{ 0, 0, 0, 1, 0, 0, 0, 0 }, // 
+	{ 1, 1, 1, 1, 0, 0, 0, 0 }, // 
+	{ 0, 0, 0, 0, 1, 0, 0, 0 }, // 
+	{ 1, 1, 1, 1, 1, 0, 0, 0 }, // 
+	{ 0, 0, 0, 0, 0, 1, 0, 0 }, // 
+	{ 1, 1, 1, 1, 1, 1, 0, 0 }, // 
+	{ 0, 0, 0, 0, 0, 0, 1, 0 }, // 
+	{ 1, 1, 1, 1, 1, 1, 1, 0 }, // 
+	{ 0, 0, 0, 0, 0, 0, 0, 1 }, // 
+	{ 1, 1, 1, 1, 1, 1, 1, 1 }
+};
+
+
 void hal_6matrix_setRow_8bit(SixMatrix_Context_t *mat, uint8_t *colBytes, uint8_t rowNum)
 {
 #ifdef DEBUG
@@ -378,7 +409,11 @@ void hal_6matrix_setRow_8bit(SixMatrix_Context_t *mat, uint8_t *colBytes, uint8_
 
 	uint8_t outByte1 = 0;
 	uint8_t outByte2 = 0;
+	uint8_t outByte3 = 0;
 	uint8_t outByte4 = 0;
+	uint8_t outByte5 = 0;
+	uint8_t outByte6 = 0;
+	uint8_t outByte7 = 0;
 	uint8_t outByte8 = 0;
 	uint8_t outCtr = 0;
 
@@ -387,7 +422,104 @@ void hal_6matrix_setRow_8bit(SixMatrix_Context_t *mat, uint8_t *colBytes, uint8_
 
 		// left-side columns are green-first
 		for (col = 0; col < 4; col++) {
-			uint8_t tmp = colBytes[module*8 + col];
+			uint8_t currCol = colBytes[module*8 + col];
+			uint8_t tmp = currCol;
+			tmp &= (uint8_t) 0x0f;
+			binSpec b = binSpecs[tmp];
+
+			outByte1 |= b.bin1Val;
+			outByte2 |= b.bin2Val;
+			outByte3 |= b.bin3Val;
+			outByte4 |= b.bin4Val;
+			outByte5 |= b.bin5Val;
+			outByte6 |= b.bin6Val;
+			outByte7 |= b.bin7Val;
+			outByte8 |= b.bin8Val;
+
+#if 0
+			switch (tmp) {
+			case 1: 
+				outBin1 |= 1;
+				break;
+
+			case 2:
+				outBin2 |= 1;
+				break;
+			case 3:
+				outBin2 |= 1;
+				outBin1 |= 1;
+				break;
+
+			case 4:
+				outBin3 |= 1;
+				break;
+			case 5:
+				outBin3 |= 1;
+				outBin2 |= 1;
+				outBin1 |= 1;
+				break;
+
+			case 6:
+				outBin4 |= 1;
+				break;
+			case 7:
+				outBin4 |= 1;
+				outBin3 |= 1;
+				outBin2 |= 1;
+				outBin1 |= 1;
+				break;
+
+			case 8:
+				outBin5 |= 1;
+				break;
+			case 9:
+				outBin5 |= 1;
+				outBin4 |= 1;
+				outBin3 |= 1;
+				outBin2 |= 1;
+				outBin1 |= 1;
+				break;
+
+			case 10:
+				outBin6 |= 1;
+				break;
+			case 11:
+				outBin6 |= 1;
+				outBin5 |= 1;
+				outBin4 |= 1;
+				outBin3 |= 1;
+				outBin2 |= 1;
+				outBin1 |= 1;
+				break;
+
+			case 12:
+				outBin7 |= 1;
+				break;
+			case 13:
+				outBin7 |= 1;
+				outBin6 |= 1;
+				outBin5 |= 1;
+				outBin4 |= 1;
+				outBin3 |= 1;
+				outBin2 |= 1;
+				outBin1 |= 1;
+				break;
+
+			case 14:
+				outBin8 |= 1;
+				break;
+			case 15:
+				outBin8 |= 1;
+				outBin7 |= 1;
+				outBin6 |= 1;
+				outBin5 |= 1;
+				outBin4 |= 1;
+				outBin3 |= 1;
+				outBin2 |= 1;
+				outBin1 |= 1;
+				break;
+			}
+#endif
 
 			outByte8 <<= 1;
 			if (tmp & 0b00001000) // green bit 4
