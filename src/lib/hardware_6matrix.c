@@ -174,50 +174,6 @@ static inline void gpio_row_power_on(uint8_t rowNum)
 	rowOn[rowNum]();
 }
 
-void old_gpio_row_power_on(uint8_t rowNum)
-{
-	switch (rowNum) {
-	case  0: gpio_set(GPIO_D2); break;
-	case  1: gpio_set(GPIO_D1); break;
-	case  2: gpio_set(GPIO_D0); break;
-	case  3: gpio_set(GPIO_C3); break;
-	case  4: gpio_set(GPIO_D5); break;
-	case  5: gpio_set(GPIO_D6); break;
-	case  6: gpio_set(GPIO_D7); break;
-	case  7: gpio_set(GPIO_B4); break;
-	case  8: gpio_set(GPIO_D3); break;
-	case  9: gpio_set(GPIO_D4); break;
-	case 10: gpio_set(GPIO_B6); break;
-	case 11: gpio_set(GPIO_B7); break;
-	case 12: gpio_set(GPIO_C2); break;
-	case 13: gpio_set(GPIO_C1); break;
-	case 14: gpio_set(GPIO_C0); break;
-	case 15: break; // spi bluewire gpio_set(GPIO_B5); break;
-	}
-}
-
-void old_gpio_row_power_off(uint8_t rowNum)
-{
-	switch (rowNum) {
-	case  0: gpio_clr(GPIO_D2); break;
-	case  1: gpio_clr(GPIO_D1); break;
-	case  2: gpio_clr(GPIO_D0); break;
-	case  3: gpio_clr(GPIO_C3); break;
-	case  4: gpio_clr(GPIO_D5); break;
-	case  5: gpio_clr(GPIO_D6); break;
-	case  6: gpio_clr(GPIO_D7); break;
-	case  7: gpio_clr(GPIO_B4); break;
-	case  8: gpio_clr(GPIO_D3); break;
-	case  9: gpio_clr(GPIO_D4); break;
-	case 10: gpio_clr(GPIO_B6); break;
-	case 11: gpio_clr(GPIO_B7); break;
-	case 12: gpio_clr(GPIO_C2); break;
-	case 13: gpio_clr(GPIO_C1); break;
-	case 14: gpio_clr(GPIO_C0); break;
-	case 15: break; // spi bluewire gpio_clr(GPIO_B5); break;
-	}
-}
-
 #ifdef SPI_SHIFTING
 
 static inline void shift_subframe(uint8_t *colBytes)
@@ -348,12 +304,55 @@ void paint_next_row(SixMatrix_Context_t *mat)
 }
 
 ///// Gamma Correction using Fibonacci Sequences
-/////
+//
+// We'd like to convert the 16 values we get from the user to 16
+// visually distinct values, using gamma correction.  We use 8 distinct
+// brightness levels in 8 distinct timeslots -- every other number in
+// the Fibonacci sequence.  This lets us play a trick, getting twice
+// as many distinct levels as we have time slots:
+//
+// Level 0: No bins
+// Level 1: Bin 1
+// Level 2: Bin 2
+// Level 3: Bin 2+1
+// Level 4: Bin 3
+// Level 5: Bin 3+2+1
+//
+// The values of the bins are {1, 3, 8, 21, 55, 144, 377, 987}
+//
+// We could just map those to times.  However, since the last bin is 987 times
+// longer than the first bin, and the first bin can't be smaller than ~50 usec
+// (twice the time it takes to shift), that would make the overall update rate
+// unacceptably slow.  Therefore, for the smallest bins, we use PWM.
+//
+// For the last 3 bins, we do extend the time.  We'll use TIMER0 with a /64
+// prescaler, so 8 microseconds per tick.  48 is a multiple of 8 so we'll
+// normalize all the bins to be portions of 48 microseconds:
+// {0.333333, 1., 2.66667, 7., 18.3333, 48., 125.667, 329.}
+// 
+// The last 3 bins are 48, 126, and 329 microseconds, or OCR values
+// of {6, 16, 41}.
+//
+// Earlier bins are PWMed down.  We'll use the 16-bit counter configured with
+// no prescaling, with a cycle time of 48 microseconds, so counts up to 384
+// (assuming 8 MHz).  Thus, rescaling the first 6 bins as OCR values gives:
+// {2.66667, 8., 21.3333, 56., 146.667, 384.,
 
 typedef struct {
-	const uint8_t ocr;
-	const uint16_t pwm;
+	const uint8_t ocr;    // subframe time -- timer0 OCR value, each tick is 8 usec
+	const uint16_t pwm;   // subframe PWM -- timer1 value, each tick is 1/384th of a frame
 } binTime;
+
+static const binTime binTimes[] = {
+	{ 6, 3 },
+	{ 6, 8 },
+	{ 6, 21 },
+	{ 6, 56 },
+	{ 6, 147 },
+	{ 6, 384 },
+	{ 16, 384 },
+	{ 41, 384 }
+};
 
 typedef struct {
 	uint8_t bin0Val:1;
@@ -368,14 +367,14 @@ typedef struct {
 
 static const brightnessToBins brightnessesToBins[] = {
 	{ 0, 0, 0, 0, 0, 0, 0, 0 }, // brightness 0: no bins
-	{ 1, 0, 0, 0, 0, 0, 0, 0 }, // brightness 1: bin 1 only
-	{ 0, 1, 0, 0, 0, 0, 0, 0 }, // brightness 2: bin 2 only
-	{ 1, 1, 0, 0, 0, 0, 0, 0 }, // brightness 3: bin 1 and 2
-	{ 0, 0, 1, 0, 0, 0, 0, 0 }, // 4
-	{ 1, 1, 1, 0, 0, 0, 0, 0 }, // 5
-	{ 0, 0, 0, 1, 0, 0, 0, 0 }, // 
-	{ 1, 1, 1, 1, 0, 0, 0, 0 }, // 
-	{ 0, 0, 0, 0, 1, 0, 0, 0 }, // 
+	{ 1, 0, 0, 0, 0, 0, 0, 0 }, // brightness 1: bin 1
+	{ 0, 1, 0, 0, 0, 0, 0, 0 }, // brightness 2: bin 2
+	{ 1, 1, 0, 0, 0, 0, 0, 0 }, // brightness 3: bin 2+1
+	{ 0, 0, 1, 0, 0, 0, 0, 0 }, // brightness 4: bin 3
+	{ 1, 1, 1, 0, 0, 0, 0, 0 }, // brightness 5: bin 3+2+1
+	{ 0, 0, 0, 1, 0, 0, 0, 0 }, // brightness 6: bin 4
+	{ 1, 1, 1, 1, 0, 0, 0, 0 }, // brightness 7: bin 4+3+2+1
+	{ 0, 0, 0, 0, 1, 0, 0, 0 }, // ...etc
 	{ 1, 1, 1, 1, 1, 0, 0, 0 }, // 
 	{ 0, 0, 0, 0, 0, 1, 0, 0 }, // 
 	{ 1, 1, 1, 1, 1, 1, 0, 0 }, // 

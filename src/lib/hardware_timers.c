@@ -14,6 +14,17 @@
  *
  ************************************************************************/
 
+#ifdef PRESCALE_TEST
+# include <stdio.h>
+# include <stdlib.h>
+# include <inttypes.h>
+# include <sys/types.h>
+# include <unistd.h>
+# include <assert.h>
+# define FALSE 0
+uint32_t hardware_f_cpu;
+#else
+
 /*
  * hardware.c: These functions are only needed for physical display hardware.
  *
@@ -92,8 +103,10 @@ void init_f_cpu()
 # else
 #  error Hardware-specific clock code needs help
 # endif
-#endif
+#endif // CRYSTAL
 }
+
+#endif // PRESCALE_TEST
 
  /* 
   * 
@@ -160,6 +173,8 @@ static void find_prescaler(uint32_t req_us_per_period, const TimerDef *timerDef,
 	}
 	assert(FALSE);	// might need a software scaler
 }
+
+#ifndef PRESCALE_TEST
 
 uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t timer_id)
 {
@@ -352,3 +367,39 @@ void hal_delay_ms(uint16_t __ms)
 	_delay_loop_2(__ticks);
 }
 
+#else // PRESCALE_TEST
+
+int main(int argc, char *argv[])
+{
+        uint32_t us_per_period;
+        uint8_t cs;
+        uint16_t ocr;
+
+	if (argc != 4) {
+		printf("Usage: %s <cpuMhz> <timerNumber> <desiredUsec>\n", argv[0]);
+		exit(1);
+	}
+
+	hardware_f_cpu = atoi(argv[1]) * 1000000;
+	int16_t timerNum = atoi(argv[2]);
+	int32_t period = atoi(argv[3]);
+
+	if (timerNum < 0 || timerNum > 2) {
+		printf("Invalid timer number\n");
+		exit(1);
+	}
+
+        find_prescaler(period,
+		        timerNum == 0 ? &_timer0 : 
+		       (timerNum == 1 ? &_timer1 : 
+			&_timer2), 
+		       &us_per_period, &cs, &ocr);
+
+	printf("cpu speed (hz): %d\n", hardware_f_cpu);
+        printf("us_per_period: %d\n", us_per_period);
+        printf("cs: %d\n", cs);
+        printf("ocr: %d\n", ocr);
+        return 0;
+}
+
+#endif
