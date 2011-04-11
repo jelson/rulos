@@ -32,7 +32,10 @@ void serial_console_update(SerialConsole *sca)
 		{
 			*(sca->line_ptr) = '\0';
 			sca->line_ptr = sca->line;
-			(sca->line_act.func)(sca->line_act.data);
+			if (sca->line_act.func != NULL)
+			{
+				(sca->line_act.func)(sca->line_act.data);
+			}
 		}
 	}
 

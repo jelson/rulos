@@ -24,6 +24,11 @@
 #include "sound.h"
 #include "audio_request_message.h"
 
+typedef struct {
+	SoundCmd skip_cmd;
+	SoundCmd loop_cmd;
+	uint8_t mlvolume;
+} AudioEffectsStream;
 
 typedef struct s_audio_server {
 	AudioStreamer audio_streamer;
@@ -35,26 +40,26 @@ typedef struct s_audio_server {
 	uint8_t mcm_recv_msg_alloc[sizeof(Message)+sizeof(MusicControlMessage)];
 	RecvSlot mcm_recvSlot;
 
-	SoundCmd skip_cmd;
-	SoundCmd loop_cmd;
-
 	r_bool index_ready;
 	AuIndexRec magic;
 	AuIndexRec index[sound_num_tokens];
 	//AuIndexRec index[2];
 
+	AudioEffectsStream audio_stream[AUDIO_NUM_STREAMS];
+	int8_t active_stream;
+
 	r_bool music_random_seeded;
-	uint8_t cur_music_token; 	// ranges 0..num_music_tokens-1
 	uint8_t num_music_tokens;	// derived from index
-	uint8_t music_token_offset;	// offset into index where music starts.
+	uint8_t music_first_token;	// offset into index where music starts.
+	uint8_t music_offset;		// offset past first_token of last thing we played
 
 	SDCard *borrowed_sdc;
 } AudioServer;
 
 void init_audio_server(AudioServer *as, Network *network, uint8_t timer_id);
-void _aserv_skip_to_clip(AudioServer *aserv, SoundCmd cur_cmd, SoundCmd loop_cmd);
 
 // visibility for debugging
 void _aserv_fetch_start(AudioServer *as);
+void _aserv_dbg_play(AudioServer *aserv, SoundToken skip, SoundToken loop);
 
 #endif // _audio_server_h

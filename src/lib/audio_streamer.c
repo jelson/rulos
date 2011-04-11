@@ -19,8 +19,8 @@
 
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 #define R_SYNCDEBUG()	syncdebug(0, 'R', __LINE__)
-#define SYNCDEBUG()	{R_SYNCDEBUG();}
-//#define SYNCDEBUG()	{}
+//#define SYNCDEBUG()	{R_SYNCDEBUG();}
+#define SYNCDEBUG()	{}
 extern void audioled_set(r_bool red, r_bool yellow);
 
 void _as_fill(AudioStreamer *as);
@@ -69,7 +69,7 @@ void _as_fill(AudioStreamer *as)
 //	syncdebug(0, 'f', (int) as->audio_out.fill_buffer);
 //	syncdebug(0, 'f', (int) fill_ptr);
 
-//	audioled_set(0, 1);
+	audioled_set(0, 1);
 	// always clear buf in case we end up coming back around here
 	// before ASStreamCard gets a chance to fill it. Want to play
 	// silence, not stuttered audio.
@@ -79,10 +79,9 @@ void _as_fill(AudioStreamer *as)
 	{
 		// invariant: ulawbuf_ready == sdc_ready waiting for it;
 		// not elsewise scheduled.
-//		audioled_set(1, 0);
+		audioled_set(1, 0);
 		SYNCDEBUG();
-		_ad_decode_ulaw_buf(fill_ptr, as->ulawbuf, AO_BUFLEN,
-			as->is_music ? as->music_mlvolume : 0);
+		_ad_decode_ulaw_buf(fill_ptr, as->ulawbuf, AO_BUFLEN, as->mlvolume);
 		event_signal(&as->ulawbuf_empty_evt);
 	}
 }
@@ -197,7 +196,7 @@ void as_6_read_more(AudioStreamer *as)
 
 //////////////////////////////////////////////////////////////////////////////
 
-r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, uint32_t end_address, r_bool is_music, ActivationFuncPtr done_func, void *done_data)
+r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, uint32_t end_address, ActivationFuncPtr done_func, void *done_data)
 {
 	SYNCDEBUG();
 	as->block_address = block_address;
@@ -208,7 +207,6 @@ r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset,
 		// Maybe the best strategy is to end early rather than
 		// start late.
 	as->end_address = end_address;
-	as->is_music = is_music;
 	as->done_func = done_func;
 	as->done_data = done_data;
 		// TODO we just lose the previous callback in this case.
@@ -217,9 +215,9 @@ r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset,
 	return TRUE;
 }
 
-void as_set_music_volume(AudioStreamer *as, uint8_t music_mlvolume)
+void as_set_volume(AudioStreamer *as, uint8_t mlvolume)
 {
-	as->music_mlvolume = music_mlvolume;
+	as->mlvolume = mlvolume;
 }
 
 void as_stop_streaming(AudioStreamer *as)

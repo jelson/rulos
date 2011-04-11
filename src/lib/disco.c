@@ -70,11 +70,11 @@ UIEventDisposition disco_event_handler(
 			screenblanker_setmode(disco->screenblanker, sb_inactive);
 			result = uied_blur;
 			ac_skip_to_clip(disco->audioClient,
-				AUDIO_STREAM_CONTINUOUS_EFFECTS, sound_silence, sound_silence);
+				AUDIO_STREAM_MUSIC, sound_silence, sound_silence);
 			break;
 		case evt_idle_nowidle:
 			ac_skip_to_clip(disco->audioClient,
-				AUDIO_STREAM_CONTINUOUS_EFFECTS, sound_silence, sound_silence);
+				AUDIO_STREAM_MUSIC, sound_silence, sound_silence);
 			break;
 		case 'a':
 		case 'r':

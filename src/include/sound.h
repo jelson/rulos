@@ -40,9 +40,11 @@ typedef struct {
 // The client code is written as if there are multiple channels (streams)
 // that can be mixed together. The audio driver code doesn't yet support that,
 // but these defines are sent in by the clients anyway.
-#define AUDIO_STREAM_BURST_EFFECTS		0
-#define AUDIO_STREAM_CONTINUOUS_EFFECTS	1
-#define AUDIO_STREAM_COUNTDOWN			2
+// Okay, now the plan is to have, if not blended, then preemptive streams.
+#define AUDIO_STREAM_BACKGROUND			0
+#define AUDIO_STREAM_MUSIC				1
+#define AUDIO_STREAM_BURST_EFFECTS		2
+#define AUDIO_NUM_STREAMS				3
 
 #define VOL_MAX (0)
 #define VOL_MIN (7)

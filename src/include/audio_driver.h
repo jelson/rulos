@@ -21,10 +21,12 @@
 #include "sound.h"
 //#include "spiflash.h"
 
-#define NUM_STREAMS	1
-#define AUDIO_STREAM_BURST_EFFECTS		0
-#define AUDIO_STREAM_CONTINUOUS_EFFECTS	1
-#define AUDIO_STREAM_COUNTDOWN			2
+#define NUM_COMPOSITE_STREAMS	1
+#if 0
+#define AUDIO_COMPOSITE_STREAM_BURST_EFFECTS		0
+#define AUDIO_COMPOSITE_STREAM_CONTINUOUS_EFFECTS	1
+#define AUDIO_COMPOSITE_STREAM_COUNTDOWN			2
+#endif
 
 #define AUDIO_RING_BUFFER_SIZE	50
 	// 6.25ms
@@ -41,7 +43,7 @@ typedef struct s_audio_stream {
 typedef struct s_audio_driver {
 	// Streams tell what addresses to fetch, and carry ring buffers to
 	// hold fetched data for compositing
-	AudioStream stream[NUM_STREAMS];
+	AudioStream stream[NUM_COMPOSITE_STREAMS];
 
 	// Data comes from here
 	//SPIFlash spif;

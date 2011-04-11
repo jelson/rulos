@@ -94,9 +94,21 @@ typedef struct s_control_panel {
 	CCPong ccpong;
 	CCDisco ccdisco;
 
+	InputInjectorIfc *volume_input_ifc;
+
 	IdleAct *idle;
 } ControlPanel;
 
-void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network, HPAM *hpam, AudioClient *audioClient, IdleAct *idle, ScreenBlanker *screenblanker, JoystickState_t *joystick);
+void init_control_panel(
+	ControlPanel *cp,
+	uint8_t board0,
+	uint8_t aux_board0,
+	Network *network,
+	HPAM *hpam,
+	AudioClient *audioClient,
+	IdleAct *idle,
+	ScreenBlanker *screenblanker,
+	JoystickState_t *joystick,
+	InputInjectorIfc *volume_input_ifc /*optional*/);
 
 #endif // _control_panel_h

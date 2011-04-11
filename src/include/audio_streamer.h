@@ -19,8 +19,7 @@ typedef struct s_AudioStreamer
 		// 0 == playing silence
 	uint32_t end_address;
 	uint16_t sector_offset;	// [0..SDBUFSIZE), in AO_BUFLEN increments
-	uint8_t music_mlvolume;	// 0=> original volume .. 8=> silent
-	r_bool is_music;
+	uint8_t mlvolume;	// 0=> original volume .. 8=> silent
 	Event ulawbuf_empty_evt;
 	Event play_request_evt;
 	ActivationFuncPtr done_func;
@@ -44,7 +43,6 @@ r_bool as_play(
 	       uint32_t block_address,
 	       uint16_t block_offset,
 	       uint32_t end_address,
-	       r_bool is_music,
 	       ActivationFuncPtr done_func,
 	       void *done_data);
 	// block_address: multiple of SDCard blocksize (512)
@@ -56,7 +54,7 @@ r_bool as_play(
 	//   byte *after* the last byte of the last block of this audio file.
 	//  done_act: called once we've queued the last buffer for this sound.
 
-void as_set_music_volume(AudioStreamer *as, uint8_t music_mlvolume);
+void as_set_volume(AudioStreamer *as, uint8_t mlvolume);
 
 void as_stop_streaming(AudioStreamer *as);
 

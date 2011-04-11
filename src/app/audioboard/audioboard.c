@@ -96,16 +96,16 @@ void cmdproc_update(CmdProc *cp)
 	else if (strncmp(buf, "play ", 5)==0)
 	{
 		SYNCDEBUG();
-		SoundCmd skip = {(SoundToken) (buf[5]-'b')};
-		SoundCmd loop = {(SoundToken) (buf[6]-'b')};
-		syncdebug(0, 's', skip.token);
-		syncdebug(0, 'l', loop.token);
-		_aserv_skip_to_clip(cp->audio_server, skip, loop);
+		SoundToken skip = (SoundToken) (buf[5]-'b');
+		SoundToken loop = (SoundToken) (buf[6]-'b');
+		syncdebug(0, 's', skip);
+		syncdebug(0, 'l', loop);
+		_aserv_dbg_play(cp->audio_server, skip, loop);
 	}
 	else if (strncmp(buf, "vol ", 4)==0)
 	{
 		uint8_t v = atoi_hex(&buf[4]);
-		as_set_music_volume(&cp->audio_server->audio_streamer, v);
+		as_set_volume(&cp->audio_server->audio_streamer, v);
 		syncdebug(0, 'V', v);
 	}
 #if 0
@@ -184,7 +184,7 @@ typedef struct {
 void _update_blink(BlinkAct *ba)
 {
 	ba->val = !ba->val;
-	audioled_set(ba->val, 0);
+	//audioled_set(ba->val, 0);
 #ifndef SIM
 //	gpio_set_or_clr(AUDIO_LED_RED, !ba->val);
 #endif //!SIM

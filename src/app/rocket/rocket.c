@@ -15,6 +15,7 @@
  ************************************************************************/
 
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -95,7 +96,7 @@ typedef struct {
 
 #define POTSTICKER_CHANNEL 0
 #define VOLUME_POT_CHANNEL 1
-//#define USE_LOCAL_KEYPAD
+#define USE_LOCAL_KEYPAD 1
 
 void init_rocket0(Rocket0 *r0)
 {
@@ -114,7 +115,19 @@ void init_rocket0(Rocket0 *r0)
 	init_screenblanker_sender(&r0->screenblanker_sender, &r0->network);
 	r0->screenblanker.screenblanker_sender = &r0->screenblanker_sender;
 
-	init_control_panel(&r0->cp, 3, 1, &r0->network, &r0->hpam, &r0->audio_client, &r0->idle, &r0->screenblanker, &r0->ts.joystick_state);
+	volume_control_init(&r0->volume_control, &r0->audio_client, VOLUME_POT_CHANNEL, /*board*/ 3);
+
+	init_control_panel(
+		&r0->cp,
+		3,
+		1,
+		&r0->network,
+		&r0->hpam,
+		&r0->audio_client,
+		&r0->idle,
+		&r0->screenblanker,
+		&r0->ts.joystick_state,
+		&r0->volume_control.injector.iii);
 	r0->cp.ccl.launch.main_rtc = &r0->dr;
 	r0->cp.ccl.launch.lunar_distance = &r0->ld;
 
@@ -144,8 +157,6 @@ void init_rocket0(Rocket0 *r0)
 		'p',
 		'q');
 
-	volume_control_init(&r0->volume_control, &r0->audio_client, VOLUME_POT_CHANNEL, /*board*/ 0);
-
 	bss_canary_init();
 }
 
@@ -159,6 +170,12 @@ int main()
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);	// includes slow calibration phase
+
+#if 0
+//	// TODO temporary for sync debug output; would interfere with uart net stack
+	hal_uart_init(NULL, 38400, true);
+	hal_uart_sync_send((char*) "hello\n", 6);
+#endif
 
 	board_buffer_module_init();
 

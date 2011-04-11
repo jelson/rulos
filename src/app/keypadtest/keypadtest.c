@@ -33,11 +33,21 @@ typedef struct {
 } KeyTestActivation_t;
 
 
-void add_char_to_bbuf(BoardBuffer *bbuf, char c)
+void add_char_to_bbuf(BoardBuffer *bbuf, char c, UartState_t *uart)
 {
 	memmove(bbuf->buffer, bbuf->buffer+1, NUM_DIGITS-1);
 	bbuf->buffer[NUM_DIGITS-1] = ascii_to_bitmap(c);
 	board_buffer_draw(bbuf);
+
+	char out[100];
+	memset(out, 'x', sizeof(out));
+	strcpy(out, "boing! ");
+	out[7] = c;
+	out[8] = '\n';
+	out[9] = '\0';
+	while (uart_busy(uart));
+	uart_send(uart, out, strlen(out), NULL, NULL);
+	while (uart_busy(uart));
 }
 
 static void update(KeyTestActivation_t *kta)
@@ -47,17 +57,40 @@ static void update(KeyTestActivation_t *kta)
 	uint8_t c;
 
 	while ((c = hal_read_keybuf()) != 0) {
-		add_char_to_bbuf(&kta->bbuf_k, c);
+		add_char_to_bbuf(&kta->bbuf_k, c, &kta->uart);
 	}
 
 	while (uart_read(&kta->uart, (char*) &c)) {
 		LOGF((logfp, "got uart char %c\n", c));
-		add_char_to_bbuf(&kta->bbuf_u, c);
+		add_char_to_bbuf(&kta->bbuf_u, c, &kta->uart);
 	}
 }
 
 
-#define TEST_STR "hello world from the uart"
+#define TEST_STR "hello world from the uart\n"
+
+typedef struct {
+	BoardBuffer *bbuf;
+	UartState_t *uart;
+	int count;
+} Metronome;
+
+void tock(Metronome *m)
+{
+	m->count = (m->count + 1) & 7;
+	m->bbuf->buffer[0] = ascii_to_bitmap('0'+m->count);
+	board_buffer_draw(m->bbuf);
+}
+
+void tick(Metronome *m)
+{
+	char *out = (char*) "tick\n";
+	while (uart_busy(m->uart));
+	uart_send(m->uart, out, strlen(out), NULL, NULL);
+	while (uart_busy(m->uart));
+	schedule_us( 500000, (ActivationFuncPtr) tock, m);
+	schedule_us(1000000, (ActivationFuncPtr) tick, m);
+}
 
 int main()
 {
@@ -65,6 +98,7 @@ int main()
 	init_clock(10000, TIMER1);
 	hal_init_keypad();	// requires clock to be initted.
 	board_buffer_module_init();
+	hal_init_rocketpanel(bc_chaseclock);
 
 
 	KeyTestActivation_t kta;
@@ -78,10 +112,15 @@ int main()
 	board_buffer_push(&kta.bbuf_u, 1);
 	schedule_us(1, (ActivationFuncPtr) update, &kta);
 
-	add_char_to_bbuf(&kta.bbuf_k, 'I');
-	add_char_to_bbuf(&kta.bbuf_k, 'n');
-	add_char_to_bbuf(&kta.bbuf_k, 'i');
-	add_char_to_bbuf(&kta.bbuf_k, 't');
+	add_char_to_bbuf(&kta.bbuf_k, 'I', &kta.uart);
+	add_char_to_bbuf(&kta.bbuf_k, 'n', &kta.uart);
+	add_char_to_bbuf(&kta.bbuf_k, 'i', &kta.uart);
+	add_char_to_bbuf(&kta.bbuf_k, 't', &kta.uart);
+
+	Metronome m;
+	m.uart = &kta.uart;
+	m.bbuf = &kta.bbuf_k;
+	schedule_us(1000000, (ActivationFuncPtr) tick, &m);
 
 	cpumon_main_loop();
 	return 0;

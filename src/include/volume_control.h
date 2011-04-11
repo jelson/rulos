@@ -22,6 +22,11 @@
 #include <potsticker.h>
 #include <audio_client.h>
 
+#define VOL_UP_KEY 't'
+#define VOL_DN_KEY 'u'
+//#define VOL_UP_KEY '9'
+//#define VOL_DN_KEY '7'
+
 #define DISPLAY_VOLUME_ADJUSTMENTS 1
 
 	// TODO drawing volume on the display burns 21 bytes of bss;

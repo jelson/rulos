@@ -14,30 +14,15 @@
  *
  ************************************************************************/
 
-#ifndef _audio_request_message_h
-#define _audio_request_message_h
-
+#pragma once
 #include "rocket.h"
-#include "sound.h"
+#include "audio_client.h"
 
 typedef struct {
-	SoundToken token;
-} SoundCmd;
-
-typedef struct {
-	uint8_t stream_id;
-	r_bool skip;
-	SoundCmd skip_cmd;
-	SoundCmd loop_cmd;
-} AudioRequestMessage;
-
-typedef struct {
-	uint8_t stream_id;
+	struct s_audio_client *audio_client;
 	uint8_t mlvolume;
-} AudioVolumeMessage;
+} AmbientNoise;
 
-typedef struct {
-	int8_t advance;	// +1: skip forward  -1: skip backward
-} MusicControlMessage;
+void ambient_noise_init(AmbientNoise *an, struct s_audio_client *audio_client);
+void ambient_noise_boost_complete(AmbientNoise *an);
 
-#endif // _audio_request_message_h

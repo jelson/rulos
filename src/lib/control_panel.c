@@ -15,6 +15,7 @@
  ************************************************************************/
 
 #include "control_panel.h"
+#include "volume_control.h"	// for VOL_UP_KEY & VOL_DN_KEY
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -68,7 +69,7 @@ UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt);
 void cp_inject(struct s_direct_injector *di, char k);
 void cp_paint(ControlPanel *cp);
 
-void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network, HPAM *hpam, AudioClient *audioClient, IdleAct *idle, ScreenBlanker *screenblanker, JoystickState_t *joystick)
+void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network, HPAM *hpam, AudioClient *audioClient, IdleAct *idle, ScreenBlanker *screenblanker, JoystickState_t *joystick, InputInjectorIfc *volume_input_ifc)
 {
 	cp->handler_func = (UIEventHandlerFunc) cp_uie_handler;
 
@@ -98,6 +99,8 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Ne
 
 	assert(cp->child_count <= CONTROL_PANEL_NUM_CHILDREN);
 
+	cp->volume_input_ifc = volume_input_ifc;
+
 	cp->selected_child = 0;
 	cp->active_child = CP_NO_CHILD;
 
@@ -115,6 +118,15 @@ void cp_inject(struct s_direct_injector *di, char k)
 UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt)
 {
 	UIEventDisposition result = uied_accepted;
+
+	if (cp->volume_input_ifc!=NULL
+		&& (evt==VOL_UP_KEY || evt==VOL_DN_KEY))
+	{
+		// steal these events for volume control
+		(cp->volume_input_ifc->func)(cp->volume_input_ifc, evt);
+		return result;
+	}
+
 	if (cp->active_child != CP_NO_CHILD)
 	{
 		ControlChild *cc = cp->children[cp->active_child];

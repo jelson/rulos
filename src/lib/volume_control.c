@@ -20,7 +20,10 @@ void volume_control_init(VolumeControl *vc, AudioClient *ac, uint8_t adc_channel
 		'u');
 	vc->ac = ac;
 
-	vc->cur_vol = VOL_MAX;
+	// cache correct volume so next music play starts at the right place
+	vc->cur_vol = 3;
+
+	ac_change_volume(vc->ac, AUDIO_STREAM_MUSIC, vc->cur_vol);
 
 #if DISPLAY_VOLUME_ADJUSTMENTS
 	vc->lastTouch = clock_time_us() - VOLUME_DISPLAY_PERSISTENCE*2;
@@ -35,15 +38,11 @@ void volume_control_init(VolumeControl *vc, AudioClient *ac, uint8_t adc_channel
 void _volume_input(InputInjectorIfc *ii, char key)
 {
 	VolumeControl *vc = ((VolumeControlInjector *) ii)->vc;
-//#define VOL_UP_KEY 't'
-//#define VOL_DN_KEY 'u'
-#define VOL_UP_KEY '9'
-#define VOL_DN_KEY '7'
-	if (key=='u' && (vc->cur_vol<VOL_MIN))
+	if (key==VOL_DN_KEY && (vc->cur_vol<VOL_MIN))
 	{
 		vc->cur_vol += 1;
 	}
-	else if (key=='t' && (vc->cur_vol>VOL_MAX))
+	else if (key==VOL_UP_KEY && (vc->cur_vol>VOL_MAX))
 	{
 		vc->cur_vol -= 1;
 	}
@@ -55,7 +54,7 @@ void _volume_input(InputInjectorIfc *ii, char key)
 #if DISPLAY_VOLUME_ADJUSTMENTS
 	vc->lastTouch = clock_time_us();
 #endif // DISPLAY_VOLUME_ADJUSTMENTS
-	ac_set_music_volume(vc->ac, vc->cur_vol);
+	ac_change_volume(vc->ac, AUDIO_STREAM_MUSIC, vc->cur_vol);
 }
 
 void _volume_update(VolumeControl *vc)
