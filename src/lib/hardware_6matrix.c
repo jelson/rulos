@@ -30,11 +30,11 @@
 #define COLLATCH_LE   GPIO_B2
 #define COLLATCH_SDI  GPIO_B3
 
-#define SHORTEST_SUBFRAME_USEC 85
+#define SHORTEST_SUBFRAME_USEC 60
 #define SPI_SHIFTING
+#define TOP_ROW_ONLY
 
-#define DEBUG GPIO_D4
-
+#define DEBUG GPIO_C2
 
 /////  Turning row transistors on and off quickly /////
 
@@ -106,7 +106,7 @@ static inline void row_11_off() { gpio_clr(GPIO_ROW_11); }
 static inline void row_12_off() { gpio_clr(GPIO_ROW_12); }
 static inline void row_13_off() { gpio_clr(GPIO_ROW_13); }
 static inline void row_14_off() { gpio_clr(GPIO_ROW_14); }
-static inline void row_15_off() { gpio_clr(GPIO_ROW_15); }
+static inline void row_15_off() { /*gpio_clr(GPIO_ROW_15); */ }
 static inline void row_16_off() { gpio_clr(GPIO_ROW_16); }
 
 static inline void row_1_on()  { gpio_set(GPIO_ROW_1); }
@@ -123,7 +123,7 @@ static inline void row_11_on() { gpio_set(GPIO_ROW_11); }
 static inline void row_12_on() { gpio_set(GPIO_ROW_12); }
 static inline void row_13_on() { gpio_set(GPIO_ROW_13); }
 static inline void row_14_on() { gpio_set(GPIO_ROW_14); }
-static inline void row_15_on() { gpio_set(GPIO_ROW_15); }
+static inline void row_15_on() { /*gpio_set(GPIO_ROW_15);*/ }
 static inline void row_16_on() { gpio_set(GPIO_ROW_16); }
 
 const static funcPtr rowOff[] = {
@@ -233,27 +233,27 @@ static inline void shift_subframe(uint8_t *colBytes)
 	_NOP(); _NOP(); _NOP();  _NOP(); 
 	_NOP(); _NOP(); _NOP();  _NOP(); 
 	_NOP(); _NOP(); _NOP();  _NOP(); 
-	_NOP(); _NOP();
+	_NOP(); _NOP(); _NOP();  _NOP();
 	SPDR = colBytes[1];
 	_NOP(); _NOP(); _NOP();  _NOP(); 
 	_NOP(); _NOP(); _NOP();  _NOP(); 
 	_NOP(); _NOP(); _NOP();  _NOP(); 
-	_NOP(); _NOP();
+	_NOP(); _NOP(); _NOP();  _NOP(); 
 	SPDR = colBytes[2];
 	_NOP(); _NOP(); _NOP();  _NOP(); 
 	_NOP(); _NOP(); _NOP();  _NOP(); 
 	_NOP(); _NOP(); _NOP();  _NOP(); 
-	_NOP(); _NOP();
+	_NOP(); _NOP(); _NOP();  _NOP(); 
 	SPDR = colBytes[3];
 	_NOP(); _NOP(); _NOP();  _NOP(); 
 	_NOP(); _NOP(); _NOP();  _NOP(); 
 	_NOP(); _NOP(); _NOP();  _NOP(); 
-	_NOP(); _NOP();
+	_NOP(); _NOP(); _NOP();  _NOP(); 
 	SPDR = colBytes[4];
 	_NOP(); _NOP(); _NOP();  _NOP(); 
 	_NOP(); _NOP(); _NOP();  _NOP(); 
 	_NOP(); _NOP(); _NOP();  _NOP(); 
-	_NOP(); _NOP();
+	_NOP(); _NOP(); _NOP();  _NOP(); 
 	SPDR = colBytes[5];
 }
 
@@ -304,16 +304,21 @@ void paint_next_row(SixMatrix_Context_t *mat)
 
 	// Compute which row to paint.  If we've reached the end of the row, 
 	// move to the first row of the next subframe.
-	if (prevRow == SIXMATRIX_NUM_ROWS-1) {
+#ifdef TOP_ROW_ONLY
+	if (1)
+#else
+	if (prevRow == SIXMATRIX_NUM_ROWS-1)
+#endif
+	{
 		currRow = 0;
 
-		if (currSubframe == SIXMATRIX_BITS_PER_COL-1) {
+		if (currSubframe == SIXMATRIX_NUM_SUBFRAMES-1) {
 			currSubframe = 0;
 		} else {
 			currSubframe++;
 		}
 		// reconfigure the time we spend on each subframe
-		OCR1A = mat->subframeOcr[currSubframe];
+		//OCR1A = mat->subframeOcr[currSubframe];
 		mat->subframeNum = currSubframe;
 	} else {
 		currRow = prevRow+1;
@@ -342,7 +347,16 @@ void paint_next_row(SixMatrix_Context_t *mat)
 #endif
 }
 
+///// Gamma Correction using Fibonacci Sequences
+/////
+
 typedef struct {
+	const uint8_t ocr;
+	const uint16_t pwm;
+} binTime;
+
+typedef struct {
+	uint8_t bin0Val:1;
 	uint8_t bin1Val:1;
 	uint8_t bin2Val:1;
 	uint8_t bin3Val:1;
@@ -350,10 +364,9 @@ typedef struct {
 	uint8_t bin5Val:1;
 	uint8_t bin6Val:1;
 	uint8_t bin7Val:1;
-	uint8_t bin8Val:1;
-} binSpec;
+} brightnessToBins;
 
-static const binSpec binSpecs[] = {
+static const brightnessToBins brightnessesToBins[] = {
 	{ 0, 0, 0, 0, 0, 0, 0, 0 }, // brightness 0: no bins
 	{ 1, 0, 0, 0, 0, 0, 0, 0 }, // brightness 1: bin 1 only
 	{ 0, 1, 0, 0, 0, 0, 0, 0 }, // brightness 2: bin 2 only
@@ -407,6 +420,7 @@ void hal_6matrix_setRow_8bit(SixMatrix_Context_t *mat, uint8_t *colBytes, uint8_
 	// [...]
 	//   17th                   left-most  green            middle
 
+	uint8_t outByte0 = 0;
 	uint8_t outByte1 = 0;
 	uint8_t outByte2 = 0;
 	uint8_t outByte3 = 0;
@@ -414,7 +428,6 @@ void hal_6matrix_setRow_8bit(SixMatrix_Context_t *mat, uint8_t *colBytes, uint8_
 	uint8_t outByte5 = 0;
 	uint8_t outByte6 = 0;
 	uint8_t outByte7 = 0;
-	uint8_t outByte8 = 0;
 	uint8_t outCtr = 0;
 
 	int8_t module, col;
@@ -425,188 +438,120 @@ void hal_6matrix_setRow_8bit(SixMatrix_Context_t *mat, uint8_t *colBytes, uint8_
 			uint8_t currCol = colBytes[module*8 + col];
 			uint8_t tmp = currCol;
 			tmp &= (uint8_t) 0x0f;
-			binSpec b = binSpecs[tmp];
+			brightnessToBins grnBins = brightnessesToBins[tmp];
+			currCol >>= 4;
+			brightnessToBins redBins = brightnessesToBins[currCol];
 
-			outByte1 |= b.bin1Val;
-			outByte2 |= b.bin2Val;
-			outByte3 |= b.bin3Val;
-			outByte4 |= b.bin4Val;
-			outByte5 |= b.bin5Val;
-			outByte6 |= b.bin6Val;
-			outByte7 |= b.bin7Val;
-			outByte8 |= b.bin8Val;
-
-#if 0
-			switch (tmp) {
-			case 1: 
-				outBin1 |= 1;
-				break;
-
-			case 2:
-				outBin2 |= 1;
-				break;
-			case 3:
-				outBin2 |= 1;
-				outBin1 |= 1;
-				break;
-
-			case 4:
-				outBin3 |= 1;
-				break;
-			case 5:
-				outBin3 |= 1;
-				outBin2 |= 1;
-				outBin1 |= 1;
-				break;
-
-			case 6:
-				outBin4 |= 1;
-				break;
-			case 7:
-				outBin4 |= 1;
-				outBin3 |= 1;
-				outBin2 |= 1;
-				outBin1 |= 1;
-				break;
-
-			case 8:
-				outBin5 |= 1;
-				break;
-			case 9:
-				outBin5 |= 1;
-				outBin4 |= 1;
-				outBin3 |= 1;
-				outBin2 |= 1;
-				outBin1 |= 1;
-				break;
-
-			case 10:
-				outBin6 |= 1;
-				break;
-			case 11:
-				outBin6 |= 1;
-				outBin5 |= 1;
-				outBin4 |= 1;
-				outBin3 |= 1;
-				outBin2 |= 1;
-				outBin1 |= 1;
-				break;
-
-			case 12:
-				outBin7 |= 1;
-				break;
-			case 13:
-				outBin7 |= 1;
-				outBin6 |= 1;
-				outBin5 |= 1;
-				outBin4 |= 1;
-				outBin3 |= 1;
-				outBin2 |= 1;
-				outBin1 |= 1;
-				break;
-
-			case 14:
-				outBin8 |= 1;
-				break;
-			case 15:
-				outBin8 |= 1;
-				outBin7 |= 1;
-				outBin6 |= 1;
-				outBin5 |= 1;
-				outBin4 |= 1;
-				outBin3 |= 1;
-				outBin2 |= 1;
-				outBin1 |= 1;
-				break;
-			}
-#endif
-
-			outByte8 <<= 1;
-			if (tmp & 0b00001000) // green bit 4
-				outByte8 |= 1;
-
-			outByte8 <<= 1;
-			if (tmp & 0b10000000) // red bit 4
-				outByte8 |= 1;
-
-		
-			outByte4 <<= 1;
-			if (tmp & 0b00000100) // green bit 3
-				outByte4 |= 1;
-
-			outByte4 <<= 1;
-			if (tmp & 0b01000000) // red bit 3
-				outByte4 |= 1;
-
-
-			outByte2 <<= 1;
-			if (tmp & 0b00000010) // green bit 2
-				outByte2 |= 1;
-
-			outByte2 <<= 1;
-			if (tmp & 0b00100000) // red bit 2
-				outByte2 |= 1;
-
+			outByte0 <<= 1;
+			outByte0 |= grnBins.bin0Val;
+			outByte0 <<= 1;
+			outByte0 |= redBins.bin0Val;
 
 			outByte1 <<= 1;
-			if (tmp & 0b00000001) // green bit 1
-				outByte1 |= 1;
-
+			outByte1 |= grnBins.bin1Val;
 			outByte1 <<= 1;
-			if (tmp & 0b00010000) // red bit 1
-				outByte1 |= 1;
+			outByte1 |= redBins.bin1Val;
+
+			outByte2 <<= 1;
+			outByte2 |= grnBins.bin2Val;
+			outByte2 <<= 1;
+			outByte2 |= redBins.bin2Val;
+
+			outByte3 <<= 1;
+			outByte3 |= grnBins.bin3Val;
+			outByte3 <<= 1;
+			outByte3 |= redBins.bin3Val;
+
+			outByte4 <<= 1;
+			outByte4 |= grnBins.bin4Val;
+			outByte4 <<= 1;
+			outByte4 |= redBins.bin4Val;
+
+			outByte5 <<= 1;
+			outByte5 |= grnBins.bin5Val;
+			outByte5 <<= 1;
+			outByte5 |= redBins.bin5Val;
+
+			outByte6 <<= 1;
+			outByte6 |= grnBins.bin6Val;
+			outByte6 <<= 1;
+			outByte6 |= redBins.bin6Val;
+
+			outByte7 <<= 1;
+			outByte7 |= grnBins.bin7Val;
+			outByte7 <<= 1;
+			outByte7 |= redBins.bin7Val;
 		}
 
-		mat->subframeData[0][rowNum][outCtr] = outByte1;
-		mat->subframeData[1][rowNum][outCtr] = outByte2;
-		mat->subframeData[2][rowNum][outCtr] = outByte4;
-		mat->subframeData[3][rowNum][outCtr] = outByte8;
+
+		mat->subframeData[0][rowNum][outCtr] = outByte0;
+		mat->subframeData[1][rowNum][outCtr] = outByte1;
+		mat->subframeData[2][rowNum][outCtr] = outByte2;
+		mat->subframeData[3][rowNum][outCtr] = outByte3;
+		mat->subframeData[4][rowNum][outCtr] = outByte4;
+		mat->subframeData[5][rowNum][outCtr] = outByte5;
+		mat->subframeData[6][rowNum][outCtr] = outByte6;
+		mat->subframeData[7][rowNum][outCtr] = outByte7;
 		outCtr++;
 
 		// right 4 columns are wired red-first, and MSB-LSB reversed.
 		for (col = 7; col >= 4; col--) {
-			uint8_t tmp = colBytes[module*8 + col];
+			uint8_t currCol = colBytes[module*8 + col];
+			uint8_t tmp = currCol;
+			tmp &= (uint8_t) 0x0f;
+			brightnessToBins grnBins = brightnessesToBins[tmp];
+			currCol >>= 4;
+			brightnessToBins redBins = brightnessesToBins[currCol];
 
-			outByte8 <<= 1;
-			if (tmp & 0b10000000) // red bit 4
-				outByte8 |= 1;
-
-			outByte8 <<= 1;
-			if (tmp & 0b00001000) // green bit 4
-				outByte8 |= 1;
-
-			
-			outByte4 <<= 1;
-			if (tmp & 0b01000000) // red bit 3
-				outByte4 |= 1;
-
-			outByte4 <<= 1;
-			if (tmp & 0b00000100) // green bit 3
-				outByte4 |= 1;
-
-
-			outByte2 <<= 1;
-			if (tmp & 0b00100000) // red bit 2
-				outByte2 |= 1;
-
-			outByte2 <<= 1;
-			if (tmp & 0b00000010) // green bit 2
-				outByte2 |= 1;
-
+			outByte0 <<= 1;
+			outByte0 |= redBins.bin0Val;
+			outByte0 <<= 1;
+			outByte0 |= grnBins.bin0Val;
 
 			outByte1 <<= 1;
-			if (tmp & 0b00010000) // red bit 1
-				outByte1 |= 1;
-
+			outByte1 |= redBins.bin1Val;
 			outByte1 <<= 1;
-			if (tmp & 0b00000001) // green bit 1
-				outByte1 |= 1;
+			outByte1 |= grnBins.bin1Val;
+
+			outByte2 <<= 1;
+			outByte2 |= redBins.bin2Val;
+			outByte2 <<= 1;
+			outByte2 |= grnBins.bin2Val;
+
+			outByte3 <<= 1;
+			outByte3 |= redBins.bin3Val;
+			outByte3 <<= 1;
+			outByte3 |= grnBins.bin3Val;
+
+			outByte4 <<= 1;
+			outByte4 |= redBins.bin4Val;
+			outByte4 <<= 1;
+			outByte4 |= grnBins.bin4Val;
+
+			outByte5 <<= 1;
+			outByte5 |= redBins.bin5Val;
+			outByte5 <<= 1;
+			outByte5 |= grnBins.bin5Val;
+
+			outByte6 <<= 1;
+			outByte6 |= redBins.bin6Val;
+			outByte6 <<= 1;
+			outByte6 |= grnBins.bin6Val;
+
+			outByte7 <<= 1;
+			outByte7 |= redBins.bin7Val;
+			outByte7 <<= 1;
+			outByte7 |= grnBins.bin7Val;
 		}
 
-		mat->subframeData[0][rowNum][outCtr] = outByte1;
-		mat->subframeData[1][rowNum][outCtr] = outByte2;
-		mat->subframeData[2][rowNum][outCtr] = outByte4;
-		mat->subframeData[3][rowNum][outCtr] = outByte8;
+		mat->subframeData[0][rowNum][outCtr] = outByte0;
+		mat->subframeData[1][rowNum][outCtr] = outByte1;
+		mat->subframeData[2][rowNum][outCtr] = outByte2;
+		mat->subframeData[3][rowNum][outCtr] = outByte3;
+		mat->subframeData[4][rowNum][outCtr] = outByte4;
+		mat->subframeData[5][rowNum][outCtr] = outByte5;
+		mat->subframeData[6][rowNum][outCtr] = outByte6;
+		mat->subframeData[7][rowNum][outCtr] = outByte7;
 		outCtr++;
 	}
 #ifdef DEBUG
@@ -621,8 +566,11 @@ void hal_6matrix_init(SixMatrix_Context_t *mat)
 	memset(mat, 0, sizeof(*mat));
 
 	// spi bluewire
-	//gpio_make_output(COLLATCH_CLK);
+#ifdef SPI_SHIFTING
 	gpio_make_input(COLLATCH_CLK);
+#else
+	gpio_make_output(COLLATCH_CLK);
+#endif
 
 	gpio_make_output(COLLATCH_OE);
 	gpio_make_output(COLLATCH_LE);
@@ -659,7 +607,7 @@ void hal_6matrix_init(SixMatrix_Context_t *mat)
 	gpio_make_output(GPIO_ROW_14);
 	gpio_make_output(GPIO_ROW_15);
 
-	hal_start_clock_us(SHORTEST_SUBFRAME_USEC*8, (Handler) paint_next_row, mat, TIMER1);
+	hal_start_clock_us(SHORTEST_SUBFRAME_USEC, (Handler) paint_next_row, mat, TIMER0);
 
 	// hal_start_clock_us finds the correct prescale value and
 	// counter value for the longest subframe -- 8 times the

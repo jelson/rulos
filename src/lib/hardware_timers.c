@@ -36,11 +36,18 @@ void null_handler(void *data)
 {
 }
 
+Handler timer0_handler = null_handler;
 Handler timer1_handler = null_handler;
-void *timer1_data = NULL;
-
 Handler timer2_handler = null_handler;
+
+void *timer0_data = NULL;
+void *timer1_data = NULL;
 void *timer2_data = NULL;
+
+ISR(TIMER0_COMPA_vect)
+{
+	timer0_handler(timer0_data);
+}
 
 ISR(TIMER1_COMPA_vect)
 {
@@ -109,16 +116,18 @@ void init_f_cpu()
   * keep the intermediate results fitting in a 32-bit int.
   */
 
-static uint8_t _timer1_prescaler_bits[] = { 0xff, 0, 3, 6, 8, 10, 0xff, 0xff };
-static uint8_t _timer2_prescaler_bits[] = { 0xff, 0, 3, 5, 6,  7,    8,   10 };
+static const uint8_t _timer0_prescaler_bits[] = { 0xff, 0, 3, 6, 8, 10, 0xff, 0xff };
+static const uint8_t _timer1_prescaler_bits[] = { 0xff, 0, 3, 6, 8, 10, 0xff, 0xff };
+static const uint8_t _timer2_prescaler_bits[] = { 0xff, 0, 3, 5, 6,  7,    8,   10 };
 typedef struct {
-	uint8_t *prescaler_bits;
-	uint8_t ocr_bits;
+	const uint8_t *prescaler_bits;
+	const uint8_t ocr_bits;
 } TimerDef;
-static TimerDef _timer1 = { _timer1_prescaler_bits, 16 };
-static TimerDef _timer2 = { _timer2_prescaler_bits,  8 };
+static const TimerDef _timer0 = { _timer0_prescaler_bits,  8 };
+static const TimerDef _timer1 = { _timer1_prescaler_bits, 16 };
+static const TimerDef _timer2 = { _timer2_prescaler_bits,  8 };
 
-static void find_prescaler(uint32_t req_us_per_period, TimerDef *timerDef,
+static void find_prescaler(uint32_t req_us_per_period, const TimerDef *timerDef,
 	uint32_t *out_us_per_period,
 	uint8_t *out_cs,	// prescaler selection
 	uint16_t *out_ocr	// count limit
@@ -165,8 +174,36 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 	// disable interrupts
 	cli();
 
-	if (timer_id == TIMER1)
-	{
+	switch (timer_id) {
+	case TIMER0:
+		find_prescaler(us, &_timer0, &actual_us_per_period, &cs, &ocr);
+
+		uint8_t tccr0b = 0;
+		tccr0b |= (cs & 4) ? _BV(CS02) : 0;
+		tccr0b |= (cs & 2) ? _BV(CS01) : 0;
+		tccr0b |= (cs & 1) ? _BV(CS00) : 0;
+
+		timer0_handler = handler;
+		timer0_data = data;
+
+		OCR0A = ocr;
+		TCCR0A =  _BV(WGM01); // CTC Mode 2 (interrupt on count-up)
+		TCCR0B = tccr0b;
+
+		/* enable output-compare int. */
+#if defined(MCU8_line)
+		TIMSK  |= _BV(OCIE0A);
+#elif defined(MCU328_line) || defined(MCU1284_line)
+		TIMSK0 |= _BV(OCIE0A);
+#else
+# error hardware-specific timer code needs help!
+#endif
+
+		/* reset counter */
+		TCNT0 = 0; 
+		break;
+
+	case TIMER1:
 		find_prescaler(us, &_timer1, &actual_us_per_period, &cs, &ocr);
 
 		uint8_t tccr1b = _BV(WGM12);		// CTC Mode 4 (interrupt on count-up)
@@ -192,9 +229,9 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 
 		/* reset counter */
 		TCNT1 = 0; 
-	}
-	else if (timer_id == TIMER2)
-	{
+		break;
+
+	case TIMER2:
 		find_prescaler(us, &_timer2, &actual_us_per_period, &cs, &ocr);
 
 		uint8_t tccr2a = _BV(WGM21);	// CTC Mode 2 (interrupt on count-up)
@@ -221,11 +258,13 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 
 		/* reset counter */
 		TCNT2 = 0; 
-	}
-	else
-	{
+		break;
+
+	default:
 		assert(FALSE);
+		break;
 	}
+
 
 	/* Enable interrupts (regardless of if they were on before or not) */
 	sei();

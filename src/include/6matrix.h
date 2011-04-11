@@ -24,7 +24,7 @@
 
 #define SIXMATRIX_NUM_COLS 24
 #define SIXMATRIX_NUM_ROWS 16
-#define SIXMATRIX_BITS_PER_COL 4
+#define SIXMATRIX_NUM_SUBFRAMES 8
 
 #define SIXMATRIX_NUM_COL_BYTES_2BIT (SIXMATRIX_NUM_COLS/4)
 #define SIXMATRIX_NUM_COL_BYTES_8BIT (SIXMATRIX_NUM_COLS)
@@ -36,8 +36,8 @@ typedef enum {
 } SixMatrix_mode;
 
 typedef struct {
-	uint16_t subframeOcr[SIXMATRIX_BITS_PER_COL];
-	uint8_t subframeData[SIXMATRIX_BITS_PER_COL][SIXMATRIX_NUM_ROWS][SIXMATRIX_NUM_COL_BYTES_2BIT];
+	uint16_t subframeOcr[SIXMATRIX_NUM_SUBFRAMES];
+	uint8_t subframeData[SIXMATRIX_NUM_SUBFRAMES][SIXMATRIX_NUM_ROWS][SIXMATRIX_NUM_COL_BYTES_2BIT];
 	uint8_t subframeNum;
 	SixMatrix_mode mode;
 	uint8_t lastRowPainted;

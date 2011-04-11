@@ -49,8 +49,10 @@ void hal_idle();			// hw: spin. sim: sleep
 
 #define HAL_MAGIC 0x74
 
+#define TIMER0  (0)
 #define TIMER1	(1)
 #define TIMER2	(2)
+
 uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t timer_id);
 
 void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff);
