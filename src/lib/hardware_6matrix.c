@@ -30,9 +30,8 @@
 #define COLLATCH_LE   GPIO_B2
 #define COLLATCH_SDI  GPIO_B3
 
-#define SHORTEST_SUBFRAME_USEC 60
 #define SPI_SHIFTING
-#define TOP_ROW_ONLY
+//#define TOP_ROW_ONLY
 
 #define DEBUG GPIO_C2
 
@@ -248,60 +247,6 @@ static inline void shift_subframe(uint8_t *colBytes)
 #endif
 
 
-void paint_next_row(SixMatrix_Context_t *mat)
-{
-#ifdef DEBUG
-	gpio_set(DEBUG);
-#endif
-	// Using the extra local copies for speed; ptr redirects are slow
-	uint8_t prevRow      = mat->lastRowPainted;
-	uint8_t currSubframe = mat->subframeNum;
-	uint8_t currRow;
-
-	// Compute which row to paint.  If we've reached the end of the row, 
-	// move to the first row of the next subframe.
-#ifdef TOP_ROW_ONLY
-	if (1)
-#else
-	if (prevRow == SIXMATRIX_NUM_ROWS-1)
-#endif
-	{
-		currRow = 0;
-
-		if (currSubframe == SIXMATRIX_NUM_SUBFRAMES-1) {
-			currSubframe = 0;
-		} else {
-			currSubframe++;
-		}
-		// reconfigure the time we spend on each subframe
-		//OCR1A = mat->subframeOcr[currSubframe];
-		mat->subframeNum = currSubframe;
-	} else {
-		currRow = prevRow+1;
-	}
-
-	// shift new row's data into the registers
-	shift_subframe(mat->subframeData[currSubframe][currRow]);
-
-	// do other book-keeping now, to give last byte time to shift out
-	mat->lastRowPainted = currRow;
-
-	// turn off old row
-	gpio_set(COLLATCH_OE);
-	gpio_row_power_off(prevRow);
-
-	// assert new row's columns
-	gpio_set(COLLATCH_LE);
-	gpio_clr(COLLATCH_LE);
-
-	// turn on new row
-	gpio_clr(COLLATCH_OE);
-	gpio_row_power_on(currRow);
-
-#ifdef DEBUG
-	gpio_clr(DEBUG);
-#endif
-}
 
 ///// Gamma Correction using Fibonacci Sequences
 //
@@ -560,6 +505,67 @@ void hal_6matrix_setRow_8bit(SixMatrix_Context_t *mat, uint8_t *colBytes, uint8_
 #endif
 }
 
+
+
+void paint_next_row(SixMatrix_Context_t *mat)
+{
+#ifdef DEBUG
+	gpio_set(DEBUG);
+#endif
+	// Using the extra local copies for speed; ptr redirects are slow
+	uint8_t prevRow      = mat->lastRowPainted;
+	uint8_t currSubframe = mat->subframeNum;
+	uint8_t currRow;
+
+	// Compute which row to paint.  If we've reached the end of the row, 
+	// move to the first row of the next subframe.
+#ifdef TOP_ROW_ONLY
+	if (1)
+#else
+	if (prevRow == SIXMATRIX_NUM_ROWS-1)
+#endif
+	{
+		currRow = 0;
+
+		if (currSubframe == SIXMATRIX_NUM_SUBFRAMES-1) {
+			currSubframe = 0;
+		} else {
+			currSubframe++;
+		}
+		// reconfigure the time we spend on each subframe
+		OCR0A = binTimes[currSubframe].ocr; // set the time until next frame
+		mat->subframeNum = currSubframe;
+	} else {
+		currRow = prevRow+1;
+	}
+
+	// shift new row's data into the registers
+	shift_subframe(mat->subframeData[currSubframe][currRow]);
+
+	// do other book-keeping now, to give last byte time to shift out
+	mat->lastRowPainted = currRow;
+
+	// turn off old row
+	gpio_row_power_off(prevRow);
+	OCR1A = 0;
+	TCNT1 = 383;
+
+	// assert new row's columns
+	gpio_set(COLLATCH_LE);
+	gpio_clr(COLLATCH_LE);
+
+	OCR1A = binTimes[currSubframe].pwm; // set PWM of this subframe
+	TCNT1 = 300; // just before the flip time
+
+	// turn on power to the new row
+	gpio_row_power_on(currRow);
+
+#ifdef DEBUG
+	gpio_clr(DEBUG);
+#endif
+}
+
+
 void hal_6matrix_init(SixMatrix_Context_t *mat)
 {
 	memset(mat, 0, sizeof(*mat));
@@ -606,16 +612,21 @@ void hal_6matrix_init(SixMatrix_Context_t *mat)
 	gpio_make_output(GPIO_ROW_14);
 	gpio_make_output(GPIO_ROW_15);
 
-	hal_start_clock_us(SHORTEST_SUBFRAME_USEC, (Handler) paint_next_row, mat, TIMER0);
+	// Use Timer0 for paint clock
+	hal_start_clock_us(329, (Handler) paint_next_row, mat, TIMER0);
 
-	// hal_start_clock_us finds the correct prescale value and
-	// counter value for the longest subframe -- 8 times the
-	// shortest, assuming 4 bits per frame.  Now, compute
-	// the OCR value for the shorter subframes.
-	uint16_t ocr = OCR1A;
-	mat->subframeOcr[3] = ocr;  ocr >>= 1;
-	mat->subframeOcr[2] = ocr;  ocr >>= 1;
-	mat->subframeOcr[1] = ocr;  ocr >>= 1;
-	mat->subframeOcr[0] = ocr;
+	// Set up PWM on Timer1 
+        TCCR1A = 0
+                | _BV(COM1A1) | _BV(COM1A0) // inverting PWM on OC1A
+                | _BV(WGM11)                // Fast PWM, 16-bit, TOP=ICR1
+                ;
+        TCCR1B = 0
+                | _BV(WGM13)                // Fast PWM, 16-bit, TOP=ICR1
+                | _BV(WGM12)                // Fast PWM, 16-bit, TOP=ICR1
+                | _BV(CS10)                 // no prescaler => 1/8 us per tick
+                ;
+
+        ICR1 = 384;
+        OCR1A = 0;
 }
 
