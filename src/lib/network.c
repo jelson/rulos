@@ -112,6 +112,7 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 	uint8_t incoming_checksum;
 	uint8_t slotIdx;
 	uint8_t payload_len;
+	uint8_t oldInterrupts;
 	RecvSlot *rs;
 	
 	// make sure it's at least as long as we're expecting
@@ -179,7 +180,12 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 	
 	// everything seems good!  copy to the receive slot and call the callback
 	memcpy(rs->msg, msg, len);
-	mrs->occupied_len = 0; // do this now in case the callback is slow
+
+	// tell the network stack the buffer is free
+	oldInterrupts = hal_start_atomic();
+	mrs->occupied_len = 0;
+	hal_end_atomic(oldInterrupts);
+	
 #ifdef DEBUG_STACK_WITH_UART
 	hal_uart_sync_send("CP", 2);
 #endif
@@ -190,7 +196,9 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 	return;
 	
 done:
+	oldInterrupts = hal_start_atomic();
 	mrs->occupied_len = 0;
+	hal_end_atomic(oldInterrupts);
 }
 
 /////////////// Sending ///////////////////////////////////////////////

@@ -272,7 +272,7 @@ static void twi_update(TwiState *twi, uint8_t status)
 		}
 
 		// overflowed the receive buffer?  if so, drop entire packet.
-		if (twi->slaveRecvSlot->capacity < twi->slaveRecvLen)
+		if (twi->slaveRecvSlot->capacity <= twi->slaveRecvLen)
 		{
 			LOGF((logfp, "dropping packet too long for local receive buffer"));
 			abortSlaveRecv(twi);
@@ -285,8 +285,10 @@ static void twi_update(TwiState *twi, uint8_t status)
 		break;
 
 	case TW_SR_DATA_NACK:
-		// we didn't ack a byte for some reason; abandon the packet
-		abortSlaveRecv(twi);
+		// we didn't ack a byte for some reason.  if we're in
+	  	// the middle of a packet, abandon it.
+		if (twi->slaveRecvLen >= 0)
+			abortSlaveRecv(twi);
 		break;
 
 	case TW_SR_STOP:
@@ -294,9 +296,9 @@ static void twi_update(TwiState *twi, uint8_t status)
 		if (twi->slaveRecvLen > 0)
 		{
 			twi->slaveRecvSlot->occupied_len = twi->slaveRecvLen;
-			twi->slaveRecvLen = -1;
 			schedule_now((ActivationFuncPtr) doRecvCallback, twi->slaveRecvSlot);
 		}
+		twi->slaveRecvLen = -1;
 		break;
 
 	case TW_SR_ARB_LOST_GCALL_ACK:
