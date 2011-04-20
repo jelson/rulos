@@ -274,6 +274,7 @@ int main()
 	cmdproc_init(&mc.cmdproc, &mc.aserv, &mc.network);
 
 	init_twi_network(&mc.network, 100, AUDIO_ADDR);
+	SYNCDEBUG();
 
 	mc.foo = 2;
 	schedule_us(1000000, init_audio_server_delayed_start, &mc);

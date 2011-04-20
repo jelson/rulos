@@ -144,6 +144,7 @@ void ddock_update(DDockAct *act)
 	if (act->focused)
 	{
 		r_bool button_pushed = ((act->joystick->state & JOYSTICK_TRIGGER)!=0);
+		booster_set_context(act->booster, bcontext_docking);
 		booster_set(act->booster, button_pushed);
 	}
 

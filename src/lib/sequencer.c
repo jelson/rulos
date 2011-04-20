@@ -178,6 +178,7 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 
 	if (launch->state == launch_state_launching)
 	{
+		booster_set_context(launch->booster, bcontext_liftoff);
 		booster_set(launch->booster, TRUE);
 		ascii_to_bitmap_str(launch->s4->bbuf[1].buffer, 8, " BLAST");
 		ascii_to_bitmap_str(launch->s4->bbuf[2].buffer, 8, "  OFF");
@@ -186,6 +187,7 @@ void launch_configure_state(Launch *launch, LaunchState newState)
 
 	if (launch->state == launch_state_complete)
 	{
+		booster_set_context(launch->booster, bcontext_liftoff);
 		booster_set(launch->booster, FALSE);
 		ascii_to_bitmap_str(launch->s4->bbuf[1].buffer, 8, " boost");
 		ascii_to_bitmap_str(launch->s4->bbuf[2].buffer, 8, "complete");

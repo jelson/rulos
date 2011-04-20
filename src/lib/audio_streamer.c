@@ -19,8 +19,8 @@
 
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 #define R_SYNCDEBUG()	syncdebug(0, 'R', __LINE__)
-//#define SYNCDEBUG()	{R_SYNCDEBUG();}
-#define SYNCDEBUG()	{}
+#define SYNCDEBUG()	{R_SYNCDEBUG();}
+//#define SYNCDEBUG()	{}
 extern void audioled_set(r_bool red, r_bool yellow);
 
 void _as_fill(AudioStreamer *as);
@@ -53,14 +53,27 @@ void _ad_decode_ulaw_buf(uint8_t *dst, uint8_t *src, uint16_t len, uint8_t mlvol
 {
 	uint8_t *srcp = src;
 	uint8_t *end = src+len;
+	uint8_t voloffset = (mlvolume==8) ? 128 : (((1<<mlvolume)-1)<<(7-mlvolume));
 
 	end = src+len;
 	for (; srcp<end; srcp++, dst++)
 	{
 		uint8_t v = (*srcp) + 128;
-		*dst = v >> mlvolume;
+		*dst = (v >> mlvolume) + voloffset;
 	}
 }
+
+#if BLEND
+void _ad_blend_ulaw_buf(uint8_t *fill_ptr, uint8_t last_blend_value)
+{
+	//lite_assert(AO_BUFLEN>8);	// wish I could do this statically.
+	int i;
+	for (i=0; i<8; i++)
+	{
+		fill_ptr[i] = (last_blend_value>>i) + (fill_ptr[i]>>(8-i));
+	}
+}
+#endif // BLEND
 
 void _as_fill(AudioStreamer *as)
 {
@@ -82,6 +95,14 @@ void _as_fill(AudioStreamer *as)
 		audioled_set(1, 0);
 		SYNCDEBUG();
 		_ad_decode_ulaw_buf(fill_ptr, as->ulawbuf, AO_BUFLEN, as->mlvolume);
+#if BLEND
+		as->last_blend_value = fill_ptr[AO_BUFLEN-1];
+		if (as->blend)
+		{
+			_ad_blend_ulaw_buf(fill_ptr, as->last_blend_value);
+			as->blend = false;
+		}
+#endif // BLEND
 		event_signal(&as->ulawbuf_empty_evt);
 	}
 }
@@ -211,6 +232,11 @@ r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset,
 	as->done_data = done_data;
 		// TODO we just lose the previous callback in this case.
 		// hope that's okay.
+
+#if BLEND
+	as->blend = true;
+#endif // BLEND
+
 	event_signal(&as->play_request_evt);
 	return TRUE;
 }

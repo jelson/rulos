@@ -115,7 +115,7 @@ void init_rocket0(Rocket0 *r0)
 	init_screenblanker_sender(&r0->screenblanker_sender, &r0->network);
 	r0->screenblanker.screenblanker_sender = &r0->screenblanker_sender;
 
-	volume_control_init(&r0->volume_control, &r0->audio_client, VOLUME_POT_CHANNEL, /*board*/ 3);
+	volume_control_init(&r0->volume_control, &r0->audio_client, VOLUME_POT_CHANNEL, /*board*/ 0);
 
 	init_control_panel(
 		&r0->cp,

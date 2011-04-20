@@ -17,7 +17,7 @@
 #include "audio_client.h"
 #include "ambient_noise.h"
 
-#define AMBIENT_NOISE_DECAY_PERIOD (30*1000000)
+#define AMBIENT_NOISE_DECAY_PERIOD (120*1000000)
 
 void ambient_noise_decay(AmbientNoise *an);
 

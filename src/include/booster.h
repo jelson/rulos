@@ -22,14 +22,21 @@
 #include "audio_client.h"
 #include "screenblanker.h"
 
+typedef enum {
+	bcontext_liftoff,
+	bcontext_docking
+} BoosterContext;
+
 typedef struct {
 	r_bool status;
 	HPAM *hpam;
 	AudioClient *audioClient;
 	ScreenBlanker *screenblanker;
+	BoosterContext bcontext;
 } Booster;
 
 void booster_init(Booster *booster, HPAM *hpam, AudioClient *audioClient, ScreenBlanker *screenblanker);
+void booster_set_context(Booster *booster, BoosterContext bcontext);
 void booster_set(Booster *booster, r_bool status);
 
 #endif // _BOOSTER_H

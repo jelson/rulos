@@ -1,11 +1,15 @@
 #ifndef _AUDIO_STREAMER_H
 #define _AUDIO_STREAMER_H
 
+#include <stdbool.h>
+
 #include "rocket.h"
 #include "sdcard.h"
 #include "audio_out.h"
 #include "event.h"
 
+#define BLEND 0
+// too short a period to matter. I think the audio samples just aren't centered.
 
 typedef struct s_AudioStreamer
 {
@@ -23,6 +27,12 @@ typedef struct s_AudioStreamer
 	Event ulawbuf_empty_evt;
 	Event play_request_evt;
 	ActivationFuncPtr done_func;
+
+#if BLEND
+	bool blend;
+	uint8_t last_blend_value;
+#endif // BLEND
+
 	void *done_data;
 } AudioStreamer;
 
