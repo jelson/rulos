@@ -1,7 +1,7 @@
 //#define TIME_DEBUG
 //#define NO_ACCEL
 //#define NO_GYRO
-//#define NO_ULTRASOUND
+#define NO_ULTRASOUND
 
 #include <string.h>
 #include <avr/interrupt.h>
@@ -234,6 +234,11 @@ void readFromPeripheral(locatorAct_t *locatorAct,
 void start_sampling(locatorAct_t *locatorAct, uint8_t topOrBot)
 {
 	uint8_t adcChan;
+
+	// for Rev C and after, put output driver into high impedance
+#ifdef GPIO_US_XMIT_ENABLE
+	gpio_clr(GPIO_US_XMIT_ENABLE);
+#endif
 
 	locatorAct->topOrBot = topOrBot;
 
@@ -484,8 +489,8 @@ void configLocator(locatorAct_t *locatorAct)
 
 	// enable 10v voltage doubler
 	gpio_make_output(GPIO_10V_ENABLE);
-	//	gpio_clr(GPIO_10V_ENABLE);
-	gpio_set(GPIO_10V_ENABLE);
+	gpio_clr(GPIO_10V_ENABLE);
+	//gpio_set(GPIO_10V_ENABLE);
 
 	// for Rev C and after, put output driver into high impedance
 #ifdef GPIO_US_XMIT_ENABLE
@@ -608,12 +613,19 @@ void sampleLocator(locatorAct_t *locatorAct)
 	schedule_us(SAMPLING_PERIOD, (ActivationFuncPtr) sampleLocator, locatorAct);
 
 	// set debug leds
+#ifndef NO_ULTRASOUND
 	if (locatorAct->rangingMode == 'r') {
 		gpio_set(GPIO_LED_1);
 	} else {
 		locatorAct->debug++;
-		gpio_set_or_clr(GPIO_LED_1, locatorAct->debug & 1);
+		if (locatorAct->debug == (1000000 / SAMPLING_PERIOD)) {
+			gpio_set(GPIO_LED_1);
+		} else if (locatorAct->debug == 2 * (1000000 / SAMPLING_PERIOD)) {
+			gpio_clr(GPIO_LED_1);
+			locatorAct->debug = 0;
+		}
 	}
+#endif
 
 #ifdef TEST_TIME_ONLY
 	snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf)-1, "%d\r\n", locatorAct->debug);
@@ -686,7 +698,7 @@ int main()
 
 	memset(&locatorAct_g, 0, sizeof(locatorAct_g));
 	locatorAct_g.twiState = hal_twi_init(100, 0, NULL);
-	uart_init(&locatorAct_g.uart, 250000, 1);
+	uart_init(&locatorAct_g.uart, 100000, 1);
 
 	if (strlen(FIRMWARE_ID) > ID_OFFSET) {
 		snprintf(locatorAct_g.UARTsendBuf, sizeof(locatorAct_g.UARTsendBuf)-1, "^i;%s\r\n", FIRMWARE_ID+ID_OFFSET);

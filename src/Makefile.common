@@ -13,21 +13,11 @@
  #
 
 
-COMMON_OBJECTS = \
+CORE_OBJECTS := \
 	board_buffer.o \
-	calculator.o \
 	clock.o \
 	cpumon.o \
 	cursor.o \
-	display_compass.o \
-	display_controller.o \
-	display_docking.o \
-	display_gratuitous_graph.o \
-	display_rtc.o \
-	display_scroll_msg.o \
-	display_thrusters.o \
-	drift_anim.o \
-	focus.o \
 	heap.o \
 	idle_display.o \
 	input_controller.o \
@@ -38,14 +28,36 @@ COMMON_OBJECTS = \
 	queue.o \
 	random.o \
 	util.o \
-	sequencer.o \
-	display_blinker.o \
 	region.o \
-	pong.o \
-	lunar_distance.o \
 	network.o \
+	event.o \
+	spi.o \
+	serial_console.o \
+	uart.o \
+	uart_net_media.o \
+	net_compute_checksum.o \
+
+ROCKET_OBJECTS := \
+	display_compass.o \
+	display_controller.o \
+	display_docking.o \
+	display_gratuitous_graph.o \
+	display_rtc.o \
+	display_scroll_msg.o \
+	display_thrusters.o \
 	display_thruster_graph.o \
 	display_aer.o \
+	drift_anim.o \
+	audio_server.o \
+	audio_client.o \
+	audio_streamer.o \
+	audio_out.o \
+	audioled.o \
+	calculator.o \
+	focus.o \
+	display_blinker.o \
+	sequencer.o \
+	lunar_distance.o \
 	remote_keyboard.o \
 	remote_bbuf.o \
 	remote_uie.o \
@@ -53,8 +65,6 @@ COMMON_OBJECTS = \
 	thruster_protocol.o \
 	sound.o \
 	screen4.o \
-	audio_server.o \
-	audio_client.o \
 	hpam.o \
 	autotype.o \
 	idle.o \
@@ -67,23 +77,17 @@ COMMON_OBJECTS = \
 	quadknob.o \
 	potsticker.o \
 	funcseq.o \
-	uart.o \
-	audio_out.o \
-	uart_net_media.o \
-	audioled.o \
-	net_compute_checksum.o \
 	sdcard.o \
-	audio_streamer.o \
-	event.o \
-	spi.o \
 	volume_control.o \
 	momentary_display.o \
-	serial_console.o \
 	led_matrix_single.o \
 	eeprom.o \
 	rasters.o \
 	ambient_noise.o \
 
+COMMON_OBJECTS := $(CORE_OBJECTS)
+#COMMON_OBJECTS += $(ROCKET_OBJECTS)
+ 
 UNAME := $(shell uname)
 
 ifeq ($(UNAME), Linux)
@@ -92,7 +96,8 @@ else
 PYTHON := c:\\python27\\python.exe
 endif
 
-
+tesss:
+	echo $(COMMON_OBJECTS)
 
 .PHONY: all-platforms
 all-platforms: sim-all avr-all

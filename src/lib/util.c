@@ -129,6 +129,70 @@ void debug_msg_hex(uint8_t board, char *m, uint16_t hex)
 	program_board(board, bm);
 }
 
+
+int int_to_string2(char *strp, uint8_t min_width, uint8_t min_zeros, int32_t i)
+{
+	int c = 0;
+	int neg = 0;
+	char *ptr = 0;
+	
+	//LOGF((logfp, "i %d\n", ));
+	if (strp!=0)
+	{
+		int ct = int_to_string2(0, min_width, min_zeros, i);
+		ptr = strp+ct-1;
+		ptr[1] = '\0';
+	}
+
+	if (i < 0)
+	{
+		i = -i;
+		neg = 1;
+	}
+	if (i==0)
+	{
+		if (strp!=0) {
+			ptr[-c] = '0';
+		}
+		c+=1;
+	}
+	else
+	{
+		while (i>0)
+		{
+			if (strp!=0) {
+				ptr[-c] = '0' + i%10;
+			}
+			c+=1;
+			i /= 10;
+		}
+	}
+	while (c<min_zeros)
+	{
+		if (strp!=0) {
+			ptr[-c] = '0';
+		}
+		c+=1;
+	}
+	if (neg)
+	{
+		if (strp!=0) {
+			ptr[-c] = '-';
+		}
+		c+=1;
+	}
+	while (c<min_width)
+	{
+		if (strp!=0) {
+			ptr[-c] = ' ';
+		}
+		c+=1;
+	}
+	//LOGF((logfp, "  ct %d str %s\n", c, strp));
+	return c;
+}
+
+
 #if 0
 uint16_t stack_ptr()
 {
