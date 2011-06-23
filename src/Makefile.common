@@ -14,17 +14,10 @@
 
 
 CORE_OBJECTS := \
-	board_buffer.o \
 	clock.o \
 	cpumon.o \
 	cursor.o \
 	heap.o \
-	idle_display.o \
-	input_controller.o \
-	joystick.o \
-	knob.o \
-	labeled_display.o \
-	numeric_input.o \
 	queue.o \
 	random.o \
 	util.o \
@@ -38,6 +31,7 @@ CORE_OBJECTS := \
 	net_compute_checksum.o \
 
 ROCKET_OBJECTS := \
+	board_buffer.o \
 	display_compass.o \
 	display_controller.o \
 	display_docking.o \
@@ -48,11 +42,14 @@ ROCKET_OBJECTS := \
 	display_thruster_graph.o \
 	display_aer.o \
 	drift_anim.o \
+	idle_display.o \
 	audio_server.o \
 	audio_client.o \
 	audio_streamer.o \
 	audio_out.o \
 	audioled.o \
+	joystick.o \
+	knob.o \
 	calculator.o \
 	focus.o \
 	display_blinker.o \
@@ -84,9 +81,15 @@ ROCKET_OBJECTS := \
 	eeprom.o \
 	rasters.o \
 	ambient_noise.o \
+	input_controller.o \
+	labeled_display.o \
+	numeric_input.o \
 
 COMMON_OBJECTS := $(CORE_OBJECTS)
-COMMON_OBJECTS += $(ROCKET_OBJECTS)
+
+ifndef CORE_ONLY
+       COMMON_OBJECTS += $(ROCKET_OBJECTS)
+endif
  
 UNAME := $(shell uname)
 

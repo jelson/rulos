@@ -24,6 +24,8 @@ TARGET_OBJECTS := \
 	uart.o \
 	locatortest.o 
 
+CORE_ONLY := 1
 
 include $(ROCKET_ROOT)/Makefile.common
+
 
