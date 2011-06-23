@@ -86,7 +86,7 @@ ROCKET_OBJECTS := \
 	ambient_noise.o \
 
 COMMON_OBJECTS := $(CORE_OBJECTS)
-#COMMON_OBJECTS += $(ROCKET_OBJECTS)
+COMMON_OBJECTS += $(ROCKET_OBJECTS)
  
 UNAME := $(shell uname)
 
@@ -95,9 +95,6 @@ PYTHON := python
 else
 PYTHON := c:\\python27\\python.exe
 endif
-
-tesss:
-	echo $(COMMON_OBJECTS)
 
 .PHONY: all-platforms
 all-platforms: sim-all avr-all
