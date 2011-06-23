@@ -91,39 +91,58 @@
 
 typedef void (*funcPtr)();
 
-static inline void row_1_off()  { gpio_clr(GPIO_ROW_1); }
-static inline void row_2_off()  { gpio_clr(GPIO_ROW_2); }
-static inline void row_3_off()  { gpio_clr(GPIO_ROW_3); }
-static inline void row_4_off()  { gpio_clr(GPIO_ROW_4); }
-static inline void row_5_off()  { gpio_clr(GPIO_ROW_5); }
-static inline void row_6_off()  { gpio_clr(GPIO_ROW_6); }
-static inline void row_7_off()  { gpio_clr(GPIO_ROW_7); }
-static inline void row_8_off()  { gpio_clr(GPIO_ROW_8); }
-static inline void row_9_off()  { gpio_clr(GPIO_ROW_9); }
-static inline void row_10_off() { gpio_clr(GPIO_ROW_10); }
-static inline void row_11_off() { gpio_clr(GPIO_ROW_11); }
-static inline void row_12_off() { gpio_clr(GPIO_ROW_12); }
-static inline void row_13_off() { gpio_clr(GPIO_ROW_13); }
-static inline void row_14_off() { gpio_clr(GPIO_ROW_14); }
-static inline void row_15_off() { /*gpio_clr(GPIO_ROW_15); */ }
-static inline void row_16_off() { gpio_clr(GPIO_ROW_16); }
+static inline void row_1_on()  { gpio_clr(GPIO_ROW_1); }
+static inline void row_2_on()  { gpio_clr(GPIO_ROW_2); }
+static inline void row_3_on()  { gpio_clr(GPIO_ROW_3); }
+static inline void row_4_on()  { gpio_clr(GPIO_ROW_4); }
+static inline void row_5_on()  { gpio_clr(GPIO_ROW_5); }
+static inline void row_6_on()  { gpio_clr(GPIO_ROW_6); }
+static inline void row_7_on()  { gpio_clr(GPIO_ROW_7); }
+static inline void row_8_on()  { gpio_clr(GPIO_ROW_8); }
+static inline void row_9_on()  { gpio_clr(GPIO_ROW_9); }
+static inline void row_10_on() { gpio_clr(GPIO_ROW_10); }
+static inline void row_11_on() { gpio_clr(GPIO_ROW_11); }
+static inline void row_12_on() { gpio_clr(GPIO_ROW_12); }
+static inline void row_13_on() { gpio_clr(GPIO_ROW_13); }
+static inline void row_14_on() { gpio_clr(GPIO_ROW_14); }
+static inline void row_15_on() { /*gpio_clr(GPIO_ROW_15); */ }
+static inline void row_16_on() { gpio_clr(GPIO_ROW_16); }
 
-static inline void row_1_on()  { gpio_set(GPIO_ROW_1); }
-static inline void row_2_on()  { gpio_set(GPIO_ROW_2); }
-static inline void row_3_on()  { gpio_set(GPIO_ROW_3); }
-static inline void row_4_on()  { gpio_set(GPIO_ROW_4); }
-static inline void row_5_on()  { gpio_set(GPIO_ROW_5); }
-static inline void row_6_on()  { gpio_set(GPIO_ROW_6); }
-static inline void row_7_on()  { gpio_set(GPIO_ROW_7); }
-static inline void row_8_on()  { gpio_set(GPIO_ROW_8); }
-static inline void row_9_on()  { gpio_set(GPIO_ROW_9); }
-static inline void row_10_on() { gpio_set(GPIO_ROW_10); }
-static inline void row_11_on() { gpio_set(GPIO_ROW_11); }
-static inline void row_12_on() { gpio_set(GPIO_ROW_12); }
-static inline void row_13_on() { gpio_set(GPIO_ROW_13); }
-static inline void row_14_on() { gpio_set(GPIO_ROW_14); }
-static inline void row_15_on() { /*gpio_set(GPIO_ROW_15);*/ }
-static inline void row_16_on() { gpio_set(GPIO_ROW_16); }
+static inline void row_1_off()  { gpio_set(GPIO_ROW_1); }
+static inline void row_2_off()  { gpio_set(GPIO_ROW_2); }
+static inline void row_3_off()  { gpio_set(GPIO_ROW_3); }
+static inline void row_4_off()  { gpio_set(GPIO_ROW_4); }
+static inline void row_5_off()  { gpio_set(GPIO_ROW_5); }
+static inline void row_6_off()  { gpio_set(GPIO_ROW_6); }
+static inline void row_7_off()  { gpio_set(GPIO_ROW_7); }
+static inline void row_8_off()  { gpio_set(GPIO_ROW_8); }
+static inline void row_9_off()  { gpio_set(GPIO_ROW_9); }
+static inline void row_10_off() { gpio_set(GPIO_ROW_10); }
+static inline void row_11_off() { gpio_set(GPIO_ROW_11); }
+static inline void row_12_off() { gpio_set(GPIO_ROW_12); }
+static inline void row_13_off() { gpio_set(GPIO_ROW_13); }
+static inline void row_14_off() { gpio_set(GPIO_ROW_14); }
+static inline void row_15_off() { /*gpio_set(GPIO_ROW_15);*/ }
+static inline void row_16_off() { gpio_set(GPIO_ROW_16); }
+
+const static funcPtr rowOn[] = {
+	row_1_on,
+	row_2_on,
+	row_3_on,
+	row_4_on,
+	row_5_on,
+	row_6_on,
+	row_7_on,
+	row_8_on,
+	row_9_on,
+	row_10_on,
+	row_11_on,
+	row_12_on,
+	row_13_on,
+	row_14_on,
+	row_15_on,
+	row_16_on
+};
 
 const static funcPtr rowOff[] = {
 	row_1_off,
@@ -144,24 +163,6 @@ const static funcPtr rowOff[] = {
 	row_16_off
 };
 
-const static funcPtr rowOn[] = {
-	row_1_on,
-	row_2_on,
-	row_3_on,
-	row_4_on,
-	row_5_on,
-	row_6_on,
-	row_7_on,
-	row_8_on,
-	row_9_on,
-	row_10_on,
-	row_11_on,
-	row_12_on,
-	row_13_on,
-	row_14_on,
-	row_15_on,
-	row_16_on
-};
 
 static inline void gpio_row_power_off(uint8_t rowNum)
 {

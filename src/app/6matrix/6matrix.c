@@ -115,6 +115,37 @@ void one_led(drawCtx *draw)
 		draw->cycle = 0;
 }
 
+void allon(drawCtx *draw)
+{
+	uint8_t bytes[SIXMATRIX_NUM_COLS];
+	uint8_t i;
+
+	memset(bytes, 0xff, sizeof(bytes));
+	for (i = 0; i < 16; i++)
+	  hal_6matrix_setRow_8bit(&draw->matrix, bytes, i);
+}
+
+void rowtest(drawCtx *draw)
+{
+	uint8_t bytes[SIXMATRIX_NUM_COLS];
+	uint8_t i;
+
+	memset(bytes, 0, sizeof(bytes));
+	for (i = 0; i < 8; i++)
+	  bytes[i] = 0xf;
+	hal_6matrix_setRow_8bit(&draw->matrix, bytes, 0);
+
+	memset(bytes, 0, sizeof(bytes));
+	for (i = 8; i < 16; i++)
+	  bytes[i] = 0xf;
+	hal_6matrix_setRow_8bit(&draw->matrix, bytes, 4);
+
+	memset(bytes, 0, sizeof(bytes));
+	for (i = 16; i < 24; i++)
+	  bytes[i] = 0xf;
+	hal_6matrix_setRow_8bit(&draw->matrix, bytes, 5);
+}
+
 drawCtx draw;
 
 int main()
@@ -125,9 +156,10 @@ int main()
 	hal_6matrix_init(&draw.matrix);
 
 	draw.cycle = 0;
-	schedule_us(1, (ActivationFuncPtr) one_gradient_row, &draw);
+	//schedule_us(1, (ActivationFuncPtr) one_gradient_row, &draw);
 	//schedule_us(1, (ActivationFuncPtr) update_matrix, &draw);
 	//schedule_us(1, (ActivationFuncPtr) one_led, &draw);
+	rowtest(&draw);
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);

@@ -64,6 +64,7 @@ ROCKET_OBJECTS := \
 	screen4.o \
 	hpam.o \
 	autotype.o \
+	pong.o \
 	idle.o \
 	hobbs.o \
 	screenblanker.o \
