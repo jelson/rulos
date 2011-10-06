@@ -25,6 +25,7 @@ TARGET_OBJECTS := \
 	locatortest.o 
 
 CORE_ONLY := 1
+NO_SIM := 1
 
 include $(ROCKET_ROOT)/Makefile.common
 

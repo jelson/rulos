@@ -87,11 +87,10 @@ ROCKET_OBJECTS := \
 	numeric_input.o \
 
 COMMON_OBJECTS := $(CORE_OBJECTS)
-
 ifndef CORE_ONLY
        COMMON_OBJECTS += $(ROCKET_OBJECTS)
 endif
- 
+
 UNAME := $(shell uname)
 
 ifeq ($(UNAME), Linux)
@@ -100,12 +99,26 @@ else
 PYTHON := c:\\python27\\python.exe
 endif
 
+ALL_PLATFORM_TARGETS := avr-all
+ALL_PLATFORM_CLEAN := avr-clean
+
+ifndef NO_SIM
+	ALL_PLATFORM_TARGETS += sim-all
+	ALL_PLATFORM_CLEAN := sim-clean
+endif
+
 .PHONY: all-platforms
-all-platforms: sim-all avr-all
+all-platforms: $(ALL_PLATFORM_TARGETS)
 
-clean: sim-clean avr-clean
+.PHONY: clean
+clean: $(ALL_PLATFORM_CLEAN)
 
-include $(ROCKET_ROOT)/Makefile.sim
+.DEFAULT_GOAL = all-platforms
+
+ifndef NO_SIM
+	include $(ROCKET_ROOT)/Makefile.sim
+endif
+
 include $(ROCKET_ROOT)/Makefile.avr
 include $(ROCKET_ROOT)/Makefile.studio
 

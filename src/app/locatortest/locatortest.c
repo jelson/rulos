@@ -1,18 +1,24 @@
 //#define TIME_DEBUG
 //#define NO_ACCEL
-//#define NO_GYRO
+#define NO_GYRO
 #define NO_ULTRASOUND
 
 #include <string.h>
 #include <avr/interrupt.h>
 
+#ifdef BOARD_REVB
+#define F_CPU 8000000UL
+#endif
+
 #ifdef BOARD_REVC
 #define F_CPU 8000000UL
 #endif
+
 #include <util/delay.h>
 
-#define SAMPLING_PERIOD 50000
-#define SCHED_QUANTUM   5000
+#define SAMPLING_PERIOD  50000
+#define SCHED_QUANTUM    5000
+#define SERIAL_BAUD_RATE 250000
 
 
 #include "rocket.h"
@@ -405,7 +411,7 @@ static inline void us_xmit_start()
 	gpio_make_output(GPIO_US_XMIT);
 #elif BOARD_REVC
 #else
-# error "Don't know how to chrip on this board; sorry"
+# error "Don't know how to chirp on this board; sorry"
 #endif
 }
 
@@ -698,7 +704,7 @@ int main()
 
 	memset(&locatorAct_g, 0, sizeof(locatorAct_g));
 	locatorAct_g.twiState = hal_twi_init(100, 0, NULL);
-	uart_init(&locatorAct_g.uart, 100000, 1);
+	uart_init(&locatorAct_g.uart, SERIAL_BAUD_RATE, 1);
 
 	if (strlen(FIRMWARE_ID) > ID_OFFSET) {
 		snprintf(locatorAct_g.UARTsendBuf, sizeof(locatorAct_g.UARTsendBuf)-1, "^i;%s\r\n", FIRMWARE_ID+ID_OFFSET);
