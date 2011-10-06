@@ -24,7 +24,6 @@ CORE_OBJECTS := \
 	region.o \
 	network.o \
 	event.o \
-	spi.o \
 	serial_console.o \
 	uart.o \
 	uart_net_media.o \
@@ -85,6 +84,7 @@ ROCKET_OBJECTS := \
 	input_controller.o \
 	labeled_display.o \
 	numeric_input.o \
+	spi.o \
 
 COMMON_OBJECTS := $(CORE_OBJECTS)
 ifndef CORE_ONLY

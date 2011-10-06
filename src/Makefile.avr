@@ -21,12 +21,18 @@ AVR_ONLY_OBJECTS := \
 	hardware_audio.o \
 	hardware_keypad.o \
 	hardware_rocketpanel.o \
-	hardware_spi.o \
 	hardware_timers.o \
 	hardware_twi.o \
 	hardware_uart.o \
 	tilty_input.o \
 	pov.o \
+
+AVR_ROCKET_OBJECTS := \
+	hardware_spi.o \
+
+ifndef CORE_ONLY
+	AVR_ONLY_OBJECTS += $(AVR_ROCKET_OBJECTS)
+endif
 
 ifeq ($(MCU),atmega1284p)
 AVR_ONLY_OBJECTS += hardware_graphic_lcd_12232.o

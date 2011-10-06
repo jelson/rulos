@@ -1,6 +1,6 @@
 //#define TIME_DEBUG
 //#define NO_ACCEL
-#define NO_GYRO
+//#define NO_GYRO
 #define NO_ULTRASOUND
 
 #include <string.h>
@@ -14,9 +14,13 @@
 #define F_CPU 8000000UL
 #endif
 
+#ifdef BOARD_REVE
+#define F_CPU 12000000UL
+#endif
+
 #include <util/delay.h>
 
-#define SAMPLING_PERIOD  50000
+#define SAMPLING_PERIOD  30000
 #define SCHED_QUANTUM    5000
 #define SERIAL_BAUD_RATE 250000
 
@@ -94,7 +98,7 @@ static locatorAct_t locatorAct_g;
 # define GPIO_10V_ENABLE GPIO_B0
 # define GPIO_US_XMIT    GPIO_D6
 # define US_TOP_CHAN     0
-#elif defined(BOARD_REVC)
+#elif defined(BOARD_REVC) || defined(BOARD_REVE)
 # define GPIO_10V_ENABLE     GPIO_B0
 # define GPIO_US_XMIT        GPIO_D6
 # define GPIO_US_XMIT_ENABLE GPIO_D2
@@ -143,8 +147,9 @@ static inline uint8_t maybe_claim_serial(locatorAct_t *locatorAct)
 // warning -- don't use from within interrupt context!
 static inline void wait_for_serial(locatorAct_t *locatorAct)
 {
-	while (!maybe_claim_serial(locatorAct))
+	while (!maybe_claim_serial(locatorAct)) {
 		_delay_us(100); // 32 microseconds per 8-bit character at 250kbit/sec
+	}
 }
 
 
@@ -553,23 +558,27 @@ void sampleLocator3(locatorAct_t *locatorAct, char *data, int len)
 
 void sampleLocator2(locatorAct_t *locatorAct, char *data, int len)
 {
-#ifndef NO_GYRO
-	// read 6 bytes from gyro over TWI starting from address 0x2
-	readFromPeripheral(locatorAct, GYRO_ADDR, 0x1D, 6, sampleLocator3);
-#endif
-
 #ifndef NO_ACCEL
 	// convert and send the accelerometer data we just received out to
 	// the serial port
 	int16_t x = convert_accel(data[0], data[1]);
 	int16_t y = convert_accel(data[2], data[3]);
 	int16_t z = convert_accel(data[4], data[5]);
+#endif
 
+#ifndef NO_GYRO
+	// read 6 bytes from gyro over TWI starting from address 0x2
+	readFromPeripheral(locatorAct, GYRO_ADDR, 0x1D, 6, sampleLocator3);
+#endif
+
+#ifndef NO_ACCEL
 	if (maybe_claim_serial(locatorAct)) {
 		snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf)-1, "^a;x=%5d;y=%5d;z=%5d$\r\n", x, y, z);
 		emit(locatorAct, locatorAct->UARTsendBuf);
 	}
 #endif
+
+
 }
 
 void process_serial_command(locatorAct_t *locatorAct, char cmd)

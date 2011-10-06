@@ -55,10 +55,9 @@ r_bool _uart_get_next_character(UartHandler *handler, char *c /* OUT */)
 
 	if (u->out_n == u->out_len)
 	{
-		if (u->send_done_cb) {
-			schedule_now(u->send_done_cb, u->send_done_cb_data);
-			// FIXME!
-			//u->send_done_cb(u->send_done_cb_data);
+		if (u->send_done_cb != NULL) {
+			// Call the "done" upcall - N.B., at interrupt time
+			u->send_done_cb(u->send_done_cb_data);
 		}
 		u->out_buf = NULL;
 		u->send_done_cb = NULL;
