@@ -55,10 +55,12 @@ void *timer0_data = NULL;
 void *timer1_data = NULL;
 void *timer2_data = NULL;
 
+#if defined(MCU328_line) || defined(MCU1284_line)
 ISR(TIMER0_COMPA_vect)
 {
 	timer0_handler(timer0_data);
 }
+#endif
 
 ISR(TIMER1_COMPA_vect)
 {
@@ -190,6 +192,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 	cli();
 
 	switch (timer_id) {
+#if defined(MCU328_line) || defined(MCU1284_line)
 	case TIMER0:
 		find_prescaler(us, &_timer0, &actual_us_per_period, &cs, &ocr);
 
@@ -206,17 +209,12 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 		TCCR0B = tccr0b;
 
 		/* enable output-compare int. */
-#if defined(MCU8_line)
-		TIMSK  |= _BV(OCIE0A);
-#elif defined(MCU328_line) || defined(MCU1284_line)
 		TIMSK0 |= _BV(OCIE0A);
-#else
-# error hardware-specific timer code needs help!
-#endif
 
 		/* reset counter */
 		TCNT0 = 0; 
 		break;
+#endif
 
 	case TIMER1:
 		find_prescaler(us, &_timer1, &actual_us_per_period, &cs, &ocr);

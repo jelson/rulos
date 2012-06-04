@@ -68,7 +68,7 @@ static void display_clock(WallClockActivation_t *wca)
 
 static void display_unhappy(WallClockActivation_t *wca, uint16_t interval_ms)
 {
-	char *msg[] = { " NEEd ", "  PC  ", "SErIAL", "      ", NULL };
+	const char *msg[] = { " NEEd ", "  PC  ", "SErIAL", "      ", NULL };
 
 	wca->unhappy_timer += interval_ms;
 
@@ -193,6 +193,8 @@ static uint8_t ascii_digit(uint8_t c)
 static void check_uart(WallClockActivation_t *wca)
 {
 	char msg[8];
+	uint8_t hour, minute, second;
+	Time reception_time_us;
 
 	uint8_t old_flags = hal_start_atomic();
 
@@ -215,7 +217,7 @@ static void check_uart(WallClockActivation_t *wca)
 	// There are (at least) 8 characters - great!  Copy them in and
 	// reset the queue.
 	CharQueue_pop_n(wca->recvQueue->q, msg, 8);
-	Time reception_time_us = wca->recvQueue->reception_time_us;
+	reception_time_us = wca->recvQueue->reception_time_us;
 	uart_reset_recvq(wca->recvQueue);
 
 	// Make sure both framing characters are correct
@@ -223,9 +225,9 @@ static void check_uart(WallClockActivation_t *wca)
 		goto done;
 
 	// Decode the characters
-	uint8_t hour   = ascii_digit(msg[1])*10 + ascii_digit(msg[2]);
-	uint8_t minute = ascii_digit(msg[3])*10 + ascii_digit(msg[4]);
-	uint8_t second = ascii_digit(msg[5])*10 + ascii_digit(msg[6]);
+	hour   = ascii_digit(msg[1])*10 + ascii_digit(msg[2]);
+	minute = ascii_digit(msg[3])*10 + ascii_digit(msg[4]);
+	second = ascii_digit(msg[5])*10 + ascii_digit(msg[6]);
 
 	// Update the clock
 	calibrate_clock(wca, hour, minute, second, reception_time_us);

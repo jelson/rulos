@@ -643,8 +643,10 @@ void start_audio_fork_shuttling_child(SimAudioState *sas)
 	int rc;
 	int audiofds[2];
 	rc = pipe(audiofds);
+	assert(rc==0);
 	int flowfds[2];
 	rc = pipe(flowfds);
+	assert(rc==0);
 
 	int pid = fork();
 	assert(pid>=0);

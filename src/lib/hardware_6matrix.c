@@ -14,6 +14,8 @@
  *
  ************************************************************************/
 
+#ifdef MCU328_line
+
 #include <inttypes.h>
 #include <string.h>
 
@@ -631,3 +633,5 @@ void hal_6matrix_init(SixMatrix_Context_t *mat)
         OCR1A = 0;
 }
 
+
+#endif // MCU328_line

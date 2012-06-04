@@ -22,18 +22,25 @@ void ps_update(PotSticker *ps)
 	int8_t new_left = (new_val+ps->hysteresis)/ps->detents;
 	int8_t new_right = (new_val-ps->hysteresis)/ps->detents;
 
+#if DEBUG_BRUTE_DISPLAY
 	static char dbg_v = '_';
+#endif
+
 	if (new_left < ps->last_digital_value)
 	{
 		ps->ifi->func(ps->ifi, ps->back);
 		ps->last_digital_value = new_left;
+#if DEBUG_BRUTE_DISPLAY
 		dbg_v = 'L';
+#endif
 	}
 	else if (new_right > ps->last_digital_value)
 	{
 		ps->ifi->func(ps->ifi, ps->fwd);
 		ps->last_digital_value = new_right;
+#if DEBUG_BRUTE_DISPLAY
 		dbg_v = 'R';
+#endif
 	}
 
 #if DEBUG_BRUTE_DISPLAY
