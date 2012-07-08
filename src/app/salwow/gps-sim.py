@@ -11,6 +11,7 @@ while (True):
 	while (True):
 		c = fp.read(1)
 		if (c==''): break
-		serial.write(c)
+		count = serial.write(c)
+		if (count!=1): raise Exception("serial port broke")
 		sys.stdout.write(c)
 	fp.close()

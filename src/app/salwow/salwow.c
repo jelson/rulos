@@ -24,6 +24,7 @@
 #include "gpsinput.h"
 #include "mark_point.h"
 #include "uart.h"
+#include "navigation.h"
 
 /****************************************************************************/
 
@@ -88,6 +89,44 @@ void _test_sentence_done(void* data)
 #endif // SIM
 }
 
+#ifndef SIM
+void mathtest() { }
+#else
+Navigation nav;
+
+void one_mathtest(Vector *p1)
+{
+	Vector p0;
+	p0.x = p1->x+0.5;
+	p0.y = p1->y+1.5;
+	int res = navigation_compute(&nav, &p0, p1);
+	fprintf(stderr, " %5d", res);
+}
+
+void mathtest()
+{
+	Vector w0; v_init(&w0, 3, 3);
+	Vector w1; v_init(&w1, 2, -2);
+	navigation_activate_leg(&nav, &w0, &w1);
+
+	Vector p1;
+#if 0
+	p1.x = 1.0; p1.y = 1.5;
+	one_mathtest(&p1);
+#endif
+#if 1
+	for (p1.y = 3; p1.y>=-3; p1.y-=0.5)
+	{
+		fprintf(stderr, "[y %.1f]", (double) p1.y);
+		for (p1.x = 0.1; p1.x<3.2; p1.x+=0.5)
+		{
+			one_mathtest(&p1);
+		}
+		fprintf(stderr, "\n");
+	}
+#endif
+}
+#endif
 int main()
 {
 	mark_point_init();
@@ -139,6 +178,8 @@ int main()
 	GPSInput gpsi;
 	gpsinput_init(&gpsi, 1, _test_sentence_done, &gpsi);
 #endif
+
+	mathtest();
 
 	cpumon_main_loop();
 	mark_point(7);

@@ -25,6 +25,7 @@ TARGET_OBJECTS := \
 	salwow.o \
 	gpsinput.o \
 	mark_point.o \
+	navigation.o \
 
 include $(ROCKET_ROOT)/Makefile.common
 
