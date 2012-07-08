@@ -45,7 +45,7 @@ void serial_console_update(SerialConsole *sca)
 
 void serial_console_init(SerialConsole *sca, ActivationFuncPtr line_func, void *line_data)
 {
-	uart_init(&sca->uart, 38400, TRUE);
+	uart_init(&sca->uart, 38400, TRUE, 0);
 	sca->line_act.func = line_func;
 	sca->line_act.data = line_data;
 

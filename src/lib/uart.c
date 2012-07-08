@@ -107,7 +107,7 @@ r_bool uart_send(UartState_t *u, char *c, uint8_t len,
 	u->send_done_cb = callback;
 	u->send_done_cb_data = callback_data;
 
-	hal_uart_start_send();
+	hal_uart_start_send(&u->handler);
 	return TRUE;
 }
 
@@ -116,7 +116,7 @@ r_bool uart_busy(UartState_t *u)
 	return (u->out_buf != NULL);
 }
 
-void uart_init(UartState_t *u, uint32_t baud, r_bool stop2)
+void uart_init(UartState_t *u, uint32_t baud, r_bool stop2, uint8_t uart_id)
 {
 	u->handler.send = _uart_get_next_character;
 	u->handler.recv = _uart_receive;
@@ -125,7 +125,7 @@ void uart_init(UartState_t *u, uint32_t baud, r_bool stop2)
 	u->recvQueue.q = (CharQueue *) u->recvQueueStore;
 	CharQueue_init(u->recvQueue.q, sizeof(u->recvQueueStore));
 	u->recvQueue.reception_time_us = 0;
-	hal_uart_init(&u->handler, baud, stop2);
+	hal_uart_init(&u->handler, baud, stop2, uart_id);
 	u->out_buf = NULL;
 	u->initted = TRUE;
 }

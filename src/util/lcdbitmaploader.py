@@ -57,18 +57,18 @@ class ImageCat:
 		self.index_to_x.append(self.catsize[0])
 		fp = open(filename, "w")
 
-		fp.write("uint8_t PROGMEM %s_data[] = {\n" % symname)
+		fp.write("const uint8_t PROGMEM %s_data[] = {\n" % symname)
 		imagebytes = self.image.tostring()
 		sys.stderr.write("num image bytes: %s %s\n" % (len(imagebytes), self.getcatsize()))
 		fp.write("".join(map(lambda s: " 0x%02x,\n" % ord(s), imagebytes)))
 		fp.write("};\n")
 
-		fp.write("uint16_t PROGMEM %s_index_to_x[] = {\n" % symname)
+		fp.write("const uint16_t PROGMEM %s_index_to_x[] = {\n" % symname)
 		ary = map(lambda s: " %d,\n" % s, self.index_to_x)
 		fp.write("".join(ary))
 		fp.write("};\n")
 
-		fp.write("char PROGMEM %s_index_to_sym[] = {\n" % symname)
+		fp.write("const char PROGMEM %s_index_to_sym[] = {\n" % symname)
 		fp.write("".join(map(lambda s: " '%c',\n" % s[0], self.index_to_sym)))
 		fp.write("};\n")
 

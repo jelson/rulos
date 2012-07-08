@@ -14,7 +14,7 @@
 
 ROCKET_ROOT := ../..
 
-MCU := atmega8
+MCU := atmega1284p
 #MCU := atmega328p
 BOARD := CUSTOM
 

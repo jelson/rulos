@@ -79,11 +79,12 @@ typedef r_bool (hal_uart_send_next_fp)(struct s_UartHandler *u, char *c /*OUT*/)
 typedef struct s_UartHandler {
 	hal_uart_receive_fp *recv;	// runs in interrupt context
 	hal_uart_send_next_fp *send;	// runs in interrupt context
+	uint8_t uart_id;
 } UartHandler;
 
-void hal_uart_init(UartHandler *handler, uint32_t baud, r_bool stop2);
-void hal_uart_start_send(void);
-void hal_uart_sync_send(char *s, uint8_t len);
+void hal_uart_init(UartHandler *handler, uint32_t baud, r_bool stop2, uint8_t uart_id);
+void hal_uart_start_send(UartHandler *handler);
+void hal_uart_sync_send(UartHandler *handler, char *s, uint8_t len);
 
 /////////////// TWI ///////////////////////////////////////////////
 

@@ -85,6 +85,7 @@ ROCKET_OBJECTS := \
 	labeled_display.o \
 	numeric_input.o \
 	spi.o \
+	servo.o \
 
 COMMON_OBJECTS := $(CORE_OBJECTS)
 ifndef CORE_ONLY

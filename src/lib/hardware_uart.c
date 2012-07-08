@@ -15,6 +15,7 @@
  ************************************************************************/
 
 #include <rocket.h>
+#include <mark_point.h>
 
 void audioled_set(r_bool red, r_bool yellow);
 
@@ -24,6 +25,7 @@ void audioled_set(r_bool red, r_bool yellow);
  * This file is not compiled by the simulator.
  */
 
+#include <stdbool.h>
 #include <avr/boot.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -36,18 +38,15 @@ void audioled_set(r_bool red, r_bool yellow);
 #include "hal.h"
 
 
-//////////////////////////////////////////////////////////////////////////////
+uint16_t baud_to_ubrr(uint32_t baud)
+{
+	return ((uint32_t) hardware_f_cpu) / 16 / baud - 1;
+}
 
-
-
-// NOTE: These functions currently statically use Uart0 at
-// compile-time using the constants below.  However, all the plumbing
-// is here to support multiple uarts; each function is already
-// parameterized with the uart struct.  To support multiple uarts,
-// compare the UartState passed in to each function and change the
-// register names conditionally.
+UartHandler* g_uart_handler[2] = {NULL, NULL};
 
 #if defined(MCU8_line)
+
 # define _UBRRH    UBRRH
 # define _UBRRL    UBRRL
 # define _UCSRA    UCSRA
@@ -63,7 +62,21 @@ void audioled_set(r_bool red, r_bool yellow);
 # define _UDRE     UDRE
 # define _UDRIE    UDRIE
 # define _USBS     USBS
+# define _USART_RXC_vect USART_RXC_vect
+# define _USART_UDRE_vect USART_UDRE_vect
+#define hal_uart_init_name hal_uart_init0
+#define enable_sendready_interrupt_name enable_sendready_interrupt0
+#define hal_uart_start_send_name hal_uart_start_send0
+#define _handle_recv_ready_name _handle_recv_ready0
+#define _handle_send_ready_name _handle_send_ready0
+#define hal_uart_start_send_name hal_uart_start_send0
+#define hal_uart_sync_send_name hal_uart_sync_send0
+#define UARTID 0
+#define HAVE_UARTID0 1
+#include "hardware_uart.ch"
+
 #elif defined(MCU328_line) || defined(MCU1284_line)
+
 # define _UBRRH    UBRR0H
 # define _UBRRL    UBRR0L
 # define _UCSRA    UCSR0A
@@ -79,144 +92,122 @@ void audioled_set(r_bool red, r_bool yellow);
 # define _UDRE     UDRE0
 # define _UDRIE    UDRIE0
 # define _USBS     USBS0
+# define _USART_RXC_vect USART0_RX_vect
+# define _USART_UDRE_vect USART0_UDRE_vect
+#define hal_uart_init_name hal_uart_init0
+#define enable_sendready_interrupt_name enable_sendready_interrupt0
+#define hal_uart_start_send_name hal_uart_start_send0
+#define _handle_recv_ready_name _handle_recv_ready0
+#define _handle_send_ready_name _handle_send_ready0
+#define hal_uart_start_send_name hal_uart_start_send0
+#define hal_uart_sync_send_name hal_uart_sync_send0
+#define UARTID 0
+#define HAVE_UARTID0 1
+#include "hardware_uart.ch"
+
+#undef _UBRRH
+#undef _UBRRL
+#undef _UCSRA
+#undef _UCSRB
+#undef _UCSRC
+#undef _RXEN
+#undef _RXCIE
+#undef _TXEN
+#undef _TXCIE
+#undef _UCSZ0
+#undef _UCSZ1
+#undef _UDR
+#undef _UDRE
+#undef _UDRIE
+#undef _USBS
+#undef _USART_RXC_vect
+#undef _USART_UDRE_vect
+#undef hal_uart_init_name
+#undef enable_sendready_interrupt_name
+#undef hal_uart_start_send_name
+#undef _handle_recv_ready_name
+#undef _handle_send_ready_name
+#undef hal_uart_start_send_name
+#undef hal_uart_sync_send_name
+#undef UARTID
+
+# define _UBRRH    UBRR1H
+# define _UBRRL    UBRR1L
+# define _UCSRA    UCSR1A
+# define _UCSRB    UCSR1B
+# define _UCSRC    UCSR1C
+# define _RXEN     RXEN1
+# define _RXCIE    RXCIE1
+# define _TXEN     TXEN1
+# define _TXCIE    TXCIE1
+# define _UCSZ0    UCSZ10
+# define _UCSZ1    UCSZ11
+# define _UDR      UDR1
+# define _UDRE     UDRE1
+# define _UDRIE    UDRIE1
+# define _USBS     USBS1
+# define _USART_RXC_vect USART1_RX_vect
+# define _USART_UDRE_vect USART1_UDRE_vect
+#define hal_uart_init_name hal_uart_init1
+#define enable_sendready_interrupt_name enable_sendready_interrupt1
+#define hal_uart_start_send_name hal_uart_start_send1
+#define _handle_recv_ready_name _handle_recv_ready1
+#define _handle_send_ready_name _handle_send_ready1
+#define hal_uart_start_send_name hal_uart_start_send1
+#define hal_uart_sync_send_name hal_uart_sync_send1
+#define UARTID 1
+#define HAVE_UARTID1 1
+#include "hardware_uart.ch"
+
 #else
 # error Hardware-specific UART code needs love
 #endif
 
-UartHandler *g_uart_handler = NULL;
-
-uint16_t baud_to_ubrr(uint32_t baud)
+void hal_uart_init(UartHandler* handler, uint32_t baud, r_bool stop2, uint8_t uart_id)
 {
-	return ((uint32_t) hardware_f_cpu) / 16 / baud - 1;
-}
-
-void hal_uart_init(UartHandler *handler, uint32_t baud, r_bool stop2)
-{
-	uint16_t ubrr = baud_to_ubrr(baud);
-
-	// disable interrupts
-	cli();
-
-	// set up baud rate
-	_UBRRH = (unsigned char) (ubrr >> 8);
-	_UBRRL = (unsigned char) ubrr;
-
-	_UCSRB =
-		_BV(_TXEN)  | // enable transmitter
-		_BV(_RXEN)   // enable receiver
-	  ;
-
-	if (handler != NULL) {
-	  _UCSRB |=
-		  _BV(_RXCIE);   // enable receiver interrupt
-	}
-
-	// set frame format: async, 8 bit data, 1 stop bit, no parity
-	_UCSRC =  _BV(_UCSZ1) | _BV(_UCSZ0)
-		| (stop2 ? _BV(_USBS) : 0)
-#ifdef MCU8_line
-	  | _BV(URSEL)
+	handler->uart_id = uart_id;
+	switch (uart_id) {
+#if HAVE_UARTID0
+	case 0: hal_uart_init0(handler, baud, stop2, uart_id); return;
 #endif
-	  ;
-
-	g_uart_handler = handler;
-	  
-	// enable interrupts, whether or not they'd been previously enabled
-	sei();
-}
-
-static inline void enable_sendready_interrupt(uint8_t enable)
-{
-	if (enable)
-	{
-		reg_set(&_UCSRB, _UDRIE);
-	}
-	else
-	{
-		reg_clr(&_UCSRB, _UDRIE);
-	}
-}
-
-// Runs in user context.
-void hal_uart_start_send(void)
-{
-	// Just enable the send-ready interrupt.  It will fire as soon as
-	// the sender register is free.
-	uint8_t old_interrupts = hal_start_atomic();
-	enable_sendready_interrupt(TRUE);
-	hal_end_atomic(old_interrupts);
-}
-
-// Runs in interrupt context.
-static inline void _handle_recv_ready(char c)
-{
-	//audioled_set(0, 1);
-	(g_uart_handler->recv)(g_uart_handler, c);
-	//audioled_set(1, 0);
-}
-
-// Runs in interrupt context.
-static inline void _handle_send_ready()
-{
-	char c;
-
-	// If there is still data remaining to send, send it.  Otherwise,
-	// disable the send-ready interrupt.
-	if ((g_uart_handler->send)(g_uart_handler, &c))
-	{
-		_UDR = c;
-	}
-	else
-	{
-		enable_sendready_interrupt(FALSE);
-	}
-}
-
-
-#if defined(MCU8_line)
-ISR(USART_RXC_vect)
-{
-	_handle_recv_ready(UDR);
-}
-ISR(USART_UDRE_vect)
-{
-	_handle_send_ready();
-}
-
-#elif defined(MCU328_line)
-ISR(USART_RX_vect)
-{
-	_handle_recv_ready(UDR0);
-}
-ISR(USART_UDRE_vect)
-{
-	_handle_send_ready();
-}
-#elif defined(MCU1284_line)
-ISR(USART0_RX_vect)
-{
-	_handle_recv_ready(UDR0);
-}
-ISR(USART0_UDRE_vect)
-{
-	_handle_send_ready();
-}
-#else
-#error need CPU love
+#if HAVE_UARTID1
+	case 1: hal_uart_init1(handler, baud, stop2, uart_id); return;
 #endif
+	default:
+		assert(false);
+	}
+}
 
-
-void hal_uart_sync_send(char *s, uint8_t len)
+void hal_uart_start_send(UartHandler* handler)
 {
-	for (uint8_t i = 0; i < len; i++) {
-		while (!(_UCSRA  & _BV(_UDRE)))
-			;
-		_UDR = s[i];
+	switch (handler->uart_id) {
+#if HAVE_UARTID0
+	case 0: hal_uart_start_send0(); return;
+#endif
+#if HAVE_UARTID1
+	case 1: hal_uart_start_send1(); return;
+#endif
+	default:
+		assert(false);
+	}
+}
+
+void hal_uart_sync_send(UartHandler* handler, char *s, uint8_t len)
+{
+	switch (handler->uart_id) {
+#if HAVE_UARTID0
+	case 0: hal_uart_sync_send0(s, len); return;
+#endif
+#if HAVE_UARTID1
+	case 1: hal_uart_sync_send1(s, len); return;
+#endif
+	default:
+		assert(false);
 	}
 }
 
 #ifdef ASSERT_TO_SERIAL
-
+	// Assumes that UART0 is always the debug uart.
 
 void uart_assert(uint16_t lineNum)
 {
@@ -228,7 +219,7 @@ void uart_assert(uint16_t lineNum)
 	buf[8] = 0;
 
 	cli();
-	hal_uart_sync_send(buf, sizeof(buf));
+	hal_uart_sync_send0(buf, sizeof(buf));
 }
 
 #endif

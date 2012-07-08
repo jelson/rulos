@@ -25,7 +25,7 @@ void _um_send(MediaStateIfc *media,
 void _um_recv_handler(struct s_UartHandler *u, char c);
 r_bool _um_send_handler(struct s_UartHandler *u, char *c /*OUT*/);
 
-MediaStateIfc *uart_media_init(UartMedia *um, MediaRecvSlot *mrs)
+MediaStateIfc *uart_media_init(UartMedia *um, MediaRecvSlot *mrs, uint8_t uart_id)
 {
 	um->uart_handler.send = _um_send_handler;
 	um->uart_handler.recv = _um_recv_handler;
@@ -36,7 +36,7 @@ MediaStateIfc *uart_media_init(UartMedia *um, MediaRecvSlot *mrs)
 	um->mrs = mrs;
 	um->recv_state = UR_sync0;
 
-	hal_uart_init(&um->uart_handler, 38400, TRUE);
+	hal_uart_init(&um->uart_handler, 38400, TRUE, uart_id);
 	return &um->uart_media_ptr.media;
 }
 
@@ -108,7 +108,7 @@ void _um_send(MediaStateIfc *media,
 	um->sending_payload.sendDoneCBData = sendDoneCBData;
 	um->send_dataidx = 0;
 	um->send_which = US_preamble;
-	hal_uart_start_send();
+	hal_uart_start_send(&um->uart_handler);
 }
 
 void _um_recv_handler(struct s_UartHandler *u, char c)

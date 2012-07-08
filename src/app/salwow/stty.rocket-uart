@@ -1,0 +1,1 @@
+stty -F /dev/ttyUSB0 38400 -parenb -crtscts clocal

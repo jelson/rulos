@@ -1,3 +1,4 @@
 gcc-avr
 avr-libc
 avrdude
+libncurses5-dev
