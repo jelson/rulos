@@ -37,6 +37,9 @@ void _gpsinput_receive(UartHandler *handler, char c)
 		assert(gpsi->recvp<=sizeof(gpsi->sentence));
 			// == okay, because it'll hit terminator
 		gpsi->sentence[gpsi->recvp] = '\0';
+
+		//{ uart_debug_log(gpsi->sentence); }
+	
 		_gpsinput_process_sentence(gpsi);
 		gpsi->recvp = 0;
 	}

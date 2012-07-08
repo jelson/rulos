@@ -388,6 +388,11 @@ void hal_uart_sync_send(char *s, uint8_t len)
 	LOGF((logfp, "uart send: %s\n", buf));
 }
 
+void uart_debug_log(const char *m)
+{
+	fprintf(stderr, "DEBUG: %s\n", m);
+}
+
 void hal_init()
 {
 	logfp = fopen("log", "w");

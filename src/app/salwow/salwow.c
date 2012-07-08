@@ -23,6 +23,7 @@
 #include "util.h"
 #include "gpsinput.h"
 #include "mark_point.h"
+#include "uart.h"
 
 /****************************************************************************/
 
@@ -35,21 +36,54 @@ UartState_t uart[2];
 const char *_test_msg[2] = { "Aa", "Bb" };
 char **test_msg = (char**) _test_msg;
 	
-void send_done(void *data)
+void send_done(void *data);
+
+void send_one(void *data)
 {
-	mark_point(8);
+	static int ctr;
+	mark_point(16+((ctr++)&15));
+
+	static char *smsg = (char*) "done x\n";
+	smsg[5] = '0' + (ctr & 7);
+	uart_debug_log(smsg);
+
 	uint16_t uart_id = (uint16_t) (int) data;
+
+#if 0
 	assert(uart_id<2);
 	char *msg = test_msg[uart_id];
+#else
+	char *msg = (char*) "hi\n";
+#endif
+	static char *vmsg = (char*) "ob x\n";
+	vmsg[3] = '0' + (uart[uart_id].out_buf != NULL);
+	uart_debug_log(vmsg);
+
 	uart_send(&uart[uart_id], msg, strlen(msg), send_done, (void*) (int) uart_id);
 
 //	{ char *m="hey doodle\n"; hal_uart_sync_send(&uart[0].handler, m, strlen(m)); }
 }
 
+void send_done(void *data)
+{
+	schedule_us(1, send_one, data);
+}
+
 void _test_sentence_done(void* data)
 {
-#ifdef SIM
 	GPSInput* gpsi = (GPSInput*) data;
+#ifndef SIM
+	{
+		char smsg[100];
+		int latint = (int) gpsi->lat;
+		uint32_t latfrac = (gpsi->lat - latint)*1000000;
+		float poslon = -gpsi->lon;
+		int lonint = (int) poslon;
+		uint32_t lonfrac = (poslon - lonint)*1000000;
+		sprintf(smsg, "GPS: %d.%06ld, %d.%06ld\n", latint,latfrac,lonint, lonfrac);
+		uart_debug_log(smsg);
+	}
+#else
 	fprintf(stderr, "Read %f,%f\n", (double) gpsi->lat, (double) gpsi->lon);
 #endif // SIM
 }
@@ -72,6 +106,11 @@ int main()
 
 	mark_point(4);
 	uart_init(&uart[0], 38400, TRUE, 0);
+	uart_init(&uart[1], 38400, TRUE, 1);
+
+	{
+		uart_debug_log("SALWOW up.\n");
+	}
 
 #if 0
 	uint8_t f = 0;
@@ -91,17 +130,15 @@ int main()
 	for (uint32_t j=0; j<1000000; j++) { }
 	}
 
-	mark_point(5);
-	uart_init(&uart[1], 38400, TRUE, 1);
-
 	servo_init();
-	send_done((void*) 0);
-	send_done((void*) 1);
+	send_one((void*) 0);
 #endif
+	//send_one((void*) 1);
 
+#if 1
 	GPSInput gpsi;
 	gpsinput_init(&gpsi, 1, _test_sentence_done, &gpsi);
-
+#endif
 
 	cpumon_main_loop();
 	mark_point(7);

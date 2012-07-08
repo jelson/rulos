@@ -209,6 +209,11 @@ void hal_uart_sync_send(UartHandler* handler, char *s, uint8_t len)
 #ifdef ASSERT_TO_SERIAL
 	// Assumes that UART0 is always the debug uart.
 
+void uart_debug_log(const char *m)
+{
+	hal_uart_sync_send0((char*) m, strlen(m));
+}
+
 void uart_assert(uint16_t lineNum)
 {
 	char buf[9];

@@ -1,1 +1,2 @@
 stty -F /dev/ttyUSB0 38400 -parenb -crtscts clocal
+stty -F /dev/ttyUSB1 4800 -parenb -crtscts clocal

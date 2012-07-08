@@ -19,6 +19,7 @@ MCU := atmega1284p
 BOARD := CUSTOM
 
 TARGET := salwow
+EXTRA_AVR_CFLAGS += -DASSERT_TO_SERIAL
 
 TARGET_OBJECTS := \
 	salwow.o \
