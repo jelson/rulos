@@ -21,86 +21,37 @@
 #include "rocket.h"
 #include "clock.h"
 #include "util.h"
-
-#if 0
-#include "display_controller.h"
-#include "display_rtc.h"
-#include "display_scroll_msg.h"
-#include "display_compass.h"
-#include "focus.h"
-#include "labeled_display.h"
-#include "display_docking.h"
-#include "display_gratuitous_graph.h"
-#include "numeric_input.h"
-#include "input_controller.h"
-#include "calculator.h"
-#include "display_aer.h"
-#include "hal.h"
-#include "cpumon.h"
-#include "idle_display.h"
-#include "sequencer.h"
-#include "rasters.h"
-#include "pong.h"
-#include "lunar_distance.h"
-#include "sim.h"
-#include "display_thrusters.h"
-#include "network.h"
-#include "remote_keyboard.h"
-#include "remote_bbuf.h"
-#include "remote_uie.h"
-#include "control_panel.h"
-#endif
+#include "gpsinput.h"
+#include "mark_point.h"
 
 /****************************************************************************/
 
-#ifndef SIM
-
-#include "hardware.h"
-#include <avr/boot.h>
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include "servo.h"
-#include "uart.h"
-
-//////////////////////////////////////////////////////////////////////////////
-
-#define LED0		GPIO_D7
-#define LED1		GPIO_C0
-#define LED2		GPIO_C1
-#define LED3		GPIO_C2
-#define LED4		GPIO_C3
-
-void mark_point_init()
-{
-	gpio_make_output(LED0);
-	gpio_make_output(LED1);
-	gpio_make_output(LED2);
-	gpio_make_output(LED3);
-	gpio_make_output(LED4);
-}
-
-void mark_point(uint8_t val)
-{
-	gpio_set_or_clr(LED0, (((val>>0)&0x1)!=0));
-	gpio_set_or_clr(LED1, (((val>>1)&0x1)!=0));
-	gpio_set_or_clr(LED2, (((val>>2)&0x1)!=0));
-	gpio_set_or_clr(LED3, (((val>>3)&0x1)!=0));
-	gpio_set_or_clr(LED4, (((val>>4)&0x1)!=0));
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
 #define SYSTEM_CLOCK 500
 
+//////////////////////////////////////////////////////////////////////////////
+
+
 UartState_t uart[2];
-char *test_msg[2] = { "Aa", "Bb" };
+const char *_test_msg[2] = { "Aa", "Bb" };
+char **test_msg = (char**) _test_msg;
 	
 void send_done(void *data)
 {
 	mark_point(8);
-	uint16_t uart_id = (uint16_t) data;
+	uint16_t uart_id = (uint16_t) (int) data;
+	assert(uart_id<2);
 	char *msg = test_msg[uart_id];
-	uart_send(&uart[uart_id], msg, strlen(msg), send_done, (void*) uart_id);
+	uart_send(&uart[uart_id], msg, strlen(msg), send_done, (void*) (int) uart_id);
+
+//	{ char *m="hey doodle\n"; hal_uart_sync_send(&uart[0].handler, m, strlen(m)); }
+}
+
+void _test_sentence_done(void* data)
+{
+#ifdef SIM
+	GPSInput* gpsi = (GPSInput*) data;
+	fprintf(stderr, "Read %f,%f\n", (double) gpsi->lat, (double) gpsi->lon);
+#endif // SIM
 }
 
 int main()
@@ -122,12 +73,22 @@ int main()
 	mark_point(4);
 	uart_init(&uart[0], 38400, TRUE, 0);
 
+#if 0
 	uint8_t f = 0;
 	while(1) {
 		f+=1;
 		mark_point((f&1) | 16);
 		char *msg = "my dog. worms.\n";
 		hal_uart_sync_send(&uart[0].handler, msg, strlen(msg));
+	}
+#endif
+
+#if 0
+	{ char *m="hey diddle\n"; hal_uart_sync_send(&uart[0].handler, m, strlen(m)); }
+
+	for (int i=0; i<100; i++) {
+	{ char *m="x \n"; hal_uart_sync_send(&uart[0].handler, m, strlen(m)); }
+	for (uint32_t j=0; j<1000000; j++) { }
 	}
 
 	mark_point(5);
@@ -136,18 +97,14 @@ int main()
 	servo_init();
 	send_done((void*) 0);
 	send_done((void*) 1);
+#endif
+
+	GPSInput gpsi;
+	gpsinput_init(&gpsi, 1, _test_sentence_done, &gpsi);
+
 
 	cpumon_main_loop();
 	mark_point(7);
 
 	return 0;
 }
-
-#else
-int main()
-{
-	return 0;
-}
-#endif // SIM
-
-

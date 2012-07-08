@@ -340,6 +340,41 @@ static void _sim_twi_send(MediaStateIfc *media,
 	}
 }
 
+/* recv-only uart simulator */
+
+int sim_uart_fd[2];
+
+void _sim_uart_recv(void *data)
+{
+	UartHandler* uart_handler = (UartHandler*) data;
+	char c;
+	int rc = read(sim_uart_fd[uart_handler->uart_id], &c, 1);
+	if (rc==1)
+	{
+		//fprintf(stderr, "_sim_uart_recv(%c)\n", c);
+		(uart_handler->recv)(uart_handler, c);
+		schedule_us(1000, _sim_uart_recv, uart_handler);
+	}
+	else
+	{
+		fprintf(stderr, "EOF on sim_uart_fd\n");
+	}
+}
+
+void hal_uart_init(UartHandler* handler, uint32_t baud, r_bool stop2, uint8_t uart_id)
+{
+	handler->uart_id = uart_id;
+	assert(uart_id<sizeof(sim_uart_fd)/sizeof(sim_uart_fd[0]));
+	sim_uart_fd[uart_id] = open("sim_uart", O_RDONLY);
+	fprintf(stderr, "open returns %d\n", sim_uart_fd[uart_id]);
+	schedule_us(1000, _sim_uart_recv, handler);
+}
+
+void hal_uart_start_send(UartHandler* handler)
+{
+	// TODO neutered; won't call your more-chars upcall ever
+}
+
 /************ init ***********************/
 
 

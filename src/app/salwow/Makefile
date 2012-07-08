@@ -21,7 +21,9 @@ BOARD := CUSTOM
 TARGET := salwow
 
 TARGET_OBJECTS := \
-	salwow.o
+	salwow.o \
+	gpsinput.o \
+	mark_point.o \
 
 include $(ROCKET_ROOT)/Makefile.common
 
