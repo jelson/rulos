@@ -3,6 +3,7 @@
 #include "gpsinput.h"
 #include "navigation.h"
 #include "rudder.h"
+#include "motors.h"
 
 typedef enum { Acquiring, Observing, Turning, Completed } ControlState;
 

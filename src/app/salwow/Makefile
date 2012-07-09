@@ -30,6 +30,7 @@ TARGET_OBJECTS := \
 	control.o \
 	leds.o \
 	rudder.o \
+	motors.o \
 
 include $(ROCKET_ROOT)/Makefile.common
 

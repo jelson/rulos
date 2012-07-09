@@ -30,7 +30,6 @@
 
 #define SYSTEM_CLOCK 500
 
-//////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -123,10 +122,16 @@ int main()
 	gpsinput_init(&gpsi, 1, _test_sentence_done, &gpsi);
 #endif
 
-#if 0
 	RudderState rudder;
 	rudder_init(&rudder);
 	rudder_test_mode(&rudder);
+
+	MotorState motors;
+	motors_init(&motors);
+	motors_test_mode(&motors);
+
+#if 0
+	mathtest();
 #endif
 
 	Vector wpts[] = {
