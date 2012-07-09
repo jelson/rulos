@@ -1,4 +1,5 @@
 #include "control.h"
+#include "leds.h"
 
 #define OBSERVATION_DURATION_SAMPLES 5
 #define US_PER_DEGREE ((uint32_t)(60000000/360))
@@ -19,18 +20,26 @@ void _control_set_rudder(Control *ctl, RudderRequest req)
 		rudder_set_angle(&ctl->rudder,    0);
 		break;
 	case RUDDER_RIGHT:
-		rudder_set_angle(&ctl->rudder,  100);
+		rudder_set_angle(&ctl->rudder,  30);
 		break;
 	case RUDDER_LEFT:
-		rudder_set_angle(&ctl->rudder, -100);
+		rudder_set_angle(&ctl->rudder, -30);
 		break;
 	}
+}
+
+void control_set_motor_state(Control *ctl, r_bool onoff)
+{
+	motors_set_power(&ctl->motors, onoff ? 35 : 0);
+	leds_green(onoff);
 }
 
 void control_init(Control *ctl)
 {
 	ctl->state = Acquiring;
 	rudder_init(&ctl->rudder);
+	motors_init(&ctl->motors);
+	control_set_motor_state(ctl, 0);
 
 	ctl->n_waypoints = 0;
 }
@@ -89,11 +98,15 @@ void _control_gps_read(void* v_ctl)
 	case Acquiring:
 		schedule_now(_control_start_observing, ctl);
 		return;
+
 	case Observing:
 		_control_observe(ctl);
+		return;
+
 	case Turning:
 		// ignore GPS while turning
 		return;
+
 	case Completed:
 		// ignore GPS when we're done!
 		return;
@@ -107,6 +120,7 @@ void _control_start_observing(void *v_ctl)
 	_control_set_rudder(ctl, RUDDER_STRAIGHT);
 	ctl->sample_num = 0;
 	ctl->state = Observing;
+	control_set_motor_state(ctl, 1);
 	// next time GPS arrives, we'll accumulate data.
 }
 
@@ -143,6 +157,7 @@ void _control_start_turning(Control *ctl)
 				// OMFSM DONE!
 				uart_debug_log("task complete\n");
 				ctl->state = Completed;
+				control_set_motor_state(ctl, 0);
 				return;
 			}
 			_control_sequence_waypoint(ctl, next_index);

@@ -12,6 +12,7 @@ typedef enum { Acquiring, Observing, Turning, Completed } ControlState;
 typedef struct {
 	ControlState state;
 	RudderState rudder;
+	MotorState motors;
 	GPSInput gpsi;
 	Navigation nav;
 

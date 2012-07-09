@@ -37,7 +37,7 @@ void motors_set_power(MotorState *motors, uint8_t power)
 }
 
 
-#define MOTOR_TEST_PERIOD_US 1000000
+#define MOTOR_TEST_PERIOD_US 10000000
 
 static void motors_test(MotorState *motors)
 {
@@ -52,6 +52,7 @@ static void motors_test(MotorState *motors)
 		motors_set_power(motors, 0);
 		motors->test_mode = 0;
 		break;
+	}
 
 #if 0
 	case 0:
