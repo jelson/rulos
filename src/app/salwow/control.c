@@ -102,7 +102,7 @@ void _control_gps_read(void* v_ctl)
 
 void _control_start_observing(void *v_ctl)
 {
-	uart_debug_log("_control_start_observing");
+	uart_debug_log("_control_start_observing\n");
 	Control *ctl = (Control*) v_ctl;
 	_control_set_rudder(ctl, RUDDER_STRAIGHT);
 	ctl->sample_num = 0;
@@ -136,12 +136,12 @@ void _control_start_turning(Control *ctl)
 		turn_request = navigation_compute(&ctl->nav, &ctl->p0, &ctl->p1);
 		if (turn_request==ABEAM)
 		{
-			uart_debug_log("sequence waypoint");
+			uart_debug_log("sequence waypoint\n");
 			int next_index = ctl->waypoint_index + 1;
 			if (next_index >= ctl->n_waypoints)
 			{
 				// OMFSM DONE!
-				uart_debug_log("task complete");
+				uart_debug_log("task complete\n");
 				ctl->state = Completed;
 				return;
 			}
@@ -152,7 +152,7 @@ void _control_start_turning(Control *ctl)
 		break;
 	}
 
-	uart_debug_log(turn_request>0 ? "turn right" : "turn left");
+	uart_debug_log(turn_request>0 ? "turn right\n" : "turn left\n");
 	_control_set_rudder(ctl, turn_request>0 ? RUDDER_RIGHT : RUDDER_LEFT);
 	Time turn_duration_us = INTABS(turn_request) * US_PER_DEGREE;
 	ctl->state = Turning;

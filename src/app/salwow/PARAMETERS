@@ -1,0 +1,4 @@
+Waypoint list is in salwow.c /wpts
+control.c has OBSERVATION_DURATION_SAMPLES (straight time, in GPS units)
+	and US_PER_DEGREE (calibrated turn rate)
+	and a switch with the rudder positions in it.

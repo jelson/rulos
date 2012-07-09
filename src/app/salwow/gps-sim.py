@@ -4,6 +4,7 @@
 # off a GPS (without hanging the GPS outside.)
 
 import sys
+import time
 
 class GPSSim:
 	def __init__(self):
@@ -52,6 +53,7 @@ class GPSSim:
 			p = i/float(steps)
 			pos = self.interp(p, p0, p1);
 			self.emit_one(pos)
+			time.sleep(2)
 		
 GPSSim()
 
