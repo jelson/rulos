@@ -20,12 +20,16 @@ BOARD := CUSTOM
 
 TARGET := salwow
 EXTRA_AVR_CFLAGS += -DASSERT_TO_SERIAL
+EXTRA_AVR_LDFLAGS += -lm
 
 TARGET_OBJECTS := \
 	salwow.o \
 	gpsinput.o \
 	mark_point.o \
 	navigation.o \
+	control.o \
+	leds.o \
+	rudder.o \
 
 include $(ROCKET_ROOT)/Makefile.common
 

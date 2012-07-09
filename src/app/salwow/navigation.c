@@ -12,6 +12,12 @@
 	// segment; farther, and we turn more aggressively back to the line.)
 float alpha = 1.0/ALPHA;
 
+#define MIN_PER_DEGREE	(60.0)
+#define NM_PER_MIN_Y	(1.0)
+#define METERS_PER_NM	(1852.0)
+#define RAD_TO_DEG(rad)	((rad)*180.0/PI)
+#define DEG_TO_RAD(rad)	((rad)*PI/180.0)
+
 float s_dot(Vector *v0, Vector *v1)
 {
 	return v0->x*v1->x + v0->y*v1->y;
@@ -109,16 +115,19 @@ void v_normalize(Vector *inout)
 	inout->y *= factor;
 }
 
-int navigation_compute(Navigation *nav, Vector *p0, Vector *p1)
+int navigation_compute(Navigation *nav, Vector *p0_ll, Vector *p1_ll)
 {
+	Vector p0; nav_meters_from_ll(nav, &p0, p0_ll);
+	Vector p1; nav_meters_from_ll(nav, &p1, p1_ll);
+
 #if NDBG
-	fprintf(stderr, "p0(%f,%f)\n", (double) p0->x, (double) p0->y);
-	fprintf(stderr, "p1(%f,%f)\n", (double) p1->x, (double) p1->y);
+	fprintf(stderr, "p0(%f,%f)\n", (double) p0.x, (double) p0.y);
+	fprintf(stderr, "p1(%f,%f)\n", (double) p1.x, (double) p1.y);
 #endif
 
 	// waypoint space has w_0 at its origin, w_1 on the x axis.
 	Vector p1_w;	// position in waypoint-space
-	v_transform(&p1_w, p1, &nav->w0, &nav->waypoint_unit);
+	v_transform(&p1_w, &p1, &nav->w0, &nav->waypoint_unit);
 #if NDBG
 	fprintf(stderr, "p1_w(%f,%f)\n", (double) p1_w.x, (double) p1_w.y);
 	fprintf(stderr, "waypoint_dist %f\n", (double) nav->waypoint_dist);
@@ -143,7 +152,7 @@ int navigation_compute(Navigation *nav, Vector *p0, Vector *p1)
 #endif
 
 	Vector p0_w;	// old position in waypoint-space
-	v_transform(&p0_w, p0, &nav->w0, &nav->waypoint_unit);
+	v_transform(&p0_w, &p0, &nav->w0, &nav->waypoint_unit);
 #if NDBG
 	fprintf(stderr, "p0_w(%f,%f)\n", (double) p0_w.x, (double) p0_w.y);
 #endif
@@ -169,14 +178,34 @@ int navigation_compute(Navigation *nav, Vector *p0, Vector *p1)
 
 	// angle_radians is positive-ccw-radians; we want to correct (one negation)
 	// and also invert to positive-cw-degrees (another negation).
-	int command_angle_degrees = (int) (angle_radians * (180.0/PI));
+	int command_angle_degrees = (int) RAD_TO_DEG(angle_radians);
 	return command_angle_degrees;
 }
 
-void navigation_activate_leg(Navigation *nav, Vector *w0, Vector *w1)
+void navigation_init(Navigation *nav, Vector *system_origin)
 {
-	v_sub(&nav->waypoint_unit, w1, w0);
-	v_copy(&nav->w0, w0);
+	v_copy(&nav->system_origin, system_origin);
+}
+
+void navigation_activate_leg(Navigation *nav, Vector *w0_ll, Vector *w1_ll)
+{
+	Vector w0; nav_meters_from_ll(nav, &w0, w0_ll);
+	Vector w1; nav_meters_from_ll(nav, &w1, w1_ll);
+
+	v_sub(&nav->waypoint_unit, &w1, &w0);
+	v_copy(&nav->w0, &w0);
 	nav->waypoint_dist = s_len(&nav->waypoint_unit);
 	v_normalize(&nav->waypoint_unit);
+}
+
+void nav_meters_from_ll(Navigation *nav, Vector *out, Vector *in)
+{
+	Vector deg;
+	v_sub(&deg, in, &nav->system_origin);
+	// deg is now "small", since 'in' is 'near' the system_origin.
+	// so errors in projecting to a flat map are small. (too rushed to do
+	// spherical math)
+	float nm_per_min_x = cos(DEG_TO_RAD(nav->system_origin.y));
+	out->x = deg.x * MIN_PER_DEGREE * nm_per_min_x * METERS_PER_NM;
+	out->y = deg.y * MIN_PER_DEGREE * NM_PER_MIN_Y * METERS_PER_NM;
 }

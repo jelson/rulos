@@ -21,137 +21,18 @@
 #include "rocket.h"
 #include "clock.h"
 #include "util.h"
-#include "gpsinput.h"
 #include "mark_point.h"
-#include "hardware.h"
 #include "uart.h"
-#include "navigation.h"
+#include "control.h"
+#include "leds.h"
 
 /****************************************************************************/
 
 #define SYSTEM_CLOCK 500
 
-#define RUDDER_SERVO_PIN GPIO_D5
-#define GREEN_LED_PIN    GPIO_D7
-
 //////////////////////////////////////////////////////////////////////////////
 
 
-typedef struct s_RudderState
-{
-	int8_t desired_position;
-
-	// test mode
-	int8_t test_mode;
-	int8_t delay_timer;
-	int8_t next_mode;
-
-} RudderState;
-
-#define RUDDER_SERVO_MIN_US 1000
-#define RUDDER_SERVO_MAX_US 2000
-#define RUDDER_API_MIN (-99)
-#define RUDDER_API_MAX (+99)
-
-// position is -100 (left) to +100 (right).  0 is center.
-void rudder_set_angle(RudderState *rudder, int8_t position)
-{
-	rudder->desired_position = position;
-
-	OCR1A = RUDDER_SERVO_MIN_US +
-		(((uint16_t) position - RUDDER_API_MIN) *
-		 ((RUDDER_SERVO_MAX_US - RUDDER_SERVO_MIN_US + 1) / (uint16_t) (RUDDER_API_MAX-RUDDER_API_MIN+1)));
-}
-
-#define RUDDER_TEST_PERIOD_US 20000
-#define RUDDER_WAIT_PERIODS 100
-
-
-static void rudder_test(RudderState *rudder)
-{
-	schedule_us(RUDDER_TEST_PERIOD_US, (ActivationFuncPtr) rudder_test, rudder);
-
-	// sweep the rudder:
-	// 0 -- center to left
-	// 1 -- left to center
-	// 2 -- center to right
-	// 3 -- right to center
-	// 4 -- wait
-	switch (rudder->test_mode) {
-	case 0:
-		if (rudder->desired_position <= RUDDER_API_MIN) {
-			rudder->test_mode = 4;
-			rudder->next_mode = 1;
-		} else {
-			rudder_set_angle(rudder, rudder->desired_position-1);
-		}
-		break;
-	case 1:
-		if (rudder->desired_position >= 0) {
-			rudder->test_mode = 4;
-			rudder->next_mode = 2;
-		} else {
-			rudder_set_angle(rudder, rudder->desired_position+1);
-		}
-		break;
-	case 2:
-		if (rudder->desired_position >= RUDDER_API_MAX) {
-			rudder->test_mode = 4;
-			rudder->next_mode = 3;
-		} else {
-			rudder_set_angle(rudder, rudder->desired_position+1);
-		}
-		break;
-	case 3:
-		if (rudder->desired_position <= 0) {
-			rudder->test_mode = 4;
-			rudder->next_mode = 0;
-		} else {
-			rudder_set_angle(rudder, rudder->desired_position-1);
-		}
-		break;
-
-	case 4:
-		if (++(rudder->delay_timer) >= RUDDER_WAIT_PERIODS) {
-			rudder->delay_timer = 0;
-			rudder->test_mode = rudder->next_mode;
-			gpio_set(GREEN_LED_PIN);
-		} else {
-			gpio_clr(GREEN_LED_PIN);
-		}
-		break;
-	}
-}
-
-static void rudder_test_mode(RudderState *rudder)
-{
-	rudder->test_mode = 0;
-	rudder->delay_timer = 0;
-	schedule_us(1, (ActivationFuncPtr) rudder_test, rudder);
-}
-
-
-void rudder_init(RudderState *rudder)
-{
-	gpio_make_output(RUDDER_SERVO_PIN);
-
-	TCCR1A = 0
-		| _BV(COM1A1)		// non-inverting PWM
-		| _BV(WGM11)		// Fast PWM, 16-bit, TOP=ICR1
-		;
-	TCCR1B = 0
-		| _BV(WGM13)		// Fast PWM, 16-bit, TOP=ICR1
-		| _BV(WGM12)		// Fast PWM, 16-bit, TOP=ICR1
-		| _BV(CS11)			// clkio/8 prescaler => 1us clock
-		;
-
-	ICR1 = 20000;
-	OCR1A = 1500;
-
-	rudder->desired_position = 0;	// ensure servo_set_pwm sets all fields
-	rudder->test_mode = 0;
-	rudder_set_angle(rudder, 0);
-}
 
 //////////////// UART ///////////////////////////////////////
 
@@ -192,63 +73,6 @@ void send_done(void *data)
 	schedule_us(1, send_one, data);
 }
 
-void _test_sentence_done(void* data)
-{
-	GPSInput* gpsi = (GPSInput*) data;
-#ifndef SIM
-	{
-		char smsg[100];
-		int latint = (int) gpsi->lat;
-		uint32_t latfrac = (gpsi->lat - latint)*1000000;
-		float poslon = -gpsi->lon;
-		int lonint = (int) poslon;
-		uint32_t lonfrac = (poslon - lonint)*1000000;
-		sprintf(smsg, "GPS: %d.%06ld, %d.%06ld\n", latint,latfrac,lonint, lonfrac);
-		uart_debug_log(smsg);
-	}
-#else
-	fprintf(stderr, "Read %f,%f\n", (double) gpsi->lat, (double) gpsi->lon);
-#endif // SIM
-}
-
-#ifndef SIM
-void mathtest() { }
-#else
-Navigation nav;
-
-void one_mathtest(Vector *p1)
-{
-	Vector p0;
-	p0.x = p1->x+0.5;
-	p0.y = p1->y+1.5;
-	int res = navigation_compute(&nav, &p0, p1);
-	fprintf(stderr, " %5d", res);
-}
-
-void mathtest()
-{
-	Vector w0; v_init(&w0, 3, 3);
-	Vector w1; v_init(&w1, 2, -2);
-	navigation_activate_leg(&nav, &w0, &w1);
-
-	Vector p1;
-#if 0
-	p1.x = 1.0; p1.y = 1.5;
-	one_mathtest(&p1);
-#endif
-#if 1
-	for (p1.y = 3; p1.y>=-3; p1.y-=0.5)
-	{
-		fprintf(stderr, "[y %.1f]", (double) p1.y);
-		for (p1.x = 0.1; p1.x<3.2; p1.x+=0.5)
-		{
-			one_mathtest(&p1);
-		}
-		fprintf(stderr, "\n");
-	}
-#endif
-}
-#endif
 int main()
 {
 	mark_point_init();
@@ -257,8 +81,7 @@ int main()
 	mark_point(2);
 	init_clock(SYSTEM_CLOCK, TIMER0);
 
-	// init green led
-	gpio_make_output(GREEN_LED_PIN);
+	leds_init();
 
 	mark_point(3);
 	CpumonAct cpumon;
@@ -295,18 +118,31 @@ int main()
 #endif
 	//send_one((void*) 1);
 
-#if 1
+#if 0
 	GPSInput gpsi;
 	gpsinput_init(&gpsi, 1, _test_sentence_done, &gpsi);
 #endif
 
+#if 0
 	RudderState rudder;
 	rudder_init(&rudder);
 	rudder_test_mode(&rudder);
-
-#if 0
-	mathtest();
 #endif
+
+	Vector wpts[] = {
+		{ -122.341817, 47.672009 },
+		{ -122.341966, 47.672792 },
+		{ -122.342680, 47.672989 },
+		{ -122.342921, 47.672284 },
+		};
+
+	Control control;
+	control_init(&control);
+	for (uint16_t i=0; i<(sizeof(wpts)/sizeof(wpts[0])); i++)
+	{
+		control_add_waypoint(&control, &wpts[i]);
+	}
+	control_start(&control);
 
 	cpumon_main_loop();
 	mark_point(7);
