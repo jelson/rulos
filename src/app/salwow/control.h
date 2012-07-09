@@ -24,8 +24,11 @@ typedef struct {
 
 	int sample_num;
 
+	uint8_t test_rudder_state;
 } Control;
 
 void control_init(Control *ctl);
 void control_add_waypoint(Control *ctl, Vector *wpt);
 void control_start(Control *ctl);
+
+void control_test_rudder(Control *ctl);

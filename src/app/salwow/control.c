@@ -11,6 +11,7 @@ void _control_start_observing(void *v_ctl);
 void _control_gps_read(void* v_ctl);
 void _control_observe(Control *ctl);
 void _control_start_turning(Control *ctl);
+void _control_test_rudder_act(void *v_ctl);
 
 void _control_set_rudder(Control *ctl, RudderRequest req)
 {
@@ -42,6 +43,19 @@ void control_init(Control *ctl)
 	control_set_motor_state(ctl, 0);
 
 	ctl->n_waypoints = 0;
+}
+
+void control_test_rudder(Control *ctl)
+{
+	schedule_us(1000, _control_test_rudder_act, ctl);
+}
+
+void _control_test_rudder_act(void *v_ctl)
+{
+	Control *ctl = (Control*) v_ctl;
+	ctl->test_rudder_state = (ctl->test_rudder_state + 1) % 3;
+	_control_set_rudder(ctl, (RudderRequest) ctl->test_rudder_state);
+	schedule_us(5000000, _control_test_rudder_act, ctl);
 }
 
 void control_add_waypoint(Control *ctl, Vector *wpt)

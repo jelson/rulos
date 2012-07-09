@@ -105,23 +105,11 @@ int main()
 #endif
 
 #if 0
-	{ char *m="hey diddle\n"; hal_uart_sync_send(&uart[0].handler, m, strlen(m)); }
-
-	for (int i=0; i<100; i++) {
-	{ char *m="x \n"; hal_uart_sync_send(&uart[0].handler, m, strlen(m)); }
-	for (uint32_t j=0; j<1000000; j++) { }
-	}
-
-	servo_init();
-	send_one((void*) 0);
-#endif
-	//send_one((void*) 1);
-
-#if 0
 	GPSInput gpsi;
 	gpsinput_init(&gpsi, 1, _test_sentence_done, &gpsi);
 #endif
 
+#if 0
 	RudderState rudder;
 	rudder_init(&rudder);
 	rudder_test_mode(&rudder);
@@ -130,7 +118,6 @@ int main()
 	motors_init(&motors);
 	motors_test_mode(&motors);
 
-#if 0
 	mathtest();
 #endif
 
@@ -147,7 +134,12 @@ int main()
 	{
 		control_add_waypoint(&control, &wpts[i]);
 	}
+
+#if 1
 	control_start(&control);
+#else
+	control_test_rudder(&control);
+#endif
 
 	cpumon_main_loop();
 	mark_point(7);
