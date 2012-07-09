@@ -152,7 +152,13 @@ void _control_start_turning(Control *ctl)
 		break;
 	}
 
-	uart_debug_log(turn_request>0 ? "turn right\n" : "turn left\n");
+	{
+		char msg[80];
+		sprintf(msg, "turn %s %d deg\n",
+			turn_request>0 ? "right" : "left",
+			turn_request);
+		uart_debug_log(msg);
+	}
 	_control_set_rudder(ctl, turn_request>0 ? RUDDER_RIGHT : RUDDER_LEFT);
 	Time turn_duration_us = INTABS(turn_request) * US_PER_DEGREE;
 	ctl->state = Turning;

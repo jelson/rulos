@@ -46,14 +46,15 @@ class GPSSim:
 		self.send_gps(str)
 
 	def synthesize(self):
-		p0 = (-122.341817+.00005, 47.672009-.00005)
-		p1 = (-122.341966-.00005, 47.672792+.00005)
-		steps = 100
+		p0 = (-122.341817-.00002, 47.672009-.00002)
+		p1 = (-122.341966+.00002, 47.672792+.00002)
+		steps = 50
 		for i in range(steps+10):
+			print "step %d/%d" % (i,steps+10)
 			p = i/float(steps)
 			pos = self.interp(p, p0, p1);
 			self.emit_one(pos)
-			time.sleep(2)
+			time.sleep(1)
 		
 GPSSim()
 
