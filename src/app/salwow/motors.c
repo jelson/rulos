@@ -37,13 +37,23 @@ void motors_set_power(MotorState *motors, uint8_t power)
 }
 
 
-#define MOTOR_TEST_PERIOD_US 40000
+#define MOTOR_TEST_PERIOD_US 1000000
 
 static void motors_test(MotorState *motors)
 {
 	schedule_us(MOTOR_TEST_PERIOD_US, (ActivationFuncPtr) motors_test, motors);
 
 	switch (motors->test_mode) {
+	case 0:
+		motors_set_power(motors, 40);
+		motors->test_mode = 1;
+		break;
+	case 1:
+		motors_set_power(motors, 0);
+		motors->test_mode = 0;
+		break;
+
+#if 0
 	case 0:
 		motors_set_power(motors, motors->desired_power + 1);
 		if (motors->desired_power == 0xff) {
@@ -58,6 +68,7 @@ static void motors_test(MotorState *motors)
 		}
 		break;
 	}
+#endif
 }
 
 
