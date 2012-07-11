@@ -2,8 +2,9 @@
 #include "leds.h"
 
 #define OBSERVATION_DURATION_SAMPLES 5
-#define US_PER_DEGREE ((uint32_t)(60000000/360))
+#define US_PER_DEGREE ((uint32_t)(5000000/360))
 	// That's one minute for a 360-degree turn.
+#define MOTOR_POWER	75
 
 typedef enum { RUDDER_RIGHT=0, RUDDER_LEFT=1, RUDDER_STRAIGHT=2 } RudderRequest;
 
@@ -18,20 +19,20 @@ void _control_set_rudder(Control *ctl, RudderRequest req)
 	switch (req)
 	{
 	case RUDDER_STRAIGHT:
-		rudder_set_angle(&ctl->rudder,    0);
+		rudder_set_angle(&ctl->rudder,    -15);
 		break;
 	case RUDDER_RIGHT:
-		rudder_set_angle(&ctl->rudder,  30);
+		rudder_set_angle(&ctl->rudder, -50);
 		break;
 	case RUDDER_LEFT:
-		rudder_set_angle(&ctl->rudder, -30);
+		rudder_set_angle(&ctl->rudder,  15);
 		break;
 	}
 }
 
 void control_set_motor_state(Control *ctl, r_bool onoff)
 {
-	motors_set_power(&ctl->motors, onoff ? 35 : 0);
+	motors_set_power(&ctl->motors, onoff ? MOTOR_POWER : 0);
 	leds_green(onoff);
 }
 
@@ -47,12 +48,22 @@ void control_init(Control *ctl)
 
 void control_test_rudder(Control *ctl)
 {
+	ctl->test_rudder_state = 0;
+	ctl->test_rudder_count = 0;
+	motors_set_power(&ctl->motors, MOTOR_POWER);
+	leds_green(1);
 	schedule_us(1000, _control_test_rudder_act, ctl);
 }
 
 void _control_test_rudder_act(void *v_ctl)
 {
 	Control *ctl = (Control*) v_ctl;
+	ctl->test_rudder_count += 1;
+	if (ctl->test_rudder_count > 9)
+	{
+		motors_set_power(&ctl->motors, 0);
+		return;
+	}
 	ctl->test_rudder_state = (ctl->test_rudder_state + 1) % 3;
 	_control_set_rudder(ctl, (RudderRequest) ctl->test_rudder_state);
 	schedule_us(5000000, _control_test_rudder_act, ctl);

@@ -25,6 +25,7 @@ typedef struct {
 	int sample_num;
 
 	uint8_t test_rudder_state;
+	uint8_t test_rudder_count;
 } Control;
 
 void control_init(Control *ctl);
