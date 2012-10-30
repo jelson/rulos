@@ -22,6 +22,7 @@
 #include "clock.h"
 #include "util.h"
 #include "uart.h"
+#include "animate.h"
 
 /****************************************************************************/
 
@@ -38,6 +39,10 @@ int main()
 	cpumon_init(&cpumon);	// includes slow calibration phase
 
 	uart_init(&uart, 38400, TRUE, 0);
+
+	Animate an;
+	animate_init(&an);
+	animate_play(&an, Zap);
 
 	cpumon_main_loop();
 

@@ -21,7 +21,8 @@ BOARD := CUSTOM
 TARGET := frozone
 
 TARGET_OBJECTS := \
-	frozone.o 
+	frozone.o \
+	animate.o \
 
 include $(ROCKET_ROOT)/Makefile.common
 
