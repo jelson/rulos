@@ -40,7 +40,7 @@ static gint expose_topWindow(GtkWidget *widget, GdkEventExpose *event)
 
 static void drawLed(int x, int y, int rColor, int gColor)
 {
-	GdkColor ledColor = { 0, rColor * (0xffff/16), gColor * (0xffff/16), 0 };
+	GdkColor ledColor = { 0, (uint8_t) (rColor * (0xffff/16)), (uint8_t) (gColor * (0xffff/16)), 0 };
 	GdkColor ledOutline = { 0, 0x4000, 0x4000, 0x4000 };
 	int xCoord = LED_SPACING/2 + x*(LED_SPACING+LED_RADIUS);
 	int yCoord = LED_SPACING/2 + y*(LED_SPACING+LED_RADIUS);

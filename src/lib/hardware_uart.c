@@ -46,6 +46,7 @@ uint16_t baud_to_ubrr(uint32_t baud)
 UartHandler* g_uart_handler[2] = {NULL, NULL};
 
 #if defined(MCU8_line)
+// Only one UART, named without an index
 
 # define _UBRRH    UBRRH
 # define _UBRRL    UBRRL
@@ -75,7 +76,21 @@ UartHandler* g_uart_handler[2] = {NULL, NULL};
 #define HAVE_UARTID0 1
 #include "hardware_uart.ch"
 
-#elif defined(MCU328_line) || defined(MCU1284_line)
+#endif
+
+#if defined(MCU328_line) || defined(MCU1284_line)
+// One or two uarts; first uart has 0 in its name.
+// Except the vector names. Geez what a mess.
+
+#if defined(MCU328_line)
+# define _USART_RXC_vect USART_RX_vect
+# define _USART_UDRE_vect USART_UDRE_vect
+#elif defined(MCU1284_line)
+# define _USART_RXC_vect USART0_RX_vect
+# define _USART_UDRE_vect USART0_UDRE_vect
+#else
+#error missing arch
+#endif
 
 # define _UBRRH    UBRR0H
 # define _UBRRL    UBRR0L
@@ -92,8 +107,6 @@ UartHandler* g_uart_handler[2] = {NULL, NULL};
 # define _UDRE     UDRE0
 # define _UDRIE    UDRIE0
 # define _USBS     USBS0
-# define _USART_RXC_vect USART0_RX_vect
-# define _USART_UDRE_vect USART0_UDRE_vect
 #define hal_uart_init_name hal_uart_init0
 #define enable_sendready_interrupt_name enable_sendready_interrupt0
 #define hal_uart_start_send_name hal_uart_start_send0
@@ -131,6 +144,11 @@ UartHandler* g_uart_handler[2] = {NULL, NULL};
 #undef hal_uart_sync_send_name
 #undef UARTID
 
+#endif
+
+#if defined(MCU1284_line)
+// Two uarts; second uart has 1 in its name.
+
 # define _UBRRH    UBRR1H
 # define _UBRRL    UBRR1L
 # define _UCSRA    UCSR1A
@@ -159,8 +177,6 @@ UartHandler* g_uart_handler[2] = {NULL, NULL};
 #define HAVE_UARTID1 1
 #include "hardware_uart.ch"
 
-#else
-# error Hardware-specific UART code needs love
 #endif
 
 void hal_uart_init(UartHandler* handler, uint32_t baud, r_bool stop2, uint8_t uart_id)
