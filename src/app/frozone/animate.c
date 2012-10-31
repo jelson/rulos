@@ -11,7 +11,11 @@
 #define FRZ_LED4	GPIO_D4
 #define FRZ_LED5	GPIO_D5
 #define FRZ_LED6	GPIO_D6
+
 #define FRZ_LED7	GPIO_D7
+
+#define FRZ_LED7	GPIO_C3
+#define FRZ_DBG		GPIO_D4
 #else
 #define FRZ_LED0	GPIO_D6
 #define FRZ_LED1	GPIO_D7
@@ -20,9 +24,7 @@
 #define FRZ_LED4	GPIO_D0
 #define FRZ_LED5	GPIO_D3
 #define FRZ_LED6	GPIO_D1
-//#define FRZ_LED7	GPIO_D4
-#define FRZ_LED7	GPIO_C3
-#define FRZ_DBG		GPIO_D4
+#define FRZ_LED7	GPIO_D4
 #endif
 
 #endif // SIM
@@ -39,28 +41,55 @@ typedef struct s_cell {
 	const char* brights;		// 8 chars.
 } Cell;
 
+#define QUEISCE	16000
 Cell movie_idle[] = {
-	{ 250, "00012345" },
-	{ 250, "54321000" },
+	{QUEISCE, "00000000" },
+	{   20, "10100010" },
+	{   50, "00000000" },
+	{   20, "00101010" },
+	{QUEISCE, "00000000" },
+	{   20, "01010101" },
+	{   50, "00000000" },
+	{   20, "05010003" },
+	{   50, "00000000" },
+	{   20, "00050200" },
+	{QUEISCE, "00000000" },
+	{   20, "00011000" },
+	{   50, "00000000" },
+	{   20, "01003010" },
+	{   50, "00000000" },
+	{   20, "01000010" },
 	{ END_SEQUENCE, NULL } };
 
+#define ZAP_RATE	15
 Cell movie_zap[] = {
-	{ 6, "50000000" },
-	{ 6, "45000000" },
-	{ 6, "34500000" },
-	{ 6, "23450000" },
-	{ 6, "12345000" },
-	{ 6, "01234500" },
-	{ 6, "00123450" },
-	{ 6, "00012345" },
-	{ 6, "00001234" },
-	{ 6, "00000123" },
-	{ 6, "00000012" },
-	{ 6, "00000001" },
+	{ ZAP_RATE, "00000001" },
+	{ ZAP_RATE, "00000012" },
+	{ ZAP_RATE, "00000123" },
+	{ ZAP_RATE, "00001234" },
+	{ ZAP_RATE, "00012345" },
+	{ ZAP_RATE, "00123450" },
+	{ ZAP_RATE, "01234500" },
+	{ ZAP_RATE, "12345000" },
+	{ ZAP_RATE, "23450000" },
+	{ ZAP_RATE, "34500000" },
+	{ ZAP_RATE, "45000000" },
+	{ ZAP_RATE, "50000000" },
 	{ END_SEQUENCE, NULL } };
 
+#define THROB_RATE	50
 Cell movie_diddle[] = {
-	{ 1000, "50505050" },
+	{ THROB_RATE, "00011000" },
+	{ THROB_RATE, "00122100" },
+	{ THROB_RATE, "12344321" },
+	{ THROB_RATE, "23455432" },
+	{ THROB_RATE, "34500534" },
+	{ THROB_RATE, "34500534" },
+	{ THROB_RATE, "23455432" },
+	{ THROB_RATE, "12344321" },
+	{ THROB_RATE, "01233210" },
+	{ THROB_RATE, "00122100" },
+	{ THROB_RATE, "00011000" },
 	{ END_SEQUENCE, NULL } };
 
 static uint8_t _pwm_phases[16] = {
@@ -100,6 +129,12 @@ void _animate_act(void* v_an)
 
 	if (an->delay == 0)
 	{
+#ifdef FRZ_DBG
+		static uint8_t foo;
+		foo++;
+		gpio_set_or_clr(FRZ_DBG, foo&1);
+#endif // FRZ_DBG
+	
 		an->cell++;
 		if (an->cell->nframes == END_SEQUENCE)
 		{
@@ -121,8 +156,6 @@ void animate_init(Animate* an)
 	gpio_make_output(FRZ_LED5);
 	gpio_make_output(FRZ_LED6);
 	gpio_make_output(FRZ_LED7);
-	gpio_make_output(FRZ_DBG);
-
 	gpio_clr(FRZ_LED0);
 	gpio_clr(FRZ_LED1);
 	gpio_clr(FRZ_LED2);
@@ -131,12 +164,16 @@ void animate_init(Animate* an)
 	gpio_clr(FRZ_LED5);
 	gpio_clr(FRZ_LED6);
 	gpio_set(FRZ_LED7);
+#ifdef FRZ_DBG
+	gpio_make_output(FRZ_DBG);
+
 	gpio_set(FRZ_DBG);
+#endif // FRZ_DBG
 #endif // SIM
 
 	an->phase = 0;
 	an->delay = 0;
-	an->cell = movie_idle;
+	animate_play(an, Idle);
 
 //	_set_leds("00543210", 0);
 

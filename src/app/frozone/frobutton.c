@@ -18,7 +18,7 @@ static void _frobutton_act(void* v_fb)
 	{
 		animate_play(fb->animate, Zap);
 	}
-	else if (!gpio_is_set(FRZ_SW0))
+	else if (!gpio_is_set(FRZ_SW1))
 	{
 		animate_play(fb->animate, Diddle);
 	}
@@ -35,5 +35,5 @@ void frobutton_init(Frobutton* fb, Animate* an)
 #endif // SIM
 
 	fb->animate = an;
-	schedule_us(1, _frobutton_act, an);
+	schedule_us(1, _frobutton_act, fb);
 }
