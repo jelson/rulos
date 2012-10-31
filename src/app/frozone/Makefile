@@ -23,6 +23,7 @@ TARGET := frozone
 TARGET_OBJECTS := \
 	frozone.o \
 	animate.o \
+	frobutton.o \
 
 include $(ROCKET_ROOT)/Makefile.common
 

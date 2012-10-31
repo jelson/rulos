@@ -2,13 +2,13 @@
 
 #include <rocket.h>
 
-typedef enum e_movie { Idle, Zap } Movie;
+typedef enum e_movie { Idle, Zap, Diddle } Movie;
 
 struct s_cell;
 
 typedef struct s_animate {
 	uint8_t phase;
-	uint8_t delay;
+	uint16_t delay;
 	struct s_cell *cell;
 } Animate;
 

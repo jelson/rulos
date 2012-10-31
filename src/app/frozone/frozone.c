@@ -23,6 +23,7 @@
 #include "util.h"
 #include "uart.h"
 #include "animate.h"
+#include "frobutton.h"
 
 /****************************************************************************/
 
@@ -38,11 +39,14 @@ int main()
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);	// includes slow calibration phase
 
-	uart_init(&uart, 38400, TRUE, 0);
+//	uart_init(&uart, 38400, TRUE, 0);
 
 	Animate an;
 	animate_init(&an);
-	animate_play(&an, Zap);
+//	animate_play(&an, Zap);
+
+	Frobutton fb;
+	frobutton_init(&fb, &an);
 
 	cpumon_main_loop();
 
