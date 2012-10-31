@@ -3,14 +3,17 @@
 #ifndef SIM
 #include "hardware.h"
 
-#define FRZ_LED0	GPIO_B0
-#define FRZ_LED1	GPIO_B1
-#define FRZ_LED2	GPIO_B2
-#define FRZ_LED3	GPIO_B3
-#define FRZ_LED4	GPIO_B4
-#define FRZ_LED5	GPIO_B5
-#define FRZ_LED6	GPIO_B6
-#define FRZ_LED7	GPIO_B7
+#define FRZ_LED0	GPIO_D0
+#define FRZ_LED1	GPIO_D1
+#define FRZ_LED2	GPIO_D2
+#define FRZ_LED3	GPIO_D3
+#define FRZ_LED4	GPIO_D4
+#define FRZ_LED5	GPIO_D5
+#define FRZ_LED6	GPIO_D6
+#define FRZ_LED7	GPIO_D7
+
+#define FRZ_SW0		GPIO_C4
+#define FRZ_SW1		GPIO_C5
 
 #endif // SIM
 
@@ -124,4 +127,3 @@ void animate_play(Animate* an, Movie movie)
 	}
 	an->delay = 0;
 }
-
