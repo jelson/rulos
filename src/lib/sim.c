@@ -340,6 +340,11 @@ static void _sim_twi_send(MediaStateIfc *media,
 	}
 }
 
+#if 0
+Jon: I disabled this because it conflicted with the 
+interactive uart simulator I wrote, in sim_rocketpanel.c.
+
+
 /* recv-only uart simulator */
 
 int sim_uart_fd[2];
@@ -374,6 +379,8 @@ void hal_uart_start_send(UartHandler* handler)
 {
 	// TODO neutered; won't call your more-chars upcall ever
 }
+
+#endif
 
 /************ init ***********************/
 

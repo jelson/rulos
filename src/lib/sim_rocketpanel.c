@@ -369,7 +369,7 @@ static void uart_simulator_start()
 	draw_uart_input_window();
 }
 
-void hal_uart_start_send()
+void hal_uart_start_send(UartHandler *handler)
 {
 	char buf[256];
 	int i = 0;
@@ -382,7 +382,7 @@ void hal_uart_start_send()
 	LOGF((logfp, "Sent to uart: '%s'\n", buf));
 }
 
-void hal_uart_init(UartHandler *s, uint32_t baud, r_bool stop2)
+void hal_uart_init(UartHandler *s, uint32_t baud, r_bool stop2, uint8_t uart_id)
 {
 	g_sim_uart_handler = s;
 }
