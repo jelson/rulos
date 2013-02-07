@@ -67,17 +67,17 @@ static void display_clock(WallClockActivation_t *wca)
 	int_to_string2(buf+6, 2, 2, wca->hundredth);
 
 	// delete some if we haven't resynced the clock in a while
-	if (wca->mins_since_last_sync > precision_threshold_times_sec[0]) {
+	if (wca->mins_since_last_sync > precision_threshold_times_min[0]) {
 		buf[7] = ' ';
 	}
-	if (wca->mins_since_last_sync > precision_threshold_times_sec[1]) {
+	if (wca->mins_since_last_sync > precision_threshold_times_min[1]) {
 		buf[6] = ' ';
 	}
-	if (wca->mins_since_last_sync > precision_threshold_times_sec[2]) {
+	if (wca->mins_since_last_sync > precision_threshold_times_min[2]) {
 		buf[5] = ' ';
 		buf[4] = ' ';
 	}
-	if (wca->mins_since_last_sync > precision_threshold_times_sec[3]) {
+	if (wca->mins_since_last_sync > precision_threshold_times_min[3]) {
 		wca->hour = -1;
 	}
 
