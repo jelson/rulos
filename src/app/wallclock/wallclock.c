@@ -50,10 +50,10 @@ typedef struct {
 /******************** Display *******************************/
 
 int precision_threshold_times_min[] = {
-	30,   // lose hundredths of a sec
-	180,  // lose tenths of a sec
-	1440, // lose seconds
-	2880  // demand resync
+	1,   // lose hundredths of a sec
+	3,  // lose tenths of a sec
+	20, // lose seconds
+	1000  // demand resync
 };
 
 static void display_clock(WallClockActivation_t *wca)

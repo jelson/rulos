@@ -22,7 +22,6 @@ AVR_ONLY_OBJECTS := \
 	hardware_keypad.o \
 	hardware_rocketpanel.o \
 	hardware_timers.o \
-	hardware_twi.o \
 	hardware_uart.o \
 	tilty_input.o \
 	pov.o \
@@ -32,6 +31,10 @@ AVR_ROCKET_OBJECTS := \
 
 ifndef CORE_ONLY
 	AVR_ONLY_OBJECTS += $(AVR_ROCKET_OBJECTS)
+endif
+
+ifndef NO_TWI
+	AVR_ONLY_OBJECTS += hardware_twi.o
 endif
 
 ifeq ($(MCU),atmega1284p)

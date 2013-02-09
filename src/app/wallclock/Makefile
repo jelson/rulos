@@ -14,6 +14,8 @@
 
 ROCKET_ROOT := ../..
 
+NO_TWI := 1
+
 MCU := atmega8
 TARGET := wallclock
 BOARD := PCB11
