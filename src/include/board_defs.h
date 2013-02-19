@@ -195,6 +195,8 @@
 # define MCU328_line
 #elif defined (MCUatmega8) || defined(MCUatmega16) || defined (MCUatmega32)
 # define MCU8_line
+#elif defined (MCUattiny24) || defined(MCUattiny44) || defined (MCUattiny84) || defined (MCUattiny24a) || defined(MCUattiny44a) || defined (MCUattiny84a)
+# define MCUtiny84_line
 #else
 # error Unknown processor
 #endif

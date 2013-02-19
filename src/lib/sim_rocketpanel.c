@@ -520,8 +520,7 @@ void hal_init_rocketpanel(BoardConfiguration bc)
 {
 	hal_init();
 
-	switch (bc)
-	{
+	switch (bc) {
 		case bc_rocket0:
 			sim_configure_tree(tree0);
 			break;
@@ -534,6 +533,7 @@ void hal_init_rocketpanel(BoardConfiguration bc)
 		case bc_chaseclock:
 			sim_configure_tree(chaseclock_tree);
 			break;
+		case bc_default:
 		default:
 			sim_configure_tree(default_tree);
 			break;

@@ -185,6 +185,8 @@ void hal_init_rocketpanel(BoardConfiguration bc)
 		case bc_chaseclock:
 			displayConfiguration[0] = BRT_CHASECLOCK;
 			break;
+		case bc_default:
+			break;
 	}
 }
 

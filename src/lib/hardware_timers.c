@@ -57,12 +57,24 @@ void *timer2_data = NULL;
 
 #if defined(MCU328_line) || defined(MCU1284_line)
 ISR(TIMER0_COMPA_vect)
+#elif defined(MCUtiny84_line)
+ISR(TIM0_COMPA_vect)
+#elif defined(MCU8_line)
+static inline void unused_function_0()
+#else
+# error hardware-specific timer code needs help!
+#endif
 {
 	timer0_handler(timer0_data);
 }
-#endif
 
+#if defined(MCU328_line) || defined(MCU1284_line) || defined(MCU8_line)
 ISR(TIMER1_COMPA_vect)
+#elif defined(MCUtiny84_line)
+ISR(TIM1_COMPA_vect)
+#else
+# error hardware-specific timer code needs help!
+#endif
 {
 	timer1_handler(timer1_data);
 }
@@ -71,6 +83,8 @@ ISR(TIMER1_COMPA_vect)
 ISR(TIMER2_COMP_vect)
 #elif defined(MCU328_line) || defined(MCU1284_line)
 ISR(TIMER2_COMPA_vect)
+#elif defined(MCUtiny84_line)
+static inline void unused_function_2()
 #else
 # error hardware-specific timer code needs help!
 #endif
@@ -96,7 +110,7 @@ void init_f_cpu()
 	// read fuses to determine clock frequency
 	uint8_t cksel = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS) & 0x0f;
 	hardware_f_cpu = f_cpu_values[cksel-1];
-# elif defined(MCU328_line) || defined (MCU1284_line)
+# elif defined(MCU328_line) || defined (MCU1284_line) || defined (MCUtiny84_line)
 	// If we decide to do variable clock rates on 328p, see page 37
 	// for prescale configurations.
 	CLKPR = 0x80;
@@ -192,7 +206,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 	cli();
 
 	switch (timer_id) {
-#if defined(MCU328_line) || defined(MCU1284_line)
+#if defined(MCU328_line) || defined(MCU1284_line) || defined(MCUtiny84_line)
 	case TIMER0:
 		find_prescaler(us, &_timer0, &actual_us_per_period, &cs, &ocr);
 
@@ -234,7 +248,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 		/* enable output-compare int. */
 #if defined(MCU8_line)
 		TIMSK  |= _BV(OCIE1A);
-#elif defined(MCU328_line) || defined(MCU1284_line)
+#elif defined(MCU328_line) || defined(MCU1284_line) || defined(MCUtiny84_line)
 		TIMSK1 |= _BV(OCIE1A);
 #else
 # error hardware-specific timer code needs help!
@@ -244,6 +258,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 		TCNT1 = 0; 
 		break;
 
+#if defined(MCU8_line) || defined(MCU328_line) || defined(MCU1284_line)
 	case TIMER2:
 		find_prescaler(us, &_timer2, &actual_us_per_period, &cs, &ocr);
 
@@ -272,6 +287,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 		/* reset counter */
 		TCNT2 = 0; 
 		break;
+#endif
 
 	default:
 		assert(FALSE);

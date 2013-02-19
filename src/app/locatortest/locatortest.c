@@ -713,7 +713,7 @@ int main()
 
 	memset(&locatorAct_g, 0, sizeof(locatorAct_g));
 	locatorAct_g.twiState = hal_twi_init(100, 0, NULL);
-	uart_init(&locatorAct_g.uart, SERIAL_BAUD_RATE, 1);
+	uart_init(&locatorAct_g.uart, SERIAL_BAUD_RATE, TRUE, 0);
 
 	if (strlen(FIRMWARE_ID) > ID_OFFSET) {
 		snprintf(locatorAct_g.UARTsendBuf, sizeof(locatorAct_g.UARTsendBuf)-1, "^i;%s\r\n", FIRMWARE_ID+ID_OFFSET);

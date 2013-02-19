@@ -71,7 +71,7 @@ void hal_init_adc_channel(uint8_t idx)
 		case 3: gpio_make_input_no_pullup(GPIO_C3); break;
 		case 4: gpio_make_input_no_pullup(GPIO_C4); break;
 		case 5: gpio_make_input_no_pullup(GPIO_C5); break;
-#elif defined (MCU1284_line)
+#elif defined (MCU1284_line) || defined (MCUtiny84_line)
 		case 0: gpio_make_input_no_pullup(GPIO_A0); break;
 		case 1: gpio_make_input_no_pullup(GPIO_A1); break;
 		case 2: gpio_make_input_no_pullup(GPIO_A2); break;

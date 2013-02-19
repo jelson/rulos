@@ -23,11 +23,11 @@ AVR_ONLY_OBJECTS := \
 	hardware_rocketpanel.o \
 	hardware_timers.o \
 	hardware_uart.o \
-	tilty_input.o \
-	pov.o \
 
 AVR_ROCKET_OBJECTS := \
 	hardware_spi.o \
+	pov.o \
+	tilty_input.o \
 
 ifndef CORE_ONLY
 	AVR_ONLY_OBJECTS += $(AVR_ROCKET_OBJECTS)

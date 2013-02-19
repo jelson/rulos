@@ -34,6 +34,7 @@ typedef enum {
 	bc_rocket1,
 	bc_wallclock,
 	bc_chaseclock,
+	bc_default,
 } BoardConfiguration;
 
 void hal_init();
