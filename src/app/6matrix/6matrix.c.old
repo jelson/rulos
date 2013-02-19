@@ -1,0 +1,216 @@
+/************************************************************************
+ *
+ * This file is part of RulOS, Ravenna Ultra-Low-Altitude Operating
+ * System -- the free, open-source operating system for microcontrollers.
+ *
+ * Written by Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com),
+ * May 2009.
+ *
+ * This operating system is in the public domain.  Copyright is waived.
+ * All source code is completely free to use by anyone for any purpose
+ * with no restrictions whatsoever.
+ *
+ * For more information about the project, see: www.jonh.net/rulos
+ *
+ ************************************************************************/
+
+#include <inttypes.h>
+#include <string.h>
+#include <math.h>
+
+#define USE_SCHEDULER
+
+#include "rocket.h"
+#ifndef SIM
+#include "hardware.h"
+#endif
+
+#define ROWLATCH_SDI  GPIO_C1  // serial data input
+#define ROWLATCH_CLK  GPIO_C0  // shift in data to register
+#define ROWLATCH_LE   GPIO_B2  // assert register to parallel output lines
+#define ROWLATCH_OE   GPIO_B1
+
+#define COLLATCH_SER  GPIO_B0  
+#define COLLATCH_SCK  GPIO_C2  
+#define COLLATCH_RCK  GPIO_C3  
+
+#define REFRESH_RATE_HZ 10  // refresh rate for the whole display
+#define NUM_COLS 16
+#define USEC_PER_COL   (1000000/(REFRESH_RATE_HZ*NUM_COLS))
+
+
+#ifndef SIM
+static void init_pins()
+{
+	gpio_make_output(ROWLATCH_SDI);
+	gpio_make_output(ROWLATCH_CLK);
+	gpio_make_output(ROWLATCH_LE);
+	gpio_make_output(ROWLATCH_OE);
+
+	gpio_make_output(COLLATCH_SER);
+	gpio_make_output(COLLATCH_SCK);
+	gpio_make_output(COLLATCH_RCK);
+
+	gpio_clr(ROWLATCH_CLK);
+	gpio_clr(ROWLATCH_LE);
+	gpio_set(ROWLATCH_OE);
+
+	gpio_clr(COLLATCH_SCK);
+	gpio_clr(COLLATCH_RCK);
+}
+
+static inline void assert_column(uint8_t colBits, uint8_t colNum)
+{
+	int i;
+
+	// first shift the new data for each row
+	gpio_clr(ROWLATCH_LE);
+	for (i = 0; i < 8; i++)
+	{
+		gpio_set_or_clr(ROWLATCH_SDI, colBits & 0x1);
+		gpio_set(ROWLATCH_CLK);
+		gpio_clr(ROWLATCH_CLK);
+		colBits >>= 1;
+	}
+
+	// shift the new column number into the col latch
+	// temp: don't assert columns higher than 8
+	if (colNum > 7)
+		colBits = 0;
+	else
+		colBits = 1 << colNum;
+	colBits = 0xff;
+
+	for (i = 0; i < 8; i++)
+	{
+		gpio_set_or_clr(COLLATCH_SER, colBits & 0x1);
+		gpio_set(COLLATCH_SCK);
+		gpio_clr(COLLATCH_SCK);
+		colBits >>= 1;
+	}
+
+	// turn off row latch
+	gpio_clr(ROWLATCH_OE);
+	gpio_set(ROWLATCH_CLK);
+	gpio_clr(ROWLATCH_CLK);
+
+	// switch to new column
+	gpio_set(COLLATCH_RCK);
+	gpio_clr(COLLATCH_RCK);
+
+	// re-enable row latch
+	gpio_set(ROWLATCH_LE);
+	gpio_clr(ROWLATCH_OE);
+	gpio_set(ROWLATCH_CLK);
+	gpio_clr(ROWLATCH_CLK);
+	gpio_clr(ROWLATCH_LE);
+}
+
+#else // sim
+
+static inline void assert_column(uint8_t colBits, uint8_t colNum)
+{
+	LOGF((logfp, "col %d: 0x%x,\n", colNum, colBits));
+}
+
+static void init_pins()
+{
+}
+
+#endif
+
+
+typedef struct {
+	ActivationFunc f;
+	uint8_t columnBits[NUM_COLS];
+	uint8_t lastColumn;
+} matrixAct_t;
+
+
+void assert_next_column(matrixAct_t *ma)
+{
+#ifdef USE_SCHEDULER
+	schedule_us(USEC_PER_COL, (Activation *) ma);
+#endif
+
+	ma->lastColumn = (ma->lastColumn + 1);
+//	if (ma->lastColumn >= NUM_COLS)
+	if (ma->lastColumn >= 1)
+		ma->lastColumn = 0;
+	assert_column(ma->columnBits[ma->lastColumn], ma->lastColumn);
+}
+
+
+void change_display(matrixAct_t *ma, uint8_t columnBits[NUM_COLS])
+{
+	memcpy(&ma->columnBits, columnBits, sizeof(uint8_t) * NUM_COLS);
+	ma->lastColumn = 0;
+}
+
+
+typedef struct {
+	ActivationFunc f;
+	matrixAct_t *ma;
+	int i;
+} changeDisplayAct_t;
+
+
+
+uint8_t test_pattern[NUM_COLS] = {
+	0b11110000,
+	0b11110000,
+	0b11110000,
+	0b11110000,
+	0b11110000,
+	0b11110000,
+	0b11110000,
+	0b11110000
+};
+
+uint8_t test_pattern2[NUM_COLS] = {
+	0b11111111,
+	0b11111110,
+	0b11111100,
+	0b11111000,
+	0b11110000,
+	0b11100000,
+	0b11000000,
+	0b10000000,
+	0,0,0,0,0,0,0,0
+};
+
+matrixAct_t ma;
+changeDisplayAct_t cda;
+
+int main()
+{
+	heap_init();
+	util_init();
+	hal_init(bc_audioboard);
+	init_pins();
+
+	memset(&ma, 0, sizeof(ma));
+	change_display(&ma, test_pattern);
+
+#ifdef USE_SCHEDULER
+	ma.f = (ActivationFunc) assert_next_column;
+	init_clock(USEC_PER_COL, TIMER1);
+	schedule_now((Activation *) &ma);
+#else
+	hal_start_clock_us(USEC_PER_COL, (Handler) assert_next_column, &ma, TIMER2);
+#endif
+
+
+#if 0
+	cda.wa = &wa;
+	cfa.f = (ActivationFunc) change_frequency;
+	cfa.i = -1;
+	schedule_now((Activation *) &cfa);
+#endif
+
+	CpumonAct cpumon;
+	cpumon_init(&cpumon);
+	cpumon_main_loop();
+
+	return 0;
+}
