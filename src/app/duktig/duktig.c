@@ -24,7 +24,7 @@
 #include "util.h"
 
 
-#define LED_DRIVER_SDI   GPIO_A7
+#define LED_DRIVER_SDI   GPIO_A6
 #define LED_DRIVER_CLK   GPIO_A4
 #define LED_DRIVER_LE    GPIO_A3
 #define LED_DRIVER_OE    GPIO_A5
@@ -195,7 +195,7 @@ int main()
 	DuktigState_t duktig;
 	memset(&duktig, 0, sizeof(duktig));
 	set_timeout(&duktig, TIMEOUT_WHILE_ON_US);
-	
+
 	// set up buttons
 	gpio_make_input(BUT1);
 	init_button(&duktig.but1);
