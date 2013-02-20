@@ -36,9 +36,10 @@
 #define KEY_REFRACTORY_TIME_US 100000
 #define TIMEOUT_WHILE_ON_US  (1000000*120) // 120 sec
 #define TIMEOUT_WHILE_OFF_US (1000000*1) // 1 sec
+
 typedef struct {
 	r_bool isDown;
-	Time next_allowed_push_time;
+	Time last_push_time;
 } ButtonState_t;
 
 typedef struct {
@@ -74,7 +75,10 @@ static void set_power(r_bool onoff)
 static void init_button(ButtonState_t *buttonState)
 {
 	buttonState->isDown = FALSE;
-	buttonState->next_allowed_push_time = clock_time_us();
+
+	// initialize "last push time" to some time in the past
+	// so the startup button push is not discarded as a bounce
+	buttonState->last_push_time = clock_time_us() - 2*KEY_REFRACTORY_TIME_US;
 }
 	
 // Given the button's state structure, and its currently-read up/down state,
@@ -88,12 +92,17 @@ static r_bool debounce_button(ButtonState_t *buttonState, r_bool isDown)
 	buttonState->isDown = isDown;
 
 	if (isDown) {
-		// key was just pressed -- register a push if it's after the refactory time.
+		// key was just pressed -- ignore it if it's inside the
+		// refractory window (taking rollover into account).
 		// Otherwise, ignore it as a bounce.
-		return later_than(clock_time_us(), buttonState->next_allowed_push_time);
+		Time time_since_last_push = clock_time_us() - buttonState->last_push_time;
+		if (time_since_last_push >= 0 && time_since_last_push < KEY_REFRACTORY_TIME_US)
+			return 0;
+		else
+			return 1;
 	} else { 
 		// key was just released.  Set refractory time.
-		buttonState->next_allowed_push_time = clock_time_us() + KEY_REFRACTORY_TIME_US;
+		buttonState->last_push_time = clock_time_us();
 		return 0;
 	}
 }
@@ -134,6 +143,9 @@ static void shift_in_config(DuktigState_t *duktig)
 	// latch the register into the outputs
 	gpio_set(LED_DRIVER_LE);
 	gpio_clr(LED_DRIVER_LE);
+
+	// tidy up (not actually necessary, but makes logic analyzer output easier to read)
+	gpio_clr(LED_DRIVER_SDI);
 }
 
 
