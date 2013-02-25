@@ -63,10 +63,11 @@ static void set_timeout(DuktigState_t *duktig, Time timeout)
 static void set_power(r_bool onoff)
 {
 	if (onoff) {
+		gpio_make_output(POWER_GATE);
 		gpio_set(POWER_GATE);
 		gpio_clr(LED_DRIVER_OE);
 	} else {
-		gpio_clr(POWER_GATE);
+		gpio_make_input_no_pullup(POWER_GATE);
 		gpio_set(LED_DRIVER_OE);
 	}
 }
@@ -194,7 +195,6 @@ int main()
 	hal_init();
 
 	// set up output pins as drivers
-	gpio_make_output(POWER_GATE);
 	gpio_make_output(LED_DRIVER_SDI);
 	gpio_make_output(LED_DRIVER_CLK);
 	gpio_make_output(LED_DRIVER_LE);
@@ -209,9 +209,9 @@ int main()
 	set_timeout(&duktig, TIMEOUT_WHILE_ON_US);
 
 	// set up buttons
-	gpio_make_input(BUT1);
+	gpio_make_input_no_pullup(BUT1);
 	init_button(&duktig.but1);
-	gpio_make_input(BUT2);
+	gpio_make_input_no_pullup(BUT2);
 	init_button(&duktig.but2);
 
 	// set up periodic sampling task
