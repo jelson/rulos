@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
 				break;
 		}
 
-		sprintf(buf, "T%02d%02d%02dE", time.wHour, time.wMinute, time.wSecond);
+		sprintf_s(buf, sizeof(buf), "T%02d%02d%02dE", time.wHour, time.wMinute, time.wSecond);
 		writeToClock(port, buf, strlen(buf));
 	}
 
