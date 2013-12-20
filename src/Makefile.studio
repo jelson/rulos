@@ -1,5 +1,8 @@
 default: studiooutput
 
+.PHONY: all
+all: studiooutput
+
 .PHONY: studiooutput
 
 studiooutput: \
