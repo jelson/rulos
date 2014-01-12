@@ -120,10 +120,13 @@ static void start_gui()
 
 void hal_6matrix_init(SixMatrix_Context_t *mat)
 {
-	g_thread_init(NULL);
+	// jonh removed this call; it's now deprecated
+	//g_thread_init(NULL);
 	gdk_threads_init();
 	ready = FALSE;
-	g_thread_create((GThreadFunc) start_gui, NULL, FALSE, NULL);
+	// jonh changed deprecated g_thread_create to g_thread_new
+	//g_thread_create((GThreadFunc) start_gui, NULL, FALSE, NULL);
+	g_thread_new("gui", (GThreadFunc) start_gui, NULL);
 	while (!ready) {
 		usleep(10000);
 	}
