@@ -152,6 +152,39 @@ void control_phase(ControlTable* control_table)
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+// stabilizing timer.
+	// Each phase should take the same total amount of time,
+	// so stall this phase to take the same time as an output phase.
+	// 
+	// Ballpark: 128 updates * 4 channels * 16 cycles per channel
+	// --> 8000 cycles per half-period.
+	// --> 16ms period @ 1MHz, 2ms @8MHz. That should do.
+
+// prescalar constants on attiny84.pdf page 84, table 11-9.
+#define TIMER_PRESCALER	(0x3)	/* clkIO/64. */
+#define TIMER_COUNT		(128)
+
+void timer_init()
+{
+	TCCR0A = 0;
+	TCCR0B = TIMER_PRESCALER;
+	OCR0A = TIMER_COUNT;
+}
+
+void timer_start()
+{
+	TCNT0 = 0;
+	reg_clr(&TIFR0, OCF0A);
+}
+
+void timer_wait()
+{
+	while (reg_is_clr(&TIFR0, OCF0A))
+	{}
+}
+
+//////////////////////////////////////////////////////////////////////////////
 // Master phases
 
 void hue_conversion(Inputs* inputs, ControlTable* control_table)
@@ -197,38 +230,19 @@ typedef struct {
 	ControlTable control_table;
 } App;
 
-// prescalar constants on attiny84.pdf page 84, table 11-9.
-#define TIMER_PRESCALER	(0x3)	/* clkIO/64. */
-#define TIMER_COUNT		(128)
-
 void app_init(App* app)
 {
-	TCCR0A = 0;
-	TCCR0B = TIMER_PRESCALER;
-	OCR0A = TIMER_COUNT;
-
+	timer_init();
 	inputs_init(&app->inputs);
 	control_init(&app->control_table);
 }
 
 void app_run(App* app)
 {
-	// Each phase should take the same total amount of time,
-	// so stall this phase to take the same time as an output phase.
-	// 
-	// Ballpark: 128 updates * 4 channels * 16 cycles per channel
-	// --> 8000 cycles per half-period.
-	// --> 16ms period @ 1MHz, 2ms @8MHz. That should do.
-	// TODO start timer
-	TCNT0 = 0;
-	reg_clr(&TIFR0, OCF0A);
-
+	timer_start();
 	inputs_sample(&app->inputs);
 	hue_conversion(&app->inputs, &app->control_table);
-
-	// TODO busy wait timer
-	while (reg_is_clr(&TIFR0, OCF0A))
-	{}
+	timer_wait();
 
 	control_phase(&app->control_table);
 }
