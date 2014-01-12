@@ -197,8 +197,16 @@ typedef struct {
 	ControlTable control_table;
 } App;
 
+// prescalar constants on attiny84.pdf page 84, table 11-9.
+#define TIMER_PRESCALER	(0x3)	/* clkIO/64. */
+#define TIMER_COUNT		(128)
+
 void app_init(App* app)
 {
+	TCCR0A = 0;
+	TCCR0B = TIMER_PRESCALER;
+	OCR0A = TIMER_COUNT;
+
 	inputs_init(&app->inputs);
 	control_init(&app->control_table);
 }
@@ -212,9 +220,15 @@ void app_run(App* app)
 	// --> 8000 cycles per half-period.
 	// --> 16ms period @ 1MHz, 2ms @8MHz. That should do.
 	// TODO start timer
+	TCNT0 = 0;
+	reg_clr(&TIFR0, OCF0A);
+
 	inputs_sample(&app->inputs);
 	hue_conversion(&app->inputs, &app->control_table);
+
 	// TODO busy wait timer
+	while (reg_is_clr(&TIFR0, OCF0A))
+	{}
 
 	control_phase(&app->control_table);
 }
