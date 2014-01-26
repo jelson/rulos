@@ -41,9 +41,9 @@
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	uint8_t hue;
-	uint8_t lightness0;
-	uint8_t lightness1;
+	uint16_t hue;
+	uint16_t lightness0;
+	uint16_t lightness1;
 } Inputs;
 
 void inputs_init(Inputs* inputs)
@@ -67,7 +67,7 @@ static void adc_busy_wait_conversion()
 	while (reg_is_set(&ADCSRA, ADSC)) {}
 }
 
-static uint8_t read_adc_raw(uint8_t adc_channel)
+static uint16_t read_adc_raw(uint8_t adc_channel)
 {
 	ADMUX = adc_channel;
 	adc_busy_wait_conversion();
@@ -76,7 +76,7 @@ static uint8_t read_adc_raw(uint8_t adc_channel)
 
 //	return ADCH;	// 8-bit variant
 	uint16_t newval = ADCL;
-	newval |= ((uint16_t) ADCH << 8);
+	newval |= (((uint16_t) ADCH) << 8);
 	return newval;
 }
 //
@@ -109,15 +109,15 @@ inline void channel_configure(ControlChannel* channel, uint8_t value)
 {
 	if (value<128)
 	{
-		channel->states[0] = 1;
-		channel->states[1] = 0;
+		channel->states[0] = 0;
+		channel->states[1] = 1;
 		channel->duty = value;
 	}
 	else
 	{
-		channel->states[0] = 0;
-		channel->states[1] = 1;
-		channel->duty = value-128;
+		channel->states[0] = 1;
+		channel->states[1] = 0;
+		channel->duty = 256-value;
 	}
 }
 
@@ -142,7 +142,7 @@ void control_init(ControlTable* table)
 void control_phase(ControlTable* control_table)
 {
 	uint8_t t;
-	for (t=0; t<128; t++)
+	for (t=0; t<129; t++)
 	{
 		channel_update(&control_table->r, t, LEDR);
 		channel_update(&control_table->g, t, LEDG);
@@ -162,8 +162,8 @@ void control_phase(ControlTable* control_table)
 	// --> 16ms period @ 1MHz, 2ms @8MHz. That should do.
 
 // prescalar constants on attiny84.pdf page 84, table 11-9.
-#define TIMER_PRESCALER	(0x3)	/* clkIO/64. */
-#define TIMER_COUNT		(128)
+#define TIMER_PRESCALER	(0x5)	/* clkIO/1024. */
+#define TIMER_COUNT		(250)
 
 void timer_init()
 {
@@ -215,10 +215,10 @@ void hue_conversion(Inputs* inputs, ControlTable* control_table)
 	// I drop 10-bit lightness by 2 bits to avoid overflow.
 	uint16_t color_lightness = inputs->lightness0 >> 2;
 	r = (((uint16_t)r) * color_lightness) >> 8;
-	g = (((uint16_t)r) * color_lightness) >> 8;
-	b = (((uint16_t)r) * color_lightness) >> 8;
+	g = (((uint16_t)g) * color_lightness) >> 8;
+	b = (((uint16_t)b) * color_lightness) >> 8;
 
-	uint8_t w = (inputs->lightness1) >> 2;
+	uint16_t w = 255-((inputs->lightness1) >> 2);
 
 	channel_configure(&control_table->r, r);
 	channel_configure(&control_table->g, g);
@@ -230,8 +230,15 @@ typedef struct {
 	ControlTable control_table;
 } App;
 
+void app_set_clock()
+{
+	CLKPR = 0x80;
+	CLKPR = 0x00;
+}
+
 void app_init(App* app)
 {
+	app_set_clock();
 	timer_init();
 	inputs_init(&app->inputs);
 	control_init(&app->control_table);
@@ -239,16 +246,31 @@ void app_init(App* app)
 
 void app_run(App* app)
 {
-	timer_start();
-	inputs_sample(&app->inputs);
-	hue_conversion(&app->inputs, &app->control_table);
-	timer_wait();
+	while (1)
+	{
+//		gpio_set(LEDW);
 
-	control_phase(&app->control_table);
+//		timer_start();
+		inputs_sample(&app->inputs);
+		// If the duty cycles overlap, increase this value;
+		// if there's a gap, decrease it. (Or just ensure
+		// that the reference bit has 50% duty...)
+		volatile int i;
+		for (i=0; i<570; i++)
+		{
+		}
+//		gpio_clr(LEDW);
+
+		hue_conversion(&app->inputs, &app->control_table);
+//		timer_wait();
+
+		control_phase(&app->control_table);
+	}
 }
 
 int main()
 {
+	// Next step: test the timer for the input phase.
 	App app;
 	app_init(&app);
 	app_run(&app);
