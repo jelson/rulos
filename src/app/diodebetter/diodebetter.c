@@ -197,7 +197,7 @@ typedef struct {
 // From full brightness, 1<<14 takes about 4 minutes.
 // Fading from dimmer settings is ugly; shall we take a 45% brightness setting
 // and change it to 100% with a 55% discount?
-#define FADER_ONE_DECREMENT_TIME (1<<14)
+#define FADER_ONE_DECREMENT_TIME (1<<15)
 #define APPLY_FADER(x)	(((x)>fader_discount) ? ((x)-fader_discount) : 0)
 
 void hue_conversion(App* app)
