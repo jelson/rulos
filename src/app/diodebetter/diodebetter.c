@@ -34,6 +34,9 @@
 #define LEDB		GPIO_B1
 #define LEDW		GPIO_B2
 
+#define FADER_KEY	GPIO_A3
+#define FADER_KEY_PULLUP	(1<<PORTA3)
+
 #define KNOB_HUE		0
 #define KNOB_LIGHTNESS0	1
 #define KNOB_LIGHTNESS1	2
@@ -44,6 +47,7 @@ typedef struct {
 	uint16_t hue;
 	uint16_t lightness0;
 	uint16_t lightness1;
+	uint8_t fader_key;
 } Inputs;
 
 void inputs_init(Inputs* inputs)
@@ -56,6 +60,7 @@ void inputs_init(Inputs* inputs)
 	hal_init_adc_channel(KNOB_HUE);
 	hal_init_adc_channel(KNOB_LIGHTNESS0);
 	hal_init_adc_channel(KNOB_LIGHTNESS1);
+	gpio_make_input(FADER_KEY);
 }
 
 //----------------------------------------------------------------------
@@ -87,6 +92,8 @@ void inputs_sample(Inputs* inputs)
 	inputs->hue = read_adc_raw(KNOB_HUE);
 	inputs->lightness0 = read_adc_raw(KNOB_LIGHTNESS0);
 	inputs->lightness1 = read_adc_raw(KNOB_LIGHTNESS1);
+
+	inputs->fader_key = gpio_is_clr(FADER_KEY);
 }
 
 
@@ -94,8 +101,8 @@ void inputs_sample(Inputs* inputs)
 // Output control
 
 typedef struct {
-	uint8_t states[2];
-	uint8_t duty;
+	uint8_t low;
+	uint8_t off_cycle;
 } ControlChannel;
 
 typedef struct {
@@ -107,28 +114,8 @@ typedef struct {
 
 inline void channel_configure(ControlChannel* channel, uint8_t value)
 {
-	if (value<128)
-	{
-		channel->states[0] = 0;
-		channel->states[1] = 1;
-		channel->duty = value;
-	}
-	else
-	{
-		channel->states[0] = 1;
-		channel->states[1] = 0;
-		channel->duty = 256-value;
-	}
-}
-
-static inline void channel_update(ControlChannel* channel, uint8_t t,
-	volatile uint8_t *ddr, volatile uint8_t *port, volatile uint8_t *pin, uint8_t bit)
-{
-	uint8_t state_sel = (t<channel->duty) & 0x1;
-	uint8_t v = channel->states[state_sel];
-
-	// TODO This function doesn't have constant time:
-	gpio_set_or_clr(ddr, port, pin, bit, v);
+	channel->low = value & 0x7f;
+	channel->off_cycle = (value >> 7) & 1;
 }
 
 void control_init(ControlTable* table)
@@ -141,14 +128,26 @@ void control_init(ControlTable* table)
 
 void control_phase(ControlTable* control_table)
 {
+	uint8_t red = control_table->r.low;
+	uint8_t green = control_table->g.low;
+	uint8_t blue = control_table->b.low;
+	uint8_t white = control_table->w.low;
+
 	uint8_t t;
-	for (t=0; t<129; t++)
+	for (t=0; t<128; t++)
 	{
-		channel_update(&control_table->r, t, LEDR);
-		channel_update(&control_table->g, t, LEDG);
-		channel_update(&control_table->b, t, LEDB);
-		channel_update(&control_table->w, t, LEDW);
+		PORTA = (t + red) & 0x80;
+		PORTB =
+			  ((t + green) & 0x80) >> 7
+			| ((t +  blue) & 0x80) >> 6
+			| ((~(t + white)) & 0x80) >> 5;
 	}
+	PORTA = (control_table->r.off_cycle << 7)
+		| FADER_KEY_PULLUP;
+	PORTB =
+		  control_table->g.off_cycle
+		| (control_table->b.off_cycle << 1)
+		| ((1-(control_table->w.off_cycle)) << 2);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -187,29 +186,65 @@ void timer_wait()
 //////////////////////////////////////////////////////////////////////////////
 // Master phases
 
-void hue_conversion(Inputs* inputs, ControlTable* control_table)
+typedef struct {
+	Inputs inputs;
+	uint8_t fader_enabled;
+	uint8_t fader_brightness;
+	uint32_t fader_elapsed_time;
+	ControlTable control_table;
+} App;
+
+// From full brightness, 1<<14 takes about 4 minutes.
+// Fading from dimmer settings is ugly; shall we take a 45% brightness setting
+// and change it to 100% with a 55% discount?
+#define FADER_ONE_DECREMENT_TIME (1<<14)
+#define APPLY_FADER(x)	(((x)>fader_discount) ? ((x)-fader_discount) : 0)
+
+void hue_conversion(App* app)
 {
-	uint16_t hue = (inputs->hue*3) >> 2;	// 0..767
-#define FWD(x) (255-(x))
-#define REV(x) (x)
+	Inputs* inputs = &app->inputs;
+	ControlTable* control_table = &app->control_table;
+
+	uint16_t hue = (inputs->hue*3) >> 1;	// 0..1535
+#define FWD(x) (x)
+#define REV(x) (255-(x))
 	uint8_t r, g, b;
-	if (hue<256)
-	{
-		r = FWD(hue);
-		g = REV(hue);
-		b = 0;
-	}
-	else if (hue<512)
-	{
-		g = FWD(hue-256);
-		b = REV(hue-256);
-		r = 0;
-	}
-	else
-	{
-		b = FWD(hue-512);
-		r = REV(hue-512);
-		g = 0;
+	uint8_t v;
+	v = hue;
+	if (hue < 768) {
+		if (hue < 512) {
+			if (hue < 256)
+			{
+				r = 255;
+				g = FWD(hue);
+				b = 0;
+			} else {
+				r = REV(v);
+				g = 255;
+				b = 0;
+			}
+		} else {
+			r = 0;
+			g = 255;
+			b = FWD(v);
+		}
+	} else {
+		if (hue < 1280) {
+			if (hue < 1024)
+			{
+				r = 0;
+				g = REV(v);
+				b = 255;
+			} else {
+				r = FWD(v);
+				g = 0;
+				b = 255;
+			}
+		} else {
+			r = 255;
+			g = 0;
+			b = REV(v);
+		}
 	}
 	// now scale by lightness.
 	// I drop 10-bit lightness by 2 bits to avoid overflow.
@@ -218,17 +253,45 @@ void hue_conversion(Inputs* inputs, ControlTable* control_table)
 	g = (((uint16_t)g) * color_lightness) >> 8;
 	b = (((uint16_t)b) * color_lightness) >> 8;
 
-	uint16_t w = 255-((inputs->lightness1) >> 2);
+	uint16_t w = ((inputs->lightness1) >> 2);
+
+	if (inputs->fader_key)
+	{
+		// (re)start fader cycle
+		app->fader_enabled = 1;
+		app->fader_elapsed_time = 0;
+		app->fader_brightness = 255;
+	}
+	if (app->fader_enabled)
+	{
+		if (app->fader_brightness == 0)
+		{
+			r = 0;
+			g = 0;
+			b = 0;
+			w = 0;
+		}
+		else
+		{
+			if (app->fader_elapsed_time>FADER_ONE_DECREMENT_TIME) {
+				app->fader_elapsed_time = 0;
+				app->fader_brightness -= 1;
+			} else {
+				app->fader_elapsed_time += app->fader_brightness;
+			}
+			uint8_t fader_discount = 255-app->fader_brightness;
+			r = APPLY_FADER(r);
+			g = APPLY_FADER(g);
+			b = APPLY_FADER(b);
+			w = APPLY_FADER(w);
+		}
+	}
 
 	channel_configure(&control_table->r, r);
 	channel_configure(&control_table->g, g);
 	channel_configure(&control_table->b, b);
 	channel_configure(&control_table->w, w);
 }
-typedef struct {
-	Inputs inputs;
-	ControlTable control_table;
-} App;
 
 void app_set_clock()
 {
@@ -241,6 +304,7 @@ void app_init(App* app)
 	app_set_clock();
 	timer_init();
 	inputs_init(&app->inputs);
+	app->fader_enabled = 0;
 	control_init(&app->control_table);
 }
 
@@ -249,8 +313,6 @@ void app_run(App* app)
 	while (1)
 	{
 //		gpio_set(LEDW);
-
-//		timer_start();
 		inputs_sample(&app->inputs);
 		// If the duty cycles overlap, increase this value;
 		// if there's a gap, decrease it. (Or just ensure
@@ -261,7 +323,7 @@ void app_run(App* app)
 		}
 //		gpio_clr(LEDW);
 
-		hue_conversion(&app->inputs, &app->control_table);
+		hue_conversion(app);
 //		timer_wait();
 
 		control_phase(&app->control_table);
