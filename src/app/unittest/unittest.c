@@ -27,8 +27,6 @@ QUEUE_DEFINE(short)
 
 void test_shortqueue()
 {
-	util_init();
-
 	uint8_t space[sizeof(shortQueue)+sizeof(short)*NUM_ELTS];
 	shortQueue *sq = (shortQueue*) space;
 	shortQueue_init(sq, sizeof(space));
@@ -69,8 +67,6 @@ void test_shortqueue()
 
 void test_ring_buffer()
 {
-	util_init();
-
 	uint8_t _storage_rb[sizeof(RingBuffer)+17+1];
 	RingBuffer *rb = (RingBuffer*) _storage_rb;
 	init_ring_buffer(rb, sizeof(_storage_rb));

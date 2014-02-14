@@ -14,6 +14,8 @@
 
 ROCKET_ROOT := ../..
 
+PLATFORMS := avr
+PERIPHERALS := uart
 #MCU := atmega8
 MCU := atmega1284p
 BOARD := CUSTOM

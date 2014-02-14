@@ -12,10 +12,9 @@
  # For more information about the project, see: www.jonh.net/rulos
  #
 
-target: avr-all
-
 ROCKET_ROOT := ../..
 
+PLATFORMS := avr
 MCU := atmega328p
 BOARD := CUSTOM
 TARGET := frozone

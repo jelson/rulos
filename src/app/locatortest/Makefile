@@ -14,6 +14,8 @@
 
 ROCKET_ROOT := ../..
 
+PLATFORMS := avr
+PERIPHERALS := uart twi
 MCU := atmega328p
 BOARD := REVE
 TARGET := locatortest
@@ -21,11 +23,7 @@ EXTRA_AVR_CFLAGS += -DCRYSTAL=12000000
 EXTRA_AVR_CFLAGS += -DASSERT_TO_SERIAL
 
 TARGET_OBJECTS := \
-	uart.o \
 	locatortest.o 
-
-CORE_ONLY := 1
-NO_SIM := 1
 
 include $(ROCKET_ROOT)/Makefile.common
 

@@ -14,6 +14,9 @@
 
 ROCKET_ROOT := ../..
 
+PLATFORMS := avr sim
+PERIPHERALS := adc
+BOARD := PCB11
 MCU := atmega8
 TARGET := adctest
 

@@ -50,8 +50,6 @@
 
 /****************************************************************************/
 
-#ifndef SIM
-
 #include "hardware.h"
 #include <avr/boot.h>
 #include <avr/io.h>
@@ -737,12 +735,4 @@ int main()
 
 	return 0;
 }
-
-#else
-int main()
-{
-	return 0;
-}
-#endif // SIM
-
 

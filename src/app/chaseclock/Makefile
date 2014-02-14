@@ -14,13 +14,14 @@
 
 ROCKET_ROOT := ../..
 
+PLATFORMS := avr
+PERIPHERALS := uart 7seg_panel
 MCU := atmega328p
 TARGET := chaseclock
 BOARD := PCB11
 
 TARGET_OBJECTS := \
 	chaseclock.o \
-	uart.o
 
 
 include $(ROCKET_ROOT)/Makefile.common

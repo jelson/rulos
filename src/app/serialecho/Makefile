@@ -19,6 +19,7 @@ everything: avr-all serialhost
 serialhost: serialhost.c
 	gcc -o $@ -g $^
 
+PLATFORMS := avr
 MCU := atmega8
 BOARD := CUSTOM
 TARGET := serialecho
@@ -27,7 +28,6 @@ TARGET := serialecho
 EXTRA_AVR_CFLAGS += -DCUSTOM_TWBR=32
 
 TARGET_OBJECTS := \
-	uart.o \
 	serialecho.o 
 
 

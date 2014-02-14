@@ -16,12 +16,13 @@ all: avr-all
 
 ROCKET_ROOT := ../..
 
+PLATFORMS := avr
+PERIPHERALS := uart 7seg_panel keypad
 MCU := atmega1284p
 TARGET := iotest
 BOARD := LPEM
 
 TARGET_OBJECTS := \
-	uart.o \
 	iotest.o
 
 

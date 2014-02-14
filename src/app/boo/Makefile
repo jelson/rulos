@@ -14,6 +14,8 @@
 
 ROCKET_ROOT := ../..
 
+PLATFORMS := avr sim
+PERIPHERALS := 7seg_panel input_controller keypad display_rtc
 MCU := atmega8
 #MCU := atmega328p
 BOARD := PCB11

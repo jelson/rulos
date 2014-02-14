@@ -14,15 +14,14 @@
 
 ROCKET_ROOT := ../..
 
-NO_TWI := 1
-
+PLATFORMS := avr sim
+PERIPHERALS = 7seg_panel uart
 MCU := atmega8
 TARGET := wallclock
 BOARD := PCB11
 
 TARGET_OBJECTS := \
 	wallclock.o \
-	uart.o
 
 
 include $(ROCKET_ROOT)/Makefile.common

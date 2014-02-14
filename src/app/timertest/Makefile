@@ -14,6 +14,7 @@
 
 ROCKET_ROOT := ../..
 
+PLATFORMS := avr
 MCU := atmega328p
 TARGET := timertest
 BOARD := CUSTOM
@@ -22,9 +23,6 @@ BOARD := CUSTOM
 
 TARGET_OBJECTS := \
 	timertest.o
-
-
-
 
 include $(ROCKET_ROOT)/Makefile.common
 

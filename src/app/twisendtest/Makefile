@@ -14,6 +14,8 @@
 
 ROCKET_ROOT := ../..
 
+PLATFORMS := avr sim
+PERIPHERALS := 7seg_panel twi
 #MCU := atmega8
 #BOARD := CUSTOM
 

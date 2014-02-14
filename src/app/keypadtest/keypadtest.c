@@ -102,7 +102,7 @@ int main()
 
 
 	KeyTestActivation_t kta;
-	uart_init(&kta.uart, 38400, true);
+	uart_init(&kta.uart, 38400, true, 0);
 	uart_send(&kta.uart, (char*) TEST_STR, strlen((char*) TEST_STR), NULL, NULL);
 
 	board_buffer_init(&kta.bbuf_k);

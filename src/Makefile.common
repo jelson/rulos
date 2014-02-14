@@ -13,85 +13,40 @@
  #
 
 
-CORE_OBJECTS := \
-	clock.o \
-	cpumon.o \
-	cursor.o \
-	heap.o \
-	queue.o \
-	random.o \
-	util.o \
-	region.o \
-	network.o \
-	event.o \
-	serial_console.o \
-	uart.o \
-	uart_net_media.o \
-	net_compute_checksum.o \
+# Add core sources
+ALL_PLATFORM_SOURCES := $(wildcard $(ROCKET_ROOT)/lib/core/*.c)
 
-ROCKET_OBJECTS := \
-	board_buffer.o \
-	display_compass.o \
-	display_controller.o \
-	display_docking.o \
-	display_gratuitous_graph.o \
-	display_rtc.o \
-	display_scroll_msg.o \
-	display_thrusters.o \
-	display_thruster_graph.o \
-	display_aer.o \
-	drift_anim.o \
-	idle_display.o \
-	audio_server.o \
-	audio_client.o \
-	audio_streamer.o \
-	audio_out.o \
-	audioled.o \
-	joystick.o \
-	knob.o \
-	calculator.o \
-	focus.o \
-	display_blinker.o \
-	sequencer.o \
-	lunar_distance.o \
-	remote_keyboard.o \
-	remote_bbuf.o \
-	remote_uie.o \
-	control_panel.o \
-	thruster_protocol.o \
-	sound.o \
-	screen4.o \
-	hpam.o \
-	autotype.o \
-	pong.o \
-	idle.o \
-	hobbs.o \
-	screenblanker.o \
-	disco.o \
-	booster.o \
-	slow_boot.o \
-	ring_buffer.o \
-	quadknob.o \
-	potsticker.o \
-	funcseq.o \
-	sdcard.o \
-	volume_control.o \
-	momentary_display.o \
-	led_matrix_single.o \
-	eeprom.o \
-	rasters.o \
-	ambient_noise.o \
-	input_controller.o \
-	labeled_display.o \
-	numeric_input.o \
-	spi.o \
-	servo.o \
+# Add bss_canary to the list of peripherals, which always goes last
+PERIPHERALS += bss_canary
 
-COMMON_OBJECTS := $(CORE_OBJECTS)
-ifndef CORE_ONLY
-       COMMON_OBJECTS += $(ROCKET_OBJECTS)
+# Add peripheral sources for all selected peripherals
+ALL_PLATFORM_SOURCES += $(foreach periph, $(PERIPHERALS), $(wildcard $(ROCKET_ROOT)/lib/periph/$(periph)/*.c))
+
+
+# Bring in the Makefile each platform for which a build is selected
+ALL_PLATFORM_TARGETS :=
+ALL_PLATFORM_CLEAN := 
+include $(foreach platform, $(PLATFORMS), $(ROCKET_ROOT)/lib/chip/$(platform)/Makefile.$(platform))
+
+.PHONY: all-platforms
+all-platforms: $(PLATFORM_TARGET_LIST)
+ifeq ($(PLATFORMS),)
+	@echo "PLATFORMS must be defined in your local Makefile (avr, arm, sim)"
+	@false
+else
+	@true
 endif
 
+.PHONY: clean
+clean: $(CLEAN_TARGET_LIST)
+
+.DEFAULT_GOAL = all-platforms
+
+
+
+FONTZIPS=$(glob $(ROCKET_ROOT)/bitmaps/*.zip)
+
+# Find path to python
 UNAME := $(shell uname)
 
 ifeq ($(UNAME), Linux)
@@ -100,55 +55,12 @@ else
 PYTHON := c:\\python27\\python.exe
 endif
 
-ALL_PLATFORM_TARGETS := avr-all
-ALL_PLATFORM_CLEAN := avr-clean
-
-ifndef NO_SIM
-	ALL_PLATFORM_TARGETS += sim-all
-	ALL_PLATFORM_CLEAN := sim-clean
-endif
-
-.PHONY: all-platforms
-all-platforms: $(ALL_PLATFORM_TARGETS)
-
-.PHONY: clean
-clean: $(ALL_PLATFORM_CLEAN)
-
-.DEFAULT_GOAL = all-platforms
-
-ifndef NO_SIM
-	include $(ROCKET_ROOT)/Makefile.sim
-endif
-
-include $(ROCKET_ROOT)/Makefile.avr
-include $(ROCKET_ROOT)/Makefile.studio
-
-# Generate the sevseg bitmaps from the artwork file
-$(SIM_OBJDIR)/display_controller.o: $(SIM_OBJDIR)/sevseg_bitmaps.ch
-$(AVR_OBJDIR)/display_controller.o: $(AVR_OBJDIR)/sevseg_bitmaps.ch
-
-$(SIM_OBJDIR)/laserfont.o: $(SIM_OBJDIR)/laserfont.ch
-$(AVR_OBJDIR)/laserfont.o: $(AVR_OBJDIR)/laserfont.ch
-
-FONTZIPS=$(glob $(ROCKET_ROOT)/bitmaps/*.zip)
-
+# Laser font
+%/laserfont.o: %/laserfont.ch
 %/laserfont.ch: $(ROCKET_ROOT)/util/ttf_to_bitmap.py $(FONTZIPS)
 	$(PYTHON) $(ROCKET_ROOT)/util/ttf_to_bitmap.py $(ROCKET_ROOT)/bitmaps > $@
-
-%/sevseg_bitmaps.ch: $(ROCKET_ROOT)/util/sevseg_convert.py $(ROCKET_ROOT)/lib/sevseg_artwork.txt
-	$(PYTHON) $(ROCKET_ROOT)/util/sevseg_convert.py $(ROCKET_ROOT)/lib/sevseg_artwork.txt > $@
 
 %/audio_index.ch: $(ROCKET_ROOT)/audio/compile_audio.py $(ROCKET_ROOT)/include/sound.h
 	$(PYTHON) $(ROCKET_ROOT)/audio/compile_audio.py -index $(ROCKET_ROOT)/include/sound.def $(ROCKET_ROOT)/audio/ > $@
 
-# Generate rasters
-$(SIM_OBJDIR)/rasters.o: $(SIM_OBJDIR)/rasters_auto.ch
-$(AVR_OBJDIR)/rasters.o: $(AVR_OBJDIR)/rasters_auto.ch
 
-$(AVR_OBJDIR)/hardware_graphic_lcd_12232.o: $(AVR_OBJDIR)/lcdrasters_auto.ch
-
-%/rasters_auto.ch: $(ROCKET_ROOT)/util/bitmaploader.py $(ROCKET_ROOT)/bitmaps/*.png
-	$(PYTHON) $(ROCKET_ROOT)/util/bitmaploader.py $@ $(ROCKET_ROOT)/bitmaps > /dev/null
-
-%/lcdrasters_auto.ch: $(ROCKET_ROOT)/util/lcdbitmaploader.py $(ROCKET_ROOT)/lcdbitmaps/*.png
-	$(PYTHON) $(ROCKET_ROOT)/util/lcdbitmaploader.py $@ $(ROCKET_ROOT)/lcdbitmaps > /dev/null

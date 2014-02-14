@@ -14,6 +14,8 @@
 
 ROCKET_ROOT := ../..
 
+PLATFORMS := avr sim
+PERIPHERALS := uart audio twi spi sdcard
 #MCU := atmega8
 MCU := atmega328p
 BOARD := ROCKETAUDIO

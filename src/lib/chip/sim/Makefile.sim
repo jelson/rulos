@@ -12,6 +12,9 @@
  # For more information about the project, see: www.jonh.net/rulos
  #
 
+PLATFORM_TARGET_LIST += sim-all
+CLEAN_TARGET_LIST += sim-clean
+
 # Objects only used by the simulator
 SIM_ONLY_OBJECTS +=  \
 	uart.o \
@@ -45,7 +48,7 @@ SIM_TARGET_OBJECTS := $(patsubst %.o,$(SIM_OBJDIR)/%.o, \
 $(SIM_OBJDIR)/sim_6matrix.o: $(ROCKET_ROOT)/lib/sim_6matrix.c
 	$(SIM_GCC) $(SIM_CFLAGS) `pkg-config --cflags gtk+-2.0` -c $< -o $@
 
-$(SIM_OBJDIR)/%.o: $(ROCKET_ROOT)/lib/%.c
+$(SIM_OBJDIR)/%.o: $(ROCKET_ROOT)/lib/core/%.c
 	$(SIM_GCC) $(SIM_CFLAGS) -c $< -o $@
 
 # For local app objects

@@ -14,13 +14,10 @@
 
 ROCKET_ROOT := ../..
 
+PLATFORMS := avr
 MCU := attiny84a
 BOARD := CUSTOM
 TARGET := duktig
-
-CORE_ONLY := 1
-NO_TWI := 1
-NO_SIM := 1
 
 TARGET_OBJECTS := \
 	duktig.o

@@ -14,6 +14,7 @@
 
 ROCKET_ROOT := ../..
 
+PLATFORMS := avr sim
 #MCU := atmega8
 MCU := atmega328p
 BOARD := CUSTOM

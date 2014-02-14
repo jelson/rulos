@@ -12,39 +12,21 @@
  # For more information about the project, see: www.jonh.net/rulos
  #
 
-# Objects that should be part of the real hardware but
-# not the simulator
-AVR_ONLY_OBJECTS := \
-	hardware.o \
-	hardware_6matrix.o \
-	hardware_adc.o \
-	hardware_audio.o \
-	hardware_keypad.o \
-	hardware_rocketpanel.o \
-	hardware_timers.o \
-	hardware_uart.o \
 
-AVR_ROCKET_OBJECTS := \
-	hardware_spi.o \
-	pov.o \
-	tilty_input.o \
+PLATFORM_TARGET_LIST += avr-all
+CLEAN_TARGET_LIST += avr-clean
 
-ifndef CORE_ONLY
-	AVR_ONLY_OBJECTS += $(AVR_ROCKET_OBJECTS)
-endif
+AVR_SOURCES :=
 
-ifndef NO_TWI
-	AVR_ONLY_OBJECTS += hardware_twi.o
-endif
+AVR_LIB_ROOT := $(ROCKET_ROOT)/lib/chip/avr
 
-ifeq ($(MCU),atmega1284p)
-AVR_ONLY_OBJECTS += hardware_graphic_lcd_12232.o
-endif
+# Add platform-specific core sources to the all-platform sources
+AVR_SOURCES += $(wildcard $(AVR_LIB_ROOT)/core/*.c)
 
-BSS_CANARY_OBJECT := bss_canary.o
+# Add platform-specific peripheral sources
+AVR_SOURCES += $(foreach periph, $(PERIPHERALS), $(wildcard $(AVR_LIB_ROOT)/periph/$(periph)/*.c))
 
-# NB pov, tilty_input are parts of magic wand project; never compiled SIM.
-# a bit sloppy.
+AVR_SOURCES += $(ALL_PLATFORM_SOURCES)
 
 ARCHTARG := $(TARGET).$(MCU).$(BOARD)
 
@@ -54,6 +36,9 @@ AVR_LIBNAME = rocket
 AVR_LIB_FILE = $(AVR_OBJDIR)/lib$(AVR_LIBNAME).a
 CC = avr-gcc
 
+CURR_OBJDIR := $(AVR_OBJDIR)
+-include $(foreach dir, $(sort $(dir $(AVR_SOURCES))), $(wildcard $(dir)/Makefile.extra))
+
 ## Options common to compile, link and assembly rules
 AVR_COMMON_FLAGS = -Wall -Werror -mmcu=$(MCU)
 
@@ -62,7 +47,7 @@ AVR_CFLAGS = $(AVR_COMMON_FLAGS)
 AVR_CFLAGS += -Wall -Werror -I$(ROCKET_ROOT)/include -I$(AVR_OBJDIR)
 AVR_CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 AVR_CFLAGS += -fdata-sections -ffunction-sections # Put all funcs/data in their own sections
-AVR_CFLAGS += -MD -MP -MT $(AVR_OBJDIR)/$(*F).o -MF $(AVR_OBJDIR)/$(@F).d 
+AVR_CFLAGS += -MD -MP # -MT $(AVR_OBJDIR)/$(*F).o -MF $(AVR_OBJDIR)/$(@F).d 
 AVR_CFLAGS += -gdwarf-2 -std=gnu99 -Os 
 AVR_CFLAGS += -DMCU$(MCU)=1 -DBOARD_$(BOARD)
 AVR_CFLAGS += $(EXTRA_AVR_CFLAGS)
@@ -89,8 +74,8 @@ HEX_EEPROM_FLAGS += --change-section-lma .eeprom=0 --no-change-warnings
 
 # Make sure MCU is defined
 .PHONY: mcu-defined-check
- 
-def-checks:
+
+mcu-defined-check:
 ifeq ($(MCU),)
 	@echo "MCU must be defined in your local Makefile (atmega8, atmega328p)"
 	@false
@@ -105,29 +90,28 @@ else
 endif
 
 ## Build
-avr-all: def-checks $(ARCHTARG).elf $(ARCHTARG).hex $(ARCHTARG).eep $(ARCHTARG).lss $(ARCHTARG).size
+avr-all: mcu-defined-check $(ARCHTARG).elf $(ARCHTARG).hex $(ARCHTARG).eep $(ARCHTARG).lss $(ARCHTARG).size
 
 ## Compile
-$(AVR_OBJDIR)/%.o: $(ROCKET_ROOT)/lib/%.c
+$(AVR_OBJDIR)/lib/%.o: $(ROCKET_ROOT)/lib/%.c
 	$(CC) $(AVR_CFLAGS) -c $< -o $@
-$(AVR_OBJDIR)/%.o: %.c
+$(AVR_OBJDIR)/app/%.o: %.c
 	$(CC) $(AVR_CFLAGS) -c $< -o $@
 
 
-## Objects that must be built in order to link.  Note: bss_canary
-## must be last
-AVR_LIB_OBJECTS := $(patsubst %.o,$(AVR_OBJDIR)/%.o,$(COMMON_OBJECTS) \
-	$(AVR_ONLY_OBJECTS) $(BSS_CANARY_OBJECT) )
+## Objects that must be built in order to link.
+AVR_LIB_OBJECTS := $(patsubst $(ROCKET_ROOT)/lib/%.c,$(AVR_OBJDIR)/lib/%.o, $(AVR_SOURCES))
 
 $(AVR_LIB_FILE): $(AVR_LIB_OBJECTS)
 	rm -f $@
 	avr-ar r $@ $(AVR_LIB_OBJECTS)
 
-##Link
-AVR_TARGET_OBJECTS := $(patsubst %.o,$(AVR_OBJDIR)/%.o, \
-	$(TARGET_OBJECTS))
+# TARGET_OBJECTS comes from the app's Makefile
+AVR_TARGET_OBJECTS := $(patsubst %.o,$(AVR_OBJDIR)/app/%.o, $(TARGET_OBJECTS))
 
+##Link
 $(ARCHTARG).elf: $(AVR_LIB_FILE) $(AVR_TARGET_OBJECTS)
+	echo $(ALL_PLATFORM_SOURCES)
 	$(CC) $(AVR_TARGET_OBJECTS) $(AVR_LDFLAGS) -o $@
 
 %.hex: %.elf
@@ -156,8 +140,9 @@ avr-clean:
 		$(ARCHTARG).map \
 
 
-## Other dependencies
--include $(shell mkdir -p $(AVR_OBJDIR)) $(wildcard $(AVR_OBJDIR)/*.d)
+## Add automatically generated dependencies
+DIR_LIST := $(sort $(dir $(AVR_LIB_OBJECTS) $(AVR_TARGET_OBJECTS)))
+-include $(shell mkdir -p $(DIR_LIST)) $(foreach dir, $(DIR_LIST), $(wildcard $(dir)/*.d))
 
 ##############################################################################
 

@@ -78,7 +78,6 @@ static void init_audio_pins()
 
 
 typedef struct {
-	ActivationFunc f;
 	uint8_t waveform[MAX_SAMPLES];
 	uint16_t num_samples;
 	uint16_t sample_idx;
@@ -92,7 +91,7 @@ void emit_waveform(waveformAct_t *wa)
 	latch_output();
 
 #ifdef USE_SCHEDULER_FOR_WAVEFORM_PLAYBACK
-	schedule_us(USEC_PER_SAMPLE, (Activation *) wa);
+	schedule_us(USEC_PER_SAMPLE, (ActivationFuncPtr) emit_waveform, wa);
 #endif
 
 	if (wa->num_samples == 0) {
@@ -130,7 +129,6 @@ void start_frequency(waveformAct_t *ta, float frequency)
 
 
 typedef struct {
-	ActivationFunc f;
 	waveformAct_t *wa;
 	int i;
 } changeFrequencyAct_t;
@@ -154,7 +152,7 @@ void change_frequency(changeFrequencyAct_t *cfa)
 		cfa->i = 0;
 
 	start_frequency(cfa->wa, scale[cfa->i]);
-	schedule_us(NOTE_LEN, (Activation *) cfa);
+	schedule_us(NOTE_LEN, (ActivationFuncPtr) change_frequency, cfa);
 }
 
 
@@ -163,8 +161,7 @@ changeFrequencyAct_t cfa;
 
 int main()
 {
-	util_init();
-	hal_init(bc_audioboard);
+	hal_init();
 	init_clock(100000, TIMER1);
 
 	init_audio_pins();
@@ -174,13 +171,11 @@ int main()
 	start_frequency(&wa, 0);
 
 	cfa.wa = &wa;
-	cfa.f = (ActivationFunc) change_frequency;
 	cfa.i = -1;
-	schedule_now((Activation *) &cfa);
+	schedule_now((ActivationFuncPtr) change_frequency, &cfa);
 
 
 #ifdef USE_SCHEDULER_FOR_WAVEFORM_PLAYBACK
-	wa.f = (ActivationFunc) emit_waveform;
 	schedule_now((Activation *) &wa);
 #else
 	hal_start_clock_us(USEC_PER_SAMPLE, (Handler) emit_waveform, &wa, TIMER2);

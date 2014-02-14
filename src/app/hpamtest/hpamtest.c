@@ -47,7 +47,6 @@ char *idx_to_name(HPAMIndex idx)
 }
 
 typedef struct {
-	ActivationFunc func;
 	JoystickState_t js;
 	int8_t dir;
 	r_bool btn;
@@ -60,7 +59,7 @@ typedef struct {
 
 void ht_update(HTAct *ht)
 {
-	schedule_us((Time) 10000, (Activation*) ht);
+	schedule_us((Time) 10000, (ActivationFuncPtr) ht_update, ht);
 
 #define DBG_BONK 0
 #if DBG_BONK
@@ -115,20 +114,19 @@ void ht_update(HTAct *ht)
 
 void ht_init(HTAct *ht)
 {
-	ht->func = (ActivationFunc) ht_update;
 	ht->js.x_adc_channel = 3;
 	ht->js.y_adc_channel = 2;
 	ht->dir = 0;
 	ht->btn = FALSE;
 	ht->idx = 0;
 	ht->tu = NULL;
-	init_hpam(&ht->hpam, 7, &ht->tu);
+	init_hpam(&ht->hpam, 7, ht->tu);
 	joystick_init(&ht->js);
 	board_buffer_init(&ht->idx_bbuf);
 	board_buffer_push(&ht->idx_bbuf, 3);
 	board_buffer_init(&ht->state_bbuf);
 	board_buffer_push(&ht->state_bbuf, 4);
-	schedule_us((Time) 10000, (Activation*) ht);
+	schedule_us((Time) 10000, (ActivationFuncPtr) ht_update, ht);
 }
 
 

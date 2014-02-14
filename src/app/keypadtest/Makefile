@@ -14,12 +14,13 @@
 
 ROCKET_ROOT := ../..
 
+PLATFORMS := avr
+PERIPHERALS := uart 7seg_panel keypad
 MCU := atmega1284p
 TARGET := keypadtest
 BOARD := LPEM
 
 TARGET_OBJECTS := \
-	uart.o \
 	keypadtest.o
 
 

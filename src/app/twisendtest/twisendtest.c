@@ -21,7 +21,6 @@ void test_without_netstack()
 {
 	char inbuf[200];
 	MediaRecvSlot *trs = (MediaRecvSlot *) inbuf;
-	trs->occupied = FALSE;
 	trs->capacity = sizeof(inbuf) - sizeof(MediaRecvSlot);
 	
 	MediaStateIfc *media = hal_twi_init(100, 0x8, trs);
@@ -36,7 +35,6 @@ void test_without_netstack()
 }
 
 typedef struct {
-	ActivationFunc f;
 	Network *net;
 	SendSlot *sendSlot;
 	int i;
@@ -78,7 +76,7 @@ void sendMessage(sendAct_t *sa)
 		LOGF((logfp, "sent message\n"));
 	}
 
-	schedule_us(1000000, (Activation *) sa);
+	schedule_us(1000000, (ActivationFuncPtr) sendMessage, sa);
 }
 
 
@@ -101,13 +99,11 @@ void test_netstack()
 	init_twi_network(&net, 100, 0x5);
 
 	sendAct_t sa;
-	sa.f = (ActivationFunc) sendMessage;
 	sa.net = &net;
 	sa.sendSlot = &sendSlot;
 	sa.i = 0;
 	
-
-	schedule_us(1000000, (Activation *) &sa);
+	schedule_us(1000000, (ActivationFuncPtr) sendMessage, &sa);
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);
@@ -117,8 +113,7 @@ void test_netstack()
 
 int main()
 {
-	util_init();
-	hal_init(bc_audioboard);
+	hal_init();
 
 	board_say("  InIt  ");
 	// test_without_netstack();

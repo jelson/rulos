@@ -118,8 +118,7 @@ void test_netstack()
 
 int main()
 {
-	util_init();
-	hal_init(bc_audioboard);
+	hal_init();
 #if HAVE_AUDIOBOARD_UART
 	serial_init();
 #endif

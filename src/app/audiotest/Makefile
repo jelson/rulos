@@ -14,6 +14,8 @@
 
 ROCKET_ROOT := ../..
 
+PLATFORMS := avr sim
+PERIPHERALS := 
 MCU := atmega328p
 BOARD := CUSTOM
 TARGET := audiotest

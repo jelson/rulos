@@ -1,0 +1,5 @@
+# Laser font
+$(CURR_OBJDIR)/lib/periph/laserfont/laserfont.o: $(CURR_OBJDIR)/laserfont.ch
+
+%/laserfont.ch: $(ROCKET_ROOT)/util/ttf_to_bitmap.py $(FONTZIPS)
+	$(PYTHON) $(ROCKET_ROOT)/util/ttf_to_bitmap.py $(ROCKET_ROOT)/bitmaps > $@

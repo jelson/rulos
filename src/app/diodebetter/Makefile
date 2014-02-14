@@ -14,6 +14,8 @@
 
 ROCKET_ROOT := ../..
 
+PLATFORMS := avr
+PERIPHERALS := adc
 MCU := attiny84
 BOARD := CUSTOM
 TARGET := diodebetter

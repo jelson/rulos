@@ -28,9 +28,11 @@
 int main()
 {
 	hal_init(bc_rocket0);
+#if 0
 	int seg=0, dig=0;
 	seg=0;
 	dig=0;
+#endif
 
 #if 0
 	extern uint32_t f_cpu;

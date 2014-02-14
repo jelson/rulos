@@ -30,7 +30,6 @@
 #include "hardware.h"	// sorry. Blinky LED.
 
 typedef struct {
-	Activation act;
 	int state;
 } BlinkAct;
 
@@ -40,20 +39,18 @@ void blink_once(BlinkAct *ba)
 	gpio_set_or_clr(GPIO_C5, (ba->state!=0));
 }
 
-void blink_update(Activation *act)
+void blink_update(BlinkAct *ba)
 {
-	BlinkAct *ba = (BlinkAct*) act;
 	blink_once(ba);
-	schedule_us(100000, &ba->act);
+	schedule_us(100000, (ActivationFuncPtr) blink_update, ba);
 }
 
 void blink_init(BlinkAct *ba, r_bool run)
 {
-	ba->act.func = blink_update;
 	gpio_make_output(GPIO_C5);
 	if (run)
 	{
-		schedule_us(50000, &ba->act);
+		schedule_us(50000, (ActivationFuncPtr) blink_update, ba);
 	}
 }
 
@@ -99,10 +96,8 @@ typedef struct {
 	cmd_cb_f *cmd_cb;
 } SerialCmdAct;
 
-void serial_echo_update(Activation *act)
+void serial_echo_update(SerialCmdAct *sca)
 {
-	SerialCmdAct *sca = (SerialCmdAct *) act;
-
 	char rcv_chr;
 	if (CharQueue_pop(sca->recvQueue->q, &rcv_chr)) {
 		*(sca->cmd_ptr) = rcv_chr;
@@ -120,7 +115,7 @@ void serial_echo_update(Activation *act)
 		}
 	}
 
-	schedule_us(120, &sca->act);
+	schedule_us(120, (ActivationFuncPtr) serial_echo_update, sca);
 }
 
 #define FOSC 8000000// Clock Speed
@@ -130,12 +125,11 @@ void serial_echo_update(Activation *act)
 void serial_echo_init(SerialCmdAct *sca, cmd_cb_f *cmd_cb)
 {
 	uart_init(RULOS_UART0, MYUBRR, TRUE);
-	sca->act.func = serial_echo_update;
 	sca->recvQueue = uart_recvq(RULOS_UART0);
 	sca->cmd_ptr = sca->cmd;
 	sca->cmd_cb = cmd_cb;
 
-	schedule_us(1000, &sca->act);
+	schedule_us(1000, (ActivationFuncPtr) serial_echo_update, sca);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -154,13 +148,12 @@ typedef struct {
 	SPIBuffer spib;
 } SDTest;
 
-void sdtest_update(Activation *act)
+void sdtest_update(SDTest *sdt)
 {
-	SDTest *sdt = (SDTest *) act;
 	if (ring_remove_avail(&sdt->rb) < sizeof(sdt->rb_space))
 	{
 		// read hasn't completed. Wait a ms.
-		schedule_us(1000, &sdt->act);
+		schedule_us(1000, (ActivationFuncPtr) sdtest_update, sdt);
 	}
 
 	char *rp = reply_buf;
@@ -185,7 +178,6 @@ void sdtest_init(SDTest *sdt)
 	sdt->spib.count = 0;
 	sdt->spib.rb = &sdt->rb;
 	init_spiflash(&sdt->spif);
-	sdt->act.func = sdtest_update;
 }
 
 void sdtest_read(SDTest *sdt)

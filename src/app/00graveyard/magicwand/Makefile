@@ -12,16 +12,22 @@
  # For more information about the project, see: www.jonh.net/rulos
  #
 
+target: avr-all wandhost
+
+wandhost: wandhost.c
+	gcc -o wandhost -g wandhost.c
+
 ROCKET_ROOT := ../..
 
-MCU := atmega8
-#MCU := atmega328p
-BOARD := PCB11
-
-TARGET := audiopoketest
+PLATFORMS := avr
+PERIPHERALS := uart
+MCU := atmega328p
+BOARD := CUSTOM
+TARGET := magicwand
 
 TARGET_OBJECTS := \
-	audiopoketest.o
+	magicwand.o 
+
 
 include $(ROCKET_ROOT)/Makefile.common
 

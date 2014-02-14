@@ -18,7 +18,7 @@
 
 // offset 32
 const uint8_t sevseg_ascii[] PROGMEM = {
-#include "sevseg_bitmaps.ch"
+#include "lib/periph/7seg_panel/sevseg_bitmaps.ch"
 };
 
 void program_cell(uint8_t board, uint8_t digit, SSBitmap bitmap)
