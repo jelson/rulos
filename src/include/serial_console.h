@@ -27,6 +27,6 @@ typedef struct {
 } SerialConsole;
 
 void serial_console_init(SerialConsole *sca, ActivationFuncPtr line_func, void *line_data);
-void serial_console_sync_send(SerialConsole *act, char *buf, uint16_t buflen);
+void serial_console_sync_send(SerialConsole *act, const char *buf, uint16_t buflen);
 
 #endif //_SERIAL_CONSOLE_H

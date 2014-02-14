@@ -188,17 +188,17 @@ typedef r_bool (check_f)(ProblemSet *ps, uint8_t problem_reference, uint8_t answ
 struct s_problem_set {
 	select_f *select;
 	check_f *check;
-	char operator;
+	char operator_;
 	uint8_t num_problems;
 	uint8_t num_problems_left;
 	uint8_t bits[0];
 };
 
-void _problem_set_init(ProblemSet *ps, select_f *select, check_f *check, char operator, uint8_t num_problems, r_bool storage)
+void _problem_set_init(ProblemSet *ps, select_f *select, check_f *check, char operator_, uint8_t num_problems, r_bool storage)
 {
 	ps->select = select;
 	ps->check = check;
-	ps->operator = operator;
+	ps->operator_ = operator_;
 	ps->num_problems = num_problems;
 	ps->num_problems_left = num_problems;
 	// NB magic assumption: caller allocates num_problems>>3 bytes of
@@ -387,7 +387,7 @@ void _flashcard_update(Flashcard *fl);
 void _flashcard_do_input(InputInjectorIfc *iii, char key);
 void _flashcard_draw(Flashcard *fl);
 uint8_t _fl_num_problems_left(Flashcard *fl);
-void _flashcard_paint(Flashcard *fl, char *s);
+void _flashcard_paint(Flashcard *fl, const char *s);
 
 void flashcard_init(Flashcard *fl)
 {
@@ -538,9 +538,9 @@ void _flashcard_itoa(Flashcard *fl, char **out, uint8_t v)
 	(*out)+=1;
 }
 
-void _flashcard_paint(Flashcard *fl, char *s)
+void _flashcard_paint(Flashcard *fl, const char *s)
 {
-	char *p;
+	const char *p;
 	int16_t width, dx;
 
 	lms_enable(&fl->lma.lms, false);
@@ -577,7 +577,7 @@ void _flashcard_draw(Flashcard *fl)
 	char string[10];
 	char *p = string;
 	_flashcard_itoa(fl, &p, fl->operand[0]);
-	*(p++) = fl->curProblem->operator;
+	*(p++) = fl->curProblem->operator_;
 	_flashcard_itoa(fl, &p, fl->operand[1]);
 	*(p++) = 'e';
 	*(p++) = fl->digit[0] | 0x80;

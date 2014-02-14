@@ -40,7 +40,7 @@ typedef struct
 	UartQueue_t recvQueue;
 
 	// send
-	char *out_buf;
+	const char *out_buf;
 	uint8_t out_len;
 	uint8_t out_n;
 	UARTSendDoneFunc send_done_cb;
@@ -53,7 +53,7 @@ r_bool uart_read(UartState_t *uart, char *c);
 UartQueue_t *uart_recvq(UartState_t *uart);
 void uart_reset_recvq(UartQueue_t *uq);
 
-r_bool uart_send(UartState_t *uart, char *c, uint8_t len, UARTSendDoneFunc, void *callback_data);
+r_bool uart_send(UartState_t *uart, const char *c, uint8_t len, UARTSendDoneFunc, void *callback_data);
 r_bool uart_busy(UartState_t *u);
 
 void uart_debug_log(const char *m);

@@ -15,6 +15,7 @@
 
 ROCKET_ROOT := ../..
 
+BOARD := custom
 TARGET := laserpov
 MCU := atmega8
 

@@ -93,7 +93,7 @@ void uart_reset_recvq(UartQueue_t *uq)
 	CharQueue_clear(uq->q);
 }
 
-r_bool uart_send(UartState_t *u, char *c, uint8_t len,
+r_bool uart_send(UartState_t *u, const char *c, uint8_t len,
 				 UARTSendDoneFunc callback, void *callback_data)
 {
 	assert(u->initted);

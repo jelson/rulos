@@ -52,7 +52,7 @@ void serial_console_init(SerialConsole *sca, ActivationFuncPtr line_func, void *
 	schedule_us(1000, (ActivationFuncPtr) serial_console_update, sca);
 }
 
-void serial_console_sync_send(SerialConsole *act, char *buf, uint16_t buflen)
+void serial_console_sync_send(SerialConsole *act, const char *buf, uint16_t buflen)
 {
 	while (uart_busy(&act->uart)) { }
 	uart_send(&act->uart, buf, buflen, NULL, NULL);
