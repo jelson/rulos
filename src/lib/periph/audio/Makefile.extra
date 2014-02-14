@@ -1,0 +1,2 @@
+%/audio_index.ch: $(ROCKET_ROOT)/audio/compile_audio.py $(ROCKET_ROOT)/include/sound.h
+		  $(PYTHON) $(ROCKET_ROOT)/audio/compile_audio.py -index $(ROCKET_ROOT)/include/sound.def $(ROCKET_ROOT)/audio/ > $@

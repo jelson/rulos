@@ -1,3 +1,6 @@
+
+FONTZIPS=$(glob $(ROCKET_ROOT)/bitmaps/*.zip)
+
 # Laser font
 $(CURR_OBJDIR)/lib/periph/laserfont/laserfont.o: $(CURR_OBJDIR)/laserfont.ch
 

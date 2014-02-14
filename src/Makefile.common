@@ -22,7 +22,6 @@ PERIPHERALS += bss_canary
 # Add peripheral sources for all selected peripherals
 ALL_PLATFORM_SOURCES += $(foreach periph, $(PERIPHERALS), $(wildcard $(ROCKET_ROOT)/lib/periph/$(periph)/*.c))
 
-
 # Bring in the Makefile each platform for which a build is selected
 ALL_PLATFORM_TARGETS :=
 ALL_PLATFORM_CLEAN := 
@@ -42,10 +41,6 @@ clean: $(CLEAN_TARGET_LIST)
 
 .DEFAULT_GOAL = all-platforms
 
-
-
-FONTZIPS=$(glob $(ROCKET_ROOT)/bitmaps/*.zip)
-
 # Find path to python
 UNAME := $(shell uname)
 
@@ -54,13 +49,5 @@ PYTHON := python
 else
 PYTHON := c:\\python27\\python.exe
 endif
-
-# Laser font
-%/laserfont.o: %/laserfont.ch
-%/laserfont.ch: $(ROCKET_ROOT)/util/ttf_to_bitmap.py $(FONTZIPS)
-	$(PYTHON) $(ROCKET_ROOT)/util/ttf_to_bitmap.py $(ROCKET_ROOT)/bitmaps > $@
-
-%/audio_index.ch: $(ROCKET_ROOT)/audio/compile_audio.py $(ROCKET_ROOT)/include/sound.h
-	$(PYTHON) $(ROCKET_ROOT)/audio/compile_audio.py -index $(ROCKET_ROOT)/include/sound.def $(ROCKET_ROOT)/audio/ > $@
 
 
