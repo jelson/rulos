@@ -40,13 +40,15 @@
 #include "pong.h"
 #include "lunar_distance.h"
 #include "network.h"
-#include "sim.h"
 #include "display_aer.h"
 #include "remote_keyboard.h"
 #include "remote_bbuf.h"
 #include "remote_uie.h"
 #include "quadknob.h"
 
+#if SIM
+#include "sim.h"
+#endif
 
 /************************************************************************************/
 /************************************************************************************/

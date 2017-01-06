@@ -19,21 +19,23 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "rocket.h"
 #include "clock.h"
 #include "util.h"
 #include "network.h"
-#include "sim.h"
+/*
 #include "audio_driver.h"
 #include "audio_server.h"
 #include "audio_streamer.h"
 #include "sdcard.h"
+*/
 #include "serial_console.h"
 
 #include "graphic_lcd_12232.h"
-#if !SIM
-#include "hardware.h"
-#endif // !SIM
+#if SIM
+# include "sim.h"
+#else
+# include "hardware.h"
+#endif // SIM
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -67,13 +69,11 @@ void syncdebug(uint8_t spaces, char f, uint16_t line)
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	Activation act;
 	uint8_t val;
 } BlinkAct;
 
-void _update_blink(Activation *act)
+void _update_blink(BlinkAct *ba)
 {
-	BlinkAct *ba = (BlinkAct *) act;
 	ba->val += 1;
 #if !SIM
 	gpio_set_or_clr(GPIO_B0, ((ba->val>>0)&0x1)==0);
@@ -100,12 +100,11 @@ void _update_blink(Activation *act)
 	if ((ba->val & 0xf)==0) {
 //		SYNCDEBUG();
 	}
-	schedule_us(100000, &ba->act);
+	schedule_us(100000, (ActivationFuncPtr) _update_blink, &ba);
 }
 
 void blink_init(BlinkAct *ba)
 {
-	ba->act.func = _update_blink;
 	ba->val = 0;
 #if !SIM
 	gpio_make_output(GPIO_B0);
@@ -117,32 +116,29 @@ void blink_init(BlinkAct *ba)
 	gpio_make_output(GPIO_D5);
 	gpio_make_output(GPIO_D6);
 #endif // !SIM
-	schedule_us(100000, &ba->act);
+	schedule_us(100000, (ActivationFuncPtr) _update_blink, &ba);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	Activation act;
 	SerialConsole console;
 	r_bool toggle;
 	GLCD *glcd;
 } Shell;
 
-void shell_func(Activation *act);
+void shell_func(Shell *shell);
 
 void shell_init(Shell *shell, GLCD *glcd)
 {
-	shell->act.func = shell_func;
 	shell->glcd = glcd;
-	serial_console_init(&shell->console, &shell->act);
+	serial_console_init(&shell->console, (ActivationFuncPtr) shell_func, &shell);
 	g_console = &shell->console;
 	SYNCDEBUG();
 }
 
-void shell_func(Activation *act)
+void shell_func(Shell *shell)
 {
-	Shell *shell = (Shell *) act;
 	char *line = shell->console.line;
 
 	shell->toggle = !shell->toggle;

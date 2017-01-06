@@ -18,6 +18,7 @@
 #define _audio_driver_h
 
 #include "rocket.h"
+#include "rocket_ring_buffer.h"
 #include "sound.h"
 //#include "spiflash.h"
 

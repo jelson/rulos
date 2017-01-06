@@ -14,16 +14,16 @@
 
 ROCKET_ROOT := ../..
 
-PLATFORMS := avr # arm
+PLATFORMS := arm avr
 ARM_CHIP_FAMILY := 11xx
 MCU := atmega328p
-TARGET := timertest
+TARGET := nulltest
 BOARD := CUSTOM
 
 #EXTRA_AVR_CFLAGS := -DCRYSTAL=12000000 -DTIMING_DEBUG
 
 TARGET_OBJECTS := \
-	timertest.o
+	nulltest.o
 
 include $(ROCKET_ROOT)/Makefile.common
 

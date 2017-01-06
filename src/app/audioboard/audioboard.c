@@ -18,7 +18,6 @@
 #include "clock.h"
 #include "util.h"
 #include "network.h"
-#include "sim.h"
 #include "audio_driver.h"
 #include "audio_server.h"
 #include "audio_streamer.h"
@@ -26,6 +25,9 @@
 #include "serial_console.h"
 #include "audioled.h"
 
+#if SIM
+#include "sim.h"
+#endif
 
 SerialConsole *g_serial_console = NULL;
 

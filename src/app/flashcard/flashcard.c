@@ -23,7 +23,6 @@
 #include "clock.h"
 #include "util.h"
 #include "network.h"
-#include "sim.h"
 #include "audio_driver.h"
 #include "audio_server.h"
 #include "audio_streamer.h"

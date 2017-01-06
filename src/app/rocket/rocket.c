@@ -41,7 +41,6 @@
 #include "rasters.h"
 #include "pong.h"
 #include "lunar_distance.h"
-#include "sim.h"
 #include "display_thrusters.h"
 #include "network.h"
 #include "remote_keyboard.h"
@@ -57,6 +56,9 @@
 #include "volume_control.h"
 #include "bss_canary.h"
 
+#if SIM
+#include "sim.h"
+#endif
 
 /************************************************************************************/
 /************************************************************************************/

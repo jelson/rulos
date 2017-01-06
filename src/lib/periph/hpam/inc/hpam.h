@@ -17,9 +17,12 @@
 #ifndef _hpam_h
 #define _hpam_h
 
-#include "util.h"
+#include "board_buffer.h"
 #include "clock.h"
 #include "display_controller.h"
+#include "network.h"
+#include "thruster_protocol.h"
+#include "util.h"
 
 typedef struct {
 	r_bool status;

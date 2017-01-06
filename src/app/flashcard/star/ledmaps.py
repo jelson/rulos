@@ -29,7 +29,7 @@ class ImageCat:
 		img = Image.open(filename)
 		binary = PIL.ImageOps.invert(img.convert("RGB")).convert("1")
 		#binary.save("binary.%s.png" % os.path.basename(filename))
-		imagebytes = binary.tostring()
+		imagebytes = binary.tobytes()
 		imagedata = "".join(map(lambda b: "0x%02x, " % ord(b), imagebytes))
 		array = "{ %s }" % imagedata
 		self.arrays.append(array)

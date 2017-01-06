@@ -58,7 +58,7 @@ class ImageCat:
 		fp = open(filename, "w")
 
 		fp.write("const uint8_t PROGMEM %s_data[] = {\n" % symname)
-		imagebytes = self.image.tostring()
+		imagebytes = self.image.tobytes()
 		sys.stderr.write("num image bytes: %s %s\n" % (len(imagebytes), self.getcatsize()))
 		fp.write("".join(map(lambda s: " 0x%02x,\n" % ord(s), imagebytes)))
 		fp.write("};\n")

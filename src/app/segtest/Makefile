@@ -15,7 +15,7 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr sim
-PERIPHERALS := 7seg_panel
+PERIPHERALS := 7seg_panel rocket input_controller hpam audio sdcard spi joystick rasters display_rtc
 MCU := atmega328p
 BOARD := PCB11
 TARGET := segtest
