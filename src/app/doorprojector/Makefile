@@ -15,7 +15,8 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr
-PERIPHERALS := adc
+PERIPHERALS := adc input_controller 7seg_panel
+
 MCU := atmega8
 #MCU := atmega328p
 BOARD := CUSTOM

@@ -14,11 +14,7 @@
  *
  ************************************************************************/
 
-#include <inttypes.h>
-#include <string.h>
-#include <math.h>
-
-#include "rocket.h"
+#include "rulos.h"
 #include "6matrix.h"
 
 typedef struct {

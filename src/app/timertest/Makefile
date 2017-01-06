@@ -14,7 +14,8 @@
 
 ROCKET_ROOT := ../..
 
-PLATFORMS := avr
+PLATFORMS := arm avr
+ARM_CHIP_FAMILY := 11xx
 MCU := atmega328p
 TARGET := timertest
 BOARD := CUSTOM

@@ -18,10 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "rocket.h"
-#include "clock.h"
-#include "util.h"
-#include "uart.h"
+#include "rulos.h"
 #include "animate.h"
 #include "frobutton.h"
 
@@ -29,7 +26,7 @@
 
 #define SYSTEM_CLOCK 500
 
-UartState_t uart; 
+// UartState_t uart; 
 
 int main()
 {

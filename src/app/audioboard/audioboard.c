@@ -14,12 +14,7 @@
  *
  ************************************************************************/
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "rocket.h"
+#include "rulos.h"
 #include "clock.h"
 #include "util.h"
 #include "network.h"

@@ -14,20 +14,8 @@
  *
  ************************************************************************/
 
-#include <inttypes.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "rocket.h"
-
-/****************************************************************************/
-
-#ifndef SIM
-
+#include "rulos.h"
 #include "hardware.h"
-#include <avr/boot.h>
-#include <avr/io.h>
-#include <avr/interrupt.h>
 
 #define LEDR		GPIO_A7
 #define LEDG		GPIO_B0
@@ -338,12 +326,4 @@ int main()
 	app_run(&app);
 	return 0;
 }
-
-#else
-int main()
-{
-	return 0;
-}
-#endif // SIM
-
 

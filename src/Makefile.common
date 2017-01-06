@@ -14,13 +14,15 @@
 
 
 # Add core sources
-ALL_PLATFORM_SOURCES := $(wildcard $(ROCKET_ROOT)/lib/core/*.c)
+ALL_PLATFORM_SOURCES := $(wildcard $(ROCKET_ROOT)/lib/core/src/*.c)
+ALL_PLATFORM_INCLUDES := -I$(ROCKET_ROOT)/lib/core/inc
 
 # Add bss_canary to the list of peripherals, which always goes last
 PERIPHERALS += bss_canary
 
 # Add peripheral sources for all selected peripherals
-ALL_PLATFORM_SOURCES += $(foreach periph, $(PERIPHERALS), $(wildcard $(ROCKET_ROOT)/lib/periph/$(periph)/*.c))
+ALL_PLATFORM_SOURCES += $(foreach periph, $(PERIPHERALS), $(wildcard $(ROCKET_ROOT)/lib/periph/$(periph)/src/*.c))
+ALL_PLATFORM_INCLUDES += $(foreach periph, $(PERIPHERALS), -I$(ROCKET_ROOT)/lib/periph/$(periph)/inc)
 
 # Bring in the Makefile each platform for which a build is selected
 ALL_PLATFORM_TARGETS :=

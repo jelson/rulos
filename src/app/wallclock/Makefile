@@ -14,11 +14,13 @@
 
 ROCKET_ROOT := ../..
 
-PLATFORMS := avr sim
+PLATFORMS := arm avr sim
 PERIPHERALS = 7seg_panel uart
 MCU := atmega8
 TARGET := wallclock
 BOARD := PCB11
+
+ARM_CHIP_FAMILY := 11xx
 
 TARGET_OBJECTS := \
 	wallclock.o \

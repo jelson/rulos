@@ -14,13 +14,13 @@
  *
  ************************************************************************/
 
-#include <inttypes.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "rocket.h"
+#include "rulos.h"
 #include "uart.h"
-#include "sim.h"
+#include "7seg_panel.h"
+
+#ifdef SIM
+# include "sim.h"
+#endif
 
 /* Chase's definitions */
 

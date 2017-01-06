@@ -1,5 +1,8 @@
 #include "animate.h"
 
+#include <stdlib.h>
+#include "clock.h"
+
 #ifndef SIM
 #include "hardware.h"
 

@@ -1,4 +1,5 @@
 #include "frobutton.h"
+#include "clock.h"
 
 #ifndef SIM
 

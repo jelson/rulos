@@ -1,4 +1,4 @@
-$(CURR_OBJDIR)/lib/chip/avr/periph/lcd_12232/hardware_graphic_lcd_12232.o: $(CURR_OBJDIR)/lcdrasters_auto.ch
+$(CURR_OBJDIR)/lib/chip/avr/periph/lcd_12232/src/hardware_graphic_lcd_12232.o: $(CURR_OBJDIR)/lcdrasters_auto.ch
 
 %/lcdrasters_auto.ch: $(ROCKET_ROOT)/util/lcdbitmaploader.py $(ROCKET_ROOT)/lcdbitmaps/*.png
 		      $(PYTHON) $(ROCKET_ROOT)/util/lcdbitmaploader.py $@ $(ROCKET_ROOT)/lcdbitmaps > /dev/null

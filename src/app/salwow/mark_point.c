@@ -1,6 +1,3 @@
-#include <rocket.h>
-#ifndef SIM
-
 #include "hardware.h"
 #include <avr/boot.h>
 #include <avr/io.h>
@@ -40,13 +37,3 @@ void mark_point(uint8_t val)
 #endif // MARK_POINT_ENABLED
 }
 
-#else
-
-void mark_point_init() {}
-
-void mark_point(uint8_t val)
-{
-	fprintf(stderr, "mark_point %d\n", val);
-}
-
-#endif

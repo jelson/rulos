@@ -65,8 +65,8 @@ $(TARGET)sim: $(SIM_LIB_FILE) $(SIM_TARGET_OBJECTS)
 sim-all: $(TARGET)sim
 
 sim-clean:
-	rm -f \
-		$(SIM_OBJDIR)/* \
+	rm -rf \
+		$(SIM_OBJDIR) \
 		$(SIM_TARGET_OBJECTS) \
 		$(TARGET)sim \
 

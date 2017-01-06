@@ -14,9 +14,9 @@
  *
  ************************************************************************/
 
-#include "rocket.h"
+#include "rulos.h"
 #include "queue.h"
-#include "ring_buffer.h"
+#include "rocket_ring_buffer.h"
 
 QUEUE_DECLARE(short)
 

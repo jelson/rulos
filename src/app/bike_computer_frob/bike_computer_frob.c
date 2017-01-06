@@ -14,20 +14,12 @@
  *
  ************************************************************************/
 
-#include <inttypes.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
-
-#include "rocket.h"
-#include "clock.h"
-#include "util.h"
-#include "network.h"
-#include "sim.h"
+#include "rulos.h"
 #include "serial_console.h"
 
-
-#if !SIM
+#ifdef SIM
+# include "sim.h"
+#else
 #include "hardware.h"
 #endif // !SIM
 

@@ -14,31 +14,10 @@
  *
  ************************************************************************/
 
-#include <inttypes.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "rocket.h"
-#include "clock.h"
-#include "util.h"
-#include "display_controller.h"
+#include "rulos.h"
+#include "7seg_panel.h"
 #include "display_rtc.h"
-#include "display_scroll_msg.h"
-#include "display_compass.h"
-#include "focus.h"
-#include "labeled_display.h"
-#include "display_docking.h"
-#include "display_gratuitous_graph.h"
-#include "numeric_input.h"
 #include "input_controller.h"
-#include "calculator.h"
-#include "hal.h"
-#include "cpumon.h"
-#include "idle_display.h"
-#include "sequencer.h"
-#include "rasters.h"
-#include "pong.h"
-#include "lunar_distance.h"
 
 
 typedef struct {

@@ -15,7 +15,7 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr
-PERIPHERALS := rasters uart led_matrix_single keypad lcd_12232 eeprom input_controller
+PERIPHERALS := rasters uart led_matrix_single keypad lcd_12232 eeprom input_controller 7seg_panel rocket hpam
 #MCU := atmega8
 MCU := atmega1284p
 BOARD := FLASHCARD

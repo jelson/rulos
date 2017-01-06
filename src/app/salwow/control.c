@@ -1,3 +1,8 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "clock.h"
 #include "control.h"
 #include "leds.h"
 

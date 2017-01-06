@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rocket.h>
 #include "uart.h"
 
 typedef struct {

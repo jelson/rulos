@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "rocket.h"
+#include "rulos.h"
 #include "hardware.h"
 
 #define FREQ_USEC 50000

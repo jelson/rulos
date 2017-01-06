@@ -20,6 +20,7 @@ serialhost: serialhost.c
 	gcc -o $@ -g $^
 
 PLATFORMS := avr
+PERIPHERALS := uart
 MCU := atmega8
 BOARD := CUSTOM
 TARGET := serialecho

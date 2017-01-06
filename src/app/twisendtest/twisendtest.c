@@ -14,7 +14,9 @@
  *
  ************************************************************************/
 
-#include "rocket.h"
+#include "rulos.h"
+#include "7seg_panel.h"
+#include "twi.h"
 
 
 void test_without_netstack()

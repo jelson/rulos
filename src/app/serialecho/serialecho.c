@@ -14,12 +14,7 @@
  *
  ************************************************************************/
 
-#include <inttypes.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-
-#include "rocket.h"
+#include "rulos.h"
 #include "uart.h"
 //#include "spiflash.h"
 

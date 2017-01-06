@@ -14,7 +14,9 @@
  *
  ************************************************************************/
 
-#include "rocket.h"
+#include "rulos.h"
+#include "twi.h"
+#include "7seg_panel.h"
 
 #define HAVE_AUDIOBOARD_UART 0
 

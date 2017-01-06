@@ -1,3 +1,4 @@
+#include "clock.h"
 #include "rudder.h"
 #include "leds.h"
 

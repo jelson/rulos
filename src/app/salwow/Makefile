@@ -15,7 +15,7 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr
-PERIPHERALS := uart
+PERIPHERALS := uart servo
 MCU := atmega1284p
 #MCU := atmega328p
 BOARD := CUSTOM

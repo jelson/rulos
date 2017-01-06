@@ -17,18 +17,22 @@ PLATFORM_TARGET_LIST += avr-all
 CLEAN_TARGET_LIST += avr-clean
 
 AVR_SOURCES :=
+AVR_INCLUDES := 
 
 AVR_LIB_ROOT := $(ROCKET_ROOT)/lib/chip/avr
 
 # Add platform-specific core sources to the all-platform sources
-AVR_SOURCES += $(wildcard $(AVR_LIB_ROOT)/core/*.c)
+AVR_SOURCES += $(wildcard $(AVR_LIB_ROOT)/core/src/*.c)
+AVR_INCLUDES += -I$(AVR_LIB_ROOT)/core/inc
 
 # Add platform-specific peripheral sources
-AVR_SOURCES += $(foreach periph, $(PERIPHERALS), $(wildcard $(AVR_LIB_ROOT)/periph/$(periph)/*.c))
+AVR_SOURCES += $(foreach periph, $(PERIPHERALS), $(wildcard $(AVR_LIB_ROOT)/periph/$(periph)/src/*.c))
+AVR_INCLUDES += $(foreach periph, $(PERIPHERALS), -I$(AVR_LIB_ROOT)/periph/$(periph)/inc)
 
 AVR_SOURCES += $(ALL_PLATFORM_SOURCES)
+AVR_INCLUDES += $(ALL_PLATFORM_INCLUDES)
 
-ARCHTARG := $(TARGET).$(MCU).$(BOARD)
+AVR_ARCHTARG := $(TARGET).$(MCU).$(BOARD)
 
 # Compilation
 AVR_OBJDIR = obj.avr.$(MCU).$(BOARD)
@@ -37,14 +41,14 @@ AVR_LIB_FILE = $(AVR_OBJDIR)/lib$(AVR_LIBNAME).a
 CC = avr-gcc
 
 CURR_OBJDIR := $(AVR_OBJDIR)
--include $(foreach dir, $(sort $(dir $(AVR_SOURCES))), $(wildcard $(dir)/Makefile.extra))
+-include $(foreach dir, $(sort $(dir $(AVR_SOURCES))), $(wildcard $(dir)/../Makefile.extra))
 
 ## Options common to compile, link and assembly rules
 AVR_COMMON_FLAGS = -Wall -Werror -mmcu=$(MCU)
 
 ## Compile options common for all C compilation units.
 AVR_CFLAGS = $(AVR_COMMON_FLAGS)
-AVR_CFLAGS += -Wall -Werror -I$(ROCKET_ROOT)/include -I$(AVR_OBJDIR)
+AVR_CFLAGS += -g -Wall -Werror -I$(AVR_OBJDIR) $(AVR_INCLUDES)
 AVR_CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 AVR_CFLAGS += -fdata-sections -ffunction-sections # Put all funcs/data in their own sections
 AVR_CFLAGS += -MD -MP # -MT $(AVR_OBJDIR)/$(*F).o -MF $(AVR_OBJDIR)/$(@F).d 
@@ -60,7 +64,7 @@ ASMFLAGS += -x assembler-with-cpp -Wa,-gdwarf2
 
 ## Linker flags
 AVR_LDFLAGS = $(AVR_COMMON_FLAGS)
-AVR_LDFLAGS +=  -Wl,-Map=$(ARCHTARG).map -L$(AVR_OBJDIR) -l$(AVR_LIBNAME) 
+AVR_LDFLAGS +=  -Wl,-Map=$(AVR_ARCHTARG).map -L$(AVR_OBJDIR) -l$(AVR_LIBNAME) 
 AVR_LDFLAGS += -Wl,--gc-sections # Garbage-collect ununused functions
 AVR_LDFLAGS += $(EXTRA_AVR_LDFLAGS)
 
@@ -90,7 +94,7 @@ else
 endif
 
 ## Build
-avr-all: mcu-defined-check $(ARCHTARG).elf $(ARCHTARG).hex $(ARCHTARG).eep $(ARCHTARG).lss $(ARCHTARG).size
+avr-all: mcu-defined-check $(AVR_ARCHTARG).elf $(AVR_ARCHTARG).hex $(AVR_ARCHTARG).eep $(AVR_ARCHTARG).lss $(AVR_ARCHTARG).size
 
 ## Compile
 $(AVR_OBJDIR)/lib/%.o: $(ROCKET_ROOT)/lib/%.c
@@ -110,34 +114,34 @@ $(AVR_LIB_FILE): $(AVR_LIB_OBJECTS)
 AVR_TARGET_OBJECTS := $(patsubst %.o,$(AVR_OBJDIR)/app/%.o, $(TARGET_OBJECTS))
 
 ##Link
-$(ARCHTARG).elf: $(AVR_LIB_FILE) $(AVR_TARGET_OBJECTS)
+$(AVR_ARCHTARG).elf: $(AVR_LIB_FILE) $(AVR_TARGET_OBJECTS)
 	echo $(ALL_PLATFORM_SOURCES)
 	$(CC) $(AVR_TARGET_OBJECTS) $(AVR_LDFLAGS) -o $@
 
-%.hex: %.elf
+$(AVR_ARCHTARG).hex: $(AVR_ARCHTARG).elf
 	avr-objcopy -O ihex $(HEX_FLASH_FLAGS)  $< $@
 
-%.eep: %.elf
+$(AVR_ARCHTARG).eep: $(AVR_ARCHTARG).elf
 	avr-objcopy $(HEX_EEPROM_FLAGS) -O ihex $< $@ || exit 0
 
-%.lss: %.elf
+$(AVR_ARCHTARG).lss: $(AVR_ARCHTARG).elf
 	avr-objdump -h -S --syms $< > $@
 
 .PHONY:
-$(ARCHTARG).size: $(ARCHTARG).elf
+$(AVR_ARCHTARG).size: $(AVR_ARCHTARG).elf
 	@echo
-#	@avr-size -C --mcu=${MCU} $(ARCHTARG).elf
-	avr-size $(ARCHTARG).elf
+#	@avr-size -C --mcu=${MCU} $(AVR_ARCHTARG).elf
+	avr-size $(AVR_ARCHTARG).elf
 
 ## Clean target
 avr-clean:
 	-rm -rf \
-	    	$(AVR_OBJDIR)/* \
-		$(ARCHTARG).elf \
-		$(ARCHTARG).hex \
-		$(ARCHTARG).eep \
-		$(ARCHTARG).lss \
-		$(ARCHTARG).map \
+	    	$(AVR_OBJDIR) \
+		$(AVR_ARCHTARG).elf \
+		$(AVR_ARCHTARG).hex \
+		$(AVR_ARCHTARG).eep \
+		$(AVR_ARCHTARG).lss \
+		$(AVR_ARCHTARG).map \
 
 
 ## Add automatically generated dependencies
@@ -166,8 +170,8 @@ AVRCONFIG :=
 AVROPTS := -p m1284p
 endif
 
-program: $(ARCHTARG).lss $(ARCHTARG).hex $(AVRCONFIG)
-	sudo avrdude -c usbtiny $(AVROPTS) -u -U flash:w:$(ARCHTARG).hex
+program: $(AVR_ARCHTARG).lss $(AVR_ARCHTARG).hex $(AVRCONFIG)
+	sudo avrdude -c usbtiny $(AVROPTS) -u -U flash:w:$(AVR_ARCHTARG).hex
 
 # Fuse byte documentation:
 # page 223 of http://www.atmel.com/dyn/resources/prod_documents/doc2486.pdf

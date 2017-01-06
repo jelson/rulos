@@ -14,47 +14,9 @@
  *
  ************************************************************************/
 
-#include <inttypes.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "rocket.h"
-#include "clock.h"
-#include "util.h"
-#include "display_controller.h"
-#include "display_rtc.h"
-#include "display_scroll_msg.h"
-#include "display_compass.h"
-#include "focus.h"
-#include "labeled_display.h"
-#include "display_docking.h"
-#include "display_gratuitous_graph.h"
-#include "numeric_input.h"
-#include "input_controller.h"
-#include "calculator.h"
-#include "display_aer.h"
-#include "hal.h"
-#include "cpumon.h"
-#include "idle_display.h"
-#include "sequencer.h"
-#include "rasters.h"
-#include "pong.h"
-#include "lunar_distance.h"
-#include "sim.h"
-#include "display_thrusters.h"
-#include "network.h"
-#include "remote_keyboard.h"
-#include "remote_bbuf.h"
-#include "remote_uie.h"
-#include "control_panel.h"
-
-/****************************************************************************/
-
+#include "rulos.h"
 #include "hardware.h"
-#include <avr/boot.h>
-#include <avr/io.h>
-#include <avr/interrupt.h>
-
+#include "focus.h"
 
 #define LED0		GPIO_C1
 #define LED1		GPIO_C3

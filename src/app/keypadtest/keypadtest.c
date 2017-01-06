@@ -14,12 +14,8 @@
  *
  ************************************************************************/
 
-#include <inttypes.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
-
-#include "rocket.h"
+#include "rulos.h"
+#include "7seg_panel.h"
 #include "uart.h"
 
 /************************************************************************************/
