@@ -16,7 +16,7 @@ ROCKET_ROOT := ../..
 
 PLATFORMS := avr sim
 PERIPHERALS := ring_buffer
-BOARD := CUSTOM
+BOARD := GENERIC
 MCU := atmega8
 #MCU := atmega328p
 

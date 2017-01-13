@@ -15,7 +15,7 @@
 
 # Add core sources
 ALL_PLATFORM_SOURCES := $(wildcard $(ROCKET_ROOT)/lib/core/src/*.c)
-ALL_PLATFORM_INCLUDES := -I$(ROCKET_ROOT)/lib/core/inc
+ALL_PLATFORM_INCLUDES := -I. -I$(ROCKET_ROOT)/lib/core/inc
 
 # Add bss_canary to the list of peripherals, which always goes last
 PERIPHERALS += bss_canary

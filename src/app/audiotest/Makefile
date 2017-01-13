@@ -17,7 +17,7 @@ ROCKET_ROOT := ../..
 PLATFORMS := avr sim
 PERIPHERALS := rocket 7seg_panel input_controller hpam audio sdcard spi joystick rasters display_rtc
 MCU := atmega328p
-BOARD := CUSTOM
+BOARD := GENERIC
 TARGET := audiotest
 #EXTRA_AVR_CFLAGS :=  -DCRYSTAL=12000000
 EXTRA_AVR_LDFLAGS := -lm

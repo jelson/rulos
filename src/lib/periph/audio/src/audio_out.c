@@ -14,9 +14,8 @@
  *
  ************************************************************************/
 
-#include "board_defs.h"
-#include "hal.h"
 #include "rocket.h"
+#include "hal.h"
 #include "audio_out.h"
 
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);

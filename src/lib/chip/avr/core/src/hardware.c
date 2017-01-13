@@ -26,7 +26,6 @@
 #include <util/delay_basic.h>
 
 #include "hardware.h"
-#include "board_defs.h"
 #include "hal.h"
 
 

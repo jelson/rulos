@@ -22,7 +22,7 @@ serialhost: serialhost.c
 PLATFORMS := avr
 PERIPHERALS := uart
 MCU := atmega8
-BOARD := CUSTOM
+BOARD := GENERIC
 TARGET := serialecho
 
 # Set twi to 500mhz (assuming 8 mhz processor)

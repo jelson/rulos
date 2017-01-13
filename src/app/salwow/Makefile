@@ -18,7 +18,7 @@ PLATFORMS := avr
 PERIPHERALS := uart servo
 MCU := atmega1284p
 #MCU := atmega328p
-BOARD := CUSTOM
+BOARD := GENERIC
 
 TARGET := salwow
 EXTRA_AVR_CFLAGS += -DASSERT_TO_SERIAL

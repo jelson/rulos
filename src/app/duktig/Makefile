@@ -16,7 +16,7 @@ ROCKET_ROOT := ../..
 
 PLATFORMS := avr
 MCU := attiny84a
-BOARD := CUSTOM
+BOARD := GENERIC
 TARGET := duktig
 
 TARGET_OBJECTS := \

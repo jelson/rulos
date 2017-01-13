@@ -17,7 +17,7 @@ ROCKET_ROOT := ../..
 PLATFORMS := avr
 PERIPHERALS := 6matrix
 MCU := atmega328p
-BOARD := CUSTOM
+BOARD := GENERIC
 TARGET := 6matrix-id
 
 TARGET_OBJECTS := \

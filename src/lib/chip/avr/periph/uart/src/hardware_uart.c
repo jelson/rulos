@@ -30,7 +30,6 @@
 
 #include "util.h"
 #include "hardware.h"
-#include "board_defs.h"
 #include "uart.h"
 #include "hal.h"
 

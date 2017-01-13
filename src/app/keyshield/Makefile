@@ -15,15 +15,13 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr
-PERIPHERALS := uart
-#MCU := atmega8
-MCU := atmega1284p
-BOARD := GENERIC
-
-TARGET := bike_computer_frob
+MCU := attiny84a
+PERIPHERALS := keypad
+BOARD := CUSTOM
+TARGET := keyshield
 
 TARGET_OBJECTS := \
-	bike_computer_frob.o
+	keyshield.o
 
 include $(ROCKET_ROOT)/Makefile.common
 

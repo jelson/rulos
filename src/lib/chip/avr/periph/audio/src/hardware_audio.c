@@ -21,9 +21,7 @@
 
 #include "rulos.h"
 #include "hardware.h"
-#include "board_defs.h"
 #include "hal.h"
-#include "board_defs.h"
 
 #ifdef AUDIO_REGISTER_LATCH
 

@@ -16,7 +16,7 @@ ROCKET_ROOT := ../..
 
 PLATFORMS := avr
 MCU := atmega328p
-BOARD := CUSTOM
+BOARD := GENERIC
 TARGET := frozone
 
 TARGET_OBJECTS := \

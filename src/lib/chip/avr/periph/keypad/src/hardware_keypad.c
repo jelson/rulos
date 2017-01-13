@@ -33,7 +33,9 @@
 
 ///////// HAL functions (public interface) ////////////////////////
 
-#ifdef KEYPAD_COL0
+#ifndef KEYPAD_COL0
+# error "Board definitions for this board don't include KEYPAD definitions."
+#else
 
 #define KEY_SCAN_INTERVAL_US 10000
 #define KEY_REFRACTORY_TIME_US 30000
@@ -181,4 +183,4 @@ char hal_scan_keypad()
 	return 0;
 }
 
-#endif // KEYPAD_COL0
+#endif  // KEYPAD_COL0

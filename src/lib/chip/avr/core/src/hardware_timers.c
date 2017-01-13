@@ -37,7 +37,6 @@ uint32_t hardware_f_cpu;
 #include <util/delay_basic.h>
 
 #include "hardware.h"
-#include "board_defs.h"
 #include "hal.h"
 
 

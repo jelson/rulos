@@ -21,7 +21,6 @@
 
 #include "rulos.h"
 #include "hardware.h"
-#include "board_defs.h"
 #include "hal.h"
 
 
