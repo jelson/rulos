@@ -32,6 +32,7 @@
 #include "rocket.h"
 #include "util.h"
 #include "display_controller.h"
+#include "rocket_ring_buffer.h"
 #include "uart.h"
 #include "sim.h"
 

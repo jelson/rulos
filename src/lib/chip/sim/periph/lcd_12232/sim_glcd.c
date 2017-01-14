@@ -29,7 +29,7 @@
 #include <curses.h>
 #include <fcntl.h>
 
-#include "rocket.h"
+#include "rulos.h"
 #include "util.h"
 #include "display_controller.h"
 #include "graphic_lcd_12232.h"

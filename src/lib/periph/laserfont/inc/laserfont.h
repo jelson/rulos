@@ -25,7 +25,7 @@
 
 typedef struct {
 	uint8_t widthpairs[(LASERFONT_HIGHEST_CHAR - LASERFONT_LOWEST_CHAR)/2+1];
-	SSBitmap data[];
+	SSBitmap data;
 } LaserFont;
 
 uint8_t laserfont_draw_char(LaserFont *lf, SSBitmap *bm, int size, char c);

@@ -15,44 +15,57 @@
 PLATFORM_TARGET_LIST += sim-all
 CLEAN_TARGET_LIST += sim-clean
 
-# Objects only used by the simulator
-SIM_ONLY_OBJECTS +=  \
-	uart.o \
-	sim_6matrix.o \
-	sim_rocketpanel.o \
-	sim_glcd.o \
-	sim.o
+SIM_SOURCES :=
+SIM_INCLUDES :=
 
-BSS_CANARY_OBJECT := bss_canary.o
+SIM_LIB_ROOT := $(ROCKET_ROOT)/lib/chip/sim
+
+# Add sim sources
+SIM_SOURCES += $(wildcard $(SIM_LIB_ROOT)/core/src/*.c)
+SIM_INCLUDES += -I$(SIM_LIB_ROOT)/core/inc
+
+# Add all-platform sources such as peripherals
+SIM_SOURCES += $(ALL_PLATFORM_SOURCES)
+SIM_INCLUDES += $(ALL_PLATFORM_INCLUDES)
+
+# The simulator forces selection of certain peripherals; include them.
+# Sorry this was done in a cut-and-paste way instead of something more general.
+SIM_EXTRA_PERIPHERALS := uart ring_buffer
+SIM_SOURCES +=  $(foreach periph, $(SIM_EXTRA_PERIPHERALS), $(wildcard $(ROCKET_ROOT)/lib/periph/$(periph)/src/*.c))
+SIM_INCLUDES += $(foreach periph, $(SIM_EXTRA_PERIPHERALS), -I$(ROCKET_ROOT)/lib/periph/$(periph)/inc)
 
 SIM_OBJDIR = obj.sim
 SIM_LIBNAME = rocket
 SIM_LIB_FILE = $(SIM_OBJDIR)/lib$(SIM_LIBNAME).a
 
-SIM_CFLAGS = -Wall -Werror -g -O3 -DSIM -I$(ROCKET_ROOT)/include -I$(SIM_OBJDIR)
+# Extra makefile rules from peripherals
+CURR_OBJDIR := $(SIM_OBJDIR)
+-include $(foreach dir, $(sort $(dir $(AVR_SOURCES))), $(wildcard $(dir)/../Makefile.extra))
+
+SIM_CFLAGS = -Wall -Werror -g -O3 -DSIM -I$(SIM_OBJDIR) $(SIM_INCLUDES)
 #SIM_CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
-SIM_CFLAGS += -MD -MP -MT $(SIM_OBJDIR)/$(*F).o -MF $(SIM_OBJDIR)/$(@F).d
+SIM_CFLAGS += -MD -MP # -MT $(SIM_OBJDIR)/$(*F).o -MF $(SIM_OBJDIR)/$(@F).d
 
 SIM_LDFLAGS = -L$(SIM_OBJDIR) -l$(SIM_LIBNAME) -lm `pkg-config --libs gtk+-2.0`
 SIM_GCC := g++
 
 ############
 
-SIM_LIB_OBJECTS := $(patsubst %.o,$(SIM_OBJDIR)/%.o,$(COMMON_OBJECTS) \
-	$(SIM_ONLY_OBJECTS) $(BSS_CANARY_OBJECT) )
+# Object files for all library objects
+SIM_LIB_OBJECTS := $(patsubst $(ROCKET_ROOT)/lib/%.c,$(SIM_OBJDIR)/lib/%.o, $(SIM_SOURCES))
 
-SIM_TARGET_OBJECTS := $(patsubst %.o,$(SIM_OBJDIR)/%.o, \
-	$(TARGET_OBJECTS))
+# Object files for the application objects
+SIM_TARGET_OBJECTS := $(patsubst %.o,$(SIM_OBJDIR)/app/%.o, $(TARGET_OBJECTS))
 
 # For lib objects
-$(SIM_OBJDIR)/sim_6matrix.o: $(ROCKET_ROOT)/lib/sim_6matrix.c
+$(SIM_OBJDIR)/sim_6matrix.o: $(ROCKET_ROOT)/lib/chip/sim/core/src/sim_6matrix.c
 	$(SIM_GCC) $(SIM_CFLAGS) `pkg-config --cflags gtk+-2.0` -c $< -o $@
 
-$(SIM_OBJDIR)/%.o: $(ROCKET_ROOT)/lib/core/%.c
+$(SIM_OBJDIR)/lib/%.o: $(ROCKET_ROOT)/lib/%.c
 	$(SIM_GCC) $(SIM_CFLAGS) -c $< -o $@
 
 # For local app objects
-$(SIM_OBJDIR)/%.o: %.c
+$(SIM_OBJDIR)/app/%.o: %.c
 	$(SIM_GCC) $(SIM_CFLAGS) -c $< -o $@
 
 $(SIM_LIB_FILE): $(SIM_LIB_OBJECTS)
@@ -70,5 +83,6 @@ sim-clean:
 		$(SIM_TARGET_OBJECTS) \
 		$(TARGET)sim \
 
-## Other dependencies
--include $(shell mkdir -p $(SIM_OBJDIR)) $(wildcard $(SIM_OBJDIR)/*.d)
+## Add automatically generated dependencies
+DIR_LIST := $(sort $(dir $(SIM_LIB_OBJECTS) $(SIM_TARGET_OBJECTS)))
+-include $(shell mkdir -p $(DIR_LIST)) $(foreach dir, $(DIR_LIST), $(wildcard $(dir)/*.d))
