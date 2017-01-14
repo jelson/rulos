@@ -19,6 +19,7 @@
  */
 
 #ifdef PRESCALE_TEST
+
 # include <stdio.h>
 # include <stdlib.h>
 # include <inttypes.h>
@@ -28,7 +29,7 @@
 # define FALSE 0
 uint32_t hardware_f_cpu;
 
-#else   // PRESCALE_TEST
+#else   // !PRESCALE_TEST
 
 #include <avr/boot.h>
 #include <avr/io.h>
