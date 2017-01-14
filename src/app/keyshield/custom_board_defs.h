@@ -6,6 +6,3 @@
 #define KEYPAD_COL1  /* pin 5 */ GPIO_A5
 #define KEYPAD_COL2  /* pin 6 */ GPIO_A3
 #define KEYPAD_COL3  /* pin 7 */ GPIO_A2
-
-
-
