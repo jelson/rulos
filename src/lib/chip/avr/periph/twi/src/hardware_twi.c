@@ -35,7 +35,7 @@ struct s_TwiState
 	uint8_t dont_ack;
 
 	// master-transmitter state
-	char *out_pkt;
+	const char *out_pkt;
 	uint8_t out_len;
 	uint8_t out_n;
 	uint8_t out_destaddr;
@@ -359,7 +359,7 @@ static void twi_update(TwiState *twi, uint8_t status)
 }
 
 void _hal_twi_send(MediaStateIfc *media,
-	Addr dest_addr, char *data, uint8_t len,
+	Addr dest_addr, const char *data, uint8_t len,
 	MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
 
 TwiState _twi_g;
@@ -413,7 +413,7 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr, MediaRecvSlot *
 }
 
 // Send a packet in master-transmitter mode.
-void _hal_twi_send(MediaStateIfc *media, Addr dest_addr, char *data, uint8_t len, 
+void _hal_twi_send(MediaStateIfc *media, Addr dest_addr, const char *data, uint8_t len, 
 		   MediaSendDoneFunc sendDoneCB, void *sendDoneCBData)
 {
 	TwiState *twi = (TwiState *)media;

@@ -43,7 +43,7 @@ typedef struct {
 } sendAct_t;
 
 
-void board_say(char *s)
+void board_say(const char *s)
 {
 	SSBitmap bm[8];
 	int i;
@@ -116,6 +116,7 @@ void test_netstack()
 int main()
 {
 	hal_init();
+	hal_init_rocketpanel(bc_default);
 
 	board_say("  InIt  ");
 	// test_without_netstack();

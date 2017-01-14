@@ -22,7 +22,7 @@
 void audioled_set(r_bool red, r_bool yellow);
 
 void _um_send(MediaStateIfc *media,
-	Addr dest_addr, char *data, uint8_t len, 
+	Addr dest_addr, const char *data, uint8_t len, 
 	MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
 
 void _um_recv_handler(struct s_UartHandler *u, char c);
@@ -88,7 +88,7 @@ r_bool _um_send_handler(struct s_UartHandler *u, char *c /*OUT*/)
 }
 
 void _um_send(MediaStateIfc *media,
-	Addr dest_addr, char *data, uint8_t len, 
+	Addr dest_addr, const char *data, uint8_t len, 
 	MediaSendDoneFunc sendDoneCB, void *sendDoneCBData)
 {
 	

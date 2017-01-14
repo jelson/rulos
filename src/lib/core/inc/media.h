@@ -18,7 +18,7 @@ typedef struct s_MediaRecvSlot {
 typedef void (*MediaSendDoneFunc)(void *user_data);
 typedef struct s_MediaStateIfc {
 	void (*send)(struct s_MediaStateIfc *media,
-		Addr dest_addr, char *data, uint8_t len, 
+		Addr dest_addr, const char *data, uint8_t len, 
 		MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
 } MediaStateIfc;
 

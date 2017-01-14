@@ -218,7 +218,7 @@ SimTwiState _g_sim_twi_state = { {NULL}, FALSE };
 
 
 static void _sim_twi_send(MediaStateIfc *media,
-	Addr dest_addr, char *data, uint8_t len,
+	Addr dest_addr, const char *data, uint8_t len,
 	MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
 static void sim_twi_poll(void *data);
 
@@ -314,7 +314,7 @@ static void doSendCallback(sendCallbackAct_t *sca)
 }
 
 static void _sim_twi_send(MediaStateIfc *media,
-			  Addr dest_addr, char *data, uint8_t len,
+			  Addr dest_addr, const char *data, uint8_t len,
 			  MediaSendDoneFunc sendDoneCB, void *sendDoneCBData)
 {
 	SimTwiState *twi_state = (SimTwiState *) media;

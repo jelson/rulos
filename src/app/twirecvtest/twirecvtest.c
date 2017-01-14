@@ -67,7 +67,7 @@ void syncdebug(uint8_t spaces, char f, uint16_t line)
 #endif // HAVE_AUDIOBOARD_UART
 
 
-void board_say(char *s)
+void board_say(const char *s)
 {
 	SSBitmap bm[8];
 	int i;
@@ -121,6 +121,7 @@ void test_netstack()
 int main()
 {
 	hal_init();
+	hal_init_rocketpanel(bc_default);
 #if HAVE_AUDIOBOARD_UART
 	serial_init();
 #endif
