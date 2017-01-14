@@ -14,6 +14,10 @@
  *
  ************************************************************************/
 
+/*
+ * hardware_timers.c: Hardware timer setup for AVR line.
+ */
+
 #ifdef PRESCALE_TEST
 # include <stdio.h>
 # include <stdlib.h>
@@ -23,13 +27,8 @@
 # include <assert.h>
 # define FALSE 0
 uint32_t hardware_f_cpu;
-#else
 
-/*
- * hardware.c: These functions are only needed for physical display hardware.
- *
- * This file is not compiled by the simulator.
- */
+#else   // PRESCALE_TEST
 
 #include <avr/boot.h>
 #include <avr/io.h>
@@ -38,8 +37,6 @@ uint32_t hardware_f_cpu;
 
 #include "hardware.h"
 #include "hal.h"
-
-
 
 void null_handler(void *data)
 {
@@ -335,26 +332,6 @@ void hal_speedup_clock_ppm(int32_t ratio)
 }
 
 
-#if 0
-void hardware_assign_timer_handler(uint8_t timer_id, Handler handler, void *data)
-{
-	if (timer_id==TIMER1)
-	{
-		timer1_handler = handler;
-		timer1_data = data;
-	}
-	else if (timer_id==TIMER2)
-	{
-		timer2_handler = handler;
-		timer2_data = data;
-	}
-	else
-	{
-		assert(FALSE);
-	}
-}
-#endif
-
 void hal_delay_ms(uint16_t __ms)
 {
 	// copied from util/delay.h
@@ -414,4 +391,4 @@ int main(int argc, char *argv[])
         return 0;
 }
 
-#endif
+#endif // PRESCALE_TEST

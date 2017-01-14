@@ -24,8 +24,6 @@
 #include "util.h"
 #include "hal.h"
 
-#include "custom_board_defs.h"
-
 int main()
 {
 	hal_init();
