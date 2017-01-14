@@ -30,7 +30,7 @@ SIM_INCLUDES += $(ALL_PLATFORM_INCLUDES)
 
 # The simulator forces selection of certain peripherals; include them.
 # Sorry this was done in a cut-and-paste way instead of something more general.
-SIM_EXTRA_PERIPHERALS := uart ring_buffer rocket input_controller hpam audio sdcard spi joystick rasters display_rtc
+SIM_EXTRA_PERIPHERALS := uart ring_buffer rocket input_controller hpam audio sdcard spi joystick rasters display_rtc 7seg_panel
 SIM_SOURCES +=  $(foreach periph, $(SIM_EXTRA_PERIPHERALS), $(wildcard $(ROCKET_ROOT)/lib/periph/$(periph)/src/*.c))
 SIM_INCLUDES += $(foreach periph, $(SIM_EXTRA_PERIPHERALS), -I$(ROCKET_ROOT)/lib/periph/$(periph)/inc)
 
