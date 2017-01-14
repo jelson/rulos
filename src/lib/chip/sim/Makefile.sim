@@ -30,7 +30,7 @@ SIM_INCLUDES += $(ALL_PLATFORM_INCLUDES)
 
 # The simulator forces selection of certain peripherals; include them.
 # Sorry this was done in a cut-and-paste way instead of something more general.
-SIM_EXTRA_PERIPHERALS := uart ring_buffer
+SIM_EXTRA_PERIPHERALS := uart ring_buffer rocket input_controller hpam audio sdcard spi joystick rasters display_rtc
 SIM_SOURCES +=  $(foreach periph, $(SIM_EXTRA_PERIPHERALS), $(wildcard $(ROCKET_ROOT)/lib/periph/$(periph)/src/*.c))
 SIM_INCLUDES += $(foreach periph, $(SIM_EXTRA_PERIPHERALS), -I$(ROCKET_ROOT)/lib/periph/$(periph)/inc)
 
@@ -40,7 +40,7 @@ SIM_LIB_FILE = $(SIM_OBJDIR)/lib$(SIM_LIBNAME).a
 
 # Extra makefile rules from peripherals
 CURR_OBJDIR := $(SIM_OBJDIR)
--include $(foreach dir, $(sort $(dir $(AVR_SOURCES))), $(wildcard $(dir)/../Makefile.extra))
+-include $(foreach dir, $(sort $(dir $(SIM_SOURCES))), $(wildcard $(dir)/../Makefile.extra))
 
 SIM_CFLAGS = -Wall -Werror -g -O3 -DSIM -I$(SIM_OBJDIR) $(SIM_INCLUDES)
 #SIM_CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
