@@ -105,6 +105,8 @@ static UsiTwiSlaveContext usi;
 #define USI_WANT_1_BIT (0xe)
 #define USI_WANT_8_BITS (0)
 
+static void usi_poll_for_stop(void *data);
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Configures the TWI bus when it's idle, waiting for a start condition.
@@ -241,6 +243,7 @@ ISR(USI_OVF_vect)
       // available; otherwise, NACK.
       DEBUG_STROBE(5);
       if (usi.recv_slot != NULL && usi.recv_slot->occupied_len == 0 && usi.recv_len == -1) {
+        schedule_now(usi_poll_for_stop, NULL);
         usi.recv_len = 0;
         USIDR = 0;
       } else {
@@ -330,50 +333,28 @@ ISR(USI_OVF_vect)
   }
 }
 
-// A trampoline function for the receive upcall.  Scheduled by usi_twi_stop_received, below.
-static void usi_twi_recv_complete(MediaRecvSlot *mrs)
+// Do you want to know what's stupid? The USI module in attiny hardware is stupid.
+// There's no way to detect a stop condition other than to poll for it. Amazing.
+// We start this "userspace" poller when we get the start of an incoming packet
+// and don't exit until we get a STOP.
+static void usi_poll_for_stop(void *data)
 {
-	assert(mrs != NULL);
-	assert(mrs->func != NULL);
-	assert(mrs->occupied_len > 0);
+  while (!(USISR & _BV(USIPF))) {
+    DEBUG_STROBE(7);
+  }
 
-#ifdef DEBUG_STACK_WITH_UART
-	hal_uart_sync_send("U", 1);
-#endif
-	mrs->func(mrs, mrs->occupied_len);
-#ifdef DEBUG_STACK_WITH_UART
-	hal_uart_sync_send("u", 1);
-#endif
-}
+  // clear the stop condition flag
+  USISR |= _BV(USIPF);
 
-static void usi_twi_stop_received()
-{
-  // If we get a stop and we were in the middle of receiving, schedule a callback to push
-  // the received packet up the stack.
-  if (usi.recv_len > 0) {
+  // If a packet was received, call the user's callback.
+  if (usi.recv_len > 0 && usi.recv_slot->func != NULL) {
+    DEBUG_STROBE(8);
     usi.recv_slot->occupied_len = usi.recv_len;
-    schedule_now((ActivationFuncPtr) usi_twi_recv_complete, usi.recv_slot);
+    usi.recv_slot->func(usi.recv_slot, usi.recv_len);
+    DEBUG_STROBE(8);
   }
   usi.recv_len = -1;
   usi_twi_slave_idle_bus();
-}
-
-// Do you want to know what's stupid? The USI module in attiny hardware is stupid.
-// There's no way to detect a stop condition other than to poll for it. Amazing.
-static void usi_poll_for_stop(void *data)
-{
-  DEBUG_STROBE(10);
-  
-  if (USISR & _BV(USIPF)) {
-    // clear the stop condition flag
-    USISR |= _BV(USIPF);
-
-    // run whatever needs to when a stop is detected
-    usi_twi_stop_received();
-  }
-
-  // schedule the next callback
-  schedule_us(10000, (ActivationFuncPtr) usi_poll_for_stop, NULL);
 }
 
 void usi_twi_slave_init(char address, MediaRecvSlot* recv_slot, usi_slave_send_func send_func)
@@ -392,6 +373,4 @@ void usi_twi_slave_init(char address, MediaRecvSlot* recv_slot, usi_slave_send_f
   gpio_make_input(USI_SDA);
   
   usi_twi_slave_idle_bus();
-
-  schedule_now((ActivationFuncPtr) usi_poll_for_stop, NULL);
 }
