@@ -16,12 +16,12 @@ ROCKET_ROOT := ../..
 
 PLATFORMS := avr
 MCU := attiny84a
-PERIPHERALS := keypad usi_twi_slave
-BOARD := CUSTOM
-TARGET := keyshield
+PERIPHERALS := usi_twi_slave
+BOARD := GENERIC
+TARGET := usi_slave_test
 
 TARGET_OBJECTS := \
-	keyshield.o
+	usi_slave_test.o
 
 include $(ROCKET_ROOT)/Makefile.common
 
