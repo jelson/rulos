@@ -23,13 +23,25 @@
 #include "clock.h"
 #include "util.h"
 #include "hal.h"
+#include "usi_twi_slave.h"
+
+static uint8_t get_next_char_to_transmit()
+{
+	return hal_read_keybuf();
+}
 
 int main()
 {
 	hal_init();
+        // start clock with 10 msec resolution
+	init_clock(10000, TIMER1);
 
+	// start scanning the keypad
 	hal_init_keypad();
-	
+
+	// set up a handler for TWI queries
+	usi_twi_slave_init(50, NULL, get_next_char_to_transmit);
+
 	cpumon_main_loop();
 	assert(FALSE);
 }
