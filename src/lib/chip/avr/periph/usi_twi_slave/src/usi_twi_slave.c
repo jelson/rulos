@@ -373,4 +373,7 @@ void usi_twi_slave_init(char address, MediaRecvSlot* recv_slot, usi_slave_send_f
   gpio_make_input(USI_SDA);
   
   usi_twi_slave_idle_bus();
+
+  // enable interrupts, in case nothing else in the program has done so already
+  sei();
 }
