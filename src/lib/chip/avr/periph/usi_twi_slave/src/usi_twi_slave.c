@@ -146,7 +146,7 @@ ISR(USI_STR_vect)
   DEBUG_STROBE(1);
   
   usi.state = USI_SLAVE_CHECK_ADDRESS;
-  gpio_make_input(USI_SDA);
+  gpio_make_input_no_pullup(USI_SDA);
 
   // wait for SCL to go low to ensure the Start Condition has completed (the
   // start detector will hold SCL low ) - if a Stop Condition arises then leave
@@ -262,7 +262,7 @@ ISR(USI_OVF_vect)
     //  Prepares to wait 8 clocks to receive a data byte from the master.
   case USI_SLAVE_RECV_DATA_WAIT: {
     usi.state = USI_SLAVE_RECV_DATA_ACK_SEND;
-    gpio_make_input(USI_SDA);
+    gpio_make_input_no_pullup(USI_SDA);
     usi_twi_slave_ack_overflow(USI_WANT_8_BITS);
     break;
   }
@@ -296,7 +296,7 @@ ISR(USI_OVF_vect)
     // If master NACKs, it means that master doesn't want any more data.
   case USI_SLAVE_REQUEST_REPLY_FROM_SEND_DATA: {
     //After sending, set SDA as input.
-    gpio_make_input(USI_SDA);
+    gpio_make_input_no_pullup(USI_SDA);
     USIDR = 0;
     usi_twi_slave_ack_overflow(USI_WANT_1_BIT);
     usi.state = USI_SLAVE_CHECK_REPLY_FROM_SEND_DATA;
@@ -370,7 +370,7 @@ void usi_twi_slave_init(char address, MediaRecvSlot* recv_slot, usi_slave_send_f
   gpio_set(USI_SCL);
   gpio_set(USI_SDA);
   gpio_make_output(USI_SCL);
-  gpio_make_input(USI_SDA);
+  gpio_make_input_no_pullup(USI_SDA);
   
   usi_twi_slave_idle_bus();
 
