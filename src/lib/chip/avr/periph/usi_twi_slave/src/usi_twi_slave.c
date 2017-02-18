@@ -146,23 +146,22 @@ ISR(USI_STR_vect)
   DEBUG_STROBE(1);
   
   usi.state = USI_SLAVE_CHECK_ADDRESS;
+
+  // Set SDA as input
   gpio_make_input_no_pullup(USI_SDA);
 
   // wait for SCL to go low to ensure the Start Condition has completed (the
-  // start detector will hold SCL low ) - if a Stop Condition arises then leave
-  // the interrupt to prevent waiting forever - don't use USISR to test for Stop
-  // Condition as in Application Note AVR312 because the Stop Condition Flag is
-  // going to be set from the last TWI sequence
+  // start detector will hold SCL low). If a Stop Condition arises then leave
+  // the interrupt to prevent waiting forever.
+  //
+  // The author of another USI slave driver writes a comment here:
+  // "Don't use USISR to test for Stop Condition as in Application Note AVR312 because
+  // the Stop Condition Flag is going to be set from the last TWI sequence."
+  // I'm not sure I agree with this; the USI TWI SLave applicatoin note does not check
+  // USISR here.
   while (gpio_is_set(USI_SCL) && gpio_is_clr(USI_SDA)) {
     // wait
   };
-
-  if (gpio_is_set(USI_SDA)) {
-    // A stop condition occurred right after start -- unexpected!
-    // Just reset the bus and wait for another start.
-    usi_twi_slave_idle_bus();
-    return;
-  }
 
   USICR =
     (1 << USISIE) |  // enable start condition interrupt
