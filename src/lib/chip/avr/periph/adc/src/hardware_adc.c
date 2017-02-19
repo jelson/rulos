@@ -65,21 +65,21 @@ void hal_init_adc_channel(uint8_t idx)
 	switch (idx)
 	{
 #if defined(MCU8_line) || defined (MCU328_line)
-		case 0: gpio_make_input_no_pullup(GPIO_C0); break;
-		case 1: gpio_make_input_no_pullup(GPIO_C1); break;
-		case 2: gpio_make_input_no_pullup(GPIO_C2); break;
-		case 3: gpio_make_input_no_pullup(GPIO_C3); break;
-		case 4: gpio_make_input_no_pullup(GPIO_C4); break;
-		case 5: gpio_make_input_no_pullup(GPIO_C5); break;
+		case 0: gpio_make_input_disable_pullup(GPIO_C0); break;
+		case 1: gpio_make_input_disable_pullup(GPIO_C1); break;
+		case 2: gpio_make_input_disable_pullup(GPIO_C2); break;
+		case 3: gpio_make_input_disable_pullup(GPIO_C3); break;
+		case 4: gpio_make_input_disable_pullup(GPIO_C4); break;
+		case 5: gpio_make_input_disable_pullup(GPIO_C5); break;
 #elif defined (MCU1284_line) || defined (MCUtiny84_line)
-		case 0: gpio_make_input_no_pullup(GPIO_A0); break;
-		case 1: gpio_make_input_no_pullup(GPIO_A1); break;
-		case 2: gpio_make_input_no_pullup(GPIO_A2); break;
-		case 3: gpio_make_input_no_pullup(GPIO_A3); break;
-		case 4: gpio_make_input_no_pullup(GPIO_A4); break;
-		case 5: gpio_make_input_no_pullup(GPIO_A5); break;
-		case 6: gpio_make_input_no_pullup(GPIO_A6); break;
-		case 7: gpio_make_input_no_pullup(GPIO_A7); break;
+		case 0: gpio_make_input_disable_pullup(GPIO_A0); break;
+		case 1: gpio_make_input_disable_pullup(GPIO_A1); break;
+		case 2: gpio_make_input_disable_pullup(GPIO_A2); break;
+		case 3: gpio_make_input_disable_pullup(GPIO_A3); break;
+		case 4: gpio_make_input_disable_pullup(GPIO_A4); break;
+		case 5: gpio_make_input_disable_pullup(GPIO_A5); break;
+		case 6: gpio_make_input_disable_pullup(GPIO_A6); break;
+		case 7: gpio_make_input_disable_pullup(GPIO_A7); break;
 #else
 # error ADC needs hardware love
 #endif

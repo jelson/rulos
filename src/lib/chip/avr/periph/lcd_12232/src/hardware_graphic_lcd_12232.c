@@ -87,14 +87,14 @@ void glcd_set_bus_dir(r_bool dir)
 	}
 	else
 	{
-		gpio_make_input(GLCD_DB0);
-		gpio_make_input(GLCD_DB1);
-		gpio_make_input(GLCD_DB2);
-		gpio_make_input(GLCD_DB3);
-		gpio_make_input(GLCD_DB4);
-		gpio_make_input(GLCD_DB5);
-		gpio_make_input(GLCD_DB6);
-		gpio_make_input(GLCD_DB7);
+		gpio_make_input_enable_pullup(GLCD_DB0);
+		gpio_make_input_enable_pullup(GLCD_DB1);
+		gpio_make_input_enable_pullup(GLCD_DB2);
+		gpio_make_input_enable_pullup(GLCD_DB3);
+		gpio_make_input_enable_pullup(GLCD_DB4);
+		gpio_make_input_enable_pullup(GLCD_DB5);
+		gpio_make_input_enable_pullup(GLCD_DB6);
+		gpio_make_input_enable_pullup(GLCD_DB7);
 	}
 }
 

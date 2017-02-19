@@ -50,7 +50,7 @@ int main()
 	// Check the OPT pin. If it's open, use the default 7-bit address of
 	// 0x32 (dec 50). If it's been jumpered, use 0x44 (dec 68).
 	uint8_t gpio_address;
-	gpio_make_input_with_pullup(OPT_PIN);
+	gpio_make_input_enable_pullup(OPT_PIN);
 	if (gpio_is_set(OPT_PIN)) {
 		gpio_address = 0x32;
 	} else {

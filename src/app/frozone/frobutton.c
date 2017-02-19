@@ -31,8 +31,8 @@ static void _frobutton_act(void* v_fb)
 void frobutton_init(Frobutton* fb, Animate* an)
 {
 #ifndef SIM
-	gpio_make_input(FRZ_SW0);
-	gpio_make_input(FRZ_SW1);
+	gpio_make_input_enable_pullup(FRZ_SW0);
+	gpio_make_input_enable_pullup(FRZ_SW1);
 #endif // SIM
 
 	fb->animate = an;

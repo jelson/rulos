@@ -80,8 +80,8 @@ void init_quadknob(QuadKnob *qk,
 #ifndef SIM
 	qk->pin0 = pin0;
 	qk->pin1 = pin1;
-	gpio_make_input(PINUSE(*pin0));
-	gpio_make_input(PINUSE(*pin1));
+	gpio_make_input_enable_pullup(PINUSE(*pin0));
+	gpio_make_input_enable_pullup(PINUSE(*pin1));
 #endif //SIM
 
 	schedule_us(1, (ActivationFuncPtr) qk_update, qk);

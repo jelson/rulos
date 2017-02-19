@@ -348,8 +348,8 @@ static UIEventDisposition control_handler(
 
 void init_control(ControlAct *ctl)
 {
-	gpio_make_input(LEFT_BTN);
-	gpio_make_input(RIGHT_BTN);
+	gpio_make_input_enable_pullup(LEFT_BTN);
+	gpio_make_input_enable_pullup(RIGHT_BTN);
 
 	gpio_make_output(LED0);
 	gpio_make_output(LED1);
@@ -596,7 +596,7 @@ void init_button(ButtonAct *button, UIEventHandler *handler)
 	button->lastStateTime = clock_time_us();
 	button->handler = handler;
 
-	gpio_make_input(SET_BTN);
+	gpio_make_input_enable_pullup(SET_BTN);
 
 	schedule_us(1, (ActivationFuncPtr) button_update, button);
 }
@@ -674,7 +674,7 @@ int main()
 	QuadTest qt;
 	init_quad_test(&qt);
 
-	gpio_make_input(SET_BTN);
+	gpio_make_input_enable_pullup(SET_BTN);
 	gpio_make_output(LED0);
 	gpio_make_output(LED1);
 	gpio_make_output(LED2);

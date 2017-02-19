@@ -153,7 +153,7 @@ void shell_func(Shell *shell)
 		uint8_t dx0 = 0;
 		for (p=&line[6]; *p!=0 && *p!='\n'; p++)
 		{
-			dx0+=glcd_paint_char(shell->glcd, *p, dx0);
+			dx0+=glcd_paint_char(shell->glcd, *p, dx0, false);
 		}
 		glcd_draw_framebuffer(shell->glcd);
 	}
@@ -203,12 +203,11 @@ void shell_func(Shell *shell)
 
 int main()
 {
-	util_init();
-	hal_init(bc_audioboard);	// TODO need a "bc_custom"
+	hal_init();
 	init_clock(1000, TIMER1);
 
 	GLCD glcd;
-	glcd_init(&glcd, NULL);
+	glcd_init(&glcd, NULL, NULL);
 	
 	Shell shell;
 	shell_init(&shell, &glcd);

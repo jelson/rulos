@@ -36,10 +36,10 @@ void key_scan_init(KeyScan *ks, SerialConsole *sc)
 {
 	ks->sc = sc;
 #if 0
-	gpio_make_input(KEYPAD_COL0);
-	gpio_make_input(KEYPAD_COL1);
-	gpio_make_input(KEYPAD_COL2);
-	gpio_make_input(KEYPAD_COL3);
+	gpio_make_input_enable_pullup(KEYPAD_COL0);
+	gpio_make_input_enable_pullup(KEYPAD_COL1);
+	gpio_make_input_enable_pullup(KEYPAD_COL2);
+	gpio_make_input_enable_pullup(KEYPAD_COL3);
 	gpio_make_output(KEYPAD_ROW0);
 	gpio_make_output(KEYPAD_ROW1);
 	gpio_make_output(KEYPAD_ROW2);

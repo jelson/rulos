@@ -570,7 +570,7 @@ void hal_6matrix_init(SixMatrix_Context_t *mat)
 
 	// spi bluewire
 #ifdef SPI_SHIFTING
-	gpio_make_input(COLLATCH_CLK);
+	gpio_make_input_disable_pullup(COLLATCH_CLK);
 #else
 	gpio_make_output(COLLATCH_CLK);
 #endif

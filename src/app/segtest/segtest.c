@@ -27,7 +27,8 @@
 
 int main()
 {
-	hal_init(bc_rocket0);
+	hal_init();
+	hal_init_rocketpanel(bc_rocket0);
 #if 0
 	int seg=0, dig=0;
 	seg=0;

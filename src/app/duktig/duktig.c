@@ -67,7 +67,7 @@ static void set_power(r_bool onoff)
 		gpio_set(POWER_GATE);
 		gpio_clr(LED_DRIVER_OE);
 	} else {
-		gpio_make_input_no_pullup(POWER_GATE);
+		gpio_make_input_disable_pullup(POWER_GATE);
 		gpio_set(LED_DRIVER_OE);
 	}
 }
@@ -209,9 +209,9 @@ int main()
 	set_timeout(&duktig, TIMEOUT_WHILE_ON_US);
 
 	// set up buttons
-	gpio_make_input_no_pullup(BUT1);
+	gpio_make_input_disable_pullup(BUT1);
 	init_button(&duktig.but1);
-	gpio_make_input_no_pullup(BUT2);
+	gpio_make_input_disable_pullup(BUT2);
 	init_button(&duktig.but2);
 
 	// set up periodic sampling task

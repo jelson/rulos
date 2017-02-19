@@ -72,10 +72,10 @@ char hal_read_keybuf()
 
 static void init_keypad(KeypadState *keypad)
 {
-	gpio_make_input(KEYPAD_COL0);
-	gpio_make_input(KEYPAD_COL1);
-	gpio_make_input(KEYPAD_COL2);
-	gpio_make_input(KEYPAD_COL3);
+	gpio_make_input_enable_pullup(KEYPAD_COL0);
+	gpio_make_input_enable_pullup(KEYPAD_COL1);
+	gpio_make_input_enable_pullup(KEYPAD_COL2);
+	gpio_make_input_enable_pullup(KEYPAD_COL3);
 	// these row setups may be redundant on board defs that
 	// re-use the row outputs, but some boards have keypads without LEDs,
 	// and we need to set up the ports.

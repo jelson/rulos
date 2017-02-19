@@ -130,7 +130,7 @@ void hal_init_joystick_button()
 {
 #if defined(JOYSTICK_TRIGGER)
 	// Only PCB11 defines a joystick trigger line
-	gpio_make_input(JOYSTICK_TRIGGER);
+	gpio_make_input_enable_pullup(JOYSTICK_TRIGGER);
 #else
 	assert(FALSE);	// no joystick on this hardware! why are you trying to read it?
 #endif

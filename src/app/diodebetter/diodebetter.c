@@ -48,7 +48,7 @@ void inputs_init(Inputs* inputs)
 	hal_init_adc_channel(KNOB_HUE);
 	hal_init_adc_channel(KNOB_LIGHTNESS0);
 	hal_init_adc_channel(KNOB_LIGHTNESS1);
-	gpio_make_input(FADER_KEY);
+	gpio_make_input_enable_pullup(FADER_KEY);
 }
 
 //----------------------------------------------------------------------
