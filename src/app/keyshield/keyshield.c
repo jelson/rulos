@@ -15,13 +15,9 @@
  ************************************************************************/
 
 #include <inttypes.h>
-#include <stdio.h>
-#include <string.h>
 
 #include "rulos.h"
 #include "hardware.h"
-#include "clock.h"
-#include "util.h"
 #include "hal.h"
 #include "usi_twi_slave.h"
 
