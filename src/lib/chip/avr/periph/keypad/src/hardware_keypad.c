@@ -103,14 +103,14 @@ static void keypad_update(KeypadState *key)
 
 	key->keypad_last = k;
 
-	// key was just released.  Set refactory time.
+	// key was just released.  Set refractory time.
 	if (k == 0) {
 		key->keypad_next_allowed_key_time = clock_time_us() + KEY_REFRACTORY_TIME_US;
 		return;
 	}
 
-	// key was just pushed.  if refrac time has arrived, queue it
-	if (clock_time_us() >= key->keypad_next_allowed_key_time) {
+	// key was just pushed.  If refrac time has arrived, queue it.
+	if (later_than(clock_time_us(), key->keypad_next_allowed_key_time)) {
 		CharQueue_append((CharQueue *)key->keypad_q, k);
 	}
 	
