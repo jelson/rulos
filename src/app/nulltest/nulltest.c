@@ -19,6 +19,14 @@
 
 #define FREQ_USEC 50000
 
+#if defined(RULOS_ARM)
+# define TEST_PIN GPIO3_03
+#elif defined(RULOS_AVR)
+# define TEST_PIN GPIO_B3
+#else
+# error "No test pin defined"
+#endif
+
 void test_func(void *data)
 {
 	schedule_us(FREQ_USEC, (ActivationFuncPtr) test_func, NULL);
@@ -29,6 +37,12 @@ int main()
 {
 	hal_init();
 
+	gpio_make_output(TEST_PIN);
+	while (1) {
+		gpio_set(TEST_PIN);
+		gpio_clr(TEST_PIN);
+	}
+	
 	init_clock(FREQ_USEC, TIMER1);
 
 	schedule_now((ActivationFuncPtr) test_func, NULL);
