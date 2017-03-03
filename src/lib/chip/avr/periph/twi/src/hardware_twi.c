@@ -419,7 +419,7 @@ void _hal_twi_send(MediaStateIfc *media, Addr dest_addr, const char *data, uint8
 	TwiState *twi = (TwiState *)media;
 	assert(twi->initted == TWI_MAGIC);
 
-	uint8_t old_interrupts = hal_start_atomic();
+	rulos_irq_state_t old_interrupts = hal_start_atomic();
 	assert(data != NULL);
 	assert(len > 0);
 	assert(twi->out_pkt == NULL);
@@ -442,7 +442,7 @@ void hal_twi_start_master_read(TwiState *twi, Addr addr, MediaRecvSlot *masterRe
 	assert(twi->initted == TWI_MAGIC);
 	assert(masterRecvSlot != NULL);
 
-	uint8_t old_interrupts = hal_start_atomic();
+	rulos_irq_state_t old_interrupts = hal_start_atomic();
 	assert(twi->masterRecvSlot == NULL);
 
 	twi->masterRecvSlot = masterRecvSlot;

@@ -61,15 +61,15 @@ ISR(INT0_vect)
 
 
 // disable interrupts, and return true if interrupts had been enabled.
-uint8_t hal_start_atomic()
+rulos_irq_state_t hal_start_atomic()
 {
-	uint8_t retval = SREG & _BV(SREG_I);
+	rulos_irq_state_t retval = SREG & _BV(SREG_I);
 	cli();
 	return retval;
 }
 
 // conditionally enable interrupts
-void hal_end_atomic(uint8_t interrupt_flag)
+void hal_end_atomic(rulos_irq_state_t interrupt_flag)
 {
 	if (interrupt_flag)
 		sei();

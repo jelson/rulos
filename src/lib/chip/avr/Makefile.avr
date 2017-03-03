@@ -44,7 +44,7 @@ CURR_OBJDIR := $(AVR_OBJDIR)
 -include $(foreach dir, $(sort $(dir $(AVR_SOURCES))), $(wildcard $(dir)/../Makefile.extra))
 
 ## Options common to compile, link and assembly rules
-AVR_COMMON_FLAGS = -Wall -Werror -mmcu=$(MCU)
+AVR_COMMON_FLAGS = -Wall -Werror -mmcu=$(MCU) -DRULOS_AVR
 
 ## Compile options common for all C compilation units.
 AVR_CFLAGS = $(AVR_COMMON_FLAGS)

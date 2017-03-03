@@ -47,17 +47,6 @@ typedef struct {
 } SysClock;
 SysClock clock;
 
-// Returns true if a > b using rollover math, assuming 32-bit signed time values
-uint8_t later_than(Time a, Time b)
-{
-	// the subtraction will roll over too
-	return a - b > 0;
-
-	// this took forever to puzzle out and was originally a
-	// complicated set of conditionals
-}
-
-
 void clock_handler(void *data)
 {
 #ifdef TIMING_DEBUG
@@ -100,8 +89,7 @@ void schedule_us(Time offset_us, ActivationFuncPtr func, void *data)
 
 void schedule_now(ActivationFuncPtr func, void *data)
 {
-	uint8_t old_interrupts;
-	old_interrupts = hal_start_atomic();
+	rulos_irq_state_t old_interrupts = hal_start_atomic();
 	if (clock.now_queue_size < NOW_QUEUE_CAPACITY)
 	{
 		clock.now_queue[clock.now_queue_size].func = func;
@@ -128,8 +116,7 @@ void schedule_absolute(Time at_time, ActivationFuncPtr func, void *data)
 #ifdef TIMING_DEBUG
 	gpio_set(GPIO_D6);
 #endif
-	uint8_t old_interrupts;
-	old_interrupts = hal_start_atomic();
+	rulos_irq_state_t old_interrupts = hal_start_atomic();
 	heap_insert(&clock.heap, at_time, func, data);
 	hal_end_atomic(old_interrupts);
 #ifdef TIMING_DEBUG
@@ -141,10 +128,9 @@ void schedule_absolute(Time at_time, ActivationFuncPtr func, void *data)
 Time precise_clock_time_us()
 {
 	uint16_t milliintervals;
-	uint8_t old_interrupts;
 	Time t;
 
-	old_interrupts = hal_start_atomic();
+	rulos_irq_state_t old_interrupts = hal_start_atomic();
 	milliintervals = hal_elapsed_milliintervals();
 	t = _interrupt_driven_jiffy_clock_us;
 	hal_end_atomic(old_interrupts);
@@ -173,14 +159,13 @@ void scheduler_run_once()
 		Time due_time;
 		ActivationRecord act;
 		int rc;
-		uint8_t old_interrupts;
 
 		r_bool valid = FALSE;
 
 #ifdef TIMING_DEBUG
 		gpio_set(GPIO_D6);
 #endif
-		old_interrupts = hal_start_atomic();
+		rulos_irq_state_t old_interrupts = hal_start_atomic();
 		if (clock.now_queue_size > 0)
 		{
 			act = clock.now_queue[0];

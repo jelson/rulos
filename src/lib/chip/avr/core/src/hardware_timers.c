@@ -316,7 +316,7 @@ uint16_t hal_elapsed_milliintervals()
 // 
 void hal_speedup_clock_ppm(int32_t ratio)
 {
-	uint8_t old_interrupts = hal_start_atomic();
+	rulos_irq_state_t old_interrupts = hal_start_atomic();
 
 	uint16_t new_ocr1a = OCR1A;
 	int32_t adjustment = new_ocr1a;

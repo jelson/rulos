@@ -63,11 +63,11 @@ static int numSimSIGIOHandlers = 0;
 static void sim_register_generic_handler(SimActivation_t *handlerList, int *numHandlers,
 					 Handler func, void *data)
 {
-	uint8_t oldInt = hal_start_atomic();
+	rulos_irq_state_t old_interrupts = hal_start_atomic();
 	handlerList[*numHandlers].func = func;
 	handlerList[*numHandlers].data = data;
 	(*numHandlers)++;
-	hal_end_atomic(oldInt);
+	hal_end_atomic(old_interrupts);
 }
 
 void sim_register_clock_handler(Handler func, void *data)
@@ -85,12 +85,12 @@ void sim_register_sigio_handler(Handler func, void *data)
 
 static void sim_generic_fire_handlers(SimActivation_t *handlerList, int numHandlers)
 {
-	uint8_t oldInt = hal_start_atomic();
+	rulos_irq_state_t old_interrupts = hal_start_atomic();
 	int i;
 
 	for (i = 0; i < numHandlers; i++)
 		handlerList[i].func(handlerList[i].data);
-	hal_end_atomic(oldInt);
+	hal_end_atomic(old_interrupts);
 }
 
 void sim_clock_handler(int signo)
@@ -138,17 +138,17 @@ void hal_speedup_clock_ppm(int32_t ratio)
 	// do nothing for now
 }
 
-uint8_t is_blocked = 0;
+rulos_irq_state_t is_blocked = 0;
 
-uint8_t hal_start_atomic()
+rulos_irq_state_t hal_start_atomic()
 {
 	sigprocmask(SIG_BLOCK, &mask_set, NULL);
-	uint8_t retval = is_blocked;
+	rulos_irq_state_t retval = is_blocked;
 	is_blocked = 1;
 	return retval;
 }
 
-void hal_end_atomic(uint8_t blocked)
+void hal_end_atomic(rulos_irq_state_t blocked)
 {
 	if (!blocked)
 	{

@@ -20,7 +20,22 @@
 #include "heap.h"
 #include "hal.h"
 
-uint8_t later_than(Time a, Time b);
+// Returns true if b is later than a using rollover math, assuming 32-bit
+// signed time values.
+static inline uint8_t later_than(Time a, Time b) {
+	// the subtraction will roll over too
+	return a - b > 0;
+
+	// this took forever to puzzle out and was originally a
+	// complicated set of conditionals
+}
+
+// Returns true if b is later than or equal to a using rollover math,
+// assuming 32-bit signed time values.
+static inline uint8_t later_than_or_eq(Time a, Time b) {
+	// the subtraction will roll over too
+	return a - b >= 0;
+}
 
 void init_clock(Time interval_us, uint8_t timer_id);
 
@@ -33,7 +48,7 @@ static inline Time clock_time_us() { return _last_scheduler_run_us; }
 
 static inline Time get_interrupt_driven_jiffy_clock() {
 	Time retval;
-	uint8_t old_interrupts = hal_start_atomic();
+	rulos_irq_state_t old_interrupts = hal_start_atomic();
 	retval = _interrupt_driven_jiffy_clock_us;
 	hal_end_atomic(old_interrupts);
 	return retval;

@@ -95,7 +95,7 @@ uint16_t hal_read_adc(uint8_t idx)
 #endif
 
 	uint16_t value;
-	uint8_t old_interrupts = hal_start_atomic();
+	rulos_irq_state_t old_interrupts = hal_start_atomic();
 	value = g_theADC.value[idx];
 	hal_end_atomic(old_interrupts);
 	return value;

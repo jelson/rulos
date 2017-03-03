@@ -113,7 +113,7 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 	uint8_t incoming_checksum;
 	uint8_t slotIdx;
 	uint8_t payload_len;
-	uint8_t oldInterrupts;
+	rulos_irq_state_t oldInterrupts;
 	RecvSlot *rs;
 	
 	// make sure it's at least as long as we're expecting

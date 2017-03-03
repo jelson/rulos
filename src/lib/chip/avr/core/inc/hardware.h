@@ -113,7 +113,7 @@ static inline void gpio_make_output(volatile uint8_t *ddr,
 }
 
 /*
- * configure a pin as input, without touching the pullup config regstier
+ * configure a pin as input, without touching the pullup config register
  */
 static inline void gpio_make_input(volatile uint8_t *ddr,
 								   volatile uint8_t *port,

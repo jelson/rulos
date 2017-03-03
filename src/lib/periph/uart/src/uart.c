@@ -71,7 +71,7 @@ r_bool _uart_get_next_character(UartHandler *handler, char *c /* OUT */)
 
 r_bool uart_read(UartState_t *u, char *c /* OUT */)
 {
-	uint8_t old_interrupts = hal_start_atomic();
+	rulos_irq_state_t old_interrupts = hal_start_atomic();
 	r_bool retval = CharQueue_pop(u->recvQueue.q, c);
 	hal_end_atomic(old_interrupts);
 	return retval;

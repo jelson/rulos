@@ -95,22 +95,32 @@ static void keypad_update(KeypadState *key)
 {
 	schedule_us(KEY_SCAN_INTERVAL_US, (ActivationFuncPtr) keypad_update, key);
 
+	Time now = clock_time_us();
+	
+	// If we're already past the allowed-key-time, advance it to the present.
+	// Otherwise, if half a clock-rollver period goes by with no keypress, a
+	// keypress might be improperly ignored.
+	if (later_than(now, key->keypad_next_allowed_key_time)) {
+		key->keypad_next_allowed_key_time = now;
+	}
+
+	// Scan the keypad.
 	char k = hal_scan_keypad();
 
-	// if the same key is down, or up, ignore it
+	// If the key state hasn't changed since the last time we checked, ignore it.
 	if (k == key->keypad_last)
 		return;
 
 	key->keypad_last = k;
 
-	// key was just released.  Set refractory time.
+	// A key was just released. Set the refractory time.
 	if (k == 0) {
-		key->keypad_next_allowed_key_time = clock_time_us() + KEY_REFRACTORY_TIME_US;
+		key->keypad_next_allowed_key_time = now + KEY_REFRACTORY_TIME_US;
 		return;
 	}
 
-	// key was just pushed.  If refrac time has arrived, queue it.
-	if (later_than(clock_time_us(), key->keypad_next_allowed_key_time)) {
+	// A key was just pushed. If the refrac time has passed, queue it.
+	if (later_than_or_eq(now, key->keypad_next_allowed_key_time)) {
 		CharQueue_append((CharQueue *)key->keypad_q, k);
 	}
 	

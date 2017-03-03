@@ -14,12 +14,12 @@
  *
  ************************************************************************/
 
-#ifndef __hal_h__
-#define __hal_h__
+#pragma once
 
 #include "heap.h"
 #include "util.h"
 #include "media.h"
+#include "hardware_types.h"
 
 /*
  * Functions that are separately implemented by both the simulator and the real hardware
@@ -39,10 +39,10 @@ void hal_init();
 void hal_init_rocketpanel(BoardConfiguration bc);
 
 // block interrupts/signals; returns previous state of interrupts
-uint8_t hal_start_atomic(void);
+rulos_irq_state_t hal_start_atomic();
 
 // restore previous interrupt state
-void hal_end_atomic(uint8_t old_interrupts);
+void hal_end_atomic(rulos_irq_state_t old_interrupts);
 
 void hal_idle();			// hw: spin. sim: sleep
 
@@ -106,5 +106,3 @@ void hal_spi_send(uint8_t bte);
 void hal_audio_init(void);
 void hal_audio_fire_latch(void);
 void hal_audio_shift_sample(uint8_t sample);
-
-#endif // __hal_h__
