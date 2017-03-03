@@ -90,7 +90,7 @@ endif
 ARM_CORE = CORE_$(ARM_MX)
 
 ## Options common to compile, link and assembly rules
-ARM_COMMON_FLAGS = -Wall -Werror
+ARM_COMMON_FLAGS = -Wall -Werror -DRULOS_ARM
 
 ## Compile options common for all C compilation units.
 ARM_CFLAGS = $(ARM_COMMON_FLAGS)
