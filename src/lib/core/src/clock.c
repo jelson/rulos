@@ -39,10 +39,13 @@ uint32_t _spin_counter;
 
 extern volatile uint8_t run_scheduler_now;
 
-#define NOW_QUEUE_CAPACITY 4
+#ifndef SCHEDULER_NOW_QUEUE_CAPACITY
+# define SCHEDULER_NOW_QUEUE_CAPACITY 4
+#endif
+
 typedef struct {
 	Heap heap;
-	ActivationRecord now_queue[NOW_QUEUE_CAPACITY];
+	ActivationRecord now_queue[SCHEDULER_NOW_QUEUE_CAPACITY];
 	uint8_t now_queue_size;
 } SysClock;
 SysClock clock;
@@ -90,7 +93,7 @@ void schedule_us(Time offset_us, ActivationFuncPtr func, void *data)
 void schedule_now(ActivationFuncPtr func, void *data)
 {
 	rulos_irq_state_t old_interrupts = hal_start_atomic();
-	if (clock.now_queue_size < NOW_QUEUE_CAPACITY)
+	if (clock.now_queue_size < SCHEDULER_NOW_QUEUE_CAPACITY)
 	{
 		clock.now_queue[clock.now_queue_size].func = func;
 		clock.now_queue[clock.now_queue_size].data = data;

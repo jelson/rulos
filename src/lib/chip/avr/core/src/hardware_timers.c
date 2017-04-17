@@ -53,7 +53,7 @@ void *timer2_data = NULL;
 
 #if defined(MCU328_line) || defined(MCU1284_line)
 ISR(TIMER0_COMPA_vect)
-#elif defined(MCUtiny84_line)
+#elif defined(MCUtiny84_line) || defined(MCUtiny85_line)
 ISR(TIM0_COMPA_vect)
 #elif defined(MCU8_line)
 static inline void unused_function_0()
@@ -66,7 +66,7 @@ static inline void unused_function_0()
 
 #if defined(MCU328_line) || defined(MCU1284_line) || defined(MCU8_line)
 ISR(TIMER1_COMPA_vect)
-#elif defined(MCUtiny84_line)
+#elif defined(MCUtiny84_line) || defined(MCUtiny85_line)
 ISR(TIM1_COMPA_vect)
 #else
 # error hardware-specific timer code needs help!
@@ -79,7 +79,7 @@ ISR(TIM1_COMPA_vect)
 ISR(TIMER2_COMP_vect)
 #elif defined(MCU328_line) || defined(MCU1284_line)
 ISR(TIMER2_COMPA_vect)
-#elif defined(MCUtiny84_line)
+#elif defined(MCUtiny84_line) || defined(MCUtiny85_line)
 static inline void unused_function_2()
 #else
 # error hardware-specific timer code needs help!
@@ -106,7 +106,7 @@ void init_f_cpu()
 	// read fuses to determine clock frequency
 	uint8_t cksel = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS) & 0x0f;
 	hardware_f_cpu = f_cpu_values[cksel-1];
-# elif defined(MCU328_line) || defined (MCU1284_line) || defined (MCUtiny84_line)
+# elif defined(MCU328_line) || defined (MCU1284_line) || defined (MCUtiny84_line) || defined(MCUtiny85_line)
 	// If we decide to do variable clock rates on 328p, see page 37
 	// for prescale configurations.
 	CLKPR = 0x80;
@@ -149,7 +149,11 @@ typedef struct {
 	const uint8_t ocr_bits;
 } TimerDef;
 static const TimerDef _timer0 = { _timer0_prescaler_bits,  8 };
+#if defined(MCUtiny85_line)
+static const TimerDef _timer1 = { _timer1_prescaler_bits, 8 };
+#else
 static const TimerDef _timer1 = { _timer1_prescaler_bits, 16 };
+#endif
 static const TimerDef _timer2 = { _timer2_prescaler_bits,  8 };
 
 static void find_prescaler(uint32_t req_us_per_period, const TimerDef *timerDef,
@@ -158,7 +162,7 @@ static void find_prescaler(uint32_t req_us_per_period, const TimerDef *timerDef,
 	uint16_t *out_ocr	// count limit
 	)
 {
-#define HS_FACTOR 120
+#define HS_FACTOR ((uint32_t) 120)
 	// Units: 120hs = 1us.
 	// jelson changed from 16 to 48 because of my 12mhz crystal
 	// 3/4/2011: jelson changed from 48 to 120 because of my 20mhz crystal.
@@ -173,6 +177,20 @@ static void find_prescaler(uint32_t req_us_per_period, const TimerDef *timerDef,
 		uint32_t prescale_tick_per_period =
 			((req_us_per_period*HS_FACTOR) / hs_per_prescale_tick) + 1;
 		uint32_t max_prescale_ticks = (((uint32_t) 1)<<timerDef->ocr_bits)-1;
+
+#ifdef USI_SERIAL_DEBUG
+		char buf[50];
+		sprintf(buf, "C%dH=%ldP=%xH=%ldI=%ldJ=%ldM=%ld",
+			cs,
+			hardware_f_cpu,
+			timerDef->prescaler_bits[cs],
+			hs_per_cpu_tick,
+			hs_per_prescale_tick,
+			prescale_tick_per_period,
+			max_prescale_ticks);
+		usi_serial_send(buf);
+#endif	      
+
 		if (prescale_tick_per_period > max_prescale_ticks)
 		{
 			// go try a bigger prescaler
@@ -192,17 +210,16 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 {
 	extern uint8_t hal_initted;
 	assert(hal_initted == HAL_MAGIC);
-
-	uint32_t actual_us_per_period;
+	uint32_t actual_us_per_period = 0;
 		// may not equal what we asked for, because of prescaler rounding.
-	uint8_t cs;
-	uint16_t ocr;
+	uint8_t cs = 0;
+	uint16_t ocr = 0;
 
 	// disable interrupts
 	cli();
 
 	switch (timer_id) {
-#if defined(MCU328_line) || defined(MCU1284_line) || defined(MCUtiny84_line)
+#if defined(MCU328_line) || defined(MCU1284_line) || defined(MCUtiny84_line) || defined(MCUtiny85_line)
 	case TIMER0:
 		find_prescaler(us, &_timer0, &actual_us_per_period, &cs, &ocr);
 
@@ -219,13 +236,18 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 		TCCR0B = tccr0b;
 
 		/* enable output-compare int. */
+#if defined(MCUtiny85_line)
+		TIMSK |= _BV(OCIE0A);
+#else
 		TIMSK0 |= _BV(OCIE0A);
+#endif
 
 		/* reset counter */
 		TCNT0 = 0; 
 		break;
 #endif
 
+#if defined(MCU8_line) || defined(MCU328_line) || defined(MCU1284_line) || defined(MCUtiny84_line)
 	case TIMER1:
 		find_prescaler(us, &_timer1, &actual_us_per_period, &cs, &ocr);
 
@@ -249,10 +271,10 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 #else
 # error hardware-specific timer code needs help!
 #endif
-
 		/* reset counter */
 		TCNT1 = 0; 
 		break;
+#endif
 
 #if defined(MCU8_line) || defined(MCU328_line) || defined(MCU1284_line)
 	case TIMER2:

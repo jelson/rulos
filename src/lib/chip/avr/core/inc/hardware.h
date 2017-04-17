@@ -30,6 +30,8 @@
 # define MCU8_line
 #elif defined (MCUattiny24) || defined(MCUattiny44) || defined (MCUattiny84) || defined (MCUattiny24a) || defined(MCUattiny44a) || defined (MCUattiny84a)
 # define MCUtiny84_line
+#elif defined (MCUattiny25) || defined (MCUattiny25v) || defined (MCUattiny45) || defined (MCUattiny45v) || defined (MCUattiny85) || defined (MCUattiny85v)
+# define MCUtiny85_line
 #else
 # error Unknown processor
 #endif

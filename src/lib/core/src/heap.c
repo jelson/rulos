@@ -46,7 +46,7 @@ void heap_bubble(HeapEntry *he, int ptr)
 void heap_insert(Heap *heap, Time key, ActivationFuncPtr func, void *data)
 {
 	int hc = heap->heap_count;
-	assert(hc < HEAP_CAPACITY);	// heap overflow
+	assert(hc < SCHEDULER_CAPACITY);	// heap overflow
 	heap->heap[hc].key = key;
 	heap->heap[hc].activation.func = func;
 	heap->heap[hc].activation.data = data;

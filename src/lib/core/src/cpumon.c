@@ -17,7 +17,7 @@
 #include "rulos.h"
 #include "cpumon.h"
 
-#ifdef TIMING_DEBUG
+#ifdef TIMING_DEBUG_PIN
 # include "hardware.h"
 #endif
 
@@ -44,6 +44,10 @@ void cpumon_main_loop()
 {
 	_run_main_loop = TRUE;
 
+#ifdef TIMING_DEBUG_PIN
+	gpio_make_output(TIMING_DEBUG_PIN);
+#endif
+
 	while (_run_main_loop)
 	{
 		run_scheduler_now = FALSE;
@@ -51,12 +55,12 @@ void cpumon_main_loop()
 		scheduler_run_once();
 
 		do {
-#ifdef TIMING_DEBUG
-			gpio_clr(GPIO_D4);
+#ifdef TIMING_DEBUG_PIN
+			gpio_clr(TIMING_DEBUG_PIN);
 #endif
 			hal_idle();
 #ifdef TIMING_DEBUG
-			gpio_set(GPIO_D4);
+			gpio_set(TIMING_DEBUG_PIN);
 #endif
 		} while (!run_scheduler_now);
 

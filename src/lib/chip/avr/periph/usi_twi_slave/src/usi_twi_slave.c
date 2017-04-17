@@ -21,32 +21,8 @@
 
 #include "rulos.h"
 #include "hardware.h"
+#include "usi_pins.h"
 #include "usi_twi_slave.h"
-
-#if \
-  defined (__AVR_ATtiny24__)  | \
-  defined (__AVR_ATtiny24A__) | \
-  defined (__AVR_ATtiny44__)  | \
-  defined (__AVR_ATtiny44A__) | \
-  defined (__AVR_ATtiny84__)  | \
-  defined (__AVR_ATtiny84A__)
-#define USI_SDA GPIO_A6
-#define USI_SCL GPIO_A4
-#elif \
-  defined (__AVR_AT90Tiny2313__) | \
-  defined (__AVR_ATTiny2313__)
-#define USI_SDA GPIO_B5
-#define USI_SCL GPIO_B7
-#elif \
-  defined(__AVR_ATtiny26__) | \
-  defined(__AVR_ATtiny25__) | \
-  defined(__AVR_ATtiny45__) | \
-  defined(__AVR_ATtiny85__)
-#define USI_SDA GPIO_B0
-#define USI_SCL GPIO_B2
-#else
-# error USI TWI chip definitions needed for this platform
-#endif
 
 // Debug
 

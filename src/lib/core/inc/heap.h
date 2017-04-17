@@ -34,9 +34,12 @@ typedef struct {
 	ActivationRecord activation;
 } HeapEntry;
 
-#define HEAP_CAPACITY 32
+#ifndef SCHEDULER_CAPACITY
+# define SCHEDULER_CAPACITY 32
+#endif
+
 typedef struct {
-	HeapEntry heap[HEAP_CAPACITY];
+	HeapEntry heap[SCHEDULER_CAPACITY];
 	int heap_count;
 } Heap;
 
