@@ -24,8 +24,8 @@ static void missa_hal_set_led(uint8_t led_num, uint8_t onoff);
 
 #ifdef SIM
 
-char led0_state = 'o';
-char led1_state = 'o';
+char led0_state = 'x';
+char led1_state = 'x';
 
 static void print_led_state() {
   printf("\rleds:   %c    %c     ", led0_state, led1_state);
@@ -70,9 +70,9 @@ static void missa_hal_init()
 
 static void missa_hal_set_led(uint8_t led_num, uint8_t onoff) {
   if (led_num == 0) {
-    gpio_set_or_clr(LED0_PIN, onoff);
+    gpio_set_or_clr(LED0_PIN, !onoff);
   } else {
-    gpio_set_or_clr(LED1_PIN, onoff);
+    gpio_set_or_clr(LED1_PIN, !onoff);
   }
 }
 
@@ -96,13 +96,75 @@ static void start_birthday_morse(void* data) {
              start_birthday_morse_after_delay);
 }
 
+/////////////////////////////////////////
+
+const int primes[] = { 2,3,5,7,11,13,17,19,23,-1};
+  
+typedef struct {
+  uint8_t prime_num;
+  uint8_t symbol_num;
+  uint8_t is_keyed;
+} prime_state_t;
+
+prime_state_t prime_state;
+
+static void do_prime_count(void* data);
+
+static void init_prime_counting() {
+  prime_state.prime_num = 0;
+  prime_state.symbol_num = 0;
+  prime_state.is_keyed = 0;
+
+  do_prime_count(NULL);
+}
+
+static void prime_delay(uint8_t time_quanta) {
+  schedule_us((uint32_t) 210000 * time_quanta, do_prime_count, NULL);
+}
+
+static void do_prime_count(void* data) {
+  if (prime_state.is_keyed) {
+    missa_hal_set_led(1, 0);
+    prime_state.is_keyed = 0;
+
+    prime_state.symbol_num++;
+
+    if (prime_state.symbol_num < primes[prime_state.prime_num]) {
+      // End of this symbol. Wait the inter-symbol delay.
+      prime_delay(1);
+      return;
+    }
+
+    prime_state.prime_num++;
+    prime_state.symbol_num = 0;
+    if (primes[prime_state.prime_num] != -1) {
+      // End of this prime. Wait the inter-prime delay.
+      prime_delay(3);
+      return;
+    }
+
+    // End of sequence. Reset for next sequence.
+    prime_state.prime_num = 0;
+    prime_delay(10);
+    return;
+  } else {
+    // Turn on keying and wait symbol delay.
+    missa_hal_set_led(1, 1);
+    prime_state.is_keyed = 1;
+    prime_delay(1);
+  }
+}
+    
 int main()
 {
   hal_init();
   missa_hal_init();
+  missa_hal_set_led(0, 0);
+  missa_hal_set_led(1, 0);
   init_clock(10000, TIMER0);
 
   start_birthday_morse(NULL);
-
+  init_prime_counting();
+  
   cpumon_main_loop();
 }
