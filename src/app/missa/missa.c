@@ -59,8 +59,8 @@ static void missa_hal_set_led(uint8_t led_num, uint8_t onoff) {
 
 #include "hardware.h"
 
-#define LED0_PIN GPIO_B2
-#define LED1_PIN GPIO_B3
+#define LED0_PIN GPIO_B0
+#define LED1_PIN GPIO_B2
 
 static void missa_hal_init()
 {
