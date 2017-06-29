@@ -15,7 +15,7 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr sim
-MCU := attiny45
+MCU := attiny85
 TARGET := missa
 BOARD := GENERIC
 
