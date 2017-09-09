@@ -182,7 +182,7 @@ static uint16_t read_adc_raw(uint8_t adc_channel)
 	Registers belongs to the same conversion.
 	*/
 	uint16_t newval = ADCL;
-	newval |= ((uint16_t) ADCH << 8);
+	newval |= (((uint16_t) ADCH) << 8);
 
 	return newval;
 }
