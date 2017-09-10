@@ -36,9 +36,9 @@ typedef struct {
 
 typedef enum {
 	hpam_hobbs = 0,
-	hpam_clanger = 1,
-	hpam_hatch_solenoid_reserved = 2,
-	hpam_lighting_flicker = 3,	// 5V
+	hpam_reserved = 1,		// future: clanger, hatch open solenoid
+	hpam_lighting_flicker = 2,
+	hpam_five_volts = 3,	// 5V channel, no longer used
 	hpam_thruster_frontleft = 4,
 	hpam_thruster_frontright = 5,
 	hpam_thruster_rear = 6,

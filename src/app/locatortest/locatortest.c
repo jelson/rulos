@@ -22,7 +22,9 @@
 
 #define SAMPLING_PERIOD  30000
 #define SCHED_QUANTUM    5000
-#define SERIAL_BAUD_RATE 250000
+//#define SERIAL_BAUD_RATE 250000
+//Don't know how to get 250kbaud in Linux.
+#define SERIAL_BAUD_RATE 38400
 
 
 #include "rulos.h"
@@ -708,6 +710,11 @@ void sampleLocator(locatorAct_t *locatorAct)
 
 int main()
 {
+	// set clock prescaler to 1
+	CLKPR = 0x80;
+	CLKPR = 0x00;
+	// rats, external clock can only be set by fuses.
+	
 	hal_init();
 	init_clock(SCHED_QUANTUM, TIMER1);
 
@@ -720,8 +727,11 @@ int main()
 	} else {
 		snprintf(locatorAct_g.UARTsendBuf, sizeof(locatorAct_g.UARTsendBuf)-1, "^i;0$\r\n");
 	}
-	wait_for_serial(&locatorAct_g);
-	emit(&locatorAct_g, locatorAct_g.UARTsendBuf);
+	while (1)	// loop jonh
+	{
+		wait_for_serial(&locatorAct_g);
+		emit(&locatorAct_g, locatorAct_g.UARTsendBuf);
+	}
 
 #ifdef TIME_DEBUG
 	for (uint8_t i = 0; i < 10; i++)

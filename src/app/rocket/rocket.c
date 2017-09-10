@@ -55,6 +55,7 @@
 #include "potsticker.h"
 #include "volume_control.h"
 #include "bss_canary.h"
+#include "uart.h"
 
 #if SIM
 #include "sim.h"
@@ -103,6 +104,7 @@ typedef struct {
 void init_rocket0(Rocket0 *r0)
 {
 	drtc_init(&r0->dr, 0, clock_time_us()+20000000);
+
 	init_twi_network(&r0->network, 100, ROCKET_ADDR);
 	lunar_distance_init(&r0->ld, 1, 2 /*, SPEED_POT_CHANNEL*/);
 	init_audio_client(&r0->audio_client, &r0->network);
@@ -117,8 +119,10 @@ void init_rocket0(Rocket0 *r0)
 	init_screenblanker_sender(&r0->screenblanker_sender, &r0->network);
 	r0->screenblanker.screenblanker_sender = &r0->screenblanker_sender;
 
+//XXX drtc works here
 	volume_control_init(&r0->volume_control, &r0->audio_client, VOLUME_POT_CHANNEL, /*board*/ 0);
 
+//XXX drtc LOST here
 	init_control_panel(
 		&r0->cp,
 		3,
@@ -138,9 +142,12 @@ void init_rocket0(Rocket0 *r0)
 	input_poller_init(&r0->ip, (InputInjectorIfc*) &r0->cp.direct_injector);
 #endif
 
+//XXX drtc LOST here
+//XXX drtc LOST here; works here with volume control removed.
 	// Remote receiver
 	init_remote_keyboard_recv(&r0->rkr, &r0->network, (InputInjectorIfc*) &r0->cp.direct_injector, REMOTE_KEYBOARD_PORT);
 
+//XXX drtc works here with volume control removed.
 	r0->thrusterUpdate[1].func = (ThrusterUpdateFunc) ddock_thruster_update;
 	r0->thrusterUpdate[1].data = &r0->cp.ccdock.dock;
 
@@ -148,8 +155,10 @@ void init_rocket0(Rocket0 *r0)
 	r0->thrusterUpdate[0].func = (ThrusterUpdateFunc) tsn_update;
 	r0->thrusterUpdate[0].data = &r0->tsn;
 
+//XXX drtc works here with volume control removed.
 	init_hobbs(&r0->hobbs, &r0->hpam, &r0->idle);
 
+//XXX drtc works here with volume control present.
 	init_slow_boot(&r0->slow_boot, &r0->screenblanker, &r0->audio_client);
 
 	init_potsticker(&r0->potsticker,
@@ -159,7 +168,9 @@ void init_rocket0(Rocket0 *r0)
 		'p',
 		'q');
 
+#if 0
 	bss_canary_init();
+#endif
 }
 
 static Rocket0 rocket0;	// allocate obj in .bss so it's easy to count
@@ -172,11 +183,19 @@ int main()
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);	// includes slow calibration phase
+#if 0
+	UartHandler uart;
+	hal_uart_init(&uart, 38400, true, 0);
+	while (true) {
+		hal_uart_sync_send(&uart, (char*) "hello\n", 6);
+	}
+#endif
 
 #if 0
 //	// TODO temporary for sync debug output; would interfere with uart net stack
-	hal_uart_init(NULL, 38400, true);
-	hal_uart_sync_send((char*) "hello\n", 6);
+	UartHandler uart;
+	hal_uart_init(&uart, 38400, true, 0);
+	hal_uart_sync_send(&uart, (char*) "hello\n", 6);
 #endif
 
 	board_buffer_module_init();

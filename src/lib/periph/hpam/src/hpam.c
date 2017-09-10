@@ -45,11 +45,11 @@ void _hpam_init_port(HPAM *hpam, HPAMIndex idx, uint8_t rest_time_secs, uint8_t 
 void init_hpam(HPAM *hpam, uint8_t board0, ThrusterUpdate *thrusterUpdates)
 {
 	_hpam_init_port(hpam, hpam_hobbs, REST_NONE, board0, HPAM_DIGIT_0, 0);
-	_hpam_init_port(hpam, hpam_clanger, REST_NONE, board0, HPAM_DIGIT_0, 1);
+	_hpam_init_port(hpam, hpam_reserved, REST_NONE, board0, HPAM_DIGIT_0, 1);
 		// HPAM 0 slot 2
-	_hpam_init_port(hpam, hpam_hatch_solenoid_reserved, REST_NONE, board0, HPAM_DIGIT_0, 2);
+	_hpam_init_port(hpam, hpam_lighting_flicker, REST_NONE, board0, HPAM_DIGIT_0, 2);
 		// HPAM 0 slot 1
-	_hpam_init_port(hpam, hpam_lighting_flicker, REST_NONE, board0, HPAM_DIGIT_0, 7);
+	_hpam_init_port(hpam, hpam_five_volts, REST_NONE, board0, HPAM_DIGIT_0, 7);
 		// HPAM 0 slot 3
 	_hpam_init_port(hpam, hpam_thruster_frontleft, REST_TIME_SECONDS, board0, HPAM_DIGIT_0, 4);
 		// HPAM 1 slot 3
