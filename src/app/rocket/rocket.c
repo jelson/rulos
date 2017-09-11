@@ -104,7 +104,6 @@ typedef struct {
 void init_rocket0(Rocket0 *r0)
 {
 	drtc_init(&r0->dr, 0, clock_time_us()+20000000);
-
 	init_twi_network(&r0->network, 100, ROCKET_ADDR);
 	lunar_distance_init(&r0->ld, 1, 2 /*, SPEED_POT_CHANNEL*/);
 	init_audio_client(&r0->audio_client, &r0->network);
@@ -119,10 +118,8 @@ void init_rocket0(Rocket0 *r0)
 	init_screenblanker_sender(&r0->screenblanker_sender, &r0->network);
 	r0->screenblanker.screenblanker_sender = &r0->screenblanker_sender;
 
-//XXX drtc works here
 	volume_control_init(&r0->volume_control, &r0->audio_client, VOLUME_POT_CHANNEL, /*board*/ 0);
 
-//XXX drtc LOST here
 	init_control_panel(
 		&r0->cp,
 		3,
@@ -142,12 +139,9 @@ void init_rocket0(Rocket0 *r0)
 	input_poller_init(&r0->ip, (InputInjectorIfc*) &r0->cp.direct_injector);
 #endif
 
-//XXX drtc LOST here
-//XXX drtc LOST here; works here with volume control removed.
 	// Remote receiver
 	init_remote_keyboard_recv(&r0->rkr, &r0->network, (InputInjectorIfc*) &r0->cp.direct_injector, REMOTE_KEYBOARD_PORT);
 
-//XXX drtc works here with volume control removed.
 	r0->thrusterUpdate[1].func = (ThrusterUpdateFunc) ddock_thruster_update;
 	r0->thrusterUpdate[1].data = &r0->cp.ccdock.dock;
 
@@ -155,10 +149,8 @@ void init_rocket0(Rocket0 *r0)
 	r0->thrusterUpdate[0].func = (ThrusterUpdateFunc) tsn_update;
 	r0->thrusterUpdate[0].data = &r0->tsn;
 
-//XXX drtc works here with volume control removed.
 	init_hobbs(&r0->hobbs, &r0->hpam, &r0->idle);
 
-//XXX drtc works here with volume control present.
 	init_slow_boot(&r0->slow_boot, &r0->screenblanker, &r0->audio_client);
 
 	init_potsticker(&r0->potsticker,
