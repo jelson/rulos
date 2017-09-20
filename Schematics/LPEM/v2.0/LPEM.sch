@@ -8080,7 +8080,7 @@ Source: www.kingbright.com</description>
 <part name="P+9" library="supply1" deviceset="+12V" device=""/>
 <part name="U$2" library="SparkFun" deviceset="RJ45-8" device="PTH"/>
 <part name="U$3" library="SparkFun" deviceset="RJ45-8" device="PTH"/>
-<part name="IC3" library="4534_I2C2" deviceset="PCA9600" device="SO8"/>
+<part name="IC2" library="4534_I2C2" deviceset="PCA9600" device="SO8"/>
 <part name="GND11" library="supply1" deviceset="GND" device=""/>
 <part name="P+10" library="supply1" deviceset="+12V" device=""/>
 <part name="12V" library="con-molex" deviceset="22-23-2021" device=""/>
@@ -8507,7 +8507,7 @@ Source: www.kingbright.com</description>
 <instance part="P+9" gate="1" x="83.82" y="48.26"/>
 <instance part="U$2" gate="G$1" x="127" y="30.48"/>
 <instance part="U$3" gate="G$1" x="152.4" y="30.48"/>
-<instance part="IC3" gate="G$1" x="99.06" y="93.98"/>
+<instance part="IC2" gate="G$1" x="99.06" y="93.98"/>
 <instance part="GND11" gate="1" x="81.28" y="116.84"/>
 <instance part="P+10" gate="1" x="106.68" y="129.54"/>
 <instance part="R6" gate="G$1" x="119.38" y="114.3" rot="R90"/>
@@ -8590,7 +8590,7 @@ Source: www.kingbright.com</description>
 <junction x="114.3" y="22.86"/>
 </segment>
 <segment>
-<pinref part="IC3" gate="G$1" pin="GND"/>
+<pinref part="IC2" gate="G$1" pin="GND"/>
 <pinref part="GND11" gate="1" pin="GND"/>
 <wire x1="86.36" y1="121.92" x2="81.28" y2="121.92" width="0.1524" layer="91"/>
 <wire x1="81.28" y1="121.92" x2="81.28" y2="119.38" width="0.1524" layer="91"/>
@@ -8613,10 +8613,11 @@ Source: www.kingbright.com</description>
 <pinref part="TWI2" gate="-2" pin="S"/>
 <pinref part="R2" gate="G$1" pin="1"/>
 <wire x1="60.96" y1="144.78" x2="60.96" y2="111.76" width="0.1524" layer="91"/>
-<pinref part="IC3" gate="G$1" pin="SX"/>
+<pinref part="IC2" gate="G$1" pin="SX"/>
 <wire x1="68.58" y1="111.76" x2="81.28" y2="111.76" width="0.1524" layer="91"/>
 <wire x1="60.96" y1="111.76" x2="68.58" y2="111.76" width="0.1524" layer="91"/>
 <junction x="60.96" y="144.78"/>
+<label x="68.58" y="111.76" size="2.1844" layer="95"/>
 </segment>
 </net>
 <net name="SCL" class="0">
@@ -8632,18 +8633,19 @@ Source: www.kingbright.com</description>
 <pinref part="TWI1" gate="-3" pin="S"/>
 <pinref part="R3" gate="G$1" pin="1"/>
 <wire x1="63.5" y1="147.32" x2="63.5" y2="88.9" width="0.1524" layer="91"/>
-<pinref part="IC3" gate="G$1" pin="SY"/>
+<pinref part="IC2" gate="G$1" pin="SY"/>
 <wire x1="76.2" y1="88.9" x2="81.28" y2="88.9" width="0.1524" layer="91"/>
 <wire x1="63.5" y1="88.9" x2="76.2" y2="88.9" width="0.1524" layer="91"/>
 <junction x="63.5" y="147.32"/>
+<label x="68.58" y="88.9" size="2.1844" layer="95"/>
 </segment>
 </net>
 <net name="SDA_12V" class="0">
 <segment>
-<pinref part="IC3" gate="G$1" pin="RX"/>
+<pinref part="IC2" gate="G$1" pin="RX"/>
 <wire x1="106.68" y1="111.76" x2="111.76" y2="111.76" width="0.1524" layer="91"/>
 <wire x1="111.76" y1="111.76" x2="111.76" y2="106.68" width="0.1524" layer="91"/>
-<pinref part="IC3" gate="G$1" pin="TX"/>
+<pinref part="IC2" gate="G$1" pin="TX"/>
 <wire x1="111.76" y1="106.68" x2="111.76" y2="101.6" width="0.1524" layer="91"/>
 <wire x1="111.76" y1="101.6" x2="106.68" y2="101.6" width="0.1524" layer="91"/>
 <wire x1="111.76" y1="106.68" x2="116.84" y2="106.68" width="0.1524" layer="91"/>
@@ -8665,14 +8667,15 @@ Source: www.kingbright.com</description>
 <pinref part="R6" gate="G$1" pin="1"/>
 <wire x1="119.38" y1="109.22" x2="119.38" y2="106.68" width="0.1524" layer="91"/>
 <junction x="119.38" y="106.68"/>
+<label x="124.46" y="106.68" size="2.1844" layer="95"/>
 </segment>
 </net>
 <net name="SCL_12V" class="0">
 <segment>
-<pinref part="IC3" gate="G$1" pin="TY"/>
+<pinref part="IC2" gate="G$1" pin="TY"/>
 <wire x1="106.68" y1="88.9" x2="111.76" y2="88.9" width="0.1524" layer="91"/>
 <wire x1="111.76" y1="88.9" x2="111.76" y2="83.82" width="0.1524" layer="91"/>
-<pinref part="IC3" gate="G$1" pin="RY"/>
+<pinref part="IC2" gate="G$1" pin="RY"/>
 <wire x1="111.76" y1="83.82" x2="111.76" y2="78.74" width="0.1524" layer="91"/>
 <wire x1="111.76" y1="78.74" x2="106.68" y2="78.74" width="0.1524" layer="91"/>
 <wire x1="111.76" y1="83.82" x2="116.84" y2="83.82" width="0.1524" layer="91"/>
@@ -8697,11 +8700,12 @@ Source: www.kingbright.com</description>
 <pinref part="R7" gate="G$1" pin="1"/>
 <wire x1="119.38" y1="86.36" x2="119.38" y2="83.82" width="0.1524" layer="91"/>
 <junction x="119.38" y="83.82"/>
+<label x="124.46" y="83.82" size="2.1844" layer="95"/>
 </segment>
 </net>
 <net name="+12V" class="1">
 <segment>
-<pinref part="IC3" gate="G$1" pin="VCC"/>
+<pinref part="IC2" gate="G$1" pin="VCC"/>
 <pinref part="P+10" gate="1" pin="+12V"/>
 <wire x1="106.68" y1="121.92" x2="106.68" y2="127" width="0.1524" layer="91"/>
 </segment>
