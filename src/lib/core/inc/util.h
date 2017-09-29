@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef __util_h__
-#define __util_h__
+#pragma once
 
 #include <inttypes.h>
 
@@ -84,5 +83,3 @@ void hardware_assert(uint16_t line);
 #define LOGF(x)	{}
 #define CONDSIMARG(x)	/**/
 #endif //SIM
-
-#endif // _util_h

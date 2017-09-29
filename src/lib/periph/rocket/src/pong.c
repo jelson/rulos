@@ -14,6 +14,7 @@
  *
  ************************************************************************/
 
+#include "rulos.h"
 #include "pong.h"
 #include "rasters.h"
 #include "sound.h"

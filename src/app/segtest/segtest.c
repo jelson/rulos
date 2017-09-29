@@ -18,7 +18,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "rocket.h"
+#include "rulos.h"
+#include "7seg_panel.h"
 
 
 /*******************************************************************************/
@@ -28,7 +29,7 @@
 int main()
 {
 	hal_init();
-	hal_init_rocketpanel(bc_rocket0);
+	hal_init_rocketpanel(bc_default);
 #if 0
 	int seg=0, dig=0;
 	seg=0;
@@ -41,6 +42,7 @@ int main()
 	program_cell(0, 0, sevseg_digits[f_cpu/1000000]);
 #endif
 
+#if 0
 	program_cell(0, 0, 0xff);
 	while (1)
 	{
@@ -50,7 +52,8 @@ int main()
 		hal_program_segment(7, 0, 0, 1);
 		hal_delay_ms(20);
 	}
-
+#endif
+	
 #if 0
 	for (seg = 0; seg < 8; seg++) {
 		for (dig = 0; dig < 8; dig++) {
@@ -74,7 +77,7 @@ int main()
 #endif
 
 
-#if 0
+#if 1
 	while (1)
 	{
 		int seg, dig, onoff;
