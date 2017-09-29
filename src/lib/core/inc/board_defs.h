@@ -178,6 +178,20 @@
         syncdebug(0, 'A', line); \
         }
 
+#elif defined(BOARD_DONGLE)
+
+#define BOARDSEL0       GPIO_C3
+#define BOARDSEL1       GPIO_D1
+#define BOARDSEL2       GPIO_D3
+#define DIGSEL0         GPIO_B7
+#define DIGSEL1         GPIO_D6
+#define DIGSEL2         GPIO_B0
+#define SEGSEL0         GPIO_D0
+#define SEGSEL1         GPIO_D2
+#define SEGSEL2         GPIO_D4
+#define DATA            GPIO_C1
+#define STROBE          GPIO_C2
+
 #elif defined(BOARD_CUSTOM)
 
 # include "custom_board_defs.h"
