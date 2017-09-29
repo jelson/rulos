@@ -23,5 +23,7 @@ TARGET := keyshield
 TARGET_OBJECTS := \
 	keyshield.o
 
+EXTRA_AVR_CFLAGS := -DSCHEDULER_CAPACITY=4 -DSCHEDULER_NOW_QUEUE_CAPACITY=4
+
 include $(ROCKET_ROOT)/Makefile.common
 
