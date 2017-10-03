@@ -18,9 +18,11 @@ PLATFORMS := avr sim
 PERIPHERALS := twi 7seg_panel
 #MCU := atmega328p
 #BOARD := PCB11
-MCU := atmega1284p
-BOARD := LPEM
+#MCU := atmega1284p
+#BOARD := LPEM
 
+MCU := atmega328
+BOARD := DONGLE
 
 TARGET := twirecvtest
 

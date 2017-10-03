@@ -14,10 +14,21 @@
  *
  ************************************************************************/
 
+// Enable this if the sender is a rocket panel that can display a status message
+// describing what message number it's currently sending.
+//#define STATUS_TO_LOCAL_PANEL
+
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "rulos.h"
-#include "7seg_panel.h"
 #include "twi.h"
 
+#ifdef STATUS_TO_LOCAL_PANEL
+# include "7seg_panel.h"
+#endif
+
+#define INTER_MESSAGE_DELAY_US 125000
 
 void test_without_netstack()
 {
@@ -43,6 +54,7 @@ typedef struct {
 } sendAct_t;
 
 
+#ifdef STATUS_TO_LOCAL_PANEL
 void board_say(const char *s)
 {
 	SSBitmap bm[8];
@@ -53,19 +65,21 @@ void board_say(const char *s)
 	for (i = 0; i < 8; i++)
 		program_board(i, bm);
 }
+#endif
 
 void sendMessage(sendAct_t *sa)
 {
-	char buf[9];
-
 	sa->i = (sa->i + 1) % 1000;
-
+		
+#ifdef STATUS_TO_LOCAL_PANEL
+	char buf[9];
 	strcpy(buf, "sENd    ");
 	debug_itoha(&buf[4], sa->i);
 	board_say(buf);
+#endif
 
-	strcpy(sa->sendSlot->msg->data, "HELO");
-	debug_itoha(&sa->sendSlot->msg->data[4], sa->i);
+	strcpy(sa->sendSlot->msg->data, "HELLO");
+	int_to_string2(&sa->sendSlot->msg->data[5], 3, 0, sa->i);
 	sa->sendSlot->msg->payload_len = strlen(sa->sendSlot->msg->data);
 
 	if (sa->sendSlot->sending)
@@ -78,7 +92,7 @@ void sendMessage(sendAct_t *sa)
 		LOGF((logfp, "sent message\n"));
 	}
 
-	schedule_us(1000000, (ActivationFuncPtr) sendMessage, sa);
+	schedule_us(INTER_MESSAGE_DELAY_US, (ActivationFuncPtr) sendMessage, sa);
 }
 
 
@@ -90,7 +104,6 @@ void test_netstack()
 
 	char data[30];
 	SendSlot sendSlot;
-
 
 	sendSlot.func = NULL;
 	sendSlot.dest_addr = AUDIO_ADDR;
@@ -105,7 +118,7 @@ void test_netstack()
 	sa.sendSlot = &sendSlot;
 	sa.i = 0;
 	
-	schedule_us(1000000, (ActivationFuncPtr) sendMessage, &sa);
+	schedule_us(INTER_MESSAGE_DELAY_US, (ActivationFuncPtr) sendMessage, &sa);
 
 	CpumonAct cpumon;
 	cpumon_init(&cpumon);
@@ -116,9 +129,11 @@ void test_netstack()
 int main()
 {
 	hal_init();
-	hal_init_rocketpanel(bc_default);
 
+#ifdef STATUS_TO_LOCAL_PANEL
+	hal_init_rocketpanel(bc_default);
 	board_say("  InIt  ");
+#endif
 	// test_without_netstack();
 	test_netstack();
 

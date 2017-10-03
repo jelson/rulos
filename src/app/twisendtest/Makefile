@@ -15,15 +15,15 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr sim
-PERIPHERALS := 7seg_panel twi
+PERIPHERALS := twi # 7seg_panel
 #MCU := atmega8
 #BOARD := GENERIC
 
-MCU := atmega328p
-BOARD := PCB11
+#MCU := atmega328p
+#BOARD := PCB11
 
-#MCU := atmega1284p
-#BOARD := LPEM
+MCU := atmega1284p
+BOARD := LPEM2
 
 
 TARGET := twisendtest
