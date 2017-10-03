@@ -160,6 +160,13 @@
 #define KEYPAD_COL2 GPIO_B2
 #define KEYPAD_COL3 GPIO_B3
 
+#elif defined(BOARD_LPEM2)
+
+#define JOYSTICK_TRIGGER        GPIO_D4
+
+#define AVAILABLE_ADCS  0xff
+#define ASSERT_TO_BOARD
+
 #elif defined(BOARD_FLASHCARD)
 
 #define KEYPAD_ROW0 GPIO_B7
