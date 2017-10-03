@@ -33,8 +33,6 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-#ifdef BOARDSEL0
-
 static uint8_t segmentRemapTables[4][8] = {
 #define SRT_SUBU	0
 	{ 0, 1, 2, 3, 4, 5, 6, 7 },
@@ -217,6 +215,3 @@ void debug_abuse_epb()
 		gpio_clr(DATA);
 	}
 }
-
-
-#endif // BOARDSEL0
