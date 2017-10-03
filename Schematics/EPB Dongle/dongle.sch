@@ -8566,8 +8566,8 @@ Source: www.kingbright.com</description>
 <part name="FRAME1" library="frames" deviceset="LETTER_L" device=""/>
 <part name="IC3" library="4534_I2C2" deviceset="PCA9600" device="SO8"/>
 <part name="GND3" library="supply1" deviceset="GND" device=""/>
-<part name="R2" library="rcl" deviceset="R-US_" device="0204/5" value="10K"/>
-<part name="R3" library="rcl" deviceset="R-US_" device="0204/5" value="10K"/>
+<part name="R2" library="rcl" deviceset="R-US_" device="0204/5" value="2K"/>
+<part name="R3" library="rcl" deviceset="R-US_" device="0204/5" value="2K"/>
 <part name="P+3" library="supply1" deviceset="+5V" device=""/>
 <part name="P+4" library="supply1" deviceset="+5V" device=""/>
 <part name="P+7" library="supply1" deviceset="+12V" device=""/>
@@ -8578,8 +8578,8 @@ Source: www.kingbright.com</description>
 <part name="C2" library="rcl" deviceset="C-US" device="025-025X050" value="1uF"/>
 <part name="P+10" library="supply1" deviceset="+12V" device=""/>
 <part name="P+11" library="supply1" deviceset="+5V" device=""/>
-<part name="R6" library="rcl" deviceset="R-US_" device="0204/5" value="10K"/>
-<part name="R7" library="rcl" deviceset="R-US_" device="0204/5" value="10K"/>
+<part name="R6" library="rcl" deviceset="R-US_" device="0204/5" value="1K"/>
+<part name="R7" library="rcl" deviceset="R-US_" device="0204/5" value="620"/>
 <part name="GND5" library="supply1" deviceset="GND" device=""/>
 <part name="GND6" library="supply1" deviceset="GND" device=""/>
 <part name="12V" library="led" deviceset="LED" device="3MM"/>
