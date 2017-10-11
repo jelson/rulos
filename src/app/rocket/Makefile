@@ -25,6 +25,9 @@ PERIPHERALS := rocket 7seg_panel twi display_rtc input_controller hpam audio adc
 MCU := atmega1284p
 BOARD := LPEM
 
+#MCU := atmega1284
+#BOARD := LPEM2
+
 TARGET := rocket
 
 TARGET_OBJECTS := \
