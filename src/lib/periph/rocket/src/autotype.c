@@ -33,7 +33,7 @@ void update_autotype(Autotype *a)
 	if (c!='\0')
 	{
 		a->ptr += 1;
-		LOGF((logfp, "Autotype(%c)\n", c));
+		LOG("Autotype(%c)\n", c);
 		a->iii->func(a->iii, c);
 		schedule_us(a->period, (ActivationFuncPtr) update_autotype, a);
 	}

@@ -16,6 +16,7 @@
 
 #include <stdlib.h>
 
+#include "rulos.h"
 #include "clock.h"
 #include "uart.h"
 
@@ -30,8 +31,8 @@ void _uart_receive(UartHandler *handler, char c)
 		u->recvQueue.reception_time_us = precise_clock_time_us();
 	}
 
-	LOGF((logfp, "uart_receive: got char at %d, msgtime=%d\n",
-		  precise_clock_time_us(), u->recvQueue.reception_time_us));
+	LOG("uart_receive: got char at %d, msgtime=%d\n",
+		  precise_clock_time_us(), u->recvQueue.reception_time_us);
 
 	// safe because we're in interrupt time.
 	CharQueue_append(u->recvQueue.q, c);

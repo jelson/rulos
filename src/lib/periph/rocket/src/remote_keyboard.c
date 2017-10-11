@@ -43,7 +43,7 @@ void rk_send(InputInjectorIfc *injector, char key)
 
 	if (rk->sendSlot.sending)
 	{
-		LOGF((logfp, "RemoteKeyboard drops a message due to full send queue.\n"));
+		LOG("RemoteKeyboard drops a message due to full send queue.\n");
 		return;
 	}
 

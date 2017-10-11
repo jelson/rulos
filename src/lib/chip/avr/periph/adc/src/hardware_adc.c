@@ -27,6 +27,7 @@
 #include "hardware.h"
 #include "hal.h"
 #include "board_defs.h"
+#include "logging.h"
 
 #define NUM_ADCS 8
 // #define RAW_ADC

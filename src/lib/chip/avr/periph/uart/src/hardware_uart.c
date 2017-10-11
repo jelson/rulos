@@ -28,10 +28,9 @@
 #include <avr/interrupt.h>
 #include <util/delay_basic.h>
 
-#include "util.h"
+#include "rulos.h"
 #include "hardware.h"
 #include "uart.h"
-#include "hal.h"
 
 void audioled_set(r_bool red, r_bool yellow);
 

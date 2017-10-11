@@ -18,6 +18,7 @@
 
 #include "clock.h"
 #include "heap.h"
+#include "logging.h"
 
 void heap_init(Heap *heap)
 {
@@ -54,7 +55,7 @@ void heap_insert(Heap *heap, Time key, ActivationFuncPtr func, void *data)
 	heap->heap_count = hc + 1;
 
 #if 0
-	LOGF((logfp, "heap_count %d this act func %08x period %d\n", heap->heap_count, (unsigned) (act->func), key-_last_scheduler_run_us));
+	LOG("heap_count %d this act func %08x period %d\n", heap->heap_count, (unsigned) (act->func), key-_last_scheduler_run_us);
 #endif
 
 }

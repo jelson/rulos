@@ -116,7 +116,7 @@ int int_to_string2(char *strp, uint8_t min_width, uint8_t min_zeros, int32_t i)
 	int neg = 0;
 	char *ptr = 0;
 	
-	//LOGF((logfp, "i %d\n", ));
+	//LOG("i %d\n", );
 	if (strp!=0)
 	{
 		int ct = int_to_string2(0, min_width, min_zeros, i);
@@ -168,7 +168,7 @@ int int_to_string2(char *strp, uint8_t min_width, uint8_t min_zeros, int32_t i)
 		}
 		c+=1;
 	}
-	//LOGF((logfp, "  ct %d str %s\n", c, strp));
+	//LOG("  ct %d str %s\n", c, strp);
 	return c;
 }
 

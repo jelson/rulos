@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 
+#include "rulos.h"
 #include "hpam.h"
 #if SIM
 #include "sim.h"
@@ -99,13 +100,13 @@ void hpam_update(HPAM *hpam)
 			// 33% duty cycle: rest expires two timeouts from now
 			port->expire_time =
 				clock_time_us() + 2*((Time)port->rest_time_secs*1000000);
-			LOGF((logfp, "RESTING HPAM idx %d\n", idx));
+			LOG("RESTING HPAM idx %d\n", idx);
 		}
 		if (port->resting
 			&& later_than(clock_time_us(), port->expire_time))
 		{
 			port->resting = FALSE;
-			LOGF((logfp, "reactivating HPAM idx %d\n", idx));
+			LOG("reactivating HPAM idx %d\n", idx);
 		}
 	}
 }
@@ -133,8 +134,8 @@ void hpam_set_port(HPAM *hpam, HPAMIndex idx, r_bool status)
 		(hpam->bbuf.buffer[port->digit]
 			& ~mask)
 		| (status ? 0 : mask);
-//	LOGF((logfp, "idx %d status %d digit now %x\n",
-//		idx, status, hpam->bbuf.buffer[port->digit]));
+//	LOG("idx %d status %d digit now %x\n",
+//		idx, status, hpam->bbuf.buffer[port->digit]);
 
 #define RAW_PROGRAM 0
 #if RAW_PROGRAM

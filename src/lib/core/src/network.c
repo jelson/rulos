@@ -17,6 +17,7 @@
 #include "network.h"
 #include "net_compute_checksum.h"
 #include "hal.h"
+#include "logging.h"
 
 #include "queue.mc"
 QUEUE_DEFINE(SendSlotPtr)
@@ -31,9 +32,9 @@ void net_log_buffer(uint8_t *buf, int len)
 	int i;
 	for (i=0; i<len; i++)
 	{
-		LOGF((logfp, "%02x ", buf[i]));
+		LOG("%02x ", buf[i]);
 	}
-	LOGF((logfp, "\n"));
+	LOG("\n");
 }
 #endif
 
@@ -100,8 +101,8 @@ void net_bind_receiver(Network *net, RecvSlot *recvSlot)
 	uint8_t slotIdx = net_find_empty_receive_slot(net);
 	assert(slotIdx != SLOT_NONE);
 	net->recvSlots[slotIdx] = recvSlot;
-	LOGF((logfp, "netstack: listener bound to port %d (0x%x), slot %d\n",
-		  recvSlot->port, recvSlot->port, slotIdx));
+	LOG("netstack: listener bound to port %d (0x%x), slot %d\n",
+	    recvSlot->port, recvSlot->port, slotIdx);
 }
 
 
@@ -119,7 +120,7 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 	// make sure it's at least as long as we're expecting
 	if (len < sizeof(Message))
 	{
-		LOGF((logfp, "netstack error: got short pkt only %d bytes\n", len));
+		LOG("netstack error: got short pkt only %d bytes\n", len);
 #ifdef DEBUG_STACK_WITH_UART
 		hal_uart_sync_send("drp1", 4);
 #endif
@@ -132,7 +133,7 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 
 	if (net_compute_checksum((char *) msg, len) != incoming_checksum)
 	{
-		LOGF((logfp, "netstack error: checksum mismatch\n"));
+		LOG("netstack error: checksum mismatch\n");
 #ifdef DEBUG_STACK_WITH_UART
 		hal_uart_sync_send("drp2", 4);
 		hal_uart_sync_send((char *)msg, len);
@@ -145,8 +146,8 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 
 	if (slotIdx == SLOT_NONE)
 	{
-		LOGF((logfp, "netstack error: dropped packet to port %d (0x%x) with no listener\n",
-			  msg->dest_port, msg->dest_port));
+		LOG("netstack error: dropped packet to port %d (0x%x) with no listener\n",
+			  msg->dest_port, msg->dest_port);
 #ifdef DEBUG_STACK_WITH_UART
 		hal_uart_sync_send("drp3", 4);
 #endif
@@ -158,8 +159,8 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 	// if slot is occupied, drop
 	if (rs->msg_occupied)
 	{
-		LOGF((logfp, "netstack error: dropped packet to port %d (0x%x) with full buffer\n",
-			  msg->dest_port, msg->dest_port));
+		LOG("netstack error: dropped packet to port %d (0x%x) with full buffer\n",
+			  msg->dest_port, msg->dest_port);
 #ifdef DEBUG_STACK_WITH_UART
 		hal_uart_sync_send("drp4", 4);
 #endif
@@ -171,8 +172,8 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len)
 	// make sure slot has enough space
 	if (rs->payload_capacity < payload_len)
 	{
-		LOGF((logfp, "netstack error: port %d got payload of len %d, only had capacity for %d\n",
-			  msg->dest_port, payload_len, rs->payload_capacity));
+		LOG("netstack error: port %d got payload of len %d, only had capacity for %d\n",
+			  msg->dest_port, payload_len, rs->payload_capacity);
 #ifdef DEBUG_STACK_WITH_UART
 		hal_uart_sync_send("drp5", 4);
 #endif
@@ -210,10 +211,10 @@ static void net_send_done_cb(void *user_data);
 // External visible API from above to launch a packet.
 r_bool net_send_message(Network *net, SendSlot *sendSlot)
 {
-	LOGF((logfp, "netstack: queueing %d-byte payload to %d:%d (0x%x:0x%x)\n",
-		  sendSlot->msg->payload_len,
-		  sendSlot->dest_addr, sendSlot->msg->dest_port,
-		  sendSlot->dest_addr, sendSlot->msg->dest_port))
+	LOG("netstack: queueing %d-byte payload to %d:%d (0x%x:0x%x)\n",
+	    sendSlot->msg->payload_len,
+	    sendSlot->dest_addr, sendSlot->msg->dest_port,
+	    sendSlot->dest_addr, sendSlot->msg->dest_port);
 
 	assert(sendSlot->sending == FALSE);
 	r_bool need_wake = (SendSlotPtrQueue_length(SendQueue(net)) == 0);
@@ -240,10 +241,10 @@ static void net_send_next_message_down(Network *net)
 	if (rc == FALSE)
 		return;
 
-	LOGF((logfp, "netstack: releasing %d-byte payload to %d:%d (0x%x:0x%x)\n",
-		  sendSlot->msg->payload_len,
-		  sendSlot->dest_addr, sendSlot->msg->dest_port,
-		  sendSlot->dest_addr, sendSlot->msg->dest_port))
+	LOG("netstack: releasing %d-byte payload to %d:%d (0x%x:0x%x)\n",
+	    sendSlot->msg->payload_len,
+	    sendSlot->dest_addr, sendSlot->msg->dest_port,
+	    sendSlot->dest_addr, sendSlot->msg->dest_port);
 
 	// Make sure this guy thinks he's sending.
 	assert(sendSlot->sending == TRUE);

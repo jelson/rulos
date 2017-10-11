@@ -104,7 +104,7 @@ void ddock_init_axis(DriftAnim *da)
 void ddock_reset(DDockAct *dd)
 {
 	ddock_init_axis(&dd->xd);
-	//LOGF((logfp, "ddock_reset: xd_b %d xd_v %d\n", dd->xd.base, dd->xd.velocity));
+	//LOG("ddock_reset: xd_b %d xd_v %d\n", dd->xd.base, dd->xd.velocity);
 	ddock_init_axis(&dd->yd);
 	da_set_value(&dd->rd, DD_MIN_RADIUS);
 	da_set_velocity_scaled(&dd->rd, DD_GROW_SPEED, DD_GROW_SPEED_SCALE);
@@ -139,7 +139,7 @@ void ddock_update(DDockAct *act)
 	dd_bump(act, hpam_thruster_rear,   	   -0,  2);
 	dd_bump(act, hpam_thruster_frontleft,  -1, -1);
 	dd_bump(act, hpam_thruster_frontright,  1, -1);
-	//LOGF((logfp, "velocity %6d %6d\n", act->xd.velocity, act->yd.velocity));
+	//LOG("velocity %6d %6d\n", act->xd.velocity, act->yd.velocity);
 
 	if (act->focused)
 	{
@@ -159,21 +159,21 @@ void ddock_update(DDockAct *act)
 			// TODO snap clanger solenoid
 			ac_skip_to_clip(act->audioClient, AUDIO_STREAM_BURST_EFFECTS, /* sound_dock_clang */ sound_dock_thud, sound_silence);
 			act->docking_complete = TRUE;
-			LOGF((logfp, "docking success!\n"));
+			LOG("docking success!\n");
 		}
 	}
 			
 /*
-	LOGF((logfp, "x %d y %d rad %d\n",
+	LOG("x %d y %d rad %d\n",
 		da_read(&act->xd),
 		da_read(&act->yd),
-		da_read(&act->rd)));
+		da_read(&act->rd));
 */
 }
 
 void dd_bump(DDockAct *act, HPAMIndex thruster_index, uint32_t xscale, uint32_t yscale)
 {
-	//LOGF((logfp, "dd_bump(hpam %x tb %x) %d\n", 1<<thruster_index, act->thrusterPayload.thruster_bits, act->thrusterPayload.thruster_bits & (1<<thruster_index)));
+	//LOG("dd_bump(hpam %x tb %x) %d\n", 1<<thruster_index, act->thrusterPayload.thruster_bits, act->thrusterPayload.thruster_bits & (1<<thruster_index));
 	if (act->thrusterPayload.thruster_bits & (1<<thruster_index))
 	{
 #if DD_INERTIA
@@ -239,7 +239,7 @@ void ddock_update_once(DDockAct *act)
 
 	dock_update_aux_display(act, xc, yc_s>>DD_SC, rad);
 
-	//LOGF((logfp, "ddock_update_once: %d %d %d\n", xc, act->xd.base, act->xd.velocity));
+	//LOG("ddock_update_once: %d %d %d\n", xc, act->xd.base, act->xd.velocity);
 
 	raster_clear_buffers(&act->s4->rrect);
 
@@ -251,7 +251,7 @@ void ddock_update_once(DDockAct *act)
 		int xs = star - ys * ((DD_MAX_POS<<DD_SC)*4);
 		int y = (ys >> DD_SC) - DD_MAX_POS*2;
 		int x = (xs >> DD_SC) - DD_MAX_POS*2;
-		LOGF((logfp, "star %d : %2d, %2d at %4d, %4d\n", star, x, y, x+xc, y+(yc_s>>DD_SC)));
+		LOG("star %d : %2d, %2d at %4d, %4d\n", star, x, y, x+xc, y+(yc_s>>DD_SC));
 		raster_paint_pixel(&act->s4->rrect,  x+xc, y+(yc_s>>DD_SC));
 		star += 2269;
 		if (y>DD_MAX_POS*2) { break; }
@@ -365,6 +365,6 @@ UIEventDisposition ddock_event_handler(
 
 void ddock_thruster_update(DDockAct *act, ThrusterPayload *tp)
 {
-	//LOGF((logfp, "ddock_thruster_update %02x\n", tp->thruster_bits));
+	//LOG("ddock_thruster_update %02x\n", tp->thruster_bits);
 	act->thrusterPayload.thruster_bits = tp->thruster_bits;
 }

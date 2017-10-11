@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
@@ -285,13 +286,13 @@ static void sim_twi_poll(void *data)
 
 	if (twi_state->mrs->occupied_len > 0)
 	{
-		LOGF((logfp, "TWI SIM: Packet arrived but network stack buffer busy; dropping\n"));
+		LOG("TWI SIM: Packet arrived but network stack buffer busy; dropping\n");
 		return;
 	}
 
 	if (rc > twi_state->mrs->capacity)
 	{
-		LOGF((logfp, "TWI SIM: Discarding %d-byte packet; too long for net stack's buffer\n", rc));
+		LOG("TWI SIM: Discarding %d-byte packet; too long for net stack's buffer\n", rc);
 		return;
 	}
 
@@ -318,11 +319,12 @@ static void _sim_twi_send(MediaStateIfc *media,
 			  MediaSendDoneFunc sendDoneCB, void *sendDoneCBData)
 {
 	SimTwiState *twi_state = (SimTwiState *) media;
-/*
-	LOGF((logfp, "hal_twi_send_byte(%02x [%c])\n",
+
+#if 0
+	LOG("hal_twi_send_byte(%02x [%c])\n",
 		byte,
-		(byte>=' ' && byte<127) ? byte : '_'));
-*/
+		(byte>=' ' && byte<127) ? byte : '_');
+#endif
 	
 	struct sockaddr_in sai;
 
@@ -385,14 +387,22 @@ void hal_uart_start_send(UartHandler* handler)
 /************ init ***********************/
 
 
-FILE *logfp = NULL;
+static FILE *logfp = NULL;
+static uint64_t init_time = 0;
 
+uint64_t curr_time_usec()
+{
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return ((uint64_t) 1000000) * tv.tv_sec + tv.tv_usec;
+}
+	
 void hal_uart_sync_send(char *s, uint8_t len)
 {
 	char buf[1000];
 	memcpy(buf, s, len);
 	buf[len] = '\0';
-	LOGF((logfp, "uart send: %s\n", buf));
+	LOG("uart send: %s\n", buf);
 }
 
 void uart_debug_log(const char *m)
@@ -400,9 +410,28 @@ void uart_debug_log(const char *m)
 	fprintf(stderr, "DEBUG: %s\n", m);
 }
 
+void sim_log(const char *fmt, ...)
+{
+  va_list ap;
+  char message[4096];
+
+  va_start(ap, fmt);
+  vsnprintf(message, sizeof(message), fmt, ap);
+  va_end(ap);
+
+  uint64_t normalized_time_usec = curr_time_usec() - init_time;
+  
+  fprintf(logfp, "%" PRIu64 ".%06" PRIu64 ": %s",
+	  normalized_time_usec / 1000000,
+	  normalized_time_usec % 1000000,
+	  message);
+  fflush(logfp);
+}
+
 void hal_init()
 {
 	logfp = fopen("log", "w");
+	init_time = curr_time_usec();
 	signal(SIGIO, sim_sigio_handler);
 	hal_initted = HAL_MAGIC;
 }

@@ -24,7 +24,6 @@
 #include "message.h"
 #include "util.h"
 
-
 #define PORT_NONE 255
 #define SLOT_NONE 255
 #define MAX_LISTENERS 10

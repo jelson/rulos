@@ -79,8 +79,8 @@ void dtg_update_expwa(DThrusterGraph *dtg, int alpha, int i, uint8_t input)
 	uint32_t oldValue = dtg->value[i];
 	dtg->value[i] = ((oldValue * (256-alpha))
 					+ (((uint32_t) input) << 16) * alpha) >> 8;
-//	LOGF((logfp, "Old %08x ~ input %08x => new %08x\n",
-//		oldValue, (((uint32_t) input) << 16), dtg->value[i]));
+//	LOG("Old %08x ~ input %08x => new %08x\n",
+//		oldValue, (((uint32_t) input) << 16), dtg->value[i]);
 }
 
 void dtg_draw_one_skinny(DThrusterGraph *dtg, int i, uint8_t input, SSBitmap mask)
@@ -115,5 +115,5 @@ void dtg_recv_func(RecvSlot *recvSlot, uint8_t payload_len)
 	assert(payload_len == sizeof(ThrusterPayload));
 	dtg->thruster_bits = tp->thruster_bits;
 	dtg->recvSlot.msg_occupied = FALSE;
-//	LOGF((logfp, "dtg_recv_func got bits %1x!\n", dtg->thruster_bits & 0x7));
+//	LOG("dtg_recv_func got bits %1x!\n", dtg->thruster_bits & 0x7);
 }

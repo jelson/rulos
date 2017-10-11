@@ -42,7 +42,7 @@ void boofunc(void *f)
 	if (booPtr->msg == NULL) { booPtr = boos; }
 	memset(bbuf.buffer, 0, 8);
 	ascii_to_bitmap_str(bbuf.buffer, 8, booPtr->msg);
-	LOGF((logfp, "msg: %s", booPtr->msg));
+	LOG("msg: %s", booPtr->msg);
 	schedule_us(booPtr->time, (ActivationFuncPtr) boofunc, NULL);
 	board_buffer_draw(&bbuf);
 }

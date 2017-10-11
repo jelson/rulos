@@ -16,6 +16,7 @@
 
 #include <stdlib.h>
 
+#include "rulos.h"
 #include "cursor.h"
 #include "clock.h"
 
@@ -67,7 +68,7 @@ void cursor_show(CursorAct *act, RectRegion rr)
 		int littlemask = ((((int)1)<<(NUM_DIGITS-x1  ))-1)>>1;
 		act->alpha = bigmask ^ littlemask;
 		board_buffer_set_alpha(&act->bbuf[i], act->alpha);
-		//LOGF((logfp, "x0 %d x1 %d alpha %08x\n", rect.x0, rect.x1, act->alpha));
+		//LOG("x0 %d x1 %d alpha %08x\n", rect.x0, rect.x1, act->alpha);
 		// TODO set up board buffer first, to avoid writing stale bytes
 		board_buffer_push(&act->bbuf[i], rr.bbuf[i]->board_index);
 	}

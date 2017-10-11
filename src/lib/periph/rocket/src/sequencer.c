@@ -255,7 +255,7 @@ void launch_configure_lunar_distance(Launch *launch)
 			{
 				ship_velocity_frac = (elapsed_time/1000 * 256) / L_LAUNCH_DURATION_MS;
 			}
-			//LOGF((logfp, "elapsed time %d frac %d\n", elapsed_time, ship_velocity_frac));
+			//LOG("elapsed time %d frac %d\n", elapsed_time, ship_velocity_frac);
 			lunar_distance_set_velocity_256ths(launch->lunar_distance, ship_velocity_frac);
 		}
 	}

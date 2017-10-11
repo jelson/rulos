@@ -50,8 +50,6 @@ uint16_t stack_ptr();
 void debug_delay(int ms);
 
 
-
-
 #ifdef AVR
 # include <avr/pgmspace.h>
 #else
@@ -60,26 +58,3 @@ void debug_delay(int ms);
 #endif
 
 
-#ifdef SIM
-
-#include <stdio.h>
-#include <assert.h>
-#include <unistd.h>
-
-#define say(x)	{ fprintf(stderr, "say: %s\n", x); }
-extern FILE *logfp;
-#define LOGF(x)	{ fprintf x; fflush(logfp); }
-#define CONDSIMARG(x)	, x
-#define _delay_us(x) do { usleep(x); } while(0);
-#define _delay_ms(x) _delay_us((x) * 1000)
-
-#else	//!SIM
-
-// jonh apologizes for evilly dup-declaring this here rather than
-// rearranging includes to make sense.
-void hardware_assert(uint16_t line);
-
-#define assert(x)	{ if (!(x)) { hardware_assert(__LINE__); } }
-#define LOGF(x)	{}
-#define CONDSIMARG(x)	/**/
-#endif //SIM

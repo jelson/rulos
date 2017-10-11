@@ -224,7 +224,7 @@ static void twi_update(TwiState *twi, uint8_t status)
 		// either the address byte, or a byte of the packet, was
 		// acked.  Either way, xmit the next byte, if any.  Otherwise
 		// we're done.
-		assert(twi->out_pkt != NULL)
+		assert(twi->out_pkt != NULL);
 
 		if (twi->out_n >= twi->out_len)
 		{
@@ -255,7 +255,7 @@ static void twi_update(TwiState *twi, uint8_t status)
 		}
 		else
 		{
-			LOGF((logfp, "dropping packet because receive buffer is busy"));
+			LOG("dropping packet because receive buffer is busy");
 			twi->slaveRecvLen = -1;
 			twi->dont_ack = TRUE;
 		}
@@ -275,7 +275,7 @@ static void twi_update(TwiState *twi, uint8_t status)
 		// overflowed the receive buffer?  if so, drop entire packet.
 		if (twi->slaveRecvSlot->capacity <= twi->slaveRecvLen)
 		{
-			LOGF((logfp, "dropping packet too long for local receive buffer"));
+			LOG("dropping packet too long for local receive buffer");
 			abortSlaveRecv(twi);
 			twi->dont_ack = TRUE;
 			break;

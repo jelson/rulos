@@ -16,6 +16,7 @@
 
 #include <string.h>
 
+#include "rulos.h"
 #include "remote_bbuf.h"
 #include "clock.h"
 
@@ -75,7 +76,7 @@ void rbs_update(RemoteBBufSend *rbs)
 
 	if (rbs->sendSlot.sending)
 	{
-		LOGF((logfp, "rbs_update: busy\n"));
+		LOG("rbs_update: busy\n");
 		return;
 	}
 
@@ -83,11 +84,11 @@ void rbs_update(RemoteBBufSend *rbs)
 	if (index==-1)
 	{
 		// no changed lines
-		LOGF((logfp, "rbs_update: idle\n"));
+		LOG("rbs_update: idle\n");
 		return;
 	}
 
-	LOGF((logfp, "rbs_update: update[%d]\n", index));
+	LOG("rbs_update: update[%d]\n", index);
 
 	// send a packet for this changed line
 	rbs->sendSlot.dest_addr = ROCKET1_ADDR;

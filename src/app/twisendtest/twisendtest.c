@@ -84,12 +84,12 @@ void sendMessage(sendAct_t *sa)
 
 	if (sa->sendSlot->sending)
 	{
-		LOGF((logfp, "twisendtest: can't send message: outgoing buffer is busy\n"));
+		LOG("twisendtest: can't send message: outgoing buffer is busy\n");
 	}
 	else
 	{
 		net_send_message(sa->net, sa->sendSlot);
-		LOGF((logfp, "sent message\n"));
+		LOG("sent message\n");
 	}
 
 	schedule_us(INTER_MESSAGE_DELAY_US, (ActivationFuncPtr) sendMessage, sa);

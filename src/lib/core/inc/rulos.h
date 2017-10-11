@@ -37,3 +37,4 @@
 #include "queue.h"
 #include "random.h"
 #include "util.h"
+#include "logging.h"

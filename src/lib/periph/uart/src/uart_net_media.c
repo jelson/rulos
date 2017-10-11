@@ -16,6 +16,7 @@
 
 #include <stdlib.h>
 
+#include "rulos.h"
 #include "clock.h"
 #include "uart_net_media.h"
 

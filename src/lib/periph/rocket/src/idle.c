@@ -70,7 +70,7 @@ void idle_broadcast(IdleAct *idle)
 	int i;
 	UIEvent evt = idle->nowactive ? evt_idle_nowactive : evt_idle_nowidle;
 
-	//LOGF((logfp, "idle_broadcast(%d => %d)", idle->nowactive, evt));
+	//LOG("idle_broadcast(%d => %d)", idle->nowactive, evt);
 
 	for (i=0; i<idle->num_handlers; i++)
 	{

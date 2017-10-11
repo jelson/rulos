@@ -41,11 +41,11 @@ void test_shortqueue()
 			if (rc)
 			{
 				in++;
-				LOGF((logfp, "in: %d\n", in));
+				LOG("in: %d\n", in);
 			}
 			else
 			{
-				LOGF((logfp, "full\n"));
+				LOG("full\n");
 			}
 		}
 		else
@@ -54,12 +54,12 @@ void test_shortqueue()
 			r_bool rc = shortQueue_pop(sq, &val);
 			if (rc) {
 				assert(val==out);
-				LOGF((logfp, "        out: %d\n", out));
+				LOG("        out: %d\n", out);
 				out++;
 			}
 			else
 			{
-				LOGF((logfp, "empty\n"));
+				LOG("empty\n");
 			}
 		}
 	}
@@ -80,29 +80,29 @@ void test_ring_buffer()
 			if (ring_insert_avail(rb)>0)
 			{
 				ring_insert(rb, in);
-				LOGF((logfp, "in: %d\n", in));
+				LOG("in: %d\n", in);
 				in++;
 			}
 			else
 			{
-				LOGF((logfp, "full\n"));
+				LOG("full\n");
 			}
 		}
 		else
 		{
 			uint8_t ra = ring_remove_avail(rb);
-			LOGF((logfp, "ra %d\n", ra));
+			LOG("ra %d\n", ra);
 			if (ra)
 			{
 				uint8_t val;
 				val = ring_remove(rb);
 				assert(val==out);
-				LOGF((logfp, "        out: %d\n", out));
+				LOG("        out: %d\n", out);
 				out++;
 			}
 			else
 			{
-				LOGF((logfp, "empty\n"));
+				LOG("empty\n");
 			}
 		}
 	}

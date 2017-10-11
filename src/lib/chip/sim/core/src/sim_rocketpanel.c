@@ -320,7 +320,7 @@ static void draw_uart_input_window()
 
 static void uart_simulator_input(int c)
 {
-	LOGF((logfp, "sim inserting to uart: %c\n", c));
+	LOG("sim inserting to uart: %c\n", c);
 
 	// display on screen
 	if (strlen(recent_uart_buf) == sizeof(recent_uart_buf)-1)
@@ -338,7 +338,7 @@ static void uart_simulator_input(int c)
 
 	// upcall to the uart code
 	if (g_sim_uart_handler == NULL) {
-		LOGF((logfp, "dropping uart char - uart not initted\n"));
+		LOG("dropping uart char - uart not initted\n");
 		return;
 	}
 	(g_sim_uart_handler->recv)(g_sim_uart_handler, c);
@@ -380,7 +380,7 @@ void hal_uart_start_send(UartHandler *handler)
 
 	buf[i+1] = '\0';
 
-	LOGF((logfp, "Sent to uart: '%s'\n", buf));
+	LOG("Sent to uart: '%s'\n", buf);
 }
 
 void hal_uart_init(UartHandler *s, uint32_t baud, r_bool stop2, uint8_t uart_id)
@@ -449,7 +449,7 @@ static void sim_curses_poll(void *data)
 	if (c == ERR)
 		return;
 
-	LOGF((logfp, "poll_kb got char: %c (%x)\n", c, c));
+	LOG("poll_kb got char: %c (%x)\n", c, c);
 
 	// if we're in normal mode and hit 'q', terminate the simulator
 	if (sim_special_input_handler == NULL && c == 'q')
@@ -725,7 +725,7 @@ void debug_audio_rate()
 		time_t tv_sec = end_time.tv_sec - start_time.tv_sec;
 		tv_usec += tv_sec*1000000;
 		float rate = 900.0/tv_usec*1000000.0;
-		LOGF((logfp, "output rate %f samples/sec\n", rate));
+		LOG("output rate %f samples/sec\n", rate);
 		counter = 0;
 	}
 }
@@ -748,7 +748,7 @@ static void sim_audio_poll(void *data)
 		&& ring_remove_avail(simAudioState->ring) > 0)
 	{
 		uint8_t sample = ring_remove(simAudioState->ring);
-		//LOGF((logfp, "sim_audio_poll removes sample %2x\n", sample));
+		//LOG("sim_audio_poll removes sample %2x\n", sample);
 		int wrote = write(simAudioState->audiofd, &sample, 1);
 		assert(wrote==1);
 
@@ -823,7 +823,7 @@ void hal_spi_send(uint8_t byte)
 	switch (g_spi.state)
 	{
 		case sss_ready:
-			LOGF((logfp, "sim:spi cmd %x\n", byte));
+			LOG("sim:spi cmd %x\n", byte);
 			if (byte==SPIFLASH_CMD_READ_DATA)
 			{
 				g_spi.state = sss_read_addr;
@@ -835,7 +835,7 @@ void hal_spi_send(uint8_t byte)
 			}
 			break;
 		case sss_read_addr:
-			//LOGF((logfp, "sim:spi addr[%d] == %x\n", g_spi.addr_off, byte));
+			//LOG("sim:spi addr[%d] == %x\n", g_spi.addr_off, byte);
 			g_spi.addr[g_spi.addr_off++] = byte;
 			if (g_spi.addr_off == 3)
 			{
@@ -843,14 +843,14 @@ void hal_spi_send(uint8_t byte)
 					  (((int)g_spi.addr[0])<<16)
 					| (((int)g_spi.addr[1])<<8)
 					| (((int)g_spi.addr[2])<<0);
-				LOGF((logfp, "sim:spi addr == %x\n", addr));
+				LOG("sim:spi addr == %x\n", addr);
 				fseek(g_spi.fp, addr, SEEK_SET);
 				g_spi.state = sss_read_fetch;
 			}
 			break;
 		case sss_read_fetch:
 			result = fgetc(g_spi.fp);
-			//LOGF((logfp, "sim:spi read fetch == %x\n", result));
+			//LOG("sim:spi read fetch == %x\n", result);
 			break;	
 	}
 
@@ -870,7 +870,7 @@ static void sim_spi_poll(void *data)
 {
 	if (!g_spi.initted) { return; }
 
-	//LOGF((logfp, "sim_spi_poke delivering deferred result\n"));
+	//LOG("sim_spi_poke delivering deferred result\n");
 	if (g_spi.result >= 0)
 	{
 		uint8_t result = g_spi.result;

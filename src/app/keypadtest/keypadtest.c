@@ -57,7 +57,7 @@ static void update(KeyTestActivation_t *kta)
 	}
 
 	while (uart_read(&kta->uart, (char*) &c)) {
-		LOGF((logfp, "got uart char %c\n", c));
+		LOG("got uart char %c\n", c);
 		add_char_to_bbuf(&kta->bbuf_u, c, &kta->uart);
 	}
 }

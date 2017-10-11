@@ -65,7 +65,7 @@ static inline void latch_output()
 
 static inline void shift_out_8bits(uint8_t num)
 {
-	LOGF((logfp, "%d,\n", num));
+	LOG("%d,\n", num);
 }
 
 static inline void latch_output()
@@ -106,7 +106,7 @@ void emit_waveform(waveformAct_t *wa)
 
 void start_frequency(waveformAct_t *ta, float frequency)
 {
-	LOGF((logfp, "starting frequency %f\n", frequency));
+	LOG("starting frequency %f\n", frequency);
 
 	// silence
 	if (frequency == 0)

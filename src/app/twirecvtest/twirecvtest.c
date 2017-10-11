@@ -83,7 +83,7 @@ static void recv_func(RecvSlot *recvSlot, uint8_t payload_size)
 	char buf[payload_size+1];
 	memcpy(buf, recvSlot->msg->data, payload_size);
 	buf[payload_size] = '\0';
-	LOGF((logfp, "Got network message [%d bytes]: '%s'\n", payload_size, buf));
+	LOG("Got network message [%d bytes]: '%s'\n", payload_size, buf);
 	SYNCDEBUG();
 
 	// display the first 8 chars to the leds

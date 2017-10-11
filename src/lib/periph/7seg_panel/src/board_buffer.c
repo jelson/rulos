@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 
+#include "rulos.h"
 #include "board_buffer.h"
 #include "remote_bbuf.h"
 
@@ -27,17 +28,17 @@ BoardBuffer *foreground[NUM_PSEUDO_BOARDS];
 void dump(char *prefix)
 {
 	int b;
-	LOGF((logfp, "-----\n"));
+	LOG("-----\n");
 	for (b=0; b<NUM_PSEUDO_BOARDS; b++)
 	{
-		LOGF((logfp, "%s b%d: ", prefix, b));
+		LOG("%s b%d: ", prefix, b);
 		BoardBuffer *buf = foreground[b];
 		while (buf!=NULL)
 		{
-			LOGF((logfp, "%s ", buf->label));
+			LOG("%s ", buf->label);
 			buf = buf->next;
 		}
-		LOGF((logfp, "<end>\n"));
+		LOG("<end>\n");
 	}
 }
 #endif // BBDEBUG && SIM
@@ -161,7 +162,7 @@ void board_buffer_draw(BoardBuffer *buf)
 #if BBDEBUG && SIM
 	if (board_index==3)
 	{
-		LOGF((logfp, "bb_draw(3, buf %08x %s, mask %x)\n", (int) buf, buf->label, buf->mask));
+		LOG("bb_draw(3, buf %08x %s, mask %x)\n", (int) buf, buf->label, buf->mask);
 	}
 #endif // BBDEBUG && SIM
 

@@ -14,8 +14,11 @@
  *
  ************************************************************************/
 
-#ifndef _SIM_H
-#define _SIM_H
+#pragma once
+
+#include <assert.h>
+
+#include "hal.h"
 
 typedef struct s_board_layout {
 	const char *label;
@@ -23,11 +26,11 @@ typedef struct s_board_layout {
 	short x, y;
 } BoardLayout;
 
+void sim_log(const char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
+
 void sim_display_light_status(r_bool status);
 
 void sim_register_clock_handler(Handler func, void *data);
 void sim_register_sigio_handler(Handler func, void *data);
 
 #define SIM_TWI_PORT_BASE 9470
-
-#endif // _SIM_H

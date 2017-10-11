@@ -18,6 +18,7 @@
 #include <inttypes.h>
 
 #include "clock.h"
+#include "logging.h"
 
 #ifdef TIMING_DEBUG
 # include "hardware.h"
@@ -114,7 +115,7 @@ void schedule_us_internal(Time offset_us, ActivationFuncPtr func, void *data)
 
 void schedule_absolute(Time at_time, ActivationFuncPtr func, void *data)
 {
-	//LOGF((logfp, "scheduling act %08x func %08x\n", (int) act, (int) act->func));
+	//LOG("scheduling act %08x func %08x\n", (int) act, (int) act->func);
 
 #ifdef TIMING_DEBUG
 	gpio_set(GPIO_D6);
@@ -199,9 +200,9 @@ void scheduler_run_once()
 			break;
 		}
 
-		//LOGF((logfp, "popping act %08x func %08x\n", (uint32_t) act, (uint32_t) act->func));
+		//LOG("popping act %08x func %08x\n", (uint32_t) act, (uint32_t) act->func);
 
 		act.func(act.data);
-		//LOGF((logfp, "returned act %08x func %08x\n", (uint32_t) act, (uint32_t) act->func));
+		//LOG("returned act %08x func %08x\n", (uint32_t) act, (uint32_t) act->func);
 	}
 }
