@@ -72,7 +72,7 @@ void joystick_poll(JoystickState_t *js)
 	uint16_t x_adc = hal_read_adc(js->x_adc_channel);
 	uint16_t y_adc = hal_read_adc(js->y_adc_channel);
 
-	if (x_adc < 10 && y_adc < 10) {
+	if (x_adc < 10 || y_adc < 10) {
 		js->state = JOYSTICK_STATE_DISCONNECTED;
 		return;
 	}
