@@ -38,7 +38,10 @@ typedef struct s_board_buffer {
 #endif // BBDEBUG && SIM
 } BoardBuffer;
 
-#define NUM_AUX_BOARDS 4
+#ifndef NUM_AUX_BOARDS
+# define NUM_AUX_BOARDS 4
+#endif
+
 #define NUM_PSEUDO_BOARDS (NUM_BOARDS + NUM_AUX_BOARDS)
 
 void board_buffer_module_init();

@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef __joystick_h__
-#define __joystick_h__
+#pragma once
 
 #include "util.h"
 
@@ -23,12 +22,12 @@
 # define _BV(x) (1 << (x))
 #endif
 
-#define JOYSTICK_UP           _BV(0)
-#define JOYSTICK_DOWN         _BV(1)
-#define JOYSTICK_LEFT         _BV(2)
-#define JOYSTICK_RIGHT        _BV(3)
-#define JOYSTICK_TRIGGER      _BV(4)
-#define JOYSTICK_DISCONNECTED _BV(5)
+#define JOYSTICK_STATE_UP           _BV(0)
+#define JOYSTICK_STATE_DOWN         _BV(1)
+#define JOYSTICK_STATE_LEFT         _BV(2)
+#define JOYSTICK_STATE_RIGHT        _BV(3)
+#define JOYSTICK_STATE_TRIGGER      _BV(4)
+#define JOYSTICK_STATE_DISCONNECTED _BV(5)
 typedef struct {
 	// ADC channel numbers.  Should be initialized by caller before
 	// joystick_init is called.
@@ -44,6 +43,3 @@ typedef struct {
 
 void joystick_init(JoystickState_t *js);
 void joystick_poll(JoystickState_t *js);
-
-
-#endif // __joystick_h__

@@ -22,7 +22,7 @@
 #include "network_ports.h"
 #include "display_controller.h"
 
-#define REMOTE_BBUF_NUM_BOARDS	NUM_BOARDS
+#define REMOTE_BBUF_NUM_BOARDS	(NUM_PSEUDO_BOARDS - NUM_BOARDS)
 
 typedef struct {
 	SSBitmap buf[NUM_DIGITS];

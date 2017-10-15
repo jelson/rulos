@@ -14,12 +14,16 @@
  *
  ************************************************************************/
 
-#ifndef __display_controller_h__
-#define __display_controller_h__
+#pragma once
 
 #include <inttypes.h>
 
-#define NUM_BOARDS 8
+#include "board_defs.h"
+
+#ifndef NUM_BOARDS
+# define NUM_BOARDS 8
+#endif
+
 #define NUM_DIGITS 8
 
 /*
@@ -112,5 +116,3 @@ void ascii_to_bitmap_str(SSBitmap *b, int max_len, const char *a);
 void debug_msg_hex(uint8_t board, char *m, uint16_t hex);
 #define debug_plod(m)	{ debug_msg_hex(0, m, __LINE__); debug_delay(250); }
 void board_debug_msg(uint16_t line);
-
-#endif // display_controller_h

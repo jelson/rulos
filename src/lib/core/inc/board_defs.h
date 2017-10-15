@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef __BOARD_DEFS_H__
+#pragma once
 
 #define B_MISSION_CLOCK         DBOARD("Mission Clock",         PG PG PG PG PG PG PY PY,  3,  0 )
 #define B_LUNAR_DISTANCE        DBOARD("Distance to Moon",      PR PR PR PR PR PR PR PR, 33,  4 )
@@ -53,6 +53,8 @@
 
 
 #ifndef SIM
+
+#include <hardware.h>
 
 #if defined(BOARD_PROTO)
 
@@ -162,6 +164,9 @@
 
 #elif defined(BOARD_LPEM2)
 
+#define NUM_BOARDS 0
+#define NUM_AUX_BOARDS 12
+
 #define JOYSTICK_TRIGGER        GPIO_D4
 
 #define AVAILABLE_ADCS  0xff
@@ -218,6 +223,3 @@
 #endif
 
 #endif // SIM
-
-#endif // __BOARD_DEFS_H__
-

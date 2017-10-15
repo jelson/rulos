@@ -31,11 +31,11 @@ static void thrusters_update(ThrusterState_t *ts)
 		  ts->joystick_state.y_pos);
 */
 
-	if (ts->joystick_state.state & JOYSTICK_DISCONNECTED) {
+	if (ts->joystick_state.state & JOYSTICK_STATE_DISCONNECTED) {
 	  ascii_to_bitmap_str(&ts->bbuf.buffer[1], 3, " NO");
 	  ascii_to_bitmap_str(&ts->bbuf.buffer[5], 3, "JOy");
 	} else {
-		if (ts->joystick_state.state & JOYSTICK_TRIGGER) {
+		if (ts->joystick_state.state & JOYSTICK_STATE_TRIGGER) {
 			ascii_to_bitmap_str(&ts->bbuf.buffer[1], 3, "PSH");
 			ascii_to_bitmap_str(&ts->bbuf.buffer[5], 3, "PSH");
 		} else {
@@ -46,16 +46,16 @@ static void thrusters_update(ThrusterState_t *ts)
 		}
 
 		// display X and Y thresholds
-		if (ts->joystick_state.state & JOYSTICK_LEFT)
+		if (ts->joystick_state.state & JOYSTICK_STATE_LEFT)
 			ts->bbuf.buffer[1] |= SSB_DECIMAL;
-		else if (ts->joystick_state.state & JOYSTICK_RIGHT)
+		else if (ts->joystick_state.state & JOYSTICK_STATE_RIGHT)
 			ts->bbuf.buffer[3] |= SSB_DECIMAL;
 		else
 			ts->bbuf.buffer[2] |= SSB_DECIMAL;
 
-		if (ts->joystick_state.state & JOYSTICK_DOWN)
+		if (ts->joystick_state.state & JOYSTICK_STATE_DOWN)
 			ts->bbuf.buffer[5] |= SSB_DECIMAL;
-		else if (ts->joystick_state.state & JOYSTICK_UP)
+		else if (ts->joystick_state.state & JOYSTICK_STATE_UP)
 			ts->bbuf.buffer[7] |= SSB_DECIMAL;
 		else
 			ts->bbuf.buffer[6] |= SSB_DECIMAL;
@@ -68,15 +68,15 @@ static void thrusters_update(ThrusterState_t *ts)
 	// DOWN&LEFT  = thruster B.
 	// DOWN&RIGHT = thruster C.
 	hpam_set_port(ts->hpam, hpam_thruster_rear,
-		ts->joystick_state.state & JOYSTICK_UP);
+		ts->joystick_state.state & JOYSTICK_STATE_UP);
 	hpam_set_port(ts->hpam, hpam_thruster_frontright,
-		ts->joystick_state.state & JOYSTICK_DOWN &&
-			ts->joystick_state.state & JOYSTICK_LEFT);
+		ts->joystick_state.state & JOYSTICK_STATE_DOWN &&
+			ts->joystick_state.state & JOYSTICK_STATE_LEFT);
 	hpam_set_port(ts->hpam, hpam_thruster_frontleft,
-		ts->joystick_state.state & JOYSTICK_DOWN &&
-			ts->joystick_state.state & JOYSTICK_RIGHT);
+		ts->joystick_state.state & JOYSTICK_STATE_DOWN &&
+			ts->joystick_state.state & JOYSTICK_STATE_RIGHT);
 
-	if ((ts->joystick_state.state & (JOYSTICK_UP | JOYSTICK_LEFT | JOYSTICK_RIGHT | JOYSTICK_TRIGGER)) != 0)
+	if ((ts->joystick_state.state & (JOYSTICK_STATE_UP | JOYSTICK_STATE_LEFT | JOYSTICK_STATE_RIGHT | JOYSTICK_STATE_TRIGGER)) != 0)
 	{
 		//LOG("idle touch due to nonzero joystick: %d\n", ts->joystick_state.state);
 		if (ts->idle != NULL)

@@ -73,38 +73,38 @@ void joystick_poll(JoystickState_t *js)
 	uint16_t y_adc = hal_read_adc(js->y_adc_channel);
 
 	if (x_adc < 10 && y_adc < 10) {
-		js->state = JOYSTICK_DISCONNECTED;
+		js->state = JOYSTICK_STATE_DISCONNECTED;
 		return;
 	}
 		
-	js->state &= ~(JOYSTICK_DISCONNECTED);
+	js->state &= ~(JOYSTICK_STATE_DISCONNECTED);
 
 	js->x_pos = -adc_to_100scale(hal_read_adc(js->x_adc_channel));
 	js->y_pos =  adc_to_100scale(hal_read_adc(js->y_adc_channel));
 
 	if (js->x_pos < -ACTUATION_THRESHOLD)
-		js->state |= JOYSTICK_LEFT;
+		js->state |= JOYSTICK_STATE_LEFT;
 	if (js->x_pos > -RELEASE_THRESHOLD)
-		js->state &= ~(JOYSTICK_LEFT);
+		js->state &= ~(JOYSTICK_STATE_LEFT);
 	if (js->x_pos > ACTUATION_THRESHOLD)
-		js->state |= JOYSTICK_RIGHT;
+		js->state |= JOYSTICK_STATE_RIGHT;
 	if (js->x_pos < RELEASE_THRESHOLD)
-		js->state &= ~(JOYSTICK_RIGHT);
+		js->state &= ~(JOYSTICK_STATE_RIGHT);
 		
 
 	if (js->y_pos > ACTUATION_THRESHOLD)
-		js->state |= JOYSTICK_UP;
+		js->state |= JOYSTICK_STATE_UP;
 	if (js->y_pos < RELEASE_THRESHOLD)
-		js->state &= ~(JOYSTICK_UP);
+		js->state &= ~(JOYSTICK_STATE_UP);
 	if (js->y_pos < -ACTUATION_THRESHOLD)
-		js->state |= JOYSTICK_DOWN;
+		js->state |= JOYSTICK_STATE_DOWN;
 	if (js->y_pos > -RELEASE_THRESHOLD)
-		js->state &= ~(JOYSTICK_DOWN);
+		js->state &= ~(JOYSTICK_STATE_DOWN);
 
 	if (hal_read_joystick_button())
-		js->state |= JOYSTICK_TRIGGER;
+		js->state |= JOYSTICK_STATE_TRIGGER;
 	else
-		js->state &= ~(JOYSTICK_TRIGGER);
+		js->state &= ~(JOYSTICK_STATE_TRIGGER);
 }
 
 void joystick_init(JoystickState_t *js)
