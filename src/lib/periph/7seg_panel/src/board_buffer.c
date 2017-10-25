@@ -25,13 +25,13 @@
 BoardBuffer *foreground[NUM_PSEUDO_BOARDS];
 
 #if BBDEBUG && SIM
-void dump(char *prefix)
+void dump(const char *prefix)
 {
 	int b;
 	LOG("-----\n");
 	for (b=0; b<NUM_PSEUDO_BOARDS; b++)
 	{
-		LOG("%s b%d: ", prefix, b);
+		LOG("%s b%2d: ", prefix, b);
 		BoardBuffer *buf = foreground[b];
 		while (buf!=NULL)
 		{
@@ -108,7 +108,8 @@ void board_buffer_pop(BoardBuffer *buf)
 	}
 	else
 	{
-		assert(buf->board_index<NUM_PSEUDO_BOARDS);	// TODO if restoring remote display code: this path not implemented.
+		// TODO if restoring remote display code: this path not implemented.
+		assert(buf->board_index<NUM_PSEUDO_BOARDS);
 		BoardBuffer *prevbuf = foreground[buf->board_index];
 		uint8_t loopcheck=0;
 		while (prevbuf->next != buf)
@@ -132,6 +133,7 @@ dump("  after pop");
 
 void board_buffer_push(BoardBuffer *buf, int board)
 {
+	assert(board < NUM_PSEUDO_BOARDS);
 #if BBDEBUG && SIM
 dump("before push");
 #endif // BBDEBUG && SIM
@@ -162,7 +164,7 @@ void board_buffer_draw(BoardBuffer *buf)
 #if BBDEBUG && SIM
 	if (board_index==3)
 	{
-		LOG("bb_draw(3, buf %08x %s, mask %x)\n", (int) buf, buf->label, buf->mask);
+		LOG("bb_draw(3, buf %016" PRIxPTR " %s, mask %x)\n", (uintptr_t) buf, buf->label, buf->mask);
 	}
 #endif // BBDEBUG && SIM
 

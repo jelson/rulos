@@ -14,13 +14,12 @@
  *
  ************************************************************************/
 
-#ifndef __board_buffer_h__
-#define __board_buffer_h__
+#pragma once
 
 #include "display_controller.h"
 #include "util.h"
 
-#define BBDEBUG 0
+#define BBDEBUG 1
 
 typedef struct s_board_buffer {
 	uint8_t board_index;
@@ -30,8 +29,8 @@ typedef struct s_board_buffer {
 	struct s_board_buffer *next;
 #if BBDEBUG && SIM
 #define DBG_BBUF_LABEL(s)	, s
-#define DBG_BBUF_LABEL_DECL	, char *label
-	char *label;
+#define DBG_BBUF_LABEL_DECL	, const char *label
+	const char *label;
 #else
 #define DBG_BBUF_LABEL(s)	/**/
 #define DBG_BBUF_LABEL_DECL	/**/
@@ -58,5 +57,3 @@ r_bool board_buffer_is_stacked(BoardBuffer *buf);
 
 // internal method used by remote_bbuf:
 void board_buffer_paint(SSBitmap *bm, uint8_t board_index, uint8_t mask);
-
-#endif // __board_buffer_h__

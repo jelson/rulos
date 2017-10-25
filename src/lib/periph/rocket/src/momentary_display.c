@@ -17,7 +17,7 @@ void momentary_display_init(MomentaryDisplay *md, Time display_period, uint8_t b
 	md->recvSlot.user_data = md;
 		
 
-	board_buffer_init(&md->bbuf);
+	board_buffer_init(&md->bbuf DBG_BBUF_LABEL("momentary"));
 	md->is_visible = false;
 	md->last_display = clock_time_us() - display_period;
 

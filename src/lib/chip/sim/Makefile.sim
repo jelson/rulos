@@ -42,7 +42,7 @@ SIM_LIB_FILE = $(SIM_OBJDIR)/lib$(SIM_LIBNAME).a
 CURR_OBJDIR := $(SIM_OBJDIR)
 -include $(foreach dir, $(sort $(dir $(SIM_SOURCES))), $(wildcard $(dir)/../Makefile.extra))
 
-SIM_CFLAGS = -Wall -Werror -g -O3 -DSIM -I$(SIM_OBJDIR) $(SIM_INCLUDES)
+SIM_CFLAGS += -Wall -Werror -g -O3 -DSIM -I$(SIM_OBJDIR) $(SIM_INCLUDES)
 #SIM_CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 SIM_CFLAGS += -MD -MP # -MT $(SIM_OBJDIR)/$(*F).o -MF $(SIM_OBJDIR)/$(@F).d
 

@@ -52,6 +52,9 @@
         B_END
 
 
+//#define NUM_BOARDS 0
+//#define NUM_AUX_BOARDS 12
+
 #ifndef SIM
 
 #include <hardware.h>
@@ -190,7 +193,7 @@
         syncdebug(0, 'A', line); \
         }
 
-#elif defined(BOARD_DONGLE)
+#elif defined(BOARD_DONGLE_REVA)
 
 #define BOARDSEL0       GPIO_C3
 #define BOARDSEL1       GPIO_D1
@@ -199,6 +202,20 @@
 #define DIGSEL1         GPIO_D6
 #define DIGSEL2         GPIO_B0
 #define SEGSEL0         GPIO_D0
+#define SEGSEL1         GPIO_D2
+#define SEGSEL2         GPIO_D4
+#define DATA            GPIO_C1
+#define STROBE          GPIO_C2
+
+#elif defined(BOARD_DONGLE_REVB)
+
+#define BOARDSEL0       GPIO_C3
+#define BOARDSEL1       GPIO_B2
+#define BOARDSEL2       GPIO_D3
+#define DIGSEL0         GPIO_B7
+#define DIGSEL1         GPIO_D6
+#define DIGSEL2         GPIO_B0
+#define SEGSEL0         GPIO_B1
 #define SEGSEL1         GPIO_D2
 #define SEGSEL2         GPIO_D4
 #define DATA            GPIO_C1

@@ -124,24 +124,19 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t 
 
 
 
+#if defined(JOYSTICK_TRIGGER)
+
 void hal_init_joystick_button()
 {
-#if defined(JOYSTICK_TRIGGER)
 	// Only PCB11 defines a joystick trigger line
 	gpio_make_input_enable_pullup(JOYSTICK_TRIGGER);
-#else
-	assert(FALSE);	// no joystick on this hardware! why are you trying to read it?
-#endif
 }
 
 r_bool hal_read_joystick_button()
 {
-#if defined(JOYSTICK_TRIGGER)
 	return gpio_is_clr(JOYSTICK_TRIGGER);
-#else
-	return FALSE;
-#endif
 }
+#endif
 
 /*************************************************************************************/
 

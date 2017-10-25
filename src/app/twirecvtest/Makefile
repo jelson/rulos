@@ -22,7 +22,7 @@ PERIPHERALS := twi 7seg_panel
 #BOARD := LPEM
 
 MCU := atmega328
-BOARD := DONGLE
+BOARD := DONGLE_REVB
 
 TARGET := twirecvtest
 
