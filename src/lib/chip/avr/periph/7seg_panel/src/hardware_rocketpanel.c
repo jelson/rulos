@@ -124,11 +124,11 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t 
 
 
 
+// Only define these functions for boards that have a joystick.
+// The EPB Dongle, notably, does not.
 #if defined(JOYSTICK_TRIGGER)
-
 void hal_init_joystick_button()
 {
-	// Only PCB11 defines a joystick trigger line
 	gpio_make_input_enable_pullup(JOYSTICK_TRIGGER);
 }
 
@@ -136,7 +136,7 @@ r_bool hal_read_joystick_button()
 {
 	return gpio_is_clr(JOYSTICK_TRIGGER);
 }
-#endif
+#endif  // JOYSTICK_TRIGGER
 
 /*************************************************************************************/
 
