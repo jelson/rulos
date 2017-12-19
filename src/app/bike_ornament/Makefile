@@ -17,8 +17,9 @@ ROCKET_ROOT := ../..
 PLATFORMS := avr
 MCU := attiny84a
 BOARD := GENERIC
-TARGET := bike_ornament
+EXTRA_AVR_CFLAGS := -DSCHEDULER_CAPACITY=3 -DSCHEDULER_NOW_QUEUE_CAPACITY=2
 
+TARGET := bike_ornament
 TARGET_OBJECTS := \
 	bike_ornament.o
 
