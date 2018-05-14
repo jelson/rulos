@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _queue_h
-#define _queue_h
+#pragma once
 
 #include <inttypes.h>
 #include "util.h"
@@ -35,5 +34,3 @@ provide a macro that converts storage ptr into correct data type
 init the raw storage, passing actual number of underlying bytes allocated
 	ByteQueue_init(GetByteQueue(act), sizeof(act->byte_queue_storage));
 */
-
-#endif // _queue_h

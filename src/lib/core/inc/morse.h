@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef __MORSE_H__
-#define __MORSE_H__
+#pragma once
 
 typedef void (MorseOutputToggleFunc)(uint8_t onoff);
 typedef void (MorseOutputDoneFunc)();
@@ -36,6 +35,3 @@ void emit_morse(const char* send_string,
 		const uint32_t dot_time_us,
 		MorseOutputToggleFunc* toggle_func,
 		MorseOutputDoneFunc* done_func);
-
-
-#endif  // __MORSE_H__

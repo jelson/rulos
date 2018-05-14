@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _EVENT_H
-#define _EVENT_H
+#pragma once
 
 #include "util.h"
 #include "heap.h"
@@ -36,6 +35,3 @@ static inline r_bool event_is_signaled(Event *evt)
 {
 	return evt->signaled;
 }
-
-#endif // _EVENT_H
-

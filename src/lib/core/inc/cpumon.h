@@ -14,9 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _cpumon_h
-#define _cpumon_h
-
+#pragma once
 
 typedef enum {
 	cpumon_phase_align,
@@ -41,5 +39,3 @@ void cpumon_init(CpumonAct *act);
 // that runs during calibration phase and real run time.
 void cpumon_main_loop();
 uint16_t cpumon_get_idle_percentage(CpumonAct *act);
-
-#endif // _cpumon_h
