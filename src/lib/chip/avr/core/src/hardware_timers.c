@@ -149,11 +149,7 @@ typedef struct {
 	const uint8_t ocr_bits;
 } TimerDef;
 static const TimerDef _timer0 = { _timer0_prescaler_bits,  8 };
-#if defined(MCUtiny85_line)
-static const TimerDef _timer1 = { _timer1_prescaler_bits, 8 };
-#else
 static const TimerDef _timer1 = { _timer1_prescaler_bits, 16 };
-#endif
 static const TimerDef _timer2 = { _timer2_prescaler_bits,  8 };
 
 static void find_prescaler(uint32_t req_us_per_period, const TimerDef *timerDef,
