@@ -16,7 +16,25 @@
 
 #pragma once
 
-#include <inttypes.h>
+#include <stdint.h>
+#include "util.h"
 
-uint32_t deadbeef_rand();
-void deadbeef_srand(uint32_t x);
+// Definition of time for RulOS, in units of usec.
+typedef int32_t Time;
+
+// Returns true if b is later than a using rollover math, assuming 32-bit
+// signed time values.
+static inline r_bool later_than(Time a, Time b) {
+	// the subtraction will roll over too
+	return a - b > 0;
+
+	// this took forever to puzzle out and was originally a
+	// complicated set of conditionals
+}
+
+// Returns true if b is later than or equal to a using rollover math,
+// assuming 32-bit signed time values.
+static inline r_bool later_than_or_eq(Time a, Time b) {
+	// the subtraction will roll over too
+	return a - b >= 0;
+}

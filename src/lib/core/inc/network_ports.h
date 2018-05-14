@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _network_ports_h
-#define _network_ports_h
+#pragma once
 
 // Addresses
 #define ROCKET_ADDR				(0x01)
@@ -34,5 +33,3 @@
 #define SET_VOLUME_PORT			(0x19)
 #define MUSIC_CONTROL_PORT		(0x20)
 #define MUSIC_DISPLAY_PORT		(0x21)
-
-#endif // _network_ports_h

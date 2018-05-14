@@ -14,28 +14,11 @@
  *
  ************************************************************************/
 
-#ifndef __clock_h__
-#define __clock_h__
+#pragma once
 
 #include "heap.h"
 #include "hal.h"
-
-// Returns true if b is later than a using rollover math, assuming 32-bit
-// signed time values.
-static inline uint8_t later_than(Time a, Time b) {
-	// the subtraction will roll over too
-	return a - b > 0;
-
-	// this took forever to puzzle out and was originally a
-	// complicated set of conditionals
-}
-
-// Returns true if b is later than or equal to a using rollover math,
-// assuming 32-bit signed time values.
-static inline uint8_t later_than_or_eq(Time a, Time b) {
-	// the subtraction will roll over too
-	return a - b >= 0;
-}
+#include "time.h"
 
 void init_clock(Time interval_us, uint8_t timer_id);
 
@@ -74,5 +57,3 @@ void scheduler_run_once();
 
 void spin_counter_increment();
 uint32_t read_spin_counter();
-
-#endif // clock_h

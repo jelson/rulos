@@ -14,13 +14,10 @@
  *
  ************************************************************************/
 
-#ifndef __heap_h__
-#define __heap_h__
+#pragma once
 
 #include <stdint.h>
-
-// had to move this from clock.h to here to resolve circular dependency
-typedef int32_t Time;	// in units of usec
+#include "time.h"
 
 typedef void (*ActivationFuncPtr)(void *data);
 
@@ -50,5 +47,3 @@ void heap_insert(Heap *heap, Time key, ActivationFuncPtr func, void *data);
 int heap_peek(Heap *heap, /*out*/ Time *key, /*out*/ ActivationRecord *act);
 	/* rc nonzero => heap empty */
 void heap_pop(Heap *heap);
-
-#endif // heap_h

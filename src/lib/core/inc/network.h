@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _NETWORK_H
-#define _NETWORK_H
+#pragma once
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -76,5 +75,3 @@ r_bool net_send_message(Network *net, SendSlot *sendSlot);
 //////////////////////////////////////////////////////////////////////////////
 
 void init_twi_network(Network *network, uint32_t speed_khz, Addr local_addr);
-
-#endif // _NETWORK_H
