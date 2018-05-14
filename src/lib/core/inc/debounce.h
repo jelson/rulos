@@ -16,26 +16,17 @@
 
 #pragma once
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <inttypes.h>
-#include <math.h>
-
-#include "clock.h"
-#include "cpumon.h"
-#include "debounce.h"
-#include "event.h"
-#include "hal.h"
-#include "heap.h"
-#include "media.h"
-#include "message.h"
-#include "net_compute_checksum.h"
-#include "network.h"
-#include "network_ports.h"
-#include "queue.h"
-#include "random.h"
 #include "util.h"
-#include "logging.h"
+#include "time.h"
+
+typedef struct {
+  r_bool is_pressed;
+  Time refrac_time_us;
+  Time next_valid_push_time;
+} DebouncedButton_t;
+  
+void debounce_button_init(DebouncedButton_t* b, Time refrac_time_us);
+
+// Pass in whether the raw (un-debounced) button is in the pushed state.
+// Returns true if the debounced button was just pushed.
+r_bool debounce_button(DebouncedButton_t* b, r_bool raw_is_down);
