@@ -15,7 +15,7 @@
 #
 
 
-import Image
+from PIL import Image
 import glob
 import sys
 
