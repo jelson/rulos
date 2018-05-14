@@ -48,8 +48,8 @@ typedef struct {
 	Heap heap;
 	ActivationRecord now_queue[SCHEDULER_NOW_QUEUE_CAPACITY];
 	uint8_t now_queue_size;
-} SysClock;
-SysClock clock;
+} SchedulerState_t;
+static SchedulerState_t sched_state;
 
 void clock_handler(void *data)
 {
@@ -68,8 +68,8 @@ void clock_handler(void *data)
 
 void init_clock(Time interval_us, uint8_t timer_id)
 {
-	heap_init(&clock.heap);
-	clock.now_queue_size = 0;
+	heap_init(&sched_state.heap);
+	sched_state.now_queue_size = 0;
 
 #ifdef TIMING_DEBUG
 	gpio_make_output(GPIO_D4);
@@ -94,15 +94,15 @@ void schedule_us(Time offset_us, ActivationFuncPtr func, void *data)
 void schedule_now(ActivationFuncPtr func, void *data)
 {
 	rulos_irq_state_t old_interrupts = hal_start_atomic();
-	if (clock.now_queue_size < SCHEDULER_NOW_QUEUE_CAPACITY)
+	if (sched_state.now_queue_size < SCHEDULER_NOW_QUEUE_CAPACITY)
 	{
-		clock.now_queue[clock.now_queue_size].func = func;
-		clock.now_queue[clock.now_queue_size].data = data;
-		clock.now_queue_size++;
+		sched_state.now_queue[sched_state.now_queue_size].func = func;
+		sched_state.now_queue[sched_state.now_queue_size].data = data;
+		sched_state.now_queue_size++;
 	}
 	else
 	{
-		heap_insert(&clock.heap, clock_time_us(), func, data);
+		heap_insert(&sched_state.heap, clock_time_us(), func, data);
 	}
 	hal_end_atomic(old_interrupts);
 	run_scheduler_now = TRUE;
@@ -121,7 +121,7 @@ void schedule_absolute(Time at_time, ActivationFuncPtr func, void *data)
 	gpio_set(GPIO_D6);
 #endif
 	rulos_irq_state_t old_interrupts = hal_start_atomic();
-	heap_insert(&clock.heap, at_time, func, data);
+	heap_insert(&sched_state.heap, at_time, func, data);
 	hal_end_atomic(old_interrupts);
 #ifdef TIMING_DEBUG
 	gpio_clr(GPIO_D6);
@@ -170,24 +170,24 @@ void scheduler_run_once()
 		gpio_set(GPIO_D6);
 #endif
 		rulos_irq_state_t old_interrupts = hal_start_atomic();
-		if (clock.now_queue_size > 0)
+		if (sched_state.now_queue_size > 0)
 		{
-			act = clock.now_queue[0];
+			act = sched_state.now_queue[0];
 			uint8_t nqi;
-			for (nqi=1; nqi<clock.now_queue_size; nqi++)
+			for (nqi=1; nqi<sched_state.now_queue_size; nqi++)
 			{
-				clock.now_queue[nqi-1] = clock.now_queue[nqi];
+				sched_state.now_queue[nqi-1] = sched_state.now_queue[nqi];
 			}
-			clock.now_queue_size -= 1;
+			sched_state.now_queue_size -= 1;
 			valid = TRUE;
 		}
 		else
 		{
-			rc = heap_peek(&clock.heap, &due_time, &act);
+			rc = heap_peek(&sched_state.heap, &due_time, &act);
 			if (!rc && !later_than(due_time, _last_scheduler_run_us))
 			{
 				valid = TRUE;
-				heap_pop(&clock.heap);
+				heap_pop(&sched_state.heap);
 			}
 		}
 		hal_end_atomic(old_interrupts);
