@@ -53,14 +53,9 @@ static inline void clock()
   gpio_clr(LED_DRIVER_CLK);
 }
 
-//
-// This function shifts 8 bits into our 8-bit latch.
-// The stove has only outputs 0 and 1 connected, so we shift real data
-// into positions 0 and 1, and turn the rest off.
-// 
-// Each time a bit is shifted, it takes position 0, and pushing
-// 0 through n-1 into positions 1 through n.  So, we shift 6 0's in first,
-// then output 1, and finally output 0.
+// This function shifts 16 bits into the two 16-bit latches. They have
+// separate data lines, but share a clock line, so in each cycle we set both
+// data lines separately and then effectively clock them together.
 static void shift_in_config(BikeState_t* bike)
 {
   gpio_clr(LED_DRIVER_LE);
