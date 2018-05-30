@@ -20,12 +20,16 @@
 #include "hal.h"
 
 #define JIFFY_TIME_US 10000
-#define BUTTON_REFRAC_TIME_US 500000
-#define FOUNTAIN_ON_TIME_SEC 5
+#define BUTTON_REFRAC_TIME_US 100000
+#define FOUNTAIN_ON_TIME_SEC 60
+#define FOUNTAIN_FAST_TIME_MSEC 2000
+#define PWM
 
 typedef struct {
 	DebouncedButton_t button;
 	r_bool fountain_on;
+	r_bool fountain_fast;
+	Time fountain_slowdown_time;
 	Time fountain_stop_time;
 } FountainState_t;
 
@@ -52,6 +56,11 @@ r_bool hal_button_pressed()
 void hal_start_pump()
 {
 	printf("pump now on\n");
+}
+
+void hal_slowdown_pump()
+{
+	printf("pump slowing down\n");
 }
 
 void hal_stop_pump()
@@ -83,14 +92,47 @@ r_bool hal_button_pressed()
 	return gpio_is_set(BUTTON);
 }
 
+#ifdef PWM
+void activate_pwm(int duty_cycle_percent)
+{
+	// Note: I'm using the inverting output (/OC1A) instead of the normal
+	// output because I accidentally wired the inverting output to the
+	// pump on the PCB.
+	OCR1A = 100 - duty_cycle_percent;
+	OCR1C = 100;
+	TCCR1 = 0
+		| _BV(CTC1)   // Reset timer 1 when it hits OCR1C
+		| _BV(PWM1A)  // Enable PWM from OCR1A
+		| _BV(COM1A0) // Set /OC1A at OCR1A, clear at OCR1C
+		| _BV(CS13) | _BV(CS12) | _BV(CS10) // /4096 prescale
+		;
+}
+#endif
+
 void hal_start_pump()
 {
+#ifdef PWM
+	activate_pwm(100);
+#else
 	gpio_set(PUMP);
+#endif
+}
+
+void hal_slowdown_pump()
+{
+#ifdef PWM
+	activate_pwm(50);
+#endif
 }
 
 void hal_stop_pump()
 {
+#ifdef PWM
+	TCCR1 = 0;
 	gpio_clr(PUMP);
+#else
+	gpio_clr(PUMP);
+#endif
 }
 
 #endif // SIM
@@ -99,6 +141,9 @@ void hal_stop_pump()
 void start_fountain(FountainState_t* f)
 {
 	f->fountain_on = TRUE;
+	f->fountain_fast = TRUE;
+	f->fountain_slowdown_time = clock_time_us() +
+		1000 * ((Time) FOUNTAIN_FAST_TIME_MSEC);
 	f->fountain_stop_time = clock_time_us() +
 		1000000 * ((Time) FOUNTAIN_ON_TIME_SEC);
 	hal_start_pump();
@@ -114,6 +159,13 @@ static void fountain_update(FountainState_t* f)
 {
 	schedule_us(JIFFY_TIME_US, (ActivationFuncPtr)fountain_update, f);
 
+	// If we've finished fast-mode, slow down the pump.
+	if (f->fountain_on && f->fountain_fast &&
+	    later_than_or_eq(clock_time_us(), f->fountain_slowdown_time)) {
+		f->fountain_fast = FALSE;
+		hal_slowdown_pump();
+	}
+	
 	// If the fountain is on and has timed out, turn it off.
 	if (f->fountain_on &&
 	    later_than_or_eq(clock_time_us(), f->fountain_stop_time)) {
@@ -138,9 +190,8 @@ static void fountain_update(FountainState_t* f)
 
 int main()
 {
-	
 	FountainState_t f;
-	
+
 	hal_init();
 	hal_fountain_init();
 
