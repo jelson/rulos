@@ -22,7 +22,7 @@
 #define JIFFY_TIME_US 10000
 #define BUTTON_REFRAC_TIME_US 100000
 #define FOUNTAIN_ON_TIME_SEC 60
-#define FOUNTAIN_FAST_TIME_MSEC 2000
+#define FOUNTAIN_FAST_TIME_MSEC 1000
 #define PWM
 
 typedef struct {
@@ -73,7 +73,7 @@ void hal_stop_pump()
 #include "hardware.h"
 
 #define BUTTON GPIO_B2
-#define PUMP   GPIO_B0
+#define PUMP   GPIO_B1
 
 void hal_fountain_init()
 {
@@ -95,16 +95,13 @@ r_bool hal_button_pressed()
 #ifdef PWM
 void activate_pwm(int duty_cycle_percent)
 {
-	// Note: I'm using the inverting output (/OC1A) instead of the normal
-	// output because I accidentally wired the inverting output to the
-	// pump on the PCB.
-	OCR1A = 100 - duty_cycle_percent;
+	OCR1A = duty_cycle_percent;
 	OCR1C = 100;
 	TCCR1 = 0
 		| _BV(CTC1)   // Reset timer 1 when it hits OCR1C
 		| _BV(PWM1A)  // Enable PWM from OCR1A
-		| _BV(COM1A0) // Set /OC1A at OCR1A, clear at OCR1C
-		| _BV(CS13) | _BV(CS12) | _BV(CS10) // /4096 prescale
+		| _BV(COM1A1) // Set OC1A at 0, clear at OC1C
+		| _BV(CS10) // No prescale
 		;
 }
 #endif
@@ -121,7 +118,7 @@ void hal_start_pump()
 void hal_slowdown_pump()
 {
 #ifdef PWM
-	activate_pwm(50);
+	activate_pwm(15);
 #endif
 }
 
