@@ -38,15 +38,10 @@
 #define TIMEOUT_WHILE_OFF_US (1000000*1) // 1 sec
 
 typedef struct {
-	r_bool isDown;
-	Time last_push_time;
-} ButtonState_t;
-
-typedef struct {
 	r_bool light1_on;
 	r_bool light2_on;
-	ButtonState_t but1;
-	ButtonState_t but2;
+	DebouncedButton_t but1;
+	DebouncedButton_t but2;
 	Time shutdown_time;
 } DuktigState_t;
 
@@ -71,43 +66,7 @@ static void set_power(r_bool onoff)
 		gpio_set(LED_DRIVER_OE);
 	}
 }
-
-// initialize a button-debounce state
-static void init_button(ButtonState_t *buttonState)
-{
-	buttonState->isDown = FALSE;
-
-	// initialize "last push time" to some time in the past
-	// so the startup button push is not discarded as a bounce
-	buttonState->last_push_time = clock_time_us() - 2*KEY_REFRACTORY_TIME_US;
-}
 	
-// Given the button's state structure, and its currently-read up/down state,
-// return 1 if we just registered a button push and 0 if not.
-static r_bool debounce_button(ButtonState_t *buttonState, r_bool isDown)
-{
-	// if the key remains in the last known state, do nothing
-	if (isDown == buttonState->isDown)
-		return 0;
-
-	buttonState->isDown = isDown;
-
-	if (isDown) {
-		// key was just pressed -- ignore it if it's inside the
-		// refractory window (taking rollover into account).
-		// Otherwise, ignore it as a bounce.
-		Time time_since_last_push = clock_time_us() - buttonState->last_push_time;
-		if (time_since_last_push >= 0 && time_since_last_push < KEY_REFRACTORY_TIME_US)
-			return 0;
-		else
-			return 1;
-	} else { 
-		// key was just released.  Set refractory time.
-		buttonState->last_push_time = clock_time_us();
-		return 0;
-	}
-}
-
 static inline void clock()
 {
 	gpio_set(LED_DRIVER_CLK);
@@ -210,9 +169,9 @@ int main()
 
 	// set up buttons
 	gpio_make_input_disable_pullup(BUT1);
-	init_button(&duktig.but1);
+	debounce_button_init(&duktig.but1, KEY_REFRACTORY_TIME_US);
 	gpio_make_input_disable_pullup(BUT2);
-	init_button(&duktig.but2);
+	debounce_button_init(&duktig.but2, KEY_REFRACTORY_TIME_US);
 
 	// set up periodic sampling task
 	init_clock(JIFFY_TIME_US, TIMER1);
