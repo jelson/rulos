@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
-#include "rulos.h"
-#include "rocket_ring_buffer.h"
+#include "core/rulos.h"
+#include "periph/ring_buffer/rocket_ring_buffer.h"
 
 void init_ring_buffer(RingBuffer *rb, uint16_t allocsize)
 {

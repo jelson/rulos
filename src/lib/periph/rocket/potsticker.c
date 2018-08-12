@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "potsticker.h"
+#include "periph/rocket/potsticker.h"
 
 void ps_update(PotSticker *ps)
 {

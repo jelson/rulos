@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "rocket.h"
+#include "periph/rocket/rocket.h"
 
 void tsn_timer_func(ThrusterSendNetwork *tsn);
 void thruster_message_sent(SendSlot *sendSlot);

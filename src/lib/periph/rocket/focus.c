@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "rocket.h"
+#include "periph/rocket/rocket.h"
 
 UIEventDisposition focus_input_handler(UIEventHandler *handler, UIEvent evt);
 

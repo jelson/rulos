@@ -14,9 +14,9 @@
  *
  ************************************************************************/
 
-#include "rocket.h"
-#include "util.h"
-#include "labeled_display.h"
+#include "periph/rocket/rocket.h"
+#include "core/util.h"
+#include "periph/rocket/labeled_display.h"
 
 UIEventDisposition labeled_display_event_handler(
 	UIEventHandler *raw_handler, UIEvent evt);

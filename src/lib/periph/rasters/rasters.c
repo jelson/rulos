@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
-#include "rulos.h"
-#include "rasters.h"
+#include "core/rulos.h"
+#include "periph/rasters/rasters.h"
 
 void raster_big_digit_update(RasterBigDigit *digit);
 

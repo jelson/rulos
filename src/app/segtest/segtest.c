@@ -18,8 +18,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "rulos.h"
-#include "7seg_panel.h"
+#include "core/rulos.h"
+#include "periph/7seg_panel/7seg_panel.h"
 
 
 /*******************************************************************************/

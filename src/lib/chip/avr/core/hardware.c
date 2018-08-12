@@ -26,7 +26,7 @@
 #include <util/delay_basic.h>
 
 #include "hardware.h"
-#include "hal.h"
+#include "core/hal.h"
 
 
 uint8_t hal_initted = 0;

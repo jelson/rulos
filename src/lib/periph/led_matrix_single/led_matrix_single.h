@@ -1,7 +1,7 @@
 #ifndef _LED_MATRIX_SINGLE_H
 #define _LED_MATRIX_SINGLE_H
 
-#include "rocket.h"
+#include "periph/rocket/rocket.h"
 
 typedef struct {
 	uint8_t red[8];

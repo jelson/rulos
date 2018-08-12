@@ -16,12 +16,12 @@
 
 #pragma once
 
-#include "rulos.h"
-#include "network.h"
-#include "network_ports.h"
-#include "audio_streamer.h"
-#include "audio_request_message.h"
-#include "ambient_noise.h"
+#include "core/rulos.h"
+#include "core/network.h"
+#include "core/network_ports.h"
+#include "periph/audio/audio_streamer.h"
+#include "periph/audio/audio_request_message.h"
+#include "periph/rocket/ambient_noise.h"
 
 typedef struct s_audio_client {
 	Network *network;

@@ -17,7 +17,7 @@
 #ifndef _mirror_h
 #define _mirror_h
 
-#include "rocket.h"
+#include "periph/rocket/rocket.h"
 
 typedef struct
 {

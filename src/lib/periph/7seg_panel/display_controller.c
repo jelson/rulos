@@ -16,8 +16,8 @@
 
 #include <string.h>
 
-#include "display_controller.h"
-#include "hal.h"
+#include "periph/7seg_panel/display_controller.h"
+#include "core/hal.h"
 
 // offset 32
 static const uint8_t sevseg_ascii[] PROGMEM = {

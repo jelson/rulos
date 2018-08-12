@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
-#include "rocket.h"
-#include "drift_anim.h"
+#include "periph/rocket/rocket.h"
+#include "periph/rocket/drift_anim.h"
 
 void drift_anim_init(DriftAnim *da, uint8_t expscale, int32_t initValue, int32_t min, int32_t max, uint32_t maxSpeed)
 {

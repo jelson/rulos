@@ -17,8 +17,8 @@
 #ifndef display_rtc_h
 #define display_rtc_h
 
-#include "clock.h"
-#include "board_buffer.h"
+#include "core/clock.h"
+#include "periph/7seg_panel/board_buffer.h"
 
 typedef struct {
 	Time base_time;

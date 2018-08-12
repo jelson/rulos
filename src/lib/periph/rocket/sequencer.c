@@ -14,10 +14,10 @@
  *
  ************************************************************************/
 
-#include "rocket.h"
-#include "sequencer.h"
-#include "sound.h"
-#include "screenblanker.h"
+#include "periph/rocket/rocket.h"
+#include "periph/rocket/sequencer.h"
+#include "periph/rocket/sound.h"
+#include "periph/rocket/screenblanker.h"
 
 #define STUB(s)	{}
 #define LAUNCH_COUNTDOWN_TIME (20*1000000+500000)

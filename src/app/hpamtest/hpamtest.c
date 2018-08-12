@@ -14,9 +14,9 @@
  *
  ************************************************************************/
 
-#include "rocket.h"
-#include "hpam.h"
-#include "joystick.h"
+#include "periph/rocket/rocket.h"
+#include "periph/hpam/hpam.h"
+#include "periph/joystick/joystick.h"
 
 struct {
 	char *name;

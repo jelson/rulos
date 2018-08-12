@@ -15,7 +15,7 @@
  ************************************************************************/
 
 #include <stdbool.h>
-#include "eeprom.h"
+#include "periph/eeprom/eeprom.h"
 
 #if SIM
 #define eeprom_write_word(x, y) {(void) y;}

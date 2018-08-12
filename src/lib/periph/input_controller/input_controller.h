@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "focus.h"
+#include "periph/input_controller/focus.h"
 
 struct s_input_injector_ifc;
 typedef void (*InputInjectorFunc)(struct s_input_injector_ifc *ii, char key);

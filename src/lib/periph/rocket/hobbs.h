@@ -17,9 +17,9 @@
 #ifndef _HOBBS_H
 #define _HOBBS_H
 
-#include "rocket.h"
-#include "hpam.h"
-#include "idle.h"
+#include "periph/rocket/rocket.h"
+#include "periph/hpam/hpam.h"
+#include "periph/rocket/idle.h"
 
 typedef struct {
 	UIEventHandlerFunc func;

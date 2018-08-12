@@ -16,9 +16,9 @@
 
 #pragma once
 
-#include "heap.h"
-#include "util.h"
-#include "media.h"
+#include "core/heap.h"
+#include "core/util.h"
+#include "core/media.h"
 #include "hardware_types.h"
 
 /*

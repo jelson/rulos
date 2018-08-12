@@ -20,7 +20,7 @@
 #include <avr/boot.h>
 #include <avr/interrupt.h>
 
-#include "hal.h"
+#include "core/hal.h"
 
 #if defined(MCUatmega1284) || defined(MCUatmega1284p)
 # define MCU1284_line

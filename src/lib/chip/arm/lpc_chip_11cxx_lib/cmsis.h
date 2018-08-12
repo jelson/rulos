@@ -29,8 +29,8 @@
 #ifndef __CMSIS_H_
 #define __CMSIS_H_
 
-#include "lpc_types.h"
-#include "sys_config.h"
+#include "chip/arm/lpc_chip_11cxx_lib/lpc_types.h"
+#include "chip/arm/lpc_chip_11cxx_lib/sys_config.h"
 
 /* Select correct CMSIS include file based on CHIP_* definition */
 #if defined(CHIP_LPC110X)
@@ -43,7 +43,7 @@ typedef LPC1125_IRQn_Type IRQn_Type;
 #include "cmsis_11axx.h"
 typedef LPC11AXX_IRQn_Type IRQn_Type;
 #elif defined(CHIP_LPC11CXX)
-#include "cmsis_11cxx.h"
+#include "chip/arm/lpc_chip_11cxx_lib/cmsis_11cxx.h"
 typedef LPC11CXX_IRQn_Type IRQn_Type;
 #elif defined(CHIP_LPC11EXX)
 #include "cmsis_11exx.h"
@@ -59,6 +59,6 @@ typedef LPC11XXLV_IRQn_Type IRQn_Type;
 #endif
 
 /* Cortex-M0 processor and core peripherals */
-#include "core_cm0.h"
+#include "chip/arm/lpc_chip_11cxx_lib/core_cm0.h"
 
 #endif /* __CMSIS_H_ */

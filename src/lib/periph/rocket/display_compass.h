@@ -17,10 +17,10 @@
 #ifndef display_compass_h
 #define display_compass_h
 
-#include "clock.h"
-#include "board_buffer.h"
-#include "focus.h"
-#include "drift_anim.h"
+#include "core/clock.h"
+#include "periph/7seg_panel/board_buffer.h"
+#include "periph/input_controller/focus.h"
+#include "periph/rocket/drift_anim.h"
 
 struct s_dcompassact;
 

@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
-#include "queue.h"
+#include "core/queue.h"
 
-#include "queue.mc"
+#include "core/queue.mc"
 QUEUE_DEFINE(Char)
 

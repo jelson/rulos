@@ -17,8 +17,8 @@
 #ifndef __cursor_h__
 #define __cursor_h__
 
-#include "board_buffer.h"
-#include "region.h"
+#include "periph/7seg_panel/board_buffer.h"
+#include "periph/7seg_panel/region.h"
 
 #define MAX_HEIGHT 5
 

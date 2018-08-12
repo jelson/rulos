@@ -19,10 +19,10 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "rocket.h"
-#include "serial_console.h"
+#include "periph/rocket/rocket.h"
+#include "periph/uart/serial_console.h"
 #include "hardware.h"
-#include "board_defs.h"
+#include "core/board_defs.h"
 
 typedef struct {
 	SerialConsole *sc;

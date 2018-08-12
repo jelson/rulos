@@ -1,5 +1,5 @@
 #include <stdbool.h>
-#include "volume_control.h"
+#include "periph/rocket/volume_control.h"
 
 #define VOLUME_DISPLAY_PERSISTENCE	(4*1000000)
 

@@ -34,16 +34,16 @@
  * 20. scroll board 0: "launch complete. Orbit attained."
  */
 
-#include "display_scroll_msg.h"
-#include "display_rtc.h"
-#include "display_blinker.h"
-#include "numeric_input.h"
-#include "focus.h"
-#include "lunar_distance.h"
-#include "screen4.h"
-#include "rasters.h"
-#include "booster.h"
-#include "audio_server.h"
+#include "periph/rocket/display_scroll_msg.h"
+#include "periph/display_rtc/display_rtc.h"
+#include "periph/rocket/display_blinker.h"
+#include "periph/rocket/numeric_input.h"
+#include "periph/input_controller/focus.h"
+#include "periph/rocket/lunar_distance.h"
+#include "periph/rocket/screen4.h"
+#include "periph/rasters/rasters.h"
+#include "periph/rocket/booster.h"
+#include "periph/audio/audio_server.h"
 
 typedef enum {
 	launch_state_init=-1,

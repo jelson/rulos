@@ -16,9 +16,9 @@
 
 #include <stdio.h>
 
-#include "rulos.h"
-#include "board_buffer.h"
-#include "remote_bbuf.h"
+#include "core/rulos.h"
+#include "periph/7seg_panel/board_buffer.h"
+#include "periph/7seg_panel/remote_bbuf.h"
 
 #define BBUF_UNMAPPED_INDEX (0xff)
 

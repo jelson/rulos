@@ -19,10 +19,10 @@
 #include <avr/interrupt.h>
 #include <util/delay_basic.h>
 
-#include "rulos.h"
+#include "core/rulos.h"
 #include "hardware.h"
-#include "hal.h"
-#include "board_defs.h"
+#include "core/hal.h"
+#include "core/board_defs.h"
 
 #ifdef AUDIO_REGISTER_LATCH
 

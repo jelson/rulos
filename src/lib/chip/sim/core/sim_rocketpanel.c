@@ -29,12 +29,12 @@
 #include <curses.h>
 #include <fcntl.h>
 
-#include "rocket.h"
-#include "util.h"
-#include "display_controller.h"
-#include "rocket_ring_buffer.h"
-#include "uart.h"
-#include "sim.h"
+#include "periph/rocket/rocket.h"
+#include "core/util.h"
+#include "periph/7seg_panel/display_controller.h"
+#include "periph/ring_buffer/rocket_ring_buffer.h"
+#include "periph/uart/uart.h"
+#include "chip/sim/core/sim.h"
 
 r_bool g_joystick_trigger_state;
 UartHandler *g_sim_uart_handler = NULL;
@@ -106,7 +106,7 @@ void hal_upside_down_led(SSBitmap *b)
 	{ name, {syms}, x, y }
 #define B_NO_BOARD	{ NULL },
 #define B_END	{ NULL }
-#include "board_defs.h"
+#include "core/board_defs.h"
 
 BoardLayout tree0_def[] = { T_ROCKET0 }, *tree0 = tree0_def;
 

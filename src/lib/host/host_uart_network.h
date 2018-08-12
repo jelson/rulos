@@ -1,7 +1,7 @@
 #ifndef _HOST_UART_NETWORK_H
 #define _HOST_UART_NETWORK_H
 
-#include "uart_net_media.h"
+#include "periph/uart/uart_net_media.h"
 // host-side uart network stack
 
 typedef struct {

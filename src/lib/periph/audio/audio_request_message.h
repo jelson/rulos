@@ -16,8 +16,8 @@
 
 #pragma once
 
-#include "rulos.h"
-#include "sound.h"
+#include "core/rulos.h"
+#include "periph/rocket/sound.h"
 
 typedef struct {
 	SoundToken token;

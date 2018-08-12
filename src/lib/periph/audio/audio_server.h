@@ -17,12 +17,12 @@
 #ifndef _audio_server_h
 #define _audio_server_h
 
-#include "rocket.h"
-#include "network.h"
-#include "network_ports.h"
-#include "audio_streamer.h"
-#include "sound.h"
-#include "audio_request_message.h"
+#include "periph/rocket/rocket.h"
+#include "core/network.h"
+#include "core/network_ports.h"
+#include "periph/audio/audio_streamer.h"
+#include "periph/rocket/sound.h"
+#include "periph/audio/audio_request_message.h"
 
 typedef struct {
 	SoundCmd skip_cmd;

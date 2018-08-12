@@ -17,9 +17,9 @@
 #ifndef display_gratuitous_graph_h
 #define display_gratuitous_graph_h
 
-#include "clock.h"
-#include "board_buffer.h"
-#include "drift_anim.h"
+#include "core/clock.h"
+#include "periph/7seg_panel/board_buffer.h"
+#include "periph/rocket/drift_anim.h"
 
 typedef struct s_d_gratuitous_graph {
 	BoardBuffer bbuf;

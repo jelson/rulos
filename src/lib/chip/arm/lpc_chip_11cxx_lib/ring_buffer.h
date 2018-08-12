@@ -32,7 +32,7 @@
 #ifndef __RING_BUFFER_H_
 #define __RING_BUFFER_H_
 
-#include "lpc_types.h"
+#include "chip/arm/lpc_chip_11cxx_lib/lpc_types.h"
 
 /** @defgroup Ring_Buffer CHIP: Simple ring buffer implementation
  * @ingroup CHIP_Common

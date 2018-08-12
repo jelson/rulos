@@ -14,10 +14,10 @@
  *
  ************************************************************************/
 
-#include "joystick.h"
-#include "network.h"
-#include "hpam.h"
-#include "idle.h"
+#include "periph/joystick/joystick.h"
+#include "core/network.h"
+#include "periph/hpam/hpam.h"
+#include "periph/rocket/idle.h"
 
 typedef struct {
 	JoystickState_t joystick_state;

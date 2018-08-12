@@ -14,9 +14,9 @@
  *
  ************************************************************************/
 
-#include "rulos.h"
+#include "core/rulos.h"
 #include "hardware.h"
-#include "focus.h"
+#include "periph/input_controller/focus.h"
 
 #define LED0		GPIO_C1
 #define LED1		GPIO_C3

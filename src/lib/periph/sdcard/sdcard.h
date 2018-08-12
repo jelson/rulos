@@ -16,8 +16,8 @@
 
 #pragma once
 
-#include "rulos.h"
-#include "spi.h"
+#include "core/rulos.h"
+#include "periph/spi/spi.h"
 
 // Memory is too scarce to have separate callers with their own buffers;
 // so we allocate a single block buffer, and share it with all callers.

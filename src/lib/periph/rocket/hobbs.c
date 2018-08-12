@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "hobbs.h"
+#include "periph/rocket/hobbs.h"
 
 UIEventDisposition hobbs_handler(Hobbs *hobbs, UIEvent evt);
 

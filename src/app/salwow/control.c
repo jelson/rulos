@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "clock.h"
+#include "core/clock.h"
 #include "control.h"
 #include "leds.h"
 

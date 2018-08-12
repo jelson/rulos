@@ -17,7 +17,7 @@
 #ifndef __numeric_input_h__
 #define __numeric_input_h__
 
-#include "rocket.h"
+#include "periph/rocket/rocket.h"
 
 typedef struct {
 	uint16_t mantissa;

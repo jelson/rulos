@@ -17,7 +17,7 @@
 #ifndef _pov_h
 #define _pov_h
 
-#include "rocket.h"
+#include "periph/rocket/rocket.h"
 #include "mirror.h"
 
 #define POV_BITMAP_LENGTH (256)

@@ -17,9 +17,9 @@
 #ifndef _disco_h
 #define _disco_h
 
-#include "rocket.h"
-#include "audio_client.h"
-#include "screenblanker.h"
+#include "periph/rocket/rocket.h"
+#include "periph/audio/audio_client.h"
+#include "periph/rocket/screenblanker.h"
 
 typedef struct s_disco_handler {
 	UIEventHandler uieh;

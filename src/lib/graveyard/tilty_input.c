@@ -1,5 +1,5 @@
-#include "tilty_input.h"
-#include "pov.h"	// for pov_paint
+#include "graveyard/tilty_input.h"
+#include "chip/avr/periph/pov/pov.h"	// for pov_paint
 
 #define G_QUIESCENT	50
 #define G_GRAVITY		100

@@ -3,7 +3,7 @@
 #include <inttypes.h>
 #include <gtk/gtk.h>
 
-#include "rulos.h"
+#include "core/rulos.h"
 
 #define X_LEDS 24
 #define Y_LEDS 16

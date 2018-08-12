@@ -14,9 +14,9 @@
  *
  ************************************************************************/
 
-#include "rocket.h"
-#include "hal.h"
-#include "audio_out.h"
+#include "periph/rocket/rocket.h"
+#include "core/hal.h"
+#include "periph/audio/audio_out.h"
 
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 #define SYNCDEBUG()	syncdebug(0, 'O', __LINE__)

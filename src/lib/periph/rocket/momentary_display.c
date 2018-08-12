@@ -1,5 +1,5 @@
 #include <stdbool.h>
-#include "momentary_display.h"
+#include "periph/rocket/momentary_display.h"
 
 void _momentary_display_update(MomentaryDisplay *md);
 void _momentary_display_recv(RecvSlot *recvSlot, uint8_t payload_len);

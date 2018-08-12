@@ -1,4 +1,4 @@
-#include "funcseq.h"
+#include "periph/rocket/funcseq.h"
 
 void funcseq_next(FuncSeq *fs)
 {

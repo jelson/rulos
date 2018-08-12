@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "audio_client.h"
+#include "periph/audio/audio_client.h"
 
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 #define SYNCDEBUG()	syncdebug(0, 'U', __LINE__)

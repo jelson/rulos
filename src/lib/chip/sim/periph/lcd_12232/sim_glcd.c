@@ -29,11 +29,11 @@
 #include <curses.h>
 #include <fcntl.h>
 
-#include "rulos.h"
-#include "util.h"
-#include "display_controller.h"
-#include "graphic_lcd_12232.h"
-#include "sim.h"
+#include "core/rulos.h"
+#include "core/util.h"
+#include "periph/7seg_panel/display_controller.h"
+#include "periph/lcd_12232/graphic_lcd_12232.h"
+#include "chip/sim/core/sim.h"
 
 
 /************* glcd ********************/

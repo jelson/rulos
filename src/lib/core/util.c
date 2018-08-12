@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "util.h"
+#include "core/util.h"
 
 int32_t bound(int32_t v, int32_t l, int32_t h)
 {

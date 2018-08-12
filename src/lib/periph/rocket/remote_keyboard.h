@@ -17,10 +17,10 @@
 #ifndef _remote_keyboard_h
 #define _remote_keyboard_h
 
-#include "rocket.h"
-#include "network.h"
-#include "network_ports.h"
-#include "input_controller.h"
+#include "periph/rocket/rocket.h"
+#include "core/network.h"
+#include "core/network_ports.h"
+#include "periph/input_controller/input_controller.h"
 
 typedef struct {
 	char key;

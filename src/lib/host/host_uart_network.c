@@ -8,11 +8,11 @@
 #include <asm/ioctls.h>
 #include <linux/serial.h>
 #include <assert.h>
-#include "uart_net_media_preamble.h"
-#include "message.h"
-#include "network_ports.h"
-#include "net_compute_checksum.h"
-#include "host_uart_network.h"
+#include "periph/uart/uart_net_media_preamble.h"
+#include "core/message.h"
+#include "core/network_ports.h"
+#include "core/net_compute_checksum.h"
+#include "host/host_uart_network.h"
 
 #define _POSIX_SOURCE 1         //POSIX compliant source
 #define FALSE 0

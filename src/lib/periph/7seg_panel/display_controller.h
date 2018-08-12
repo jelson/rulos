@@ -18,7 +18,7 @@
 
 #include <inttypes.h>
 
-#include "board_defs.h"
+#include "core/board_defs.h"
 
 #ifndef NUM_BOARDS
 # define NUM_BOARDS 8

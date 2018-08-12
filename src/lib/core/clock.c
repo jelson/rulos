@@ -17,8 +17,8 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
-#include "clock.h"
-#include "logging.h"
+#include "core/clock.h"
+#include "core/logging.h"
 
 #ifdef TIMING_DEBUG
 # include "hardware.h"

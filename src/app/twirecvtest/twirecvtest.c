@@ -14,9 +14,9 @@
  *
  ************************************************************************/
 
-#include "rulos.h"
-#include "twi.h"
-#include "7seg_panel.h"
+#include "core/rulos.h"
+#include "core/twi.h"
+#include "periph/7seg_panel/7seg_panel.h"
 
 #define HAVE_AUDIOBOARD_UART 0
 

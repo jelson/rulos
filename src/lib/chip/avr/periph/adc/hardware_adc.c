@@ -23,11 +23,11 @@
 #include <avr/interrupt.h>
 #include <util/delay_basic.h>
 
-#include "clock.h"
+#include "core/clock.h"
 #include "hardware.h"
-#include "hal.h"
-#include "board_defs.h"
-#include "logging.h"
+#include "core/hal.h"
+#include "core/board_defs.h"
+#include "core/logging.h"
 
 #define NUM_ADCS 8
 // #define RAW_ADC

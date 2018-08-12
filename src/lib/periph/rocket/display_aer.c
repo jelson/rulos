@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
-#include "rocket.h"
-#include "display_aer.h"
+#include "periph/rocket/rocket.h"
+#include "periph/rocket/display_aer.h"
 
 
 void daer_update(DAER *act);

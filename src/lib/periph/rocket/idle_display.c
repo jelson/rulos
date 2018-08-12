@@ -14,9 +14,9 @@
  *
  ************************************************************************/
 
-#include "rocket.h"
-#include "idle_display.h"
-#include "display_scroll_msg.h"
+#include "periph/rocket/rocket.h"
+#include "periph/rocket/idle_display.h"
+#include "periph/rocket/display_scroll_msg.h"
 
 void idle_display_update(IdleDisplayAct *act);
 void idle_display_init(IdleDisplayAct *act, DScrollMsgAct *scrollAct, CpumonAct *cpumonAct)

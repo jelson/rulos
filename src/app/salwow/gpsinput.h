@@ -1,6 +1,6 @@
 #pragma once
 
-#include "uart.h"
+#include "periph/uart/uart.h"
 
 typedef struct {
 	UartHandler uart_hw;

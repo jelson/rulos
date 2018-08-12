@@ -10,13 +10,13 @@
 #define F_CPU 8000000UL
 #include <util/delay.h>
 
-#include "rocket.h"
+#include "periph/rocket/rocket.h"
 #include "hardware.h"
-#include "funcseq.h"
-#include "pov.h"
+#include "periph/rocket/funcseq.h"
+#include "chip/avr/periph/pov/pov.h"
 #include "vect3d.h"
-#include "tilty_input.h"
-#include "serial_console.h"
+#include "graveyard/tilty_input.h"
+#include "periph/uart/serial_console.h"
 
 struct locatorAct;
 typedef struct locatorAct locatorAct_t;

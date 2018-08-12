@@ -19,12 +19,12 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "rocket.h"
-#include "clock.h"
-#include "util.h"
-#include "network.h"
-#include "sim.h"
-#include "serial_console.h"
+#include "periph/rocket/rocket.h"
+#include "core/clock.h"
+#include "core/util.h"
+#include "core/network.h"
+#include "chip/sim/core/sim.h"
+#include "periph/uart/serial_console.h"
 
 
 #if !SIM

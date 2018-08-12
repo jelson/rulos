@@ -19,10 +19,10 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-#include "rulos.h"
+#include "core/rulos.h"
 #include "hardware.h"
-#include "usi_pins.h"
-#include "usi_twi_slave.h"
+#include "chip/avr/core/usi_pins.h"
+#include "chip/avr/periph/usi_twi_slave/usi_twi_slave.h"
 
 // Debug
 

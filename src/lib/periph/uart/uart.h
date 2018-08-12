@@ -17,9 +17,9 @@
 #ifndef __uart_h__
 #define __uart_h__
 
-#include "queue.h"
-#include "heap.h"
-#include "hal.h"
+#include "core/queue.h"
+#include "core/heap.h"
+#include "core/hal.h"
 
 typedef struct {
 	CharQueue *q;

@@ -37,9 +37,9 @@
 #include <netinet/in.h>
 #include <errno.h>
 
-#include "rocket.h"
-#include "util.h"
-#include "sim.h"
+#include "periph/rocket/rocket.h"
+#include "core/util.h"
+#include "chip/sim/core/sim.h"
 
 uint32_t f_cpu = 4000000;
 uint8_t hal_initted = 0;

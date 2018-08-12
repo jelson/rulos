@@ -14,9 +14,9 @@
  *
  ************************************************************************/
 
-#include "rulos.h"
-#include "uart.h"
-//#include "spiflash.h"
+#include "core/rulos.h"
+#include "periph/uart/uart.h"
+//#include "graveyard/spiflash.h"
 
 #include "hardware.h"	// sorry. Blinky LED.
 

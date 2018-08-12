@@ -30,7 +30,7 @@
  */
 
 #include <string.h>
-#include "ring_buffer.h"
+#include "chip/arm/lpc_chip_11cxx_lib/ring_buffer.h"
 
 /*****************************************************************************
  * Private types/enumerations/variables

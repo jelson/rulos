@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "idle.h"
+#include "periph/rocket/idle.h"
 
 void idle_update(IdleAct *idle);
 void idle_set_active(IdleAct *idle, r_bool nowactive);

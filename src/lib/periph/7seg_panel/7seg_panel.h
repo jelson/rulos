@@ -16,9 +16,9 @@
 
 #pragma once
 
-#include "board_buffer.h"
-#include "cursor.h"
-#include "display_controller.h"
-#include "region.h"
-#include "remote_bbuf.h"
+#include "periph/7seg_panel/board_buffer.h"
+#include "periph/7seg_panel/cursor.h"
+#include "periph/7seg_panel/display_controller.h"
+#include "periph/7seg_panel/region.h"
+#include "periph/7seg_panel/remote_bbuf.h"
 

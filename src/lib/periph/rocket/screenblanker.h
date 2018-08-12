@@ -17,9 +17,9 @@
 #ifndef _SCREENBLANKER_H
 #define _SCREENBLANKER_H
 
-#include "rocket.h"
-#include "idle.h"
-#include "hpam.h"
+#include "periph/rocket/rocket.h"
+#include "periph/rocket/idle.h"
+#include "periph/hpam/hpam.h"
 
 #define SB_MAX_BUFFERS 8
 

@@ -16,10 +16,10 @@
 
 #include <stdio.h>
 
-#include "rulos.h"
-#include "hpam.h"
+#include "core/rulos.h"
+#include "periph/hpam/hpam.h"
 #if SIM
-#include "sim.h"
+#include "chip/sim/core/sim.h"
 #endif // SIM
 
 void hpam_update(HPAM *hpam);

@@ -1,6 +1,6 @@
-#include "bss_canary.h"
+#include "periph/bss_canary/bss_canary.h"
 
-#include "rulos.h"
+#include "core/rulos.h"
 
 #if SIM
 void bss_canary_init()

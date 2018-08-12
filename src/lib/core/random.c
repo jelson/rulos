@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "random.h"
+#include "core/random.h"
 // prng from http://inglorion.net/software/deadbeef_rand/
 
 static uint32_t deadbeef_seed;

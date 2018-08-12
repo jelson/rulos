@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
-#include "rulos.h"
-#include "cpumon.h"
+#include "core/rulos.h"
+#include "core/cpumon.h"
 
 #ifdef TIMING_DEBUG_PIN
 # include "hardware.h"

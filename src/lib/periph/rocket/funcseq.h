@@ -1,7 +1,7 @@
 #ifndef _FUNCSEQ_H
 #define _FUNCSEQ_H
 
-#include "rocket.h"
+#include "periph/rocket/rocket.h"
 
 typedef void (*SequencableFunc)(void *param);
 

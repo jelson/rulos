@@ -17,10 +17,10 @@
 #ifndef display_aer_h
 #define display_aer_h
 
-#include "clock.h"
-#include "board_buffer.h"
-#include "drift_anim.h"
-#include "calculator_decoration.h"
+#include "core/clock.h"
+#include "periph/7seg_panel/board_buffer.h"
+#include "periph/rocket/drift_anim.h"
+#include "periph/rocket/calculator_decoration.h"
 
 struct s_d_aer;
 

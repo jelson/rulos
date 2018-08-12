@@ -18,10 +18,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "rulos.h"
-#include "queue.h"
-#include "uart.h"
-#include "board_buffer.h"
+#include "core/rulos.h"
+#include "core/queue.h"
+#include "periph/uart/uart.h"
+#include "periph/7seg_panel/board_buffer.h"
 
 #ifdef SIM
 # include "sim.h"

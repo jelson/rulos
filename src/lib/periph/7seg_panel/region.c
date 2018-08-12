@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "region.h"
+#include "periph/7seg_panel/region.h"
 
 void region_hide(RectRegion *rr)
 {

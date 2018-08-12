@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
-#include "audio_client.h"
-#include "ambient_noise.h"
+#include "periph/audio/audio_client.h"
+#include "periph/rocket/ambient_noise.h"
 
 #define AMBIENT_NOISE_DECAY_PERIOD (120*1000000)
 

@@ -19,7 +19,7 @@
 #ifdef SIM
 
 #include <assert.h>
-#include "sim.h"
+#include "chip/sim/core/sim.h"
 
 #define LOG(args...) do { sim_log(args); } while (0)
 #define CONDSIMARG(x)	, x

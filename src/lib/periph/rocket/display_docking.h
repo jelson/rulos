@@ -17,15 +17,15 @@
 #ifndef display_docking_h
 #define display_docking_h
 
-#include "clock.h"
-#include "board_buffer.h"
-#include "focus.h"
-#include "drift_anim.h"
-#include "thruster_protocol.h"
-#include "screen4.h"
-#include "audio_server.h"
-#include "booster.h"
-#include "joystick.h"
+#include "core/clock.h"
+#include "periph/7seg_panel/board_buffer.h"
+#include "periph/input_controller/focus.h"
+#include "periph/rocket/drift_anim.h"
+#include "periph/rocket/thruster_protocol.h"
+#include "periph/rocket/screen4.h"
+#include "periph/audio/audio_server.h"
+#include "periph/rocket/booster.h"
+#include "periph/joystick/joystick.h"
 
 #define DOCK_HEIGHT 4
 #define MAX_Y (DOCK_HEIGHT*6)

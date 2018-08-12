@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "rulos.h"
+#include "core/rulos.h"
 #include "hardware.h"
-#include "graphic_lcd_12232.h"
+#include "periph/lcd_12232/graphic_lcd_12232.h"
 

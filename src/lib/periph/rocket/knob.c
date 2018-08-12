@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
-#include "rocket.h"
-#include "knob.h"
+#include "periph/rocket/rocket.h"
+#include "periph/rocket/knob.h"
 
 UIEventDisposition knob_handler(UIEventHandler *raw_handler, UIEvent evt);
 void knob_update_once(Knob *knob);

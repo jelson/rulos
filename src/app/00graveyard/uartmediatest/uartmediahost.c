@@ -8,7 +8,7 @@
 #include <asm/ioctls.h>
 #include <linux/serial.h>
 #include <assert.h>
-#include "uart_net_media_preamble.h"
+#include "periph/uart/uart_net_media_preamble.h"
 
 #define _POSIX_SOURCE 1         //POSIX compliant source
 #define FALSE 0

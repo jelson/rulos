@@ -17,8 +17,8 @@
 #ifndef _IDLE_H
 #define _IDLE_H
 
-#include "rocket.h"
-#include "thruster_protocol.h"
+#include "periph/rocket/rocket.h"
+#include "periph/rocket/thruster_protocol.h"
 
 #define MAX_IDLE_HANDLERS 4
 #define IDLE_PERIOD (((Time)1000000)*60*5)	// five minutes.

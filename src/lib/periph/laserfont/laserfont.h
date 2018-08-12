@@ -18,7 +18,7 @@
 #define _laserfont_h
 
 #include <inttypes.h>
-#include "rocket.h"
+#include "periph/rocket/rocket.h"
 
 #define LASERFONT_LOWEST_CHAR		(32)
 #define LASERFONT_HIGHEST_CHAR	(126)

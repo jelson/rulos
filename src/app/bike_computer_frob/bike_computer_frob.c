@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
-#include "rulos.h"
-#include "serial_console.h"
+#include "core/rulos.h"
+#include "periph/uart/serial_console.h"
 
 #ifdef SIM
 # include "sim.h"

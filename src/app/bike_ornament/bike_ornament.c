@@ -18,10 +18,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "clock.h"
+#include "core/clock.h"
 #include "hardware.h"
-#include "rulos.h"
-#include "util.h"
+#include "core/rulos.h"
+#include "core/util.h"
 
 #define LED_DRIVER_SDI_L GPIO_A1
 #define LED_DRIVER_SDI_R GPIO_A0

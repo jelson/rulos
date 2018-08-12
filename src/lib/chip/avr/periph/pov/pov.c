@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "pov.h"
+#include "chip/avr/periph/pov/pov.h"
 
 typedef struct {
 	uint8_t width;

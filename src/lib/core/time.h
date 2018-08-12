@@ -17,7 +17,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "util.h"
+#include "core/util.h"
 
 // Definition of time for RulOS, in units of usec.
 typedef int32_t Time;

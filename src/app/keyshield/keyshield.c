@@ -16,10 +16,10 @@
 
 #include <inttypes.h>
 
-#include "rulos.h"
+#include "core/rulos.h"
 #include "hardware.h"
-#include "hal.h"
-#include "usi_twi_slave.h"
+#include "core/hal.h"
+#include "chip/avr/periph/usi_twi_slave/usi_twi_slave.h"
 
 #include "custom_board_defs.h"
 

@@ -32,7 +32,7 @@
 #ifndef __ROMAPI_11XX_H_
 #define __ROMAPI_11XX_H_
 
-#include "error.h"
+#include "chip/arm/lpc_chip_11cxx_lib/error.h"
 
 #ifdef __cplusplus
 extern "C" {

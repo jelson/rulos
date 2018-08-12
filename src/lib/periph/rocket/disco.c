@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
-#include "disco.h"
-#include "sound.h"
+#include "periph/rocket/disco.h"
+#include "periph/rocket/sound.h"
 
 void disco_update(Disco *disco);
 void disco_paint_once(Disco *disco);

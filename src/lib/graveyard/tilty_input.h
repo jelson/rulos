@@ -17,7 +17,7 @@
 #ifndef _TILTY_INPUT_H
 #define _TILTY_INPUT_H
 
-#include "rocket.h"
+#include "periph/rocket/rocket.h"
 
 #ifndef SIM
 #include "hardware.h"

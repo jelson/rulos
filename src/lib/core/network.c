@@ -14,10 +14,10 @@
  *
  ************************************************************************/
 
-#include "network.h"
-#include "net_compute_checksum.h"
-#include "hal.h"
-#include "logging.h"
+#include "core/network.h"
+#include "core/net_compute_checksum.h"
+#include "core/hal.h"
+#include "core/logging.h"
 
 #include "queue.mc"
 QUEUE_DEFINE(SendSlotPtr)

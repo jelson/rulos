@@ -14,9 +14,9 @@
  *
  ************************************************************************/
 
-#include "rocket.h"
-#include "display_blinker.h"
-#include "util.h"
+#include "periph/rocket/rocket.h"
+#include "periph/rocket/display_blinker.h"
+#include "core/util.h"
 
 void blinker_update(DBlinker *blinker);
 void blinker_update_once(DBlinker *blinker);

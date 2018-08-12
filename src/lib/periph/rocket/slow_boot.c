@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "slow_boot.h"
+#include "periph/rocket/slow_boot.h"
 
 void slowboot_update(SlowBoot *slowboot);
 

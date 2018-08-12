@@ -14,10 +14,10 @@
  *
  ************************************************************************/
 
-#include "rulos.h"
-#include "pong.h"
-#include "rasters.h"
-#include "sound.h"
+#include "core/rulos.h"
+#include "periph/rocket/pong.h"
+#include "periph/rasters/rasters.h"
+#include "periph/rocket/sound.h"
 
 #define PS(v)	((v)<<PONG_SCALE2)
 #define BALLDIA	3

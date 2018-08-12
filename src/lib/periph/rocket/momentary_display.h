@@ -1,9 +1,9 @@
 #ifndef _MOMENTARY_DISPLAY_H
 #define _MOMENTARY_DISPLAY_H
 
-#include "rocket.h"
-#include "network.h"
-#include "momentary_display_message.h"
+#include "periph/rocket/rocket.h"
+#include "core/network.h"
+#include "periph/rocket/momentary_display_message.h"
 
 typedef struct {
 	Time display_period;

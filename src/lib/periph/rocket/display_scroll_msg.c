@@ -17,8 +17,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "rocket.h"
-#include "display_scroll_msg.h"
+#include "periph/rocket/rocket.h"
+#include "periph/rocket/display_scroll_msg.h"
 
 void dscrlmsg_update(DScrollMsgAct *act);
 

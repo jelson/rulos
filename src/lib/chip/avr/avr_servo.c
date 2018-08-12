@@ -1,4 +1,4 @@
-#include "servo.h"
+#include "periph/servo/servo.h"
 
 #ifndef SIM
 #include "hardware.h"

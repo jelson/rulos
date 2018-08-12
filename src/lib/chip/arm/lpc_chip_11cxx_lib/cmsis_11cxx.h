@@ -32,8 +32,8 @@
 #ifndef __CMSIS_11CXX_H_
 #define __CMSIS_11CXX_H_
 
-#include "lpc_types.h"
-#include "sys_config.h"
+#include "chip/arm/lpc_chip_11cxx_lib/lpc_types.h"
+#include "chip/arm/lpc_chip_11cxx_lib/sys_config.h"
 
 #ifdef __cplusplus
 extern "C" {

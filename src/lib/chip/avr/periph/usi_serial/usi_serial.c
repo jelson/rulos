@@ -17,7 +17,7 @@
 #include <avr/io.h>
 
 #include "hardware.h"
-#include "usi_pins.h"
+#include "chip/avr/core/usi_pins.h"
 
 void usi_serial_send(const char* s)
 {

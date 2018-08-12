@@ -16,9 +16,9 @@
 
 #pragma once
 
-#include "heap.h"
-#include "hal.h"
-#include "time.h"
+#include "core/heap.h"
+#include "core/hal.h"
+#include "core/time.h"
 
 void init_clock(Time interval_us, uint8_t timer_id);
 

@@ -1,4 +1,4 @@
-#include "hardware_graphic_lcd_12232.h"
+#include "chip/avr/periph/lcd_12232/hardware_graphic_lcd_12232.h"
 
 #include <avr/pgmspace.h>
 #include "lcdrasters_auto.ch"

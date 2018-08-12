@@ -16,8 +16,8 @@
 
 #pragma once
 
-#include "display_controller.h"
-#include "util.h"
+#include "periph/7seg_panel/display_controller.h"
+#include "core/util.h"
 
 #define BBDEBUG 1
 

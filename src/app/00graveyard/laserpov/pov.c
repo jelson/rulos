@@ -15,7 +15,7 @@
  ************************************************************************/
 
 #include <string.h>
-#include "pov.h"
+#include "chip/avr/periph/pov/pov.h"
 
 void pov_update(PovHandler *pov);
 

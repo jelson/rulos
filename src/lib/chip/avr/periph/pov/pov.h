@@ -17,7 +17,7 @@
 #ifndef _POV_H
 #define _POV_H
 
-#include "rocket.h"
+#include "periph/rocket/rocket.h"
 
 #ifndef SIM
 #include "hardware.h"

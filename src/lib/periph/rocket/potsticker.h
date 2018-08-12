@@ -17,8 +17,8 @@
 #ifndef _POTSTICKER_H
 #define _POTSTICKER_H
 
-#include "rocket.h"
-#include "input_controller.h"
+#include "periph/rocket/rocket.h"
+#include "periph/input_controller/input_controller.h"
 
 typedef struct s_potsticker {
 	uint8_t adc_channel;

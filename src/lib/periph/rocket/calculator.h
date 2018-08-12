@@ -17,12 +17,12 @@
 #ifndef _calculator_h
 #define _calculator_h
 
-#include "focus.h"
-#include "knob.h"
-#include "numeric_input.h"
-#include "board_buffer.h"
-#include "display_scroll_msg.h"
-#include "calculator_decoration.h"
+#include "periph/input_controller/focus.h"
+#include "periph/rocket/knob.h"
+#include "periph/rocket/numeric_input.h"
+#include "periph/7seg_panel/board_buffer.h"
+#include "periph/rocket/display_scroll_msg.h"
+#include "periph/rocket/calculator_decoration.h"
 
 typedef struct s_calculator {
 	UIEventHandlerFunc func;

@@ -27,10 +27,10 @@
 #define SERIAL_BAUD_RATE 38400
 
 
-#include "rulos.h"
+#include "core/rulos.h"
 #include "hardware.h"
-#include "uart.h"
-#include "twi.h"
+#include "periph/uart/uart.h"
+#include "core/twi.h"
 
 struct locatorAct;
 typedef struct locatorAct locatorAct_t;

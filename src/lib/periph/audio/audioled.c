@@ -15,7 +15,7 @@
  ************************************************************************/
 
 
-#include "rocket.h"
+#include "periph/rocket/rocket.h"
 
 #define AUDIO_LED_RED		GPIO_D2
 #define AUDIO_LED_YELLOW	GPIO_D3

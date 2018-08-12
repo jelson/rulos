@@ -16,9 +16,9 @@
 
 #include <stdlib.h>
 
-#include "rulos.h"
-#include "clock.h"
-#include "uart.h"
+#include "core/rulos.h"
+#include "core/clock.h"
+#include "periph/uart/uart.h"
 
 // Upcall from HAL when new data arrives.  Happens at interrupt time.
 void _uart_receive(UartHandler *handler, char c)

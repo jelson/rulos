@@ -17,10 +17,10 @@
 #ifndef _remote_bbuf_h
 #define _remote_bbuf_h
 
-#include "network.h"
-#include "board_buffer.h"
-#include "network_ports.h"
-#include "display_controller.h"
+#include "core/network.h"
+#include "periph/7seg_panel/board_buffer.h"
+#include "core/network_ports.h"
+#include "periph/7seg_panel/display_controller.h"
 
 #define REMOTE_BBUF_NUM_BOARDS	(NUM_PSEUDO_BOARDS - NUM_BOARDS)
 

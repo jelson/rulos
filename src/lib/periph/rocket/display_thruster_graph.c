@@ -14,9 +14,9 @@
  *
  ************************************************************************/
 
-#include "rocket.h"
-#include "display_thruster_graph.h"
-#include "hpam.h"
+#include "periph/rocket/rocket.h"
+#include "periph/rocket/display_thruster_graph.h"
+#include "periph/hpam/hpam.h"
 
 #define THRUSTER_ALPHA 130	/* update weight, out of 256 */
 #define BOOSTER_ALPHA  16	/* update weight, out of 256 */

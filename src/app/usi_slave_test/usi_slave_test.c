@@ -17,12 +17,12 @@
 #include <inttypes.h>
 #include <ctype.h>
 
-#include "rulos.h"
+#include "core/rulos.h"
 #include "hardware.h"
-#include "clock.h"
-#include "util.h"
-#include "hal.h"
-#include "usi_twi_slave.h"
+#include "core/clock.h"
+#include "core/util.h"
+#include "core/hal.h"
+#include "chip/avr/periph/usi_twi_slave/usi_twi_slave.h"
 
 #define TEST_SLAVE_SEND_ONLY
 

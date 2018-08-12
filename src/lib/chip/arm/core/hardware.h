@@ -19,8 +19,8 @@
 #undef FALSE
 #undef TRUE
 
-#include "chip.h"
-#include "gpio_11xx_2.h"
+#include "chip/arm/lpc_chip_11cxx_lib/chip.h"
+#include "chip/arm/lpc_chip_11cxx_lib/gpio_11xx_2.h"
 
 /*
  * This silliness is required because the LPC11[UEA]XX do IO Control

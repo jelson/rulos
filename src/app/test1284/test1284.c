@@ -19,18 +19,18 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "clock.h"
-#include "util.h"
-#include "network.h"
+#include "core/clock.h"
+#include "core/util.h"
+#include "core/network.h"
 /*
-#include "audio_driver.h"
-#include "audio_server.h"
-#include "audio_streamer.h"
-#include "sdcard.h"
+#include "periph/audio/audio_driver.h"
+#include "periph/audio/audio_server.h"
+#include "periph/audio/audio_streamer.h"
+#include "periph/sdcard/sdcard.h"
 */
-#include "serial_console.h"
+#include "periph/uart/serial_console.h"
 
-#include "graphic_lcd_12232.h"
+#include "periph/lcd_12232/graphic_lcd_12232.h"
 #if SIM
 # include "sim.h"
 #else

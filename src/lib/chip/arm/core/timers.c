@@ -1,10 +1,10 @@
-#include "hal.h"
+#include "core/hal.h"
 
 #undef FALSE
 #undef TRUE
 
-#include "chip.h"
-#include "gpio_11xx_2.h"
+#include "chip/arm/lpc_chip_11cxx_lib/chip.h"
+#include "chip/arm/lpc_chip_11cxx_lib/gpio_11xx_2.h"
 
 void SystemInit()
 {

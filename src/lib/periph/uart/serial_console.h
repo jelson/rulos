@@ -17,7 +17,7 @@
 #ifndef _SERIAL_CONSOLE_H
 #define _SERIAL_CONSOLE_H
 
-#include "uart.h"
+#include "periph/uart/uart.h"
 
 typedef struct {
 	UartState_t uart;

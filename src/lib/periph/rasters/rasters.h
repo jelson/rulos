@@ -16,9 +16,9 @@
 
 #pragma once
 
-#include "rulos.h"
-#include "region.h"
-#include "screen4.h"
+#include "core/rulos.h"
+#include "periph/7seg_panel/region.h"
+#include "periph/rocket/screen4.h"
 
 typedef struct {
 	char sym;

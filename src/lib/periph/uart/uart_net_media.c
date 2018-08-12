@@ -16,9 +16,9 @@
 
 #include <stdlib.h>
 
-#include "rulos.h"
-#include "clock.h"
-#include "uart_net_media.h"
+#include "core/rulos.h"
+#include "core/clock.h"
+#include "periph/uart/uart_net_media.h"
 
 void audioled_set(r_bool red, r_bool yellow);
 

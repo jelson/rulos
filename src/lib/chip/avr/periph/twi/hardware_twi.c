@@ -14,9 +14,9 @@
  *
  ************************************************************************/
 
-#include "rulos.h"
+#include "core/rulos.h"
 #include "hardware.h"
-#include "twi.h"
+#include "core/twi.h"
 
 #include <avr/boot.h>
 #include <avr/io.h>

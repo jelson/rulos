@@ -19,7 +19,7 @@
 
 #include <inttypes.h>
 
-#include "board_buffer.h"
+#include "periph/7seg_panel/board_buffer.h"
 
 typedef struct {
 	BoardBuffer *bbuf;

@@ -29,7 +29,7 @@
  * this code.
  */
 
-#include "chip.h"
+#include "chip/arm/lpc_chip_11cxx_lib/chip.h"
 
 #if !defined(CHIP_LPC1125)
 

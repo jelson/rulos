@@ -27,7 +27,6 @@ AVR_INCLUDES += -I$(AVR_LIB_ROOT)/core
 
 # Add platform-specific peripheral sources
 AVR_SOURCES += $(foreach periph, $(PERIPHERALS), $(wildcard $(AVR_LIB_ROOT)/periph/$(periph)/*.c))
-AVR_INCLUDES += $(foreach periph, $(PERIPHERALS), -I$(AVR_LIB_ROOT)/periph/$(periph))
 
 AVR_SOURCES += $(ALL_PLATFORM_SOURCES)
 AVR_INCLUDES += $(ALL_PLATFORM_INCLUDES)

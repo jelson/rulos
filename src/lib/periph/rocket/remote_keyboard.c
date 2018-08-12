@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "remote_keyboard.h"
+#include "periph/rocket/remote_keyboard.h"
 
 void rk_send(InputInjectorIfc *injector, char key);
 void rk_send_complete(SendSlot *sendSlot);

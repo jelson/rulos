@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
-#include "audio_streamer.h"
-#include "event.h"
+#include "periph/audio/audio_streamer.h"
+#include "core/event.h"
 
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 #define R_SYNCDEBUG()	syncdebug(0, 'R', __LINE__)

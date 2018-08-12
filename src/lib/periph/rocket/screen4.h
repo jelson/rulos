@@ -17,8 +17,8 @@
 #ifndef _SCREEN4_H
 #define _SCREEN4_H
 
-#include "rocket.h"
-#include "board_buffer.h"
+#include "periph/rocket/rocket.h"
+#include "periph/7seg_panel/board_buffer.h"
 
 #define SCREEN4SIZE		4	/* shocking, I know */
 

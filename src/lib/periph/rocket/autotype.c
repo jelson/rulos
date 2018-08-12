@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "autotype.h"
+#include "periph/rocket/autotype.h"
 
 void update_autotype(Autotype *a);
 

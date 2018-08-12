@@ -19,9 +19,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "media.h"
-#include "message.h"
-#include "util.h"
+#include "core/media.h"
+#include "core/message.h"
+#include "core/util.h"
 
 #define PORT_NONE 255
 #define SLOT_NONE 255

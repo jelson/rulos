@@ -17,16 +17,16 @@
 #ifndef _control_panel_h
 #define _control_panel_h
 
-#include "rocket.h"
-#include "remote_keyboard.h"
-#include "remote_uie.h"
-#include "sequencer.h"
-#include "display_docking.h"
-#include "pong.h"
-#include "disco.h"
-#include "hpam.h"
-#include "idle.h"
-#include "screenblanker.h"
+#include "periph/rocket/rocket.h"
+#include "periph/rocket/remote_keyboard.h"
+#include "periph/rocket/remote_uie.h"
+#include "periph/rocket/sequencer.h"
+#include "periph/rocket/display_docking.h"
+#include "periph/rocket/pong.h"
+#include "periph/rocket/disco.h"
+#include "periph/hpam/hpam.h"
+#include "periph/rocket/idle.h"
+#include "periph/rocket/screenblanker.h"
 
 #define CONTROL_PANEL_HEIGHT 4
 #define CONTROL_PANEL_NUM_CHILDREN 5

@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "sound.h"
+#include "periph/rocket/sound.h"
 
 void sound_start(SoundToken token, r_bool loop)
 {

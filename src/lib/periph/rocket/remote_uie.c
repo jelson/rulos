@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "remote_uie.h"
+#include "periph/rocket/remote_uie.h"
 
 UIEventDisposition remote_uie_handler(RemoteUIE *ruie, UIEvent evt);
 

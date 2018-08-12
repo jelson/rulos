@@ -1,4 +1,4 @@
-#include "net_compute_checksum.h"
+#include "core/net_compute_checksum.h"
 
 uint8_t net_compute_checksum(char *buf, int size)
 {

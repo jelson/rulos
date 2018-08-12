@@ -2,8 +2,8 @@
 #include <avr/boot.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include "servo.h"
-#include "uart.h"
+#include "periph/servo/servo.h"
+#include "periph/uart/uart.h"
 
 //////////////////////////////////////////////////////////////////////////////
 

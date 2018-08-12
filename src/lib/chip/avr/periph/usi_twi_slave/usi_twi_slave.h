@@ -17,7 +17,7 @@
 #ifndef __USI_TWI_SLAVE_H__
 #define __USI_TWI_SLAVE_H__
 
-#include "media.h"
+#include "core/media.h"
 
 typedef uint8_t (*usi_slave_send_func)();
 

@@ -19,9 +19,9 @@
 #include <avr/interrupt.h>
 #include <util/delay_basic.h>
 
-#include "rulos.h"
+#include "core/rulos.h"
 #include "hardware.h"
-#include "hal.h"
+#include "core/hal.h"
 
 
 //////////////////////////////////////////////////////////////////////////////

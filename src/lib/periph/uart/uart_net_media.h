@@ -18,9 +18,9 @@
 #ifndef _UART_NET_MEDIA_H
 #define _UART_NET_MEDIA_H
 
-#include "hal.h"
-#include "media.h"
-#include "uart_net_media_preamble.h"
+#include "core/hal.h"
+#include "core/media.h"
+#include "periph/uart/uart_net_media_preamble.h"
 
 struct s_UartMedia;
 

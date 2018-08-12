@@ -16,8 +16,8 @@
 
 #include <stdio.h>
 
-#include "rocket.h"
-#include "calculator.h"
+#include "periph/rocket/rocket.h"
+#include "periph/rocket/calculator.h"
 
 
 enum {

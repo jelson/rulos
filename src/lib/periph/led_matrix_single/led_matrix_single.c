@@ -1,5 +1,5 @@
 #include <stdbool.h>
-#include "led_matrix_single.h"
+#include "periph/led_matrix_single/led_matrix_single.h"
 
 #define FINAL_STRIPBOARD 1
 #if FINAL_STRIPBOARD

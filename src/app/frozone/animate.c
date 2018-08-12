@@ -1,7 +1,7 @@
 #include "animate.h"
 
 #include <stdlib.h>
-#include "clock.h"
+#include "core/clock.h"
 
 #ifndef SIM
 #include "hardware.h"

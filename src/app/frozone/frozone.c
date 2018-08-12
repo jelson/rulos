@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "rulos.h"
+#include "core/rulos.h"
 #include "animate.h"
 #include "frobutton.h"
 

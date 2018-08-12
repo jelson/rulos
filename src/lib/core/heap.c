@@ -16,9 +16,9 @@
 
 #include <stdlib.h>
 
-#include "clock.h"
-#include "heap.h"
-#include "logging.h"
+#include "core/clock.h"
+#include "core/heap.h"
+#include "core/logging.h"
 
 void heap_init(Heap *heap)
 {

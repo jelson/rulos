@@ -19,9 +19,9 @@
 
 /////////////////////////////
 
-#include "rulos.h"
+#include "core/rulos.h"
 #include "hardware.h"
-#include "usi_serial.h"
+#include "chip/avr/periph/usi_serial/usi_serial.h"
 
 uint16_t seconds_on = 0;
 

@@ -17,10 +17,10 @@
 #ifndef _BOOSTER_H
 #define _BOOSTER_H
 
-#include "rocket.h"
-#include "hpam.h"
-#include "audio_client.h"
-#include "screenblanker.h"
+#include "periph/rocket/rocket.h"
+#include "periph/hpam/hpam.h"
+#include "periph/audio/audio_client.h"
+#include "periph/rocket/screenblanker.h"
 
 typedef enum {
 	bcontext_liftoff,

@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
-#include "rulos.h"
-#include "morse.h"
+#include "core/rulos.h"
+#include "core/morse.h"
 #include <ctype.h>
 
 #ifdef SIM

@@ -18,11 +18,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "rulos.h"
-#include "clock.h"
-#include "util.h"
+#include "core/rulos.h"
+#include "core/clock.h"
+#include "core/util.h"
 #include "mark_point.h"
-#include "uart.h"
+#include "periph/uart/uart.h"
 #include "control.h"
 #include "leds.h"
 

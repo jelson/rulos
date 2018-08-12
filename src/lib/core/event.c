@@ -17,8 +17,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#include "clock.h"
-#include "event.h"
+#include "core/clock.h"
+#include "core/event.h"
 
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 //#define SYNCDEBUG()	syncdebug(0, 'E', __LINE__)

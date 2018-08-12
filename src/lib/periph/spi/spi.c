@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "sdcard.h"
+#include "periph/sdcard/sdcard.h"
 
 #define R_SYNCDEBUG()	syncdebug(0, 'I', __LINE__)
 //#define SYNCDEBUG()	R_SYNCDEBUG()

@@ -18,7 +18,7 @@
 #include <string.h>
 #include <math.h>
 
-#include "rocket.h"
+#include "periph/rocket/rocket.h"
 #ifndef SIM
 #include "hardware.h"
 #endif

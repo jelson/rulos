@@ -17,8 +17,8 @@
 #ifndef __display_scroll_msg_h__
 #define __display_scroll_msg_h__
 
-#include "clock.h"
-#include "board_buffer.h"
+#include "core/clock.h"
+#include "periph/7seg_panel/board_buffer.h"
 
 typedef struct s_dscrollmsgact {
 	BoardBuffer bbuf;

@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "lunar_distance.h"
+#include "periph/rocket/lunar_distance.h"
 
 void lunar_distance_update(LunarDistance *ld);
 

@@ -21,8 +21,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "rulos.h"
-#include "twi.h"
+#include "core/rulos.h"
+#include "core/twi.h"
 
 #ifdef STATUS_TO_LOCAL_PANEL
 # include "7seg_panel.h"

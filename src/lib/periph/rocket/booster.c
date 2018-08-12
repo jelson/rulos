@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "booster.h"
+#include "periph/rocket/booster.h"
 
 void booster_init(Booster *booster, HPAM *hpam, AudioClient *audioClient, ScreenBlanker *screenblanker)
 {

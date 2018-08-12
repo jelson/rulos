@@ -17,8 +17,8 @@
 #ifndef _display_blinker_h
 #define _display_blinker_h
 
-#include "board_buffer.h"
-#include "clock.h"
+#include "periph/7seg_panel/board_buffer.h"
+#include "core/clock.h"
 
 typedef struct {
 	uint16_t period;

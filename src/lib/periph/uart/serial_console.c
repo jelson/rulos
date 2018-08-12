@@ -16,8 +16,8 @@
 
 #include <stdlib.h>
 
-#include "clock.h"
-#include "serial_console.h"
+#include "core/clock.h"
+#include "periph/uart/serial_console.h"
 
 void serial_console_update(SerialConsole *sca)
 {

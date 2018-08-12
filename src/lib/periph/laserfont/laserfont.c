@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "laserfont.h"
+#include "periph/laserfont/laserfont.h"
 
 #include "laserfont.ch"
 

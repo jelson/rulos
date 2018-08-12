@@ -17,10 +17,10 @@
 #ifndef _audio_driver_h
 #define _audio_driver_h
 
-#include "rocket.h"
-#include "rocket_ring_buffer.h"
-#include "sound.h"
-//#include "spiflash.h"
+#include "periph/rocket/rocket.h"
+#include "periph/ring_buffer/rocket_ring_buffer.h"
+#include "periph/rocket/sound.h"
+//#include "graveyard/spiflash.h"
 
 #define NUM_COMPOSITE_STREAMS	1
 #if 0

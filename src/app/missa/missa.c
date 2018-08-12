@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
-#include "rulos.h"
-#include "morse.h"
+#include "core/rulos.h"
+#include "core/morse.h"
 
 static void missa_hal_init();
 static void missa_hal_set_led(uint8_t led_num, uint8_t onoff);

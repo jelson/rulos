@@ -17,9 +17,9 @@
 #ifndef _spiflash_h
 #define _spiflash_h
 
-#include "rocket.h"
-#include "hal.h"
-#include "rocket_ring_buffer.h"
+#include "periph/rocket/rocket.h"
+#include "core/hal.h"
+#include "periph/ring_buffer/rocket_ring_buffer.h"
 
 typedef enum {
 	spist_read_send_addr,

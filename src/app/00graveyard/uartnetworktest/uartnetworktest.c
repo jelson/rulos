@@ -18,17 +18,17 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "rocket.h"
-#include "clock.h"
-#include "util.h"
-#include "network.h"
-#include "sim.h"
-#include "audio_driver.h"
-#include "audio_server.h"
-#include "audio_streamer.h"
-#include "sdcard.h"
-#include "uart_net_media.h"
-#include "audioled.h"
+#include "periph/rocket/rocket.h"
+#include "core/clock.h"
+#include "core/util.h"
+#include "core/network.h"
+#include "chip/sim/core/sim.h"
+#include "periph/audio/audio_driver.h"
+#include "periph/audio/audio_server.h"
+#include "periph/audio/audio_streamer.h"
+#include "periph/sdcard/sdcard.h"
+#include "periph/uart/uart_net_media.h"
+#include "periph/audio/audioled.h"
 
 typedef struct {
 	UartMedia uart_media;

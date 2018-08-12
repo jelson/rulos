@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "screenblanker.h"
+#include "periph/rocket/screenblanker.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // disco mode defs
@@ -42,7 +42,7 @@
 #define B_NO_BOARD	/**/
 #define B_END	/**/
 
-#include "board_defs.h"
+#include "core/board_defs.h"
 
 static uint32_t t_rocket0[] = { T_ROCKET0 };
 static uint32_t t_rocket1[] = { T_ROCKET1 };

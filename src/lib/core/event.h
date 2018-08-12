@@ -16,8 +16,8 @@
 
 #pragma once
 
-#include "util.h"
-#include "heap.h"
+#include "core/util.h"
+#include "core/heap.h"
 
 typedef struct {
 	r_bool auto_reset;

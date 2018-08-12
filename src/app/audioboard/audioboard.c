@@ -14,19 +14,19 @@
  *
  ************************************************************************/
 
-#include "rulos.h"
-#include "clock.h"
-#include "util.h"
-#include "network.h"
-#include "audio_driver.h"
-#include "audio_server.h"
-#include "audio_streamer.h"
-#include "sdcard.h"
-#include "serial_console.h"
-#include "audioled.h"
+#include "core/rulos.h"
+#include "core/clock.h"
+#include "core/util.h"
+#include "core/network.h"
+#include "periph/audio/audio_driver.h"
+#include "periph/audio/audio_server.h"
+#include "periph/audio/audio_streamer.h"
+#include "periph/sdcard/sdcard.h"
+#include "periph/uart/serial_console.h"
+#include "periph/audio/audioled.h"
 
 #if SIM
-#include "sim.h"
+#include "chip/sim/core/sim.h"
 #endif
 
 SerialConsole *g_serial_console = NULL;

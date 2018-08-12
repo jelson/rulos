@@ -19,7 +19,7 @@
 // we ended up never even soldering it together, in favor of
 // GB-range SD cards.
 
-#include "spiflash.h"
+#include "graveyard/spiflash.h"
 
 void _spif_start(SPIFlash *spif);
 void _spiflash_receive(HALSPIHandler *hdlr, uint8_t byte);

@@ -14,10 +14,10 @@
  *
  ************************************************************************/
 
-#include "rulos.h"
-#include "7seg_panel.h"
-#include "display_rtc.h"
-#include "input_controller.h"
+#include "core/rulos.h"
+#include "periph/7seg_panel/7seg_panel.h"
+#include "periph/display_rtc/display_rtc.h"
+#include "periph/input_controller/input_controller.h"
 
 
 typedef struct {

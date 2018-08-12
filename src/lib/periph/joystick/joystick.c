@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
-#include "joystick.h"
-#include "hal.h"
+#include "periph/joystick/joystick.h"
+#include "core/hal.h"
 
 // Using 30k resistor:
 //    X direction -- adc1, full left = 1020, center=470, right=305
