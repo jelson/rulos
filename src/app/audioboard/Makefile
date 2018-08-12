@@ -15,8 +15,7 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr sim
-PERIPHERALS := uart audio rocket twi spi sdcard input_controller hpam joystick rasters display_rtc \
-	ring_buffer
+PERIPHERALS := uart audio rocket twi spi sdcard
 #MCU := atmega8
 MCU := atmega328p
 BOARD := ROCKETAUDIO
