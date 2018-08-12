@@ -72,7 +72,7 @@ int main()
 	InputPollerAct ia;
 	input_poller_init(&ia, NULL);
 
-	board_buffer_init(&bbuf);
+	board_buffer_init(&bbuf DBG_BBUF_LABEL("boo"));
 	board_buffer_push(&bbuf, 0);
 	schedule_us(1, boofunc, NULL);
 
