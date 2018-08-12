@@ -15,7 +15,7 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr
-PERIPHERALS := 7seg_panel joystick adc hpam rocket input_controller audio sdcard spi rasters display_rtc
+PERIPHERALS := 7seg_panel joystick adc hpam
 MCU := atmega328p
 BOARD := PCB11
 TARGET := hpamtest

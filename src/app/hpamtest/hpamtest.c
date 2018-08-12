@@ -14,6 +14,7 @@
  *
  ************************************************************************/
 
+#include "core/board_defs.h"
 #include "periph/hpam/hpam.h"
 #include "periph/joystick/joystick.h"
 #include "periph/rocket/rocket.h"
@@ -23,8 +24,8 @@ struct {
 	HPAMIndex hpamIndex;
 } hpams[] = {
 	{"hobbs", hpam_hobbs},
-	{"clanger", hpam_clanger},
-	{"hatch", hpam_hatch_solenoid_reserved},
+	//	{"clanger", hpam_reserved},
+	//{"hatch", hpam_hatch_solenoid_reserved},
 	{"lights", hpam_lighting_flicker},
 	{"th_frLft", hpam_thruster_frontleft},
 	{"th_frRgt", hpam_thruster_frontright},
@@ -73,8 +74,8 @@ void ht_update(HTAct *ht)
 
 	joystick_poll(&ht->js);
 	int8_t new_dir =
-		(ht->js.state & JOYSTICK_LEFT) ? -1 :
-			(ht->js.state & JOYSTICK_RIGHT) ? +1 : 0;
+		(ht->js.state & JOYSTICK_STATE_LEFT) ? -1 :
+		(ht->js.state & JOYSTICK_STATE_RIGHT) ? +1 : 0;
 	if (new_dir != ht->dir)
 	{
 		if (ht->dir==-1)
@@ -87,7 +88,7 @@ void ht_update(HTAct *ht)
 		}
 		ht->dir = new_dir;
 	}
-	r_bool new_btn = (ht->js.state & JOYSTICK_TRIGGER) != 0;
+	r_bool new_btn = (ht->js.state & JOYSTICK_STATE_TRIGGER) != 0;
 	if (new_btn != ht->btn)
 	{
 		if (!ht->btn)
