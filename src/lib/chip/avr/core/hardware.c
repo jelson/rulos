@@ -94,7 +94,7 @@ void hal_init()
 }
 
 #ifdef ASSERT_TO_SERIAL
-# include "uart.h"
+# include "periph/uart/uart.h"
 #endif
 
 #ifdef ASSERT_TO_BOARD
