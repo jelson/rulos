@@ -14,10 +14,10 @@
  *
  ************************************************************************/
 
-#ifndef _EEPROM_H
-#define _EEPROM_H
+#pragma once
 
-#include <rocket.h>
+#include <inttypes.h>
+#include "core/util.h"
 
 // checksum-protected eeprom record
 void eeprom_write(uint8_t *buf, int len);
@@ -25,5 +25,3 @@ void eeprom_write(uint8_t *buf, int len);
 r_bool eeprom_read(uint8_t *buf, int len);
 	// returns whether checksum/magic worked. Writes buf either way,
 	// so if you get false, better initialize buf yourself.
-
-#endif // _EEPROM_H
