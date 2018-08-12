@@ -1,4 +1,4 @@
-$(CURR_OBJDIR)/lib/periph/7seg_panel/src/display_controller.o: $(CURR_OBJDIR)/lib/periph/7seg_panel/sevseg_bitmaps.ch $(ROCKET_ROOT)/lib/periph/7seg_panel/src/display_controller.c
+$(CURR_OBJDIR)/lib/periph/7seg_panel/display_controller.o: $(CURR_OBJDIR)/lib/periph/7seg_panel/sevseg_bitmaps.ch $(ROCKET_ROOT)/lib/periph/7seg_panel/display_controller.c
 
 $(CURR_OBJDIR)/lib/periph/7seg_panel/sevseg_bitmaps.ch: $(ROCKET_ROOT)/util/sevseg_convert.py $(ROCKET_ROOT)/lib/periph/7seg_panel/sevseg_artwork.txt
 	$(PYTHON) $(ROCKET_ROOT)/util/sevseg_convert.py $(ROCKET_ROOT)/lib/periph/7seg_panel/sevseg_artwork.txt > $@

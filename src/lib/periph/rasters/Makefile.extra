@@ -1,4 +1,4 @@
-$(CURR_OBJDIR)/lib/periph/rasters/src/rasters.o: $(CURR_OBJDIR)/rasters_auto.ch $(ROCKET_ROOT)/lib/periph/rasters/src/rasters.c
+$(CURR_OBJDIR)/lib/periph/rasters/rasters.o: $(CURR_OBJDIR)/rasters_auto.ch $(ROCKET_ROOT)/lib/periph/rasters/rasters.c
 
 $(CURR_OBJDIR)/rasters_auto.ch: $(ROCKET_ROOT)/util/bitmaploader.py $(ROCKET_ROOT)/bitmaps/*.png
 	$(PYTHON) $(ROCKET_ROOT)/util/bitmaploader.py $@ $(ROCKET_ROOT)/bitmaps > /dev/null

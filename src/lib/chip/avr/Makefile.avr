@@ -22,12 +22,12 @@ AVR_INCLUDES :=
 AVR_LIB_ROOT := $(ROCKET_ROOT)/lib/chip/avr
 
 # Add platform-specific core sources to the all-platform sources
-AVR_SOURCES += $(wildcard $(AVR_LIB_ROOT)/core/src/*.c)
-AVR_INCLUDES += -I$(AVR_LIB_ROOT)/core/inc
+AVR_SOURCES += $(wildcard $(AVR_LIB_ROOT)/core/*.c)
+AVR_INCLUDES += -I$(AVR_LIB_ROOT)/core
 
 # Add platform-specific peripheral sources
-AVR_SOURCES += $(foreach periph, $(PERIPHERALS), $(wildcard $(AVR_LIB_ROOT)/periph/$(periph)/src/*.c))
-AVR_INCLUDES += $(foreach periph, $(PERIPHERALS), -I$(AVR_LIB_ROOT)/periph/$(periph)/inc)
+AVR_SOURCES += $(foreach periph, $(PERIPHERALS), $(wildcard $(AVR_LIB_ROOT)/periph/$(periph)/*.c))
+AVR_INCLUDES += $(foreach periph, $(PERIPHERALS), -I$(AVR_LIB_ROOT)/periph/$(periph))
 
 AVR_SOURCES += $(ALL_PLATFORM_SOURCES)
 AVR_INCLUDES += $(ALL_PLATFORM_INCLUDES)
@@ -41,7 +41,7 @@ AVR_LIB_FILE = $(AVR_OBJDIR)/lib$(AVR_LIBNAME).a
 CC = avr-gcc
 
 CURR_OBJDIR := $(AVR_OBJDIR)
--include $(foreach dir, $(sort $(dir $(AVR_SOURCES))), $(wildcard $(dir)/../Makefile.extra))
+-include $(foreach dir, $(sort $(dir $(AVR_SOURCES))), $(wildcard $(dir)/Makefile.extra))
 
 ## Options common to compile, link and assembly rules
 AVR_COMMON_FLAGS = -Wall -Werror -mmcu=$(MCU) -DRULOS_AVR
