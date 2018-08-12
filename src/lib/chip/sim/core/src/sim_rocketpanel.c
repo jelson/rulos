@@ -665,13 +665,41 @@ void start_audio_fork_shuttling_child(SimAudioState *sas)
 	setnonblock(simAudioState->flowfd);
 }
 
+int open_audio_device() {
+#if 0
+	int devdspfd = open("/dev/dsp", O_WRONLY, 0);
+	return devdspfd;
+#else
+	int pipes[2];
+	int rc = pipe(pipes);
+	assert(rc==0);
+	pid_t pid = fork();
+	if (pid == 0) {
+		// child
+		close(0);
+		close(1);
+		close(2);
+		close(pipes[1]);
+		dup2(pipes[0], 0);
+		rc = system("aplay");
+		assert(false);
+	} else {
+		// parent
+		close(pipes[0]);
+		return pipes[1];
+	}
+	assert(false);
+	return -1;
+#endif
+}
+
 void audio_shuttling_child(int audiofd, int flowfd)
 {
 	char flowbuf = 0;
 	char audiobuf[6];
 	int rc;
 
-	int devdspfd = open("/dev/dsp", O_WRONLY, 0);
+	int devdspfd = open_audio_device();
 	assert(devdspfd >= 0);
 	int debugfd = open("devdsp", O_CREAT|O_WRONLY, S_IRWXU);
 	assert(debugfd >= 0);
