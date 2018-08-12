@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "core/rulos.h"
+#include "periph/6matrix/6matrix.h"
 
 #define X_LEDS 24
 #define Y_LEDS 16

@@ -31,7 +31,9 @@ SIM_INCLUDES += $(ALL_PLATFORM_INCLUDES)
 # The simulator forces selection of certain peripherals; include them.
 # Sorry this was done in a cut-and-paste way instead of something more general.
 SIM_EXTRA_PERIPHERALS := uart ring_buffer rocket input_controller hpam audio sdcard spi joystick rasters display_rtc 7seg_panel
-SIM_SOURCES +=  $(foreach periph, $(SIM_EXTRA_PERIPHERALS), $(wildcard $(ROCKET_ROOT)/lib/periph/$(periph)/*.c))
+SIM_PERIPHERALS := $(SIM_EXTRA_PERIPHERALS) $(PERIPHERALS)
+SIM_SOURCES +=  $(foreach periph, $(SIM_PERIPHERALS), $(wildcard $(ROCKET_ROOT)/lib/periph/$(periph)/*.c))
+SIM_SOURCES +=  $(foreach periph, $(SIM_PERIPHERALS), $(wildcard $(SIM_LIB_ROOT)/periph/$(periph)/*.c))
 
 SIM_OBJDIR = obj.sim
 SIM_LIBNAME = rocket
@@ -58,7 +60,7 @@ SIM_LIB_OBJECTS := $(patsubst $(ROCKET_ROOT)/lib/%.c,$(SIM_OBJDIR)/lib/%.o, $(SI
 SIM_TARGET_OBJECTS := $(patsubst %.o,$(SIM_OBJDIR)/app/%.o, $(TARGET_OBJECTS))
 
 # For lib objects
-$(SIM_OBJDIR)/sim_6matrix.o: $(ROCKET_ROOT)/lib/chip/sim/core/sim_6matrix.c
+$(SIM_OBJDIR)/lib/chip/sim/periph/6matrix/sim_6matrix.o: $(ROCKET_ROOT)/lib/chip/sim/periph/6matrix/sim_6matrix.c
 	$(SIM_GCC) $(SIM_CFLAGS) `pkg-config --cflags gtk+-2.0` -c $< -o $@
 
 $(SIM_OBJDIR)/lib/%.o: $(ROCKET_ROOT)/lib/%.c
