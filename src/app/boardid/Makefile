@@ -21,7 +21,7 @@ PERIPHERALS := 7seg_panel
 #BOARD := PCB11
 
 MCU := atmega328p
-BOARD := DONGLE
+BOARD := DONGLE_REVB
 
 #MCU := atmega1284p
 #BOARD := LPEM

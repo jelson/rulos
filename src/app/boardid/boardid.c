@@ -84,7 +84,7 @@ int main()
 
 	uint8_t board;
 	for (board = 0; board < NUM_BOARDS; board++) {
-		board_buffer_init(&ba.b[board]);
+		board_buffer_init(&ba.b[board] DBG_BBUF_LABEL("testboard"));
 		board_buffer_push(&ba.b[board], board);
 	}
 
