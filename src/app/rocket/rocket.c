@@ -163,9 +163,7 @@ void init_rocket0(Rocket0 *r0)
 		'p',
 		'q');
 
-#if 0
 	bss_canary_init();
-#endif
 }
 
 static Rocket0 rocket0;	// allocate obj in .bss so it's easy to count
