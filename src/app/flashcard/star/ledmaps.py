@@ -15,7 +15,7 @@
 #
 
 
-import Image
+from PIL import Image
 import PIL.ImageOps
 import glob
 import sys
