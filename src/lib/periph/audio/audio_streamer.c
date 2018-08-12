@@ -15,6 +15,7 @@
  ************************************************************************/
 
 #include "periph/audio/audio_streamer.h"
+
 #include "core/event.h"
 
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);

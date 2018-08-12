@@ -1,10 +1,10 @@
 #ifndef _HOST_AUDIO_CAPTURE_H
 #define _HOST_AUDIO_CAPTURE_H
 
+#include <alsa/asoundlib.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <alsa/asoundlib.h>
 
 
 typedef struct

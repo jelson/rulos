@@ -15,6 +15,7 @@
  ************************************************************************/
 
 #include "periph/joystick/joystick.h"
+
 #include "core/hal.h"
 
 // Using 30k resistor:

@@ -18,9 +18,9 @@
 #define display_thruster_graph_h
 
 #include "core/clock.h"
+#include "core/network.h"
 #include "periph/7seg_panel/board_buffer.h"
 #include "periph/rocket/thruster_protocol.h"
-#include "core/network.h"
 
 typedef struct s_d_thruster_graph {
 	BoardBuffer bbuf;

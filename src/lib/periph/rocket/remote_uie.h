@@ -17,9 +17,9 @@
 #ifndef _remote_uie_h
 #define _remote_uie_h
 
-#include "periph/rocket/rocket.h"
 #include "periph/input_controller/focus.h"
 #include "periph/input_controller/input_controller.h"
+#include "periph/rocket/rocket.h"
 
 typedef struct {
 	UIEventHandlerFunc func;

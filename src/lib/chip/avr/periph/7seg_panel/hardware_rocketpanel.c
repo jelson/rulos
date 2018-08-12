@@ -21,14 +21,14 @@
  */
 
 #include <avr/boot.h>
-#include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/io.h>
 #include <util/delay_basic.h>
 
-#include "periph/7seg_panel/display_controller.h"
-#include "hardware.h"
 #include "core/board_defs.h"
 #include "core/hal.h"
+#include "hardware.h"
+#include "periph/7seg_panel/display_controller.h"
 
 
 //////////////////////////////////////////////////////////////////////////////

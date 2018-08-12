@@ -15,15 +15,15 @@
  ************************************************************************/
 
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdbool.h>
 
-#include "periph/rocket/rocket.h"
-#include "core/clock.h"
-#include "core/util.h"
-#include "core/network.h"
 #include "chip/sim/core/sim.h"
+#include "core/clock.h"
+#include "core/network.h"
+#include "core/util.h"
+#include "periph/rocket/rocket.h"
 #include "periph/uart/serial_console.h"
 
 

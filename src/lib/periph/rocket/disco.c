@@ -15,6 +15,7 @@
  ************************************************************************/
 
 #include "periph/rocket/disco.h"
+
 #include "periph/rocket/sound.h"
 
 void disco_update(Disco *disco);

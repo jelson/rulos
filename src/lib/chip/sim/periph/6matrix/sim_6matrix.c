@@ -1,7 +1,7 @@
+#include <gtk/gtk.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h>
-#include <gtk/gtk.h>
 
 #include "core/rulos.h"
 

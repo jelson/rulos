@@ -17,12 +17,12 @@
 #ifndef _hpam_h
 #define _hpam_h
 
-#include "periph/7seg_panel/board_buffer.h"
 #include "core/clock.h"
-#include "periph/7seg_panel/display_controller.h"
 #include "core/network.h"
-#include "periph/rocket/thruster_protocol.h"
 #include "core/util.h"
+#include "periph/7seg_panel/board_buffer.h"
+#include "periph/7seg_panel/display_controller.h"
+#include "periph/rocket/thruster_protocol.h"
 
 typedef struct {
 	r_bool status;

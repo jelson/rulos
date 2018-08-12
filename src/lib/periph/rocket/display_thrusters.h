@@ -14,9 +14,9 @@
  *
  ************************************************************************/
 
-#include "periph/joystick/joystick.h"
 #include "core/network.h"
 #include "periph/hpam/hpam.h"
+#include "periph/joystick/joystick.h"
 #include "periph/rocket/idle.h"
 
 typedef struct {

@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <inttypes.h>
+
 typedef void (MorseOutputToggleFunc)(uint8_t onoff);
 typedef void (MorseOutputDoneFunc)();
 

@@ -16,9 +16,9 @@
 
 #include <stdlib.h>
 
+#include "core/clock.h"
 #include "core/rulos.h"
 #include "periph/7seg_panel/cursor.h"
-#include "core/clock.h"
 
 #define BLINK2	(18)	// blink every 256ms
 

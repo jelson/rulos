@@ -14,27 +14,27 @@
  *
  ************************************************************************/
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <time.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/timeb.h>
-#include <signal.h>
-#include <sched.h>
 #include <ctype.h>
 #include <curses.h>
 #include <fcntl.h>
+#include <sched.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/timeb.h>
+#include <sys/types.h>
+#include <time.h>
+#include <unistd.h>
 
-#include "periph/rocket/rocket.h"
+#include "chip/sim/core/sim.h"
 #include "core/util.h"
 #include "periph/7seg_panel/display_controller.h"
 #include "periph/ring_buffer/rocket_ring_buffer.h"
+#include "periph/rocket/rocket.h"
 #include "periph/uart/uart.h"
-#include "chip/sim/core/sim.h"
 
 r_bool g_joystick_trigger_state;
 UartHandler *g_sim_uart_handler = NULL;

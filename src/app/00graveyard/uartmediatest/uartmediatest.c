@@ -18,14 +18,14 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "periph/rocket/rocket.h"
-#include "core/clock.h"
-#include "core/util.h"
-#include "core/network.h"
 #include "chip/sim/core/sim.h"
+#include "core/clock.h"
+#include "core/network.h"
+#include "core/util.h"
 #include "periph/audio/audio_driver.h"
 #include "periph/audio/audio_server.h"
 #include "periph/audio/audio_streamer.h"
+#include "periph/rocket/rocket.h"
 #include "periph/sdcard/sdcard.h"
 #include "periph/uart/uart_net_media.h"
 

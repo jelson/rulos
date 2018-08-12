@@ -16,8 +16,8 @@
 
 #pragma once
 
-#include <stdlib.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "core/media.h"
 #include "core/message.h"
@@ -51,6 +51,7 @@ typedef struct s_send_slot {
 } SendSlot, *SendSlotPtr;
 
 #include "queue.mh"
+
 QUEUE_DECLARE(SendSlotPtr)
 
 

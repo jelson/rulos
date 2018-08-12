@@ -16,9 +16,9 @@
 
 #include <string.h>
 
+#include "core/clock.h"
 #include "core/rulos.h"
 #include "periph/7seg_panel/remote_bbuf.h"
-#include "core/clock.h"
 
 void rbs_update(RemoteBBufSend *rbs);
 void rbs_send_complete(SendSlot *slot);

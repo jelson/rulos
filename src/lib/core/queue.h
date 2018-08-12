@@ -17,10 +17,12 @@
 #pragma once
 
 #include <inttypes.h>
+
 #include "core/util.h"
 
 typedef char Char;
 #include "queue.mh"
+
 QUEUE_DECLARE(Char)
 
 /* usage:

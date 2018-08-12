@@ -1,10 +1,11 @@
 #include "periph/servo/servo.h"
 
 #ifndef SIM
-#include "hardware.h"
 #include <avr/boot.h>
-#include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/io.h>
+
+#include "hardware.h"
 
 
 #define SERVO_PERIOD	20000

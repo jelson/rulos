@@ -15,13 +15,14 @@
  ************************************************************************/
 
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdbool.h>
 
 #include "core/clock.h"
-#include "core/util.h"
 #include "core/network.h"
+#include "core/util.h"
+#include "periph/lcd_12232/graphic_lcd_12232.h"
 /*
 #include "periph/audio/audio_driver.h"
 #include "periph/audio/audio_server.h"
@@ -29,8 +30,6 @@
 #include "periph/sdcard/sdcard.h"
 */
 #include "periph/uart/serial_console.h"
-
-#include "periph/lcd_12232/graphic_lcd_12232.h"
 #if SIM
 # include "sim.h"
 #else

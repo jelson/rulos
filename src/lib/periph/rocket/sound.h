@@ -23,6 +23,7 @@
 
 typedef enum e_sound_token {
 #include "sound.def"
+
 	sound_num_tokens
 } SoundToken;
 

@@ -18,9 +18,8 @@
 #define _labeled_display_h
 
 #include "periph/display_rtc/display_rtc.h"
-#include "periph/rocket/display_scroll_msg.h"
-
 #include "periph/input_controller/focus.h"
+#include "periph/rocket/display_scroll_msg.h"
 
 typedef struct {
 	UIEventHandlerFunc func;

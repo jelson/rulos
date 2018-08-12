@@ -18,6 +18,7 @@
 #define _laserfont_h
 
 #include <inttypes.h>
+
 #include "periph/rocket/rocket.h"
 
 #define LASERFONT_LOWEST_CHAR		(32)

@@ -3,20 +3,20 @@
 //#define NO_GYRO
 //#define NO_ANALOG
 
-#include <string.h>
-#include <stdbool.h>
 #include <avr/interrupt.h>
+#include <stdbool.h>
+#include <string.h>
 
 #define F_CPU 8000000UL
 #include <util/delay.h>
 
-#include "periph/rocket/rocket.h"
+#include "chip/avr/periph/pov/pov.h"
+#include "graveyard/tilty_input.h"
 #include "hardware.h"
 #include "periph/rocket/funcseq.h"
-#include "chip/avr/periph/pov/pov.h"
-#include "vect3d.h"
-#include "graveyard/tilty_input.h"
+#include "periph/rocket/rocket.h"
 #include "periph/uart/serial_console.h"
+#include "vect3d.h"
 
 struct locatorAct;
 typedef struct locatorAct locatorAct_t;

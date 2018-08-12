@@ -1,9 +1,9 @@
 #pragma once
 
-#include "core/rulos.h"
-#include "periph/sdcard/sdcard.h"
-#include "periph/audio/audio_out.h"
 #include "core/event.h"
+#include "core/rulos.h"
+#include "periph/audio/audio_out.h"
+#include "periph/sdcard/sdcard.h"
 
 #define BLEND 0
 // too short a period to matter. I think the audio samples just aren't centered.

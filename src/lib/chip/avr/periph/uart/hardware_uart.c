@@ -20,12 +20,11 @@
  * This file is not compiled by the simulator.
  */
 
+#include <avr/boot.h>
+#include <avr/interrupt.h>
+#include <avr/io.h>
 #include <stdbool.h>
 #include <string.h>
-
-#include <avr/boot.h>
-#include <avr/io.h>
-#include <avr/interrupt.h>
 #include <util/delay_basic.h>
 
 #include "core/rulos.h"

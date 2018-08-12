@@ -17,6 +17,7 @@
 #pragma once
 
 #include <stdint.h>
+
 #include "core/time.h"
 
 typedef void (*ActivationFuncPtr)(void *data);

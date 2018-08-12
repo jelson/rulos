@@ -15,8 +15,8 @@
  ************************************************************************/
 
 #include "core/rulos.h"
-#include "periph/uart/uart.h"
 #include "periph/7seg_panel/7seg_panel.h"
+#include "periph/uart/uart.h"
 
 #ifdef SIM
 # include "sim.h"

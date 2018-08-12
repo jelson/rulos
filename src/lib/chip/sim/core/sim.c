@@ -18,28 +18,30 @@
  * These are the base simulator modules, for just the clock and TWI.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <unistd.h>
-#include <string.h>
-#include <time.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/timeb.h>
-#include <signal.h>
-#include <sched.h>
-#include <ctype.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <netinet/in.h>
+#include <signal.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <time.h>
+#include <unistd.h>
 
-#include "periph/rocket/rocket.h"
-#include "core/util.h"
 #include "chip/sim/core/sim.h"
+#include "core/clock.h"
+#include "core/heap.h"
+#include "core/logging.h"
+#include "core/media.h"
+#include "core/util.h"
+#include "hardware_types.h"
 
 uint32_t f_cpu = 4000000;
 uint8_t hal_initted = 0;

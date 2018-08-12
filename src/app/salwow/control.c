@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/clock.h"
 #include "control.h"
+#include "core/clock.h"
 #include "leds.h"
 
 #define OBSERVATION_DURATION_SAMPLES 5

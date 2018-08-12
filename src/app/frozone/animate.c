@@ -1,6 +1,7 @@
 #include "animate.h"
 
 #include <stdlib.h>
+
 #include "core/clock.h"
 
 #ifndef SIM

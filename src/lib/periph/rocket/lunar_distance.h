@@ -17,8 +17,8 @@
 #ifndef _LUNAR_DISTANCE_H
 #define _LUNAR_DISTANCE_H
 
-#include "periph/rocket/rocket.h"
 #include "periph/rocket/drift_anim.h"
+#include "periph/rocket/rocket.h"
 
 typedef struct {
 	DriftAnim da;

@@ -18,9 +18,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "periph/rocket/rocket.h"
 #include "periph/joystick/joystick.h"
 #include "periph/rocket/display_thrusters.h"
+#include "periph/rocket/rocket.h"
 
 /************************************************************************************/
 /************************************************************************************/

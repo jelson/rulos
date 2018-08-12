@@ -15,8 +15,8 @@
  ************************************************************************/
 
 #pragma once
-#include "periph/rocket/rocket.h"
 #include "periph/audio/audio_client.h"
+#include "periph/rocket/rocket.h"
 
 typedef struct {
 	struct s_audio_client *audio_client;

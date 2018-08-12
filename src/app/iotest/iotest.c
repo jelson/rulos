@@ -15,14 +15,14 @@
  ************************************************************************/
 
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdbool.h>
 
+#include "core/board_defs.h"
+#include "hardware.h"
 #include "periph/rocket/rocket.h"
 #include "periph/uart/serial_console.h"
-#include "hardware.h"
-#include "core/board_defs.h"
 
 typedef struct {
 	SerialConsole *sc;

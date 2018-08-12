@@ -3,8 +3,8 @@
 //#define NO_GYRO
 #define NO_ULTRASOUND
 
-#include <string.h>
 #include <avr/interrupt.h>
+#include <string.h>
 
 #ifdef BOARD_REVB
 #define F_CPU 8000000UL
@@ -28,9 +28,9 @@
 
 
 #include "core/rulos.h"
+#include "core/twi.h"
 #include "hardware.h"
 #include "periph/uart/uart.h"
-#include "core/twi.h"
 
 struct locatorAct;
 typedef struct locatorAct locatorAct_t;

@@ -15,12 +15,12 @@
  ************************************************************************/
 
 #include "core/rulos.h"
-#include "periph/6matrix/6matrix.h"
 #include "hardware.h"
+#include "periph/6matrix/6matrix.h"
 
 #define F_CPU 8000000UL
-#include <util/delay.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 
 #define COLLATCH_CLK  GPIO_B0
 #define COLLATCH_OE   GPIO_B1

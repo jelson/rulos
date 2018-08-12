@@ -17,8 +17,8 @@
 #ifndef _AUTOTYPE_H
 #define _AUTOTYPE_H
 
-#include "periph/rocket/rocket.h"
 #include "periph/input_controller/input_controller.h"
+#include "periph/rocket/rocket.h"
 
 typedef struct s_autotype {
 	InputInjectorIfc *iii;

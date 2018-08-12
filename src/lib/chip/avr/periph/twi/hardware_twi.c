@@ -14,14 +14,14 @@
  *
  ************************************************************************/
 
-#include "core/rulos.h"
-#include "hardware.h"
-#include "core/twi.h"
-
 #include <avr/boot.h>
-#include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/io.h>
 #include <util/twi.h>
+
+#include "core/rulos.h"
+#include "core/twi.h"
+#include "hardware.h"
 
 
 #define NEED_BUS(twi) ((twi->out_pkt != NULL) || (twi->masterRecvSlot != NULL))

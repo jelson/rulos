@@ -14,17 +14,16 @@
  *
  ************************************************************************/
 
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <inttypes.h>
-#include <sys/select.h>
-
-#include <errno.h>
-#include <malloc.h>
 #include <assert.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <malloc.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/select.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #define min(a,b)	((a)<(b)?(a):(b))
 

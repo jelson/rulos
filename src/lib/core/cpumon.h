@@ -16,6 +16,10 @@
 
 #pragma once
 
+#include <inttypes.h>
+
+#include "core/time.h"
+
 typedef enum {
 	cpumon_phase_align,
 	cpumon_phase_measure,

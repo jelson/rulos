@@ -1,6 +1,5 @@
-#include <stdio.h>
-
 #include <gtk/gtk.h>
+#include <stdio.h>
 
 #define X_LEDS 24
 #define Y_LEDS 16

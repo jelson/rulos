@@ -1,9 +1,9 @@
 #pragma once
 
 #include "gpsinput.h"
+#include "motors.h"
 #include "navigation.h"
 #include "rudder.h"
-#include "motors.h"
 
 typedef enum { Acquiring, Observing, Turning, Completed } ControlState;
 

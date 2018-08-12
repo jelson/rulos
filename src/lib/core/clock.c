@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
-#include <stdlib.h>
 #include <inttypes.h>
+#include <stdlib.h>
 
 #include "core/clock.h"
 #include "core/logging.h"

@@ -17,8 +17,8 @@
 #ifndef _calculator_decoration_h
 #define _calculator_decoration_h
 
-#include "periph/rocket/rocket.h"
 #include "periph/rocket/numeric_input.h"
+#include "periph/rocket/rocket.h"
 
 struct s_decoration_state;
 typedef void (*FetchCalcDecorationValuesFunc)(

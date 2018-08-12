@@ -14,13 +14,14 @@
  *
  ************************************************************************/
 
-#include "core/rulos.h"
 #include "core/queue.h"
+#include "core/rulos.h"
 #include "periph/ring_buffer/rocket_ring_buffer.h"
 
 QUEUE_DECLARE(short)
 
 #include "queue.mc"
+
 QUEUE_DEFINE(short)
 
 #define NUM_ELTS 4

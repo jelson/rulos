@@ -17,8 +17,8 @@
 #ifndef _QUADKNOB_H
 #define _QUADKNOB_H
 
-#include "periph/rocket/rocket.h"
 #include "periph/input_controller/input_controller.h"
+#include "periph/rocket/rocket.h"
 
 #ifndef SIM
 #include "hardware.h"

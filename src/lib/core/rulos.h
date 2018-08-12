@@ -16,13 +16,13 @@
 
 #pragma once
 
+#include <inttypes.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <inttypes.h>
-#include <math.h>
 
 #include "core/clock.h"
 #include "core/cpumon.h"
@@ -30,6 +30,7 @@
 #include "core/event.h"
 #include "core/hal.h"
 #include "core/heap.h"
+#include "core/logging.h"
 #include "core/media.h"
 #include "core/message.h"
 #include "core/net_compute_checksum.h"
@@ -38,4 +39,3 @@
 #include "core/queue.h"
 #include "core/random.h"
 #include "core/util.h"
-#include "core/logging.h"

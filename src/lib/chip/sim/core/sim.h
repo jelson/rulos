@@ -19,6 +19,7 @@
 #include <assert.h>
 
 #include "core/hal.h"
+#include "core/util.h"
 
 typedef struct s_board_layout {
 	const char *label;

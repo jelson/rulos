@@ -19,15 +19,15 @@
  */
 
 #include <avr/boot.h>
-#include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/io.h>
 #include <util/delay_basic.h>
 
-#include "core/clock.h"
-#include "hardware.h"
-#include "core/hal.h"
 #include "core/board_defs.h"
+#include "core/clock.h"
+#include "core/hal.h"
 #include "core/logging.h"
+#include "hardware.h"
 
 #define NUM_ADCS 8
 // #define RAW_ADC

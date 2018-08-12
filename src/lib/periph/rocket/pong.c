@@ -15,8 +15,8 @@
  ************************************************************************/
 
 #include "core/rulos.h"
-#include "periph/rocket/pong.h"
 #include "periph/rasters/rasters.h"
+#include "periph/rocket/pong.h"
 #include "periph/rocket/sound.h"
 
 #define PS(v)	((v)<<PONG_SCALE2)

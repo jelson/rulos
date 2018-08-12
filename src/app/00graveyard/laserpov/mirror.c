@@ -15,8 +15,9 @@
  ************************************************************************/
 
 #include <stdio.h>
-#include "mirror.h"
+
 #include "hardware.h"
+#include "mirror.h"
 
 void mirror_handler();
 static MirrorHandler *theMirror = NULL;

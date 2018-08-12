@@ -1,8 +1,10 @@
 #include <math.h>
+
 #include "navigation.h"
 
 #ifdef SIM
 #include <stdio.h>
+
 #define NDBG 0
 #endif
 

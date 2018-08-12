@@ -1,4 +1,5 @@
 #include <stdbool.h>
+
 #include "periph/rocket/momentary_display.h"
 
 void _momentary_display_update(MomentaryDisplay *md);

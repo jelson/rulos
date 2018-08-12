@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
-#include <stdlib.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include "core/clock.h"
 #include "core/event.h"

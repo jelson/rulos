@@ -17,8 +17,8 @@
 #ifndef _idle_display_h
 #define _idle_display_h
 
-#include "periph/rocket/display_scroll_msg.h"
 #include "core/cpumon.h"
+#include "periph/rocket/display_scroll_msg.h"
 
 typedef struct {
 	DScrollMsgAct *scrollAct;

@@ -1,8 +1,7 @@
-#include "rudder.h"
-#include "leds.h"
 #include "core/clock.h"
-
+#include "leds.h"
 #include "motors.h"
+#include "rudder.h"
 
 #ifndef SIM
 

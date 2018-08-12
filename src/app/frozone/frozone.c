@@ -18,8 +18,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "core/rulos.h"
 #include "animate.h"
+#include "core/rulos.h"
 #include "frobutton.h"
 
 /****************************************************************************/

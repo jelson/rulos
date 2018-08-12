@@ -47,6 +47,7 @@ SIM_CFLAGS += -MD -MP # -MT $(SIM_OBJDIR)/$(*F).o -MF $(SIM_OBJDIR)/$(@F).d
 
 SIM_LDFLAGS = -L$(SIM_OBJDIR) -l$(SIM_LIBNAME) -lm `pkg-config --libs gtk+-2.0`
 SIM_GCC := g++
+#SIM_GCC := /usr/local/bin/include-what-you-use -Xiwyu --mapping_file=./mapping
 
 ############
 

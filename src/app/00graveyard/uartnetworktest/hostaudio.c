@@ -1,12 +1,13 @@
+#include <arpa/inet.h>	// htonl
+#include <pthread.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <pthread.h>
-#include <arpa/inet.h>	// htonl
-#include "host/linear2ulaw.h"
+
 #include "graveyard/aufile.h"
 #include "host/host_audio_capture.h"
 #include "host/host_uart_network.h"
+#include "host/linear2ulaw.h"
 
 // http://www.equalarea.com/paul/alsa-audio.html#captureex
 

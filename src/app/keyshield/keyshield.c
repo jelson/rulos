@@ -16,12 +16,11 @@
 
 #include <inttypes.h>
 
-#include "core/rulos.h"
-#include "hardware.h"
-#include "core/hal.h"
 #include "chip/avr/periph/usi_twi_slave/usi_twi_slave.h"
-
+#include "core/hal.h"
+#include "core/rulos.h"
 #include "custom_board_defs.h"
+#include "hardware.h"
 
 /*
  * This callback is called every time we, as a TWI slave, get a query from

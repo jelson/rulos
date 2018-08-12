@@ -16,9 +16,9 @@
 
 #pragma once
 
-#include <avr/io.h>
 #include <avr/boot.h>
 #include <avr/interrupt.h>
+#include <avr/io.h>
 
 #include "core/hal.h"
 

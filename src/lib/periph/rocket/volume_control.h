@@ -17,10 +17,10 @@
 #ifndef _VOLUME_CONTROL_H
 #define _VOLUME_CONTROL_H
 
-#include "periph/rocket/rocket.h"
+#include "periph/audio/audio_client.h"
 #include "periph/input_controller/input_controller.h"
 #include "periph/rocket/potsticker.h"
-#include "periph/audio/audio_client.h"
+#include "periph/rocket/rocket.h"
 
 #define VOL_UP_KEY 't'
 #define VOL_DN_KEY 'u'

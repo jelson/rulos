@@ -15,6 +15,7 @@
  ************************************************************************/
 
 #include "periph/rocket/control_panel.h"
+
 #include "periph/rocket/volume_control.h"	// for VOL_UP_KEY & VOL_DN_KEY
 
 //////////////////////////////////////////////////////////////////////////////

@@ -1,13 +1,14 @@
-#include <string.h>
-#include <termios.h>
-#include <stdio.h>
-#include <unistd.h>
+#include <asm/ioctls.h>
 #include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
 #include <sys/signal.h>
 #include <sys/types.h>
-#include <asm/ioctls.h>
+#include <termios.h>
+#include <unistd.h>
 #include <linux/serial.h>
 #include <assert.h>
+
 #include "periph/uart/uart_net_media_preamble.h"
 
 #define _POSIX_SOURCE 1         //POSIX compliant source

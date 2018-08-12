@@ -15,6 +15,7 @@
  ************************************************************************/
 
 #include <stdbool.h>
+
 #include "periph/eeprom/eeprom.h"
 
 #if SIM

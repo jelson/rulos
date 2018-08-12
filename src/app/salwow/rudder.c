@@ -1,6 +1,6 @@
 #include "core/clock.h"
-#include "rudder.h"
 #include "leds.h"
+#include "rudder.h"
 
 #ifndef SIM
 

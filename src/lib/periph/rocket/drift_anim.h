@@ -18,6 +18,7 @@
 #define drift_anim_h
 
 #include <inttypes.h>
+#include "core/util.h"
 
 typedef struct {
 	// bounds

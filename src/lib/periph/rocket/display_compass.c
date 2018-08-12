@@ -14,9 +14,9 @@
  *
  ************************************************************************/
 
-#include "periph/rocket/rocket.h"
-#include "periph/rocket/display_compass.h"
 #include "periph/input_controller/focus.h"
+#include "periph/rocket/display_compass.h"
+#include "periph/rocket/rocket.h"
 
 void dcompass_update_once(DCompassAct *act);
 void dcompass_update(void *data);

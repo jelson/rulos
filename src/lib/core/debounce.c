@@ -14,9 +14,9 @@
  *
  ************************************************************************/
 
-#include "core/util.h"
 #include "core/clock.h"
 #include "core/debounce.h"
+#include "core/util.h"
 
 void debounce_button_init(DebouncedButton_t* b, Time refrac_time_us) {
   b->is_pressed = FALSE;

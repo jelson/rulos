@@ -16,8 +16,8 @@
 
 #include <inttypes.h>
 
-#include "core/rulos.h"
 #include "core/hal.h"
+#include "core/rulos.h"
 
 #define JIFFY_TIME_US 10000
 #define BUTTON_REFRAC_TIME_US 100000

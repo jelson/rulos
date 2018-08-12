@@ -23,8 +23,8 @@
 //#include <string.h>
 
 
-#include "periph/rocket/rocket.h"
 #include "hardware.h"
+#include "periph/rocket/rocket.h"
 
 int main()
 {

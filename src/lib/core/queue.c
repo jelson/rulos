@@ -17,5 +17,6 @@
 #include "core/queue.h"
 
 #include "core/queue.mc"
+
 QUEUE_DEFINE(Char)
 

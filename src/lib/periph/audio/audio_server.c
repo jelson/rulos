@@ -15,6 +15,7 @@
  ************************************************************************/
 
 #include <stdbool.h>
+
 #include "periph/audio/audio_server.h"
 
 #define FETCH_RETRY_TIME	1000000

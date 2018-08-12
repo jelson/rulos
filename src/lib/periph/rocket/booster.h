@@ -17,9 +17,9 @@
 #ifndef _BOOSTER_H
 #define _BOOSTER_H
 
-#include "periph/rocket/rocket.h"
-#include "periph/hpam/hpam.h"
 #include "periph/audio/audio_client.h"
+#include "periph/hpam/hpam.h"
+#include "periph/rocket/rocket.h"
 #include "periph/rocket/screenblanker.h"
 
 typedef enum {

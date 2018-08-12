@@ -17,6 +17,7 @@
 #pragma once
 
 #include <stdint.h>
+
 #include "core/util.h"
 
 // Definition of time for RulOS, in units of usec.

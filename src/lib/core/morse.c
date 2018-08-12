@@ -14,12 +14,14 @@
  *
  ************************************************************************/
 
-#include "core/rulos.h"
-#include "core/morse.h"
 #include <ctype.h>
+
+#include "core/morse.h"
+#include "core/rulos.h"
 
 #ifdef SIM
 # include <stdio.h>
+
 # define debug(x...) do { printf(x); printf("          "); fflush(stdout); } while (0)
 #else
 # define debug(x...)

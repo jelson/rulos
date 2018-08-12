@@ -14,11 +14,11 @@
  *
  ************************************************************************/
 
-#include <sys/types.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
+#include <sys/types.h>
 
 uint8_t ulaw_samples[] = {
 0xff, 0x7f, 0x7e, 0xfe, 0x80, 0x00,

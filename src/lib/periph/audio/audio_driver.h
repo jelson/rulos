@@ -17,8 +17,8 @@
 #ifndef _audio_driver_h
 #define _audio_driver_h
 
-#include "periph/rocket/rocket.h"
 #include "periph/ring_buffer/rocket_ring_buffer.h"
+#include "periph/rocket/rocket.h"
 #include "periph/rocket/sound.h"
 //#include "graveyard/spiflash.h"
 

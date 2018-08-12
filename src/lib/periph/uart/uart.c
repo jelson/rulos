@@ -16,8 +16,8 @@
 
 #include <stdlib.h>
 
-#include "core/rulos.h"
 #include "core/clock.h"
+#include "core/rulos.h"
 #include "periph/uart/uart.h"
 
 // Upcall from HAL when new data arrives.  Happens at interrupt time.

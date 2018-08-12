@@ -16,18 +16,18 @@
 
 #pragma once
 
-#include "core/heap.h"
-#include "periph/7seg_panel/display_controller.h"
-#include "periph/7seg_panel/board_buffer.h"
-#include "core/queue.h"
-#include "periph/7seg_panel/region.h"
-#include "periph/7seg_panel/cursor.h"
-#include "periph/input_controller/focus.h"
 #include "core/cpumon.h"
 #include "core/hal.h"
-#include "core/twi.h"
+#include "core/heap.h"
 #include "core/network.h"
 #include "core/network_ports.h"
+#include "core/queue.h"
+#include "core/twi.h"
+#include "periph/7seg_panel/board_buffer.h"
+#include "periph/7seg_panel/cursor.h"
+#include "periph/7seg_panel/display_controller.h"
+#include "periph/7seg_panel/region.h"
+#include "periph/input_controller/focus.h"
 #include "periph/rocket/thruster_protocol.h"
 
 

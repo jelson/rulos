@@ -1,7 +1,8 @@
-#include "hardware.h"
 #include <avr/boot.h>
-#include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/io.h>
+
+#include "hardware.h"
 #include "periph/servo/servo.h"
 #include "periph/uart/uart.h"
 

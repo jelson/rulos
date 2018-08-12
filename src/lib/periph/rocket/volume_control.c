@@ -1,4 +1,5 @@
 #include <stdbool.h>
+
 #include "periph/rocket/volume_control.h"
 
 #define VOLUME_DISPLAY_PERSISTENCE	(4*1000000)
@@ -8,8 +9,6 @@ void _volume_update(VolumeControl *vc);
 
 void volume_control_init(VolumeControl *vc, AudioClient *ac, uint8_t adc_channel, uint8_t boardnum)
 {
-#if DISPLAY_VOLUME_ADJUSTMENTS
-#endif // DISPLAY_VOLUME_ADJUSTMENTS
 	vc->injector.iii.func = _volume_input;
 	vc->injector.vc = vc;
 	init_potsticker(&vc->potsticker,

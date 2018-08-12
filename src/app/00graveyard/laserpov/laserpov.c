@@ -18,14 +18,14 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "periph/rocket/rocket.h"
-#include "core/clock.h"
-#include "core/hal.h"
-#include "core/cpumon.h"
-#include "mirror.h"
 #include "chip/avr/periph/pov/pov.h"
+#include "core/clock.h"
+#include "core/cpumon.h"
+#include "core/hal.h"
+#include "mirror.h"
 #include "periph/input_controller/input_controller.h"
 #include "periph/laserfont/laserfont.h"
+#include "periph/rocket/rocket.h"
 
 int main()
 {

@@ -16,13 +16,13 @@
 |            -calcprogrammer1@gmail.com                 |
 \*-----------------------------------------------------*/
 
-#include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/io.h>
 
-#include "core/rulos.h"
-#include "hardware.h"
 #include "chip/avr/core/usi_pins.h"
 #include "chip/avr/periph/usi_twi_slave/usi_twi_slave.h"
+#include "core/rulos.h"
+#include "hardware.h"
 
 // Debug
 

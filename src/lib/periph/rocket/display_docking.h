@@ -19,13 +19,13 @@
 
 #include "core/clock.h"
 #include "periph/7seg_panel/board_buffer.h"
-#include "periph/input_controller/focus.h"
-#include "periph/rocket/drift_anim.h"
-#include "periph/rocket/thruster_protocol.h"
-#include "periph/rocket/screen4.h"
 #include "periph/audio/audio_server.h"
-#include "periph/rocket/booster.h"
+#include "periph/input_controller/focus.h"
 #include "periph/joystick/joystick.h"
+#include "periph/rocket/booster.h"
+#include "periph/rocket/drift_anim.h"
+#include "periph/rocket/screen4.h"
+#include "periph/rocket/thruster_protocol.h"
 
 #define DOCK_HEIGHT 4
 #define MAX_Y (DOCK_HEIGHT*6)

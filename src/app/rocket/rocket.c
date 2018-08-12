@@ -19,50 +19,50 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "periph/rocket/rocket.h"
 #include "core/clock.h"
+#include "core/cpumon.h"
+#include "core/hal.h"
+#include "core/network.h"
 #include "core/util.h"
 #include "periph/7seg_panel/display_controller.h"
+#include "periph/7seg_panel/remote_bbuf.h"
+#include "periph/bss_canary/bss_canary.h"
 #include "periph/display_rtc/display_rtc.h"
-#include "periph/rocket/display_scroll_msg.h"
-#include "periph/rocket/display_compass.h"
 #include "periph/input_controller/focus.h"
-#include "periph/rocket/labeled_display.h"
+#include "periph/input_controller/input_controller.h"
+#include "periph/rasters/rasters.h"
+#include "periph/rocket/autotype.h"
+#include "periph/rocket/calculator.h"
+#include "periph/rocket/control_panel.h"
+#include "periph/rocket/display_aer.h"
+#include "periph/rocket/display_compass.h"
 #include "periph/rocket/display_docking.h"
 #include "periph/rocket/display_gratuitous_graph.h"
-#include "periph/rocket/numeric_input.h"
-#include "periph/input_controller/input_controller.h"
-#include "periph/rocket/calculator.h"
-#include "periph/rocket/display_aer.h"
-#include "core/hal.h"
-#include "core/cpumon.h"
-#include "periph/rocket/idle_display.h"
-#include "periph/rocket/sequencer.h"
-#include "periph/rasters/rasters.h"
-#include "periph/rocket/pong.h"
-#include "periph/rocket/lunar_distance.h"
+#include "periph/rocket/display_scroll_msg.h"
 #include "periph/rocket/display_thrusters.h"
-#include "core/network.h"
-#include "periph/rocket/remote_keyboard.h"
-#include "periph/7seg_panel/remote_bbuf.h"
-#include "periph/rocket/remote_uie.h"
-#include "periph/rocket/control_panel.h"
-#include "periph/rocket/autotype.h"
-#include "periph/rocket/idle.h"
 #include "periph/rocket/hobbs.h"
-#include "periph/rocket/screenblanker.h"
-#include "periph/rocket/slow_boot.h"
+#include "periph/rocket/idle.h"
+#include "periph/rocket/idle_display.h"
+#include "periph/rocket/labeled_display.h"
+#include "periph/rocket/lunar_distance.h"
+#include "periph/rocket/numeric_input.h"
+#include "periph/rocket/pong.h"
 #include "periph/rocket/potsticker.h"
+#include "periph/rocket/remote_keyboard.h"
+#include "periph/rocket/remote_uie.h"
+#include "periph/rocket/rocket.h"
+#include "periph/rocket/screenblanker.h"
+#include "periph/rocket/sequencer.h"
+#include "periph/rocket/slow_boot.h"
 #include "periph/rocket/volume_control.h"
-#include "periph/bss_canary/bss_canary.h"
 #include "periph/uart/uart.h"
 
 #if SIM
 #include "chip/sim/core/sim.h"
 #endif
 
-/************************************************************************************/
-/************************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
 
 typedef struct {
 	DRTCAct dr;

@@ -16,8 +16,8 @@
 
 #pragma once
 
-#include "core/util.h"
 #include "core/time.h"
+#include "core/util.h"
 
 typedef struct {
   r_bool is_pressed;

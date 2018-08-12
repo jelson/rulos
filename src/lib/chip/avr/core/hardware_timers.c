@@ -20,20 +20,21 @@
 
 #ifdef PRESCALE_TEST
 
+# include <assert.h>
+# include <inttypes.h>
 # include <stdio.h>
 # include <stdlib.h>
-# include <inttypes.h>
 # include <sys/types.h>
 # include <unistd.h>
-# include <assert.h>
+
 # define FALSE 0
 uint32_t hardware_f_cpu;
 
 #else   // !PRESCALE_TEST
 
 #include <avr/boot.h>
-#include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/io.h>
 #include <util/delay_basic.h>
 
 #include "core/rulos.h"

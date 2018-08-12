@@ -14,12 +14,12 @@
  *
  ************************************************************************/
 
-#include "periph/rocket/rocket.h"
-#include "periph/rocket/display_docking.h"
-#include "periph/rasters/rasters.h"
 #include "periph/7seg_panel/region.h"
-#include "periph/rocket/sound.h"
 #include "periph/hpam/hpam.h"
+#include "periph/rasters/rasters.h"
+#include "periph/rocket/display_docking.h"
+#include "periph/rocket/rocket.h"
+#include "periph/rocket/sound.h"
 
 UIEventDisposition ddock_event_handler(
 	UIEventHandler *raw_handler, UIEvent evt);

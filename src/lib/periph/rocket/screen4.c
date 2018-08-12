@@ -16,8 +16,8 @@
 
 #include "periph/rocket/screen4.h"
 
-#include "periph/rocket/rocket.h"
 #include "periph/7seg_panel/region.h"
+#include "periph/rocket/rocket.h"
 
 void init_screen4(Screen4 *s4, uint8_t board0)
 {

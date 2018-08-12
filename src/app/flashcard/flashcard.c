@@ -15,24 +15,23 @@
  ************************************************************************/
 
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdbool.h>
 
-#include "periph/rocket/rocket.h"
 #include "core/clock.h"
-#include "core/util.h"
 #include "core/network.h"
+#include "core/util.h"
 #include "periph/audio/audio_driver.h"
 #include "periph/audio/audio_server.h"
 #include "periph/audio/audio_streamer.h"
-#include "periph/sdcard/sdcard.h"
-#include "periph/uart/serial_console.h"
-#include "periph/input_controller/input_controller.h"
 #include "periph/eeprom/eeprom.h"
-
+#include "periph/input_controller/input_controller.h"
 #include "periph/lcd_12232/graphic_lcd_12232.h"
 #include "periph/led_matrix_single/led_matrix_single.h"
+#include "periph/rocket/rocket.h"
+#include "periph/sdcard/sdcard.h"
+#include "periph/uart/serial_console.h"
 
 #if !SIM
 #include "hardware.h"
@@ -101,6 +100,7 @@ void blink_init(BlinkAct *ba)
 //////////////////////////////////////////////////////////////////////////////
 
 #include "starbitmaps.ch"
+
 uint8_t lma_question[] = { 0x3c, 0x42, 0x02, 0x04, 0x08, 0x08, 0x00, 0x08 };
 uint8_t lma_x[] = { 0x81, 0x42, 0x24, 0x18, 0x18, 0x24, 0x42, 0x81 };
 uint8_t lma_disc[] = { 0x3c, 0x7e, 0xff, 0xff, 0xff, 0xff, 0x7e, 0x3c };

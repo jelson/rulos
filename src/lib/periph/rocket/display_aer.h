@@ -19,8 +19,8 @@
 
 #include "core/clock.h"
 #include "periph/7seg_panel/board_buffer.h"
-#include "periph/rocket/drift_anim.h"
 #include "periph/rocket/calculator_decoration.h"
+#include "periph/rocket/drift_anim.h"
 
 struct s_d_aer;
 

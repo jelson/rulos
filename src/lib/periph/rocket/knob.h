@@ -14,8 +14,12 @@
  *
  ************************************************************************/
 
-#ifndef __knob_h__
-#define __knob_h__
+#pragma once
+
+#include <inttypes.h>
+#include "periph/7seg_panel/cursor.h"
+#include "periph/7seg_panel/region.h"
+#include "periph/input_controller/focus.h"
 
 typedef struct {
 	UIEventHandlerFunc func;
@@ -30,5 +34,3 @@ typedef struct {
 void knob_init(Knob *knob, RowRegion region, const char **msgs, uint8_t len, UIEventHandler *notify, FocusManager *fa, const char *label);
 
 void knob_set_value(Knob *knob, uint8_t value);
-
-#endif //_knob_h

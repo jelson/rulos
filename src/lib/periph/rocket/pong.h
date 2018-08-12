@@ -17,8 +17,8 @@
 #ifndef _pong_h
 #define _pong_h
 
-#include "periph/rocket/rocket.h"
 #include "periph/audio/audio_client.h"
+#include "periph/rocket/rocket.h"
 #include "periph/rocket/screen4.h"
 
 #define PONG_HEIGHT 4
