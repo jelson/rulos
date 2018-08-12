@@ -14,16 +14,16 @@
  *
  ************************************************************************/
 
-#include "core/rulos.h"
 #include "core/clock.h"
-#include "core/util.h"
 #include "core/network.h"
+#include "core/rulos.h"
+#include "core/util.h"
 #include "periph/audio/audio_driver.h"
 #include "periph/audio/audio_server.h"
 #include "periph/audio/audio_streamer.h"
+#include "periph/audio/audioled.h"
 #include "periph/sdcard/sdcard.h"
 #include "periph/uart/serial_console.h"
-#include "periph/audio/audioled.h"
 
 #if SIM
 #include "chip/sim/core/sim.h"
