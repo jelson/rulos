@@ -328,7 +328,7 @@ int main()
 	wca.recvQueue = uart_recvq(&uart);
 
 	// init the board buffer
-	board_buffer_init(&wca.bbuf);
+	board_buffer_init(&wca.bbuf DBG_BBUF_LABEL("clock"));
 	board_buffer_push(&wca.bbuf, 0);
 
 	// have the callback get called immediately
