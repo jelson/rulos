@@ -20,7 +20,7 @@
 
 QUEUE_DECLARE(short)
 
-#include "queue.mc"
+#include "core/queue.mc"
 
 QUEUE_DEFINE(short)
 
@@ -111,6 +111,7 @@ void test_ring_buffer()
 
 int main()
 {
+	hal_init();
 	//test_shortqueue();
 	test_ring_buffer();
 	return 0;
