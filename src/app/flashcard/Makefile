@@ -15,8 +15,8 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr
-PERIPHERALS := rasters uart led_matrix_single keypad lcd_12232 eeprom input_controller rocket \
-	audio sdcard spi joystick display_rtc ring_buffer
+PERIPHERALS := rasters uart led_matrix_single keypad lcd_12232 eeprom input_controller \
+	audio sdcard spi 
 #MCU := atmega8
 MCU := atmega1284p
 BOARD := FLASHCARD
