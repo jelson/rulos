@@ -18,9 +18,14 @@
 #include "hardware.h"
 
 #define FREQ_USEC 50000
-#define TEST_PIN GPIO_B5
 #define TOTAL 20
 #define TEST_HAL
+
+#ifdef RULOS_ARM
+# define TEST_PIN GPIO0_00
+#else
+# define TEST_PIN GPIO_B5
+#endif
 
 #if TEST_SCHEDULER
 void test_func(void *data)
