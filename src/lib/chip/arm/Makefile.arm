@@ -17,6 +17,8 @@
 # the right makefile based on what LPCxpresso does:
 # https://bitbucket.org/smartavionics/lpcopen-make/src
 
+ARM_COMPILER_BINDIR := /home/jelson/gcc-arm-none-eabi-7-2018-q2-update/bin
+
 PLATFORM_TARGET_LIST += arm-all
 CLEAN_TARGET_LIST += arm-clean
 
@@ -26,12 +28,11 @@ ARM_INCLUDES :=
 ARM_LIB_ROOT := $(ROCKET_ROOT)/lib/chip/arm
 
 # Add platform-specific core sources to the all-platform sources
-ARM_SOURCES += $(wildcard $(ARM_LIB_ROOT)/core/src/*.c)
-ARM_INCLUDES += -I$(ARM_LIB_ROOT)/core/inc
+ARM_SOURCES += $(wildcard $(ARM_LIB_ROOT)/core/*.c)
+ARM_INCLUDES += -I$(ARM_LIB_ROOT)
 
 # Add platform-specific peripheral sources
-ARM_SOURCES += $(foreach periph, $(PERIPHERALS), $(wildcard $(ARM_LIB_ROOT)/periph/$(periph)/src/*.c))
-ARM_INCLUDES += $(foreach periph, $(PERIPHERALS), -I$(ARM_LIB_ROOT)/periph/$(periph)/inc)
+ARM_SOURCES += $(foreach periph, $(PERIPHERALS), $(wildcard $(ARM_LIB_ROOT)/periph/$(periph)/*.c))
 
 ARM_SOURCES += $(ALL_PLATFORM_SOURCES)
 ARM_INCLUDES += $(ALL_PLATFORM_INCLUDES)
@@ -42,7 +43,7 @@ ARM_ARCHTARG := $(TARGET).arm-$(ARM_CHIP_FAMILY).$(BOARD)
 ARM_OBJDIR = obj.$(ARM_ARCHTARG).$(BOARD)
 ARM_LIBNAME = rocket
 ARM_LIB_FILE = $(ARM_OBJDIR)/lib$(ARM_LIBNAME).a
-ARM_GCC_PREFIX = arm-none-eabi
+ARM_GCC_PREFIX = $(ARM_COMPILER_BINDIR)/arm-none-eabi
 
 CURR_OBJDIR := $(ARM_OBJDIR)
 -include $(foreach dir, $(sort $(dir $(ARM_SOURCES))), $(wildcard $(dir)/../Makefile.extra))
@@ -61,8 +62,8 @@ ARM_CHIP ?= CHIP_LPC11CXX
 ARM_FLASHK ?= 32
 ARM_RAMK ?= 4
 ARM_STARTUP ?= $(ARM_OBJDIR)/lib/chip/arm/startup/startup_ARMC$(ARM_MX).o
-ARM_SOURCES += $(wildcard $(ARM_LIB_ROOT)/lpc_chip_11cxx_lib/src/*.c)
-ARM_INCLUDES += -I$(ARM_LIB_ROOT)/lpc_chip_11cxx_lib/inc
+ARM_SOURCES += $(wildcard $(ARM_LIB_ROOT)/lpc_chip_11cxx_lib/*.c)
+ARM_INCLUDES += -I$(ARM_LIB_ROOT)/lpc_chip_11cxx_lib -I$(ARM_LIB_ROOT)/core
 endif
 
 ifeq ($(ARM_CHIP_FAMILY),13xx)
