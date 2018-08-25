@@ -20,7 +20,7 @@
 
 #include "core/queue.h"
 #include "core/rulos.h"
-#include "periph/7seg_panel/board_buffer.h"
+#include "periph/7seg_panel/7seg_panel.h"
 #include "periph/uart/uart.h"
 
 #ifdef SIM
