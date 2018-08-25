@@ -148,7 +148,7 @@ void bike_wake(BikeState_t* bike) {
 
 void bike_sleep() {
   gpio_set(LED_DRIVER_POWER);
-  //hal_deep_sleep();
+  hal_deep_sleep();
 }
 
 int main() {

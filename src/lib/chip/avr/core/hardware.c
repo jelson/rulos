@@ -95,6 +95,8 @@ void hal_deep_sleep()
 	uint8_t prr1_old = PRR1;
 	PRR1 = 0xff;
 #endif
+	rulos_irq_state_t old_interrupts = hal_start_atomic();
+	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 	sleep_enable();
 
 #if defined(BODS) && defined(BODSE)
@@ -102,6 +104,7 @@ void hal_deep_sleep()
 #endif
 	sei();
 	sleep_cpu();
+	sleep_disable();
 
 	// Cpu has re-awakened!
 #ifdef PRR
@@ -113,7 +116,7 @@ void hal_deep_sleep()
 #ifdef PRR1
 	PRR1 = prr1_old;
 #endif
-	
+	hal_end_atomic(old_interrupts);
 }
 
 void hal_init()
