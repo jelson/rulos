@@ -68,7 +68,7 @@ typedef uint8_t BoardRemapIndex;
 
 static BoardRemapIndex displayConfiguration[NUM_BOARDS];
 
-uint16_t g_epb_delay_constant = 1;
+static const uint16_t g_epb_delay_constant = 1;
 void epb_delay()
 {
 	uint16_t delay;

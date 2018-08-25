@@ -96,7 +96,10 @@ void hal_deep_sleep()
 	PRR1 = 0xff;
 #endif
 	sleep_enable();
+
+#if defined(BODS) && defined(BODSE)
 	sleep_bod_disable();
+#endif
 	sei();
 	sleep_cpu();
 
