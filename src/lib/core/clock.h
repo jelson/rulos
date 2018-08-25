@@ -27,7 +27,9 @@ extern volatile Time _interrupt_driven_jiffy_clock_us; // must have lock to read
 
 // very cheap but only precise to one jiffy.  this should be used my
 // most functions.
-static inline Time clock_time_us() { return _last_scheduler_run_us; }
+static inline Time clock_time_us() {
+	return _interrupt_driven_jiffy_clock_us;
+}
 
 static inline Time get_interrupt_driven_jiffy_clock() {
 	Time retval;

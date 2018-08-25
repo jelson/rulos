@@ -78,7 +78,7 @@ void init_clock(Time interval_us, uint8_t timer_id)
 #endif
 	// Initialize the clock to 20 seconds before rollover time so that 
 	// rollover bugs happen quickly during testing
-	_interrupt_driven_jiffy_clock_us = (((uint32_t) 1) << 31) - ((uint32_t) 20000000);
+	_interrupt_driven_jiffy_clock_us = (Time) INT32_MAX - 20000000;
 	_rtc_interval_us = hal_start_clock_us(interval_us, clock_handler, NULL, timer_id);
 	_spin_counter = 0;
 }
