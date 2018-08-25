@@ -23,6 +23,7 @@
 #include <avr/boot.h>
 #include <avr/interrupt.h>
 #include <avr/io.h>
+#include <avr/sleep.h>
 #include <util/delay_basic.h>
 
 #include "core/hal.h"
@@ -80,6 +81,20 @@ void hal_idle()
 	// just busy-wait on microcontroller.
 }
 
+void hal_deep_sleep()
+{
+	PRR = _BV(PRTIM1) |
+		_BV(PRTIM0) |
+		_BV(PRUSI) |
+		_BV(PRADC);
+	sleep_enable();
+	sleep_bod_disable();
+	sei();
+	sleep_cpu();
+
+	// Cpu has re-awakened!
+	PRR = 0;
+}
 
 void hal_init()
 {

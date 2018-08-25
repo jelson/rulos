@@ -44,6 +44,7 @@ rulos_irq_state_t hal_start_atomic();
 // restore previous interrupt state
 void hal_end_atomic(rulos_irq_state_t old_interrupts);
 
+void hal_deep_sleep();
 void hal_idle();			// hw: spin. sim: sleep
 
 #define HAL_MAGIC 0x74

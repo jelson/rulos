@@ -107,9 +107,9 @@ static inline uint8_t reg_is_set(volatile uint8_t *reg, uint8_t bit)
 
 /* configure a pin as output */
 static inline void gpio_make_output(volatile uint8_t *ddr,
-									volatile uint8_t *port,
-									volatile uint8_t *pin,
-									uint8_t bit)
+				    volatile uint8_t *port,
+				    volatile uint8_t *pin,
+				    uint8_t bit)
 {
 	reg_set(ddr, bit);
 }
@@ -118,9 +118,9 @@ static inline void gpio_make_output(volatile uint8_t *ddr,
  * configure a pin as input, without touching the pullup config register
  */
 static inline void gpio_make_input(volatile uint8_t *ddr,
-								   volatile uint8_t *port,
-								   volatile uint8_t *pin,
-								   uint8_t bit)
+				   volatile uint8_t *port,
+				   volatile uint8_t *pin,
+				   uint8_t bit)
 {
 	reg_clr(ddr, bit); // set direction as input
 }
@@ -129,9 +129,9 @@ static inline void gpio_make_input(volatile uint8_t *ddr,
  * configure a pin as input, and enable its internal pullup resistors
  */
 static inline void gpio_make_input_enable_pullup(volatile uint8_t *ddr,
-								   volatile uint8_t *port,
-								   volatile uint8_t *pin,
-								   uint8_t bit)
+						 volatile uint8_t *port,
+						 volatile uint8_t *pin,
+						 uint8_t bit)
 {
 	gpio_make_input(ddr, port, pin, bit);
 	reg_set(port, bit); // enable internal pull-up resistors
@@ -141,9 +141,9 @@ static inline void gpio_make_input_enable_pullup(volatile uint8_t *ddr,
  * configure a pin as input and disable its pullup resistor.
  */
 static inline void gpio_make_input_disable_pullup(volatile uint8_t *ddr,
-					     volatile uint8_t *port,
-					     volatile uint8_t *pin,
-					     uint8_t bit)
+						  volatile uint8_t *port,
+						  volatile uint8_t *pin,
+						  uint8_t bit)
 {
 	gpio_make_input(ddr, port, pin, bit);
 	reg_clr(port, bit); // disable internal pull-up resistor
@@ -164,9 +164,9 @@ static inline void gpio_set(volatile uint8_t *ddr,
  * assert an output pin LOW
  */
 static inline void gpio_clr(volatile uint8_t *ddr,
-							volatile uint8_t *port,
-							volatile uint8_t *pin,
-							uint8_t bit)
+			    volatile uint8_t *port,
+			    volatile uint8_t *pin,
+			    uint8_t bit)
 {
 	reg_clr(port, bit);
 }
@@ -175,10 +175,10 @@ static inline void gpio_clr(volatile uint8_t *ddr,
  * assert an output either high or low depending on the 'onoff' parameter
  */
 static inline void gpio_set_or_clr(volatile uint8_t *ddr,
-								   volatile uint8_t *port,
-								   volatile uint8_t *pin,
-								   uint8_t bit,
-								   uint8_t onoff)
+				   volatile uint8_t *port,
+				   volatile uint8_t *pin,
+				   uint8_t bit,
+				   uint8_t onoff)
 {
 	if (onoff)
 		gpio_set(ddr, port, pin, bit);
@@ -190,9 +190,9 @@ static inline void gpio_set_or_clr(volatile uint8_t *ddr,
  * returns true if an input is being asserted LOW, false otherwise
  */
 static inline int gpio_is_clr(volatile uint8_t *ddr,
-							  volatile uint8_t *port,
-							  volatile uint8_t *pin,
-							  uint8_t bit)
+			      volatile uint8_t *port,
+			      volatile uint8_t *pin,
+			      uint8_t bit)
 {
 	return reg_is_clr(pin, bit);
 }
@@ -201,9 +201,9 @@ static inline int gpio_is_clr(volatile uint8_t *ddr,
  * returns true if an input is being asserted HIGH, false otherwise
  */
 static inline int gpio_is_set(volatile uint8_t *ddr,
-							  volatile uint8_t *port,
-							  volatile uint8_t *pin,
-							  uint8_t bit)
+			      volatile uint8_t *port,
+			      volatile uint8_t *pin,
+			      uint8_t bit)
 {
 	return !(gpio_is_clr(ddr, port, pin, bit));
 }
