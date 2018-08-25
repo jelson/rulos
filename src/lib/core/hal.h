@@ -27,16 +27,7 @@
 
 typedef void (*Handler)(void *data);
 
-typedef enum {
-	bc_rocket0,
-	bc_rocket1,
-	bc_wallclock,
-	bc_chaseclock,
-	bc_default,
-} BoardConfiguration;
-
 void hal_init();
-void hal_init_rocketpanel(BoardConfiguration bc);
 
 // block interrupts/signals; returns previous state of interrupts
 rulos_irq_state_t hal_start_atomic();

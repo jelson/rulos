@@ -29,6 +29,7 @@
 #include "core/hal.h"
 #include "hardware.h"
 #include "periph/7seg_panel/display_controller.h"
+#include "periph/rocket/rocket.h"
 
 
 //////////////////////////////////////////////////////////////////////////////

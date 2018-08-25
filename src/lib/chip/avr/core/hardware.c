@@ -83,17 +83,34 @@ void hal_idle()
 
 void hal_deep_sleep()
 {
-	PRR = _BV(PRTIM1) |
-		_BV(PRTIM0) |
-		_BV(PRUSI) |
-		_BV(PRADC);
+#ifdef PRR
+	uint8_t prr_old = PRR;
+	PRR = 0xff;
+#endif
+#ifdef PRR0
+	uint8_t prr0_old = PRR0;
+	PRR1 = 0xff;
+#endif
+#ifdef PRR1
+	uint8_t prr1_old = PRR1;
+	PRR1 = 0xff;
+#endif
 	sleep_enable();
 	sleep_bod_disable();
 	sei();
 	sleep_cpu();
 
 	// Cpu has re-awakened!
-	PRR = 0;
+#ifdef PRR
+	PRR = prr_old;
+#endif
+#ifdef PRR0
+	PRR0 = prr0_old;
+#endif
+#ifdef PRR1
+	PRR1 = prr1_old;
+#endif
+	
 }
 
 void hal_init()

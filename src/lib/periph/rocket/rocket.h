@@ -30,5 +30,12 @@
 #include "periph/input_controller/focus.h"
 #include "periph/rocket/thruster_protocol.h"
 
+typedef enum {
+	bc_rocket0,
+	bc_rocket1,
+	bc_wallclock,
+	bc_chaseclock,
+	bc_default,
+} BoardConfiguration;
 
-
+void hal_init_rocketpanel(BoardConfiguration bc);
