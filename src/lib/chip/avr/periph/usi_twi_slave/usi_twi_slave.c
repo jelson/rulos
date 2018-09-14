@@ -117,7 +117,7 @@ static void usi_twi_slave_idle_bus()
 //  triggering the first state table interrupt.  If a stop condition occurs,   //
 //  reset the start condition detector to detect the next start condition.     //
 /////////////////////////////////////////////////////////////////////////////////
-ISR(USI_STR_vect)
+ISR(USI_START_VECT)
 {
   DEBUG_STROBE(1);
   
@@ -181,7 +181,7 @@ static void usi_twi_slave_ack_overflow(uint8_t num_bits_to_recv)
 //  This is used to set up a state table of I2C transmission states that fits  //
 //  the I2C protocol for proper transmission.                                  //
 /////////////////////////////////////////////////////////////////////////////////
-ISR(USI_OVF_vect)
+ISR(USI_OVF_VECT)
 {
   DEBUG_STROBE(2);
   
