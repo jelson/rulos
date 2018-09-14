@@ -35,7 +35,7 @@
 
 #ifndef KEYPAD_COL0
 # error "Board definitions for this board don't include KEYPAD definitions."
-#else
+#endif
 
 #define KEY_SCAN_INTERVAL_US 10000
 #define KEY_REFRACTORY_TIME_US 30000
@@ -122,8 +122,7 @@ static void keypad_update(KeypadState *key)
 	// A key was just pushed. If the refrac time has passed, queue it.
 	if (later_than_or_eq(now, key->keypad_next_allowed_key_time)) {
 		CharQueue_append((CharQueue *)key->keypad_q, k);
-	}
-	
+	}	
 }
 
 static uint8_t scan_row()
@@ -192,5 +191,3 @@ char hal_scan_keypad()
 
 	return 0;
 }
-
-#endif  // KEYPAD_COL0
