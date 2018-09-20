@@ -15,7 +15,8 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr
-MCU := attiny84a
+#MCU := attiny84a
+MCU := attiny85
 PERIPHERALS := usi_twi_slave
 BOARD := GENERIC
 TARGET := usi_slave_test
