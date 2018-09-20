@@ -16,12 +16,12 @@ ROCKET_ROOT := ../..
 
 PLATFORMS := avr
 MCU := attiny45
-TARGET := usisendtest
+TARGET := usi_serial_send_test
 BOARD := GENERIC
 PERIPHERALS := usi_serial
 
 TARGET_OBJECTS := \
-	usisendtest.o
+	usi_serial_send_test.o
 
 include $(ROCKET_ROOT)/Makefile.common
 
