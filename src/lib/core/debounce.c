@@ -25,6 +25,15 @@ void debounce_button_init(DebouncedButton_t* b, Time refrac_time_us) {
 }
 
 r_bool debounce_button(DebouncedButton_t* b, r_bool raw_is_down) {
+  Time now = clock_time_us();
+  
+  // If we're already past the allowed-key-time, advance it to the present.
+  // Otherwise, if half a clock-rollver period goes by with no keypress, a
+  // keypress might be improperly ignored.
+  if (later_than(now, b->next_valid_push_time)) {
+    b->next_valid_push_time = now;
+  }
+
   // If the button is in the same state as before, do nothing.
   if (raw_is_down == b->is_pressed) {
     return FALSE;
@@ -35,7 +44,7 @@ r_bool debounce_button(DebouncedButton_t* b, r_bool raw_is_down) {
   if (raw_is_down) {
     // Button was just pressed. If it's inside the refractory window (taking rollover
     // into account), ignore it as a bounce. Otherwise, return a valid button press.
-    if (later_than_or_eq(clock_time_us(), b->next_valid_push_time)) {
+    if (later_than_or_eq(now, b->next_valid_push_time)) {
       return TRUE;
     } else {
       return FALSE;
@@ -43,7 +52,7 @@ r_bool debounce_button(DebouncedButton_t* b, r_bool raw_is_down) {
   } else {
     // Button was just released. Set next valid press time to be after the refractory
     // time.
-    b->next_valid_push_time = clock_time_us() + b->refrac_time_us;
+    b->next_valid_push_time = now + b->refrac_time_us;
     return FALSE;
   }
 }
