@@ -73,6 +73,22 @@
 
 // Device dependant defines
 #if __GNUC__
+#if \
+  defined (__AVR_ATtiny24__)  | \
+  defined (__AVR_ATtiny24A__) | \
+  defined (__AVR_ATtiny44__)  | \
+  defined (__AVR_ATtiny44A__) | \
+  defined (__AVR_ATtiny84__)  | \
+  defined (__AVR_ATtiny84A__)
+#define DDR_USI DDRA
+#define PORT_USI PORTA
+#define PIN_USI PINA
+#define PORT_USI_SDA PORTA6
+#define PORT_USI_SCL PORTA4
+#define PIN_USI_SDA PINA6
+#define PIN_USI_SCL PINA4
+#endif
+
 #if defined(__AVR_AT90Mega169__) || defined(__AVR_ATmega169PA__) || defined(__AVR_AT90Mega165__)                       \
     || defined(__AVR_ATmega165__) || defined(__AVR_ATmega325__) || defined(__AVR_ATmega3250__)                         \
     || defined(__AVR_ATmega645__) || defined(__AVR_ATmega6450__) || defined(__AVR_ATmega329__)                         \
@@ -156,7 +172,7 @@ void usi_twi_master_init(void);
 #ifndef __GNUC__
 __x // AVR compiler
 #endif
-unsigned char
-usi_twi_master_sendorrecv(const uint8_t address, char *, unsigned char);
+unsigned char usi_twi_master_send(const uint8_t sevbit_addr, char *, unsigned char);
+unsigned char usi_twi_master_recv(const uint8_t sevbit_addr, char *, unsigned char);
 
 unsigned char USI_TWI_Get_State_Info(void);

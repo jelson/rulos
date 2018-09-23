@@ -31,6 +31,8 @@
 #include <ioavr.h>
 #endif
 
+#define TWI_FAST_MODE
+
 #include "chip/avr/periph/usi_twi_master/usi_twi_master.h"
 
 unsigned char USI_TWI_Master_Transfer(unsigned char);
@@ -88,8 +90,8 @@ unsigned char USI_TWI_Get_State_Info(void)
 #ifndef __GNUC__
 __x // AVR compiler
 #endif
-    unsigned char
-usi_twi_master_sendorrecv(const uint8_t address, char *msg, unsigned char msgSize)
+unsigned char
+usi_twi_master_sendorrecv(const uint8_t eightbit_addr, char *msg, unsigned char msgSize)
 {
 	unsigned char tempUSISR_8bit = (1 << USISIF) | (1 << USIOIF) | (1 << USIPF) | (1 << USIDC)
 	                               |                 // Prepare register value to: Clear flags, and
@@ -129,8 +131,8 @@ usi_twi_master_sendorrecv(const uint8_t address, char *msg, unsigned char msgSiz
 	}
 #endif
 
-	if (!(*msg
-	      & (1 << TWI_READ_BIT))) // The LSB in the address byte determines if is a masterRead or masterWrite operation.
+	// The LSB in the address byte determines if is a masterRead or masterWrite operation.
+	if (!(eightbit_addr & (1 << TWI_READ_BIT)))
 	{
 		USI_TWI_state.masterWriteDataMode = TRUE;
 	}
@@ -158,6 +160,9 @@ usi_twi_master_sendorrecv(const uint8_t address, char *msg, unsigned char msgSiz
 	}
 #endif
 
+	/* add 1 to msgSize to account for extra address byte */
+	msgSize++;
+
 	/*Write address and Read/Write data */
 	do {
 		/* If masterWrite cycle (or inital address tranmission)*/
@@ -166,7 +171,7 @@ usi_twi_master_sendorrecv(const uint8_t address, char *msg, unsigned char msgSiz
 			PORT_USI &= ~(1 << PIN_USI_SCL);         // Pull SCL LOW.
                         // Setup data.
 			if (USI_TWI_state.addressMode) {
-				USIDR = address;
+				USIDR = eightbit_addr;
 			} else {
 				USIDR = *(msg++);
 			}
@@ -204,6 +209,18 @@ usi_twi_master_sendorrecv(const uint8_t address, char *msg, unsigned char msgSiz
 
 	/* Transmission successfully completed*/
 	return (TRUE);
+}
+
+unsigned char
+usi_twi_master_send(const uint8_t sevbit_addr, char *msg, unsigned char msgSize)
+{
+	return usi_twi_master_sendorrecv(sevbit_addr << 1, msg, msgSize);
+}
+
+unsigned char
+usi_twi_master_recv(const uint8_t sevbit_addr, char *msg, unsigned char msgSize)
+{
+	return usi_twi_master_sendorrecv((sevbit_addr << 1) | 1, msg, msgSize);
 }
 
 /*---------------------------------------------------------------

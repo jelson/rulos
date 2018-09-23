@@ -15,8 +15,8 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr
-#MCU := attiny84a
-MCU := attiny85
+MCU := attiny84a
+#MCU := attiny85
 PERIPHERALS := usi_twi_master
 BOARD := GENERIC
 TARGET := usi_master_test

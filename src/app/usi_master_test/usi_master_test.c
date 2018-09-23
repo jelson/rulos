@@ -25,6 +25,12 @@
 #include "hardware.h"
 
 
+void send_message(void* data) {
+	static char* test = "hello this is a test\n";
+	usi_twi_master_send(4, test, strlen(test));
+	schedule_us(1000000, send_message, NULL);
+}
+
 int main()
 {
 	hal_init();
@@ -32,9 +38,8 @@ int main()
         // start clock with 10 msec resolution
 	init_clock(10000, TIMER1);
 
-	static char* test = "hellotest";
 	usi_twi_master_init();
-	usi_twi_master_sendorrecv(0x44, test, strlen(test));
+	schedule_now(send_message, NULL);
 
 	cpumon_main_loop();
 	assert(FALSE);
