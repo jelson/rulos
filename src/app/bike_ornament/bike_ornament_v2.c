@@ -25,18 +25,19 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <avr/power.h>
+
+#include "chip/avr/periph/usi_twi_master/usi_twi_master.h"
 #include "core/clock.h"
 #include "core/rulos.h"
 #include "core/util.h"
 #include "hardware.h"
 
-#define LED_DRIVER_SDI_L GPIO_A1
-#define LED_DRIVER_SDI_R GPIO_A0
-#define LED_DRIVER_CLK GPIO_A2
-#define LED_DRIVER_LE GPIO_A3
 #define BUTTON GPIO_B2
-#define LED_DRIVER_POWER GPIO_B0
 #define TAILLIGHT GPIO_B1
+
+#define L_WHEEL_ADDR 0b1110100
+#define R_WHEEL_ADDR 0b1110111
 
 #define JIFFY_TIME_US 2500
 
@@ -62,6 +63,8 @@ void bike_wake(BikeState_t* bike);
 ISR(INT0_vect) {
   bike_wake(&bike);
 }
+
+#ifdef OLD_LED_DRIVER
 
 static inline void clock()
 {
@@ -95,6 +98,64 @@ static void shift_in_config(BikeState_t* bike)
   gpio_clr(LED_DRIVER_SDI_L);
   gpio_clr(LED_DRIVER_SDI_R);
 }
+
+#else  // OLD_LED_DRIVER
+
+static void init_led_drivers(uint8_t sevbit_addr)
+{
+  char buf[17];
+
+  buf[0] = 0x10; // Set address to 0x10, first PWM register.
+
+  for (int i = 1; i <= 16; i++) {
+    buf[i] = 0xff;
+  }
+  
+  usi_twi_master_send(sevbit_addr, buf, 17);
+
+  buf[0] = 0xB0;
+  buf[1] = 0;
+
+  usi_twi_master_send(sevbit_addr, buf, 2);
+}
+
+static void shift_in_one_config(uint8_t sevbit_addr, uint8_t led_number)
+{
+  char buf[4];
+
+  buf[0] = 0;  // start address is address 0
+  buf[1] = 0;  // address 0: data 0
+
+  if (led_number < 8) {
+    buf[2] = 0;
+    buf[3] = 1 << led_number;
+  } else {
+    buf[2] = 1 << (led_number - 8);
+    buf[3] = 0;
+  }
+
+  usi_twi_master_send(sevbit_addr, buf, 4);
+}
+
+static void shutdown_led_driver(uint8_t sevbit_addr)
+{
+  char buf[4];
+
+  buf[0] = 0;  // start address is address 0
+  buf[1] = 0b10000000;  // address 0: set shutdown bit
+  buf[2] = 0;  // address 1: no LEDs on
+  buf[3] = 0;  // address 2: no LEDs on
+
+  usi_twi_master_send(sevbit_addr, buf, 4);
+}
+
+static void shift_in_config(BikeState_t* bike)
+{
+  shift_in_one_config(L_WHEEL_ADDR, bike->light_on_l);
+  shift_in_one_config(R_WHEEL_ADDR, bike->light_on_r);
+}
+
+#endif  // OLD_LED_DRIVER
 
 static void bike_update(BikeState_t* bike) {
   schedule_us(JIFFY_TIME_US, (ActivationFuncPtr)bike_update, bike);
@@ -143,11 +204,27 @@ void bike_wake(BikeState_t* bike) {
   bike->tail_next_toggle_time = now;
   bike->shutoff_time = now + time_sec(ANIM_TIME_SEC);
 
-  gpio_clr(LED_DRIVER_POWER);
+  // Set up USI.
+  power_usi_enable();
+  usi_twi_master_init();
+  
+  // Initialize LED drivers.
+  init_led_drivers(L_WHEEL_ADDR);
+  init_led_drivers(R_WHEEL_ADDR);
 }
 
 void bike_sleep() {
-  gpio_set(LED_DRIVER_POWER);
+  // Shut down LED drivers
+  shutdown_led_driver(L_WHEEL_ADDR);
+  shutdown_led_driver(R_WHEEL_ADDR);
+
+  // Disable USI
+  USICR = 0;
+
+  // Set ports as inputs
+  DDRA = 0;
+  DDRB = 0;
+
   hal_deep_sleep();
 }
 
@@ -157,11 +234,13 @@ int main() {
   init_clock(JIFFY_TIME_US, TIMER1);
 
   // set up output pins as drivers
+#ifdef OLD_LED_DRIVER
   gpio_make_output(LED_DRIVER_SDI_L);
   gpio_make_output(LED_DRIVER_SDI_R);
   gpio_make_output(LED_DRIVER_CLK);
   gpio_make_output(LED_DRIVER_LE);
   gpio_make_output(LED_DRIVER_POWER);
+#endif
   gpio_make_output(TAILLIGHT);
 
   gpio_make_input_enable_pullup(BUTTON);
@@ -172,7 +251,7 @@ int main() {
   // Configure INT0 to generate interrupts.
   GIMSK |= _BV(INT0);
   sei();
-  
+
   // Init bike state.
   memset(&bike, 0, sizeof(bike));
   bike_wake(&bike);
