@@ -69,17 +69,26 @@ static void init_led_drivers(uint8_t sevbit_addr)
   char buf[17];
 
   buf[0] = 0x10; // Set address to 0x10, first PWM register.
-
   for (int i = 1; i <= 16; i++) {
     buf[i] = 0xff;
   }
-  
   usi_twi_master_send(sevbit_addr, buf, 17);
 
-  buf[0] = 0xB0;
+  buf[0] = 0xB0; // Set address to 0xB0, "take PWM settings" register
   buf[1] = 0;
-
   usi_twi_master_send(sevbit_addr, buf, 2);
+}
+
+static void shutdown_led_driver(uint8_t sevbit_addr)
+{
+  char buf[4];
+
+  buf[0] = 0;  // start address is address 0
+  buf[1] = 0b10000000;  // register 0: set shutdown bit
+  buf[2] = 0;  // register 1: no LEDs on
+  buf[3] = 0;  // register 2: no LEDs on
+
+  usi_twi_master_send(sevbit_addr, buf, 4);
 }
 
 static void shift_in_one_config(uint8_t sevbit_addr, uint8_t led_number)
@@ -96,18 +105,6 @@ static void shift_in_one_config(uint8_t sevbit_addr, uint8_t led_number)
     buf[2] = 1 << (led_number - 8);
     buf[3] = 0;
   }
-
-  usi_twi_master_send(sevbit_addr, buf, 4);
-}
-
-static void shutdown_led_driver(uint8_t sevbit_addr)
-{
-  char buf[4];
-
-  buf[0] = 0;  // start address is address 0
-  buf[1] = 0b10000000;  // address 0: set shutdown bit
-  buf[2] = 0;  // address 1: no LEDs on
-  buf[3] = 0;  // address 2: no LEDs on
 
   usi_twi_master_send(sevbit_addr, buf, 4);
 }
