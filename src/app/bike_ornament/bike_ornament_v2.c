@@ -64,43 +64,6 @@ ISR(INT0_vect) {
   bike_wake(&bike);
 }
 
-#ifdef OLD_LED_DRIVER
-
-static inline void clock()
-{
-  gpio_set(LED_DRIVER_CLK);
-  gpio_clr(LED_DRIVER_CLK);
-}
-
-// This function shifts 16 bits into the two 16-bit latches. They have
-// separate data lines, but share a clock line, so in each cycle we set both
-// data lines separately and then effectively clock them together.
-static void shift_in_config(BikeState_t* bike)
-{
-  gpio_clr(LED_DRIVER_LE);
-  gpio_clr(LED_DRIVER_CLK);
-
-  // Shift in the data.
-  for (int8_t i = 15; i >= 0; i--) {
-    gpio_set_or_clr(LED_DRIVER_SDI_L, (bike->light_on_l == i));
-    gpio_set_or_clr(LED_DRIVER_SDI_R, (bike->light_on_r == i));
-    clock();
-  }
-
-  // Disable output; enable latch
-  gpio_set(LED_DRIVER_LE);
-
-  // Enable output
-  gpio_clr(LED_DRIVER_LE);
-
-  // tidy up -- not actually necessary, but makes logic analyzer output easier
-  // to read
-  gpio_clr(LED_DRIVER_SDI_L);
-  gpio_clr(LED_DRIVER_SDI_R);
-}
-
-#else  // OLD_LED_DRIVER
-
 static void init_led_drivers(uint8_t sevbit_addr)
 {
   char buf[17];
@@ -154,8 +117,6 @@ static void shift_in_config(BikeState_t* bike)
   shift_in_one_config(L_WHEEL_ADDR, bike->light_on_l);
   shift_in_one_config(R_WHEEL_ADDR, bike->light_on_r);
 }
-
-#endif  // OLD_LED_DRIVER
 
 static void bike_update(BikeState_t* bike) {
   schedule_us(JIFFY_TIME_US, (ActivationFuncPtr)bike_update, bike);
@@ -211,6 +172,9 @@ void bike_wake(BikeState_t* bike) {
   // Initialize LED drivers.
   init_led_drivers(L_WHEEL_ADDR);
   init_led_drivers(R_WHEEL_ADDR);
+
+  // set up output pins as drivers
+  gpio_make_output(TAILLIGHT);
 }
 
 void bike_sleep() {
@@ -232,16 +196,6 @@ int main() {
   hal_init();
 
   init_clock(JIFFY_TIME_US, TIMER1);
-
-  // set up output pins as drivers
-#ifdef OLD_LED_DRIVER
-  gpio_make_output(LED_DRIVER_SDI_L);
-  gpio_make_output(LED_DRIVER_SDI_R);
-  gpio_make_output(LED_DRIVER_CLK);
-  gpio_make_output(LED_DRIVER_LE);
-  gpio_make_output(LED_DRIVER_POWER);
-#endif
-  gpio_make_output(TAILLIGHT);
 
   gpio_make_input_enable_pullup(BUTTON);
 
