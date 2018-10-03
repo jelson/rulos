@@ -19,6 +19,15 @@
 #define WHEEL_PERIOD_MS  10
 #define ANIM_TIME_SEC    5
 
+#define HEADLIGHT GPIO_B0
+#define TAILLIGHT GPIO_B1
+#define BUTTON    GPIO_B2
+
+#define L_WHEEL_ADDR 0b1110100
+#define R_WHEEL_ADDR 0b1110111
+
+#define JIFFY_TIME_US 2500
+
 /////////////////////////////////////////////////////////////////
 
 #include <inttypes.h>
@@ -32,14 +41,6 @@
 #include "core/rulos.h"
 #include "core/util.h"
 #include "hardware.h"
-
-#define BUTTON GPIO_B2
-#define TAILLIGHT GPIO_B1
-
-#define L_WHEEL_ADDR 0b1110100
-#define R_WHEEL_ADDR 0b1110111
-
-#define JIFFY_TIME_US 2500
 
 typedef struct {
   // timeout
@@ -154,6 +155,10 @@ static void bike_update(BikeState_t* bike) {
 }
 
 void bike_wake(BikeState_t* bike) {
+  // Stop generating INT0 interrupts.
+  GIMSK &= ~(_BV(INT0));
+
+  // Init state.
   Time now = clock_time_us();
   bike->light_on_l = 0;
   bike->light_on_r = 0;
@@ -171,7 +176,11 @@ void bike_wake(BikeState_t* bike) {
   init_led_drivers(R_WHEEL_ADDR);
 
   // set up output pins as drivers
+  gpio_make_output(HEADLIGHT);
   gpio_make_output(TAILLIGHT);
+
+  // turn on headlight
+  gpio_set(HEADLIGHT);
 }
 
 void bike_sleep() {
@@ -186,6 +195,11 @@ void bike_sleep() {
   DDRA = 0;
   DDRB = 0;
 
+  // Configure INT0 to generate interrupts.
+  GIMSK |= _BV(INT0);
+  sei();
+
+  // Night night!
   hal_deep_sleep();
 }
 
@@ -198,10 +212,6 @@ int main() {
 
   // Configure INT0 to generate interrupts at low level.
   MCUCR &= ~(_BV(ISC01) | _BV(ISC00));
-
-  // Configure INT0 to generate interrupts.
-  GIMSK |= _BV(INT0);
-  sei();
 
   // Init bike state.
   memset(&bike, 0, sizeof(bike));
