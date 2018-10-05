@@ -20,7 +20,7 @@
 #define ANIM_TIME_SEC    5
 
 #define HEADLIGHT GPIO_B0
-#define TAILLIGHT GPIO_B1
+#define TAILLIGHT GPIO_A1
 #define BUTTON    GPIO_B2
 
 #define L_WHEEL_ADDR 0b1110100
