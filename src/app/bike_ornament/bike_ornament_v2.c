@@ -195,6 +195,9 @@ void bike_sleep() {
   DDRA = 0;
   DDRB = 0;
 
+  // configure button
+  gpio_make_input_enable_pullup(BUTTON);
+
   // Configure INT0 to generate interrupts.
   GIMSK |= _BV(INT0);
   sei();
@@ -207,8 +210,6 @@ int main() {
   hal_init();
 
   init_clock(JIFFY_TIME_US, TIMER1);
-
-  gpio_make_input_enable_pullup(BUTTON);
 
   // Configure INT0 to generate interrupts at low level.
   MCUCR &= ~(_BV(ISC01) | _BV(ISC00));

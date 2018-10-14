@@ -15,6 +15,7 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr
+#MCU := attiny44
 MCU := attiny84
 BOARD := GENERIC
 PERIPHERALS := usi_twi_master
