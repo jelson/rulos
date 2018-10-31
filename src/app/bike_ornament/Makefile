@@ -15,8 +15,8 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr
-#MCU := attiny44
-MCU := attiny84
+MCU := attiny44
+#MCU := attiny84
 BOARD := GENERIC
 PERIPHERALS := usi_twi_master
 EXTRA_AVR_CFLAGS := -DSCHEDULER_CAPACITY=3 -DSCHEDULER_NOW_QUEUE_CAPACITY=2

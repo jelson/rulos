@@ -26,7 +26,7 @@
  ****************************************************************************/
 #if __GNUC__
 #ifndef F_CPU
-#define F_CPU 8000000UL
+#define F_CPU 4000000UL
 #endif
 #include <avr/io.h>
 #include <util/delay.h>
