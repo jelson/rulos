@@ -97,32 +97,35 @@ static void keypad_update(KeypadState *key)
 
 	Time now = clock_time_us();
 	
-	// If we're already past the allowed-key-time, advance it to the present.
-	// Otherwise, if half a clock-rollver period goes by with no keypress, a
-	// keypress might be improperly ignored.
+	// If we're already past the allowed-key-time, advance it to
+	// the present.  Otherwise, if half a clock-rollver period
+	// goes by with no keypress, a keypress might be improperly
+	// ignored.
 	if (later_than(now, key->keypad_next_allowed_key_time)) {
 		key->keypad_next_allowed_key_time = now;
+	} else {
+		// If we're *not* past the next-allowed-time, return now.
+		return;
 	}
 
 	// Scan the keypad.
 	char k = hal_scan_keypad();
 
-	// If the key state hasn't changed since the last time we checked, ignore it.
+	// If the key state hasn't changed since the last time we
+	// checked, ignore it.
 	if (k == key->keypad_last)
 		return;
 
-	key->keypad_last = k;
-
-	// A key was just released. Set the refractory time.
-	if (k == 0) {
-		key->keypad_next_allowed_key_time = now + KEY_REFRACTORY_TIME_US;
-		return;
-	}
-
-	// A key was just pushed. If the refrac time has passed, queue it.
-	if (later_than_or_eq(now, key->keypad_next_allowed_key_time)) {
+	if (k != 0) {
+		// A key was just pressed, enqueue it.
 		CharQueue_append((CharQueue *)key->keypad_q, k);
+	} else {
+		CharQueue_append((CharQueue *)key->keypad_q, 'r');
 	}	
+
+	// Set the refactory time and record the last-known-state.
+	key->keypad_last = k;
+	key->keypad_next_allowed_key_time = now + KEY_REFRACTORY_TIME_US;
 }
 
 static uint8_t scan_row()
