@@ -52,10 +52,12 @@
         B_END
 
 
-//#define NUM_BOARDS 0
-//#define NUM_AUX_BOARDS 12
+#ifdef SIM
 
-#ifndef SIM
+#define NUM_BOARDS 4
+#define NUM_AUX_BOARDS 4
+
+#else // SIM
 
 #include <hardware.h>
 
@@ -164,6 +166,9 @@
 #define KEYPAD_COL1 GPIO_B1
 #define KEYPAD_COL2 GPIO_B2
 #define KEYPAD_COL3 GPIO_B3
+
+#define NUM_BOARDS 8
+#define NUM_AUX_BOARDS 0
 
 #elif defined(BOARD_LPEM2)
 

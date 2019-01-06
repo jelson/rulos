@@ -21,7 +21,8 @@
 #include "core/board_defs.h"
 
 #ifndef NUM_BOARDS
-# define NUM_BOARDS 8
+#error Display requested but NUM_BOARDS not defined.
+#include <stophere>
 #endif
 
 #define NUM_DIGITS 8

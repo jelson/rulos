@@ -91,7 +91,7 @@ void rbs_update(RemoteBBufSend *rbs)
 	LOG("rbs_update: update[%d]\n", index);
 
 	// send a packet for this changed line
-	rbs->sendSlot.dest_addr = ROCKET1_ADDR;
+	rbs->sendSlot.dest_addr = DONGLE0_ADDR;
 	rbs->sendSlot.msg->dest_port = REMOTE_BBUF_PORT;
 	rbs->sendSlot.msg->payload_len = sizeof(BBufMessage);
 	BBufMessage *bbm = (BBufMessage *) &rbs->sendSlot.msg->data;
