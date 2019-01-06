@@ -20,10 +20,6 @@
 #include "core/rulos.h"
 #include "periph/7seg_panel/remote_bbuf.h"
 
-void rbs_update(RemoteBBufSend *rbs);
-void rbs_send_complete(SendSlot *slot);
-void rbr_recv(RecvSlot *recvSlot, uint8_t payload_len);
-
 #define REMOTE_BBUF_SEND_RATE 33000	// 30 board msgs ber sec
 
 void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network)
@@ -119,7 +115,12 @@ void init_remote_bbuf_recv(RemoteBBufRecv *rbr, Network *network)
 
 void rbr_recv(RecvSlot *recvSlot, uint8_t payload_len)
 {
-	assert(payload_len == sizeof(BBufMessage));
+	if (payload_len != sizeof(BBufMessage)) {
+		LOG("Error: expected BBufMessage of size %ld, got %d bytes",
+		    sizeof(BBufMessage), payload_len);
+		return;
+	}
+
 	BBufMessage *bbm = (BBufMessage *) &recvSlot->msg->data;
 	board_buffer_paint(bbm->buf, bbm->index, 0xff);
 	recvSlot->msg_occupied = FALSE;

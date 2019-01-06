@@ -48,6 +48,9 @@ typedef struct s_remote_bbuf_recv {
 } RemoteBBufRecv;
 
 void init_remote_bbuf_recv(RemoteBBufRecv *rbr, Network *network);
+void rbs_update(RemoteBBufSend *rbs);
+void rbs_send_complete(SendSlot *slot);
+void rbr_recv(RecvSlot *recvSlot, uint8_t payload_len);
 
 
 #endif // _remote_bbuf_h

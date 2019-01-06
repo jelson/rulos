@@ -200,6 +200,8 @@
 
 #elif defined(BOARD_DONGLE_REVA)
 
+#define NUM_BOARDS 8
+
 #define BOARDSEL0       GPIO_C3
 #define BOARDSEL1       GPIO_D1
 #define BOARDSEL2       GPIO_D3
@@ -213,6 +215,8 @@
 #define STROBE          GPIO_C2
 
 #elif defined(BOARD_DONGLE_REVB)
+
+#define NUM_BOARDS 8
 
 #define BOARDSEL0       GPIO_C3
 #define BOARDSEL1       GPIO_B2
