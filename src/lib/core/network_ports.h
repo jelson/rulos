@@ -21,7 +21,8 @@
 #define ROCKET1_ADDR                    (0x02)
 #define AUDIO_ADDR                      (0x03)
 
-#define DONGLE0_ADDR                    (0x50)
+#define DONGLE_BASE_ADDR                (0x50)  /* Address of 0th dongle */
+/*
 #define DONGLE1_ADDR                    (0x51)
 #define DONGLE2_ADDR                    (0x52)
 #define DONGLE3_ADDR                    (0x53)
@@ -29,6 +30,7 @@
 #define DONGLE5_ADDR                    (0x55)
 #define DONGLE6_ADDR                    (0x56)
 #define DONGLE7_ADDR                    (0x57)
+*/
 
 // Ports
 #define THRUSTER_PORT                   (0x11)

@@ -28,8 +28,8 @@ void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network)
 	rbs->sendSlot.func = NULL;
 	rbs->sendSlot.msg = (Message*) rbs->send_msg_alloc;
 	rbs->sendSlot.sending = FALSE;
-	memset(rbs->offscreen, 0, REMOTE_BBUF_NUM_BOARDS*NUM_DIGITS*sizeof(SSBitmap));
-	memset(rbs->changed, FALSE, REMOTE_BBUF_NUM_BOARDS*sizeof(r_bool));
+	memset(rbs->offscreen, 0, NUM_AUX_BOARDS*NUM_DIGITS*sizeof(SSBitmap));
+	memset(rbs->changed, FALSE, NUM_AUX_BOARDS*sizeof(r_bool));
 	rbs->last_index = 0;
 
 	schedule_us(1, (ActivationFuncPtr) rbs_update, rbs);
@@ -37,7 +37,7 @@ void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network)
 
 void send_remote_bbuf(RemoteBBufSend *rbs, SSBitmap *bm, uint8_t index, uint8_t mask)
 {
-	assert(0<=index && index<REMOTE_BBUF_NUM_BOARDS);
+	assert(0<=index && index<NUM_AUX_BOARDS);
 	
 	int di;
 	for (di=0; di<NUM_DIGITS; di++)
@@ -55,9 +55,12 @@ int rbs_find_changed_index(RemoteBBufSend *rbs)
 {
 	int idx = rbs->last_index;
 	int tries;
-	for (tries=0; tries<REMOTE_BBUF_NUM_BOARDS; tries++)
+	for (tries=0; tries<NUM_AUX_BOARDS; tries++)
 	{
-		idx = (idx + 1) % REMOTE_BBUF_NUM_BOARDS;
+#if NUM_AUX_BOARDS==0
+#error I'm having a bad day
+#endif
+		idx = (idx + 1) % NUM_AUX_BOARDS;
 		if (rbs->changed[idx])
 		{
 			return idx;
@@ -87,12 +90,11 @@ void rbs_update(RemoteBBufSend *rbs)
 	LOG("rbs_update: update[%d]\n", index);
 
 	// send a packet for this changed line
-	rbs->sendSlot.dest_addr = DONGLE0_ADDR;
+	rbs->sendSlot.dest_addr = DONGLE_BASE_ADDR + index;
 	rbs->sendSlot.msg->dest_port = REMOTE_BBUF_PORT;
 	rbs->sendSlot.msg->payload_len = sizeof(BBufMessage);
 	BBufMessage *bbm = (BBufMessage *) &rbs->sendSlot.msg->data;
 	memcpy(bbm->buf, rbs->offscreen[index], NUM_DIGITS);
-	bbm->index = index;
 
 	if (net_send_message(rbs->network, &rbs->sendSlot))
 	{
@@ -122,6 +124,6 @@ void rbr_recv(RecvSlot *recvSlot, uint8_t payload_len)
 	}
 
 	BBufMessage *bbm = (BBufMessage *) &recvSlot->msg->data;
-	board_buffer_paint(bbm->buf, bbm->index, 0xff);
+	board_buffer_paint(bbm->buf, 0, 0xff);
 	recvSlot->msg_occupied = FALSE;
 }

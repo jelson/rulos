@@ -22,11 +22,8 @@
 #include "periph/7seg_panel/board_buffer.h"
 #include "periph/7seg_panel/display_controller.h"
 
-#define REMOTE_BBUF_NUM_BOARDS	(NUM_PSEUDO_BOARDS - NUM_BOARDS)
-
 typedef struct {
 	SSBitmap buf[NUM_DIGITS];
-	uint8_t index;
 } BBufMessage;
 
 typedef struct s_remote_bbuf_send {
@@ -34,8 +31,8 @@ typedef struct s_remote_bbuf_send {
 	uint8_t send_msg_alloc[sizeof(Message)+sizeof(BBufMessage)];
 	SendSlot sendSlot;
 	struct s_remote_bbuf_send *send_this;
-	SSBitmap offscreen[REMOTE_BBUF_NUM_BOARDS][NUM_DIGITS];
-	r_bool changed[REMOTE_BBUF_NUM_BOARDS];
+	SSBitmap offscreen[NUM_AUX_BOARDS][NUM_DIGITS];
+	r_bool changed[NUM_AUX_BOARDS];
 	uint8_t last_index;
 } RemoteBBufSend;
 
