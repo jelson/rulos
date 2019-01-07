@@ -23,7 +23,6 @@ void init_slow_boot(SlowBoot *slowboot, ScreenBlanker *screenblanker, AudioClien
 	slowboot->screenblanker = screenblanker;
 	slowboot->audioClient = audioClient;
 
-
 #if BORROW_SCREENBLANKER_BUFS
 	screenblanker_setmode(slowboot->screenblanker, sb_borrowed);
 	slowboot->buffer = screenblanker->buffer;
@@ -38,7 +37,7 @@ void init_slow_boot(SlowBoot *slowboot, ScreenBlanker *screenblanker, AudioClien
 	int bi;
 	for (bi=0; bi<SLOW_MAX_BUFFERS; bi++)
 	{
-		board_buffer_init(&slowboot->buffer[bi]);
+		board_buffer_init(&slowboot->buffer[bi] DBG_BBUF_LABEL("slowboot"));
 		board_buffer_push(&slowboot->buffer[bi], bi);
 	}
 #endif // BORROW_SCREENBLANKER_BUFS
