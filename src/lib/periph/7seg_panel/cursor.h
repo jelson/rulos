@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef __cursor_h__
-#define __cursor_h__
+#pragma once
 
 #include "periph/7seg_panel/board_buffer.h"
 #include "periph/7seg_panel/region.h"
@@ -38,5 +37,3 @@ void cursor_hide(CursorAct *act);
 void cursor_show(CursorAct *act, RectRegion rr);
 	// addresses are inclusive
 void cursor_set_label(CursorAct *act, const char *label);
-
-#endif // _cursor_h

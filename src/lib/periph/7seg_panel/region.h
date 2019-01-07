@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _region_h
-#define _region_h
+#pragma once
 
 #include <inttypes.h>
 
@@ -36,5 +35,3 @@ typedef struct {
 
 void region_hide(RectRegion *rr);
 void region_show(RectRegion *rr, int board0);
-
-#endif // _region_h

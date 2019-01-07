@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _remote_bbuf_h
-#define _remote_bbuf_h
+#pragma once
 
 #include "core/network.h"
 #include "core/network_ports.h"
@@ -48,6 +47,3 @@ void init_remote_bbuf_recv(RemoteBBufRecv *rbr, Network *network);
 void rbs_update(RemoteBBufSend *rbs);
 void rbs_send_complete(SendSlot *slot);
 void rbr_recv(RecvSlot *recvSlot, uint8_t payload_len);
-
-
-#endif // _remote_bbuf_h
