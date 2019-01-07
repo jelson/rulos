@@ -72,7 +72,7 @@ void program_matrix(SSBitmap bitmap)
 {
 	uint8_t board;
 
-	for (board = 0; board < NUM_BOARDS; board++)
+	for (board = 0; board < NUM_LOCAL_BOARDS; board++)
 		program_row(board, bitmap);
 }
 

@@ -184,7 +184,7 @@ void sim_display_light_status(r_bool status)
 
 void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff)
 {
-	if (board < 0 || board >= NUM_BOARDS || digit < 0 || digit >= NUM_DIGITS || segment < 0 || segment >= 8 || g_sim_theTree[board].label==NULL)
+	if (board < 0 || board >= NUM_LOCAL_BOARDS || digit < 0 || digit >= NUM_DIGITS || segment < 0 || segment >= 8 || g_sim_theTree[board].label==NULL)
     return;
 
 	int x_origin = g_sim_theTree[board].x + (digit) * DIGIT_WIDTH;
@@ -538,7 +538,7 @@ void hal_init_rocketpanel()
 	sim_program_labels();
 	SSBitmap value = ascii_to_bitmap('8') | SSB_DECIMAL;
 	int board, digit;
-	for (board = 0; board < NUM_BOARDS; board++) {
+	for (board = 0; board < NUM_LOCAL_BOARDS; board++) {
 		for (digit = 0; digit < NUM_DIGITS; digit++) {
 			program_cell(board, digit, value);
 		}

@@ -20,8 +20,8 @@
 
 #include "periph/7seg_panel/board_config.h"
 
-#ifndef NUM_BOARDS
-#error "Display requested but NUM_BOARDS not defined by your app makefile."
+#ifndef NUM_LOCAL_BOARDS
+#error "Display requested but BOARDCONFIG_xxx not defined by your app makefile."
 #include <stophere>
 #endif
 

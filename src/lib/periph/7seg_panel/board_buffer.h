@@ -37,11 +37,7 @@ typedef struct s_board_buffer {
 #endif // BBDEBUG && SIM
 } BoardBuffer;
 
-#ifndef NUM_AUX_BOARDS
-# define NUM_AUX_BOARDS 4
-#endif
-
-#define NUM_PSEUDO_BOARDS (NUM_BOARDS + NUM_AUX_BOARDS)
+#define NUM_TOTAL_BOARDS (NUM_LOCAL_BOARDS + NUM_REMOTE_BOARDS)
 
 void board_buffer_module_init();
 struct s_remote_bbuf_send;

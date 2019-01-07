@@ -66,7 +66,7 @@ static BoardRemap boardRemapTables[] = {
 };
 typedef uint8_t BoardRemapIndex;
 
-static BoardRemapIndex displayConfiguration[NUM_BOARDS];
+static BoardRemapIndex displayConfiguration[NUM_LOCAL_BOARDS];
 
 static const uint16_t g_epb_delay_constant = 1;
 void epb_delay()
@@ -143,7 +143,7 @@ void hal_init_rocketpanel()
 
 	// This code is static per binary; could save some code space
 	// by using #ifdefs instead of dynamic code.
-	for (int i=0; i<NUM_BOARDS; i++)
+	for (int i=0; i<NUM_LOCAL_BOARDS; i++)
 	{
 		displayConfiguration[i] = BRT_SOLDERED_UP_BOARD_UP;
 	}

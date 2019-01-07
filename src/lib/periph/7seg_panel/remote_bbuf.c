@@ -28,10 +28,10 @@ void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network)
 	rbs->sendSlot.func = NULL;
 	rbs->sendSlot.msg = (Message*) rbs->send_msg_alloc;
 	rbs->sendSlot.sending = FALSE;
-#if NUM_AUX_BOARDS > 0
-	memset(rbs->offscreen, 0, NUM_AUX_BOARDS*NUM_DIGITS*sizeof(SSBitmap));
+#if NUM_REMOTE_BOARDS > 0
+	memset(rbs->offscreen, 0, NUM_REMOTE_BOARDS*NUM_DIGITS*sizeof(SSBitmap));
 #endif
-	memset(rbs->changed, FALSE, NUM_AUX_BOARDS*sizeof(r_bool));
+	memset(rbs->changed, FALSE, NUM_REMOTE_BOARDS*sizeof(r_bool));
 	rbs->last_index = 0;
 
 	schedule_us(1, (ActivationFuncPtr) rbs_update, rbs);
@@ -39,7 +39,7 @@ void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network)
 
 void send_remote_bbuf(RemoteBBufSend *rbs, SSBitmap *bm, uint8_t index, uint8_t mask)
 {
-	assert(0<=index && index<NUM_AUX_BOARDS);
+	assert(0<=index && index<NUM_REMOTE_BOARDS);
 	
 	int di;
 	for (di=0; di<NUM_DIGITS; di++)
@@ -55,12 +55,12 @@ void send_remote_bbuf(RemoteBBufSend *rbs, SSBitmap *bm, uint8_t index, uint8_t 
 
 int rbs_find_changed_index(RemoteBBufSend *rbs)
 {
-#if NUM_AUX_BOARDS > 0	
+#if NUM_REMOTE_BOARDS > 0	
 	int idx = rbs->last_index;
 	int tries;
-	for (tries=0; tries<NUM_AUX_BOARDS; tries++)
+	for (tries=0; tries<NUM_REMOTE_BOARDS; tries++)
 	{
-		idx = (idx + 1) % NUM_AUX_BOARDS;
+		idx = (idx + 1) % NUM_REMOTE_BOARDS;
 		if (rbs->changed[idx])
 		{
 			return idx;

@@ -32,7 +32,7 @@ static void update(BoardIDAct_t *ba)
 {
 	uint8_t board, digit;
 
-	for (board = 0; board < NUM_BOARDS; board++) {
+	for (board = 0; board < NUM_LOCAL_BOARDS; board++) {
 		switch (ba->stage) {
 		case 0:
 			for (digit = 0; digit < NUM_DIGITS; digit++)
@@ -83,7 +83,7 @@ int main()
 	ba.d_bitmap = ascii_to_bitmap('d');
 
 	uint8_t board;
-	for (board = 0; board < NUM_BOARDS; board++) {
+	for (board = 0; board < NUM_LOCAL_BOARDS; board++) {
 		board_buffer_init(&ba.b[board] DBG_BBUF_LABEL("testboard"));
 		board_buffer_push(&ba.b[board], board);
 	}

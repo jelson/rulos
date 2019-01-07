@@ -22,14 +22,14 @@
 
 #define BBUF_UNMAPPED_INDEX (0xff)
 
-BoardBuffer *foreground[NUM_PSEUDO_BOARDS];
+BoardBuffer *foreground[NUM_TOTAL_BOARDS];
 
 #if BBDEBUG && SIM
 void dump(const char *prefix)
 {
 	int b;
 	LOG("-----\n");
-	for (b=0; b<NUM_PSEUDO_BOARDS; b++)
+	for (b=0; b<NUM_TOTAL_BOARDS; b++)
 	{
 		LOG("%s b%2d: ", prefix, b);
 		BoardBuffer *buf = foreground[b];
@@ -48,7 +48,7 @@ RemoteBBufSend *g_remote_bbuf_send;
 void board_buffer_module_init()
 {
 	int i;
-	for (i=0; i<NUM_PSEUDO_BOARDS; i++)
+	for (i=0; i<NUM_TOTAL_BOARDS; i++)
 	{
 		foreground[i] = NULL;
 	}
@@ -98,7 +98,7 @@ void board_buffer_pop(BoardBuffer *buf)
 		if (buf->next == NULL)
 		{
 			// will the last buffer to leave, please turn out the lights?
-#if NUM_BOARDS > 0
+#if NUM_LOCAL_BOARDS > 0
 			program_row(buf->board_index, 0);
 #endif
 			foreground[buf->board_index] = NULL;
@@ -111,7 +111,7 @@ void board_buffer_pop(BoardBuffer *buf)
 	else
 	{
 		// TODO if restoring remote display code: this path not implemented.
-		assert(buf->board_index<NUM_PSEUDO_BOARDS);
+		assert(buf->board_index<NUM_TOTAL_BOARDS);
 		BoardBuffer *prevbuf = foreground[buf->board_index];
 		uint8_t loopcheck=0;
 		while (prevbuf->next != buf)
@@ -135,7 +135,7 @@ dump("  after pop");
 
 void board_buffer_push(BoardBuffer *buf, int board)
 {
-	assert(board < NUM_PSEUDO_BOARDS);
+	assert(board < NUM_TOTAL_BOARDS);
 #if BBDEBUG && SIM
 dump("before push");
 #endif // BBDEBUG && SIM
@@ -171,20 +171,20 @@ void board_buffer_draw(BoardBuffer *buf)
 #endif // BBDEBUG && SIM
 
 	// draw locally, if we can.
-#if NUM_BOARDS > 0
-	if (0<=board_index && board_index<NUM_BOARDS)
+#if NUM_LOCAL_BOARDS > 0
+	if (0<=board_index && board_index<NUM_LOCAL_BOARDS)
 	{
 		board_buffer_paint(buf->buffer, board_index, buf->mask);
 	}
 #endif
-#if NUM_AUX_BOARDS > 0
+#if NUM_REMOTE_BOARDS > 0
 	if (g_remote_bbuf_send!=NULL
-		&& NUM_BOARDS<=board_index && board_index<NUM_PSEUDO_BOARDS)
+		&& NUM_LOCAL_BOARDS<=board_index && board_index<NUM_TOTAL_BOARDS)
 	{
 		// jonh hard-codes remote send ability, rather than getting all
 		// objecty about it, because doing this well with polymorphism
 		// really wants a dynamic memory allocator.
-		send_remote_bbuf(g_remote_bbuf_send, buf->buffer, board_index-NUM_BOARDS, buf->mask);
+		send_remote_bbuf(g_remote_bbuf_send, buf->buffer, board_index-NUM_LOCAL_BOARDS, buf->mask);
 	}
 #endif
 }
@@ -204,7 +204,7 @@ void board_buffer_paint(SSBitmap *bm, uint8_t board_index, uint8_t mask)
 
 uint8_t board_buffer_is_foreground(BoardBuffer *buf)
 {
-	return (buf->board_index<NUM_PSEUDO_BOARDS
+	return (buf->board_index<NUM_TOTAL_BOARDS
 		&& foreground[buf->board_index] == buf);
 }
 

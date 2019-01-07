@@ -61,7 +61,7 @@ void screenblanker_update_once(ScreenBlanker *sb);
 void init_screenblanker(ScreenBlanker *screenblanker, HPAM *hpam, IdleAct *idle)
 {
 	screenblanker->func = (UIEventHandlerFunc) screenblanker_handler;
-	screenblanker->num_buffers = NUM_BOARDS;
+	screenblanker->num_buffers = NUM_LOCAL_BOARDS;
 	screenblanker->tree = rocket_tree;
 	screenblanker->disco_color = DISCO_RED;
 	screenblanker->hpam = hpam;
