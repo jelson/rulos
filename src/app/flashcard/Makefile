@@ -15,12 +15,13 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr
-PERIPHERALS := rasters uart led_matrix_single keypad lcd_12232 eeprom input_controller \
+PERIPHERALS := uart led_matrix_single keypad lcd_12232 eeprom input_controller \
 	audio sdcard spi 
 #MCU := atmega8
 MCU := atmega1284p
 BOARD := FLASHCARD
 #EXTRA_AVR_CFLAGS += -DCRYSTAL=20000000
+ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_DEFAULT
 
 TARGET := flashcard
 

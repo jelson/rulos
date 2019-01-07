@@ -14,11 +14,7 @@
  *
  ************************************************************************/
 
-
-#ifndef _audioled_h
-#define _audioled_h
+#pragma once
 
 void audioled_init();
 void audioled_set(r_bool red, r_bool yellow);
-
-#endif // _audioled_h

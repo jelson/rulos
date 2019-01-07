@@ -21,7 +21,7 @@
 # include "hardware.h"
 #endif
 
-uint8_t _run_main_loop;
+uint8_t g_run_main_loop;
 
 void cpumon_act(void *data);
 
@@ -42,13 +42,13 @@ volatile uint8_t run_scheduler_now = FALSE;
 
 void cpumon_main_loop()
 {
-	_run_main_loop = TRUE;
+	g_run_main_loop = TRUE;
 
 #ifdef TIMING_DEBUG_PIN
 	gpio_make_output(TIMING_DEBUG_PIN);
 #endif
 
-	while (_run_main_loop)
+	while (g_run_main_loop)
 	{
 		run_scheduler_now = FALSE;
 
@@ -102,7 +102,7 @@ void cpumon_act(void *data)
 				// signal that we're done with cpumon_init()'s invocation of
 				// cpumon_main_loop; let rocket.c's main initialization
 				// continue until it's called for real (and forEVVEEEEERRRR).
-				_run_main_loop = FALSE;
+				g_run_main_loop = FALSE;
 			}
 			break;
 		}

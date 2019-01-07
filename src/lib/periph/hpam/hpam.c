@@ -33,7 +33,7 @@ void hpam_update(HPAM *hpam);
 #define HPAM_DIGIT_0	0
 #define HPAM_DIGIT_1	4
 
-void _hpam_init_port(HPAM *hpam, HPAMIndex idx, uint8_t rest_time_secs, uint8_t board, uint8_t digit, uint8_t segment)
+static void hpam_init_port(HPAM *hpam, HPAMIndex idx, uint8_t rest_time_secs, uint8_t board, uint8_t digit, uint8_t segment)
 {
 	hpam->hpam_ports[idx].status = FALSE;
 	hpam->hpam_ports[idx].rest_time_secs = rest_time_secs;
@@ -45,23 +45,23 @@ void _hpam_init_port(HPAM *hpam, HPAMIndex idx, uint8_t rest_time_secs, uint8_t 
 
 void init_hpam(HPAM *hpam, uint8_t board0, ThrusterUpdate *thrusterUpdates)
 {
-	_hpam_init_port(hpam, hpam_hobbs, REST_NONE, board0, HPAM_DIGIT_0, 0);
-	_hpam_init_port(hpam, hpam_reserved, REST_NONE, board0, HPAM_DIGIT_0, 1);
+	hpam_init_port(hpam, hpam_hobbs, REST_NONE, board0, HPAM_DIGIT_0, 0);
+	hpam_init_port(hpam, hpam_reserved, REST_NONE, board0, HPAM_DIGIT_0, 1);
 		// HPAM 0 slot 2
-	_hpam_init_port(hpam, hpam_lighting_flicker, REST_NONE, board0, HPAM_DIGIT_0, 2);
+	hpam_init_port(hpam, hpam_lighting_flicker, REST_NONE, board0, HPAM_DIGIT_0, 2);
 		// HPAM 0 slot 1
-	_hpam_init_port(hpam, hpam_five_volts, REST_NONE, board0, HPAM_DIGIT_0, 7);
+	hpam_init_port(hpam, hpam_five_volts, REST_NONE, board0, HPAM_DIGIT_0, 7);
 		// HPAM 0 slot 3
-	_hpam_init_port(hpam, hpam_thruster_frontleft, REST_TIME_SECONDS, board0, HPAM_DIGIT_0, 4);
+	hpam_init_port(hpam, hpam_thruster_frontleft, REST_TIME_SECONDS, board0, HPAM_DIGIT_0, 4);
 		// HPAM 1 slot 3
 		// cable "thruster2"
-	_hpam_init_port(hpam, hpam_thruster_frontright, REST_TIME_SECONDS, board0, HPAM_DIGIT_0, 5);
+	hpam_init_port(hpam, hpam_thruster_frontright, REST_TIME_SECONDS, board0, HPAM_DIGIT_0, 5);
 		// HPAM 1 slot 2
 		// calbe "thruster1"
-	_hpam_init_port(hpam, hpam_thruster_rear, REST_TIME_SECONDS, board0, HPAM_DIGIT_0, 6);
+	hpam_init_port(hpam, hpam_thruster_rear, REST_TIME_SECONDS, board0, HPAM_DIGIT_0, 6);
 		// HPAM 1 slot 1
 		// cable "thruster0"
-	_hpam_init_port(hpam, hpam_booster, REST_TIME_SECONDS, board0, HPAM_DIGIT_0, 3);
+	hpam_init_port(hpam, hpam_booster, REST_TIME_SECONDS, board0, HPAM_DIGIT_0, 3);
 		// HPAM 1 slot 3
 	hpam->thrusterPayload.thruster_bits = 0;
 	hpam->thrusterUpdates = thrusterUpdates;

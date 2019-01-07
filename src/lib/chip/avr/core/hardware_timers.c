@@ -142,16 +142,16 @@ void init_f_cpu()
   * keep the intermediate results fitting in a 32-bit int.
   */
 
-static const uint8_t _timer0_prescaler_bits[] = { 0xff, 0, 3, 6, 8, 10, 0xff, 0xff };
-static const uint8_t _timer1_prescaler_bits[] = { 0xff, 0, 3, 6, 8, 10, 0xff, 0xff };
-static const uint8_t _timer2_prescaler_bits[] = { 0xff, 0, 3, 5, 6,  7,    8,   10 };
+static const uint8_t timer0_prescaler_bits[] = { 0xff, 0, 3, 6, 8, 10, 0xff, 0xff };
+static const uint8_t timer1_prescaler_bits[] = { 0xff, 0, 3, 6, 8, 10, 0xff, 0xff };
+static const uint8_t timer2_prescaler_bits[] = { 0xff, 0, 3, 5, 6,  7,    8,   10 };
 typedef struct {
 	const uint8_t *prescaler_bits;
 	const uint8_t ocr_bits;
 } TimerDef;
-static const TimerDef _timer0 = { _timer0_prescaler_bits,  8 };
-static const TimerDef _timer1 = { _timer1_prescaler_bits, 16 };
-static const TimerDef _timer2 = { _timer2_prescaler_bits,  8 };
+static const TimerDef timer0 = { timer0_prescaler_bits,  8 };
+static const TimerDef timer1 = { timer1_prescaler_bits, 16 };
+static const TimerDef timer2 = { timer2_prescaler_bits,  8 };
 
 static void find_prescaler(uint32_t req_us_per_period, const TimerDef *timerDef,
 	uint32_t *out_us_per_period,
@@ -218,7 +218,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 	switch (timer_id) {
 #if defined(MCU328_line) || defined(MCU1284_line) || defined(MCUtiny84_line) || defined(MCUtiny85_line)
 	case TIMER0:
-		find_prescaler(us, &_timer0, &actual_us_per_period, &cs, &ocr);
+		find_prescaler(us, &timer0, &actual_us_per_period, &cs, &ocr);
 
 		uint8_t tccr0b = 0;
 		tccr0b |= (cs & 4) ? _BV(CS02) : 0;
@@ -246,7 +246,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 
 #if defined(MCU8_line) || defined(MCU328_line) || defined(MCU1284_line) || defined(MCUtiny84_line)
 	case TIMER1:
-		find_prescaler(us, &_timer1, &actual_us_per_period, &cs, &ocr);
+		find_prescaler(us, &timer1, &actual_us_per_period, &cs, &ocr);
 
 		uint8_t tccr1b = _BV(WGM12);		// CTC Mode 4 (interrupt on count-up)
 		tccr1b |= (cs & 4) ? _BV(CS12) : 0;
@@ -275,7 +275,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 
 #if defined(MCU8_line) || defined(MCU328_line) || defined(MCU1284_line)
 	case TIMER2:
-		find_prescaler(us, &_timer2, &actual_us_per_period, &cs, &ocr);
+		find_prescaler(us, &timer2, &actual_us_per_period, &cs, &ocr);
 
 		uint8_t tccr2a = _BV(WGM21);	// CTC Mode 2 (interrupt on count-up)
 		uint8_t tccr2b = 0;
@@ -399,9 +399,9 @@ int main(int argc, char *argv[])
 	}
 
         find_prescaler(period,
-		        timerNum == 0 ? &_timer0 : 
-		       (timerNum == 1 ? &_timer1 : 
-			&_timer2), 
+		        timerNum == 0 ? &timer0 : 
+		       (timerNum == 1 ? &timer1 : 
+			&timer2), 
 		       &us_per_period, &cs, &ocr);
 
 	printf("cpu speed (hz): %d\n", hardware_f_cpu);

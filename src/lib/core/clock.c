@@ -27,16 +27,16 @@
 void schedule_us_internal(Time offset_us, ActivationFuncPtr func, void *data);
 
 // usec between timer interrupts
-Time _rtc_interval_us;
+Time g_rtc_interval_us;
 
 // Clock updated by timer interrupt.  Should not be accessed without a
 // lock since it is updated at interrupt time.
-volatile Time _interrupt_driven_jiffy_clock_us;
+volatile Time g_interrupt_driven_jiffy_clock_us;
 
 // last time the scheduler ran.  Can be accessed safely without a lock.
-Time _last_scheduler_run_us;
+Time g_last_scheduler_run_us;
 
-uint32_t _spin_counter;
+uint32_t g_spin_counter;
 
 extern volatile uint8_t run_scheduler_now;
 
@@ -59,7 +59,7 @@ void clock_handler(void *data)
 #endif
 	// NB we assume this runs in interrupt context and is hence
 	// automatically atomic.
-	_interrupt_driven_jiffy_clock_us += _rtc_interval_us;
+	g_interrupt_driven_jiffy_clock_us += g_rtc_interval_us;
 	run_scheduler_now = TRUE;
 #ifdef TIMING_DEBUG
 	gpio_clr(GPIO_D5);
@@ -78,9 +78,9 @@ void init_clock(Time interval_us, uint8_t timer_id)
 #endif
 	// Initialize the clock to 20 seconds before rollover time so that 
 	// rollover bugs happen quickly during testing
-	_interrupt_driven_jiffy_clock_us = (Time) INT32_MAX - 20000000;
-	_rtc_interval_us = hal_start_clock_us(interval_us, clock_handler, NULL, timer_id);
-	_spin_counter = 0;
+	g_interrupt_driven_jiffy_clock_us = (Time) INT32_MAX - 20000000;
+	g_rtc_interval_us = hal_start_clock_us(interval_us, clock_handler, NULL, timer_id);
+	g_spin_counter = 0;
 }
 
 void schedule_us(Time offset_us, ActivationFuncPtr func, void *data)
@@ -136,27 +136,27 @@ Time precise_clock_time_us()
 
 	rulos_irq_state_t old_interrupts = hal_start_atomic();
 	milliintervals = hal_elapsed_milliintervals();
-	t = _interrupt_driven_jiffy_clock_us;
+	t = g_interrupt_driven_jiffy_clock_us;
 	hal_end_atomic(old_interrupts);
 
-	t += ((_rtc_interval_us * milliintervals) / 1000);
+	t += ((g_rtc_interval_us * milliintervals) / 1000);
 	return t;
 }
 
 void spin_counter_increment()
 {
-	_spin_counter += 1;
+	g_spin_counter += 1;
 }
 
 uint32_t read_spin_counter()
 {
-	return _spin_counter;
+	return g_spin_counter;
 }
 
 void scheduler_run_once()
 {
 	// update output of clock_time_us()
-	_last_scheduler_run_us = get_interrupt_driven_jiffy_clock();
+	g_last_scheduler_run_us = get_interrupt_driven_jiffy_clock();
 
 	while (1)	// run until nothing to do for this time
 	{
@@ -184,7 +184,7 @@ void scheduler_run_once()
 		else
 		{
 			rc = heap_peek(&sched_state.heap, &due_time, &act);
-			if (!rc && !later_than(due_time, _last_scheduler_run_us))
+			if (!rc && !later_than(due_time, g_last_scheduler_run_us))
 			{
 				valid = TRUE;
 				heap_pop(&sched_state.heap);

@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _hpam_h
-#define _hpam_h
+#pragma once
 
 #include "core/clock.h"
 #include "core/network.h"
@@ -58,5 +57,3 @@ typedef struct {
 void init_hpam(HPAM *hpam, uint8_t board0, ThrusterUpdate *thrusterUpdates);
 void hpam_set_port(HPAM *hpam, HPAMIndex idx, r_bool status);
 r_bool hpam_get_port(HPAM *hpam, HPAMIndex idx);
-
-#endif // _hpam_h

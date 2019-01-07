@@ -22,19 +22,19 @@
 
 void init_clock(Time interval_us, uint8_t timer_id);
 
-extern Time _last_scheduler_run_us;
-extern volatile Time _interrupt_driven_jiffy_clock_us; // must have lock to read!
+extern Time g_last_scheduler_run_us;
+extern volatile Time g_interrupt_driven_jiffy_clock_us; // must have lock to read!
 
 // very cheap but only precise to one jiffy.  this should be used my
 // most functions.
 static inline Time clock_time_us() {
-	return _interrupt_driven_jiffy_clock_us;
+	return g_interrupt_driven_jiffy_clock_us;
 }
 
 static inline Time get_interrupt_driven_jiffy_clock() {
 	Time retval;
 	rulos_irq_state_t old_interrupts = hal_start_atomic();
-	retval = _interrupt_driven_jiffy_clock_us;
+	retval = g_interrupt_driven_jiffy_clock_us;
 	hal_end_atomic(old_interrupts);
 	return retval;
 }

@@ -36,7 +36,7 @@ typedef struct s_audio_stream {
 	uint32_t cur_offset;
 	SoundToken loop_token;
 
-	uint8_t _ring_buffer_storage[sizeof(RingBuffer)+1+AUDIO_RING_BUFFER_SIZE];
+	uint8_t ring_buffer_storage[sizeof(RingBuffer)+1+AUDIO_RING_BUFFER_SIZE];
 	RingBuffer *ring;
 } AudioStream;
 

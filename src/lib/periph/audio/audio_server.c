@@ -31,10 +31,10 @@ void ac_send_complete(SendSlot *sendSlot);
 void aserv_recv_arm(RecvSlot *recvSlot, uint8_t payload_len);
 void aserv_recv_avm(RecvSlot *recvSlot, uint8_t payload_len);
 void aserv_recv_mcm(RecvSlot *recvSlot, uint8_t payload_len);
-void _aserv_fetch_start(AudioServer *as);
-void _aserv_fetch_complete(AudioServer *as);
-void _aserv_start_play(AudioServer *as);
-void _aserv_advance(AudioServer *as);
+void aserv_fetch_start(AudioServer *as);
+void aserv_fetch_complete(AudioServer *as);
+void aserv_start_play(AudioServer *as);
+void aserv_advance(AudioServer *as);
 
 void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id)
 {
@@ -76,14 +76,14 @@ void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id)
 
 	init_audio_streamer(&aserv->audio_streamer, timer_id);
 	aserv->index_ready = FALSE;
-	_aserv_fetch_start(aserv);
+	aserv_fetch_start(aserv);
 
 	net_bind_receiver(network, &aserv->arm_recvSlot);
 	net_bind_receiver(network, &aserv->avm_recvSlot);
 	net_bind_receiver(network, &aserv->mcm_recvSlot);
 }
 
-void _aserv_fetch_start(AudioServer *aserv)
+void aserv_fetch_start(AudioServer *aserv)
 {
 	SYNCDEBUG();
 
@@ -93,7 +93,7 @@ void _aserv_fetch_start(AudioServer *aserv)
 	{
 		// sdc not initialized yet
 		SYNCDEBUG();
-		schedule_us(FETCH_RETRY_TIME, (ActivationFuncPtr) _aserv_fetch_start, aserv);
+		schedule_us(FETCH_RETRY_TIME, (ActivationFuncPtr) aserv_fetch_start, aserv);
 		return;
 	}
 
@@ -104,7 +104,7 @@ void _aserv_fetch_start(AudioServer *aserv)
 		0,
 		start_addr,
 		count,
-		(ActivationFuncPtr) _aserv_fetch_complete,
+		(ActivationFuncPtr) aserv_fetch_complete,
 		aserv);
 #if !SIM
 		SYNCPRINT(4, 'a', (uint16_t) (aserv));
@@ -115,12 +115,12 @@ void _aserv_fetch_start(AudioServer *aserv)
 	if (!rc)
 	{
 		SYNCDEBUG();
-		schedule_us(FETCH_RETRY_TIME, (ActivationFuncPtr) _aserv_fetch_start, aserv);
+		schedule_us(FETCH_RETRY_TIME, (ActivationFuncPtr) aserv_fetch_start, aserv);
 		return;
 	}
 }
 
-void _aserv_fetch_complete(AudioServer *aserv)
+void aserv_fetch_complete(AudioServer *aserv)
 {
 	SYNCDEBUG();
 #if !SIM
@@ -165,12 +165,12 @@ void _aserv_fetch_complete(AudioServer *aserv)
 	if (!success)
 	{
 		SYNCDEBUG();
-		schedule_us(FETCH_RETRY_TIME, (ActivationFuncPtr) _aserv_fetch_start, aserv);
+		schedule_us(FETCH_RETRY_TIME, (ActivationFuncPtr) aserv_fetch_start, aserv);
 	}
 	SYNCDEBUG();
 }
 
-void _aserv_skip_stream(AudioServer *aserv, uint8_t stream_id)
+void aserv_skip_stream(AudioServer *aserv, uint8_t stream_id)
 {
 	SYNCDEBUG();
 	if (
@@ -180,7 +180,7 @@ void _aserv_skip_stream(AudioServer *aserv, uint8_t stream_id)
 		SYNCDEBUG();
 		// preemption
 		aserv->active_stream = stream_id;
-		_aserv_start_play(aserv);
+		aserv_start_play(aserv);
 	}
 	else if (
 		aserv->audio_stream[stream_id].skip_cmd.token == sound_silence
@@ -188,7 +188,7 @@ void _aserv_skip_stream(AudioServer *aserv, uint8_t stream_id)
 	{
 		SYNCDEBUG();
 		// drop back down the stack and find something else to pick up
-		_aserv_advance(aserv);
+		aserv_advance(aserv);
 	}
 }
 
@@ -208,7 +208,7 @@ void aserv_recv_arm(RecvSlot *recvSlot, uint8_t payload_len)
 		SYNCPRINT(2, 'i', arm->stream_id);
 		SYNCPRINT(2, 'k', aserv->audio_stream[arm->stream_id].skip_cmd.token);
 		SYNCPRINT(2, 'l', aserv->audio_stream[arm->stream_id].loop_cmd.token);
-		_aserv_skip_stream(aserv, arm->stream_id);
+		aserv_skip_stream(aserv, arm->stream_id);
 	}
 
 	recvSlot->msg_occupied = FALSE;
@@ -262,21 +262,21 @@ void aserv_recv_mcm(RecvSlot *recvSlot, uint8_t payload_len)
 		SYNCPRINT(1, 't', aserv->music_offset);
 		SYNCPRINT(1, 'n', aserv->num_music_tokens);
 		// and start it playin'
-		_aserv_skip_stream(aserv, AUDIO_STREAM_MUSIC);
+		aserv_skip_stream(aserv, AUDIO_STREAM_MUSIC);
 	}
 
 	recvSlot->msg_occupied = FALSE;
 }
 
-void _aserv_dbg_play(AudioServer *aserv, SoundToken skip, SoundToken loop)
+void aserv_dbg_play(AudioServer *aserv, SoundToken skip, SoundToken loop)
 {
 	aserv->audio_stream[AUDIO_STREAM_BURST_EFFECTS].skip_cmd.token = skip;
 	aserv->audio_stream[AUDIO_STREAM_BURST_EFFECTS].loop_cmd.token = loop;
 	aserv->audio_stream[AUDIO_STREAM_BURST_EFFECTS].mlvolume = 0;
-	_aserv_start_play(aserv);
+	aserv_start_play(aserv);
 }
 
-void _aserv_start_play(AudioServer *aserv)
+void aserv_start_play(AudioServer *aserv)
 {
 	SYNCDEBUG();
 	AudioEffectsStream *stream = &aserv->audio_stream[aserv->active_stream];
@@ -318,7 +318,7 @@ void _aserv_start_play(AudioServer *aserv)
 			airec->start_offset,
 			airec->block_offset,
 			airec->end_offset,
-			(ActivationFuncPtr) _aserv_advance,
+			(ActivationFuncPtr) aserv_advance,
 			aserv);
 		if (!rc)
 		{
@@ -326,12 +326,12 @@ void _aserv_start_play(AudioServer *aserv)
 			// Retry rapidly, so we can get ahold of sdc as soon as it's
 			// idle. (Yeah, I could have a callback from SD to alert the
 			// next waiter, but what a big project. This'll do.)
-			schedule_us(1, (ActivationFuncPtr) _aserv_start_play, aserv);
+			schedule_us(1, (ActivationFuncPtr) aserv_start_play, aserv);
 		}
 	}
 }
 
-void _aserv_advance(AudioServer *aserv)
+void aserv_advance(AudioServer *aserv)
 {
 	aserv->audio_stream[aserv->active_stream].skip_cmd =
 		aserv->audio_stream[aserv->active_stream].loop_cmd;
@@ -347,5 +347,5 @@ void _aserv_advance(AudioServer *aserv)
 		aserv->active_stream = 0;
 	}
 
-	_aserv_start_play(aserv);
+	aserv_start_play(aserv);
 }

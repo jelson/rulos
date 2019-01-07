@@ -759,14 +759,14 @@ void ledwalk_update(LEDWalk *lw)
 		{
 			lw->row = lw->row << 1;
 		}
-		_lms_configure_row(lw->row);
+		lms_configure_row(lw->row);
 		lw->col = 0x0001;
-		_lms_configure_col(lw->col);
+		lms_configure_col(lw->col);
 	}
 	else
 	{
 		lw->col = lw->col << 1;
-		_lms_configure_col(lw->col);
+		lms_configure_col(lw->col);
 	}
 	schedule_us(50000, (ActivationFuncPtr) ledwalk_update, lw);
 }
@@ -864,33 +864,33 @@ void shell_func(Shell *shell)
 		SYNCDEBUG();
 		shell->rowdata = atoi_hex(&line[4]);
 		syncdebug(2, 'r', shell->rowdata);
-		_lms_configure_row(shell->rowdata);
+		lms_configure_row(shell->rowdata);
 	}
 	else if (strncmp(line, "col", 3)==0)
 	{
 		SYNCDEBUG();
 		shell->coldata = atoi_hex(&line[4]);
 		syncdebug(2, 'c', shell->coldata);
-		_lms_configure_col(shell->coldata);
+		lms_configure_col(shell->coldata);
 	}
 	else if (strcmp(line, "t1\n")==0)
 	{
 		SYNCDEBUG();
-//		_lms_configure_col(0xf00f);
-		_lms_configure_row(0x40);
+//		lms_configure_col(0xf00f);
+		lms_configure_row(0x40);
 	}
 	else if (strcmp(line, "t2\n")==0)
 	{
 		SYNCDEBUG();
-//		_lms_configure_col(0xf00f);
-		_lms_configure_row(0x80);
+//		lms_configure_col(0xf00f);
+		lms_configure_row(0x80);
 	}
 	else if (strncmp(line, "pwm", 3)==0)
 	{
 		SYNCDEBUG();
 //		lms.pwm_enable = atoi_hex(&line[4]);
-//		void _lms_handler(void *arg);
-//		_lms_handler(&lms);
+//		void lms_handler(void *arg);
+//		lms_handler(&lms);
 	}
 #else
 	line++;

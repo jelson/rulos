@@ -17,7 +17,8 @@
 #pragma once
 
 #include "core/rulos.h"
-#include "periph/7seg_panel/7seg_panel.h"
+#include "periph/7seg_panel/cursor.h"
+#include "periph/7seg_panel/region.h"
 
 struct s_focus_handler;
 typedef uint8_t UIEvent;

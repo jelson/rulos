@@ -24,7 +24,7 @@ extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 //#define SYNCDEBUG()	{}
 extern void audioled_set(r_bool red, r_bool yellow);
 
-void _as_fill(AudioStreamer *as);
+static void as_fill(AudioStreamer *as);
 
 void as_1_init_sdc(AudioStreamer *as);
 void as_2_check_reset(AudioStreamer *as);
@@ -36,7 +36,7 @@ void as_6_read_more(AudioStreamer *as);
 void init_audio_streamer(AudioStreamer *as, uint8_t timer_id)
 {
 	as->timer_id = timer_id;
-	init_audio_out(&as->audio_out, as->timer_id, (ActivationFuncPtr) _as_fill, as);
+	init_audio_out(&as->audio_out, as->timer_id, (ActivationFuncPtr) as_fill, as);
 	as->sdc_initialized = FALSE;
 	sdc_init(&as->sdc);
 
@@ -50,7 +50,7 @@ void init_audio_streamer(AudioStreamer *as, uint8_t timer_id)
 	schedule_now((ActivationFuncPtr) as_1_init_sdc, as);
 }
 
-void _ad_decode_ulaw_buf(uint8_t *dst, uint8_t *src, uint16_t len, uint8_t mlvolume)
+static void ad_decode_ulaw_buf(uint8_t *dst, uint8_t *src, uint16_t len, uint8_t mlvolume)
 {
 	uint8_t *srcp = src;
 	uint8_t *end = src+len;
@@ -65,7 +65,7 @@ void _ad_decode_ulaw_buf(uint8_t *dst, uint8_t *src, uint16_t len, uint8_t mlvol
 }
 
 #if BLEND
-void _ad_blend_ulaw_buf(uint8_t *fill_ptr, uint8_t last_blend_value)
+static void ad_blend_ulaw_buf(uint8_t *fill_ptr, uint8_t last_blend_value)
 {
 	//lite_assert(AO_BUFLEN>8);	// wish I could do this statically.
 	int i;
@@ -76,7 +76,7 @@ void _ad_blend_ulaw_buf(uint8_t *fill_ptr, uint8_t last_blend_value)
 }
 #endif // BLEND
 
-void _as_fill(AudioStreamer *as)
+static void as_fill(AudioStreamer *as)
 {
 	uint8_t *fill_ptr = as->audio_out.buffers[as->audio_out.fill_buffer];
 //	SYNCDEBUG();
@@ -95,12 +95,12 @@ void _as_fill(AudioStreamer *as)
 		// not elsewise scheduled.
 		audioled_set(1, 0);
 		SYNCDEBUG();
-		_ad_decode_ulaw_buf(fill_ptr, as->ulawbuf, AO_BUFLEN, as->mlvolume);
+		ad_decode_ulaw_buf(fill_ptr, as->ulawbuf, AO_BUFLEN, as->mlvolume);
 #if BLEND
 		as->last_blend_value = fill_ptr[AO_BUFLEN-1];
 		if (as->blend)
 		{
-			_ad_blend_ulaw_buf(fill_ptr, as->last_blend_value);
+			ad_blend_ulaw_buf(fill_ptr, as->last_blend_value);
 			as->blend = false;
 		}
 #endif // BLEND

@@ -57,5 +57,5 @@ typedef struct s_audio_server {
 void init_audio_server(AudioServer *as, Network *network, uint8_t timer_id);
 
 // visibility for debugging
-void _aserv_fetch_start(AudioServer *as);
-void _aserv_dbg_play(AudioServer *aserv, SoundToken skip, SoundToken loop);
+void aserv_fetch_start(AudioServer *as);
+void aserv_dbg_play(AudioServer *aserv, SoundToken skip, SoundToken loop);

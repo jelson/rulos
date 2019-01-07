@@ -180,8 +180,8 @@ void hal_delay_ms(uint16_t ms)
 
 /********************** sensors *************************/
 
-Handler _sensor_interrupt_handler = NULL;
-void *_sensor_interrupt_data = NULL;
+Handler sensor_interrupt_handler = NULL;
+void *sensor_interrupt_data = NULL;
 const uint32_t sensor_interrupt_simulator_counter_period = 507;
 uint32_t sensor_interrupt_simulator_counter;
 
@@ -190,9 +190,9 @@ void sim_sensor_poll(void *data)
 	sensor_interrupt_simulator_counter += 1;
 	if (sensor_interrupt_simulator_counter == sensor_interrupt_simulator_counter_period)
 	{
-		if (_sensor_interrupt_handler != NULL)
+		if (sensor_interrupt_handler != NULL)
 		{
-			_sensor_interrupt_handler(_sensor_interrupt_data);
+			sensor_interrupt_handler(sensor_interrupt_data);
 		}
 		sensor_interrupt_simulator_counter = 0;
 	}
@@ -202,8 +202,8 @@ void sim_sensor_poll(void *data)
 
 void sensor_interrupt_register_handler(Handler handler, void *data)
 {
-	_sensor_interrupt_handler = handler;
-	_sensor_interrupt_data = data;
+	sensor_interrupt_handler = handler;
+	sensor_interrupt_data = data;
 	sim_register_clock_handler(sim_sensor_poll, NULL);
 }
 
@@ -216,19 +216,18 @@ typedef struct {
 	MediaRecvSlot *mrs;
 	int udp_socket;
 } SimTwiState;
-SimTwiState _g_sim_twi_state = { {NULL}, FALSE };
+SimTwiState g_sim_twi_state = { {NULL}, FALSE };
 
 
-
-static void _sim_twi_send(MediaStateIfc *media,
+static void sim_twi_send(MediaStateIfc *media,
 	Addr dest_addr, const char *data, uint8_t len,
 	MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
 static void sim_twi_poll(void *data);
 
 MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr, MediaRecvSlot *mrs)
 {
-	SimTwiState *twi_state = &_g_sim_twi_state;
-	twi_state->media.send = _sim_twi_send;
+	SimTwiState *twi_state = &g_sim_twi_state;
+	twi_state->media.send = sim_twi_send;
 	twi_state->mrs = mrs;
 	twi_state->udp_socket = socket(PF_INET, SOCK_DGRAM, 0);
 
@@ -264,7 +263,7 @@ static void doRecvCallback(MediaRecvSlot *mrs)
 
 static void sim_twi_poll(void *data)
 {
-	SimTwiState *twi_state = &_g_sim_twi_state;
+	SimTwiState *twi_state = &g_sim_twi_state;
 	if (!twi_state->initted)
 	{
 		return;
@@ -316,7 +315,7 @@ static void doSendCallback(sendCallbackAct_t *sca)
 	sca->sendDoneCB(sca->sendDoneCBData);
 }
 
-static void _sim_twi_send(MediaStateIfc *media,
+static void sim_twi_send(MediaStateIfc *media,
 			  Addr dest_addr, const char *data, uint8_t len,
 			  MediaSendDoneFunc sendDoneCB, void *sendDoneCBData)
 {
@@ -353,16 +352,16 @@ interactive uart simulator I wrote, in sim_rocketpanel.c.
 
 int sim_uart_fd[2];
 
-void _sim_uart_recv(void *data)
+void sim_uart_recv(void *data)
 {
 	UartHandler* uart_handler = (UartHandler*) data;
 	char c;
 	int rc = read(sim_uart_fd[uart_handler->uart_id], &c, 1);
 	if (rc==1)
 	{
-		//fprintf(stderr, "_sim_uart_recv(%c)\n", c);
+		//fprintf(stderr, "sim_uart_recv(%c)\n", c);
 		(uart_handler->recv)(uart_handler, c);
-		schedule_us(1000, _sim_uart_recv, uart_handler);
+		schedule_us(1000, sim_uart_recv, uart_handler);
 	}
 	else
 	{
@@ -376,7 +375,7 @@ void hal_uart_init(UartHandler* handler, uint32_t baud, r_bool stop2, uint8_t ua
 	assert(uart_id<sizeof(sim_uart_fd)/sizeof(sim_uart_fd[0]));
 	sim_uart_fd[uart_id] = open("sim_uart", O_RDONLY);
 	fprintf(stderr, "open returns %d\n", sim_uart_fd[uart_id]);
-	schedule_us(1000, _sim_uart_recv, handler);
+	schedule_us(1000, sim_uart_recv, handler);
 }
 
 void hal_uart_start_send(UartHandler* handler)

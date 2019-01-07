@@ -30,15 +30,15 @@
 extern char *BSS_END_SYM;
 #define BSS_CANARY_MAGIC 0xca
 
-void _bss_canary_update(void *data)
+static void bss_canary_update(void *data)
 {
 	assert(*BSS_END_SYM == BSS_CANARY_MAGIC);
-	schedule_us(250000, _bss_canary_update, NULL);
+	schedule_us(250000, bss_canary_update, NULL);
 }
 
 void bss_canary_init()
 {
 	*BSS_END_SYM = BSS_CANARY_MAGIC;
 
-	schedule_us(250000, _bss_canary_update, NULL);
+	schedule_us(250000, bss_canary_update, NULL);
 }

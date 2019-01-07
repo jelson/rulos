@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _disco_h
-#define _disco_h
+#pragma once
 
 #include "periph/audio/audio_client.h"
 #include "periph/rocket/rocket.h"
@@ -34,5 +33,3 @@ typedef struct s_disco {
 } Disco;
 
 void disco_init(Disco *disco, AudioClient *audioClient, ScreenBlanker *screenblanker, IdleAct *idle);
-
-#endif // _disco_h
