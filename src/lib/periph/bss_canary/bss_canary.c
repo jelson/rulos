@@ -20,8 +20,10 @@
 // The linker automatically creates symbols that indicate the end of BSS.
 // Unfortunately, they're named differently on different platforms.
 #if defined(RULOS_AVR)
-#define BSS_END_SYM __bss_end
-#elif defined(SIM) || defined(RULOS_ARM)
+#define BSS_END_SYM _end
+#elif defined(RULOS_ARM)
+#define BSS_END_SYM __end__
+#elif defined(SIM)
 #define BSS_END_SYM _end
 #else
 #error "What's your bss-end auto symbol on this platform?"

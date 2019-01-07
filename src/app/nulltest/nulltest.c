@@ -15,6 +15,7 @@
  ************************************************************************/
 
 #include "core/rulos.h"
+#include "periph/bss_canary/bss_canary.h"
 #include "hardware.h"
 
 #define FREQ_USEC 50000
@@ -37,6 +38,8 @@ int main()
 {
 	hal_init();
 
+	bss_canary_init();
+	
 	gpio_make_output(TEST_PIN);
 	while (1) {
 		gpio_set(TEST_PIN);
