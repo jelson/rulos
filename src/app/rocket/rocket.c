@@ -171,6 +171,9 @@ static Rocket0 rocket0;	// allocate obj in .bss so it's easy to count
 int main()
 {
 	hal_init();
+
+	// Only init the rocketpanel module in the ROCKET0 configuration, not
+	// the TWI-output-only NETROCKET configuration.
 #ifdef BOARDCONFIG_ROCKET0
 	hal_init_rocketpanel();
 #endif

@@ -12,7 +12,7 @@ void bss_canary_init()
 
 void _bss_canary_update(void *data);
 
-uint8_t bss_end[0];
+uint8_t bss_end[1];
 
 void bss_canary_init()
 {
