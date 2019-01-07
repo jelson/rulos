@@ -21,7 +21,7 @@
 // Unfortunately, they're named differently on different platforms.
 #if defined(RULOS_AVR)
 #define BSS_END_SYM __bss_end
-#elif defined(SIM)
+#elif defined(SIM) || defined(RULOS_ARM)
 #define BSS_END_SYM _end
 #else
 #error "What's your bss-end auto symbol on this platform?"

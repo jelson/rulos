@@ -88,7 +88,7 @@ void cmdproc_update(CmdProc *cp)
 	}
 	else if (strcmp(buf, "fetch\n")==0)
 	{
-		_aserv_fetch_start(cp->audio_server);
+		aserv_fetch_start(cp->audio_server);
 	}
 	else if (strncmp(buf, "play ", 5)==0)
 	{
@@ -97,7 +97,7 @@ void cmdproc_update(CmdProc *cp)
 		SoundToken loop = (SoundToken) (buf[6]-'b');
 		syncdebug(0, 's', skip);
 		syncdebug(0, 'l', loop);
-		_aserv_dbg_play(cp->audio_server, skip, loop);
+		aserv_dbg_play(cp->audio_server, skip, loop);
 	}
 	else if (strncmp(buf, "vol ", 4)==0)
 	{
