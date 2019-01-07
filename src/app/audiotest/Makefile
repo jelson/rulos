@@ -15,7 +15,7 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr sim
-PERIPHERALS := rocket audio sdcard spi
+PERIPHERALS := audio sdcard spi
 MCU := atmega328p
 BOARD := GENERIC
 TARGET := audiotest

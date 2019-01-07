@@ -124,24 +124,9 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t 
 }
 
 
-
-// Only define these functions for boards that have a joystick.
-// The EPB Dongle, notably, does not.
-#if defined(JOYSTICK_TRIGGER)
-void hal_init_joystick_button()
-{
-	gpio_make_input_enable_pullup(JOYSTICK_TRIGGER);
-}
-
-r_bool hal_read_joystick_button()
-{
-	return gpio_is_clr(JOYSTICK_TRIGGER);
-}
-#endif  // JOYSTICK_TRIGGER
-
 /*************************************************************************************/
 
-void hal_init_rocketpanel(BoardConfiguration bc)
+void hal_init_rocketpanel()
 {
 	// Init pins used by rocketpanel bus
 	gpio_make_output(BOARDSEL0);
@@ -158,30 +143,21 @@ void hal_init_rocketpanel(BoardConfiguration bc)
 
 	// This code is static per binary; could save some code space
 	// by using #ifdefs instead of dynamic code.
-	int i;
-	for (i=0; i<NUM_BOARDS; i++)
+	for (int i=0; i<NUM_BOARDS; i++)
 	{
 		displayConfiguration[i] = BRT_SOLDERED_UP_BOARD_UP;
 	}
-	switch (bc)
-	{
-		case bc_rocket0:
-			displayConfiguration[0] = BRT_WALLCLOCK;
-			displayConfiguration[3] = BRT_SOLDERED_DN_BOARD_DN;
-			displayConfiguration[4] = BRT_SOLDERED_DN_BOARD_DN;
-			break;
-		case bc_rocket1:
-			displayConfiguration[2] = BRT_SOLDERED_DN_BOARD_DN;
-			break;
-		case bc_wallclock:
-			displayConfiguration[0] = BRT_WALLCLOCK;
-			break;
-		case bc_chaseclock:
-			displayConfiguration[0] = BRT_CHASECLOCK;
-			break;
-		case bc_default:
-			break;
-	}
+
+#if defined(BOARDCONFIG_ROCKET0)
+	displayConfiguration[3] = BRT_SOLDERED_DN_BOARD_DN;
+	displayConfiguration[4] = BRT_SOLDERED_DN_BOARD_DN;
+#elif defined(BOARDCONFIG_ROCKET1)	
+	displayConfiguration[2] = BRT_SOLDERED_DN_BOARD_DN;
+#elif defined(BOARDCONFIG_WALLCLOCK)	
+	displayConfiguration[0] = BRT_WALLCLOCK;
+#elif defined(BOARDCONFIG_CHASECLOCK)
+	displayConfiguration[0] = BRT_CHASECLOCK;
+#endif
 }
 
 

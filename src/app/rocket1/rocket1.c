@@ -58,7 +58,7 @@ int main()
 {
 
 	hal_init();
-	hal_init_rocketpanel(bc_rocket1);
+	hal_init_rocketpanel();
 	init_clock(10000, TIMER1);
 
 	CpumonAct cpumon;
@@ -121,7 +121,7 @@ int main()
 #endif
 
 	ScreenBlankerListener sbl;
-	init_screenblanker_listener(&sbl, &network, bc_rocket1);
+	init_screenblanker_listener(&sbl, &network);
 
 /*
 	DAER daer;

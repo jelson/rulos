@@ -54,8 +54,6 @@
 
 #ifdef SIM
 
-#define NUM_BOARDS 4
-#define NUM_AUX_BOARDS 4
 
 #else // SIM
 
@@ -167,13 +165,7 @@
 #define KEYPAD_COL2 GPIO_B2
 #define KEYPAD_COL3 GPIO_B3
 
-#define NUM_BOARDS 8
-#define NUM_AUX_BOARDS 0
-
 #elif defined(BOARD_LPEM2)
-
-#define NUM_BOARDS 0
-#define NUM_AUX_BOARDS 12
 
 #define JOYSTICK_TRIGGER        GPIO_D4
 
@@ -200,8 +192,6 @@
 
 #elif defined(BOARD_DONGLE_REVA)
 
-#define NUM_BOARDS 8
-
 #define BOARDSEL0       GPIO_C3
 #define BOARDSEL1       GPIO_D1
 #define BOARDSEL2       GPIO_D3
@@ -215,8 +205,6 @@
 #define STROBE          GPIO_C2
 
 #elif defined(BOARD_DONGLE_REVB)
-
-#define NUM_BOARDS 8
 
 #define BOARDSEL0       GPIO_C3
 #define BOARDSEL1       GPIO_B2

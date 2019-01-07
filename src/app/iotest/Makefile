@@ -17,7 +17,7 @@ all: avr-all
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr
-PERIPHERALS := uart 7seg_panel keypad rocket input_controller hpam audio sdcard spi joystick rasters display_rtc
+PERIPHERALS := uart keypad 
 MCU := atmega1284p
 TARGET := iotest
 BOARD := LPEM

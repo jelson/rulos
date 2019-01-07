@@ -16,18 +16,11 @@
 
 #pragma once
 
+#include "periph/7seg_panel/board_config.h"
 #include "periph/7seg_panel/board_buffer.h"
 #include "periph/7seg_panel/cursor.h"
 #include "periph/7seg_panel/display_controller.h"
 #include "periph/7seg_panel/region.h"
 #include "periph/7seg_panel/remote_bbuf.h"
 
-typedef enum {
-	bc_rocket0,
-	bc_rocket1,
-	bc_wallclock,
-	bc_chaseclock,
-	bc_default,
-} BoardConfiguration;
-
-void hal_init_rocketpanel(BoardConfiguration bc);
+void hal_init_rocketpanel();

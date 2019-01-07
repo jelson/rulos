@@ -15,7 +15,8 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr sim
-PERIPHERALS := 7seg_panel
+PERIPHERALS := 7seg_panel 7seg_panel_hardware
+ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_DEFAULT
 MCU := atmega328p
 BOARD := PCB11
 TARGET := segtest

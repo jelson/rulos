@@ -46,7 +46,7 @@ CURR_OBJDIR := $(AVR_OBJDIR)
 AVR_COMMON_FLAGS = -Wall -Werror -mmcu=$(MCU) -DRULOS_AVR
 
 ## Compile options common for all C compilation units.
-AVR_CFLAGS = $(AVR_COMMON_FLAGS)
+AVR_CFLAGS = $(ALL_PLATFORM_CFLAGS) $(AVR_COMMON_FLAGS)
 AVR_CFLAGS += -g -Wall -Werror -I$(AVR_OBJDIR) $(AVR_INCLUDES)
 AVR_CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 AVR_CFLAGS += -fdata-sections -ffunction-sections # Put all funcs/data in their own sections

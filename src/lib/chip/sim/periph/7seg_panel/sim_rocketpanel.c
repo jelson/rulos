@@ -31,13 +31,13 @@
 
 #include "chip/sim/core/sim.h"
 #include "core/util.h"
+#include "periph/7seg_panel/board_config.h"
 #include "periph/7seg_panel/display_controller.h"
 #include "periph/ring_buffer/rocket_ring_buffer.h"
 #include "periph/rocket/rocket.h"
 #include "periph/uart/uart.h"
 
 r_bool g_joystick_trigger_state;
-UartHandler *g_sim_uart_handler = NULL;
 
 
 /*
@@ -305,10 +305,9 @@ uint16_t hal_read_adc(uint8_t idx)
 	return adc[idx];
 }
 
+/********** uart input simulator ***************/
 
-/********************** uart simulator *********************/
-
-
+extern UartHandler *g_sim_uart_handler;
 static WINDOW *uart_input_window = NULL;
 char recent_uart_buf[20];
 
@@ -369,26 +368,6 @@ static void uart_simulator_start()
 	box(uart_input_window, ACS_VLINE, ACS_HLINE);
 	draw_uart_input_window();
 }
-
-void hal_uart_start_send(UartHandler *handler)
-{
-	char buf[256];
-	int i = 0;
-
-	while ((g_sim_uart_handler->send)(g_sim_uart_handler, &buf[i]))
-		i++;
-
-	buf[i+1] = '\0';
-
-	LOG("Sent to uart: '%s'\n", buf);
-}
-
-void hal_uart_init(UartHandler *s, uint32_t baud, r_bool stop2, uint8_t uart_id)
-{
-	g_sim_uart_handler = s;
-}
-
-
 
 /************ keypad simulator *********************/
 
@@ -517,28 +496,23 @@ static void sim_curses_poll(void *data)
 
 
 
-void hal_init_rocketpanel(BoardConfiguration bc)
+void hal_init_rocketpanel()
 {
 	hal_init();
 
-	switch (bc) {
-		case bc_rocket0:
-			sim_configure_tree(tree0);
-			break;
-		case bc_rocket1:
-			sim_configure_tree(tree1);
-			break;
-		case bc_wallclock:
-			sim_configure_tree(wallclock_tree);
-			break;
-		case bc_chaseclock:
-			sim_configure_tree(chaseclock_tree);
-			break;
-		case bc_default:
-		default:
-			sim_configure_tree(default_tree);
-			break;
-	}
+#if defined (BOARDCONFIG_ROCKET0)
+	sim_configure_tree(tree0);
+#elif defined (BOARDCONFIG_ROCKET1)
+	sim_configure_tree(tree1);
+#elif defined (BOARDCONFIG_WALLCLOCK)
+	sim_configure_tree(wallclock_tree);
+#elif defined (BOARDCONFIG_CHASECLOCK)
+	sim_configure_tree(chaseclock_tree);
+#elif defined (BOARDCONFIG_DEFAULT) || defined(BOARDCONFIG_NETROCKET)
+	sim_configure_tree(default_tree);
+#else
+# error "Board config not defined for rocketpanel"
+#endif
 
 	/* init input buffers */
 	CharQueue_init((CharQueue *) keypad_buf, sizeof(keypad_buf));
@@ -571,345 +545,6 @@ void hal_init_rocketpanel(BoardConfiguration bc)
 	}
 
 	sim_register_clock_handler(sim_curses_poll, NULL);
-}
-
-
-/***************** audio ********************/
-
-
-#define AUDIO_BUF_SIZE 30
-typedef struct s_SimAudioState {
-	int audiofd;
-	int flowfd;
-	RingBuffer *ring;
-	uint8_t _storage[sizeof(RingBuffer)+1+AUDIO_BUF_SIZE];
-	int write_avail;
-} SimAudioState;
-SimAudioState alloc_simAudioState, *simAudioState = NULL;
-
-static void sim_audio_poll(void *data);
-
-void setnonblock(int fd)
-{
-	int flags, rc;
-	flags = fcntl(fd, F_GETFL);
-	rc = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-	assert(rc==0);
-}
-
-void start_audio_fork_shuttling_child(SimAudioState *sas);
-void audio_shuttling_child(int audiofd, int flowfd);
-
-void hal_audio_init()
-{
-	assert(simAudioState == NULL);	// duplicate initialization
-	simAudioState = &alloc_simAudioState;
-	simAudioState->ring = (RingBuffer*) simAudioState->_storage;
-	init_ring_buffer(simAudioState->ring, sizeof(simAudioState->_storage));
-	simAudioState->write_avail = 0;
-
-	start_audio_fork_shuttling_child(simAudioState);
-
-	sim_register_clock_handler(sim_audio_poll, NULL);
-	sim_register_sigio_handler(sim_audio_poll, NULL);
-}
-
-void start_audio_fork_shuttling_child(SimAudioState *sas)
-{
-	// Now, you'd think that you could just open /dev/dsp with O_NONBLOCK
-	// and just write to it as it accepts bytes, right? You'd think that,
-	// but then you'd be wrong, see, because it just doesn't work right;
-	// it produces blips and pops that sound like gaps in the stream.
-	// I tried all sorts of variations, from select(timeout=NULL), to
-	// select(timeout=.5ms), to busy-waiting, but you just can't seem to
-	// get the bytes in fast enough with O_NONBLOCK to keep the driver
-	// full. Perhaps the audio driver has a broken implementation of
-	// nonblocking-mode file descriptors? I do not know; all I know is
-	// that the "obvious thing" sure isn't working.
-	//
-	// So my apalling (apollo-ing?) workaround: fork a child process
-	// to read from a pipe and patiently feed the bytes into a nonblocking
-	// fd to /dev/dsp. Yes. It works.
-	//
-	// Of course, pipes have something like 32k of buffer, which introduces
-	// an unacceptably-long 4 sec latency in the audio stream, on top of the
-	// already-too-long-but-non-negotiable .25-sec latency due to the 1k
-	// buffer in /dev/dsp.
-	//
-	// So my even-more-apalling (gemini-ing?) workaroundaround: have the
-	// child process signal flow control by sending bytes on an *upstream*
-	// pipe; each upstream byte means there's room for another downstream
-	// byte. Sheesh.
-
-	int rc;
-	int audiofds[2];
-	rc = pipe(audiofds);
-	assert(rc==0);
-	int flowfds[2];
-	rc = pipe(flowfds);
-	assert(rc==0);
-
-	int pid = fork();
-	assert(pid>=0);
-
-	if (pid==0)
-	{
-		// child
-		audio_shuttling_child(audiofds[0], flowfds[1]);
-		assert(FALSE); // should not return
-	}
-
-	simAudioState->audiofd = audiofds[1];
-	setnonblock(simAudioState->audiofd);
-	simAudioState->flowfd = flowfds[0];
-	setnonblock(simAudioState->flowfd);
-}
-
-int open_audio_device() {
-#if 0
-	int devdspfd = open("/dev/dsp", O_WRONLY, 0);
-	return devdspfd;
-#else
-	int pipes[2];
-	int rc = pipe(pipes);
-	assert(rc==0);
-	pid_t pid = fork();
-	if (pid == 0) {
-		// child
-		close(0);
-		close(1);
-		close(2);
-		close(pipes[1]);
-		dup2(pipes[0], 0);
-		rc = system("aplay");
-		assert(false);
-	} else {
-		// parent
-		close(pipes[0]);
-		return pipes[1];
-	}
-	assert(false);
-	return -1;
-#endif
-}
-
-void audio_shuttling_child(int audiofd, int flowfd)
-{
-	char flowbuf = 0;
-	char audiobuf[6];
-	int rc;
-
-	int devdspfd = open_audio_device();
-	assert(devdspfd >= 0);
-	int debugfd = open("devdsp", O_CREAT|O_WRONLY, S_IRWXU);
-	assert(debugfd >= 0);
-
-	// give buffer a little depth.
-	// Smaller is better (less latency);
-	// but you need a minimum amount. In audioboard, we run the
-	// system clock at 1kHz (1ms). The audio subsystem is polled off
-	// the system clock, so we need to be able to fill at least 8 samples
-	// every poll to keep up with the buffer's drain rate.
-	// Experimentation shows that 10 is the minimum value that avoids
-	// clicks and pops.
-	int i;
-	for (i=0; i<12; i++)
-	{
-		rc = write(flowfd, &flowbuf, 1);
-		assert(rc==1);
-	}
-	
-	while (1)
-	{
-		// loop doing blocking reads and, more importantly,
-		// writes, which seem to stitch acceptably on /dev/dsp
-		rc = read(audiofd, audiobuf, 1);
-		assert(rc==1);
-		rc = write(devdspfd, audiobuf, 1);
-		assert(rc==1);
-		rc = write(debugfd, audiobuf, 1);
-		assert(rc==1);
-
-		// release a byte of flow control
-		rc = write(flowfd, &flowbuf, 1);
-		assert(rc==1);
-	}
-}
-
-void debug_audio_rate()
-{
-	static int counter=0;
-	static struct timeval start_time;
-	if (counter==0)
-	{
-		gettimeofday(&start_time, NULL);
-	}
-	counter += 1;
-	if (counter==900)
-	{
-		struct timeval end_time;
-		gettimeofday(&end_time, NULL);
-		suseconds_t tv_usec = end_time.tv_usec - start_time.tv_usec;
-		time_t tv_sec = end_time.tv_sec - start_time.tv_sec;
-		tv_usec += tv_sec*1000000;
-		float rate = 900.0/tv_usec*1000000.0;
-		LOG("output rate %f samples/sec\n", rate);
-		counter = 0;
-	}
-}
-
-static void sim_audio_poll(void *data)
-{
-	int rc;
-
-	if (simAudioState==NULL) { return; }
-
-	// check for flow control signal
-	char flowbuf[10];
-	rc = read(simAudioState->flowfd, flowbuf, sizeof(flowbuf));
-	if (rc>=0)
-	{
-		simAudioState->write_avail += rc;
-	}
-
-	while (simAudioState->write_avail > 0
-		&& ring_remove_avail(simAudioState->ring) > 0)
-	{
-		uint8_t sample = ring_remove(simAudioState->ring);
-		//LOG("sim_audio_poll removes sample %2x\n", sample);
-		int wrote = write(simAudioState->audiofd, &sample, 1);
-		assert(wrote==1);
-
-		simAudioState->write_avail -= 1;
-
-		debug_audio_rate();
-	}
-}
-
-void hal_audio_fire_latch(void)
-{
-}
-
-void hal_audio_shift_sample(uint8_t sample)
-{
-}
-
-
-/**************** spi *********************/
-
-typedef enum {
-	sss_ready,
-	sss_read_addr,
-	sss_read_fetch,
-} SimSpiState;
-
-typedef struct s_sim_spi {
-	r_bool initted;
-	HALSPIHandler *spi_handler;
-	FILE *fp;
-	SimSpiState state;
-	int addr_off;
-	uint8_t addr[3];
-	int16_t result;
-	uint8_t recursions;
-} SimSpi;
-SimSpi g_spi = { FALSE };
-
-static void sim_spi_poll(void *data);
-
-void hal_init_spi()
-{
-	g_spi.spi_handler = NULL;
-	g_spi.fp = fopen("obj.sim/spiflash.bin", "r");
-	assert(g_spi.fp != NULL);
-	g_spi.initted = TRUE;
-	sim_register_clock_handler(sim_spi_poll, NULL);
-}
-
-void hal_spi_set_fast(r_bool fast)
-{
-}
-
-void hal_spi_select_slave(r_bool select)
-{
-	if (select)
-	{
-		g_spi.state = sss_ready;
-	}
-}
-
-void hal_spi_set_handler(HALSPIHandler *handler)
-{
-	g_spi.spi_handler = handler;
-}
-
-void hal_spi_send(uint8_t byte)
-{
-	g_spi.recursions += 1;
-
-	uint8_t result = 0;
-	switch (g_spi.state)
-	{
-		case sss_ready:
-			LOG("sim:spi cmd %x\n", byte);
-			if (byte==SPIFLASH_CMD_READ_DATA)
-			{
-				g_spi.state = sss_read_addr;
-				g_spi.addr_off = 0;
-			}
-			else
-			{
-				assert(FALSE); // "unsupported SPI command"
-			}
-			break;
-		case sss_read_addr:
-			//LOG("sim:spi addr[%d] == %x\n", g_spi.addr_off, byte);
-			g_spi.addr[g_spi.addr_off++] = byte;
-			if (g_spi.addr_off == 3)
-			{
-				int addr =
-					  (((int)g_spi.addr[0])<<16)
-					| (((int)g_spi.addr[1])<<8)
-					| (((int)g_spi.addr[2])<<0);
-				LOG("sim:spi addr == %x\n", addr);
-				fseek(g_spi.fp, addr, SEEK_SET);
-				g_spi.state = sss_read_fetch;
-			}
-			break;
-		case sss_read_fetch:
-			result = fgetc(g_spi.fp);
-			//LOG("sim:spi read fetch == %x\n", result);
-			break;	
-	}
-
-	// deliver on stack. This may be a little infinite-recursion-y
-	if (g_spi.recursions > 10)
-	{
-		g_spi.result = result;
-	}
-	else
-	{
-		g_spi.spi_handler->func(g_spi.spi_handler, result);
-	}
-	g_spi.recursions -= 1;
-}
-
-static void sim_spi_poll(void *data)
-{
-	if (!g_spi.initted) { return; }
-
-	//LOG("sim_spi_poke delivering deferred result\n");
-	if (g_spi.result >= 0)
-	{
-		uint8_t result = g_spi.result;
-		g_spi.result = -1;
-		g_spi.spi_handler->func(g_spi.spi_handler, result);
-	}
-}
-
-void hal_spi_close()
-{
-	g_spi.state = sss_ready;
 }
 
 

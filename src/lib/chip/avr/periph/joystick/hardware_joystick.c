@@ -14,30 +14,26 @@
  *
  ************************************************************************/
 
+/*
+ * hardware.c: These functions are only needed for physical display hardware.
+ *
+ * This file is not compiled by the simulator.
+ */
 
-#include "core/rulos.h"
-
-#define AUDIO_LED_RED		GPIO_D2
-#define AUDIO_LED_YELLOW	GPIO_D3
-
-#ifndef SIM
+#include "core/board_defs.h"
+#include "core/hal.h"
 #include "hardware.h"
-#endif // SIM
 
 
-void audioled_init()
+//////////////////////////////////////////////////////////////////////////////
+
+void hal_init_joystick_button()
 {
-#ifndef SIM
-	gpio_make_output(AUDIO_LED_RED);
-	gpio_make_output(AUDIO_LED_YELLOW);
-#endif // SIM
+	gpio_make_input_enable_pullup(JOYSTICK_TRIGGER);
 }
 
-void audioled_set(r_bool red, r_bool yellow)
+r_bool hal_read_joystick_button()
 {
-#ifndef SIM
-	gpio_set_or_clr(AUDIO_LED_RED, !red);
-	gpio_set_or_clr(AUDIO_LED_YELLOW, !yellow);
-#endif // SIM
+	return gpio_is_clr(JOYSTICK_TRIGGER);
 }
 

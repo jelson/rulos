@@ -153,7 +153,7 @@ void update_time_vals(ChaseClockActivation_t *cc)
 int main()
 {
 	hal_init();
-	hal_init_rocketpanel(bc_chaseclock);
+	hal_init_rocketpanel();
 	board_buffer_module_init();
 
 	// start clock with 10 msec resolution

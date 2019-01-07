@@ -15,7 +15,8 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr sim
-PERIPHERALS := twi 7seg_panel
+PERIPHERALS := twi 7seg_panel 7seg_panel_hardware
+ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_ROCKET0
 MCU := atmega328p
 BOARD := DONGLE_REVB
 

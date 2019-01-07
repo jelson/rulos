@@ -94,7 +94,7 @@ int main()
 	init_clock(10000, TIMER1);
 	hal_init_keypad();	// requires clock to be initted.
 	board_buffer_module_init();
-	hal_init_rocketpanel(bc_chaseclock);
+	hal_init_rocketpanel();
 
 
 	KeyTestActivation_t kta;

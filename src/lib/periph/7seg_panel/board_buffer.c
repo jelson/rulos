@@ -98,7 +98,9 @@ void board_buffer_pop(BoardBuffer *buf)
 		if (buf->next == NULL)
 		{
 			// will the last buffer to leave, please turn out the lights?
+#if NUM_BOARDS > 0
 			program_row(buf->board_index, 0);
+#endif
 			foreground[buf->board_index] = NULL;
 		}
 		else
@@ -169,11 +171,14 @@ void board_buffer_draw(BoardBuffer *buf)
 #endif // BBDEBUG && SIM
 
 	// draw locally, if we can.
+#if NUM_BOARDS > 0
 	if (0<=board_index && board_index<NUM_BOARDS)
 	{
 		board_buffer_paint(buf->buffer, board_index, buf->mask);
 	}
-	else if (g_remote_bbuf_send!=NULL
+#endif
+#if NUM_AUX_BOARDS > 0
+	if (g_remote_bbuf_send!=NULL
 		&& NUM_BOARDS<=board_index && board_index<NUM_PSEUDO_BOARDS)
 	{
 		// jonh hard-codes remote send ability, rather than getting all
@@ -181,6 +186,7 @@ void board_buffer_draw(BoardBuffer *buf)
 		// really wants a dynamic memory allocator.
 		send_remote_bbuf(g_remote_bbuf_send, buf->buffer, board_index-NUM_BOARDS, buf->mask);
 	}
+#endif
 }
 
 void board_buffer_paint(SSBitmap *bm, uint8_t board_index, uint8_t mask)
@@ -191,7 +197,6 @@ void board_buffer_paint(SSBitmap *bm, uint8_t board_index, uint8_t mask)
 		if (mask & 0x80)
 		{
 			SSBitmap tmp = bm[idx];
-			// 
 			program_cell(board_index, idx, tmp);
 		}
 	}

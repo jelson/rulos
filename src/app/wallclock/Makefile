@@ -15,7 +15,8 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr sim #arm
-PERIPHERALS = 7seg_panel uart
+PERIPHERALS = 7seg_panel 7seg_panel_hardware uart
+ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_WALLCLOCK
 MCU := atmega8
 TARGET := wallclock
 BOARD := PCB11

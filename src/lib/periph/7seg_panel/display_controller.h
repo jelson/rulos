@@ -18,10 +18,10 @@
 
 #include <inttypes.h>
 
-#include "core/board_defs.h"
+#include "periph/7seg_panel/board_config.h"
 
 #ifndef NUM_BOARDS
-#error Display requested but NUM_BOARDS not defined.
+#error "Display requested but NUM_BOARDS not defined by your app makefile."
 #include <stophere>
 #endif
 

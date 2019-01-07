@@ -19,6 +19,8 @@
 #include "periph/7seg_panel/7seg_panel.h"
 #include "periph/7seg_panel/remote_bbuf.h"
 
+#define DONGLE_BOARD_ID 0
+
 static void recv_func(RecvSlot *recvSlot, uint8_t payload_size)
 {
 	rbr_recv(recvSlot, payload_size);
@@ -27,7 +29,7 @@ static void recv_func(RecvSlot *recvSlot, uint8_t payload_size)
 int main()
 {
 	hal_init();
-	hal_init_rocketpanel(bc_default);
+	hal_init_rocketpanel();
 	
 	char data[sizeof(Message) + sizeof(BBufMessage)];
 
@@ -43,7 +45,7 @@ int main()
 	recvSlot.msg_occupied = FALSE;
 
 	Network net;
-	init_twi_network(&net, 100, DONGLE0_ADDR);
+	init_twi_network(&net, 100, DONGLE_BASE_ADDR + DONGLE_BOARD_ID);
 	net_bind_receiver(&net, &recvSlot);
 
 	CpumonAct cpumon;

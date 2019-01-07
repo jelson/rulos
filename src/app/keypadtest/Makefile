@@ -15,10 +15,13 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr
-PERIPHERALS := uart 7seg_panel keypad
+PERIPHERALS := uart 7seg_panel 7seg_panel_hardware keypad
 MCU := atmega1284p
 TARGET := keypadtest
 BOARD := LPEM
+
+# Configuration for 7seg_panel
+ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_DEFAULT
 
 TARGET_OBJECTS := \
 	keypadtest.o

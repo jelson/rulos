@@ -29,7 +29,7 @@
 int main()
 {
 	hal_init();
-	hal_init_rocketpanel(bc_default);
+	hal_init_rocketpanel();
 #if 0
 	int seg=0, dig=0;
 	seg=0;

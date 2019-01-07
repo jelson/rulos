@@ -90,7 +90,7 @@ typedef struct {
 
 #if defined(BOARD_PCB10)
 #define THRUSTER_Y_CHAN	4
-#elif defined(BOARD_PCB11) || defined(BOARD_LPEM)
+#elif defined(BOARD_PCB11) || defined(BOARD_LPEM) || defined(BOARD_LPEM2)
 #define THRUSTER_Y_CHAN	2
 #elif SIM
 #define THRUSTER_Y_CHAN	2
@@ -100,7 +100,7 @@ typedef struct {
 
 #define POTSTICKER_CHANNEL 0
 #define VOLUME_POT_CHANNEL 1
-#define USE_LOCAL_KEYPAD 1
+#define USE_LOCAL_KEYPAD 0
 
 void init_rocket0(Rocket0 *r0)
 {
@@ -117,7 +117,7 @@ void init_rocket0(Rocket0 *r0)
 	//r0->thrusterUpdate[2].func = idle_thruster_listener_func;
 	//r0->thrusterUpdate[2].data = &r0->idle;
 
-	init_screenblanker(&r0->screenblanker, bc_rocket0, &r0->hpam, &r0->idle);
+	init_screenblanker(&r0->screenblanker, &r0->hpam, &r0->idle);
 	init_screenblanker_sender(&r0->screenblanker_sender, &r0->network);
 	r0->screenblanker.screenblanker_sender = &r0->screenblanker_sender;
 
@@ -138,7 +138,7 @@ void init_rocket0(Rocket0 *r0)
 	r0->cp.ccl.launch.lunar_distance = &r0->ld;
 
 	// Local input poller
-#ifdef USE_LOCAL_KEYPAD
+#if USE_LOCAL_KEYPAD==1
 	input_poller_init(&r0->ip, (InputInjectorIfc*) &r0->cp.direct_injector);
 #endif
 
@@ -171,7 +171,9 @@ static Rocket0 rocket0;	// allocate obj in .bss so it's easy to count
 int main()
 {
 	hal_init();
-	hal_init_rocketpanel(bc_rocket0);
+#ifdef BOARDCONFIG_ROCKET0
+	hal_init_rocketpanel();
+#endif
 	init_clock(10000, TIMER1);
 
 	CpumonAct cpumon;

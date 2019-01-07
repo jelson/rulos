@@ -15,10 +15,11 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr
-PERIPHERALS := 7seg_panel joystick adc hpam
+PERIPHERALS := 7seg_panel 7seg_panel_hardware joystick adc hpam
 MCU := atmega328p
 BOARD := PCB11
 TARGET := hpamtest
+ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_DEFAULT
 
 TARGET_OBJECTS := \
 	hpamtest.o

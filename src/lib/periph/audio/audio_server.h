@@ -14,14 +14,12 @@
  *
  ************************************************************************/
 
-#ifndef _audio_server_h
-#define _audio_server_h
+#pragma once
 
 #include "core/network.h"
 #include "core/network_ports.h"
 #include "periph/audio/audio_request_message.h"
 #include "periph/audio/audio_streamer.h"
-#include "periph/rocket/rocket.h"
 #include "periph/rocket/sound.h"
 
 typedef struct {
@@ -61,5 +59,3 @@ void init_audio_server(AudioServer *as, Network *network, uint8_t timer_id);
 // visibility for debugging
 void _aserv_fetch_start(AudioServer *as);
 void _aserv_dbg_play(AudioServer *aserv, SoundToken skip, SoundToken loop);
-
-#endif // _audio_server_h

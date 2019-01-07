@@ -121,7 +121,7 @@ void test_netstack()
 int main()
 {
 	hal_init();
-	hal_init_rocketpanel(bc_default);
+	hal_init_rocketpanel();
 #if HAVE_AUDIOBOARD_UART
 	serial_init();
 #endif

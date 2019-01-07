@@ -14,11 +14,10 @@
  *
  ************************************************************************/
 
-#ifndef _audio_driver_h
-#define _audio_driver_h
+#pragma once
 
+#include "core/rulos.h"
 #include "periph/ring_buffer/rocket_ring_buffer.h"
-#include "periph/rocket/rocket.h"
 #include "periph/rocket/sound.h"
 //#include "graveyard/spiflash.h"
 
@@ -72,5 +71,3 @@ void ad_skip_to_clip(
 
 void ad_queue_loop_clip(AudioDriver *ad, uint8_t stream_idx, SoundToken loop_token);
 	// After current token finishes, start looping loop_token
-
-#endif // _audio_driver_h

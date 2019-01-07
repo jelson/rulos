@@ -16,13 +16,25 @@
 
 #pragma once
 
-#include "periph/audio/audio_client.h"
-
-typedef struct {
-	struct s_audio_client *audio_client;
-	uint8_t mlvolume;
-} AmbientNoise;
-
-void ambient_noise_init(AmbientNoise *an, struct s_audio_client *audio_client);
-void ambient_noise_boost_complete(AmbientNoise *an);
-
+#if defined (BOARDCONFIG_ROCKET0)
+# define NUM_BOARDS     8
+# define NUM_AUX_BOARDS 0
+#elif defined (BOARDCONFIG_NETROCKET)
+# define NUM_BOARDS     0
+# define NUM_AUX_BOARDS 8
+#elif defined (BOARDCONFIG_ROCKET1)
+# define NUM_BOARDS     4
+# define NUM_AUX_BOARDS 0
+#elif defined (BOARDCONFIG_WALLCLOCK)
+# define NUM_BOARDS     1
+# define NUM_AUX_BOARDS 0
+#elif defined (BOARDCONFIG_CHASECLOCK)
+# define NUM_BOARDS     1
+# define NUM_AUX_BOARDS 0
+#elif defined (BOARDCONFIG_DEFAULT)
+# define NUM_BOARDS     8
+# define NUM_AUX_BOARDS 0
+#else
+# error "Your app Makefile must define one of the BOARDCONFIG_xxx constants."
+# include <stop>
+#endif

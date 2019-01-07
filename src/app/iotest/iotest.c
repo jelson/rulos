@@ -19,9 +19,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "core/rulos.h"
 #include "core/board_defs.h"
 #include "hardware.h"
-#include "periph/rocket/rocket.h"
 #include "periph/uart/serial_console.h"
 
 typedef struct {

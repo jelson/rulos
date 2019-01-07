@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "periph/rocket/rocket.h"
+#include "core/rulos.h"
 
 #define SOUND(symbol,source_file_name,filter,label) symbol,
 

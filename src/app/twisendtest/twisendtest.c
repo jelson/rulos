@@ -131,7 +131,7 @@ int main()
 	hal_init();
 
 #ifdef STATUS_TO_LOCAL_PANEL
-	hal_init_rocketpanel(bc_default);
+	hal_init_rocketpanel();
 	board_say("  InIt  ");
 #endif
 	// test_without_netstack();

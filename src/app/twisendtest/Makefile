@@ -15,7 +15,8 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr sim
-PERIPHERALS := twi # 7seg_panel
+PERIPHERALS := twi
+ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_DEFAULT
 #MCU := atmega8
 #BOARD := GENERIC
 

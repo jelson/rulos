@@ -56,7 +56,7 @@ typedef struct s_screen_blanker {
 	struct s_screenblanker_sender *screenblanker_sender;
 } ScreenBlanker;
 
-void init_screenblanker(ScreenBlanker *screenblanker, BoardConfiguration bc, HPAM *hpam, IdleAct *idle);
+void init_screenblanker(ScreenBlanker *screenblanker, HPAM *hpam, IdleAct *idle);
 void screenblanker_setmode(ScreenBlanker *screenblanker, ScreenBlankerMode newmode);
 void screenblanker_setdisco(ScreenBlanker *screenblanker, DiscoColor disco_color);
 
@@ -73,7 +73,7 @@ typedef struct s_screenblanker_listener {
 	uint8_t message_storage[sizeof(Message)+sizeof(ScreenblankerPayload)];
 } ScreenBlankerListener;
 
-void init_screenblanker_listener(ScreenBlankerListener *sbl, Network *network, BoardConfiguration bc);
+void init_screenblanker_listener(ScreenBlankerListener *sbl, Network *network);
 
 typedef struct s_screenblanker_sender {
 	Network *network;

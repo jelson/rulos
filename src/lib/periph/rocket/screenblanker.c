@@ -44,8 +44,13 @@
 
 #include "core/board_defs.h"
 
-static uint32_t t_rocket0[] = { T_ROCKET0 };
-static uint32_t t_rocket1[] = { T_ROCKET1 };
+#if defined(BOARDCONFIG_ROCKET0) || defined(BOARDCONFIG_NETROCKET)	
+static uint32_t rocket_tree[] = { T_ROCKET0 };
+#elif defined(BOARDCONFIG_ROCKET1)
+static uint32_t rocket_tree[] = { T_ROCKET1 };
+#else
+# error "Screenblanker is confused"
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -53,12 +58,11 @@ UIEventDisposition screenblanker_handler(ScreenBlanker *screenblanker, UIEvent e
 void screenblanker_update(ScreenBlanker *sb);
 void screenblanker_update_once(ScreenBlanker *sb);
 
-void init_screenblanker(ScreenBlanker *screenblanker, BoardConfiguration bc, HPAM *hpam, IdleAct *idle)
+void init_screenblanker(ScreenBlanker *screenblanker, HPAM *hpam, IdleAct *idle)
 {
-	assert(bc==bc_rocket0 || bc==bc_rocket1);
 	screenblanker->func = (UIEventHandlerFunc) screenblanker_handler;
-	screenblanker->num_buffers = bc==bc_rocket0 ? 8 : 4;
-	screenblanker->tree = bc==bc_rocket0 ? t_rocket0 : t_rocket1;
+	screenblanker->num_buffers = NUM_BOARDS;
+	screenblanker->tree = rocket_tree;
 	screenblanker->disco_color = DISCO_RED;
 	screenblanker->hpam = hpam;
 
@@ -261,9 +265,9 @@ void screenblanker_update_once(ScreenBlanker *sb)
 
 void sbl_recv_func(RecvSlot *recvSlot, uint8_t payload_len);
 
-void init_screenblanker_listener(ScreenBlankerListener *sbl, Network *network, BoardConfiguration bc)
+void init_screenblanker_listener(ScreenBlankerListener *sbl, Network *network)
 {
-	init_screenblanker(&sbl->screenblanker, bc, NULL, NULL);
+	init_screenblanker(&sbl->screenblanker, NULL, NULL);
 	sbl->recvSlot.func = sbl_recv_func;
 	sbl->recvSlot.port = SCREENBLANKER_PORT;
 	sbl->recvSlot.payload_capacity = sizeof(ScreenblankerPayload);

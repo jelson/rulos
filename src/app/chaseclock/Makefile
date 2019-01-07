@@ -15,7 +15,8 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr
-PERIPHERALS := uart 7seg_panel
+PERIPHERALS := uart 7seg_panel 7seg_panel_hardware
+ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_CHASECLOCK
 MCU := atmega328p
 TARGET := chaseclock
 BOARD := PCB11
@@ -23,6 +24,4 @@ BOARD := PCB11
 TARGET_OBJECTS := \
 	chaseclock.o \
 
-
 include $(ROCKET_ROOT)/Makefile.common
-

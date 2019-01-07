@@ -15,18 +15,23 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr sim
-PERIPHERALS := rocket 7seg_panel twi display_rtc input_controller hpam audio adc rasters joystick sdcard spi uart
+PERIPHERALS := rocket 7seg_panel twi display_rtc hpam audio adc rasters joystick uart
 
 #MCU := atmega8
 
 #MCU := atmega328p
 #BOARD=PCB11
 
-MCU := atmega1284p
-BOARD := LPEM2
+## Uncomment this block for LPEM
+#MCU := atmega1284p
+#BOARD := LPEM
+#PERIPHERALS += 7seg_panel_hardware
+#ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_ROCKET0
 
-#MCU := atmega1284
-#BOARD := LPEM2
+## Uncomment this block for LPEM2
+MCU := atmega1284
+BOARD := LPEM2
+ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_NETROCKET
 
 TARGET := rocket
 

@@ -307,7 +307,7 @@ static void update(WallClockActivation_t *wca)
 int main()
 {
 	hal_init();
-	hal_init_rocketpanel(bc_wallclock);
+	hal_init_rocketpanel();
 	board_buffer_module_init();
 
 	// start clock with 10 msec resolution

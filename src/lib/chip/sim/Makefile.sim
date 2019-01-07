@@ -28,9 +28,7 @@ SIM_INCLUDES += -I$(SIM_LIB_ROOT)/core
 SIM_SOURCES += $(ALL_PLATFORM_SOURCES)
 SIM_INCLUDES += $(ALL_PLATFORM_INCLUDES)
 
-# The simulator forces selection of certain peripherals; include them.
-# Sorry this was done in a cut-and-paste way instead of something more general.
-SIM_EXTRA_PERIPHERALS := uart ring_buffer rocket input_controller hpam audio sdcard spi joystick rasters display_rtc 7seg_panel
+SIM_EXTRA_PERIPHERALS :=
 SIM_PERIPHERALS := $(SIM_EXTRA_PERIPHERALS) $(PERIPHERALS)
 SIM_SOURCES +=  $(foreach periph, $(SIM_PERIPHERALS), $(wildcard $(ROCKET_ROOT)/lib/periph/$(periph)/*.c))
 SIM_SOURCES +=  $(foreach periph, $(SIM_PERIPHERALS), $(wildcard $(SIM_LIB_ROOT)/periph/$(periph)/*.c))
@@ -43,6 +41,7 @@ SIM_LIB_FILE = $(SIM_OBJDIR)/lib$(SIM_LIBNAME).a
 CURR_OBJDIR := $(SIM_OBJDIR)
 -include $(foreach dir, $(sort $(dir $(SIM_SOURCES))), $(wildcard $(dir)/Makefile.extra))
 
+SIM_CFLAGS += $(ALL_PLATFORM_CFLAGS)
 SIM_CFLAGS += -Wall -Werror -g -O3 -DSIM -I$(SIM_OBJDIR) $(SIM_INCLUDES)
 #SIM_CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 SIM_CFLAGS += -MD -MP # -MT $(SIM_OBJDIR)/$(*F).o -MF $(SIM_OBJDIR)/$(@F).d

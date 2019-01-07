@@ -134,7 +134,7 @@ void ht_init(HTAct *ht)
 int main()
 {
 	hal_init();
-	hal_init_rocketpanel(bc_rocket0);
+	hal_init_rocketpanel();
 	init_clock(10000, TIMER1);
 	board_buffer_module_init();
 	CpumonAct cpumon;
