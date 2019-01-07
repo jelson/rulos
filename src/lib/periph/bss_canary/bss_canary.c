@@ -2,12 +2,6 @@
 
 #include "core/rulos.h"
 
-#if SIM
-void bss_canary_init()
-{
-}
-#else
-
 #define BSS_CANARY_MAGIC 0xca
 
 void _bss_canary_update(void *data);
@@ -26,4 +20,3 @@ void _bss_canary_update(void *data)
 	assert(bss_end[0] == BSS_CANARY_MAGIC);
 	schedule_us(250000, _bss_canary_update, NULL);
 }
-#endif
