@@ -29,7 +29,7 @@
 #error "What's your bss-end auto symbol on this platform?"
 #endif
 
-extern char BSS_END_SYM;
+extern unsigned char BSS_END_SYM;
 #define BSS_CANARY_MAGIC 0xca
 
 static void bss_canary_update(void *data)
