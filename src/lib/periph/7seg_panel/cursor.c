@@ -22,7 +22,7 @@
 
 #define BLINK2	(18)	// blink every 256ms
 
-char cursor_label_white[0];
+char cursor_label_white[1];
 void cursor_update_once(CursorAct *act);
 void cursor_update(void *data);
 
