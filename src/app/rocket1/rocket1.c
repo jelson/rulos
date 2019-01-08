@@ -24,6 +24,7 @@
 #include "core/network.h"
 #include "core/util.h"
 #include "periph/7seg_panel/7seg_panel.h"
+#include "periph/bss_canary/bss_canary.h"
 #include "periph/input_controller/focus.h"
 #include "periph/input_controller/input_controller.h"
 #include "periph/rasters/rasters.h"
@@ -57,6 +58,7 @@ int main()
 
 	hal_init();
 	hal_init_rocketpanel();
+	bss_canary_init();
 	init_clock(10000, TIMER1);
 
 	CpumonAct cpumon;

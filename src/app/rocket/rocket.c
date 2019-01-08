@@ -24,6 +24,7 @@
 #include "core/hal.h"
 #include "core/network.h"
 #include "core/util.h"
+#include "periph/7seg_panel/7seg_panel.h"
 #include "periph/7seg_panel/display_controller.h"
 #include "periph/7seg_panel/remote_bbuf.h"
 #include "periph/bss_canary/bss_canary.h"

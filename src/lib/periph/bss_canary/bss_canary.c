@@ -29,18 +29,18 @@
 #error "What's your bss-end auto symbol on this platform?"
 #endif
 
-extern char *BSS_END_SYM;
+extern char BSS_END_SYM;
 #define BSS_CANARY_MAGIC 0xca
 
 static void bss_canary_update(void *data)
 {
-	assert(*BSS_END_SYM == BSS_CANARY_MAGIC);
+	assert(BSS_END_SYM == BSS_CANARY_MAGIC);
 	schedule_us(250000, bss_canary_update, NULL);
 }
 
 void bss_canary_init()
 {
-	*BSS_END_SYM = BSS_CANARY_MAGIC;
+	BSS_END_SYM = BSS_CANARY_MAGIC;
 
 	schedule_us(250000, bss_canary_update, NULL);
 }
