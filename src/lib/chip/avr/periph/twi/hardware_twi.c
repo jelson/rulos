@@ -67,7 +67,7 @@ static void print_status(uint16_t status)
 }
 #endif
 
-static void end_xmit(TwiState *twi) {
+static void end_xmit(TwiState *const twi) {
   assert(twi->out_pkt != NULL);
   assert(twi->have_bus == TRUE);
 
@@ -86,7 +86,7 @@ static void end_xmit(TwiState *twi) {
 
 // A trampoline function for the receive upcall.  Scheduled by
 // initiateRecvCallback, above.
-static void doRecvCallback(MediaRecvSlot *mrs) {
+static void doRecvCallback(MediaRecvSlot *const mrs) {
   assert(mrs != NULL);
   assert(mrs->func != NULL);
   assert(mrs->occupied_len > 0);
@@ -100,18 +100,18 @@ static void doRecvCallback(MediaRecvSlot *mrs) {
 #endif
 }
 
-static void abortSlaveRecv(TwiState *twi) {
+static void abortSlaveRecv(TwiState *const twi) {
   twi->slaveRecvLen = -1;
   twi->slaveRecvSlot->occupied_len = 0;
 }
 
-static void mr_maybe_dont_ack(TwiState *twi) {
+static void mr_maybe_dont_ack(TwiState *const twi) {
   if (twi->masterRecvSlot &&
       twi->masterRecvLen == twi->masterRecvSlot->capacity - 1)
     twi->dont_ack = TRUE;
 }
 
-static void end_mr(TwiState *twi) {
+static void end_mr(TwiState *const twi) {
   assert(twi->masterRecvSlot != NULL);
   twi->masterRecvSlot->occupied_len = twi->masterRecvLen;
   schedule_now((ActivationFuncPtr)doRecvCallback, twi->masterRecvSlot);
@@ -119,7 +119,7 @@ static void end_mr(TwiState *twi) {
   twi->masterRecvLen = -1;
 }
 
-static void twi_set_control_register(TwiState *twi, uint8_t bits) {
+static void twi_set_control_register(TwiState *const twi, uint8_t bits) {
   bits |= _BV(TWEN) |  // enable twi
           _BV(TWIE)    // enable twi interrupts;
       ;
@@ -146,7 +146,7 @@ static void twi_set_control_register(TwiState *twi, uint8_t bits) {
   TWCR = bits;
 }
 
-static void twi_update(TwiState *twi, uint8_t status) {
+static void twi_update(TwiState *const twi, uint8_t status) {
   assert(twi->initted == TWI_MAGIC);
 
   // Mask off the prescaler bits
@@ -333,8 +333,8 @@ TwiState g_twi;
 ISR(TWI_vect) { twi_update(&g_twi, TW_STATUS); }
 
 MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
-                            MediaRecvSlot *slaveRecvSlot) {
-  TwiState *twi = &g_twi;
+                            MediaRecvSlot *const slaveRecvSlot) {
+  TwiState *const twi = &g_twi;
 
 #ifdef DEBUG_STACK_WITH_UART
   hal_uart_init(NULL, 250000, 0);
