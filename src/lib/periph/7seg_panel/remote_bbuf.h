@@ -23,6 +23,7 @@
 
 typedef struct {
 	SSBitmap buf[NUM_DIGITS];
+    uint8_t index;
 } BBufMessage;
 
 typedef struct s_remote_bbuf_send {

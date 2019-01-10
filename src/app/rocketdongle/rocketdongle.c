@@ -19,7 +19,7 @@
 #include "periph/7seg_panel/7seg_panel.h"
 #include "periph/7seg_panel/remote_bbuf.h"
 
-#define DONGLE_BOARD_ID 0
+#define DONGLE_BOARD_ID 3
 
 static void recv_func(RecvSlot *recvSlot, uint8_t payload_size)
 {

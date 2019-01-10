@@ -96,6 +96,7 @@ void rbs_update(RemoteBBufSend *rbs)
 	rbs->sendSlot.msg->payload_len = sizeof(BBufMessage);
 	BBufMessage *bbm = (BBufMessage *) &rbs->sendSlot.msg->data;
 	memcpy(bbm->buf, rbs->offscreen[index], NUM_DIGITS);
+    bbm->index = index;
 
 	if (net_send_message(rbs->network, &rbs->sendSlot))
 	{
@@ -125,6 +126,6 @@ void rbr_recv(RecvSlot *recvSlot, uint8_t payload_len)
 	}
 
 	BBufMessage *bbm = (BBufMessage *) &recvSlot->msg->data;
-	board_buffer_paint(bbm->buf, 0, 0xff);
+	board_buffer_paint(bbm->buf, bbm->index, 0xff);
 	recvSlot->msg_occupied = FALSE;
 }
