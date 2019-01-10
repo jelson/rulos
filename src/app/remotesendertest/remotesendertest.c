@@ -47,7 +47,7 @@ void sendMessage(sendAct_t *sa) {
 
 int main() {
   hal_init();
-  hal_init_rocketpanel(bc_default);
+  hal_init_rocketpanel();
   init_clock(10000, TIMER1);
 
   Network network;
