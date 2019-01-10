@@ -20,7 +20,7 @@
 #include "core/rulos.h"
 #include "periph/7seg_panel/remote_bbuf.h"
 
-#define REMOTE_BBUF_SEND_RATE 33000	// 30 board msgs ber sec
+#define REMOTE_BBUF_SEND_RATE 10000	// 100 board msgs per sec
 
 void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network)
 {
