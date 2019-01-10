@@ -105,7 +105,7 @@ typedef struct {
 
 void init_rocket0(Rocket0 *r0)
 {
-	init_twi_network(&r0->network, 400, ROCKET_ADDR);
+	init_twi_network(&r0->network, 200, ROCKET_ADDR);
 	init_remote_bbuf_send(&r0->rbs, &r0->network);
 	install_remote_bbuf_send(&r0->rbs);
 	drtc_init(&r0->dr, 0, clock_time_us()+20000000);
