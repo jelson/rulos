@@ -21,6 +21,7 @@
 #include "periph/7seg_panel/remote_bbuf.h"
 
 #define REMOTE_BBUF_SEND_RATE 10000	// 100 board msgs per sec
+#define REMOTE_BBUF_REFRESH_PERIOD_US 1000000   // 1s refresh rate
 
 void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network)
 {
@@ -35,6 +36,7 @@ void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network)
 	rbs->last_index = 0;
 
 	schedule_us(1, (ActivationFuncPtr) rbs_update, rbs);
+	schedule_us(1, (ActivationFuncPtr) rbs_refresh, rbs);
 }
 
 void send_remote_bbuf(RemoteBBufSend *rbs, SSBitmap *bm, uint8_t index, uint8_t mask)
@@ -53,6 +55,7 @@ void send_remote_bbuf(RemoteBBufSend *rbs, SSBitmap *bm, uint8_t index, uint8_t 
 	rbs->changed[index] = TRUE;
 }
 
+// Finds the next changed board since we last sent a board.
 int rbs_find_changed_index(RemoteBBufSend *rbs)
 {
 #if NUM_REMOTE_BOARDS > 0	
@@ -70,6 +73,23 @@ int rbs_find_changed_index(RemoteBBufSend *rbs)
 	return -1;
 }
 
+// Extract the remote address mappings from the DBOARD definitions into a static.
+#define	DBOARD(name, syms, x, y, remote_addr, remote_idx) \
+	{ remote_addr, remote_idx }
+#define B_NO_BOARD	/**/
+#define B_END	    /**/
+#include "core/board_defs.h"
+
+typedef struct {
+    uint8_t remote_addr;
+    uint8_t remote_index;
+} RemoteMapping;
+RemoteMapping remote_mapping_def[] = { T_ROCKET0 }, *remote_mapping = remote_mapping_def;
+int remote_mapping_count = sizeof(remote_mapping_def)/sizeof(RemoteMapping);
+
+// This thread looks for a board that has been changed since we last sent it,
+// and transmits it. It finds boards round-robin to avoid starvation. It runs
+// on a regular schedule avoid swamping the network with board traffic.
 void rbs_update(RemoteBBufSend *rbs)
 {
 	schedule_us(REMOTE_BBUF_SEND_RATE, (ActivationFuncPtr) rbs_update, rbs);
@@ -91,12 +111,13 @@ void rbs_update(RemoteBBufSend *rbs)
 	LOG("rbs_update: update[%d]\n", index);
 
 	// send a packet for this changed line
-	rbs->sendSlot.dest_addr = DONGLE_BASE_ADDR + index;
+    RemoteMapping* mapping = &remote_mapping[index];
+	rbs->sendSlot.dest_addr = DONGLE_BASE_ADDR + mapping->remote_addr;
 	rbs->sendSlot.msg->dest_port = REMOTE_BBUF_PORT;
 	rbs->sendSlot.msg->payload_len = sizeof(BBufMessage);
 	BBufMessage *bbm = (BBufMessage *) &rbs->sendSlot.msg->data;
 	memcpy(bbm->buf, rbs->offscreen[index], NUM_DIGITS);
-    bbm->index = index;
+    bbm->index = mapping->remote_index;
 
 	if (net_send_message(rbs->network, &rbs->sendSlot))
 	{
@@ -104,6 +125,20 @@ void rbs_update(RemoteBBufSend *rbs)
 	}
 
 	rbs->last_index = index;
+}
+
+// This thread periodically marks all boards changed to ensure that dropped
+// messages are eventually cleaned up.
+void rbs_refresh(RemoteBBufSend *rbs)
+{
+	schedule_us(REMOTE_BBUF_REFRESH_PERIOD_US, (ActivationFuncPtr) rbs_refresh, rbs);
+#if NUM_REMOTE_BOARDS > 0	
+    int idx;
+	for (idx=0; idx<NUM_REMOTE_BOARDS; idx++)
+	{
+		rbs->changed[idx] = TRUE;
+	}
+#endif
 }
 
 void init_remote_bbuf_recv(RemoteBBufRecv *rbr, Network *network)

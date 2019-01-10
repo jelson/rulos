@@ -102,7 +102,7 @@ void hal_upside_down_led(SSBitmap *b)
 #define PB PAIR_BLUE,
 #define PW PAIR_WHITE,
 
-#define	DBOARD(name, syms, x, y) \
+#define	DBOARD(name, syms, x, y, remote_addr, remote_idx) \
 	{ name, {syms}, x, y }
 #define B_NO_BOARD	{ NULL },
 #define B_END	{ NULL }

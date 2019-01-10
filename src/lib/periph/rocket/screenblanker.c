@@ -38,7 +38,7 @@
 #define PY	DISCO_YELLOW,
 #define PB	DISCO_BLUE,
 
-#define DBOARD(name, colors, x, y) _packed(colors 0)
+#define DBOARD(name, colors, x, y, remote_addr, remote_idx) _packed(colors 0)
 #define B_NO_BOARD	/**/
 #define B_END	/**/
 
