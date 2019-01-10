@@ -21,15 +21,16 @@
 #include "periph/rocket/screenblanker.h"
 
 typedef struct s_disco_handler {
-	UIEventHandler uieh;
-	struct s_disco *disco;
+  UIEventHandler uieh;
+  struct s_disco *disco;
 } DiscoHandler;
 
 typedef struct s_disco {
-	ScreenBlanker *screenblanker;
-	DiscoHandler handler;
-	AudioClient *audioClient;
-	r_bool focused;
+  ScreenBlanker *screenblanker;
+  DiscoHandler handler;
+  AudioClient *audioClient;
+  r_bool focused;
 } Disco;
 
-void disco_init(Disco *disco, AudioClient *audioClient, ScreenBlanker *screenblanker, IdleAct *idle);
+void disco_init(Disco *disco, AudioClient *audioClient,
+                ScreenBlanker *screenblanker, IdleAct *idle);

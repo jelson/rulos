@@ -20,49 +20,45 @@
 
 #include "periph/rocket/rocket.h"
 
-
 /************************************************************************************/
 /************************************************************************************/
 
 typedef struct {
-	ActivationFunc update;
-	int task;
-	int interval;
+  ActivationFunc update;
+  int task;
+  int interval;
 } RolloverTest_t;
 
-static void update(RolloverTest_t *rt)
-{
-	LOG("task %d running at jiffy %d\n", rt->task, clock_time_us());
-	schedule_us(rt->interval, (Activation *) rt);
+static void update(RolloverTest_t *rt) {
+  LOG("task %d running at jiffy %d\n", rt->task, clock_time_us());
+  schedule_us(rt->interval, (Activation *)rt);
 }
 
-int main()
-{
-	heap_init();
-	util_init();
-	hal_init();
-	clock_init(1000);
+int main() {
+  heap_init();
+  util_init();
+  hal_init();
+  clock_init(1000);
 
-	RolloverTest_t t1, t2, t3, t4;
-	t1.update = t2.update = t3.update = t4.update = (ActivationFunc) update;
-	t1.task = 1;
-	t1.interval = 10000;
+  RolloverTest_t t1, t2, t3, t4;
+  t1.update = t2.update = t3.update = t4.update = (ActivationFunc)update;
+  t1.task = 1;
+  t1.interval = 10000;
 
-	t2.task = 2;
-	t2.interval = 5000;
+  t2.task = 2;
+  t2.interval = 5000;
 
-	t3.task = 3;
-	t3.interval = 6000;
+  t3.task = 3;
+  t3.interval = 6000;
 
-	t4.task = 4;
-	t4.interval = 3000;
+  t4.task = 4;
+  t4.interval = 3000;
 
-	schedule_us(1, (Activation *) &t1);
-   	schedule_us(1, (Activation *) &t2);
-	//	schedule_us(1, (Activation *) &t3);
-	//	schedule_us(1, (Activation *) &t4);
+  schedule_us(1, (Activation *)&t1);
+  schedule_us(1, (Activation *)&t2);
+  //	schedule_us(1, (Activation *) &t3);
+  //	schedule_us(1, (Activation *) &t4);
 
-	cpumon_main_loop();
-	return 0;
+  cpumon_main_loop();
+  return 0;
 }
-

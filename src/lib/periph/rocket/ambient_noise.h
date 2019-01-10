@@ -16,13 +16,14 @@
 
 #pragma once
 
-#include "periph/audio/audio_client.h"
+#include <inttypes.h>
+
+struct s_audio_client;
 
 typedef struct {
-	struct s_audio_client *audio_client;
-	uint8_t mlvolume;
+  struct s_audio_client *audio_client;
+  uint8_t mlvolume;
 } AmbientNoise;
 
 void ambient_noise_init(AmbientNoise *an, struct s_audio_client *audio_client);
 void ambient_noise_boost_complete(AmbientNoise *an);
-

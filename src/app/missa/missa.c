@@ -39,7 +39,7 @@ static void missa_hal_init() {
 
 static void missa_hal_set_led(uint8_t led_num, uint8_t onoff) {
   char new_state;
-  
+
   if (onoff) {
     new_state = '*';
   } else {
@@ -66,8 +66,7 @@ static void missa_hal_set_led(uint8_t led_num, uint8_t onoff) {
 #define LED0_PIN GPIO_B0
 #define LED1_PIN GPIO_B2
 #endif
-static void missa_hal_init()
-{
+static void missa_hal_init() {
   gpio_make_output(LED0_PIN);
   gpio_make_output(LED1_PIN);
 }
@@ -80,7 +79,7 @@ static void missa_hal_set_led(uint8_t led_num, uint8_t onoff) {
   }
 }
 
-#endif // SIM
+#endif  // SIM
 
 ////////////////////////////////////
 
@@ -95,15 +94,14 @@ static void start_birthday_morse_after_delay() {
 }
 
 static void start_birthday_morse(void* data) {
-  emit_morse("happy birthday missa", 170000,
-             morse_toggle_func_trampoline,
+  emit_morse("happy birthday missa", 170000, morse_toggle_func_trampoline,
              start_birthday_morse_after_delay);
 }
 
 /////////////////////////////////////////
 
-const int primes[] = { 2,3,5,7,11,13,17,19,23,-1};
-  
+const int primes[] = {2, 3, 5, 7, 11, 13, 17, 19, 23, -1};
+
 typedef struct {
   uint8_t prime_num;
   uint8_t symbol_num;
@@ -123,7 +121,7 @@ static void init_prime_counting() {
 }
 
 static void prime_delay(uint8_t time_quanta) {
-  schedule_us((uint32_t) 210000 * time_quanta, do_prime_count, NULL);
+  schedule_us((uint32_t)210000 * time_quanta, do_prime_count, NULL);
 }
 
 static void do_prime_count(void* data) {
@@ -158,9 +156,8 @@ static void do_prime_count(void* data) {
     prime_delay(1);
   }
 }
-    
-int main()
-{
+
+int main() {
   hal_init();
   missa_hal_init();
   missa_hal_set_led(0, 0);
@@ -169,6 +166,6 @@ int main()
 
   start_birthday_morse(NULL);
   init_prime_counting();
-  
+
   cpumon_main_loop();
 }

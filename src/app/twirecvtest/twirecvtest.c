@@ -21,111 +21,98 @@
 #define HAVE_AUDIOBOARD_UART 0
 
 #if !HAVE_AUDIOBOARD_UART
-# define SYNCDEBUG() {}
+#define SYNCDEBUG() \
+  {}
 #else
 
-#define SYNCDEBUG()	syncdebug(0, 'T', __LINE__)
+#define SYNCDEBUG() syncdebug(0, 'T', __LINE__)
 
-#define FOSC 8000000// Clock Speed
+#define FOSC 8000000  // Clock Speed
 #define BAUD 38400
-#define MYUBRR FOSC/16/BAUD-1
+#define MYUBRR FOSC / 16 / BAUD - 1
 
-void serial_init()
-{
-	uart_init(RULOS_UART0, MYUBRR, TRUE);
+void serial_init() { uart_init(RULOS_UART0, MYUBRR, TRUE); }
+
+void waitbusyuart() {
+  while (uart_busy(RULOS_UART0)) {
+  }
 }
 
-void waitbusyuart()
-{
-	while (uart_busy(RULOS_UART0)) { }
+void syncdebug(uint8_t spaces, char f, uint16_t line) {
+  char buf[16], hexbuf[6];
+  int i;
+  for (i = 0; i < spaces; i++) {
+    buf[i] = ' ';
+  }
+  buf[i++] = f;
+  buf[i++] = ':';
+  buf[i++] = '\0';
+  if (f >= 'a')  // lowercase -> hex value; so sue me
+  {
+    debug_itoha(hexbuf, line);
+  } else {
+    itoda(hexbuf, line);
+  }
+  strcat(buf, hexbuf);
+  strcat(buf, "\n");
+  uart_send(RULOS_UART0, (char *)buf, strlen(buf), NULL, NULL);
+  waitbusyuart();
+}
+#endif  // HAVE_AUDIOBOARD_UART
+
+void board_say(const char *s) {
+  SSBitmap bm[8];
+  int i;
+
+  ascii_to_bitmap_str(bm, 8, s);
+
+  for (i = 0; i < 8; i++) program_board(i, bm);
 }
 
-void syncdebug(uint8_t spaces, char f, uint16_t line)
-{
-	char buf[16], hexbuf[6];
-	int i;
-	for (i=0; i<spaces; i++)
-	{
-		buf[i] = ' ';
-	}
-	buf[i++] = f;
-	buf[i++] = ':';
-	buf[i++] = '\0';
-	if (f >= 'a')	// lowercase -> hex value; so sue me
-	{
-		debug_itoha(hexbuf, line);
-	}
-	else
-	{
-		itoda(hexbuf, line);
-	}
-	strcat(buf, hexbuf);
-	strcat(buf, "\n");
-	uart_send(RULOS_UART0, (char*) buf, strlen(buf), NULL, NULL);
-	waitbusyuart();
-}
-#endif // HAVE_AUDIOBOARD_UART
+static void recv_func(RecvSlot *recvSlot, uint8_t payload_size) {
+  char buf[payload_size + 1];
+  memcpy(buf, recvSlot->msg->data, payload_size);
+  buf[payload_size] = '\0';
+  LOG("Got network message [%d bytes]: '%s'\n", payload_size, buf);
+  SYNCDEBUG();
 
-
-void board_say(const char *s)
-{
-	SSBitmap bm[8];
-	int i;
-
-	ascii_to_bitmap_str(bm, 8, s);
-
-	for (i = 0; i < 8; i++)
-		program_board(i, bm);
+  // display the first 8 chars to the leds
+  buf[min(payload_size, 8)] = '\0';
+  board_say(buf);
 }
 
-static void recv_func(RecvSlot *recvSlot, uint8_t payload_size)
-{
-	char buf[payload_size+1];
-	memcpy(buf, recvSlot->msg->data, payload_size);
-	buf[payload_size] = '\0';
-	LOG("Got network message [%d bytes]: '%s'\n", payload_size, buf);
-	SYNCDEBUG();
+void test_netstack() {
+  Network net;
+  char data[20];
+  RecvSlot recvSlot;
 
-	// display the first 8 chars to the leds
-	buf[min(payload_size, 8)] = '\0';
-	board_say(buf);
+  board_say(" rEAdy  ");
+
+  init_clock(10000, TIMER1);
+
+  recvSlot.func = recv_func;
+  recvSlot.port = AUDIO_PORT;
+  recvSlot.msg = (Message *)data;
+  recvSlot.payload_capacity = sizeof(data) - sizeof(Message);
+  recvSlot.msg_occupied = FALSE;
+
+  SYNCDEBUG();
+  init_twi_network(&net, 100, AUDIO_ADDR);
+  net_bind_receiver(&net, &recvSlot);
+  SYNCDEBUG();
+
+  CpumonAct cpumon;
+  cpumon_init(&cpumon);
+  cpumon_main_loop();
 }
 
-
-void test_netstack()
-{
-	Network net;
-	char data[20];
-	RecvSlot recvSlot;
-
-	board_say(" rEAdy  ");
-
-	init_clock(10000, TIMER1);
-
-	recvSlot.func = recv_func;
-	recvSlot.port = AUDIO_PORT;
-	recvSlot.msg = (Message *) data;
-	recvSlot.payload_capacity = sizeof(data) - sizeof(Message);
-	recvSlot.msg_occupied = FALSE;
-
-	SYNCDEBUG();
-	init_twi_network(&net, 100, AUDIO_ADDR);
-	net_bind_receiver(&net, &recvSlot);
-	SYNCDEBUG();
-
-	CpumonAct cpumon;
-	cpumon_init(&cpumon);
-	cpumon_main_loop();
-}
-
-int main()
-{
-	hal_init();
-	hal_init_rocketpanel();
+int main() {
+  hal_init();
+  hal_init_rocketpanel();
 #if HAVE_AUDIOBOARD_UART
-	serial_init();
+  serial_init();
 #endif
 
-	test_netstack();
-	return 0;
+  test_netstack();
+  return 0;
 }

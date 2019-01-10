@@ -35,80 +35,74 @@
 struct s_control_child;
 
 typedef struct s_control_child {
-	UIEventHandler *uie_handler;
-	char *name;
+  UIEventHandler *uie_handler;
+  char *name;
 } ControlChild;
 
 typedef struct {
-	UIEventHandler *uie_handler;
-	const char *name;
-	RemoteKeyboardSend rks;
-	RemoteUIE ruie;
+  UIEventHandler *uie_handler;
+  const char *name;
+  RemoteKeyboardSend rks;
+  RemoteUIE ruie;
 } CCRemoteCalc;
 
 typedef struct {
-	UIEventHandler *uie_handler;
-	const char *name;
-	Launch launch;
+  UIEventHandler *uie_handler;
+  const char *name;
+  Launch launch;
 } CCLaunch;
 
 typedef struct {
-	UIEventHandler *uie_handler;
-	const char *name;
-	DDockAct dock;
+  UIEventHandler *uie_handler;
+  const char *name;
+  DDockAct dock;
 } CCDock;
 
 typedef struct {
-	UIEventHandler *uie_handler;
-	const char *name;
-	Pong pong;
+  UIEventHandler *uie_handler;
+  const char *name;
+  Pong pong;
 } CCPong;
 
 typedef struct {
-	UIEventHandler *uie_handler;
-	const char *name;
-	Disco disco;
+  UIEventHandler *uie_handler;
+  const char *name;
+  Disco disco;
 } CCDisco;
 
 typedef struct s_direct_injector {
-	InputInjectorFunc injector_func;
-	struct s_control_panel *cp;
+  InputInjectorFunc injector_func;
+  struct s_control_panel *cp;
 } direct_injector_t;
 
 typedef struct s_control_panel {
-	UIEventHandlerFunc handler_func;
-	Screen4 s4;
-	direct_injector_t direct_injector;
-	
-	ControlChild *children[CONTROL_PANEL_NUM_CHILDREN];
-	uint8_t child_count;
-	uint8_t selected_child;
-	uint8_t active_child;
+  UIEventHandlerFunc handler_func;
+  Screen4 s4;
+  direct_injector_t direct_injector;
 
-	Booster booster;
+  ControlChild *children[CONTROL_PANEL_NUM_CHILDREN];
+  uint8_t child_count;
+  uint8_t selected_child;
+  uint8_t active_child;
 
-	// actual children listed here to allocate their storage statically.
-	CCRemoteCalc ccrc;
-	CCLaunch ccl;
-	CCDock ccdock;
-	CCPong ccpong;
-	CCDisco ccdisco;
+  Booster booster;
 
-	InputInjectorIfc *volume_input_ifc;
+  // actual children listed here to allocate their storage statically.
+  CCRemoteCalc ccrc;
+  CCLaunch ccl;
+  CCDock ccdock;
+  CCPong ccpong;
+  CCDisco ccdisco;
 
-	IdleAct *idle;
+  InputInjectorIfc *volume_input_ifc;
+
+  IdleAct *idle;
 } ControlPanel;
 
-void init_control_panel(
-	ControlPanel *cp,
-	uint8_t board0,
-	uint8_t aux_board0,
-	Network *network,
-	HPAM *hpam,
-	AudioClient *audioClient,
-	IdleAct *idle,
-	ScreenBlanker *screenblanker,
-	JoystickState_t *joystick,
-	InputInjectorIfc *volume_input_ifc /*optional*/);
+void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
+                        Network *network, HPAM *hpam, AudioClient *audioClient,
+                        IdleAct *idle, ScreenBlanker *screenblanker,
+                        JoystickState_t *joystick,
+                        InputInjectorIfc *volume_input_ifc /*optional*/);
 
-#endif // _control_panel_h
+#endif  // _control_panel_h

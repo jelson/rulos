@@ -34,28 +34,25 @@ void audioled_init();
 void audioled_set(r_bool red, r_bool yellow);
 //////////////////////////////////////////////////////////////////////////////
 
-#define AUDIO_LED_RED		GPIO_D2
-#define AUDIO_LED_YELLOW	GPIO_D3
+#define AUDIO_LED_RED GPIO_D2
+#define AUDIO_LED_YELLOW GPIO_D3
 
 #ifndef SIM
 #include "hardware.h"
-#endif // SIM
+#endif  // SIM
 
-
-void audioled_init()
-{
+void audioled_init() {
 #ifndef SIM
-	gpio_make_output(AUDIO_LED_RED);
-	gpio_make_output(AUDIO_LED_YELLOW);
-#endif // SIM
+  gpio_make_output(AUDIO_LED_RED);
+  gpio_make_output(AUDIO_LED_YELLOW);
+#endif  // SIM
 }
 
-void audioled_set(r_bool red, r_bool yellow)
-{
+void audioled_set(r_bool red, r_bool yellow) {
 #ifndef SIM
-	gpio_set_or_clr(AUDIO_LED_RED, !red);
-	gpio_set_or_clr(AUDIO_LED_YELLOW, !yellow);
-#endif // SIM
+  gpio_set_or_clr(AUDIO_LED_RED, !red);
+  gpio_set_or_clr(AUDIO_LED_YELLOW, !yellow);
+#endif  // SIM
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -124,106 +121,95 @@ void cmdproc_init(CmdProc *cp, AudioServer *audio_server, Network *network)
 #endif
 
 typedef struct {
-	UartMedia uart_media;
-	struct {
-		MediaRecvSlot mrs;
-		char mrs_buffer[20];
-	};	// must stay together
-	MediaStateIfc *media;
-	char send_buffer[20];
+  UartMedia uart_media;
+  struct {
+    MediaRecvSlot mrs;
+    char mrs_buffer[20];
+  };  // must stay together
+  MediaStateIfc *media;
+  char send_buffer[20];
 } UartListener;
 
 void _uart_listener_recv_done(MediaRecvSlot *mrs, uint8_t len);
 
-void uart_listener_init(UartListener *ul)
-{
-	ul->mrs.func = _uart_listener_recv_done;
-	ul->mrs.capacity = sizeof(ul->mrs_buffer);
-	ul->mrs.occupied = FALSE;
-	ul->mrs.user_data = ul;
-	ul->media = uart_media_init(&ul->uart_media, &ul->mrs);
+void uart_listener_init(UartListener *ul) {
+  ul->mrs.func = _uart_listener_recv_done;
+  ul->mrs.capacity = sizeof(ul->mrs_buffer);
+  ul->mrs.occupied = FALSE;
+  ul->mrs.user_data = ul;
+  ul->media = uart_media_init(&ul->uart_media, &ul->mrs);
 }
 
-void _uart_listener_recv_done(MediaRecvSlot *mrs, uint8_t len)
-{
-	UartListener *ul = (UartListener *) mrs->user_data;
-	memcpy(ul->send_buffer, ul->mrs_buffer, len);
-	ul->mrs.occupied = FALSE;
-	(ul->media->send)(ul->media, 0x01, ul->send_buffer, len, NULL, NULL);
+void _uart_listener_recv_done(MediaRecvSlot *mrs, uint8_t len) {
+  UartListener *ul = (UartListener *)mrs->user_data;
+  memcpy(ul->send_buffer, ul->mrs_buffer, len);
+  ul->mrs.occupied = FALSE;
+  (ul->media->send)(ul->media, 0x01, ul->send_buffer, len, NULL, NULL);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	Activation act;
-	UartListener *ul;
+  Activation act;
+  UartListener *ul;
 } Tick;
 
 void _tick_update(Activation *act);
 
-void tick_init(Tick *tick, UartListener *ul)
-{
-	tick->ul = ul;
-	tick->act.func = _tick_update;
-	schedule_us(1000000, &tick->act);
+void tick_init(Tick *tick, UartListener *ul) {
+  tick->ul = ul;
+  tick->act.func = _tick_update;
+  schedule_us(1000000, &tick->act);
 }
 
-void tick_say(Tick *tick, char *msg)
-{
-	(tick->ul->media->send)(tick->ul->media, 0x02, msg, strlen(msg), NULL, NULL);
+void tick_say(Tick *tick, char *msg) {
+  (tick->ul->media->send)(tick->ul->media, 0x02, msg, strlen(msg), NULL, NULL);
 }
 
-void _tick_update(Activation *act)
-{
-	Tick *tick = (Tick *) act;
-	tick_say(tick, "tick");
-	schedule_us(1000000, &tick->act);
+void _tick_update(Activation *act) {
+  Tick *tick = (Tick *)act;
+  tick_say(tick, "tick");
+  schedule_us(1000000, &tick->act);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	CpumonAct cpumon;
-//	CmdProc cmdproc;
-	UartListener uart_listener;
-	Tick tick;
+  CpumonAct cpumon;
+  //	CmdProc cmdproc;
+  UartListener uart_listener;
+  Tick tick;
 } MainContext;
 MainContext mc;
 
-void g_tick_say(char *msg)
-{
-	tick_say(&mc.tick, msg);
-}
+void g_tick_say(char *msg) { tick_say(&mc.tick, msg); }
 
-int main()
-{
-	audioled_init();
-	util_init();
-	hal_init(bc_audioboard);
-	init_clock(1000, TIMER1);
+int main() {
+  audioled_init();
+  util_init();
+  hal_init(bc_audioboard);
+  init_clock(1000, TIMER1);
 
-	audioled_set(0, 0);
+  audioled_set(0, 0);
 
-	uart_listener_init(&mc.uart_listener);
+  uart_listener_init(&mc.uart_listener);
 
-	tick_init(&mc.tick, &mc.uart_listener);
+  tick_init(&mc.tick, &mc.uart_listener);
 
-	g_tick_say("hiya!");
+  g_tick_say("hiya!");
 
-	// needs to be early, because it initializes uart, which at the
-	// moment I'm using for SYNCDEBUG(), including in init_audio_server.
-	//cmdproc_init(&mc.cmdproc, &mc.aserv, &mc.network);
+  // needs to be early, because it initializes uart, which at the
+  // moment I'm using for SYNCDEBUG(), including in init_audio_server.
+  // cmdproc_init(&mc.cmdproc, &mc.aserv, &mc.network);
 
-	//init_audio_server(&mc.aserv, &mc.network, TIMER2);
+  // init_audio_server(&mc.aserv, &mc.network, TIMER2);
 
-	cpumon_init(&mc.cpumon);	// includes slow calibration phase
-
+  cpumon_init(&mc.cpumon);  // includes slow calibration phase
 
 #if 0
 	board_buffer_module_init();
 #endif
-	cpumon_main_loop();
+  cpumon_main_loop();
 
-	return 0;
+  return 0;
 }
-

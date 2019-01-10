@@ -22,8 +22,8 @@
 #include "periph/rocket/rocket.h"
 
 typedef struct {
-	UIEventHandlerFunc func;
-	InputInjectorIfc *iii;
+  UIEventHandlerFunc func;
+  InputInjectorIfc *iii;
 } RemoteUIE;
 
 void init_remote_uie(RemoteUIE *ruie, InputInjectorIfc *iii);
@@ -31,14 +31,13 @@ void init_remote_uie(RemoteUIE *ruie, InputInjectorIfc *iii);
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	InputInjectorFunc func;
-	UIEventHandler *uie_handler;
-	InputInjectorIfc *escape_ifi;
+  InputInjectorFunc func;
+  UIEventHandler *uie_handler;
+  InputInjectorIfc *escape_ifi;
 } CascadedInputInjector;
 
-void init_cascaded_input_injector(
-	CascadedInputInjector *cii,
-	UIEventHandler *uie_handler,
-	InputInjectorIfc *escape_ifi);
+void init_cascaded_input_injector(CascadedInputInjector *cii,
+                                  UIEventHandler *uie_handler,
+                                  InputInjectorIfc *escape_ifi);
 
-#endif // _remote_uie_h
+#endif  // _remote_uie_h

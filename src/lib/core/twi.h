@@ -21,6 +21,7 @@
 struct s_TwiState;
 typedef struct s_TwiState TwiState;
 
-void hal_twi_start_master_read(TwiState *twiState, Addr addr, MediaRecvSlot *mrs);
+void hal_twi_start_master_read(TwiState *twiState, Addr addr,
+                               MediaRecvSlot *mrs);
 
 //#define DEBUG_STACK_WITH_UART

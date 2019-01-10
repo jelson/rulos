@@ -16,7 +16,6 @@
 
 #include "periph/rocket/sound.h"
 
-void sound_start(SoundToken token, r_bool loop)
-{
-	LOG("Now would be a good time to start sound %d.\n", token);
+void sound_start(SoundToken token, r_bool loop) {
+  LOG("Now would be a good time to start sound %d.\n", token);
 }

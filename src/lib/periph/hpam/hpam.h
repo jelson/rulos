@@ -24,34 +24,34 @@
 #include "periph/rocket/thruster_protocol.h"
 
 typedef struct {
-	r_bool status;
-	uint8_t rest_time_secs;
-	Time expire_time;	// time when needs to rest, or when rest complete
-	r_bool resting;
-	uint8_t board;
-	uint8_t digit;
-	uint8_t segment;
+  r_bool status;
+  uint8_t rest_time_secs;
+  Time expire_time;  // time when needs to rest, or when rest complete
+  r_bool resting;
+  uint8_t board;
+  uint8_t digit;
+  uint8_t segment;
 } HPAMPort;
 
 typedef enum {
-	hpam_hobbs = 0,
-	hpam_reserved = 1,		// future: clanger, hatch open solenoid
-	hpam_lighting_flicker = 2,
-	hpam_five_volts = 3,	// 5V channel, no longer used
-	hpam_thruster_frontleft = 4,
-	hpam_thruster_frontright = 5,
-	hpam_thruster_rear = 6,
-	hpam_booster = 7,
-	hpam_end
+  hpam_hobbs = 0,
+  hpam_reserved = 1,  // future: clanger, hatch open solenoid
+  hpam_lighting_flicker = 2,
+  hpam_five_volts = 3,  // 5V channel, no longer used
+  hpam_thruster_frontleft = 4,
+  hpam_thruster_frontright = 5,
+  hpam_thruster_rear = 6,
+  hpam_booster = 7,
+  hpam_end
 } HPAMIndex;
 
 // Future: gauges on a 12V HPAM.
 
 typedef struct {
-	HPAMPort hpam_ports[hpam_end];
-	ThrusterUpdate *thrusterUpdates;
-	BoardBuffer bbuf;
-	ThrusterPayload thrusterPayload;
+  HPAMPort hpam_ports[hpam_end];
+  ThrusterUpdate *thrusterUpdates;
+  BoardBuffer bbuf;
+  ThrusterPayload thrusterPayload;
 } HPAM;
 
 void init_hpam(HPAM *hpam, uint8_t board0, ThrusterUpdate *thrusterUpdates);

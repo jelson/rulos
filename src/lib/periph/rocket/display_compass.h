@@ -25,19 +25,19 @@
 struct s_dcompassact;
 
 typedef struct {
-	UIEventHandlerFunc func;
-	struct s_dcompassact *act;
+  UIEventHandlerFunc func;
+  struct s_dcompassact *act;
 } DCompassHandler;
 
 typedef struct s_dcompassact {
-	BoardBuffer bbuf;
-	BoardBuffer *btable;	// needed for RectRegion
-	DCompassHandler handler;
-	uint8_t focused;
-	DriftAnim drift;
-	uint32_t last_impulse_time;
+  BoardBuffer bbuf;
+  BoardBuffer *btable;  // needed for RectRegion
+  DCompassHandler handler;
+  uint8_t focused;
+  DriftAnim drift;
+  uint32_t last_impulse_time;
 } DCompassAct;
 
 void dcompass_init(DCompassAct *act, uint8_t board, FocusManager *focus);
 
-#endif // display_compass_h
+#endif  // display_compass_h

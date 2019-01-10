@@ -10,22 +10,22 @@ typedef enum { Acquiring, Observing, Turning, Completed } ControlState;
 #define MAX_WAYPOINTS 10
 
 typedef struct {
-	ControlState state;
-	RudderState rudder;
-	MotorState motors;
-	GPSInput gpsi;
-	Navigation nav;
+  ControlState state;
+  RudderState rudder;
+  MotorState motors;
+  GPSInput gpsi;
+  Navigation nav;
 
-	Vector waypoints[MAX_WAYPOINTS];
-	int n_waypoints;
-	int waypoint_index;
+  Vector waypoints[MAX_WAYPOINTS];
+  int n_waypoints;
+  int waypoint_index;
 
-	Vector p0, p1;
+  Vector p0, p1;
 
-	int sample_num;
+  int sample_num;
 
-	uint8_t test_rudder_state;
-	uint8_t test_rudder_count;
+  uint8_t test_rudder_state;
+  uint8_t test_rudder_count;
 } Control;
 
 void control_init(Control *ctl);

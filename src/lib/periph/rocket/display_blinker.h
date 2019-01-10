@@ -21,13 +21,13 @@
 #include "periph/7seg_panel/board_buffer.h"
 
 typedef struct {
-	uint16_t period;
-	const char **msg;
-	uint8_t cur_line;
-	BoardBuffer bbuf;
+  uint16_t period;
+  const char **msg;
+  uint8_t cur_line;
+  BoardBuffer bbuf;
 } DBlinker;
 
 void blinker_init(DBlinker *blinker, uint16_t period);
 void blinker_set_msg(DBlinker *blinker, const char **msg);
 
-#endif // _display_blinker_h
+#endif  // _display_blinker_h

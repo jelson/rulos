@@ -14,14 +14,14 @@
  *
  ************************************************************************/
 
-#define TAIL_ON_TIME_MS  100
+#define TAIL_ON_TIME_MS 100
 #define TAIL_OFF_TIME_MS 300
-#define WHEEL_PERIOD_MS  10
-#define ANIM_TIME_SEC    5
+#define WHEEL_PERIOD_MS 10
+#define ANIM_TIME_SEC 5
 
 #define HEADLIGHT GPIO_B0
 #define TAILLIGHT GPIO_A1
-#define BUTTON    GPIO_B2
+#define BUTTON GPIO_B2
 
 #define L_WHEEL_ADDR 0b1110100
 #define R_WHEEL_ADDR 0b1110111
@@ -50,7 +50,7 @@ typedef struct {
   uint8_t light_on_l;
   uint8_t light_on_r;
   Time wheels_next_move_time;
-  
+
   // taillight
   r_bool tail_on;
   Time tail_next_toggle_time;
@@ -61,39 +61,34 @@ BikeState_t bike;
 void bike_sleep();
 void bike_wake(BikeState_t* bike);
 
-ISR(INT0_vect) {
-  bike_wake(&bike);
-}
+ISR(INT0_vect) { bike_wake(&bike); }
 
-static void init_led_drivers(uint8_t sevbit_addr)
-{
+static void init_led_drivers(uint8_t sevbit_addr) {
   char buf[17];
 
-  buf[0] = 0x10; // Set address to 0x10, first PWM register.
+  buf[0] = 0x10;  // Set address to 0x10, first PWM register.
   for (int i = 1; i <= 16; i++) {
     buf[i] = 0xff;
   }
   usi_twi_master_send(sevbit_addr, buf, 17);
 
-  buf[0] = 0xB0; // Set address to 0xB0, "take PWM settings" register
+  buf[0] = 0xB0;  // Set address to 0xB0, "take PWM settings" register
   buf[1] = 0;
   usi_twi_master_send(sevbit_addr, buf, 2);
 }
 
-static void shutdown_led_driver(uint8_t sevbit_addr)
-{
+static void shutdown_led_driver(uint8_t sevbit_addr) {
   char buf[4];
 
-  buf[0] = 0;  // start address is address 0
+  buf[0] = 0;           // start address is address 0
   buf[1] = 0b10000000;  // register 0: set shutdown bit
-  buf[2] = 0;  // register 1: no LEDs on
-  buf[3] = 0;  // register 2: no LEDs on
+  buf[2] = 0;           // register 1: no LEDs on
+  buf[3] = 0;           // register 2: no LEDs on
 
   usi_twi_master_send(sevbit_addr, buf, 4);
 }
 
-static void shift_in_one_config(uint8_t sevbit_addr, uint8_t led_number)
-{
+static void shift_in_one_config(uint8_t sevbit_addr, uint8_t led_number) {
   char buf[4];
 
   buf[0] = 0;  // start address is address 0
@@ -110,8 +105,7 @@ static void shift_in_one_config(uint8_t sevbit_addr, uint8_t led_number)
   usi_twi_master_send(sevbit_addr, buf, 4);
 }
 
-static void shift_in_config(BikeState_t* bike)
-{
+static void shift_in_config(BikeState_t* bike) {
   shift_in_one_config(L_WHEEL_ADDR, bike->light_on_l);
   shift_in_one_config(R_WHEEL_ADDR, bike->light_on_r);
 }
@@ -125,13 +119,13 @@ static void bike_update(BikeState_t* bike) {
     bike_wake(bike);
   }
 #endif
-  
+
   // If we've reached the end of the animation time, shut everything down.
   if (later_than(now, bike->shutoff_time)) {
     bike_sleep();
     return;
   }
-  
+
   // If we've reached the next blink state for the tail light, toggle it
   if (later_than(now, bike->tail_next_toggle_time)) {
     if (bike->tail_on) {
@@ -170,7 +164,7 @@ void bike_wake(BikeState_t* bike) {
   // Set up USI.
   power_usi_enable();
   usi_twi_master_init();
-  
+
   // Initialize LED drivers.
   init_led_drivers(L_WHEEL_ADDR);
   init_led_drivers(R_WHEEL_ADDR);

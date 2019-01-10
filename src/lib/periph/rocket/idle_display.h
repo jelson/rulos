@@ -21,11 +21,12 @@
 #include "periph/rocket/display_scroll_msg.h"
 
 typedef struct {
-	DScrollMsgAct *scrollAct;
-	CpumonAct *cpumonAct;
-	char msg[16];
+  DScrollMsgAct *scrollAct;
+  CpumonAct *cpumonAct;
+  char msg[16];
 } IdleDisplayAct;
 
-void idle_display_init(IdleDisplayAct *act, DScrollMsgAct *scrollAct, CpumonAct *cpumonAct);
+void idle_display_init(IdleDisplayAct *act, DScrollMsgAct *scrollAct,
+                       CpumonAct *cpumonAct);
 
-#endif // _idle_display_h
+#endif  // _idle_display_h

@@ -23,28 +23,28 @@
 typedef void (*ActivationFuncPtr)(void *data);
 
 typedef struct {
-	ActivationFuncPtr func;
-	void *data;
+  ActivationFuncPtr func;
+  void *data;
 } ActivationRecord;
-	
+
 typedef struct {
-	Time key;
-	ActivationRecord activation;
+  Time key;
+  ActivationRecord activation;
 } HeapEntry;
 
 #ifndef SCHEDULER_CAPACITY
-# define SCHEDULER_CAPACITY 32
+#define SCHEDULER_CAPACITY 32
 #endif
 
 typedef struct {
-	HeapEntry heap[SCHEDULER_CAPACITY];
-	int heap_count;
+  HeapEntry heap[SCHEDULER_CAPACITY];
+  int heap_count;
 } Heap;
 
 void heap_init(Heap *heap);
-	// NB: got an old ref to heap_init() (no args) in your main()?
-	// Just discard it; it's now handeld by init_clock().
+// NB: got an old ref to heap_init() (no args) in your main()?
+// Just discard it; it's now handeld by init_clock().
 void heap_insert(Heap *heap, Time key, ActivationFuncPtr func, void *data);
 int heap_peek(Heap *heap, /*out*/ Time *key, /*out*/ ActivationRecord *act);
-	/* rc nonzero => heap empty */
+/* rc nonzero => heap empty */
 void heap_pop(Heap *heap);

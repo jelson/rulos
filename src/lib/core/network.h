@@ -29,44 +29,42 @@
 #define SEND_QUEUE_SIZE 4
 #define NET_MAX_PAYLOAD_SIZE 10
 
-
 struct s_recv_slot;
-typedef void (*RecvCompleteFunc)(struct s_recv_slot *recv_slot, uint8_t payload_size);
+typedef void (*RecvCompleteFunc)(struct s_recv_slot *recv_slot,
+                                 uint8_t payload_size);
 typedef struct s_recv_slot {
-	RecvCompleteFunc func;
-	Port port;
-	Message *msg;	// must contain enough space
-	uint8_t payload_capacity;
-	uint8_t msg_occupied;	// message in use by app; can't refill now.
-	void *user_data; // pointer can be used for user functions
+  RecvCompleteFunc func;
+  Port port;
+  Message *msg;  // must contain enough space
+  uint8_t payload_capacity;
+  uint8_t msg_occupied;  // message in use by app; can't refill now.
+  void *user_data;       // pointer can be used for user functions
 } RecvSlot;
 
 struct s_send_slot;
 typedef void (*SendCompleteFunc)(struct s_send_slot *send_slot);
 typedef struct s_send_slot {
-	SendCompleteFunc func;
-	Addr dest_addr;
-	Message *msg;
-	r_bool sending;
+  SendCompleteFunc func;
+  Addr dest_addr;
+  Message *msg;
+  r_bool sending;
 } SendSlot, *SendSlotPtr;
 
 #include "queue.mh"
 
 QUEUE_DECLARE(SendSlotPtr)
 
-
 typedef struct s_network {
-	RecvSlot *recvSlots[MAX_LISTENERS];
-	uint8_t sendQueue_storage[sizeof(SendSlotPtrQueue)+sizeof(SendSlotPtr)*SEND_QUEUE_SIZE];
-	union {
-		char MediaRecvSlotStorage
-			[sizeof(MediaRecvSlot) + sizeof(Message) + NET_MAX_PAYLOAD_SIZE];
-		MediaRecvSlot mrs;
-	};
-	MediaStateIfc *media;
+  RecvSlot *recvSlots[MAX_LISTENERS];
+  uint8_t sendQueue_storage[sizeof(SendSlotPtrQueue) +
+                            sizeof(SendSlotPtr) * SEND_QUEUE_SIZE];
+  union {
+    char MediaRecvSlotStorage[sizeof(MediaRecvSlot) + sizeof(Message) +
+                              NET_MAX_PAYLOAD_SIZE];
+    MediaRecvSlot mrs;
+  };
+  MediaStateIfc *media;
 } Network;
-
-
 
 // Public API
 void init_network(Network *net, MediaStateIfc *media);

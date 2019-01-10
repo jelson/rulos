@@ -36,24 +36,20 @@
 
 UartHandler *g_sim_uart_handler = NULL;
 
-
 /********************** uart output simulator *********************/
 
+void hal_uart_start_send(UartHandler *handler) {
+  char buf[256];
+  int i = 0;
 
-void hal_uart_start_send(UartHandler *handler)
-{
-	char buf[256];
-	int i = 0;
+  while ((g_sim_uart_handler->send)(g_sim_uart_handler, &buf[i])) i++;
 
-	while ((g_sim_uart_handler->send)(g_sim_uart_handler, &buf[i]))
-		i++;
+  buf[i + 1] = '\0';
 
-	buf[i+1] = '\0';
-
-	LOG("Sent to uart: '%s'\n", buf);
+  LOG("Sent to uart: '%s'\n", buf);
 }
 
-void hal_uart_init(UartHandler *s, uint32_t baud, r_bool stop2, uint8_t uart_id)
-{
-	g_sim_uart_handler = s;
+void hal_uart_init(UartHandler *s, uint32_t baud, r_bool stop2,
+                   uint8_t uart_id) {
+  g_sim_uart_handler = s;
 }

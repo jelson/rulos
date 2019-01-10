@@ -25,14 +25,14 @@
 extern char cursor_label_white[1];
 
 typedef struct s_cursor_act {
-	BoardBuffer bbuf[MAX_HEIGHT];
-	uint8_t visible;
-	RectRegion rr;
-	uint8_t alpha;
-	const char *label;
+  BoardBuffer bbuf[MAX_HEIGHT];
+  uint8_t visible;
+  RectRegion rr;
+  uint8_t alpha;
+  const char *label;
 } CursorAct;
 
-// Initialize an unassigned cursor. 
+// Initialize an unassigned cursor.
 void cursor_init(CursorAct *act);
 
 // Configure the cursor to cover the region rr, which may span multiple boards.

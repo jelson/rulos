@@ -20,21 +20,21 @@
 #include "periph/rocket/sound.h"
 
 typedef struct {
-	SoundToken token;
+  SoundToken token;
 } SoundCmd;
 
 typedef struct {
-	uint8_t stream_id;
-	r_bool skip;
-	SoundCmd skip_cmd;
-	SoundCmd loop_cmd;
+  uint8_t stream_id;
+  r_bool skip;
+  SoundCmd skip_cmd;
+  SoundCmd loop_cmd;
 } AudioRequestMessage;
 
 typedef struct {
-	uint8_t stream_id;
-	uint8_t mlvolume;
+  uint8_t stream_id;
+  uint8_t mlvolume;
 } AudioVolumeMessage;
 
 typedef struct {
-	int8_t advance;	// +1: skip forward  -1: skip backward
+  int8_t advance;  // +1: skip forward  -1: skip backward
 } MusicControlMessage;

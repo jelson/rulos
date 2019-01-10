@@ -21,12 +21,12 @@
 #include "periph/7seg_panel/board_buffer.h"
 
 typedef struct {
-	Time base_time;
-	BoardBuffer bbuf;
+  Time base_time;
+  BoardBuffer bbuf;
 } DRTCAct;
 
 void drtc_init(DRTCAct *act, uint8_t board, Time base_time);
 void drtc_set_base_time(DRTCAct *act, Time base_time);
 Time drtc_get_base_time(DRTCAct *act);
 
-#endif // display_rtc_h
+#endif  // display_rtc_h

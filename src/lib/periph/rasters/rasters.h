@@ -21,9 +21,9 @@
 #include "periph/rocket/screen4.h"
 
 typedef struct {
-	char sym;
-	uint8_t len;			// units: 11-bit fields
-	uint16_t offset_bits;	// units: bits
+  char sym;
+  uint8_t len;           // units: 11-bit fields
+  uint16_t offset_bits;  // units: bits
 } RasterIndex;
 
 extern RasterIndex rasterIndex[];
@@ -32,12 +32,12 @@ extern const uint8_t rasterData[];
 void raster_draw_sym(RectRegion *rrect, char sym, int8_t dx, int8_t dy);
 void raster_paint_pixel(RectRegion *rrect, int x, int y);
 void raster_paint_pixel_v(RectRegion *rrect, int x, int y, r_bool on);
-	// x in [0,32), y in [0,24)
+// x in [0,32), y in [0,24)
 
 typedef struct {
-	Screen4 *s4;
-	Time startTime;
-	r_bool focused;
+  Screen4 *s4;
+  Time startTime;
+  r_bool focused;
 } RasterBigDigit;
 
 void raster_big_digit_init(RasterBigDigit *digit, Screen4 *s4);

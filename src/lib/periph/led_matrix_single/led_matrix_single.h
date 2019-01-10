@@ -3,14 +3,14 @@
 #include "core/rulos.h"
 
 typedef struct {
-	uint8_t red[8];
-	uint8_t green[8];
+  uint8_t red[8];
+  uint8_t green[8];
 } LMSBitmap;
 
 typedef struct {
-	LMSBitmap bitmap;
-	uint8_t row;
-	r_bool pwm_enable;
+  LMSBitmap bitmap;
+  uint8_t row;
+  r_bool pwm_enable;
 } LEDMatrixSingle;
 
 void led_matrix_single_init(LEDMatrixSingle *lms, uint8_t timer_id);

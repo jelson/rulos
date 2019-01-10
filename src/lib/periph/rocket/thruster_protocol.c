@@ -19,21 +19,20 @@
 void tsn_timer_func(ThrusterSendNetwork *tsn);
 void thruster_message_sent(SendSlot *sendSlot);
 
-void init_thruster_send_network(ThrusterSendNetwork *tsn, Network *network)
-{
-	tsn->network = network;
+void init_thruster_send_network(ThrusterSendNetwork *tsn, Network *network) {
+  tsn->network = network;
 
-	tsn->sendSlot.func = NULL;
-	tsn->sendSlot.msg = (Message*) tsn->thruster_message_storage;
-	tsn->sendSlot.dest_addr = ROCKET1_ADDR;
-	tsn->sendSlot.msg->dest_port = THRUSTER_PORT;
-	tsn->sendSlot.msg->payload_len = sizeof(ThrusterPayload);
-	tsn->sendSlot.sending = FALSE;
+  tsn->sendSlot.func = NULL;
+  tsn->sendSlot.msg = (Message *)tsn->thruster_message_storage;
+  tsn->sendSlot.dest_addr = ROCKET1_ADDR;
+  tsn->sendSlot.msg->dest_port = THRUSTER_PORT;
+  tsn->sendSlot.msg->payload_len = sizeof(ThrusterPayload);
+  tsn->sendSlot.sending = FALSE;
 
-	tsn->last_state.thruster_bits = 0;
-	tsn->state_changed = TRUE;
+  tsn->last_state.thruster_bits = 0;
+  tsn->state_changed = TRUE;
 
-	schedule_us(1, (ActivationFuncPtr) tsn_timer_func, tsn);
+  schedule_us(1, (ActivationFuncPtr)tsn_timer_func, tsn);
 }
 
 // To be sure messages are eventually sent (even if they're delayed
@@ -42,32 +41,24 @@ void init_thruster_send_network(ThrusterSendNetwork *tsn, Network *network)
 // start/stop periodic tasks as needed, we would, but it's not, so we
 // just waste a few cycles on the scheduler heap.
 
-void tsn_update(ThrusterSendNetwork *tsn, ThrusterPayload *payload)
-{
-	if (payload->thruster_bits != tsn->last_state.thruster_bits)
-	{
-		tsn->last_state.thruster_bits = payload->thruster_bits;
-		tsn->state_changed = TRUE;
-	}
+void tsn_update(ThrusterSendNetwork *tsn, ThrusterPayload *payload) {
+  if (payload->thruster_bits != tsn->last_state.thruster_bits) {
+    tsn->last_state.thruster_bits = payload->thruster_bits;
+    tsn->state_changed = TRUE;
+  }
 }
 
-void tsn_timer_func(ThrusterSendNetwork *tsn)
-{
-	schedule_us(1000000/20, (ActivationFuncPtr) tsn_timer_func, tsn);
+void tsn_timer_func(ThrusterSendNetwork *tsn) {
+  schedule_us(1000000 / 20, (ActivationFuncPtr)tsn_timer_func, tsn);
 
-	if (tsn->state_changed && !tsn->sendSlot.sending)
-	{
-		LOG("tsn: state change, sending packet\n");
+  if (tsn->state_changed && !tsn->sendSlot.sending) {
+    LOG("tsn: state change, sending packet\n");
 
-		ThrusterPayload *tp = (ThrusterPayload *) tsn->sendSlot.msg->data;
-		tp->thruster_bits = tsn->last_state.thruster_bits;
+    ThrusterPayload *tp = (ThrusterPayload *)tsn->sendSlot.msg->data;
+    tp->thruster_bits = tsn->last_state.thruster_bits;
 
-		if (net_send_message(tsn->network, &tsn->sendSlot))
-		{
-			tsn->state_changed = FALSE;
-		}
-	}
+    if (net_send_message(tsn->network, &tsn->sendSlot)) {
+      tsn->state_changed = FALSE;
+    }
+  }
 }
-
-
-

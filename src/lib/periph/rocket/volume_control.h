@@ -29,46 +29,42 @@
 
 #define DISPLAY_VOLUME_ADJUSTMENTS 1
 
-	// TODO drawing volume on the display burns 21 bytes of bss;
-	// here's where to reclaim them.
+// TODO drawing volume on the display burns 21 bytes of bss;
+// here's where to reclaim them.
 
-typedef struct
-{
-	uint8_t mlvolume;
+typedef struct {
+  uint8_t mlvolume;
 } SetVolumePayload;
 
 struct s_volume_control;
 
-typedef struct
-{
-	InputInjectorIfc iii;
-	struct s_volume_control *vc;
+typedef struct {
+  InputInjectorIfc iii;
+  struct s_volume_control *vc;
 } VolumeControlInjector;
 
-typedef struct s_volume_control
-{
+typedef struct s_volume_control {
 #if DISPLAY_VOLUME_ADJUSTMENTS
-#endif // DISPLAY_VOLUME_ADJUSTMENTS
-	VolumeControlInjector injector;
-	PotSticker potsticker;
-	AudioClient *ac;
+#endif  // DISPLAY_VOLUME_ADJUSTMENTS
+  VolumeControlInjector injector;
+  PotSticker potsticker;
+  AudioClient *ac;
 
-	uint8_t cur_vol;
+  uint8_t cur_vol;
 
 #if DISPLAY_VOLUME_ADJUSTMENTS
-	Time lastTouch;
-	r_bool visible;
-	uint8_t boardnum;
-	BoardBuffer bbuf;
-#endif // DISPLAY_VOLUME_ADJUSTMENTS
+  Time lastTouch;
+  r_bool visible;
+  uint8_t boardnum;
+  BoardBuffer bbuf;
+#endif  // DISPLAY_VOLUME_ADJUSTMENTS
 } VolumeControl;
 
-void volume_control_init(VolumeControl *vc, AudioClient *ac, uint8_t adc_channel, uint8_t boardnum);
+void volume_control_init(VolumeControl *vc, AudioClient *ac,
+                         uint8_t adc_channel, uint8_t boardnum);
 
-static inline uint8_t volume_get_mlvolume(VolumeControl *vc)
-{
-	return vc->cur_vol;
+static inline uint8_t volume_get_mlvolume(VolumeControl *vc) {
+  return vc->cur_vol;
 }
 
-
-#endif // _VOLUME_CONTROL_H
+#endif  // _VOLUME_CONTROL_H

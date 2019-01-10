@@ -26,24 +26,22 @@
 #define SIXMATRIX_NUM_ROWS 16
 #define SIXMATRIX_NUM_SUBFRAMES 8
 
-#define SIXMATRIX_NUM_COL_BYTES_2BIT (SIXMATRIX_NUM_COLS/4)
+#define SIXMATRIX_NUM_COL_BYTES_2BIT (SIXMATRIX_NUM_COLS / 4)
 #define SIXMATRIX_NUM_COL_BYTES_8BIT (SIXMATRIX_NUM_COLS)
 
-
-typedef enum {
-	sixmatrix_2bit,
-	sixmatrix_8bit
-} SixMatrix_mode;
+typedef enum { sixmatrix_2bit, sixmatrix_8bit } SixMatrix_mode;
 
 typedef struct {
-	uint16_t subframeOcr[SIXMATRIX_NUM_SUBFRAMES];
-	uint8_t subframeData[SIXMATRIX_NUM_SUBFRAMES][SIXMATRIX_NUM_ROWS][SIXMATRIX_NUM_COL_BYTES_2BIT];
-	uint8_t subframeNum;
-	SixMatrix_mode mode;
-	uint8_t lastRowPainted;
+  uint16_t subframeOcr[SIXMATRIX_NUM_SUBFRAMES];
+  uint8_t subframeData[SIXMATRIX_NUM_SUBFRAMES][SIXMATRIX_NUM_ROWS]
+                      [SIXMATRIX_NUM_COL_BYTES_2BIT];
+  uint8_t subframeNum;
+  SixMatrix_mode mode;
+  uint8_t lastRowPainted;
 } SixMatrix_Context_t;
 
 void hal_6matrix_init(SixMatrix_Context_t *matrixCtx);
-void hal_6matrix_setRow_2bit(SixMatrix_Context_t *matrixCtx, uint8_t *colBytes, uint8_t rowNum);
-void hal_6matrix_setRow_8bit(SixMatrix_Context_t *matrixCtx, uint8_t *colBytes, uint8_t rowNum);
-
+void hal_6matrix_setRow_2bit(SixMatrix_Context_t *matrixCtx, uint8_t *colBytes,
+                             uint8_t rowNum);
+void hal_6matrix_setRow_8bit(SixMatrix_Context_t *matrixCtx, uint8_t *colBytes,
+                             uint8_t rowNum);

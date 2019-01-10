@@ -22,27 +22,24 @@
 
 #ifndef SIM
 #include "hardware.h"
-#endif // SIM
+#endif  // SIM
 
 typedef struct s_quadknob {
-	uint8_t oldState;
-	InputInjectorIfc *ifi;
+  uint8_t oldState;
+  InputInjectorIfc *ifi;
 
 #ifndef SIM
-	IOPinDef *pin0;
-	IOPinDef *pin1;
+  IOPinDef *pin0;
+  IOPinDef *pin1;
 #endif
-	char fwd;
-	char back;
+  char fwd;
+  char back;
 } QuadKnob;
 
-void init_quadknob(QuadKnob *qk,
-	InputInjectorIfc *ifi,
+void init_quadknob(QuadKnob *qk, InputInjectorIfc *ifi,
 #ifndef SIM
-	IOPinDef *pin0,
-	IOPinDef *pin1,
+                   IOPinDef *pin0, IOPinDef *pin1,
 #endif
-	char fwd,
-	char back);
+                   char fwd, char back);
 
-#endif // _QUADKNOB_H
+#endif  // _QUADKNOB_H

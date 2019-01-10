@@ -21,12 +21,12 @@
 #include "periph/rocket/rocket.h"
 
 typedef struct s_autotype {
-	InputInjectorIfc *iii;
-	Time period;
-	char *str;
-	char *ptr;
+  InputInjectorIfc *iii;
+  Time period;
+  char *str;
+  char *ptr;
 } Autotype;
 
 void init_autotype(Autotype *a, InputInjectorIfc *iii, char *str, Time period);
 
-#endif // _AUTOTYPE_H
+#endif  // _AUTOTYPE_H

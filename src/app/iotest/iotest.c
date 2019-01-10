@@ -19,22 +19,21 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "core/rulos.h"
 #include "core/board_defs.h"
+#include "core/rulos.h"
 #include "hardware.h"
 #include "periph/uart/serial_console.h"
 
 typedef struct {
-	SerialConsole *sc;
+  SerialConsole *sc;
 } KeyScan;
 
 void key_scan(KeyScan *ks);
 
 #define KEY_SCAN_PERIOD 50000
 
-void key_scan_init(KeyScan *ks, SerialConsole *sc)
-{
-	ks->sc = sc;
+void key_scan_init(KeyScan *ks, SerialConsole *sc) {
+  ks->sc = sc;
 #if 0
 	gpio_make_input_enable_pullup(KEYPAD_COL0);
 	gpio_make_input_enable_pullup(KEYPAD_COL1);
@@ -45,14 +44,13 @@ void key_scan_init(KeyScan *ks, SerialConsole *sc)
 	gpio_make_output(KEYPAD_ROW2);
 	gpio_make_output(KEYPAD_ROW3);
 #endif
-	hal_init_keypad();
-	schedule_us(KEY_SCAN_PERIOD, (ActivationFuncPtr) key_scan, ks);
+  hal_init_keypad();
+  schedule_us(KEY_SCAN_PERIOD, (ActivationFuncPtr)key_scan, ks);
 }
 
-void key_scan(KeyScan *ks)
-{
-	char msg[10];
-	int len;
+void key_scan(KeyScan *ks) {
+  char msg[10];
+  int len;
 
 #if 0
 	msg[0] = gpio_is_set(KEYPAD_COL0) ? '0' : '_';
@@ -63,27 +61,25 @@ void key_scan(KeyScan *ks)
 	len = 5;
 #endif
 
-	msg[0] = hal_scan_keypad();
-	msg[1] = '\n';
-	len = 2;
-	
-	schedule_us(KEY_SCAN_PERIOD, (ActivationFuncPtr) key_scan, ks);
+  msg[0] = hal_scan_keypad();
+  msg[1] = '\n';
+  len = 2;
 
-	serial_console_sync_send(ks->sc, msg, len);
+  schedule_us(KEY_SCAN_PERIOD, (ActivationFuncPtr)key_scan, ks);
+
+  serial_console_sync_send(ks->sc, msg, len);
 }
 
-int main()
-{
-	hal_init();
-	init_clock(10000, TIMER1);
+int main() {
+  hal_init();
+  init_clock(10000, TIMER1);
 
-	SerialConsole sca;
-	serial_console_init(&sca, NULL, NULL);
+  SerialConsole sca;
+  serial_console_init(&sca, NULL, NULL);
 
-	KeyScan ks;
-	key_scan_init(&ks, &sca);
-	
-	cpumon_main_loop();
-	return 0;
+  KeyScan ks;
+  key_scan_init(&ks, &sca);
+
+  cpumon_main_loop();
+  return 0;
 }
-

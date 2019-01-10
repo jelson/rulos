@@ -21,15 +21,12 @@
 #include "core/rulos.h"
 #include "periph/7seg_panel/7seg_panel.h"
 
-
 /*******************************************************************************/
 /*******************************************************************************/
 
-
-int main()
-{
-	hal_init();
-	hal_init_rocketpanel();
+int main() {
+  hal_init();
+  hal_init_rocketpanel();
 #if 0
 	int seg=0, dig=0;
 	seg=0;
@@ -53,7 +50,7 @@ int main()
 		hal_delay_ms(20);
 	}
 #endif
-	
+
 #if 0
 	for (seg = 0; seg < 8; seg++) {
 		for (dig = 0; dig < 8; dig++) {
@@ -76,21 +73,19 @@ int main()
 	}
 #endif
 
-
 #if 1
-	while (1)
-	{
-		int seg, dig, onoff;
+  while (1) {
+    int seg, dig, onoff;
 
-		for (onoff = 0; onoff < 2; onoff++) {
-			for (seg = 0; seg < 8; seg++) {
-				for (dig = 0; dig < 8; dig++) {
-						hal_program_segment(0, dig, seg, onoff);
-				}
-				hal_delay_ms(1000);
-			}
-		}
-	}
+    for (onoff = 0; onoff < 2; onoff++) {
+      for (seg = 0; seg < 8; seg++) {
+        for (dig = 0; dig < 8; dig++) {
+          hal_program_segment(0, dig, seg, onoff);
+        }
+        hal_delay_ms(1000);
+      }
+    }
+  }
 #endif
 
 #if 0
@@ -109,6 +104,5 @@ int main()
 	}
 #endif
 
-	return 0;
+  return 0;
 }
-

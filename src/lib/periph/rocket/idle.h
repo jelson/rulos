@@ -21,16 +21,17 @@
 #include "periph/rocket/thruster_protocol.h"
 
 #define MAX_IDLE_HANDLERS 4
-#define IDLE_PERIOD (((Time)1000000)*60*5)	// five minutes.
-//#define IDLE_PERIOD (((Time)1000000)*3)			// 20 seconds (test)
-	// NB can't make it more than half the clock rollover time, or
-	// later_than will screw up.  I think that's about 10 min.
+#define IDLE_PERIOD (((Time)1000000) * 60 * 5)  // five minutes.
+//#define IDLE_PERIOD (((Time)1000000)*3)			// 20 seconds
+//(test)
+// NB can't make it more than half the clock rollover time, or
+// later_than will screw up.  I think that's about 10 min.
 
 typedef struct s_idle_act {
-	UIEventHandler *handlers[MAX_IDLE_HANDLERS];
-	uint8_t num_handlers;
-	r_bool nowactive;
-	Time last_touch;
+  UIEventHandler *handlers[MAX_IDLE_HANDLERS];
+  uint8_t num_handlers;
+  r_bool nowactive;
+  Time last_touch;
 } IdleAct;
 
 void init_idle(IdleAct *idle);
@@ -38,6 +39,4 @@ void idle_add_handler(IdleAct *idle, UIEventHandler *handler);
 void idle_touch(IdleAct *idle);
 void idle_thruster_listener_func(IdleAct *idle);
 
-
-
-#endif // _IDLE_H
+#endif  // _IDLE_H

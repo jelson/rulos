@@ -52,95 +52,93 @@
 /************************************************************************************/
 /************************************************************************************/
 
+int main() {
+  hal_init();
+  hal_init_rocketpanel();
+  bss_canary_init();
+  init_clock(10000, TIMER1);
 
-int main()
-{
+  CpumonAct cpumon;
+  cpumon_init(&cpumon);  // includes slow calibration phase
 
-	hal_init();
-	hal_init_rocketpanel();
-	bss_canary_init();
-	init_clock(10000, TIMER1);
+  Network network;
+  init_twi_network(&network, 100, ROCKET1_ADDR);
 
-	CpumonAct cpumon;
-	cpumon_init(&cpumon);	// includes slow calibration phase
+  // install_handler(ADC, adc_handler);
 
-	Network network;
-	init_twi_network(&network, 100, ROCKET1_ADDR);
+  board_buffer_module_init();
 
-	//install_handler(ADC, adc_handler);
+  /*
+          FocusManager fa;
+          focus_init(&fa);
+  */
 
-	board_buffer_module_init();
+  RemoteKeyboardSend rks;
+  init_remote_keyboard_send(&rks, &network, ROCKET_ADDR, REMOTE_KEYBOARD_PORT);
 
-/*
-	FocusManager fa;
-	focus_init(&fa);
-*/
+  /*
+          RemoteBBufRecv rbr;
+          init_remote_bbuf_recv(&rbr, &network);
+  */
 
-	RemoteKeyboardSend rks;
-	init_remote_keyboard_send(&rks, &network, ROCKET_ADDR, REMOTE_KEYBOARD_PORT);
+  DAER daer;
+  daer_init(&daer, 0, ((Time)5) << 20);
 
-/*
-	RemoteBBufRecv rbr;
-	init_remote_bbuf_recv(&rbr, &network);
-*/
+  DThrusterGraph dtg;
+  dtg_init(&dtg, 1, &network);
 
-	DAER daer;
-	daer_init(&daer, 0, ((Time)5)<<20);
-	
-	DThrusterGraph dtg;
-	dtg_init(&dtg, 1, &network);
+  Calculator calc;
+  calculator_init(&calc, 2, NULL,
+                  (FetchCalcDecorationValuesIfc*)&daer.decoration_ifc);
 
-	Calculator calc;
-	calculator_init(&calc, 2, NULL,
-		(FetchCalcDecorationValuesIfc*) &daer.decoration_ifc);
+  CascadedInputInjector cii;
+  init_cascaded_input_injector(&cii, (UIEventHandler*)&calc.focus,
+                               &rks.forwardLocalStrokes);
+  RemoteKeyboardRecv rkr;
+  init_remote_keyboard_recv(&rkr, &network, (InputInjectorIfc*)&cii,
+                            REMOTE_SUBFOCUS_PORT0);
 
-	CascadedInputInjector cii;
-	init_cascaded_input_injector(&cii, (UIEventHandler*) &calc.focus, &rks.forwardLocalStrokes);
-	RemoteKeyboardRecv rkr;
-	init_remote_keyboard_recv(&rkr, &network, (InputInjectorIfc*) &cii, REMOTE_SUBFOCUS_PORT0);
-
-	InputPollerAct ip;
+  InputPollerAct ip;
 #define LOCALTEST 0
 #if LOCALTEST
-	input_poller_init(&ip, (InputInjectorIfc*) &cii);
+  input_poller_init(&ip, (InputInjectorIfc*)&cii);
 #else
-	input_poller_init(&ip, &rks.forwardLocalStrokes);
+  input_poller_init(&ip, &rks.forwardLocalStrokes);
 #endif
 
 #ifndef SIM
-	// IO pins aren't defined for SIM. Clunky. Could simulate them?
-	IOPinDef q0pin0 = PINDEF(GPIO_C0);
-	IOPinDef q0pin1 = PINDEF(GPIO_C1);
-	QuadKnob q0;
-	init_quadknob(&q0, &rks.forwardLocalStrokes, &q0pin0, &q0pin1, 'r', 's');
+  // IO pins aren't defined for SIM. Clunky. Could simulate them?
+  IOPinDef q0pin0 = PINDEF(GPIO_C0);
+  IOPinDef q0pin1 = PINDEF(GPIO_C1);
+  QuadKnob q0;
+  init_quadknob(&q0, &rks.forwardLocalStrokes, &q0pin0, &q0pin1, 'r', 's');
 
-	IOPinDef q1pin0 = PINDEF(GPIO_C2);
-	IOPinDef q1pin1 = PINDEF(GPIO_C3);
-	QuadKnob q1;
-	init_quadknob(&q1, &rks.forwardLocalStrokes, &q1pin0, &q1pin1, 'a', 'b');
+  IOPinDef q1pin0 = PINDEF(GPIO_C2);
+  IOPinDef q1pin1 = PINDEF(GPIO_C3);
+  QuadKnob q1;
+  init_quadknob(&q1, &rks.forwardLocalStrokes, &q1pin0, &q1pin1, 'a', 'b');
 #endif
 
-	ScreenBlankerListener sbl;
-	init_screenblanker_listener(&sbl, &network);
+  ScreenBlankerListener sbl;
+  init_screenblanker_listener(&sbl, &network);
 
-/*
-	DAER daer;
-	daer_init(&daer, 0, ((Time)5)<<20);
+  /*
+          DAER daer;
+          daer_init(&daer, 0, ((Time)5)<<20);
 
-	Calculator calc;
-	calculator_init(&calc, 2, &fa,
-		(FetchCalcDecorationValuesIfc*) &daer.decoration_ifc);
-*/
+          Calculator calc;
+          calculator_init(&calc, 2, &fa,
+                  (FetchCalcDecorationValuesIfc*) &daer.decoration_ifc);
+  */
 
 #if MEASURE_CPU_FOR_RULOS_PAPER
-	DScrollMsgAct dsm;
-	dscrlmsg_init(&dsm, 1, "bong", 100);
-	IdleDisplayAct idle;
-	idle_display_init(&idle, &dsm, &cpumon);
-#endif // MEASURE_CPU_FOR_RULOS_PAPER
+  DScrollMsgAct dsm;
+  dscrlmsg_init(&dsm, 1, "bong", 100);
+  IdleDisplayAct idle;
+  idle_display_init(&idle, &dsm, &cpumon);
+#endif  // MEASURE_CPU_FOR_RULOS_PAPER
 
-	cpumon_main_loop();
+  cpumon_main_loop();
 
-	return 0;
+  return 0;
 }
-

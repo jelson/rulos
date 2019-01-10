@@ -1,41 +1,33 @@
 #include <asm/ioctls.h>
+#include <assert.h>
 #include <fcntl.h>
+#include <linux/serial.h>
 #include <stdio.h>
 #include <sys/signal.h>
 #include <sys/types.h>
 #include <termios.h>
 #include <unistd.h>
-#include <linux/serial.h>
-#include <assert.h>
 
-#define _POSIX_SOURCE 1         //POSIX compliant source
+#define _POSIX_SOURCE 1  // POSIX compliant source
 #define FALSE 0
 #define TRUE 1
 
+int main(int argc, const char **argv) {
+  int rc;
+  const char *port_path;
+  if (argc == 2) {
+    port_path = argv[1];
+  } else if (argc == 1) {
+    port_path = "/dev/ttyUSB0";
+  } else {
+    assert(FALSE);
+  }
 
-int main(int argc, const char **argv)
-{
-	int rc;
-	const char *port_path;
-	if (argc==2)
-	{
-		port_path = argv[1];
-	}
-	else if (argc==1)
-	{
-		port_path = "/dev/ttyUSB0";
-	}
-	else
-	{
-		assert(FALSE);
-	}
-
-	int fd = open(port_path, O_RDWR|O_NOCTTY);
-	if (fd<0) {
-		perror(port_path);
-		assert(0);
-	}
-
+  int fd = open(port_path, O_RDWR | O_NOCTTY);
+  if (fd < 0) {
+    perror(port_path);
+    assert(0);
+  }
 
 #if 0
 	// via setserial.c source
@@ -85,71 +77,67 @@ int main(int argc, const char **argv)
 	rc = tcsetattr(fd, TCSANOW, &newtio);
 	assert(rc==0);
 #else
-	struct termios termios_p;
+  struct termios termios_p;
 
-	rc = tcgetattr(fd, &termios_p);
-	assert(rc==0);
+  rc = tcgetattr(fd, &termios_p);
+  assert(rc == 0);
 
-	speed_t baud = B38400;
-	rc = cfsetispeed(&termios_p, baud);
-	assert(rc==0);
-	rc = cfsetospeed(&termios_p, baud);
-	assert(rc==0);
-	termios_p.c_cflag &= (~CRTSCTS);
+  speed_t baud = B38400;
+  rc = cfsetispeed(&termios_p, baud);
+  assert(rc == 0);
+  rc = cfsetospeed(&termios_p, baud);
+  assert(rc == 0);
+  termios_p.c_cflag &= (~CRTSCTS);
 
-	printf("CRTSCTS = %d\n", CRTSCTS);
+  printf("CRTSCTS = %d\n", CRTSCTS);
 
-	rc = tcsetattr(fd, TCSANOW, &termios_p);
-	assert(rc==0);
+  rc = tcsetattr(fd, TCSANOW, &termios_p);
+  assert(rc == 0);
 
-	rc = tcflush(fd, TCIOFLUSH);
-	assert(rc==0);
+  rc = tcflush(fd, TCIOFLUSH);
+  assert(rc == 0);
 
-	rc = tcgetattr(fd, &termios_p);
-	assert(rc==0);
+  rc = tcgetattr(fd, &termios_p);
+  assert(rc == 0);
 #endif
 
-	unlink("serialtee");
-	int teefd = open("serialtee", O_CREAT|O_WRONLY, 0644);
+  unlink("serialtee");
+  int teefd = open("serialtee", O_CREAT | O_WRONLY, 0644);
 
-	while (1)
-	{
-		fd_set readfds;
-		FD_ZERO(&readfds);
-		FD_SET(0, &readfds);
-		FD_SET(fd, &readfds);
-		int rc = select(fd+1, &readfds, NULL, NULL, NULL);
-		if (rc<0) {
-			perror("select");
-			break;
-		} else if (rc==0)
-		{
-			continue;
-		}
+  while (1) {
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(0, &readfds);
+    FD_SET(fd, &readfds);
+    int rc = select(fd + 1, &readfds, NULL, NULL, NULL);
+    if (rc < 0) {
+      perror("select");
+      break;
+    } else if (rc == 0) {
+      continue;
+    }
 
-		if (FD_ISSET(0, &readfds))
-		{
-			char c;
-			rc = read(0, &c, 1);
-			assert(rc==1);
-			write(fd, &c, 1);
-			assert(rc==1);
+    if (FD_ISSET(0, &readfds)) {
+      char c;
+      rc = read(0, &c, 1);
+      assert(rc == 1);
+      write(fd, &c, 1);
+      assert(rc == 1);
 
-			write(teefd, &c, 1);
-			assert(rc==1);
-		}
-		if (FD_ISSET(fd, &readfds))
-		{
-			char c;
-			rc = read(fd, &c, 1);
-			assert(rc==1);
-			write(1, &c, 1);
-			assert(rc==1);
+      write(teefd, &c, 1);
+      assert(rc == 1);
+    }
+    if (FD_ISSET(fd, &readfds)) {
+      char c;
+      rc = read(fd, &c, 1);
+      assert(rc == 1);
+      write(1, &c, 1);
+      assert(rc == 1);
 
-			write(teefd, &c, 1);
-			assert(rc==1);
-		}
-	}
+      write(teefd, &c, 1);
+      assert(rc == 1);
+    }
+  }
 
 #if 0
 	while (1)

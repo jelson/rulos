@@ -24,7 +24,7 @@ typedef struct {
   Time refrac_time_us;
   Time next_valid_push_time;
 } DebouncedButton_t;
-  
+
 void debounce_button_init(DebouncedButton_t* b, Time refrac_time_us);
 
 // Pass in whether the raw (un-debounced) button is in the pushed state.

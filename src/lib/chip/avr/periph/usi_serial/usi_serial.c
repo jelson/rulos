@@ -19,8 +19,7 @@
 #include "chip/avr/core/usi_pins.h"
 #include "hardware.h"
 
-void usi_serial_send(const char* s)
-{
+void usi_serial_send(const char* s) {
   gpio_make_output(USI_DO);
   gpio_make_output(USI_SCL);
 
@@ -34,4 +33,3 @@ void usi_serial_send(const char* s)
     }
   }
 }
-

@@ -6,15 +6,15 @@
 #include "periph/rocket/rocket.h"
 
 typedef struct {
-	Time display_period;
-	uint8_t board_num;
+  Time display_period;
+  uint8_t board_num;
 
-	uint8_t messagespace[sizeof(MomentaryDisplayMessage)];
-	RecvSlot recvSlot;
+  uint8_t messagespace[sizeof(MomentaryDisplayMessage)];
+  RecvSlot recvSlot;
 
-	BoardBuffer bbuf;
-	r_bool is_visible;
-	Time last_display;
+  BoardBuffer bbuf;
+  r_bool is_visible;
+  Time last_display;
 } MomentaryDisplay;
 
-#endif // _MOMENTARY_DISPLAY_H
+#endif  // _MOMENTARY_DISPLAY_H

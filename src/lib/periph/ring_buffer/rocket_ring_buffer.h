@@ -18,18 +18,18 @@
 #define _RING_BUFFER_H
 
 typedef struct {
-	uint8_t capacity;	// actually holds capacity-1 bytes;
-						// last byte is a sentinel
-	uint8_t insert;
-	uint8_t remove;
-	uint8_t buf[1];		// dummy byte to "automatically" allocate extra byte
+  uint8_t capacity;  // actually holds capacity-1 bytes;
+                     // last byte is a sentinel
+  uint8_t insert;
+  uint8_t remove;
+  uint8_t buf[1];  // dummy byte to "automatically" allocate extra byte
 } RingBuffer;
 
-#define DECLARE_RING_BUFFER(name, capacity)	\
-	union {	\
-		RingBuffer name;	\
-		uint8_t _storage_##name[sizeof(RingBuffer)+capacity+1];	\
-	};
+#define DECLARE_RING_BUFFER(name, capacity)                     \
+  union {                                                       \
+    RingBuffer name;                                            \
+    uint8_t _storage_##name[sizeof(RingBuffer) + capacity + 1]; \
+  };
 //	uint8_t[sizeof(RingBuffer)+capacity] storage_##name;
 //	RingBuffer *name = (RingBuffer*) storage_##name;
 
@@ -39,4 +39,4 @@ void ring_insert(RingBuffer *rb, uint8_t data);
 uint8_t ring_remove_avail(RingBuffer *rb);
 uint8_t ring_remove(RingBuffer *rb);
 
-#endif // _RING_BUFFER_H
+#endif  // _RING_BUFFER_H

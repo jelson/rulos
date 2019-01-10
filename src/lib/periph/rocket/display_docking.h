@@ -28,35 +28,37 @@
 #include "periph/rocket/thruster_protocol.h"
 
 #define DOCK_HEIGHT 4
-#define MAX_Y (DOCK_HEIGHT*6)
-#define MAX_X (NUM_DIGITS*4)
-#define CTR_X (MAX_X/2)
-#define CTR_Y (MAX_Y/2)
+#define MAX_Y (DOCK_HEIGHT * 6)
+#define MAX_X (NUM_DIGITS * 4)
+#define CTR_X (MAX_X / 2)
+#define CTR_Y (MAX_Y / 2)
 
 struct s_ddockact;
 
 typedef struct {
-	UIEventHandlerFunc func;
-	struct s_ddockact *act;
+  UIEventHandlerFunc func;
+  struct s_ddockact *act;
 } DDockHandler;
 
 typedef struct s_ddockact {
-	Screen4 *s4;
-	DDockHandler handler;
-	uint8_t focused;
-	DriftAnim xd, yd, rd;
-	uint32_t last_impulse_time;
-	ThrusterPayload thrusterPayload;
-	BoardBuffer auxboards[2];
-	uint8_t auxboard_base;
-	r_bool docking_complete;
-	AudioClient *audioClient;
-	Booster *booster;
-	JoystickState_t *joystick;
+  Screen4 *s4;
+  DDockHandler handler;
+  uint8_t focused;
+  DriftAnim xd, yd, rd;
+  uint32_t last_impulse_time;
+  ThrusterPayload thrusterPayload;
+  BoardBuffer auxboards[2];
+  uint8_t auxboard_base;
+  r_bool docking_complete;
+  AudioClient *audioClient;
+  Booster *booster;
+  JoystickState_t *joystick;
 } DDockAct;
 
-void ddock_init(DDockAct *act, Screen4 *s4, uint8_t auxboard_base, AudioClient *audioClient, Booster *booster, JoystickState_t *joystick);
+void ddock_init(DDockAct *act, Screen4 *s4, uint8_t auxboard_base,
+                AudioClient *audioClient, Booster *booster,
+                JoystickState_t *joystick);
 void ddock_reset(DDockAct *dd);
 void ddock_thruster_update(DDockAct *act, ThrusterPayload *tp);
 
-#endif // display_docking_h
+#endif  // display_docking_h

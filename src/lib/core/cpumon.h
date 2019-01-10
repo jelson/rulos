@@ -21,20 +21,20 @@
 #include "core/time.h"
 
 typedef enum {
-	cpumon_phase_align,
-	cpumon_phase_measure,
-	cpumon_phase_periodic_sample,
+  cpumon_phase_align,
+  cpumon_phase_measure,
+  cpumon_phase_periodic_sample,
 } CpumonPhase;
 
 typedef struct s_cpumon_act {
-	CpumonPhase phase;
-	uint8_t num_calibrations;
-	uint32_t last_spin_counter;
-	Time last_time;
-	uint32_t calibration_spin_counts;
-	Time calibration_interval;
-	uint32_t sample_spin_counts;
-	Time sample_interval;
+  CpumonPhase phase;
+  uint8_t num_calibrations;
+  uint32_t last_spin_counter;
+  Time last_time;
+  uint32_t calibration_spin_counts;
+  Time calibration_interval;
+  uint32_t sample_spin_counts;
+  Time sample_interval;
 } CpumonAct;
 
 void cpumon_init(CpumonAct *act);

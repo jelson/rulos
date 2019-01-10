@@ -53,8 +53,8 @@ sigset_t mask_set;
 #define MAX_HANDLERS 20
 
 typedef struct {
-	Handler func;
-	void *data;
+  Handler func;
+  void *data;
 } SimActivation_t;
 
 static SimActivation_t simClockHandlers[MAX_HANDLERS];
@@ -63,119 +63,103 @@ static int numSimClockHandlers = 0;
 static SimActivation_t simSIGIOHandlers[MAX_HANDLERS];
 static int numSimSIGIOHandlers = 0;
 
-static void sim_register_generic_handler(SimActivation_t *handlerList, int *numHandlers,
-					 Handler func, void *data)
-{
-	rulos_irq_state_t old_interrupts = hal_start_atomic();
-	handlerList[*numHandlers].func = func;
-	handlerList[*numHandlers].data = data;
-	(*numHandlers)++;
-	hal_end_atomic(old_interrupts);
+static void sim_register_generic_handler(SimActivation_t *handlerList,
+                                         int *numHandlers, Handler func,
+                                         void *data) {
+  rulos_irq_state_t old_interrupts = hal_start_atomic();
+  handlerList[*numHandlers].func = func;
+  handlerList[*numHandlers].data = data;
+  (*numHandlers)++;
+  hal_end_atomic(old_interrupts);
 }
 
-void sim_register_clock_handler(Handler func, void *data)
-{
-	sim_register_generic_handler(simClockHandlers, &numSimClockHandlers,
-				     func, data);
+void sim_register_clock_handler(Handler func, void *data) {
+  sim_register_generic_handler(simClockHandlers, &numSimClockHandlers, func,
+                               data);
 }
 
-
-void sim_register_sigio_handler(Handler func, void *data)
-{
-	sim_register_generic_handler(simSIGIOHandlers, &numSimSIGIOHandlers,
-				     func, data);
+void sim_register_sigio_handler(Handler func, void *data) {
+  sim_register_generic_handler(simSIGIOHandlers, &numSimSIGIOHandlers, func,
+                               data);
 }
 
-static void sim_generic_fire_handlers(SimActivation_t *handlerList, int numHandlers)
-{
-	rulos_irq_state_t old_interrupts = hal_start_atomic();
-	int i;
+static void sim_generic_fire_handlers(SimActivation_t *handlerList,
+                                      int numHandlers) {
+  rulos_irq_state_t old_interrupts = hal_start_atomic();
+  int i;
 
-	for (i = 0; i < numHandlers; i++)
-		handlerList[i].func(handlerList[i].data);
-	hal_end_atomic(old_interrupts);
+  for (i = 0; i < numHandlers; i++) handlerList[i].func(handlerList[i].data);
+  hal_end_atomic(old_interrupts);
 }
 
-void sim_clock_handler(int signo)
-{
-	sim_generic_fire_handlers(simClockHandlers, numSimClockHandlers);
+void sim_clock_handler(int signo) {
+  sim_generic_fire_handlers(simClockHandlers, numSimClockHandlers);
 }
 
-void sim_sigio_handler(int signo)
-{
-	sim_generic_fire_handlers(simSIGIOHandlers, numSimSIGIOHandlers);
+void sim_sigio_handler(int signo) {
+  sim_generic_fire_handlers(simSIGIOHandlers, numSimSIGIOHandlers);
 }
 
+uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
+                            uint8_t timer_id) {
+  assert(hal_initted == HAL_MAGIC);  // did you forget to call hal_init()?
 
-uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t timer_id)
-{
-	assert(hal_initted == HAL_MAGIC); // did you forget to call hal_init()?
-	
-	/* init clock stuff */
-	sigemptyset(&mask_set);
-	sigaddset(&mask_set, SIGALRM);
-	sigaddset(&mask_set, SIGIO);
+  /* init clock stuff */
+  sigemptyset(&mask_set);
+  sigaddset(&mask_set, SIGALRM);
+  sigaddset(&mask_set, SIGIO);
 
-	struct itimerval ivalue, ovalue;
-	ivalue.it_interval.tv_sec = us/1000000;
-	ivalue.it_interval.tv_usec = (us%1000000);
-	ivalue.it_value = ivalue.it_interval;
-	setitimer(ITIMER_REAL, &ivalue, &ovalue);
+  struct itimerval ivalue, ovalue;
+  ivalue.it_interval.tv_sec = us / 1000000;
+  ivalue.it_interval.tv_usec = (us % 1000000);
+  ivalue.it_value = ivalue.it_interval;
+  setitimer(ITIMER_REAL, &ivalue, &ovalue);
 
-	sim_register_clock_handler(handler, data);
-	signal(SIGALRM, sim_clock_handler);
-	
-	return us;
+  sim_register_clock_handler(handler, data);
+  signal(SIGALRM, sim_clock_handler);
+
+  return us;
 }
 
 // this COULD be implemented with gettimeofday(), but I'm too lazy,
 // since the only reason this function exists is for the wall clock
 // app, so it only matters in hardware.
-uint16_t hal_elapsed_milliintervals()
-{
-	return 0;
-}
+uint16_t hal_elapsed_milliintervals() { return 0; }
 
-void hal_speedup_clock_ppm(int32_t ratio)
-{
-	// do nothing for now
+void hal_speedup_clock_ppm(int32_t ratio) {
+  // do nothing for now
 }
 
 rulos_irq_state_t is_blocked = 0;
 
-rulos_irq_state_t hal_start_atomic()
-{
-	sigprocmask(SIG_BLOCK, &mask_set, NULL);
-	rulos_irq_state_t retval = is_blocked;
-	is_blocked = 1;
-	return retval;
+rulos_irq_state_t hal_start_atomic() {
+  sigprocmask(SIG_BLOCK, &mask_set, NULL);
+  rulos_irq_state_t retval = is_blocked;
+  is_blocked = 1;
+  return retval;
 }
 
-void hal_end_atomic(rulos_irq_state_t blocked)
-{
-	if (!blocked)
-	{
-		is_blocked = 0;
-		sigprocmask(SIG_UNBLOCK, &mask_set, NULL);
-	}
+void hal_end_atomic(rulos_irq_state_t blocked) {
+  if (!blocked) {
+    is_blocked = 0;
+    sigprocmask(SIG_UNBLOCK, &mask_set, NULL);
+  }
 }
 
-void hal_idle()
-{
-	// turns out 'man sleep' says sleep & sigalrm don't mix. yield is what we want.
-	// No, sched_yield doesn't wait ANY time. libc suggests select()
-	static struct timeval tv;
-	tv.tv_sec = 0;
-	tv.tv_usec = 100;	// .1 ms
-	select(0, NULL, NULL, NULL, &tv);
+void hal_idle() {
+  // turns out 'man sleep' says sleep & sigalrm don't mix. yield is what we
+  // want. No, sched_yield doesn't wait ANY time. libc suggests select()
+  static struct timeval tv;
+  tv.tv_sec = 0;
+  tv.tv_usec = 100;  // .1 ms
+  select(0, NULL, NULL, NULL, &tv);
 }
 
-void hal_delay_ms(uint16_t ms)
-{
-	static struct timeval tv;
-	tv.tv_sec = ms/1000;
-	tv.tv_usec = 1000*(ms%1000);
-	select(0, NULL, NULL, NULL, &tv);
+void hal_delay_ms(uint16_t ms) {
+  static struct timeval tv;
+  tv.tv_sec = ms / 1000;
+  tv.tv_usec = 1000 * (ms % 1000);
+  select(0, NULL, NULL, NULL, &tv);
 }
 
 /********************** sensors *************************/
@@ -185,162 +169,141 @@ void *sensor_interrupt_data = NULL;
 const uint32_t sensor_interrupt_simulator_counter_period = 507;
 uint32_t sensor_interrupt_simulator_counter;
 
-void sim_sensor_poll(void *data)
-{
-	sensor_interrupt_simulator_counter += 1;
-	if (sensor_interrupt_simulator_counter == sensor_interrupt_simulator_counter_period)
-	{
-		if (sensor_interrupt_handler != NULL)
-		{
-			sensor_interrupt_handler(sensor_interrupt_data);
-		}
-		sensor_interrupt_simulator_counter = 0;
-	}
-
+void sim_sensor_poll(void *data) {
+  sensor_interrupt_simulator_counter += 1;
+  if (sensor_interrupt_simulator_counter ==
+      sensor_interrupt_simulator_counter_period) {
+    if (sensor_interrupt_handler != NULL) {
+      sensor_interrupt_handler(sensor_interrupt_data);
+    }
+    sensor_interrupt_simulator_counter = 0;
+  }
 }
 
-
-void sensor_interrupt_register_handler(Handler handler, void *data)
-{
-	sensor_interrupt_handler = handler;
-	sensor_interrupt_data = data;
-	sim_register_clock_handler(sim_sensor_poll, NULL);
+void sensor_interrupt_register_handler(Handler handler, void *data) {
+  sensor_interrupt_handler = handler;
+  sensor_interrupt_data = data;
+  sim_register_clock_handler(sim_sensor_poll, NULL);
 }
-
 
 /*************** twi ************************/
 
 typedef struct {
-	MediaStateIfc media;
-	r_bool initted;
-	MediaRecvSlot *mrs;
-	int udp_socket;
+  MediaStateIfc media;
+  r_bool initted;
+  MediaRecvSlot *mrs;
+  int udp_socket;
 } SimTwiState;
-SimTwiState g_sim_twi_state = { {NULL}, FALSE };
+SimTwiState g_sim_twi_state = {{NULL}, FALSE};
 
-
-static void sim_twi_send(MediaStateIfc *media,
-	Addr dest_addr, const char *data, uint8_t len,
-	MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
+static void sim_twi_send(MediaStateIfc *media, Addr dest_addr, const char *data,
+                         uint8_t len, MediaSendDoneFunc sendDoneCB,
+                         void *sendDoneCBData);
 static void sim_twi_poll(void *data);
 
-MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr, MediaRecvSlot *mrs)
-{
-	SimTwiState *twi_state = &g_sim_twi_state;
-	twi_state->media.send = sim_twi_send;
-	twi_state->mrs = mrs;
-	twi_state->udp_socket = socket(PF_INET, SOCK_DGRAM, 0);
+MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
+                            MediaRecvSlot *mrs) {
+  SimTwiState *twi_state = &g_sim_twi_state;
+  twi_state->media.send = sim_twi_send;
+  twi_state->mrs = mrs;
+  twi_state->udp_socket = socket(PF_INET, SOCK_DGRAM, 0);
 
-	int rc;
-	int on = 1;
-	int flags = fcntl(twi_state->udp_socket, F_GETFL);
-	rc = fcntl(twi_state->udp_socket, F_SETFL, flags | O_ASYNC);
-	assert(rc==0);
-	rc = ioctl(twi_state->udp_socket, FIOASYNC, &on );
-	assert(rc==0);
-	rc = ioctl(twi_state->udp_socket, FIONBIO, &on);
-	assert(rc==0);
-	int flag = -getpid();
-	rc = ioctl(twi_state->udp_socket, SIOCSPGRP, &flag);
-	assert(rc==0);
+  int rc;
+  int on = 1;
+  int flags = fcntl(twi_state->udp_socket, F_GETFL);
+  rc = fcntl(twi_state->udp_socket, F_SETFL, flags | O_ASYNC);
+  assert(rc == 0);
+  rc = ioctl(twi_state->udp_socket, FIOASYNC, &on);
+  assert(rc == 0);
+  rc = ioctl(twi_state->udp_socket, FIONBIO, &on);
+  assert(rc == 0);
+  int flag = -getpid();
+  rc = ioctl(twi_state->udp_socket, SIOCSPGRP, &flag);
+  assert(rc == 0);
 
-	struct sockaddr_in sai;
-	sai.sin_family = AF_INET;
-	sai.sin_addr.s_addr = htonl(INADDR_ANY);
-	sai.sin_port = htons(SIM_TWI_PORT_BASE + local_addr);
-	bind(twi_state->udp_socket, (struct sockaddr*)&sai, sizeof(sai));
-	twi_state->initted = TRUE;
-	sim_register_clock_handler(sim_twi_poll, NULL);
-	sim_register_sigio_handler(sim_twi_poll, NULL);
-	return &twi_state->media;
+  struct sockaddr_in sai;
+  sai.sin_family = AF_INET;
+  sai.sin_addr.s_addr = htonl(INADDR_ANY);
+  sai.sin_port = htons(SIM_TWI_PORT_BASE + local_addr);
+  bind(twi_state->udp_socket, (struct sockaddr *)&sai, sizeof(sai));
+  twi_state->initted = TRUE;
+  sim_register_clock_handler(sim_twi_poll, NULL);
+  sim_register_sigio_handler(sim_twi_poll, NULL);
+  return &twi_state->media;
 }
 
-
-static void doRecvCallback(MediaRecvSlot *mrs)
-{
-	mrs->func(mrs, mrs->occupied_len);
+static void doRecvCallback(MediaRecvSlot *mrs) {
+  mrs->func(mrs, mrs->occupied_len);
 }
 
-static void sim_twi_poll(void *data)
-{
-	SimTwiState *twi_state = &g_sim_twi_state;
-	if (!twi_state->initted)
-	{
-		return;
-	}
+static void sim_twi_poll(void *data) {
+  SimTwiState *twi_state = &g_sim_twi_state;
+  if (!twi_state->initted) {
+    return;
+  }
 
-	char buf[4096];
+  char buf[4096];
 
-	int rc = recv(
-		twi_state->udp_socket,
-		buf,
-		sizeof(buf),
-		MSG_DONTWAIT);
+  int rc = recv(twi_state->udp_socket, buf, sizeof(buf), MSG_DONTWAIT);
 
-	if (rc<0)
-	{
-		assert(errno == EAGAIN);
-		return;
-	}
+  if (rc < 0) {
+    assert(errno == EAGAIN);
+    return;
+  }
 
-	assert(rc != 0);
+  assert(rc != 0);
 
-	if (twi_state->mrs->occupied_len > 0)
-	{
-		LOG("TWI SIM: Packet arrived but network stack buffer busy; dropping\n");
-		return;
-	}
+  if (twi_state->mrs->occupied_len > 0) {
+    LOG("TWI SIM: Packet arrived but network stack buffer busy; dropping\n");
+    return;
+  }
 
-	if (rc > twi_state->mrs->capacity)
-	{
-		LOG("TWI SIM: Discarding %d-byte packet; too long for net stack's buffer\n", rc);
-		return;
-	}
+  if (rc > twi_state->mrs->capacity) {
+    LOG("TWI SIM: Discarding %d-byte packet; too long for net stack's buffer\n",
+        rc);
+    return;
+  }
 
-	twi_state->mrs->occupied_len = rc;
-	memcpy(twi_state->mrs->data, buf, rc);
-	schedule_now((ActivationFuncPtr) doRecvCallback, twi_state->mrs);
+  twi_state->mrs->occupied_len = rc;
+  memcpy(twi_state->mrs->data, buf, rc);
+  schedule_now((ActivationFuncPtr)doRecvCallback, twi_state->mrs);
 }
-
 
 typedef struct {
-	MediaSendDoneFunc sendDoneCB;
-	void *sendDoneCBData;
+  MediaSendDoneFunc sendDoneCB;
+  void *sendDoneCBData;
 } sendCallbackAct_t;
 
 sendCallbackAct_t sendCallbackAct_g;
 
-static void doSendCallback(sendCallbackAct_t *sca)
-{
-	sca->sendDoneCB(sca->sendDoneCBData);
+static void doSendCallback(sendCallbackAct_t *sca) {
+  sca->sendDoneCB(sca->sendDoneCBData);
 }
 
-static void sim_twi_send(MediaStateIfc *media,
-			  Addr dest_addr, const char *data, uint8_t len,
-			  MediaSendDoneFunc sendDoneCB, void *sendDoneCBData)
-{
-	SimTwiState *twi_state = (SimTwiState *) media;
+static void sim_twi_send(MediaStateIfc *media, Addr dest_addr, const char *data,
+                         uint8_t len, MediaSendDoneFunc sendDoneCB,
+                         void *sendDoneCBData) {
+  SimTwiState *twi_state = (SimTwiState *)media;
 
 #if 0
 	LOG("hal_twi_send_byte(%02x [%c])\n",
 		byte,
 		(byte>=' ' && byte<127) ? byte : '_');
 #endif
-	
-	struct sockaddr_in sai;
 
-	sai.sin_family = AF_INET;
-	sai.sin_addr.s_addr = htonl(0x7f000001);
-	sai.sin_port = htons(SIM_TWI_PORT_BASE + dest_addr);
-	sendto(twi_state->udp_socket, data, len,
-		   0, (struct sockaddr*)&sai, sizeof(sai));
+  struct sockaddr_in sai;
 
-	if (sendDoneCB)
-	{
-		sendCallbackAct_g.sendDoneCB = sendDoneCB;
-		sendCallbackAct_g.sendDoneCBData = sendDoneCBData;
-		schedule_now((ActivationFuncPtr) doSendCallback, &sendCallbackAct_g);
-	}
+  sai.sin_family = AF_INET;
+  sai.sin_addr.s_addr = htonl(0x7f000001);
+  sai.sin_port = htons(SIM_TWI_PORT_BASE + dest_addr);
+  sendto(twi_state->udp_socket, data, len, 0, (struct sockaddr *)&sai,
+         sizeof(sai));
+
+  if (sendDoneCB) {
+    sendCallbackAct_g.sendDoneCB = sendDoneCB;
+    sendCallbackAct_g.sendDoneCBData = sendDoneCBData;
+    schedule_now((ActivationFuncPtr)doSendCallback, &sendCallbackAct_g);
+  }
 }
 
 #if 0
@@ -387,32 +350,25 @@ void hal_uart_start_send(UartHandler* handler)
 
 /************ init ***********************/
 
-
 static FILE *logfp = NULL;
 static uint64_t init_time = 0;
 
-uint64_t curr_time_usec()
-{
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	return ((uint64_t) 1000000) * tv.tv_sec + tv.tv_usec;
-}
-	
-void hal_uart_sync_send(char *s, uint8_t len)
-{
-	char buf[1000];
-	memcpy(buf, s, len);
-	buf[len] = '\0';
-	LOG("uart send: %s\n", buf);
+uint64_t curr_time_usec() {
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return ((uint64_t)1000000) * tv.tv_sec + tv.tv_usec;
 }
 
-void uart_debug_log(const char *m)
-{
-	fprintf(stderr, "DEBUG: %s\n", m);
+void hal_uart_sync_send(char *s, uint8_t len) {
+  char buf[1000];
+  memcpy(buf, s, len);
+  buf[len] = '\0';
+  LOG("uart send: %s\n", buf);
 }
 
-void sim_log(const char *fmt, ...)
-{
+void uart_debug_log(const char *m) { fprintf(stderr, "DEBUG: %s\n", m); }
+
+void sim_log(const char *fmt, ...) {
   va_list ap;
   char message[4096];
 
@@ -421,18 +377,16 @@ void sim_log(const char *fmt, ...)
   va_end(ap);
 
   uint64_t normalized_time_usec = curr_time_usec() - init_time;
-  
+
   fprintf(logfp, "%" PRIu64 ".%06" PRIu64 ": %s",
-	  normalized_time_usec / 1000000,
-	  normalized_time_usec % 1000000,
-	  message);
+          normalized_time_usec / 1000000, normalized_time_usec % 1000000,
+          message);
   fflush(logfp);
 }
 
-void hal_init()
-{
-	logfp = fopen("log", "w");
-	init_time = curr_time_usec();
-	signal(SIGIO, sim_sigio_handler);
-	hal_initted = HAL_MAGIC;
+void hal_init() {
+  logfp = fopen("log", "w");
+  init_time = curr_time_usec();
+  signal(SIGIO, sim_sigio_handler);
+  hal_initted = HAL_MAGIC;
 }

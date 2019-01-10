@@ -21,11 +21,11 @@
 #include "periph/rocket/rocket.h"
 
 struct s_decoration_state;
-typedef void (*FetchCalcDecorationValuesFunc)(
-	struct s_decoration_state *state,
-	DecimalFloatingPoint *op0, DecimalFloatingPoint *op1);
+typedef void (*FetchCalcDecorationValuesFunc)(struct s_decoration_state *state,
+                                              DecimalFloatingPoint *op0,
+                                              DecimalFloatingPoint *op1);
 typedef struct s_decoration_state {
-	FetchCalcDecorationValuesFunc func;
+  FetchCalcDecorationValuesFunc func;
 } FetchCalcDecorationValuesIfc;
 
-#endif // _calculator_decoration_h
+#endif  // _calculator_decoration_h

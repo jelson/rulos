@@ -14,36 +14,33 @@
  *
  ************************************************************************/
 
-#include "core/util.h"
 #include "periph/rocket/labeled_display.h"
+#include "core/util.h"
 #include "periph/rocket/rocket.h"
 
-UIEventDisposition labeled_display_event_handler(
-	UIEventHandler *raw_handler, UIEvent evt);
+UIEventDisposition labeled_display_event_handler(UIEventHandler *raw_handler,
+                                                 UIEvent evt);
 
-void labeled_display_init(LabeledDisplayHandler *ldh, int b0, FocusManager *focus)
-{
-	ldh->func = labeled_display_event_handler;
+void labeled_display_init(LabeledDisplayHandler *ldh, int b0,
+                          FocusManager *focus) {
+  ldh->func = labeled_display_event_handler;
 
-	dscrlmsg_init(&ldh->msgAct, 0, " clock  ", b0);
-	drtc_init(&ldh->rtcAct, b0+1, 0);
+  dscrlmsg_init(&ldh->msgAct, 0, " clock  ", b0);
+  drtc_init(&ldh->rtcAct, b0 + 1, 0);
 
-	ldh->bufs[0] = &ldh->msgAct.bbuf;
-	ldh->bufs[1] = &ldh->rtcAct.bbuf;
-	RectRegion rr = {ldh->bufs, 2, 1, 6};
-	focus_register(focus, (UIEventHandler*) ldh, rr, "clock");
+  ldh->bufs[0] = &ldh->msgAct.bbuf;
+  ldh->bufs[1] = &ldh->rtcAct.bbuf;
+  RectRegion rr = {ldh->bufs, 2, 1, 6};
+  focus_register(focus, (UIEventHandler *)ldh, rr, "clock");
 }
 
-UIEventDisposition labeled_display_event_handler(
-	UIEventHandler *raw_handler, UIEvent evt)
-{
-	// most-trivial handler (note no cursor; sorry.)
-	switch (evt)
-	{
-		case uie_escape:
-			return uied_blur;
-		default:
-			return uied_accepted;
-	}
+UIEventDisposition labeled_display_event_handler(UIEventHandler *raw_handler,
+                                                 UIEvent evt) {
+  // most-trivial handler (note no cursor; sorry.)
+  switch (evt) {
+    case uie_escape:
+      return uied_blur;
+    default:
+      return uied_accepted;
+  }
 }
-

@@ -20,28 +20,26 @@
 #define THRUSTER_REPORT_INTERVAL 250000
 
 typedef struct {
-	uint8_t thruster_bits;
+  uint8_t thruster_bits;
 } ThrusterPayload;
 
-typedef void (*ThrusterUpdateFunc)(
-				   void *data,
-				   ThrusterPayload *payload);
+typedef void (*ThrusterUpdateFunc)(void *data, ThrusterPayload *payload);
 
 // Record of someone who wants to be notified when thurster status changes
 typedef struct {
-	ThrusterUpdateFunc func;
-	void *data;
+  ThrusterUpdateFunc func;
+  void *data;
 } ThrusterUpdate;
 
 typedef struct s_thruster_send_network {
-	Network *network;
-	uint8_t thruster_message_storage[sizeof(Message)+sizeof(ThrusterPayload)];
-	SendSlot sendSlot;
-	ThrusterPayload last_state;
-	r_bool state_changed;
+  Network *network;
+  uint8_t thruster_message_storage[sizeof(Message) + sizeof(ThrusterPayload)];
+  SendSlot sendSlot;
+  ThrusterPayload last_state;
+  r_bool state_changed;
 } ThrusterSendNetwork;
 
 void init_thruster_send_network(ThrusterSendNetwork *tsn, Network *network);
 void tsn_update(ThrusterSendNetwork *tsn, ThrusterPayload *payload);
 
-#endif // _thruster_protocol_h
+#endif  // _thruster_protocol_h

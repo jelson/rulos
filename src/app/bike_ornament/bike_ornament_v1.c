@@ -37,7 +37,7 @@ typedef struct {
   uint8_t light_on_l;
   uint8_t light_on_r;
   Time wheels_next_move_time;
-  
+
   // taillight
   r_bool tail_on;
   Time tail_next_toggle_time;
@@ -47,8 +47,7 @@ typedef struct {
 #define TAIL_OFF_TIME_MS 300
 #define WHEEL_PERIOD_MS 10
 
-static inline void clock()
-{
+static inline void clock() {
   gpio_set(LED_DRIVER_CLK);
   gpio_clr(LED_DRIVER_CLK);
 }
@@ -56,8 +55,7 @@ static inline void clock()
 // This function shifts 16 bits into the two 16-bit latches. They have
 // separate data lines, but share a clock line, so in each cycle we set both
 // data lines separately and then effectively clock them together.
-static void shift_in_config(BikeState_t* bike)
-{
+static void shift_in_config(BikeState_t* bike) {
   gpio_clr(LED_DRIVER_LE);
   gpio_clr(LED_DRIVER_CLK);
 

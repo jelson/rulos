@@ -25,9 +25,7 @@
 /************************************************************************************/
 /************************************************************************************/
 
-
-int main()
-{
+int main() {
   HPAM hpam;
   ThrusterUpdate *thrusterUpdate[4];
 
@@ -37,13 +35,12 @@ int main()
   memset(thrusterUpdate, 0, sizeof(thrusterUpdate));
   init_hpam(&hpam, 7, thrusterUpdate);
   board_buffer_module_init();
-  
+
   ThrusterState_t ts;
   thrusters_init(&ts, 7, 3, 2, &hpam, NULL);
-  
+
   CpumonAct cpumon;
   cpumon_init(&cpumon);
   cpumon_main_loop();
   return 0;
 }
-

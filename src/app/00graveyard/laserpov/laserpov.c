@@ -27,49 +27,46 @@
 #include "periph/laserfont/laserfont.h"
 #include "periph/rocket/rocket.h"
 
-int main()
-{
-	heap_init();
-	util_init();
-	hal_init();
-	clock_init(300);
+int main() {
+  heap_init();
+  util_init();
+  hal_init();
+  clock_init(300);
 
-	InputControllerAct ia;
-	input_controller_init(&ia, NULL);
+  InputControllerAct ia;
+  input_controller_init(&ia, NULL);
 
-	CpumonAct cpumon;
-	cpumon_init(&cpumon);	// includes slow calibration phase
+  CpumonAct cpumon;
+  cpumon_init(&cpumon);  // includes slow calibration phase
 
-	MirrorHandler mirror;
-	mirror_init(&mirror);
+  MirrorHandler mirror;
+  mirror_init(&mirror);
 
-	PovHandler pov;
-	pov_init(&pov, &mirror, 0, 1);
+  PovHandler pov;
+  pov_init(&pov, &mirror, 0, 1);
 
-	extern LaserFont font_uni_05_x;	// yuk. Need to generate a .h, I guess.
-	laserfont_draw_string(&font_uni_05_x, pov.bitmap, POV_BITMAP_LENGTH, "01234 Hello, lasery world!");
+  extern LaserFont font_uni_05_x;  // yuk. Need to generate a .h, I guess.
+  laserfont_draw_string(&font_uni_05_x, pov.bitmap, POV_BITMAP_LENGTH,
+                        "01234 Hello, lasery world!");
 
 #if SIM
-	{
-		FILE *fp = fopen("bitmap.txt", "w");
-		int i, bit;
-		for (i=0; i<POV_BITMAP_LENGTH; i++)
-		{
-			SSBitmap p = pov.bitmap[i];
-			for (bit=0; bit<8; bit++)
-			{
-				fprintf(fp, ((p>>bit) & 1) ? "#" : " ");
-			}
-			fprintf(fp, "\n");
-		}
-		fclose(fp);
-	}
-#endif // SIM
+  {
+    FILE *fp = fopen("bitmap.txt", "w");
+    int i, bit;
+    for (i = 0; i < POV_BITMAP_LENGTH; i++) {
+      SSBitmap p = pov.bitmap[i];
+      for (bit = 0; bit < 8; bit++) {
+        fprintf(fp, ((p >> bit) & 1) ? "#" : " ");
+      }
+      fprintf(fp, "\n");
+    }
+    fclose(fp);
+  }
+#endif  // SIM
 
-	board_buffer_module_init();
+  board_buffer_module_init();
 
-	cpumon_main_loop();
+  cpumon_main_loop();
 
-	return 0;
+  return 0;
 }
-

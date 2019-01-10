@@ -28,40 +28,38 @@ uint16_t seconds_on = 0;
 const uint16_t off_time = TIMEOUT_MINUTES * 60;
 #define ONE_SEC_IN_USEC 1000000
 
-static void one_sec(void *data)
-{
-	usi_serial_send("S");
+static void one_sec(void *data) {
+  usi_serial_send("S");
 
-	if (seconds_on < off_time) {
-		seconds_on++;
-		schedule_us(ONE_SEC_IN_USEC, (ActivationFuncPtr) one_sec, NULL);
-	} else {
-		gpio_clr(LIGHT_PIN);
-	}
+  if (seconds_on < off_time) {
+    seconds_on++;
+    schedule_us(ONE_SEC_IN_USEC, (ActivationFuncPtr)one_sec, NULL);
+  } else {
+    gpio_clr(LIGHT_PIN);
+  }
 }
 
-int main()
-{
-	hal_init();
+int main() {
+  hal_init();
 
-	gpio_make_output(LIGHT_PIN);
-	gpio_set(LIGHT_PIN);
+  gpio_make_output(LIGHT_PIN);
+  gpio_set(LIGHT_PIN);
 
 #ifdef TIMING_DEBUG_PIN
-	gpio_make_output(TIMING_DEBUG_PIN);
+  gpio_make_output(TIMING_DEBUG_PIN);
 
-	for (int i = 0; i < 20; i++) {
-		gpio_set(TIMING_DEBUG_PIN);
-		gpio_clr(TIMING_DEBUG_PIN);
-}
+  for (int i = 0; i < 20; i++) {
+    gpio_set(TIMING_DEBUG_PIN);
+    gpio_clr(TIMING_DEBUG_PIN);
+  }
 #endif
 
-	usi_serial_send("A");
+  usi_serial_send("A");
 
-	init_clock(10000, TIMER0);
-	schedule_now((ActivationFuncPtr) one_sec, NULL);
+  init_clock(10000, TIMER0);
+  schedule_now((ActivationFuncPtr)one_sec, NULL);
 
-	usi_serial_send("L");
+  usi_serial_send("L");
 
-	cpumon_main_loop();
+  cpumon_main_loop();
 }

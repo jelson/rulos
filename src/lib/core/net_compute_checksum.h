@@ -5,4 +5,4 @@
 
 uint8_t net_compute_checksum(char *buf, int size);
 
-#endif // _net_compute_checksum_h
+#endif  // _net_compute_checksum_h

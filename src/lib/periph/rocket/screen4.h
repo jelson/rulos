@@ -20,13 +20,13 @@
 #include "periph/7seg_panel/board_buffer.h"
 #include "periph/rocket/rocket.h"
 
-#define SCREEN4SIZE		4	/* shocking, I know */
+#define SCREEN4SIZE 4 /* shocking, I know */
 
 typedef struct {
-	uint8_t board0;
-	BoardBuffer bbuf[SCREEN4SIZE];
-	BoardBuffer *bbufp[SCREEN4SIZE];
-	RectRegion rrect;
+  uint8_t board0;
+  BoardBuffer bbuf[SCREEN4SIZE];
+  BoardBuffer *bbufp[SCREEN4SIZE];
+  RectRegion rrect;
 } Screen4;
 
 void init_screen4(Screen4 *s4, uint8_t board0);
@@ -35,4 +35,4 @@ void s4_hide(Screen4 *s4);
 void s4_draw(Screen4 *s4);
 r_bool s4_visible(Screen4 *s4);
 
-#endif // _SCREEN4_H
+#endif  // _SCREEN4_H

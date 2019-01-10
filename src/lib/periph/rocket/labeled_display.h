@@ -22,11 +22,12 @@
 #include "periph/rocket/display_scroll_msg.h"
 
 typedef struct {
-	UIEventHandlerFunc func;
-	DScrollMsgAct msgAct;
-	DRTCAct rtcAct;
-	BoardBuffer *bufs[2];
+  UIEventHandlerFunc func;
+  DScrollMsgAct msgAct;
+  DRTCAct rtcAct;
+  BoardBuffer *bufs[2];
 } LabeledDisplayHandler;
 
-void labeled_display_init(LabeledDisplayHandler *ldh, int b0, FocusManager *focus);
-#endif // _labeled_display_h
+void labeled_display_init(LabeledDisplayHandler *ldh, int b0,
+                          FocusManager *focus);
+#endif  // _labeled_display_h

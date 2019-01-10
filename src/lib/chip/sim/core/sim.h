@@ -22,12 +22,12 @@
 #include "core/util.h"
 
 typedef struct s_board_layout {
-	const char *label;
-	short colors[8];
-	short x, y;
+  const char *label;
+  short colors[8];
+  short x, y;
 } BoardLayout;
 
-void sim_log(const char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
+void sim_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 void sim_display_light_status(r_bool status);
 

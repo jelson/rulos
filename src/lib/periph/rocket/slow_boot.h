@@ -24,14 +24,15 @@
 //#define BORROW_SCREENBLANKER_BUFS 1
 
 typedef struct s_slow_boot {
-	ScreenBlanker *screenblanker;
+  ScreenBlanker *screenblanker;
 #if BORROW_SCREENBLANKER_BUFS
-	BoardBuffer *buffer;
-#else // BORROW_SCREENBLANKER_BUFS
-	BoardBuffer buffer[SLOW_MAX_BUFFERS];
-#endif // BORROW_SCREENBLANKER_BUFS
-	Time startTime;
-	AudioClient *audioClient;
+  BoardBuffer *buffer;
+#else   // BORROW_SCREENBLANKER_BUFS
+  BoardBuffer buffer[SLOW_MAX_BUFFERS];
+#endif  // BORROW_SCREENBLANKER_BUFS
+  Time startTime;
+  AudioClient *audioClient;
 } SlowBoot;
 
-void init_slow_boot(SlowBoot *slowboot, ScreenBlanker *screenblanker, AudioClient *audioClient);
+void init_slow_boot(SlowBoot *slowboot, ScreenBlanker *screenblanker,
+                    AudioClient *audioClient);

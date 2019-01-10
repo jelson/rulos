@@ -21,7 +21,7 @@
 struct s_input_injector_ifc;
 typedef void (*InputInjectorFunc)(struct s_input_injector_ifc *ii, char key);
 typedef struct s_input_injector_ifc {
-	InputInjectorFunc func;
+  InputInjectorFunc func;
 } InputInjectorIfc;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -29,7 +29,7 @@ typedef struct s_input_injector_ifc {
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	InputInjectorIfc *injector;
+  InputInjectorIfc *injector;
 } InputPollerAct;
 
 void input_poller_init(InputPollerAct *ip, InputInjectorIfc *injector);
@@ -39,11 +39,10 @@ void input_poller_init(InputPollerAct *ip, InputInjectorIfc *injector);
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	InputInjectorFunc func;
-	UIEventHandler *topHandler;
-	uint8_t topHandlerActive;
+  InputInjectorFunc func;
+  UIEventHandler *topHandler;
+  uint8_t topHandlerActive;
 } InputFocusInjector;
 
-void input_focus_injector_init(
-	InputFocusInjector *ifi, UIEventHandler *topHandler);
-
+void input_focus_injector_init(InputFocusInjector *ifi,
+                               UIEventHandler *topHandler);

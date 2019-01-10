@@ -22,51 +22,48 @@
 #define TEST_HAL
 
 #ifdef RULOS_ARM
-# define TEST_PIN GPIO0_00
+#define TEST_PIN GPIO0_00
 #else
-# define TEST_PIN GPIO_B5
+#define TEST_PIN GPIO_B5
 #endif
 
 #if TEST_SCHEDULER
-void test_func(void *data)
-{
-	gpio_set(TEST_PIN);
-	schedule_us(FREQ_USEC, a);
-	gpio_clr(TEST_PIN);
+void test_func(void *data) {
+  gpio_set(TEST_PIN);
+  schedule_us(FREQ_USEC, a);
+  gpio_clr(TEST_PIN);
 }
 #endif
 
-void hal_test_func(void *data)
-{
-	gpio_set(TEST_PIN);
-	gpio_clr(TEST_PIN);
+void hal_test_func(void *data) {
+  gpio_set(TEST_PIN);
+  gpio_clr(TEST_PIN);
 }
 
-int main()
-{
-	hal_init();
-	gpio_make_output(TEST_PIN);
-	gpio_clr(TEST_PIN);
+int main() {
+  hal_init();
+  gpio_make_output(TEST_PIN);
+  gpio_clr(TEST_PIN);
 
 #ifdef TEST_HAL
-	hal_start_clock_us(FREQ_USEC, hal_test_func, NULL, TIMER1);
-	while(1) { } ;
+  hal_start_clock_us(FREQ_USEC, hal_test_func, NULL, TIMER1);
+  while (1) {
+  };
 
 #endif
 
 #ifdef TEST_SCHEDULER
-	init_clock(FREQ_USEC, TIMER1);
+  init_clock(FREQ_USEC, TIMER1);
 
-	a.func = test_func;
+  a.func = test_func;
 
-	int i;
-	for (i = 0; i < TOTAL-1; i++)
-		schedule_us(1000000+i, &a);
+  int i;
+  for (i = 0; i < TOTAL - 1; i++) schedule_us(1000000 + i, &a);
 
-	schedule_now(&a);
+  schedule_now(&a);
 
-	CpumonAct cpumon;
-	cpumon_init(&cpumon);
-	cpumon_main_loop();
+  CpumonAct cpumon;
+  cpumon_init(&cpumon);
+  cpumon_main_loop();
 #endif
 }

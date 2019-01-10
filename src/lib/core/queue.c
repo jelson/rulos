@@ -19,4 +19,3 @@
 #include "core/queue.mc"
 
 QUEUE_DEFINE(Char)
-

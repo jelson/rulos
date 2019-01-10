@@ -20,16 +20,12 @@
 #include "periph/rocket/idle.h"
 
 typedef struct {
-	JoystickState_t joystick_state;
-	BoardBuffer bbuf;
-	ThrusterPayload payload;
-	HPAM *hpam;
-	IdleAct *idle;
+  JoystickState_t joystick_state;
+  BoardBuffer bbuf;
+  ThrusterPayload payload;
+  HPAM *hpam;
+  IdleAct *idle;
 } ThrusterState_t;
 
-void thrusters_init(ThrusterState_t *ts,
-					uint8_t board,
-					uint8_t x_chan,
-					uint8_t y_chan,
-					HPAM *hpam,
-					IdleAct *idle);
+void thrusters_init(ThrusterState_t *ts, uint8_t board, uint8_t x_chan,
+                    uint8_t y_chan, HPAM *hpam, IdleAct *idle);

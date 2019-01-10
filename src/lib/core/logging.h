@@ -22,18 +22,34 @@
 
 #include "chip/sim/core/sim.h"
 
-#define LOG(args...) do { sim_log(args); } while (0)
-#define CONDSIMARG(x)	, x
-#define _delay_us(x) do { usleep(x); } while(0)
-#define _delay_ms(x) do { _delay_us((x) * 1000); } while(0)
+#define LOG(args...) \
+  do {               \
+    sim_log(args);   \
+  } while (0)
+#define CONDSIMARG(x) , x
+#define _delay_us(x) \
+  do {               \
+    usleep(x);       \
+  } while (0)
+#define _delay_ms(x)     \
+  do {                   \
+    _delay_us((x)*1000); \
+  } while (0)
 
-#else	//!SIM
+#else  //! SIM
 
 // jonh apologizes for evilly dup-declaring this here rather than
 // rearranging includes to make sense.
 void hardware_assert(uint16_t line);
 
-#define assert(x)	do { if (!(x)) { hardware_assert(__LINE__); } } while(0)
-#define LOG(args...)	do {} while(0)
-#define CONDSIMARG(x)	/**/
-#endif //SIM
+#define assert(x)                \
+  do {                           \
+    if (!(x)) {                  \
+      hardware_assert(__LINE__); \
+    }                            \
+  } while (0)
+#define LOG(args...) \
+  do {               \
+  } while (0)
+#define CONDSIMARG(x) /**/
+#endif                // SIM

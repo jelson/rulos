@@ -26,11 +26,10 @@
 
 #ifdef AUDIO_REGISTER_LATCH
 
-void hal_audio_init(void)
-{
-	gpio_make_output(AUDIO_REGISTER_LATCH);
-	gpio_make_output(AUDIO_REGISTER_DATA);
-	gpio_make_output(AUDIO_REGISTER_SHIFT);
+void hal_audio_init(void) {
+  gpio_make_output(AUDIO_REGISTER_LATCH);
+  gpio_make_output(AUDIO_REGISTER_DATA);
+  gpio_make_output(AUDIO_REGISTER_SHIFT);
 }
 
 #if 0
@@ -46,22 +45,19 @@ void audio_register_delay()
 }
 #endif
 
-void hal_audio_fire_latch(void)
-{
-	gpio_set(AUDIO_REGISTER_LATCH);
-	gpio_clr(AUDIO_REGISTER_LATCH);
+void hal_audio_fire_latch(void) {
+  gpio_set(AUDIO_REGISTER_LATCH);
+  gpio_clr(AUDIO_REGISTER_LATCH);
 }
 
-void hal_audio_shift_sample(uint8_t sample)
-{
-	uint8_t i;
-	for (i=0; i<8; i++)
-	{
-		gpio_set_or_clr(AUDIO_REGISTER_DATA, sample&1);
-		gpio_set(AUDIO_REGISTER_SHIFT);
-		gpio_clr(AUDIO_REGISTER_SHIFT);
-		sample=sample>>1;
-	}
+void hal_audio_shift_sample(uint8_t sample) {
+  uint8_t i;
+  for (i = 0; i < 8; i++) {
+    gpio_set_or_clr(AUDIO_REGISTER_DATA, sample & 1);
+    gpio_set(AUDIO_REGISTER_SHIFT);
+    gpio_clr(AUDIO_REGISTER_SHIFT);
+    sample = sample >> 1;
+  }
 }
 
-#endif // AUDIO_REGISTER_LATCH
+#endif  // AUDIO_REGISTER_LATCH

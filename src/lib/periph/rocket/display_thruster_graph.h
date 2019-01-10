@@ -23,14 +23,14 @@
 #include "periph/rocket/thruster_protocol.h"
 
 typedef struct s_d_thruster_graph {
-	BoardBuffer bbuf;
-	Network *network;
-	uint8_t thruster_message_storage[sizeof(Message)+sizeof(ThrusterPayload)];
-	RecvSlot recvSlot;
-	uint8_t thruster_bits;
-	uint32_t value[4];
+  BoardBuffer bbuf;
+  Network *network;
+  uint8_t thruster_message_storage[sizeof(Message) + sizeof(ThrusterPayload)];
+  RecvSlot recvSlot;
+  uint8_t thruster_bits;
+  uint32_t value[4];
 } DThrusterGraph;
 
 void dtg_init(DThrusterGraph *dtg, uint8_t board, Network *network);
 
-#endif // display_thruster_graph_h
+#endif  // display_thruster_graph_h

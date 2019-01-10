@@ -26,26 +26,25 @@
 
 #define SYSTEM_CLOCK 500
 
-// UartState_t uart; 
+// UartState_t uart;
 
-int main()
-{
-	hal_init();
-	init_clock(SYSTEM_CLOCK, TIMER0);
+int main() {
+  hal_init();
+  init_clock(SYSTEM_CLOCK, TIMER0);
 
-	CpumonAct cpumon;
-	cpumon_init(&cpumon);	// includes slow calibration phase
+  CpumonAct cpumon;
+  cpumon_init(&cpumon);  // includes slow calibration phase
 
-//	uart_init(&uart, 38400, TRUE, 0);
+  //	uart_init(&uart, 38400, TRUE, 0);
 
-	Animate an;
-	animate_init(&an);
-//	animate_play(&an, Zap);
+  Animate an;
+  animate_init(&an);
+  //	animate_play(&an, Zap);
 
-	Frobutton fb;
-	frobutton_init(&fb, &an);
+  Frobutton fb;
+  frobutton_init(&fb, &an);
 
-	cpumon_main_loop();
+  cpumon_main_loop();
 
-	return 0;
+  return 0;
 }

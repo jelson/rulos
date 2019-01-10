@@ -27,12 +27,12 @@ QUEUE_DECLARE(Char)
 
 /* usage:
 declare storage
-	uint8_t byte_queue_storage[sizeof(ByteQueue)+8];
+        uint8_t byte_queue_storage[sizeof(ByteQueue)+8];
 
 provide a macro that converts storage ptr into correct data type
 (no need to "store" converted type in precious RAM!)
 #define GetByteQueue(act)	((ByteQueue*)act->byte_queue_storage)
 
 init the raw storage, passing actual number of underlying bytes allocated
-	ByteQueue_init(GetByteQueue(act), sizeof(act->byte_queue_storage));
+        ByteQueue_init(GetByteQueue(act), sizeof(act->byte_queue_storage));
 */

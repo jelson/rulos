@@ -19,4 +19,3 @@
 #include "core/rulos.h"
 #include "hardware.h"
 #include "periph/lcd_12232/graphic_lcd_12232.h"
-

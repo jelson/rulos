@@ -22,29 +22,28 @@
 #include "core/queue.h"
 
 typedef struct {
-	CharQueue *q;
-	Time reception_time_us;
+  CharQueue *q;
+  Time reception_time_us;
 } UartQueue_t;
 
 #define UART_QUEUE_LEN 32
 
 typedef void (*UARTSendDoneFunc)(void *callback_data);
 
-typedef struct
-{
-	UartHandler handler;
-	uint8_t initted;
+typedef struct {
+  UartHandler handler;
+  uint8_t initted;
 
-	// receive
-	char recvQueueStore[UART_QUEUE_LEN];
-	UartQueue_t recvQueue;
+  // receive
+  char recvQueueStore[UART_QUEUE_LEN];
+  UartQueue_t recvQueue;
 
-	// send
-	const char *out_buf;
-	uint8_t out_len;
-	uint8_t out_n;
-	UARTSendDoneFunc send_done_cb;
-	void *send_done_cb_data;
+  // send
+  const char *out_buf;
+  uint8_t out_len;
+  uint8_t out_n;
+  UARTSendDoneFunc send_done_cb;
+  void *send_done_cb_data;
 } UartState_t;
 
 ///////////////// application API
@@ -53,7 +52,8 @@ r_bool uart_read(UartState_t *uart, char *c);
 UartQueue_t *uart_recvq(UartState_t *uart);
 void uart_reset_recvq(UartQueue_t *uq);
 
-r_bool uart_send(UartState_t *uart, const char *c, uint8_t len, UARTSendDoneFunc, void *callback_data);
+r_bool uart_send(UartState_t *uart, const char *c, uint8_t len,
+                 UARTSendDoneFunc, void *callback_data);
 r_bool uart_busy(UartState_t *u);
 
 void uart_debug_log(const char *m);
@@ -62,4 +62,3 @@ void uart_assert(uint16_t lineNum);
 #endif
 
 #endif
-

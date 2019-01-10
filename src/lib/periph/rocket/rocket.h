@@ -29,4 +29,3 @@
 #include "periph/7seg_panel/region.h"
 #include "periph/input_controller/focus.h"
 #include "periph/rocket/thruster_protocol.h"
-

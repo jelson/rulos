@@ -25,22 +25,21 @@
 #include "periph/rocket/numeric_input.h"
 
 typedef struct s_calculator {
-	UIEventHandlerFunc func;
-	BoardBuffer bbuf[2];
-	BoardBuffer *btable[2];
-	NumericInputAct operands[2];
-	Knob op;
-	NumericInputAct result;
-	FocusManager focus;
+  UIEventHandlerFunc func;
+  BoardBuffer bbuf[2];
+  BoardBuffer *btable[2];
+  NumericInputAct operands[2];
+  Knob op;
+  NumericInputAct result;
+  FocusManager focus;
 
-	struct s_decoration_timeout {
-		Time last_activity;
-		FetchCalcDecorationValuesIfc *fetchDecorationValuesObj;
-	} decorationTimeout;
+  struct s_decoration_timeout {
+    Time last_activity;
+    FetchCalcDecorationValuesIfc *fetchDecorationValuesObj;
+  } decorationTimeout;
 } Calculator;
 
-void calculator_init(
-	Calculator *calc, int board0, FocusManager *fa,
-	FetchCalcDecorationValuesIfc *fetchDecorationValuesObj);
+void calculator_init(Calculator *calc, int board0, FocusManager *fa,
+                     FetchCalcDecorationValuesIfc *fetchDecorationValuesObj);
 
-#endif // _calculator_h
+#endif  // _calculator_h

@@ -22,14 +22,14 @@
 #include "periph/rocket/drift_anim.h"
 
 typedef struct s_d_gratuitous_graph {
-	BoardBuffer bbuf;
-	DriftAnim drift[3];
-	char *name;
-	Time impulse_frequency_us;
-	Time last_impulse;
+  BoardBuffer bbuf;
+  DriftAnim drift[3];
+  char *name;
+  Time impulse_frequency_us;
+  Time last_impulse;
 } DGratuitousGraph;
 
-void dgg_init(DGratuitousGraph *dgg,
-	uint8_t board, char *name, Time impulse_frequency_us);
+void dgg_init(DGratuitousGraph *dgg, uint8_t board, char *name,
+              Time impulse_frequency_us);
 
-#endif // display_gratuitous_graph_h
+#endif  // display_gratuitous_graph_h

@@ -18,19 +18,17 @@
 
 #include "core/rulos.h"
 
-#define BITMAP_ROW_LEN	16	/* bytes; 128 pixels, six offscreen */
-#define BITMAP_NUM_ROWS	32
+#define BITMAP_ROW_LEN 16 /* bytes; 128 pixels, six offscreen */
+#define BITMAP_NUM_ROWS 32
 
 typedef struct {
-	ActivationRecord done_act;
-	uint8_t framebuffer[BITMAP_NUM_ROWS][BITMAP_ROW_LEN];
+  ActivationRecord done_act;
+  uint8_t framebuffer[BITMAP_NUM_ROWS][BITMAP_ROW_LEN];
 } GLCD;
 
 void glcd_init(GLCD *glcd, ActivationFuncPtr done_func, void *done_data);
-//void glcd_clear_screen(GLCD *glcd);
+// void glcd_clear_screen(GLCD *glcd);
 void glcd_draw_framebuffer(GLCD *glcd);
 void glcd_clear_framebuffer(GLCD *glcd);
 
 uint8_t glcd_paint_char(GLCD *glcd, char glyph, int16_t dx0, r_bool invert);
-
-

@@ -22,19 +22,19 @@
 #define BBDEBUG 1
 
 typedef struct s_board_buffer {
-	uint8_t board_index;
-	SSBitmap buffer[NUM_DIGITS];
-	uint8_t alpha;
-	uint8_t mask;	// visible alpha
-	struct s_board_buffer *next;
+  uint8_t board_index;
+  SSBitmap buffer[NUM_DIGITS];
+  uint8_t alpha;
+  uint8_t mask;  // visible alpha
+  struct s_board_buffer *next;
 #if BBDEBUG && SIM
-#define DBG_BBUF_LABEL(s)	, s
-#define DBG_BBUF_LABEL_DECL	, const char *label
-	const char *label;
+#define DBG_BBUF_LABEL(s) , s
+#define DBG_BBUF_LABEL_DECL , const char *label
+  const char *label;
 #else
-#define DBG_BBUF_LABEL(s)	/**/
-#define DBG_BBUF_LABEL_DECL	/**/
-#endif // BBDEBUG && SIM
+#define DBG_BBUF_LABEL(s)   /**/
+#define DBG_BBUF_LABEL_DECL /**/
+#endif                      // BBDEBUG && SIM
 } BoardBuffer;
 
 #define NUM_TOTAL_BOARDS (NUM_LOCAL_BOARDS + NUM_REMOTE_BOARDS)

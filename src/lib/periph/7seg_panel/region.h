@@ -21,16 +21,16 @@
 #include "periph/7seg_panel/board_buffer.h"
 
 typedef struct {
-	BoardBuffer *bbuf;
-	uint8_t x;
-	uint8_t xlen;
+  BoardBuffer *bbuf;
+  uint8_t x;
+  uint8_t xlen;
 } RowRegion;
 
 typedef struct {
-	BoardBuffer **bbuf;
-	uint8_t ylen;
-	uint8_t x;
-	uint8_t xlen;
+  BoardBuffer **bbuf;
+  uint8_t ylen;
+  uint8_t x;
+  uint8_t xlen;
 } RectRegion;
 
 void region_hide(RectRegion *rr);

@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
-#include "core/rulos.h"
 #include "periph/bss_canary/bss_canary.h"
+#include "core/rulos.h"
 
 // The linker automatically creates symbols that indicate the end of BSS.
 // Unfortunately, they're named differently on different platforms.
@@ -32,15 +32,13 @@
 extern uint8_t BSS_END_SYM;
 #define BSS_CANARY_MAGIC 0xca
 
-static void bss_canary_update(void *data)
-{
-	assert(BSS_END_SYM == BSS_CANARY_MAGIC);
-	schedule_us(250000, bss_canary_update, NULL);
+static void bss_canary_update(void *data) {
+  assert(BSS_END_SYM == BSS_CANARY_MAGIC);
+  schedule_us(250000, bss_canary_update, NULL);
 }
 
-void bss_canary_init()
-{
-	BSS_END_SYM = BSS_CANARY_MAGIC;
+void bss_canary_init() {
+  BSS_END_SYM = BSS_CANARY_MAGIC;
 
-	schedule_us(250000, bss_canary_update, NULL);
+  schedule_us(250000, bss_canary_update, NULL);
 }

@@ -23,35 +23,35 @@
 #include "periph/rocket/sound.h"
 
 typedef struct {
-	SoundCmd skip_cmd;
-	SoundCmd loop_cmd;
-	uint8_t mlvolume;
+  SoundCmd skip_cmd;
+  SoundCmd loop_cmd;
+  uint8_t mlvolume;
 } AudioEffectsStream;
 
 typedef struct s_audio_server {
-	AudioStreamer audio_streamer;
+  AudioStreamer audio_streamer;
 
-	uint8_t arm_recv_msg_alloc[sizeof(Message)+sizeof(AudioRequestMessage)];
-	RecvSlot arm_recvSlot;
-	uint8_t avm_recv_msg_alloc[sizeof(Message)+sizeof(AudioVolumeMessage)];
-	RecvSlot avm_recvSlot;
-	uint8_t mcm_recv_msg_alloc[sizeof(Message)+sizeof(MusicControlMessage)];
-	RecvSlot mcm_recvSlot;
+  uint8_t arm_recv_msg_alloc[sizeof(Message) + sizeof(AudioRequestMessage)];
+  RecvSlot arm_recvSlot;
+  uint8_t avm_recv_msg_alloc[sizeof(Message) + sizeof(AudioVolumeMessage)];
+  RecvSlot avm_recvSlot;
+  uint8_t mcm_recv_msg_alloc[sizeof(Message) + sizeof(MusicControlMessage)];
+  RecvSlot mcm_recvSlot;
 
-	r_bool index_ready;
-	AuIndexRec magic;
-	AuIndexRec index[sound_num_tokens];
-	//AuIndexRec index[2];
+  r_bool index_ready;
+  AuIndexRec magic;
+  AuIndexRec index[sound_num_tokens];
+  // AuIndexRec index[2];
 
-	AudioEffectsStream audio_stream[AUDIO_NUM_STREAMS];
-	int8_t active_stream;
+  AudioEffectsStream audio_stream[AUDIO_NUM_STREAMS];
+  int8_t active_stream;
 
-	r_bool music_random_seeded;
-	uint8_t num_music_tokens;	// derived from index
-	uint8_t music_first_token;	// offset into index where music starts.
-	uint8_t music_offset;		// offset past first_token of last thing we played
+  r_bool music_random_seeded;
+  uint8_t num_music_tokens;   // derived from index
+  uint8_t music_first_token;  // offset into index where music starts.
+  uint8_t music_offset;       // offset past first_token of last thing we played
 
-	SDCard *borrowed_sdc;
+  SDCard *borrowed_sdc;
 } AudioServer;
 
 void init_audio_server(AudioServer *as, Network *network, uint8_t timer_id);

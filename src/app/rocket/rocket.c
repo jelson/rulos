@@ -66,122 +66,112 @@
 /****************************************************************************/
 
 typedef struct {
-	DRTCAct dr;
-	Network network;
-	LunarDistance ld;
-	AudioClient audio_client;
-	ThrusterUpdate thrusterUpdate[4];
-	HPAM hpam;
-	ControlPanel cp;
-	InputPollerAct ip;
-	RemoteKeyboardRecv rkr;
-	ThrusterSendNetwork tsn;
-	ThrusterState_t ts;
-	IdleAct idle;
-	Hobbs hobbs;
-	ScreenBlanker screenblanker;
-	ScreenBlankerSender screenblanker_sender;
-	SlowBoot slow_boot;
-	PotSticker potsticker;
-	VolumeControl volume_control;
-	RemoteBBufSend rbs;
+  DRTCAct dr;
+  Network network;
+  LunarDistance ld;
+  AudioClient audio_client;
+  ThrusterUpdate thrusterUpdate[4];
+  HPAM hpam;
+  ControlPanel cp;
+  InputPollerAct ip;
+  RemoteKeyboardRecv rkr;
+  ThrusterSendNetwork tsn;
+  ThrusterState_t ts;
+  IdleAct idle;
+  Hobbs hobbs;
+  ScreenBlanker screenblanker;
+  ScreenBlankerSender screenblanker_sender;
+  SlowBoot slow_boot;
+  PotSticker potsticker;
+  VolumeControl volume_control;
+  RemoteBBufSend rbs;
 } Rocket0;
 
-#define THRUSTER_X_CHAN	3
+#define THRUSTER_X_CHAN 3
 
 #if defined(BOARD_PCB10)
-#define THRUSTER_Y_CHAN	4
+#define THRUSTER_Y_CHAN 4
 #elif defined(BOARD_PCB11) || defined(BOARD_LPEM) || defined(BOARD_LPEM2)
-#define THRUSTER_Y_CHAN	2
+#define THRUSTER_Y_CHAN 2
 #elif SIM
-#define THRUSTER_Y_CHAN	2
+#define THRUSTER_Y_CHAN 2
 #else
-# error Thruster y chan not defined for this board
+#error Thruster y chan not defined for this board
 #endif
 
 #define POTSTICKER_CHANNEL 0
 #define VOLUME_POT_CHANNEL 1
 #define USE_LOCAL_KEYPAD 0
 
-void init_rocket0(Rocket0 *r0)
-{
-	init_twi_network(&r0->network, 200, ROCKET_ADDR);
-	init_remote_bbuf_send(&r0->rbs, &r0->network);
-	install_remote_bbuf_send(&r0->rbs);
-	drtc_init(&r0->dr, 0, clock_time_us()+20000000);
-	lunar_distance_init(&r0->ld, 1, 2 /*, SPEED_POT_CHANNEL*/);
-	init_audio_client(&r0->audio_client, &r0->network);
-	memset(&r0->thrusterUpdate, 0, sizeof(r0->thrusterUpdate));
-	init_hpam(&r0->hpam, 7, r0->thrusterUpdate);
-	init_idle(&r0->idle);
-	thrusters_init(&r0->ts, 7, THRUSTER_X_CHAN, THRUSTER_Y_CHAN, &r0->hpam, &r0->idle);
-	//r0->thrusterUpdate[2].func = idle_thruster_listener_func;
-	//r0->thrusterUpdate[2].data = &r0->idle;
+void init_rocket0(Rocket0 *r0) {
+  init_twi_network(&r0->network, 200, ROCKET_ADDR);
+  init_remote_bbuf_send(&r0->rbs, &r0->network);
+  install_remote_bbuf_send(&r0->rbs);
+  drtc_init(&r0->dr, 0, clock_time_us() + 20000000);
+  lunar_distance_init(&r0->ld, 1, 2 /*, SPEED_POT_CHANNEL*/);
+  init_audio_client(&r0->audio_client, &r0->network);
+  memset(&r0->thrusterUpdate, 0, sizeof(r0->thrusterUpdate));
+  init_hpam(&r0->hpam, 7, r0->thrusterUpdate);
+  init_idle(&r0->idle);
+  thrusters_init(&r0->ts, 7, THRUSTER_X_CHAN, THRUSTER_Y_CHAN, &r0->hpam,
+                 &r0->idle);
+  // r0->thrusterUpdate[2].func = idle_thruster_listener_func;
+  // r0->thrusterUpdate[2].data = &r0->idle;
 
-	init_screenblanker(&r0->screenblanker, &r0->hpam, &r0->idle);
-	init_screenblanker_sender(&r0->screenblanker_sender, &r0->network);
-	r0->screenblanker.screenblanker_sender = &r0->screenblanker_sender;
+  init_screenblanker(&r0->screenblanker, &r0->hpam, &r0->idle);
+  init_screenblanker_sender(&r0->screenblanker_sender, &r0->network);
+  r0->screenblanker.screenblanker_sender = &r0->screenblanker_sender;
 
-	volume_control_init(&r0->volume_control, &r0->audio_client, VOLUME_POT_CHANNEL, /*board*/ 0);
+  volume_control_init(&r0->volume_control, &r0->audio_client,
+                      VOLUME_POT_CHANNEL, /*board*/ 0);
 
-	init_control_panel(
-		&r0->cp,
-		3,
-		1,
-		&r0->network,
-		&r0->hpam,
-		&r0->audio_client,
-		&r0->idle,
-		&r0->screenblanker,
-		&r0->ts.joystick_state,
-		&r0->volume_control.injector.iii);
-	r0->cp.ccl.launch.main_rtc = &r0->dr;
-	r0->cp.ccl.launch.lunar_distance = &r0->ld;
+  init_control_panel(&r0->cp, 3, 1, &r0->network, &r0->hpam, &r0->audio_client,
+                     &r0->idle, &r0->screenblanker, &r0->ts.joystick_state,
+                     &r0->volume_control.injector.iii);
+  r0->cp.ccl.launch.main_rtc = &r0->dr;
+  r0->cp.ccl.launch.lunar_distance = &r0->ld;
 
-	// Local input poller
-#if USE_LOCAL_KEYPAD==1
-	input_poller_init(&r0->ip, (InputInjectorIfc*) &r0->cp.direct_injector);
+  // Local input poller
+#if USE_LOCAL_KEYPAD == 1
+  input_poller_init(&r0->ip, (InputInjectorIfc *)&r0->cp.direct_injector);
 #endif
 
-	// Remote receiver
-	init_remote_keyboard_recv(&r0->rkr, &r0->network, (InputInjectorIfc*) &r0->cp.direct_injector, REMOTE_KEYBOARD_PORT);
+  // Remote receiver
+  init_remote_keyboard_recv(&r0->rkr, &r0->network,
+                            (InputInjectorIfc *)&r0->cp.direct_injector,
+                            REMOTE_KEYBOARD_PORT);
 
-	r0->thrusterUpdate[1].func = (ThrusterUpdateFunc) ddock_thruster_update;
-	r0->thrusterUpdate[1].data = &r0->cp.ccdock.dock;
+  r0->thrusterUpdate[1].func = (ThrusterUpdateFunc)ddock_thruster_update;
+  r0->thrusterUpdate[1].data = &r0->cp.ccdock.dock;
 
-	init_thruster_send_network(&r0->tsn, &r0->network);
-	r0->thrusterUpdate[0].func = (ThrusterUpdateFunc) tsn_update;
-	r0->thrusterUpdate[0].data = &r0->tsn;
+  init_thruster_send_network(&r0->tsn, &r0->network);
+  r0->thrusterUpdate[0].func = (ThrusterUpdateFunc)tsn_update;
+  r0->thrusterUpdate[0].data = &r0->tsn;
 
-	init_hobbs(&r0->hobbs, &r0->hpam, &r0->idle);
+  init_hobbs(&r0->hobbs, &r0->hpam, &r0->idle);
 
-	init_slow_boot(&r0->slow_boot, &r0->screenblanker, &r0->audio_client);
+  init_slow_boot(&r0->slow_boot, &r0->screenblanker, &r0->audio_client);
 
-	init_potsticker(&r0->potsticker,
-		POTSTICKER_CHANNEL,
-		(InputInjectorIfc*) &r0->cp.direct_injector,
-		9,
-		'p',
-		'q');
+  init_potsticker(&r0->potsticker, POTSTICKER_CHANNEL,
+                  (InputInjectorIfc *)&r0->cp.direct_injector, 9, 'p', 'q');
 
-	bss_canary_init();
+  bss_canary_init();
 }
 
-static Rocket0 rocket0;	// allocate obj in .bss so it's easy to count
+static Rocket0 rocket0;  // allocate obj in .bss so it's easy to count
 
-int main()
-{
-	hal_init();
+int main() {
+  hal_init();
 
-	// Only init the rocketpanel module in the ROCKET0 configuration, not
-	// the TWI-output-only NETROCKET configuration.
+  // Only init the rocketpanel module in the ROCKET0 configuration, not
+  // the TWI-output-only NETROCKET configuration.
 #ifdef BOARDCONFIG_ROCKET0
-	hal_init_rocketpanel();
+  hal_init_rocketpanel();
 #endif
-	init_clock(10000, TIMER1);
+  init_clock(10000, TIMER1);
 
-	CpumonAct cpumon;
-	cpumon_init(&cpumon);	// includes slow calibration phase
+  CpumonAct cpumon;
+  cpumon_init(&cpumon);  // includes slow calibration phase
 #if 0
 	UartHandler uart;
 	hal_uart_init(&uart, 38400, true, 0);
@@ -197,31 +187,31 @@ int main()
 	hal_uart_sync_send(&uart, (char*) "hello\n", 6);
 #endif
 
-	board_buffer_module_init();
+  board_buffer_module_init();
 
-	init_rocket0(&rocket0);
+  init_rocket0(&rocket0);
 
 #define DEBUG_IDLE_BUSY 0
 #if DEBUG_IDLE_BUSY
-#endif // DEBUG_IDLE_BUSY
+#endif  // DEBUG_IDLE_BUSY
 
-/*
-	Autotype autotype;
-	init_autotype(&autotype, (InputInjectorIfc*) &rocket0.cp.direct_injector,
-		//"000aaaaac004671c",
-		"000bc",
-		(Time) 1300000);
-*/
+  /*
+          Autotype autotype;
+          init_autotype(&autotype, (InputInjectorIfc*)
+     &rocket0.cp.direct_injector,
+                  //"000aaaaac004671c",
+                  "000bc",
+                  (Time) 1300000);
+  */
 
 #if MEASURE_CPU_FOR_RULOS_PAPER
-	DScrollMsgAct dsm;
-	dscrlmsg_init(&dsm, 2, "bong", 100);
-	IdleDisplayAct idle;
-	idle_display_init(&idle, &dsm, &cpumon);
-#endif // MEASURE_CPU_FOR_RULOS_PAPER
+  DScrollMsgAct dsm;
+  dscrlmsg_init(&dsm, 2, "bong", 100);
+  IdleDisplayAct idle;
+  idle_display_init(&idle, &dsm, &cpumon);
+#endif  // MEASURE_CPU_FOR_RULOS_PAPER
 
-	cpumon_main_loop();
+  cpumon_main_loop();
 
-	return 0;
+  return 0;
 }
-

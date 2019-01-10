@@ -21,30 +21,30 @@
 
 #ifndef SIM
 #include "hardware.h"
-#endif //SIM
+#endif  // SIM
 
-#define POV_LG_DISPLAY_WIDTH	5
-#define POV_DISPLAY_WIDTH	(1<<POV_LG_DISPLAY_WIDTH)
+#define POV_LG_DISPLAY_WIDTH 5
+#define POV_DISPLAY_WIDTH (1 << POV_LG_DISPLAY_WIDTH)
 
-#define POVLEDA	GPIO_B4
-#define POVLEDB	GPIO_B5
-#define POVLEDC	GPIO_B3
-#define POVLEDD	GPIO_D6
-#define POVLEDE	GPIO_B0
+#define POVLEDA GPIO_B4
+#define POVLEDB GPIO_B5
+#define POVLEDC GPIO_B3
+#define POVLEDD GPIO_D6
+#define POVLEDE GPIO_B0
 
 typedef struct {
-	// written by measurement func; read by display func
-	r_bool last_wave_positive;
-	Time lastPhase;
-	Time curPhase;
-	Time lastPeriod;
-	uint16_t debug_position;
-	char debug_display_on;
-	char debug_reverse;
+  // written by measurement func; read by display func
+  r_bool last_wave_positive;
+  Time lastPhase;
+  Time curPhase;
+  Time lastPeriod;
+  uint16_t debug_position;
+  char debug_display_on;
+  char debug_reverse;
 
-	r_bool visible;
+  r_bool visible;
 
-	uint8_t message[POV_DISPLAY_WIDTH];
+  uint8_t message[POV_DISPLAY_WIDTH];
 } PovAct;
 
 void pov_init(PovAct *povAct);
@@ -55,4 +55,4 @@ void pov_set_visible(PovAct *povAct, r_bool visible);
 
 void pov_paint(uint8_t bitmap);
 
-#endif // _POV_H
+#endif  // _POV_H

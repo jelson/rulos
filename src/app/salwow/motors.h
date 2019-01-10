@@ -1,8 +1,8 @@
+#include <inttypes.h>
 
-typedef struct s_MotorState
-{
-	uint8_t desired_power;
-	uint8_t test_mode;
+typedef struct s_MotorState {
+  uint8_t desired_power;
+  uint8_t test_mode;
 } MotorState;
 
 void motors_init(MotorState *motors);

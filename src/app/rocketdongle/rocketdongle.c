@@ -21,36 +21,34 @@
 
 #define DONGLE_BOARD_ID 3
 
-static void recv_func(RecvSlot *recvSlot, uint8_t payload_size)
-{
-	rbr_recv(recvSlot, payload_size);
+static void recv_func(RecvSlot *recvSlot, uint8_t payload_size) {
+  rbr_recv(recvSlot, payload_size);
 }
 
-int main()
-{
-	hal_init();
-	hal_init_rocketpanel();
-	
-	char data[sizeof(Message) + sizeof(BBufMessage)];
+int main() {
+  hal_init();
+  hal_init_rocketpanel();
 
-	/*board_say(" rEAdy  "); */
+  char data[sizeof(Message) + sizeof(BBufMessage)];
 
-	init_clock(10000, TIMER1);
+  /*board_say(" rEAdy  "); */
 
-	RecvSlot recvSlot;
-	recvSlot.func = recv_func;
-	recvSlot.port = REMOTE_BBUF_PORT;
-	recvSlot.msg = (Message *) data;
-	recvSlot.payload_capacity = sizeof(data) - sizeof(Message);
-	recvSlot.msg_occupied = FALSE;
+  init_clock(10000, TIMER1);
 
-	Network net;
-	init_twi_network(&net, 100, DONGLE_BASE_ADDR + DONGLE_BOARD_ID);
-	net_bind_receiver(&net, &recvSlot);
+  RecvSlot recvSlot;
+  recvSlot.func = recv_func;
+  recvSlot.port = REMOTE_BBUF_PORT;
+  recvSlot.msg = (Message *)data;
+  recvSlot.payload_capacity = sizeof(data) - sizeof(Message);
+  recvSlot.msg_occupied = FALSE;
 
-	CpumonAct cpumon;
-	cpumon_init(&cpumon);
-	cpumon_main_loop();
+  Network net;
+  init_twi_network(&net, 100, DONGLE_BASE_ADDR + DONGLE_BOARD_ID);
+  net_bind_receiver(&net, &recvSlot);
 
-	return 0;
+  CpumonAct cpumon;
+  cpumon_init(&cpumon);
+  cpumon_main_loop();
+
+  return 0;
 }

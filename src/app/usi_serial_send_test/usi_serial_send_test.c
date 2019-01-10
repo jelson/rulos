@@ -19,15 +19,14 @@
 #include "chip/avr/periph/usi_serial/usi_serial.h"
 #include "core/rulos.h"
 
-int main()
-{
-	hal_init();
+int main() {
+  hal_init();
 
-	while (true) {
-		for (int i = 0; i < 10000; i++) {
-			char buf[50];
-			sprintf(buf, "This is test number %05d", i);
-			usi_serial_send(buf);
-		}
-	}
+  while (true) {
+    for (int i = 0; i < 10000; i++) {
+      char buf[50];
+      sprintf(buf, "This is test number %05d", i);
+      usi_serial_send(buf);
+    }
+  }
 }

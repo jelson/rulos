@@ -30,69 +30,60 @@
 
 #define SYSTEM_CLOCK 500
 
-
-
-
 //////////////// UART ///////////////////////////////////////
 
 UartState_t uart[2];
-const char *_test_msg[2] = { "Aa", "Bb" };
-char **test_msg = (char**) _test_msg;
-	
+const char *_test_msg[2] = {"Aa", "Bb"};
+char **test_msg = (char **)_test_msg;
+
 void send_done(void *data);
 
-void send_one(void *data)
-{
-	static int ctr;
-	mark_point(16+((ctr++)&15));
+void send_one(void *data) {
+  static int ctr;
+  mark_point(16 + ((ctr++) & 15));
 
-	static char *smsg = (char*) "done x\n";
-	smsg[5] = '0' + (ctr & 7);
-	uart_debug_log(smsg);
+  static char *smsg = (char *)"done x\n";
+  smsg[5] = '0' + (ctr & 7);
+  uart_debug_log(smsg);
 
-	uint16_t uart_id = (uint16_t) (int) data;
+  uint16_t uart_id = (uint16_t)(int)data;
 
 #if 0
 	assert(uart_id<2);
 	char *msg = test_msg[uart_id];
 #else
-	char *msg = (char*) "hi\n";
+  char *msg = (char *)"hi\n";
 #endif
-	static char *vmsg = (char*) "ob x\n";
-	vmsg[3] = '0' + (uart[uart_id].out_buf != NULL);
-	uart_debug_log(vmsg);
+  static char *vmsg = (char *)"ob x\n";
+  vmsg[3] = '0' + (uart[uart_id].out_buf != NULL);
+  uart_debug_log(vmsg);
 
-	uart_send(&uart[uart_id], msg, strlen(msg), send_done, (void*) (int) uart_id);
+  uart_send(&uart[uart_id], msg, strlen(msg), send_done, (void *)(int)uart_id);
 
-//	{ char *m="hey doodle\n"; hal_uart_sync_send(&uart[0].handler, m, strlen(m)); }
+  //	{ char *m="hey doodle\n"; hal_uart_sync_send(&uart[0].handler, m,
+  //strlen(m)); }
 }
 
-void send_done(void *data)
-{
-	schedule_us(1, send_one, data);
-}
+void send_done(void *data) { schedule_us(1, send_one, data); }
 
-int main()
-{
-	mark_point_init();
-	mark_point(1);
-	hal_init();
-	mark_point(2);
-	init_clock(SYSTEM_CLOCK, TIMER0);
+int main() {
+  mark_point_init();
+  mark_point(1);
+  hal_init();
+  mark_point(2);
+  init_clock(SYSTEM_CLOCK, TIMER0);
 
-	leds_init();
+  leds_init();
 
-	mark_point(3);
-	CpumonAct cpumon;
-	cpumon_init(&cpumon);	// includes slow calibration phase
+  mark_point(3);
+  CpumonAct cpumon;
+  cpumon_init(&cpumon);  // includes slow calibration phase
 
-	mark_point(4);
-	uart_init(&uart[0], 38400, TRUE, 0);
-	uart_init(&uart[1], 38400, TRUE, 1);
+  mark_point(4);
+  uart_init(&uart[0], 38400, TRUE, 0);
+  uart_init(&uart[1], 38400, TRUE, 1);
 
-	{
-		uart_debug_log("SALWOW up.\n");
-	}
+  { uart_debug_log("SALWOW up.\n"); }
 
 #if 0
 	uint8_t f = 0;
@@ -121,28 +112,27 @@ int main()
 	mathtest();
 #endif
 
-	Vector wpts[] = {
-		{ -122.341817, 47.672009 },
-		{ -122.341966, 47.672792 },
-		{ -122.342680, 47.672989 },
-		{ -122.342921, 47.672284 },
-		};
+  Vector wpts[] = {
+      {-122.341817, 47.672009},
+      {-122.341966, 47.672792},
+      {-122.342680, 47.672989},
+      {-122.342921, 47.672284},
+  };
 
-	Control control;
-	control_init(&control);
-	for (uint16_t i=0; i<(sizeof(wpts)/sizeof(wpts[0])); i++)
-	{
-		control_add_waypoint(&control, &wpts[i]);
-	}
+  Control control;
+  control_init(&control);
+  for (uint16_t i = 0; i < (sizeof(wpts) / sizeof(wpts[0])); i++) {
+    control_add_waypoint(&control, &wpts[i]);
+  }
 
 #if 1
-	control_start(&control);
+  control_start(&control);
 #else
-	control_test_rudder(&control);
+  control_test_rudder(&control);
 #endif
 
-	cpumon_main_loop();
-	mark_point(7);
+  cpumon_main_loop();
+  mark_point(7);
 
-	return 0;
+  return 0;
 }

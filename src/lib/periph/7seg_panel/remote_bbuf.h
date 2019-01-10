@@ -22,29 +22,30 @@
 #include "periph/7seg_panel/display_controller.h"
 
 typedef struct {
-	SSBitmap buf[NUM_DIGITS];
-    uint8_t index;
+  SSBitmap buf[NUM_DIGITS];
+  uint8_t index;
 } BBufMessage;
 
 typedef struct s_remote_bbuf_send {
-	Network *network;
-	uint8_t send_msg_alloc[sizeof(Message)+sizeof(BBufMessage)];
-	SendSlot sendSlot;
-	struct s_remote_bbuf_send *send_this;
-	SSBitmap offscreen[NUM_REMOTE_BOARDS][NUM_DIGITS];
-	r_bool changed[NUM_REMOTE_BOARDS];
-	uint8_t last_index;
+  Network *network;
+  uint8_t send_msg_alloc[sizeof(Message) + sizeof(BBufMessage)];
+  SendSlot sendSlot;
+  struct s_remote_bbuf_send *send_this;
+  SSBitmap offscreen[NUM_REMOTE_BOARDS][NUM_DIGITS];
+  r_bool changed[NUM_REMOTE_BOARDS];
+  uint8_t last_index;
 } RemoteBBufSend;
 
 void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network);
 
 // Inbound interface from callsite in board_buffer that delivers remote boards.
-void send_remote_bbuf(RemoteBBufSend *rbs, SSBitmap *bm, uint8_t index, uint8_t mask);
+void send_remote_bbuf(RemoteBBufSend *rbs, SSBitmap *bm, uint8_t index,
+                      uint8_t mask);
 
 // Thread context for rbs_update and rbs_refresh.
 typedef struct s_remote_bbuf_recv {
-	uint8_t recv_msg_alloc[sizeof(Message)+sizeof(BBufMessage)];
-	RecvSlot recvSlot;
+  uint8_t recv_msg_alloc[sizeof(Message) + sizeof(BBufMessage)];
+  RecvSlot recvSlot;
 } RemoteBBufRecv;
 
 // Initialize the remote bbuf service.

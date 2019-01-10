@@ -25,43 +25,43 @@
 
 #include "vect3d.h"
 
-
 typedef enum {
-	// internal states
-	ti_neutral = 0,
-	ti_undef = 0xa0,
-	ti_left = 0xa1,
-	ti_right = 0xa2,
-	ti_up = 0xa3,
-	ti_down = 0xa4,
+  // internal states
+  ti_neutral = 0,
+  ti_undef = 0xa0,
+  ti_left = 0xa1,
+  ti_right = 0xa2,
+  ti_up = 0xa3,
+  ti_down = 0xa4,
 
-	// messages sent out. (clumsy).
-	ti_enter_pov = 0xa5,
-	ti_exit_pov = 0xa6,
+  // messages sent out. (clumsy).
+  ti_enter_pov = 0xa5,
+  ti_exit_pov = 0xa6,
 
-	// modifier flag
-	ti_proposed = 0x100,
+  // modifier flag
+  ti_proposed = 0x100,
 } TiltyInputState;
 
 typedef enum {
-	tia_led_click,
-	tia_led_proposal,
-	tia_led_black,
+  tia_led_click,
+  tia_led_proposal,
+  tia_led_black,
 } TiltyLEDPattern;
 
 typedef struct {
-	Vect3D *accelValue;
-	UIEventHandler *event_handler;
+  Vect3D *accelValue;
+  UIEventHandler *event_handler;
 
-	TiltyInputState curState;
-	Time proposed_time;
+  TiltyInputState curState;
+  Time proposed_time;
 
-	TiltyLEDPattern led_pattern;
-	Time led_anim_start;
+  TiltyLEDPattern led_pattern;
+  Time led_anim_start;
 } TiltyInputAct;
 
 void _tilty_input_issue_event(TiltyInputAct *tia, TiltyInputState evt);
 void tilty_input_update(TiltyInputAct *tia);
-void tilty_input_init(TiltyInputAct *tia, Vect3D *accelValue, UIEventHandler *event_handler);
+void tilty_input_init(TiltyInputAct *tia, Vect3D *accelValue,
+                      UIEventHandler *event_handler);
 
-#endif // _TILTY_INPUT_H
+#endif  // _TILTY_INPUT_H

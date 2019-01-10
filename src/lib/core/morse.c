@@ -20,42 +20,47 @@
 #include "core/rulos.h"
 
 #ifdef SIM
-# include <stdio.h>
+#include <stdio.h>
 
-# define debug(x...) do { printf(x); printf("          "); fflush(stdout); } while (0)
+#define debug(x...)       \
+  do {                    \
+    printf(x);            \
+    printf("          "); \
+    fflush(stdout);       \
+  } while (0)
 #else
-# define debug(x...)
+#define debug(x...)
 #endif
 
 static const char* const morse_alphabet[] = {
-  ".-",   // a
-  "-...", // b 
-  "-.-.", // c 
-  "-..",  // d 
-  ".",    // e
-  "..-.", // f 
-  "--.",  // g 
-  "....", // h 
-  "..",   // i 
-  ".---", // j 
-  "-.-",  // k
-  ".-..", // l
-  "--",   // m
-  "-.",   // n
-  "---",  // o
-  ".--.", // p
-  "--.-", // q
-  ".-.",  // r
-  "...",  // s
-  "-",    // t
-  "..-",  // u
-  "...-"  // v
-  ".--",  // w
-  "-..-", // x
-  "-.--", // y
-  "--..", // z
+    ".-",    // a
+    "-...",  // b
+    "-.-.",  // c
+    "-..",   // d
+    ".",     // e
+    "..-.",  // f
+    "--.",   // g
+    "....",  // h
+    "..",    // i
+    ".---",  // j
+    "-.-",   // k
+    ".-..",  // l
+    "--",    // m
+    "-.",    // n
+    "---",   // o
+    ".--.",  // p
+    "--.-",  // q
+    ".-.",   // r
+    "...",   // s
+    "-",     // t
+    "..-",   // u
+    "...-"   // v
+    ".--",   // w
+    "-..-",  // x
+    "-.--",  // y
+    "--..",  // z
 };
-  
+
 typedef struct {
   // inputs
   const char* send_string;
@@ -73,8 +78,8 @@ morse_state_t morse_state;
 static void morse_go(morse_state_t* morse_state);
 
 static void morse_wait(morse_state_t* morse_state, uint8_t dot_times) {
-  schedule_us(dot_times * morse_state->dot_time_us,
-	      (ActivationFuncPtr) morse_go, morse_state);
+  schedule_us(dot_times * morse_state->dot_time_us, (ActivationFuncPtr)morse_go,
+              morse_state);
 }
 
 static void morse_go(morse_state_t* morse_state) {
@@ -128,7 +133,7 @@ static void morse_go(morse_state_t* morse_state) {
 
     assert(curr_letter >= 'a' && curr_letter <= 'z');
     debug("starting %c ", curr_letter);
-    morse_state->curr_letter =  morse_alphabet[curr_letter - 'a'];
+    morse_state->curr_letter = morse_alphabet[curr_letter - 'a'];
   }
 
   // Key on!
@@ -146,15 +151,14 @@ static void morse_go(morse_state_t* morse_state) {
   }
 }
 
-void emit_morse(const char* send_string,
-		const uint32_t dot_time_us,
-		MorseOutputToggleFunc* toggle_func,
-		MorseOutputDoneFunc* done_func) {
+void emit_morse(const char* send_string, const uint32_t dot_time_us,
+                MorseOutputToggleFunc* toggle_func,
+                MorseOutputDoneFunc* done_func) {
   morse_state.send_string = send_string;
   morse_state.dot_time_us = dot_time_us;
   morse_state.toggle_func = toggle_func;
   morse_state.done_func = done_func;
   morse_state.is_keyed = 0;
   morse_state.curr_letter = NULL;
-  schedule_now((ActivationFuncPtr) morse_go, &morse_state);
+  schedule_now((ActivationFuncPtr)morse_go, &morse_state);
 }

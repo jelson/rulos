@@ -20,10 +20,10 @@
 #include "core/util.h"
 
 typedef struct {
-	r_bool auto_reset;
-	r_bool signaled;
-	ActivationFuncPtr waiter_func;
-	void *waiter_data;
+  r_bool auto_reset;
+  r_bool signaled;
+  ActivationFuncPtr waiter_func;
+  void *waiter_data;
 } Event;
 
 void event_init(Event *evt, r_bool auto_reset);
@@ -31,7 +31,4 @@ void event_signal(Event *evt);
 void event_reset(Event *evt);
 void event_wait(Event *evt, ActivationFuncPtr func, void *data);
 
-static inline r_bool event_is_signaled(Event *evt)
-{
-	return evt->signaled;
-}
+static inline r_bool event_is_signaled(Event *evt) { return evt->signaled; }

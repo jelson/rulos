@@ -2,7 +2,7 @@
 #define _MOMENTARY_DISPLAY_MESSAGE_H
 
 typedef struct {
-	char ascii_message[8];
+  char ascii_message[8];
 } MomentaryDisplayMessage;
 
-#endif // _MOMENTARY_DISPLAY_MESSAGE_H
+#endif  // _MOMENTARY_DISPLAY_MESSAGE_H

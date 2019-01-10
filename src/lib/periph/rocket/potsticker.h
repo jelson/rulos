@@ -21,16 +21,17 @@
 #include "periph/rocket/rocket.h"
 
 typedef struct s_potsticker {
-	uint8_t adc_channel;
-	InputInjectorIfc *ifi;
-	uint8_t detents;
-	int8_t hysteresis;
-	char fwd;
-	char back;
+  uint8_t adc_channel;
+  InputInjectorIfc *ifi;
+  uint8_t detents;
+  int8_t hysteresis;
+  char fwd;
+  char back;
 
-	int8_t last_digital_value;
+  int8_t last_digital_value;
 } PotSticker;
 
-void init_potsticker(PotSticker *ps, uint8_t adc_channel, InputInjectorIfc *ifi, uint8_t detents, char fwd, char back);
+void init_potsticker(PotSticker *ps, uint8_t adc_channel, InputInjectorIfc *ifi,
+                     uint8_t detents, char fwd, char back);
 
-#endif // _POTSTICKER_H
+#endif  // _POTSTICKER_H

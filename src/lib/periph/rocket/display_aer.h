@@ -25,20 +25,20 @@
 struct s_d_aer;
 
 typedef struct s_decoration_ifc {
-	FetchCalcDecorationValuesFunc func;
-	struct s_d_aer *daer;
+  FetchCalcDecorationValuesFunc func;
+  struct s_d_aer *daer;
 } decoration_ifc_t;
 
 typedef struct s_d_aer {
-	BoardBuffer bbuf;
-	DriftAnim azimuth;
-	DriftAnim elevation;
-	DriftAnim roll;
-	Time impulse_frequency_us;
-	Time last_impulse;
-	decoration_ifc_t decoration_ifc;
+  BoardBuffer bbuf;
+  DriftAnim azimuth;
+  DriftAnim elevation;
+  DriftAnim roll;
+  Time impulse_frequency_us;
+  Time last_impulse;
+  decoration_ifc_t decoration_ifc;
 } DAER;
 
 void daer_init(DAER *daer, uint8_t board, Time impulse_frequency_us);
 
-#endif // display_aer_h
+#endif  // display_aer_h

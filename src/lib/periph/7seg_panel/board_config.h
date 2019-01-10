@@ -16,25 +16,25 @@
 
 #pragma once
 
-#if defined (BOARDCONFIG_ROCKET0)
-# define NUM_LOCAL_BOARDS  8
-# define NUM_REMOTE_BOARDS 0
-#elif defined (BOARDCONFIG_NETROCKET)
-# define NUM_LOCAL_BOARDS  0
-# define NUM_REMOTE_BOARDS 8
-#elif defined (BOARDCONFIG_ROCKET1)
-# define NUM_LOCAL_BOARDS  4
-# define NUM_REMOTE_BOARDS 0
-#elif defined (BOARDCONFIG_WALLCLOCK)
-# define NUM_LOCAL_BOARDS  1
-# define NUM_REMOTE_BOARDS 0
-#elif defined (BOARDCONFIG_CHASECLOCK)
-# define NUM_LOCAL_BOARDS  1
-# define NUM_REMOTE_BOARDS 0
-#elif defined (BOARDCONFIG_DEFAULT)
-# define NUM_LOCAL_BOARDS  8
-# define NUM_REMOTE_BOARDS 0
+#if defined(BOARDCONFIG_ROCKET0)
+#define NUM_LOCAL_BOARDS 8
+#define NUM_REMOTE_BOARDS 0
+#elif defined(BOARDCONFIG_NETROCKET)
+#define NUM_LOCAL_BOARDS 0
+#define NUM_REMOTE_BOARDS 8
+#elif defined(BOARDCONFIG_ROCKET1)
+#define NUM_LOCAL_BOARDS 4
+#define NUM_REMOTE_BOARDS 0
+#elif defined(BOARDCONFIG_WALLCLOCK)
+#define NUM_LOCAL_BOARDS 1
+#define NUM_REMOTE_BOARDS 0
+#elif defined(BOARDCONFIG_CHASECLOCK)
+#define NUM_LOCAL_BOARDS 1
+#define NUM_REMOTE_BOARDS 0
+#elif defined(BOARDCONFIG_DEFAULT)
+#define NUM_LOCAL_BOARDS 8
+#define NUM_REMOTE_BOARDS 0
 #else
-# error "Your app Makefile must define one of the BOARDCONFIG_xxx constants."
-# include <stop>
+#error "Your app Makefile must define one of the BOARDCONFIG_xxx constants."
+#include <stop>
 #endif

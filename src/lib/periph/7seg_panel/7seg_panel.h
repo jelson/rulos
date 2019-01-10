@@ -16,8 +16,8 @@
 
 #pragma once
 
-#include "periph/7seg_panel/board_config.h"
 #include "periph/7seg_panel/board_buffer.h"
+#include "periph/7seg_panel/board_config.h"
 #include "periph/7seg_panel/cursor.h"
 #include "periph/7seg_panel/display_controller.h"
 #include "periph/7seg_panel/region.h"

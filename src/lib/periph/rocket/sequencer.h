@@ -21,9 +21,8 @@
  * play a scripted storyboard.
  *
  * EG: launch:
- * 0. board 0 prompt: "Initiate launch sequence: Enter A476" (move focus appropriately)
- * 0. board 1: display entered string
- * await input; reset schedule
+ * 0. board 0 prompt: "Initiate launch sequence: Enter A476" (move focus
+ * appropriately) 0. board 1: display entered string await input; reset schedule
  * 0. scroll board 0: "launch sequence initiated."
  * 0. clock panel 1: t-(10-now)
  * 10. scroll panel 0: blinking "LAUNCH"
@@ -46,42 +45,44 @@
 #include "periph/rocket/screen4.h"
 
 typedef enum {
-	launch_state_init=-1,
-	launch_state_hidden=0,
-	launch_state_enter_code,
-	launch_state_wrong_code,
-	launch_state_countdown,
-	launch_state_launching,
-	launch_state_complete,
+  launch_state_init = -1,
+  launch_state_hidden = 0,
+  launch_state_enter_code,
+  launch_state_wrong_code,
+  launch_state_countdown,
+  launch_state_launching,
+  launch_state_complete,
 } LaunchState;
 
 struct s_screen_blanker;
 
 typedef struct s_launch {
-	UIEventHandlerFunc func;
+  UIEventHandlerFunc func;
 
-	LaunchState state;
+  LaunchState state;
 
-	Screen4 *s4;
-	DScrollMsgAct dscrlmsg;
-	BoardBuffer code_bbuf;
-	BoardBuffer textentry_bbuf;
-	NumericInputAct textentry;
-	RasterBigDigit bigDigit;
+  Screen4 *s4;
+  DScrollMsgAct dscrlmsg;
+  BoardBuffer code_bbuf;
+  BoardBuffer textentry_bbuf;
+  NumericInputAct textentry;
+  RasterBigDigit bigDigit;
 
-	DRTCAct *main_rtc;
-	LunarDistance *lunar_distance;
+  DRTCAct *main_rtc;
+  LunarDistance *lunar_distance;
 
-	Time nextEventTimeout;
+  Time nextEventTimeout;
 
-	Booster *booster;
-	AudioClient *audioClient;
-	uint16_t launch_code;
-	char launch_code_str[45];
+  Booster *booster;
+  AudioClient *audioClient;
+  uint16_t launch_code;
+  char launch_code_str[45];
 
-	struct s_screen_blanker *screenblanker;
+  struct s_screen_blanker *screenblanker;
 } Launch;
 
-void launch_init(Launch *launch, Screen4 *s4, Booster *booster, AudioClient *audioClient, struct s_screen_blanker *screenblanker);
+void launch_init(Launch *launch, Screen4 *s4, Booster *booster,
+                 AudioClient *audioClient,
+                 struct s_screen_blanker *screenblanker);
 
-#endif // _sequencer_h
+#endif  // _sequencer_h

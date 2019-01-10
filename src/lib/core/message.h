@@ -24,8 +24,8 @@ typedef uint8_t Port;
 // Payload_Len
 // [Payload_Len * uint8_t]
 typedef struct s_message {
-	Port dest_port;
-	uint8_t checksum;
-	uint8_t payload_len;
-	char data[0];
+  Port dest_port;
+  uint8_t checksum;
+  uint8_t payload_len;
+  char data[0];
 } Message, *MessagePtr;
