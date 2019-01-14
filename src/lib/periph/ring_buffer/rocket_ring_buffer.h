@@ -14,8 +14,9 @@
  *
  ************************************************************************/
 
-#ifndef _RING_BUFFER_H
-#define _RING_BUFFER_H
+#pragma once
+
+#include <inttypes.h>
 
 typedef struct {
   uint8_t capacity;  // actually holds capacity-1 bytes;
@@ -38,5 +39,3 @@ uint8_t ring_insert_avail(RingBuffer *rb);
 void ring_insert(RingBuffer *rb, uint8_t data);
 uint8_t ring_remove_avail(RingBuffer *rb);
 uint8_t ring_remove(RingBuffer *rb);
-
-#endif  // _RING_BUFFER_H
