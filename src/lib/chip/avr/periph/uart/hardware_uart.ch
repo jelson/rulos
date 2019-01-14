@@ -70,8 +70,8 @@ void hal_uart_start_send_name(void) {
 // Runs in interrupt context.
 static inline void _handle_recv_ready_name(char c) {
   // audioled_set(0, 1);
-  if (g_uart_handler[UARTID] != nullptr &&
-      g_uart_handler[UARTID]->recv != nullptr) {
+  if (g_uart_handler[UARTID] != NULL &&
+      g_uart_handler[UARTID]->recv != NULL) {
     (g_uart_handler[UARTID]->recv)(g_uart_handler[UARTID], c);
   }
   // audioled_set(1, 0);
@@ -83,8 +83,8 @@ static inline void _handle_send_ready_name() {
 
   // If there is still data remaining to send, send it.  Otherwise,
   // disable the send-ready interrupt.
-  if (g_uart_handler[UARTID] != nullptr &&
-      g_uart_handler[UARTID]->send != nullptr) {
+  if (g_uart_handler[UARTID] != NULL &&
+      g_uart_handler[UARTID]->send != NULL) {
     if ((g_uart_handler[UARTID]->send)(g_uart_handler[UARTID], &c)) {
       _UDR = c;
     } else {
