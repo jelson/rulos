@@ -42,8 +42,7 @@ void send_remote_bbuf(RemoteBBufSend *rbs, SSBitmap *bm, uint8_t index,
                       uint8_t mask) {
   assert(0 <= index && index < NUM_REMOTE_BOARDS);
 
-  int di;
-  for (di = 0; di < NUM_DIGITS; di++) {
+  for (int di = 0; di < NUM_DIGITS; di++) {
     if (mask & 0x80) {
       rbs->offscreen[index][di] = bm[di];
     }
@@ -154,6 +153,19 @@ void rbr_recv(RecvSlot *recvSlot, uint8_t payload_len) {
   }
 
   BBufMessage *bbm = (BBufMessage *)&recvSlot->msg->data;
+
+#if BBDEBUG
+  LOG("rbs: updating board %d with data %x%x%x%x%x%x%x%x\n", bbm->index,
+      bbm->buf[0],
+      bbm->buf[1],
+      bbm->buf[2],
+      bbm->buf[3],
+      bbm->buf[4],
+      bbm->buf[5],
+      bbm->buf[6],
+      bbm->buf[7]);
+#endif
+
   board_buffer_paint(bbm->buf, bbm->index, 0xff);
   recvSlot->msg_occupied = FALSE;
 }

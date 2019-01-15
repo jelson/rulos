@@ -138,29 +138,27 @@ void board_buffer_set_alpha(BoardBuffer *buf, uint8_t alpha) {
 
 void board_buffer_draw(BoardBuffer *buf) {
   uint8_t board_index = buf->board_index;
-
 #if BBDEBUG
   LOG("bb_draw(3, buf %016" PRIxPTR " %s, mask %x)\n", (uintptr_t)buf,
       buf->label, buf->mask);
-}
 #endif  // BBDEBUG
 
 // draw locally, if we can.
 #if NUM_LOCAL_BOARDS > 0
-if (0 <= board_index && board_index < NUM_LOCAL_BOARDS) {
-  board_buffer_paint(buf->buffer, board_index, buf->mask);
-}
-#endif
+  if (0 <= board_index && board_index < NUM_LOCAL_BOARDS) {
+    board_buffer_paint(buf->buffer, board_index, buf->mask);
+  }
+#endif  // NUM_LOCAL_BOARDS > 0
 #if NUM_REMOTE_BOARDS > 0
-if (g_remote_bbuf_send != NULL && NUM_LOCAL_BOARDS <= board_index &&
-    board_index < NUM_TOTAL_BOARDS) {
-  // jonh hard-codes remote send ability, rather than getting all
-  // objecty about it, because doing this well with polymorphism
-  // really wants a dynamic memory allocator.
-  send_remote_bbuf(g_remote_bbuf_send, buf->buffer,
-                   board_index - NUM_LOCAL_BOARDS, buf->mask);
-}
-#endif
+  if (g_remote_bbuf_send != NULL && NUM_LOCAL_BOARDS <= board_index &&
+      board_index < NUM_TOTAL_BOARDS) {
+    // jonh hard-codes remote send ability, rather than getting all
+    // objecty about it, because doing this well with polymorphism
+    // really wants a dynamic memory allocator.
+    send_remote_bbuf(g_remote_bbuf_send, buf->buffer,
+                     board_index - NUM_LOCAL_BOARDS, buf->mask);
+  }
+#endif  // NUM_REMOTE_BOARDS > 0
 }
 
 void board_buffer_paint(SSBitmap *bm, uint8_t board_index, uint8_t mask) {
