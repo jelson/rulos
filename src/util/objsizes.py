@@ -17,6 +17,7 @@
 import glob
 import os
 import operator
+import fnmatch
 
 class Sizes:
 	def __init__(self, objfilename):
@@ -40,8 +41,10 @@ class Sizes:
 class Collection:
 	def __init__(self, dir):
 		self.d = {}
-		for f in glob.glob(dir+"/*.o"):
-			self.d[f] = Sizes(f)
+                for root, dirnames, filenames in os.walk(dir):
+                        for filename in fnmatch.filter(filenames, "*.o"):
+                                f = os.path.join(root, filename)
+                                self.d[f] = Sizes(f)
 
 	def dump(self):
 		for (k,v) in self.d.items():
@@ -53,4 +56,6 @@ class Collection:
 		return reduce(operator.add, sizes, 0)
 
 if (__name__=="__main__"):
-	Collection("obj.avr").dump()
+        for objdir in glob.glob("obj.avr.*"):
+                print objdir
+	        Collection(objdir).dump()
