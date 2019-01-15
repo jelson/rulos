@@ -24,7 +24,7 @@
 
 BoardBuffer *foreground[NUM_TOTAL_BOARDS];
 
-#if BBDEBUG && SIM
+#if BBDEBUG
 void dump(const char *prefix) {
   int b;
   LOG("-----\n");
@@ -38,7 +38,7 @@ void dump(const char *prefix) {
     LOG("<end>\n");
   }
 }
-#endif  // BBDEBUG && SIM
+#endif  // BBDEBUG
 
 RemoteBBufSend *g_remote_bbuf_send;
 
@@ -61,7 +61,7 @@ void board_buffer_init(BoardBuffer *buf DBG_BBUF_LABEL_DECL) {
   buf->board_index = BBUF_UNMAPPED_INDEX;
   buf->alpha = 0xff;
   assert(sizeof(buf->alpha) * 8 >= NUM_DIGITS);
-#if BBDEBUG && SIM
+#if BBDEBUG
   buf->label = label;
 #endif
 }
@@ -108,24 +108,24 @@ void board_buffer_pop(BoardBuffer *buf) {
   buf->next = NULL;
   buf->board_index = BBUF_UNMAPPED_INDEX;
 
-#if BBDEBUG && SIM
+#if BBDEBUG
   dump("  after pop");
-#endif  // BBDEBUG && SIM
+#endif
 }
 
 void board_buffer_push(BoardBuffer *buf, int board) {
   assert(board < NUM_TOTAL_BOARDS);
-#if BBDEBUG && SIM
+#if BBDEBUG
   dump("before push");
-#endif  // BBDEBUG && SIM
+#endif  // BBDEBUG
   buf->board_index = board;
   buf->next = foreground[board];
   foreground[board] = buf;
   _board_buffer_compute_mask(buf, FALSE);  // no redraw because...
   board_buffer_draw(buf);  // ...this line will overwrite existing
-#if BBDEBUG && SIM
+#if BBDEBUG
   dump(" after push");
-#endif  // BBDEBUG && SIM
+#endif  // BBDEBUG
 }
 
 void board_buffer_set_alpha(BoardBuffer *buf, uint8_t alpha) {
@@ -139,28 +139,27 @@ void board_buffer_set_alpha(BoardBuffer *buf, uint8_t alpha) {
 void board_buffer_draw(BoardBuffer *buf) {
   uint8_t board_index = buf->board_index;
 
-#if BBDEBUG && SIM
-  if (board_index == 3) {
-    LOG("bb_draw(3, buf %016" PRIxPTR " %s, mask %x)\n", (uintptr_t)buf,
-        buf->label, buf->mask);
-  }
-#endif  // BBDEBUG && SIM
+#if BBDEBUG
+  LOG("bb_draw(3, buf %016" PRIxPTR " %s, mask %x)\n", (uintptr_t)buf,
+      buf->label, buf->mask);
+}
+#endif  // BBDEBUG
 
-  // draw locally, if we can.
+// draw locally, if we can.
 #if NUM_LOCAL_BOARDS > 0
-  if (0 <= board_index && board_index < NUM_LOCAL_BOARDS) {
-    board_buffer_paint(buf->buffer, board_index, buf->mask);
-  }
+if (0 <= board_index && board_index < NUM_LOCAL_BOARDS) {
+  board_buffer_paint(buf->buffer, board_index, buf->mask);
+}
 #endif
 #if NUM_REMOTE_BOARDS > 0
-  if (g_remote_bbuf_send != NULL && NUM_LOCAL_BOARDS <= board_index &&
-      board_index < NUM_TOTAL_BOARDS) {
-    // jonh hard-codes remote send ability, rather than getting all
-    // objecty about it, because doing this well with polymorphism
-    // really wants a dynamic memory allocator.
-    send_remote_bbuf(g_remote_bbuf_send, buf->buffer,
-                     board_index - NUM_LOCAL_BOARDS, buf->mask);
-  }
+if (g_remote_bbuf_send != NULL && NUM_LOCAL_BOARDS <= board_index &&
+    board_index < NUM_TOTAL_BOARDS) {
+  // jonh hard-codes remote send ability, rather than getting all
+  // objecty about it, because doing this well with polymorphism
+  // really wants a dynamic memory allocator.
+  send_remote_bbuf(g_remote_bbuf_send, buf->buffer,
+                   board_index - NUM_LOCAL_BOARDS, buf->mask);
+}
 #endif
 }
 

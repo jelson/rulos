@@ -137,7 +137,7 @@ UIEventDisposition calculator_notify_internal(Calculator *calc, UIEvent evt) {
       }
       //			LOG("setup2 op0 %3de%d o1 %3de%d\n",
       //				m0, op0.neg_exponent, m1,
-      //op1.neg_exponent);
+      // op1.neg_exponent);
       assert(op0.neg_exponent == op1.neg_exponent);
       // swap mantissas back so subtraction makes sense
       if (swapped) {

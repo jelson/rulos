@@ -19,7 +19,7 @@
 #include "core/util.h"
 #include "periph/7seg_panel/display_controller.h"
 
-#define BBDEBUG 1
+#define BBDEBUG 0
 
 typedef struct s_board_buffer {
   uint8_t board_index;
@@ -27,14 +27,14 @@ typedef struct s_board_buffer {
   uint8_t alpha;
   uint8_t mask;  // visible alpha
   struct s_board_buffer *next;
-#if BBDEBUG && SIM
+#if BBDEBUG
 #define DBG_BBUF_LABEL(s) , s
 #define DBG_BBUF_LABEL_DECL , const char *label
   const char *label;
 #else
 #define DBG_BBUF_LABEL(s)   /**/
 #define DBG_BBUF_LABEL_DECL /**/
-#endif                      // BBDEBUG && SIM
+#endif                      // BBDEBUG
 } BoardBuffer;
 
 #define NUM_TOTAL_BOARDS (NUM_LOCAL_BOARDS + NUM_REMOTE_BOARDS)

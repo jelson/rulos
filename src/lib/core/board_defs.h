@@ -166,7 +166,6 @@
 #define JOYSTICK_TRIGGER GPIO_D4
 
 #define AVAILABLE_ADCS 0xff
-#define ASSERT_TO_BOARD
 
 #elif defined(BOARD_FLASHCARD)
 

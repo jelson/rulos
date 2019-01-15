@@ -17,8 +17,8 @@
 #include "core/network.h"
 
 #include "core/hal.h"
-#include "core/logging.h"
 #include "core/net_compute_checksum.h"
+#include "logging.h"
 #include "queue.mc"
 
 QUEUE_DEFINE(SendSlotPtr)
@@ -194,9 +194,11 @@ static void net_send_done_cb(void *user_data);
 
 // External visible API from above to launch a packet.
 r_bool net_send_message(Network *net, SendSlot *sendSlot) {
+#if 0
   LOG("netstack: queueing %d-byte payload to %d:%d (0x%x:0x%x)\n",
       sendSlot->msg->payload_len, sendSlot->dest_addr, sendSlot->msg->dest_port,
       sendSlot->dest_addr, sendSlot->msg->dest_port);
+#endif
 
   assert(sendSlot->sending == FALSE);
   r_bool need_wake = (SendSlotPtrQueue_length(SendQueue(net)) == 0);
@@ -219,9 +221,11 @@ static void net_send_next_message_down(Network *net) {
 
   if (rc == FALSE) return;
 
+#if 0
   LOG("netstack: releasing %d-byte payload to %d:%d (0x%x:0x%x)\n",
       sendSlot->msg->payload_len, sendSlot->dest_addr, sendSlot->msg->dest_port,
       sendSlot->dest_addr, sendSlot->msg->dest_port);
+#endif
 
   // Make sure this guy thinks he's sending.
   assert(sendSlot->sending == TRUE);

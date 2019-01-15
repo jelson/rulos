@@ -21,7 +21,7 @@
 #include "periph/uart/uart.h"
 
 // Upcall from HAL when new data arrives.  Happens at interrupt time.
-void _uart_receive(UartHandler *handler, char c) {
+void _uart_receive(HalUart *handler, char c) {
   UartState_t *u = (UartState_t *)handler;
   if (!u->initted) return;
 
@@ -29,8 +29,10 @@ void _uart_receive(UartHandler *handler, char c) {
     u->recvQueue.reception_time_us = precise_clock_time_us();
   }
 
+#ifdef UART_DEBUG
   LOG("uart_receive: got char at %d, msgtime=%d\n", precise_clock_time_us(),
       u->recvQueue.reception_time_us);
+#endif
 
   // safe because we're in interrupt time.
   CharQueue_append(u->recvQueue.q, c);
@@ -38,7 +40,7 @@ void _uart_receive(UartHandler *handler, char c) {
 
 // Upcall from hal when the next byte is needed for a send.  Happens
 // at interrupt time.
-r_bool _uart_get_next_character(UartHandler *handler, char *c /* OUT */) {
+r_bool _uart_get_next_character(HalUart *handler, char *c /* OUT */) {
   UartState_t *u = (UartState_t *)handler;
   assert(u != NULL);
 

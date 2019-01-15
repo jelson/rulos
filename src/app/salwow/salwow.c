@@ -42,26 +42,7 @@ void send_one(void *data) {
   static int ctr;
   mark_point(16 + ((ctr++) & 15));
 
-  static char *smsg = (char *)"done x\n";
-  smsg[5] = '0' + (ctr & 7);
-  uart_debug_log(smsg);
-
-  uint16_t uart_id = (uint16_t)(int)data;
-
-#if 0
-	assert(uart_id<2);
-	char *msg = test_msg[uart_id];
-#else
-  char *msg = (char *)"hi\n";
-#endif
-  static char *vmsg = (char *)"ob x\n";
-  vmsg[3] = '0' + (uart[uart_id].out_buf != NULL);
-  uart_debug_log(vmsg);
-
-  uart_send(&uart[uart_id], msg, strlen(msg), send_done, (void *)(int)uart_id);
-
-  //	{ char *m="hey doodle\n"; hal_uart_sync_send(&uart[0].handler, m,
-  //strlen(m)); }
+  LOG("done %d\n", ctr);
 }
 
 void send_done(void *data) { schedule_us(1, send_one, data); }
@@ -82,16 +63,14 @@ int main() {
   mark_point(4);
   uart_init(&uart[0], 38400, TRUE, 0);
   uart_init(&uart[1], 38400, TRUE, 1);
-
-  { uart_debug_log("SALWOW up.\n"); }
+  LOG("SALWOW up.\n");
 
 #if 0
 	uint8_t f = 0;
 	while(1) {
 		f+=1;
 		mark_point((f&1) | 16);
-		char *msg = "my dog. worms.\n";
-		hal_uart_sync_send(&uart[0].handler, msg, strlen(msg));
+		LOG("my dog. worms.\n");
 	}
 #endif
 

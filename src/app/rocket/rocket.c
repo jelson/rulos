@@ -159,50 +159,36 @@ void init_rocket0(Rocket0 *r0) {
 }
 
 static Rocket0 rocket0;  // allocate obj in .bss so it's easy to count
+HalUart uart;
+CpumonAct cpumon;
 
 int main() {
   hal_init();
+
+  hal_uart_init(&uart, 38400, true, /* uart_id= */ 0);
+  LOG("Log output running\n");
 
   // Only init the rocketpanel module in the ROCKET0 configuration, not
   // the TWI-output-only NETROCKET configuration.
 #ifdef BOARDCONFIG_ROCKET0
   hal_init_rocketpanel();
 #endif
+
+  // start the jiffy clock
   init_clock(10000, TIMER1);
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);  // includes slow calibration phase
-#if 0
-	UartHandler uart;
-	hal_uart_init(&uart, 38400, true, 0);
-	while (true) {
-		hal_uart_sync_send(&uart, (char*) "hello\n", 6);
-	}
-#endif
-
-#if 0
-//	// TODO temporary for sync debug output; would interfere with uart net stack
-	UartHandler uart;
-	hal_uart_init(&uart, 38400, true, 0);
-	hal_uart_sync_send(&uart, (char*) "hello\n", 6);
-#endif
+  // includes slow calibration phase
+  cpumon_init(&cpumon);
 
   board_buffer_module_init();
-
   init_rocket0(&rocket0);
 
-#define DEBUG_IDLE_BUSY 0
-#if DEBUG_IDLE_BUSY
-#endif  // DEBUG_IDLE_BUSY
-
-  /*
-          Autotype autotype;
-          init_autotype(&autotype, (InputInjectorIfc*)
-     &rocket0.cp.direct_injector,
-                  //"000aaaaac004671c",
-                  "000bc",
-                  (Time) 1300000);
-  */
+#ifdef AUTOTYPE
+  Autotype autotype;
+  init_autotype(&autotype, (InputInjectorIfc *)&rocket0.cp.direct_injector,
+                //"000aaaaac004671c",
+                "000bc", (Time)1300000);
+#endif
 
 #if MEASURE_CPU_FOR_RULOS_PAPER
   DScrollMsgAct dsm;

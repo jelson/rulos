@@ -28,8 +28,20 @@
 
 #include "core/hal.h"
 #include "hardware.h"
+#include "logging.h"
 
-uint8_t hal_initted = 0;
+uint8_t g_hal_initted = 0;
+
+void hal_init() {
+#ifdef MCUatmega1284p
+  // Disable JTAG, which opens up PC2..PC5 as gpios (or their other features)
+  MCUCR |= _BV(JTD);
+  MCUCR |= _BV(JTD);
+#endif  // MCUatmega1284p
+
+  init_f_cpu();
+  g_hal_initted = HAL_MAGIC;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -64,7 +76,9 @@ rulos_irq_state_t hal_start_atomic() {
 
 // conditionally enable interrupts
 void hal_end_atomic(rulos_irq_state_t interrupt_flag) {
-  if (interrupt_flag) sei();
+  if (interrupt_flag) {
+    sei();
+  }
 }
 
 void hal_idle() {
@@ -108,31 +122,15 @@ void hal_deep_sleep() {
   hal_end_atomic(old_interrupts);
 }
 
-void hal_init() {
-#ifdef MCUatmega1284p
-  // Disable JTAG, which opens up PC2..PC5 as gpios (or their other features)
-  MCUCR |= _BV(JTD);
-  MCUCR |= _BV(JTD);
-#endif  // MCUatmega1284p
-
-  init_f_cpu();
-  hal_initted = HAL_MAGIC;
-}
-
-#ifdef ASSERT_TO_SERIAL
-#include "periph/uart/uart.h"
-#endif
-
 #ifdef ASSERT_TO_BOARD
 #include "display_controller.h"
 #endif
 
-void hardware_assert(uint16_t line) {
+void avr_assert(const uint16_t line) {
+  LOG("assertion failed: line %d", line);
+
 #ifdef ASSERT_TO_BOARD
   board_debug_msg(line);
-#endif
-#ifdef ASSERT_TO_SERIAL
-  uart_assert(line);
 #endif
 #ifdef ASSERT_CUSTOM
   ASSERT_CUSTOM(line);

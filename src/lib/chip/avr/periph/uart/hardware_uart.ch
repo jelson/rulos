@@ -18,7 +18,7 @@
 // definitions; we include it multiple times to provide access to both
 // UARTs.
 
-void hal_uart_init_name(UartHandler *handler, uint32_t baud, r_bool stop2,
+void hal_uart_init_name(HalUart *handler, uint32_t baud, r_bool stop2,
                         uint8_t uart_id) {
   uint16_t ubrr = baud_to_ubrr(baud);
 
@@ -29,12 +29,12 @@ void hal_uart_init_name(UartHandler *handler, uint32_t baud, r_bool stop2,
   _UBRRH = (unsigned char)(ubrr >> 8);
   _UBRRL = (unsigned char)ubrr;
 
-  _UCSRB = _BV(_TXEN) | // enable transmitter
-           _BV(_RXEN)   // enable receiver
+  _UCSRB = _BV(_TXEN) |  // enable transmitter
+           _BV(_RXEN)    // enable receiver
       ;
 
   if (handler != NULL) {
-    _UCSRB |= _BV(_RXCIE); // enable receiver interrupt
+    _UCSRB |= _BV(_RXCIE);  // enable receiver interrupt
   }
 
   // set frame format: async, 8 bit data, 1 stop bit, no parity
@@ -70,8 +70,7 @@ void hal_uart_start_send_name(void) {
 // Runs in interrupt context.
 static inline void _handle_recv_ready_name(char c) {
   // audioled_set(0, 1);
-  if (g_uart_handler[UARTID] != NULL &&
-      g_uart_handler[UARTID]->recv != NULL) {
+  if (g_uart_handler[UARTID] != NULL && g_uart_handler[UARTID]->recv != NULL) {
     (g_uart_handler[UARTID]->recv)(g_uart_handler[UARTID], c);
   }
   // audioled_set(1, 0);
@@ -83,8 +82,7 @@ static inline void _handle_send_ready_name() {
 
   // If there is still data remaining to send, send it.  Otherwise,
   // disable the send-ready interrupt.
-  if (g_uart_handler[UARTID] != NULL &&
-      g_uart_handler[UARTID]->send != NULL) {
+  if (g_uart_handler[UARTID] != NULL && g_uart_handler[UARTID]->send != NULL) {
     if ((g_uart_handler[UARTID]->send)(g_uart_handler[UARTID], &c)) {
       _UDR = c;
     } else {
@@ -96,10 +94,21 @@ static inline void _handle_send_ready_name() {
 ISR(_USART_RXC_vect) { _handle_recv_ready_name(_UDR); }
 ISR(_USART_UDRE_vect) { _handle_send_ready_name(); }
 
-void hal_uart_sync_send_name(char *s, uint8_t len) {
+static inline void sync_send_byte_name(const char c) {
+  while (!(_UCSRA & _BV(_UDRE))) {
+    ;
+  }
+  _UDR = c;
+}
+
+void hal_uart_sync_send_bytes_name(const char *s, uint8_t len) {
   for (uint8_t i = 0; i < len; i++) {
-    while (!(_UCSRA & _BV(_UDRE)))
-      ;
-    _UDR = s[i];
+    sync_send_byte_name(*s++);
+  }
+}
+
+void hal_uart_sync_send_name(const char *s) {
+  while (*s != '\0') {
+    sync_send_byte_name(*s++);
   }
 }

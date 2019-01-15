@@ -4,8 +4,8 @@
 
 #include "gpsinput.h"
 
-r_bool _gpsinput_send_next(UartHandler *handler, char *c /* OUT */);
-void _gpsinput_receive(UartHandler *handler, char c);
+r_bool _gpsinput_send_next(HalUart *handler, char *c /* OUT */);
+void _gpsinput_receive(HalUart *handler, char c);
 uint8_t split(char *s, uint8_t *index /*OUT*/, uint8_t index_size);
 void _gpsinput_process_sentence(GPSInput *gpsi);
 bool _parse_ddm(char *s, float *out);
@@ -27,11 +27,11 @@ void gpsinput_init(GPSInput *gpsi, uint8_t uart_id,
   gpsi->recvp = 0;
 }
 
-r_bool _gpsinput_send_next(UartHandler *handler, char *c /* OUT */) {
+r_bool _gpsinput_send_next(HalUart *handler, char *c /* OUT */) {
   return FALSE;
 }
 
-void _gpsinput_receive(UartHandler *handler, char c) {
+void _gpsinput_receive(HalUart *handler, char c) {
   GPSInput *gpsi = (GPSInput *)handler;
   if (c == '\n') {
     // line done

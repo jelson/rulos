@@ -90,18 +90,22 @@ void rbs_update(RemoteBBufSend *rbs) {
   schedule_us(REMOTE_BBUF_SEND_RATE, (ActivationFuncPtr)rbs_update, rbs);
 
   if (rbs->sendSlot.sending) {
-    LOG("rbs_update: busy\n");
+    LOG("rbs_update: dropping update; sender busy\n");
     return;
   }
 
   int index = rbs_find_changed_index(rbs);
   if (index == -1) {
+#if BBDEBUG
     // no changed lines
     LOG("rbs_update: idle\n");
+#endif
     return;
   }
 
+#if BBDEBUG
   LOG("rbs_update: update[%d]\n", index);
+#endif
 
   // send a packet for this changed line
   RemoteMapping *mapping = &remote_mapping[index];

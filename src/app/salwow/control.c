@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,6 +5,7 @@
 #include "control.h"
 #include "core/clock.h"
 #include "leds.h"
+#include "logging.h"
 
 #define OBSERVATION_DURATION_SAMPLES 5
 #define US_PER_DEGREE ((uint32_t)(5000000 / 360))
@@ -94,21 +94,7 @@ void control_start(Control *ctl) {
 }
 
 void _test_sentence_done(GPSInput *gpsi) {
-#ifndef SIM
-  {
-    char smsg[100];
-    int latint = (int)gpsi->lat;
-    uint32_t latfrac = (gpsi->lat - latint) * 1000000;
-    float poslon = -gpsi->lon;
-    int lonint = (int)poslon;
-    uint32_t lonfrac = (poslon - lonint) * 1000000;
-    sprintf(smsg, "GPS: %d.%06ld, %d.%06ld\n", latint, latfrac, lonint,
-            lonfrac);
-    uart_debug_log(smsg);
-  }
-#else
-  fprintf(stderr, "Read %f,%f\n", (double)gpsi->lat, (double)gpsi->lon);
-#endif  // SIM
+  LOG("Read %f,%f\n", (double)gpsi->lat, (double)gpsi->lon);
 }
 
 void _control_gps_read(void *v_ctl) {
@@ -136,7 +122,7 @@ void _control_gps_read(void *v_ctl) {
 }
 
 void _control_start_observing(void *v_ctl) {
-  uart_debug_log("_control_start_observing\n");
+  LOG("_control_start_observing\n");
   Control *ctl = (Control *)v_ctl;
   _control_set_rudder(ctl, RUDDER_STRAIGHT);
   ctl->sample_num = 0;
@@ -164,11 +150,11 @@ void _control_start_turning(Control *ctl) {
   while (TRUE) {
     turn_request = navigation_compute(&ctl->nav, &ctl->p0, &ctl->p1);
     if (turn_request == ABEAM) {
-      uart_debug_log("sequence waypoint\n");
+      LOG("sequence waypoint\n");
       int next_index = ctl->waypoint_index + 1;
       if (next_index >= ctl->n_waypoints) {
         // OMFSM DONE!
-        uart_debug_log("task complete\n");
+        LOG("task complete\n");
         ctl->state = Completed;
         control_set_motor_state(ctl, 0);
         return;
@@ -180,12 +166,7 @@ void _control_start_turning(Control *ctl) {
     break;
   }
 
-  {
-    char msg[80];
-    sprintf(msg, "turn %s %d deg\n", turn_request > 0 ? "right" : "left",
-            turn_request);
-    uart_debug_log(msg);
-  }
+  LOG("turn %s %d deg\n", turn_request > 0 ? "right" : "left", turn_request);
   _control_set_rudder(ctl, turn_request > 0 ? RUDDER_RIGHT : RUDDER_LEFT);
   Time turn_duration_us = INTABS(turn_request) * US_PER_DEGREE;
   ctl->state = Turning;

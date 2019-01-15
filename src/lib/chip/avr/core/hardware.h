@@ -196,7 +196,8 @@ static inline int gpio_is_set(volatile uint8_t *ddr, volatile uint8_t *port,
 
 void sensor_interrupt_register_handler(Handler handler);
 
-void hardware_assert(uint16_t line);
+void avr_log(const char *fmt, ...);
+void avr_assert(uint16_t line);
 void hardware_assign_timer_handler(uint8_t timer_id, Handler handler);
 void init_f_cpu(void);
 extern uint32_t hardware_f_cpu;

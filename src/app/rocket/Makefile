@@ -16,11 +16,12 @@ ROCKET_ROOT := ../..
 
 PLATFORMS := avr sim
 PERIPHERALS := rocket 7seg_panel twi display_rtc hpam audio adc rasters joystick uart
+EXTRA_AVR_CFLAGS := -DLOG_TO_SERIAL=UART0
 
 #MCU := atmega8
 
 #MCU := atmega328p
-#BOARD=PCB11
+#BOARD := PCB11
 
 ## Uncomment this block for LPEM
 #MCU := atmega1284p
@@ -39,4 +40,3 @@ TARGET_OBJECTS := \
 	rocket.o
 
 include $(ROCKET_ROOT)/Makefile.common
-

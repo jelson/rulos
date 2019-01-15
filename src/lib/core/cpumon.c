@@ -83,7 +83,7 @@ void cpumon_act(void *data) {
       // we won't get run again until real main loop starts.
       //			LOG("calib %d/%dms\n",
       //				act->calibration_spin_counts,
-      //act->calibration_interval);
+      // act->calibration_interval);
       act->num_calibrations--;
       if (act->num_calibrations > 0) {
         act->phase = cpumon_phase_align;

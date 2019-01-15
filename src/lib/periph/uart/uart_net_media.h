@@ -46,7 +46,7 @@ typedef enum {
 } UartMedia_RecvState;
 
 typedef struct s_UartMedia {
-  UartHandler uart_handler;
+  HalUart uart_handler;
   UartMediaPtr uart_media_ptr;
 
   uint8_t send_which;

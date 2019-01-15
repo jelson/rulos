@@ -3,7 +3,7 @@
 #include "periph/uart/uart.h"
 
 typedef struct {
-  UartHandler uart_hw;
+  HalUart uart_hw;
   float lon, lat;
   ActivationFuncPtr data_ready_cb_func;
   void* data_ready_cb_data;

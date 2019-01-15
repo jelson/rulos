@@ -38,10 +38,10 @@
 #include "chip/sim/core/sim.h"
 #include "core/clock.h"
 #include "core/heap.h"
-#include "core/logging.h"
 #include "core/media.h"
 #include "core/util.h"
 #include "hardware_types.h"
+#include "logging.h"
 
 uint32_t f_cpu = 4000000;
 uint8_t hal_initted = 0;
@@ -306,48 +306,6 @@ static void sim_twi_send(MediaStateIfc *media, Addr dest_addr, const char *data,
   }
 }
 
-#if 0
-Jon: I disabled this because it conflicted with the 
-interactive uart simulator I wrote, in sim_rocketpanel.c.
-
-
-/* recv-only uart simulator */
-
-int sim_uart_fd[2];
-
-void sim_uart_recv(void *data)
-{
-	UartHandler* uart_handler = (UartHandler*) data;
-	char c;
-	int rc = read(sim_uart_fd[uart_handler->uart_id], &c, 1);
-	if (rc==1)
-	{
-		//fprintf(stderr, "sim_uart_recv(%c)\n", c);
-		(uart_handler->recv)(uart_handler, c);
-		schedule_us(1000, sim_uart_recv, uart_handler);
-	}
-	else
-	{
-		fprintf(stderr, "EOF on sim_uart_fd\n");
-	}
-}
-
-void hal_uart_init(UartHandler* handler, uint32_t baud, r_bool stop2, uint8_t uart_id)
-{
-	handler->uart_id = uart_id;
-	assert(uart_id<sizeof(sim_uart_fd)/sizeof(sim_uart_fd[0]));
-	sim_uart_fd[uart_id] = open("sim_uart", O_RDONLY);
-	fprintf(stderr, "open returns %d\n", sim_uart_fd[uart_id]);
-	schedule_us(1000, sim_uart_recv, handler);
-}
-
-void hal_uart_start_send(UartHandler* handler)
-{
-	// TODO neutered; won't call your more-chars upcall ever
-}
-
-#endif
-
 /************ init ***********************/
 
 static FILE *logfp = NULL;
@@ -359,14 +317,7 @@ uint64_t curr_time_usec() {
   return ((uint64_t)1000000) * tv.tv_sec + tv.tv_usec;
 }
 
-void hal_uart_sync_send(char *s, uint8_t len) {
-  char buf[1000];
-  memcpy(buf, s, len);
-  buf[len] = '\0';
-  LOG("uart send: %s\n", buf);
-}
-
-void uart_debug_log(const char *m) { fprintf(stderr, "DEBUG: %s\n", m); }
+void hal_bind_logging_to_uart(HalUart *uart) {}
 
 void sim_log(const char *fmt, ...) {
   va_list ap;

@@ -63,7 +63,7 @@ static BoardRemap boardRemapTables[] = {
       SRT_SDBD}},
 #define BRT_WALLCLOCK 2
     //	{ FALSE, { SRT_SUBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SDBU, SRT_SUBU,
-    //SRT_SUBU, SRT_SUBU }},
+    // SRT_SUBU, SRT_SUBU }},
     {FALSE,
      {SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SDBU, SRT_SUBU,
       SRT_SUBU}},

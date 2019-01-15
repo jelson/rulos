@@ -592,9 +592,9 @@ void hal_6matrix_init(SixMatrix_Context_t *mat) {
   gpio_make_output(GPIO_B3);  // MOSI
   gpio_make_output(GPIO_B5);  // SCK
   SPCR = _BV(SPE) |           // SPI enable
-         // Interrupts not enabled
-         //_BV(DORD) |  // Transmit MSB first
-         _BV(MSTR);  // Master mode
+                              // Interrupts not enabled
+                              //_BV(DORD) |  // Transmit MSB first
+         _BV(MSTR);           // Master mode
   // CPOL = 0, CPHA = 0 -- bit must be stable during clock rising edge
   // SPR1 =0 0, SPR0 = 0 -- Fosc/2
 

@@ -25,8 +25,8 @@ void audioled_set(r_bool red, r_bool yellow);
 void _um_send(MediaStateIfc *media, Addr dest_addr, const char *data,
               uint8_t len, MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
 
-void _um_recv_handler(struct s_UartHandler *u, char c);
-r_bool _um_send_handler(struct s_UartHandler *u, char *c /*OUT*/);
+void _um_recv_handler(struct s_HalUart *u, char c);
+r_bool _um_send_handler(struct s_HalUart *u, char *c /*OUT*/);
 
 MediaStateIfc *uart_media_init(UartMedia *um, MediaRecvSlot *mrs,
                                uint8_t uart_id) {
@@ -50,7 +50,7 @@ void _um_send_complete(UartMediaSendingPayload *usp) {
   }
 }
 
-r_bool _um_send_handler(struct s_UartHandler *u, char *c /*OUT*/) {
+r_bool _um_send_handler(struct s_HalUart *u, char *c /*OUT*/) {
   UartMedia *um = (UartMedia *)u;
   if (um->send_which == US_packet) {
     (*c) = um->sending_payload.data[um->send_dataidx];
@@ -97,7 +97,7 @@ void _um_send(MediaStateIfc *media, Addr dest_addr, const char *data,
   hal_uart_start_send(&um->uart_handler);
 }
 
-void _um_recv_handler(struct s_UartHandler *u, char c) {
+void _um_recv_handler(struct s_HalUart *u, char c) {
   UartMedia *um = (UartMedia *)u;
   if (um->mrs->occupied_len > 0) {
     um->recv_state = UR_sync0;

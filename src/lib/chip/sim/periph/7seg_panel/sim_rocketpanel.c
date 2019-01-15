@@ -251,7 +251,7 @@ uint16_t hal_read_adc(uint8_t idx) { return adc[idx]; }
 
 /********** uart input simulator ***************/
 
-extern UartHandler *g_sim_uart_handler;
+extern HalUart *g_sim_uart_handler;
 static WINDOW *uart_input_window = NULL;
 char recent_uart_buf[20];
 
