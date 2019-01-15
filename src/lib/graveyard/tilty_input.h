@@ -20,7 +20,7 @@
 #include "periph/rocket/rocket.h"
 
 #ifndef SIM
-#include "hardware.h"
+#include "core/hardware.h"
 #endif
 
 #include "vect3d.h"

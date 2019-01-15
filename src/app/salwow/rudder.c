@@ -4,7 +4,7 @@
 
 #ifndef SIM
 
-#include "hardware.h"
+#include "core/hardware.h"
 
 #define RUDDER_SERVO_PIN GPIO_D5
 

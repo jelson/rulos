@@ -53,7 +53,7 @@
 
 #else  // SIM
 
-#include <hardware.h>
+#include <core/hardware.h>
 
 #if defined(BOARD_PROTO)
 

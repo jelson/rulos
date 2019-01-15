@@ -5,7 +5,7 @@
 #include "core/clock.h"
 
 #ifndef SIM
-#include "hardware.h"
+#include "core/hardware.h"
 
 #if 0
 #define FRZ_LED0 GPIO_D0

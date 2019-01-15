@@ -21,8 +21,8 @@
 
 #include "chip/avr/core/usi_pins.h"
 #include "chip/avr/periph/usi_twi_slave/usi_twi_slave.h"
+#include "core/hardware.h"
 #include "core/rulos.h"
-#include "hardware.h"
 
 // Debug
 

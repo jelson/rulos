@@ -24,7 +24,7 @@
 #include "periph/uart/uart.h"
 
 #ifdef SIM
-#include "sim.h"
+#include "core/sim.h"
 #endif
 
 #define MILLION 1000000

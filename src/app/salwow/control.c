@@ -4,8 +4,8 @@
 
 #include "control.h"
 #include "core/clock.h"
+#include "core/logging.h"
 #include "leds.h"
-#include "logging.h"
 
 #define OBSERVATION_DURATION_SAMPLES 5
 #define US_PER_DEGREE ((uint32_t)(5000000 / 360))

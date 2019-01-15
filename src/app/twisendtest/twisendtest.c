@@ -24,8 +24,10 @@
 #include "core/rulos.h"
 #include "core/twi.h"
 
+//#define STATUS_TO_LOCAL_PANEL
+
 #ifdef STATUS_TO_LOCAL_PANEL
-#include "7seg_panel.h"
+#include "periph/7seg_panel/7seg_panel.h"
 #endif
 
 #define INTER_MESSAGE_DELAY_US 125000

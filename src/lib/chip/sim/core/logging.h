@@ -18,7 +18,7 @@
 
 #include <assert.h>
 
-#include "sim.h"
+#include "chip/sim/core/sim.h"
 
 #define LOG(args...) \
   do {               \

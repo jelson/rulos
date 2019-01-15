@@ -16,4 +16,6 @@
 
 #pragma once
 
+#include <inttypes.h>
+
 typedef uint32_t rulos_irq_state_t;

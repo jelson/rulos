@@ -27,9 +27,15 @@
 
 #include "core/board_defs.h"
 #include "core/hal.h"
-#include "hardware.h"
+#include "core/hardware.h"
 #include "periph/7seg_panel/display_controller.h"
 #include "periph/rocket/rocket.h"
+
+#ifndef SEGSEL0
+#error \
+    "Make sure your makefile defines BOARD to be the name of a board with an EPB."
+#include <stophere>
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 

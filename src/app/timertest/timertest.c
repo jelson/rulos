@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
+#include "core/hardware.h"
 #include "core/rulos.h"
-#include "hardware.h"
 
 #define FREQ_USEC 50000
 #define TOTAL 20

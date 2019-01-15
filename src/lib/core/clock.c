@@ -18,10 +18,10 @@
 #include <stdlib.h>
 
 #include "core/clock.h"
-#include "logging.h"
+#include "core/logging.h"
 
 #ifdef TIMING_DEBUG
-#include "hardware.h"
+#include "core/hardware.h"
 #endif
 
 void schedule_us_internal(Time offset_us, ActivationFuncPtr func, void *data);

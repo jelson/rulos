@@ -20,7 +20,7 @@
 #include "periph/rocket/rocket.h"
 
 #ifndef SIM
-#include "hardware.h"
+#include "core/hardware.h"
 #endif  // SIM
 
 #define POV_LG_DISPLAY_WIDTH 5

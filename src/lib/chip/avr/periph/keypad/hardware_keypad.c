@@ -27,8 +27,8 @@
 
 #include "core/board_defs.h"
 #include "core/hal.h"
+#include "core/hardware.h"
 #include "core/rulos.h"
-#include "hardware.h"
 
 ///////// HAL functions (public interface) ////////////////////////
 

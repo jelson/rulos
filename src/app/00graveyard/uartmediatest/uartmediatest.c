@@ -38,7 +38,7 @@ void audioled_set(r_bool red, r_bool yellow);
 #define AUDIO_LED_YELLOW GPIO_D3
 
 #ifndef SIM
-#include "hardware.h"
+#include "core/hardware.h"
 #endif  // SIM
 
 void audioled_init() {

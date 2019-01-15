@@ -57,7 +57,7 @@ static void missa_hal_set_led(uint8_t led_num, uint8_t onoff) {
 
 #else  // SIM
 
-#include "hardware.h"
+#include "core/hardware.h"
 
 #ifdef RULOS_ARM
 #define LED0_PIN GPIO0_00

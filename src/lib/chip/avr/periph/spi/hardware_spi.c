@@ -20,8 +20,8 @@
 #include <util/delay_basic.h>
 
 #include "core/hal.h"
+#include "core/hardware.h"
 #include "core/rulos.h"
-#include "hardware.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // SPI: ATMega...32P page 82, 169

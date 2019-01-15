@@ -17,8 +17,8 @@
 #include "core/network.h"
 
 #include "core/hal.h"
+#include "core/logging.h"
 #include "core/net_compute_checksum.h"
-#include "logging.h"
 #include "queue.mc"
 
 QUEUE_DEFINE(SendSlotPtr)

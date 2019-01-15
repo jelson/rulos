@@ -27,7 +27,7 @@
 #include "periph/uart/serial_console.h"
 
 #if !SIM
-#include "hardware.h"
+#include "core/hardware.h"
 #endif  // !SIM
 
 typedef struct {

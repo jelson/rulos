@@ -4,7 +4,7 @@
 
 #ifndef SIM
 
-#include "hardware.h"
+#include "core/hardware.h"
 
 #define FRZ_SW0 GPIO_C4
 #define FRZ_SW1 GPIO_C5

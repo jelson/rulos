@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
+#include "core/hardware.h"
 #include "core/rulos.h"
-#include "hardware.h"
 #include "periph/6matrix/6matrix.h"
 
 #define F_CPU 8000000UL

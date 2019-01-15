@@ -18,7 +18,7 @@
 #include "periph/uart/uart.h"
 //#include "graveyard/spiflash.h"
 
-#include "hardware.h"  // sorry. Blinky LED.
+#include "core/hardware.h"  // sorry. Blinky LED.
 
 //////////////////////////////////////////////////////////////////////////////
 

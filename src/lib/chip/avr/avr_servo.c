@@ -5,7 +5,7 @@
 #include <avr/interrupt.h>
 #include <avr/io.h>
 
-#include "hardware.h"
+#include "core/hardware.h"
 
 #define SERVO_PERIOD 20000
 #define SERVO_PULSE_MIN_US 350

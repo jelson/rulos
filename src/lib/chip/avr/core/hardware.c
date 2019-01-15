@@ -27,8 +27,8 @@
 #include <util/delay_basic.h>
 
 #include "core/hal.h"
-#include "hardware.h"
-#include "logging.h"
+#include "core/hardware.h"
+#include "core/logging.h"
 
 uint8_t g_hal_initted = 0;
 

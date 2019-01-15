@@ -16,10 +16,10 @@
 
 #pragma once
 
+#include "core/hardware_types.h"
 #include "core/heap.h"
 #include "core/media.h"
 #include "core/util.h"
-#include "hardware_types.h"
 
 /*
  * Functions that are separately implemented by both the simulator and the real

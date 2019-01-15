@@ -18,7 +18,7 @@
 
 #include "core/clock.h"
 #include "core/heap.h"
-#include "logging.h"
+#include "core/logging.h"
 
 void heap_init(Heap *heap) { heap->heap_count = 0; }
 

@@ -1,5 +1,5 @@
+#include "core/hardware.h"
 #include "core/rulos.h"
-#include "hardware.h"
 
 #define F_CPU 8000000UL
 #include <util/delay.h>

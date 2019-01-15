@@ -16,7 +16,7 @@
 
 #include <stdio.h>
 
-#include "hardware.h"
+#include "core/hardware.h"
 #include "mirror.h"
 
 void mirror_handler();

@@ -18,10 +18,6 @@
 #include "periph/7seg_panel/7seg_panel.h"
 #include "periph/uart/uart.h"
 
-#ifdef SIM
-#include "sim.h"
-#endif
-
 /* Chase's definitions */
 
 #define RAND_OFFSET_LIMIT 10

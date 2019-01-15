@@ -19,9 +19,9 @@
 #include <string.h>
 
 #include "core/clock.h"
+#include "core/hardware.h"
 #include "core/rulos.h"
 #include "core/util.h"
-#include "hardware.h"
 
 #define LED_DRIVER_SDI_L GPIO_A1
 #define LED_DRIVER_SDI_R GPIO_A0

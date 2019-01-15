@@ -1,4 +1,4 @@
-#include "hardware.h"
+#include "core/hardware.h"
 
 #define F_CPU 8000000UL
 #include <util/delay.h>

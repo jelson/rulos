@@ -20,9 +20,9 @@
 #include "chip/avr/periph/usi_twi_master/usi_twi_master.h"
 #include "core/clock.h"
 #include "core/hal.h"
+#include "core/hardware.h"
 #include "core/rulos.h"
 #include "core/util.h"
-#include "hardware.h"
 
 int i = 0;
 

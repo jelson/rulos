@@ -5,7 +5,7 @@
 
 #ifndef SIM
 
-#include "hardware.h"
+#include "core/hardware.h"
 
 ///////////// motors //////////////////////////////////////
 

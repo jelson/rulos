@@ -2,7 +2,7 @@
 
 #ifndef SIM
 
-#include "hardware.h"
+#include "core/hardware.h"
 
 #define GREEN_LED_PIN GPIO_D7
 

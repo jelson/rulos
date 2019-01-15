@@ -35,7 +35,7 @@ void lms_shift_byte(uint8_t data);
 void lms_configure(uint8_t rowdata, uint16_t coldata);
 
 #if !SIM
-#include "hardware.h"
+#include "core/hardware.h"
 
 // void lms_handler(void *arg);
 void lms_update(LEDMatrixSingle *lms);

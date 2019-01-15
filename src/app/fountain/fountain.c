@@ -58,7 +58,7 @@ void hal_stop_pump() { printf("pump now off\n"); }
 
 #else  // SIM
 
-#include "hardware.h"
+#include "core/hardware.h"
 
 #define BUTTON GPIO_B2
 #define PUMP GPIO_B1

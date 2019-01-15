@@ -20,7 +20,7 @@
 
 #include "core/rulos.h"
 #ifndef SIM
-#include "hardware.h"
+#include "core/hardware.h"
 #endif
 
 #define REGISTER_SER GPIO_D5  // serial data input

@@ -21,7 +21,7 @@
 #include "periph/rocket/rocket.h"
 
 #ifndef SIM
-#include "hardware.h"
+#include "core/hardware.h"
 #endif  // SIM
 
 typedef struct s_quadknob {

@@ -19,9 +19,9 @@
 #include <avr/io.h>
 #include <util/twi.h>
 
+#include "core/hardware.h"
 #include "core/rulos.h"
 #include "core/twi.h"
-#include "hardware.h"
 
 #define NEED_BUS(twi) ((twi->out_pkt != NULL) || (twi->masterRecvSlot != NULL))
 

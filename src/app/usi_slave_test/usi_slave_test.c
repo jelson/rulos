@@ -20,9 +20,9 @@
 #include "chip/avr/periph/usi_twi_slave/usi_twi_slave.h"
 #include "core/clock.h"
 #include "core/hal.h"
+#include "core/hardware.h"
 #include "core/rulos.h"
 #include "core/util.h"
-#include "hardware.h"
 
 #define TEST_SLAVE_SEND_ONLY
 

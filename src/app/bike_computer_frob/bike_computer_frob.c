@@ -18,9 +18,9 @@
 #include "periph/uart/serial_console.h"
 
 #ifdef SIM
-#include "sim.h"
+#include "core/sim.h"
 #else
-#include "hardware.h"
+#include "core/hardware.h"
 #endif  // !SIM
 
 //////////////////////////////////////////////////////////////////////////////

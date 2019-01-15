@@ -16,8 +16,8 @@
 
 #pragma once
 
+#include "core/hardware.h"
 #include "core/util.h"
-#include "hardware.h"
 
 #ifdef LOG_TO_SERIAL
 

@@ -23,7 +23,7 @@ AVR_LIB_ROOT := $(ROCKET_ROOT)/lib/chip/avr
 
 # Add platform-specific core sources to the all-platform sources
 AVR_SOURCES += $(wildcard $(AVR_LIB_ROOT)/core/*.c)
-AVR_INCLUDES += -I$(AVR_LIB_ROOT)/core
+AVR_INCLUDES += -I$(AVR_LIB_ROOT)
 
 # Add platform-specific peripheral sources
 AVR_SOURCES += $(foreach periph, $(PERIPHERALS), $(wildcard $(AVR_LIB_ROOT)/periph/$(periph)/*.c))

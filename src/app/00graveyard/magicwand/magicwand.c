@@ -11,8 +11,8 @@
 #include <util/delay.h>
 
 #include "chip/avr/periph/pov/pov.h"
+#include "core/hardware.h"
 #include "graveyard/tilty_input.h"
-#include "hardware.h"
 #include "periph/rocket/funcseq.h"
 #include "periph/rocket/rocket.h"
 #include "periph/uart/serial_console.h"

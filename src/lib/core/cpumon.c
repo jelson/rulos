@@ -18,7 +18,7 @@
 #include "core/rulos.h"
 
 #ifdef TIMING_DEBUG_PIN
-#include "hardware.h"
+#include "core/hardware.h"
 #endif
 
 uint8_t g_run_main_loop;

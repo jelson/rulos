@@ -30,10 +30,9 @@
 #include "periph/sdcard/sdcard.h"
 */
 #include "periph/uart/serial_console.h"
-#if SIM
-#include "sim.h"
-#else
-#include "hardware.h"
+
+#if !SIM
+#include "core/hardware.h"
 #endif  // SIM
 
 //////////////////////////////////////////////////////////////////////////////

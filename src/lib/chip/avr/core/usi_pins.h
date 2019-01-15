@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "hardware.h"
+#include "core/hardware.h"
 
 #if defined(__AVR_ATtiny24__) | defined(__AVR_ATtiny24A__) | \
     defined(__AVR_ATtiny44__) | defined(__AVR_ATtiny44A__) | \

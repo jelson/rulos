@@ -37,8 +37,8 @@ uint32_t hardware_f_cpu;
 #include <avr/io.h>
 #include <util/delay_basic.h>
 
+#include "core/hardware.h"
 #include "core/rulos.h"
-#include "hardware.h"
 
 void null_handler(void *data) {}
 

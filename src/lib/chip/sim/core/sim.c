@@ -38,10 +38,10 @@
 #include "chip/sim/core/sim.h"
 #include "core/clock.h"
 #include "core/heap.h"
+#include "core/logging.h"
 #include "core/media.h"
 #include "core/util.h"
 #include "hardware_types.h"
-#include "logging.h"
 
 uint32_t f_cpu = 4000000;
 uint8_t hal_initted = 0;

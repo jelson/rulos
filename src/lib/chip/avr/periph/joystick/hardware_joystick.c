@@ -22,7 +22,7 @@
 
 #include "core/board_defs.h"
 #include "core/hal.h"
-#include "hardware.h"
+#include "core/hardware.h"
 
 //////////////////////////////////////////////////////////////////////////////
 

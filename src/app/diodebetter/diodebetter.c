@@ -14,8 +14,8 @@
  *
  ************************************************************************/
 
+#include "core/hardware.h"
 #include "core/rulos.h"
-#include "hardware.h"
 
 #define LEDR GPIO_A7
 #define LEDG GPIO_B0

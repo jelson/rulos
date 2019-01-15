@@ -26,9 +26,9 @@
 // Don't know how to get 250kbaud in Linux.
 #define SERIAL_BAUD_RATE 38400
 
+#include "core/hardware.h"
 #include "core/rulos.h"
 #include "core/twi.h"
-#include "hardware.h"
 #include "periph/uart/uart.h"
 
 struct locatorAct;

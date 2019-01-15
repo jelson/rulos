@@ -22,7 +22,7 @@
 //#include <stdio.h>
 //#include <string.h>
 
-#include "hardware.h"
+#include "core/hardware.h"
 #include "periph/rocket/rocket.h"
 
 int main() {

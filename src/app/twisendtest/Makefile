@@ -17,14 +17,17 @@ ROCKET_ROOT := ../..
 PLATFORMS := avr sim
 PERIPHERALS := twi
 ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_DEFAULT
+
 #MCU := atmega8
 #BOARD := GENERIC
 
-#MCU := atmega328p
-#BOARD := PCB11
+MCU := atmega328p
+BOARD := PCB11
+PERIPHERALS += 7seg_panel 7seg_panel_hardware
+ALL_PLATFORM_CFLAGS += -DSTATUS_TO_LOCAL_PANEL
 
-MCU := atmega1284p
-BOARD := LPEM2
+#MCU := atmega1284p
+#BOARD := LPEM2
 
 
 TARGET := twisendtest

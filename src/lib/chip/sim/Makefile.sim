@@ -22,7 +22,7 @@ SIM_LIB_ROOT := $(ROCKET_ROOT)/lib/chip/sim
 
 # Add sim sources
 SIM_SOURCES += $(wildcard $(SIM_LIB_ROOT)/core/*.c)
-SIM_INCLUDES += -I$(SIM_LIB_ROOT)/core
+SIM_INCLUDES += -I$(SIM_LIB_ROOT)
 
 # Add all-platform sources such as peripherals
 SIM_SOURCES += $(ALL_PLATFORM_SOURCES)

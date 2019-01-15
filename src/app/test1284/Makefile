@@ -14,7 +14,7 @@
 
 ROCKET_ROOT := ../..
 
-PLATFORMS := avr
+PLATFORMS := avr sim
 PERIPHERALS := lcd_12232 uart
 MCU := atmega1284p
 BOARD := GENERIC
