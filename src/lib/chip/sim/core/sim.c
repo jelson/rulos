@@ -150,8 +150,8 @@ void hal_idle() {
   // turns out 'man sleep' says sleep & sigalrm don't mix. yield is what we
   // want. No, sched_yield doesn't wait ANY time. libc suggests select()
   static struct timeval tv;
-  tv.tv_sec = 0;
-  tv.tv_usec = 100;  // .1 ms
+  tv.tv_sec = 1;
+  tv.tv_usec = 0;
   select(0, NULL, NULL, NULL, &tv);
 }
 
