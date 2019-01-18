@@ -174,7 +174,7 @@
 
 #elif defined(BOARD_LPEM2)
 
-#define JOYSTICK_TRIGGER GPIO_D4
+#define JOYSTICK_TRIGGER GPIO_C7
 #define JOYSTICK_X_CHAN  1
 #define JOYSTICK_Y_CHAN  0
 #define AVAILABLE_ADCS 0xff
