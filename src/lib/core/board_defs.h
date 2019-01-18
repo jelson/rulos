@@ -51,6 +51,9 @@
 
 #ifdef SIM
 
+#define JOYSTICK_X_CHAN 3
+#define JOYSTICK_Y_CHAN 2  
+
 #else  // SIM
 
 #include <core/hardware.h>
@@ -98,6 +101,9 @@
 #define AVAILABLE_ADCS 0x38
 #define ASSERT_TO_BOARD
 
+#define JOYSTICK_X_CHAN 3
+#define JOYSTICK_Y_CHAN 4
+
 #elif defined(BOARD_PCB11)
 
 #define BOARDSEL0 GPIO_B0
@@ -122,6 +128,8 @@
 #define KEYPAD_COL3 GPIO_D3
 
 #define JOYSTICK_TRIGGER GPIO_D4
+#define JOYSTICK_X_CHAN 3
+#define JOYSTICK_Y_CHAN 2
 
 #define AVAILABLE_ADCS 0x3f
 #define ASSERT_TO_BOARD
@@ -147,6 +155,9 @@
 #define DATA GPIO_D6
 #define STROBE GPIO_D7
 
+#define JOYSTICK_X_CHAN 3
+#define JOYSTICK_Y_CHAN 2
+
 #define JOYSTICK_TRIGGER GPIO_D4
 
 #define AVAILABLE_ADCS 0xff
@@ -164,7 +175,8 @@
 #elif defined(BOARD_LPEM2)
 
 #define JOYSTICK_TRIGGER GPIO_D4
-
+#define JOYSTICK_X_CHAN  1
+#define JOYSTICK_Y_CHAN  0
 #define AVAILABLE_ADCS 0xff
 
 #elif defined(BOARD_FLASHCARD)

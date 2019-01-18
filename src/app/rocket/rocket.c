@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "core/board_defs.h"
 #include "core/clock.h"
 #include "core/cpumon.h"
 #include "core/hal.h"
@@ -87,16 +88,10 @@ typedef struct {
   RemoteBBufSend rbs;
 } Rocket0;
 
-#define THRUSTER_X_CHAN 3
 
-#if defined(BOARD_PCB10)
-#define THRUSTER_Y_CHAN 4
-#elif defined(BOARD_PCB11) || defined(BOARD_LPEM) || defined(BOARD_LPEM2)
-#define THRUSTER_Y_CHAN 2
-#elif SIM
-#define THRUSTER_Y_CHAN 2
-#else
-#error Thruster y chan not defined for this board
+#if !defined(JOYSTICK_X_CHAN) || !defined(JOYSTICK_Y_CHAN)
+# error "JOYSTICK_X_CHAN and JOYSTICK_Y_CHAN must be defined."
+# include <stophere>
 #endif
 
 #define POTSTICKER_CHANNEL 0
@@ -113,7 +108,7 @@ void init_rocket0(Rocket0 *r0) {
   memset(&r0->thrusterUpdate, 0, sizeof(r0->thrusterUpdate));
   init_hpam(&r0->hpam, 7, r0->thrusterUpdate);
   init_idle(&r0->idle);
-  thrusters_init(&r0->ts, 7, THRUSTER_X_CHAN, THRUSTER_Y_CHAN, &r0->hpam,
+  thrusters_init(&r0->ts, 7, JOYSTICK_X_CHAN, JOYSTICK_Y_CHAN, &r0->hpam,
                  &r0->idle);
   // r0->thrusterUpdate[2].func = idle_thruster_listener_func;
   // r0->thrusterUpdate[2].data = &r0->idle;
