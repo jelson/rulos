@@ -111,15 +111,15 @@ r_bool sim_adc_keystroke_handler(char c) {
       adc[3] = 512;  // x
       return true;
     case '@':       // back-left
-      adc[2] = 11;  // y
+      adc[2] = 1023;  // y
       adc[3] = 11;  // x
       return true;
     case '#':         // fwd
-      adc[2] = 1023;  // y
+      adc[2] = 11;  // y
       adc[3] = 512;   // x
       return true;
     case '$':         // back-right
-      adc[2] = 11;    // y
+      adc[2] = 1023;    // y
       adc[3] = 1023;  // x
       return true;
 
