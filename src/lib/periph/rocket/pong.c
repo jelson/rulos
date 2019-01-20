@@ -213,11 +213,11 @@ UIEventDisposition pong_event_handler(UIEventHandler *raw_handler,
       pong->paddley[0] = min(pong->paddley[0] + 2, 22 - PADDLEHEIGHT);
       break;
     case '3':
-    case 'r':
+    case 'e':
       pong->paddley[1] = max(pong->paddley[1] - 2, 0);
       break;
     case '6':
-    case 's':
+    case 'f':
       pong->paddley[1] = min(pong->paddley[1] + 2, 22 - PADDLEHEIGHT);
       break;
     case uie_focus:

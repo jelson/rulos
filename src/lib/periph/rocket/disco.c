@@ -73,11 +73,11 @@ UIEventDisposition disco_event_handler(UIEventHandler *raw_handler,
                       sound_silence);
       break;
     case 'a':
-    case 'r':
+    case 'e':
       ac_send_music_control(disco->audioClient, +1);
       break;
     case 'b':
-    case 's':
+    case 'f':
       ac_send_music_control(disco->audioClient, -1);
       break;
   }

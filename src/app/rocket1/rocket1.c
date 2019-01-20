@@ -45,12 +45,7 @@
 #include "periph/rocket/rocket.h"
 #include "periph/rocket/sequencer.h"
 
-#if SIM
-#include "chip/sim/core/sim.h"
-#endif
-
-/************************************************************************************/
-/************************************************************************************/
+/**************************************************************************/
 
 int main() {
   hal_init();
@@ -111,7 +106,7 @@ int main() {
   IOPinDef q0pin0 = PINDEF(GPIO_C0);
   IOPinDef q0pin1 = PINDEF(GPIO_C1);
   QuadKnob q0;
-  init_quadknob(&q0, &rks.forwardLocalStrokes, &q0pin0, &q0pin1, 'r', 's');
+  init_quadknob(&q0, &rks.forwardLocalStrokes, &q0pin0, &q0pin1, 'e', 'f');
 
   IOPinDef q1pin0 = PINDEF(GPIO_C2);
   IOPinDef q1pin1 = PINDEF(GPIO_C3);
