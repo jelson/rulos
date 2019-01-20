@@ -19,7 +19,7 @@
 #if defined(BOARDCONFIG_ROCKET0)
 #define NUM_LOCAL_BOARDS 8
 #define NUM_REMOTE_BOARDS 0
-#elif defined(BOARDCONFIG_NETROCKET)    // A bench-only configuration
+#elif defined(BOARDCONFIG_NETROCKET)  // A bench-only configuration
 #define NUM_LOCAL_BOARDS 0
 #define NUM_REMOTE_BOARDS 8
 #elif defined(BOARDCONFIG_UNIROCKET)
@@ -44,4 +44,3 @@
 #error "Your app Makefile must define one of the BOARDCONFIG_xxx constants."
 #include <stop>
 #endif
-

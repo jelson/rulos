@@ -16,11 +16,10 @@
 
 #pragma once
 
-
 #ifdef SIM
 
 #define JOYSTICK_X_CHAN 3
-#define JOYSTICK_Y_CHAN 2  
+#define JOYSTICK_Y_CHAN 2
 
 #else  // SIM
 
@@ -143,8 +142,8 @@
 #elif defined(BOARD_LPEM2)
 
 #define JOYSTICK_TRIGGER GPIO_C7
-#define JOYSTICK_X_CHAN  1
-#define JOYSTICK_Y_CHAN  0
+#define JOYSTICK_X_CHAN 1
+#define JOYSTICK_Y_CHAN 0
 #define AVAILABLE_ADCS 0xff
 
 #elif defined(BOARD_FLASHCARD)

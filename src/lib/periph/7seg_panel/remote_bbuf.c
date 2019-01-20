@@ -158,14 +158,8 @@ void rbr_recv(RecvSlot *recvSlot, uint8_t payload_len) {
 
 #if BBDEBUG
   LOG("rbs: updating board %d with data %x%x%x%x%x%x%x%x\n", bbm->index,
-      bbm->buf[0],
-      bbm->buf[1],
-      bbm->buf[2],
-      bbm->buf[3],
-      bbm->buf[4],
-      bbm->buf[5],
-      bbm->buf[6],
-      bbm->buf[7]);
+      bbm->buf[0], bbm->buf[1], bbm->buf[2], bbm->buf[3], bbm->buf[4],
+      bbm->buf[5], bbm->buf[6], bbm->buf[7]);
 #endif
 
   board_buffer_paint(bbm->buf, bbm->index, 0xff);
