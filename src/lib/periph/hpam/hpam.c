@@ -41,27 +41,27 @@ static void hpam_init_port(HPAM *hpam, HPAMIndex idx, uint8_t rest_time_secs,
 }
 
 void init_hpam(HPAM *hpam, uint8_t board0, ThrusterUpdate *thrusterUpdates) {
-  hpam_init_port(hpam, hpam_hobbs, REST_NONE, board0, HPAM_DIGIT_0, 0);
-  hpam_init_port(hpam, hpam_reserved, REST_NONE, board0, HPAM_DIGIT_0, 1);
+  hpam_init_port(hpam, HPAM_HOBBS, REST_NONE, board0, HPAM_DIGIT_0, 0);
+  hpam_init_port(hpam, HPAM_RESERVED, REST_NONE, board0, HPAM_DIGIT_0, 1);
   // HPAM 0 slot 2
-  hpam_init_port(hpam, hpam_lighting_flicker, REST_NONE, board0, HPAM_DIGIT_0,
+  hpam_init_port(hpam, HPAM_LIGHTING_FLICKER, REST_NONE, board0, HPAM_DIGIT_0,
                  2);
   // HPAM 0 slot 1
-  hpam_init_port(hpam, hpam_five_volts, REST_NONE, board0, HPAM_DIGIT_0, 7);
+  hpam_init_port(hpam, HPAM_FIVE_VOLTS, REST_NONE, board0, HPAM_DIGIT_0, 7);
   // HPAM 0 slot 3
-  hpam_init_port(hpam, hpam_thruster_frontleft, REST_TIME_SECONDS, board0,
+  hpam_init_port(hpam, HPAM_THRUSTER_FRONTLEFT, REST_TIME_SECONDS, board0,
                  HPAM_DIGIT_0, 4);
   // HPAM 1 slot 3
   // cable "thruster2"
-  hpam_init_port(hpam, hpam_thruster_frontright, REST_TIME_SECONDS, board0,
+  hpam_init_port(hpam, HPAM_THRUSTER_FRONTRIGHT, REST_TIME_SECONDS, board0,
                  HPAM_DIGIT_0, 5);
   // HPAM 1 slot 2
   // calbe "thruster1"
-  hpam_init_port(hpam, hpam_thruster_rear, REST_TIME_SECONDS, board0,
+  hpam_init_port(hpam, HPAM_THRUSTER_REAR, REST_TIME_SECONDS, board0,
                  HPAM_DIGIT_0, 6);
   // HPAM 1 slot 1
   // cable "thruster0"
-  hpam_init_port(hpam, hpam_booster, REST_TIME_SECONDS, board0, HPAM_DIGIT_0,
+  hpam_init_port(hpam, HPAM_BOOSTER, REST_TIME_SECONDS, board0, HPAM_DIGIT_0,
                  3);
   // HPAM 1 slot 3
   hpam->thrusterPayload.thruster_bits = 0;
@@ -72,7 +72,7 @@ void init_hpam(HPAM *hpam, uint8_t board0, ThrusterUpdate *thrusterUpdates) {
   board_buffer_push(&hpam->bbuf, board0);
 
   int idx;
-  for (idx = 0; idx < hpam_end; idx++) {
+  for (idx = 0; idx < HPAM_END; idx++) {
     hpam_set_port(hpam, (HPAMIndex)idx, TRUE);  // force a state change
     hpam_set_port(hpam, (HPAMIndex)idx, FALSE);
   }
@@ -85,7 +85,7 @@ void hpam_update(HPAM *hpam) {
 
   // check that no valve stays open more than max_time.
   int idx;
-  for (idx = 0; idx < hpam_end; idx++) {
+  for (idx = 0; idx < HPAM_END; idx++) {
     HPAMPort *port = &hpam->hpam_ports[idx];
     if (port->status && !port->resting && port->rest_time_secs > 0 &&
         later_than(clock_time_us(), port->expire_time)) {
@@ -105,7 +105,7 @@ void hpam_update(HPAM *hpam) {
 }
 
 void hpam_set_port(HPAM *hpam, HPAMIndex idx, r_bool status) {
-  assert(0 <= idx && idx < hpam_end);
+  assert(0 <= idx && idx < HPAM_END);
 
   HPAMPort *port = &hpam->hpam_ports[idx];
   if (port->status == status) {
@@ -147,14 +147,14 @@ void hpam_set_port(HPAM *hpam, HPAMIndex idx, r_bool status) {
   }
 
 #if SIM
-  if (idx == hpam_lighting_flicker) {
+  if (idx == HPAM_LIGHTING_FLICKER) {
     sim_display_light_status(status);
   }
 #endif  // SIM
 }
 
 r_bool hpam_get_port(HPAM *hpam, HPAMIndex idx) {
-  assert(0 <= idx && idx < hpam_end);
+  assert(0 <= idx && idx < HPAM_END);
 
   HPAMPort *port = &hpam->hpam_ports[idx];
   return port->status;

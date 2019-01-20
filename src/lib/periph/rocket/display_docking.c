@@ -131,9 +131,9 @@ void ddock_update(DDockAct *act) {
 
   _da_update_base(&act->xd);
   _da_update_base(&act->yd);
-  dd_bump(act, hpam_thruster_rear, -0, 2);
-  dd_bump(act, hpam_thruster_frontleft, -1, -1);
-  dd_bump(act, hpam_thruster_frontright, 1, -1);
+  dd_bump(act, HPAM_THRUSTER_REAR, -0, 2);
+  dd_bump(act, HPAM_THRUSTER_FRONTLEFT, -1, -1);
+  dd_bump(act, HPAM_THRUSTER_FRONTRIGHT, 1, -1);
   // LOG("velocity %6d %6d\n", act->xd.velocity, act->yd.velocity);
 
   if (act->focused) {

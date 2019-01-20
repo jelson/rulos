@@ -27,10 +27,10 @@ void init_hobbs(Hobbs *hobbs, HPAM *hpam, IdleAct *idle) {
 UIEventDisposition hobbs_handler(Hobbs *hobbs, UIEvent evt) {
   if (evt == evt_idle_nowidle) {
     // LOG("hobbs hpam_set_port(%d)\n", FALSE);
-    hpam_set_port(hobbs->hpam, hpam_hobbs, FALSE);
+    hpam_set_port(hobbs->hpam, HPAM_HOBBS, FALSE);
   } else if (evt == evt_idle_nowactive) {
     // LOG("hobbs hpam_set_port(%d)\n", TRUE);
-    hpam_set_port(hobbs->hpam, hpam_hobbs, TRUE);
+    hpam_set_port(hobbs->hpam, HPAM_HOBBS, TRUE);
   }
   return uied_accepted;
 }

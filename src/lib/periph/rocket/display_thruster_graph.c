@@ -58,17 +58,17 @@ void dtg_update(DThrusterGraph *dtg) {
     dtg->bbuf.buffer[d] = 0;
   }
   dtg_draw_one_skinny(
-      dtg, 0, (dtg->thruster_bits & (1 << hpam_thruster_frontleft)) ? 16 : 0,
+      dtg, 0, (dtg->thruster_bits & (1 << HPAM_THRUSTER_FRONTLEFT)) ? 16 : 0,
       0b1000000);
   dtg_draw_one_skinny(dtg, 1,
-                      (dtg->thruster_bits & (1 << hpam_thruster_rear)) ? 16 : 0,
+                      (dtg->thruster_bits & (1 << HPAM_THRUSTER_REAR)) ? 16 : 0,
                       0b0000001);
   dtg_draw_one_skinny(
-      dtg, 2, (dtg->thruster_bits & (1 << hpam_thruster_frontright)) ? 16 : 0,
+      dtg, 2, (dtg->thruster_bits & (1 << HPAM_THRUSTER_FRONTRIGHT)) ? 16 : 0,
       0b0001000);
 
   dtg_update_expwa(dtg, BOOSTER_ALPHA, 3,
-                   (dtg->thruster_bits & (1 << hpam_booster)) ? 16 : 0);
+                   (dtg->thruster_bits & (1 << HPAM_BOOSTER)) ? 16 : 0);
   dtg_draw_fat_bars(&dtg->bbuf, dtg->value[3] >> 16, 0b0000110, 0b0110000);
 
   board_buffer_draw(&dtg->bbuf);

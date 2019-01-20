@@ -34,21 +34,21 @@ typedef struct {
 } HPAMPort;
 
 typedef enum {
-  hpam_hobbs = 0,
-  hpam_reserved = 1,  // future: clanger, hatch open solenoid
-  hpam_lighting_flicker = 2,
-  hpam_five_volts = 3,  // 5V channel, no longer used
-  hpam_thruster_frontleft = 4,
-  hpam_thruster_frontright = 5,
-  hpam_thruster_rear = 6,
-  hpam_booster = 7,
-  hpam_end
+  HPAM_HOBBS = 0,
+  HPAM_RESERVED = 1,  // future: clanger, hatch open solenoid
+  HPAM_LIGHTING_FLICKER = 2,
+  HPAM_FIVE_VOLTS = 3,  // 5V channel, no longer used
+  HPAM_THRUSTER_FRONTLEFT = 4,
+  HPAM_THRUSTER_FRONTRIGHT = 5,
+  HPAM_THRUSTER_REAR = 6,
+  HPAM_BOOSTER = 7,
+  HPAM_END
 } HPAMIndex;
 
 // Future: gauges on a 12V HPAM.
 
 typedef struct {
-  HPAMPort hpam_ports[hpam_end];
+  HPAMPort hpam_ports[HPAM_END];
   ThrusterUpdate *thrusterUpdates;
   BoardBuffer bbuf;
   ThrusterPayload thrusterPayload;

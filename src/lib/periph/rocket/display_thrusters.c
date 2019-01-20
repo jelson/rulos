@@ -65,12 +65,12 @@ static void thrusters_update(ThrusterState_t *ts) {
   // UP         = thruster A.
   // DOWN&LEFT  = thruster B.
   // DOWN&RIGHT = thruster C.
-  hpam_set_port(ts->hpam, hpam_thruster_rear,
+  hpam_set_port(ts->hpam, HPAM_THRUSTER_REAR,
                 ts->joystick_state.state & JOYSTICK_STATE_UP);
-  hpam_set_port(ts->hpam, hpam_thruster_frontright,
+  hpam_set_port(ts->hpam, HPAM_THRUSTER_FRONTRIGHT,
                 ts->joystick_state.state & JOYSTICK_STATE_DOWN &&
                     ts->joystick_state.state & JOYSTICK_STATE_LEFT);
-  hpam_set_port(ts->hpam, hpam_thruster_frontleft,
+  hpam_set_port(ts->hpam, HPAM_THRUSTER_FRONTLEFT,
                 ts->joystick_state.state & JOYSTICK_STATE_DOWN &&
                     ts->joystick_state.state & JOYSTICK_STATE_RIGHT);
 

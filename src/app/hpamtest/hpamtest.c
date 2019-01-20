@@ -23,20 +23,20 @@ struct {
   char *name;
   HPAMIndex hpamIndex;
 } hpams[] = {
-    {"hobbs", hpam_hobbs},
-    //	{"clanger", hpam_reserved},
+    {"hobbs", HPAM_HOBBS},
+    //	{"clanger", HPAM_RESERVED},
     //{"hatch", hpam_hatch_solenoid_reserved},
-    {"lights", hpam_lighting_flicker},
-    {"th_frLft", hpam_thruster_frontleft},
-    {"th_frRgt", hpam_thruster_frontright},
-    {"th_rear", hpam_thruster_rear},
-    {"booster", hpam_booster},
+    {"lights", HPAM_LIGHTING_FLICKER},
+    {"th_frLft", HPAM_THRUSTER_FRONTLEFT},
+    {"th_frRgt", HPAM_THRUSTER_FRONTRIGHT},
+    {"th_rear", HPAM_THRUSTER_REAR},
+    {"booster", HPAM_BOOSTER},
     {NULL, 0},
 };
 
 char *idx_to_name(HPAMIndex idx) {
   int i;
-  for (i = 0; i < hpam_end; i++) {
+  for (i = 0; i < HPAM_END; i++) {
     if (hpams[i].hpamIndex == idx) {
       return hpams[i].name;
     }
@@ -76,9 +76,9 @@ void ht_update(HTAct *ht) {
                        : (ht->js.state & JOYSTICK_STATE_RIGHT) ? +1 : 0;
   if (new_dir != ht->dir) {
     if (ht->dir == -1) {
-      ht->idx = (ht->idx - 1 + hpam_end) % hpam_end;
+      ht->idx = (ht->idx - 1 + HPAM_END) % HPAM_END;
     } else if (ht->dir == +1) {
-      ht->idx = (ht->idx + 1 + hpam_end) % hpam_end;
+      ht->idx = (ht->idx + 1 + HPAM_END) % HPAM_END;
     }
     ht->dir = new_dir;
   }

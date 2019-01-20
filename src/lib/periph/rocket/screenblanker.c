@@ -149,7 +149,7 @@ void screenblanker_update_once(ScreenBlanker *sb) {
   switch (sb->mode) {
     case sb_inactive: {
       if (sb->hpam != NULL) {
-        hpam_set_port(sb->hpam, hpam_lighting_flicker, TRUE);
+        hpam_set_port(sb->hpam, HPAM_LIGHTING_FLICKER, TRUE);
       }
       break;
     }
@@ -160,7 +160,7 @@ void screenblanker_update_once(ScreenBlanker *sb) {
         }
       }
       if (sb->hpam != NULL) {
-        hpam_set_port(sb->hpam, hpam_lighting_flicker, TRUE);
+        hpam_set_port(sb->hpam, HPAM_LIGHTING_FLICKER, TRUE);
       }
       break;
     }
@@ -171,7 +171,7 @@ void screenblanker_update_once(ScreenBlanker *sb) {
         }
       }
       if (sb->hpam != NULL) {
-        hpam_set_port(sb->hpam, hpam_lighting_flicker, TRUE);
+        hpam_set_port(sb->hpam, HPAM_LIGHTING_FLICKER, TRUE);
       }
       break;
     }
@@ -186,7 +186,7 @@ void screenblanker_update_once(ScreenBlanker *sb) {
         }
       }
       if (sb->hpam != NULL) {
-        hpam_set_port(sb->hpam, hpam_lighting_flicker,
+        hpam_set_port(sb->hpam, HPAM_LIGHTING_FLICKER,
                       sb->disco_color == DISCO_WHITE);
       }
       break;
@@ -205,14 +205,14 @@ void screenblanker_update_once(ScreenBlanker *sb) {
         // NB 'set_alpha includes a redraw.
       }
       if (sb->hpam != NULL) {
-        hpam_set_port(sb->hpam, hpam_lighting_flicker,
+        hpam_set_port(sb->hpam, HPAM_LIGHTING_FLICKER,
                       (deadbeef_rand() & 3) != 0);
       }
       break;
     }
     case sb_borrowed: {
       if (sb->hpam != NULL) {
-        hpam_set_port(sb->hpam, hpam_lighting_flicker, TRUE);
+        hpam_set_port(sb->hpam, HPAM_LIGHTING_FLICKER, TRUE);
       }
       break;
     }
