@@ -195,14 +195,14 @@
 
 #elif defined(BOARD_SOUTHBRIDGE)
 
-#define KEYPAD_ROW0 GPIO_D4
-#define KEYPAD_ROW1 GPIO_B2
-#define KEYPAD_ROW2 GPIO_B3
-#define KEYPAD_ROW3 GPIO_B4
-#define KEYPAD_COL0 GPIO_D0
-#define KEYPAD_COL1 GPIO_D1
-#define KEYPAD_COL2 GPIO_D2
-#define KEYPAD_COL3 GPIO_D3
+#define KEYPAD_ROW0 /* pin 8 */ GPIO_B6
+#define KEYPAD_ROW1 /* pin 1 */ GPIO_B2
+#define KEYPAD_ROW2 /* pin 2 */ GPIO_B1
+#define KEYPAD_ROW3 /* pin 4 */ GPIO_D7
+#define KEYPAD_COL0 /* pin 3 */ GPIO_B0
+#define KEYPAD_COL1 /* pin 5 */ GPIO_D6
+#define KEYPAD_COL2 /* pin 6 */ GPIO_D5
+#define KEYPAD_COL3 /* pin 7 */ GPIO_B7
 
 #elif defined(BOARD_CUSTOM)
 

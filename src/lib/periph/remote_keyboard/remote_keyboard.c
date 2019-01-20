@@ -67,6 +67,7 @@ void rk_recv(RecvSlot *recvSlot, uint8_t payload_len) {
   RemoteKeyboardRecv *rk = (RemoteKeyboardRecv *)recvSlot->user_data;
   KeystrokeMessage *km = (KeystrokeMessage *)recvSlot->msg->data;
   assert(payload_len == sizeof(KeystrokeMessage));
+  LOG("remote key: %c\n", km->key);
   rk->acceptNetStrokes->func(rk->acceptNetStrokes, km->key);
   recvSlot->msg_occupied = FALSE;
 }
