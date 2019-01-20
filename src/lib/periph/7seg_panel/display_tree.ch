@@ -15,7 +15,8 @@
  ************************************************************************/
 
 #if !defined(DBOARD)
-#error "display_tree.ch is meant to be included after defining DBOARD to tell it how to use the DBOARD fields."
+#error \
+    "display_tree.ch is meant to be included after defining DBOARD to tell it how to use the DBOARD fields."
 #include <stophere>
 #endif
 
@@ -52,11 +53,10 @@
   B_AZE, B_LIQ_HYD_PRES, B_FLIGHTCOMPUTER0, B_FLIGHTCOMPUTER1, \
       B_NO_BOARD B_NO_BOARD B_NO_BOARD B_NO_BOARD B_END
 
-#define T_UNIROCKET \
+#define T_UNIROCKET                                                            \
   B_MISSION_CLOCK, B_LUNAR_DISTANCE, B_SPEED, B_RASTER0, B_RASTER1, B_RASTER2, \
-      B_RASTER3, B_THRUSTER_ACT, \
-  B_AZE, B_LIQ_HYD_PRES, B_FLIGHTCOMPUTER0, B_FLIGHTCOMPUTER1, \
-  B_END
+      B_RASTER3, B_THRUSTER_ACT, B_AZE, B_LIQ_HYD_PRES, B_FLIGHTCOMPUTER0,     \
+      B_FLIGHTCOMPUTER1, B_END
 
 #define B_WALLCLOCK DBOARD("Clock", PG PG PG PG PG PG PB PB, 15, 0, 0, 0)
 #define T_WALLCLOCK B_WALLCLOCK, B_END
@@ -72,9 +72,9 @@
 #define B_DEFAULT5 DBOARD("board5", PG PG PG PG PG PG PG PG, 15, 4, 0, 0)
 #define B_DEFAULT6 DBOARD("board6", PG PG PG PG PG PG PG PG, 15, 4, 0, 0)
 #define B_DEFAULT7 DBOARD("board7", PG PG PG PG PG PG PG PG, 15, 4, 0, 0)
-#define T_DEFAULT \
-    B_DEFAULT0, B_DEFAULT1, B_DEFAULT2, B_DEFAULT3, \
-    B_DEFAULT4, B_DEFAULT5, B_DEFAULT6, B_DEFAULT7, B_END
+#define T_DEFAULT                                                         \
+  B_DEFAULT0, B_DEFAULT1, B_DEFAULT2, B_DEFAULT3, B_DEFAULT4, B_DEFAULT5, \
+      B_DEFAULT6, B_DEFAULT7, B_END
 
 #if defined(BOARDCONFIG_ROCKET0) || defined(BOARDCONFIG_NETROCKET)
 #define ROCKET_TREE T_ROCKET0
@@ -94,4 +94,3 @@
 #error "Unknown board-tree config (consider BOARDCONFIG_DEFAULT)"
 #include <stophere>
 #endif
-
