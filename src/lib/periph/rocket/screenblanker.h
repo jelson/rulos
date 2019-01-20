@@ -21,8 +21,6 @@
 #include "periph/rocket/idle.h"
 #include "periph/rocket/rocket.h"
 
-#define SB_MAX_BUFFERS 8
-
 struct s_screen_blanker;
 struct s_screenblanker_sender;
 
@@ -45,8 +43,8 @@ typedef enum {
 
 typedef struct s_screen_blanker {
   UIEventHandlerFunc func;
-  BoardBuffer buffer[SB_MAX_BUFFERS];
-  uint8_t hpam_max_alpha[SB_MAX_BUFFERS];
+  BoardBuffer buffer[NUM_TOTAL_BOARDS];
+  uint8_t hpam_max_alpha[NUM_TOTAL_BOARDS];
   uint8_t num_buffers;
   ScreenBlankerMode mode;
   HPAM *hpam;

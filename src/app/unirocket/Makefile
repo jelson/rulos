@@ -18,25 +18,17 @@ PLATFORMS := avr sim
 PERIPHERALS := rocket 7seg_panel twi display_rtc hpam audio adc rasters joystick uart input_controller
 EXTRA_AVR_CFLAGS := -DLOG_TO_SERIAL=UART0
 
-#MCU := atmega8
-
-#MCU := atmega328p
-#BOARD := PCB11
-
-## Uncomment this block for LPEM
-MCU := atmega1284p
+## Uncomment this block for LPEM2
+MCU := atmega1284
+#BOARD := LPEM2
+#ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_UNIROCKET
 BOARD := LPEM
 PERIPHERALS += 7seg_panel_hardware
-ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_ROCKET0
+ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_UNIROCKET_LOCALSIM
 
-## Uncomment this block for LPEM2
-#MCU := atmega1284
-#BOARD := LPEM2
-#ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_NETROCKET
-
-TARGET := rocket
+TARGET := unirocket
 
 TARGET_OBJECTS := \
-	rocket.o
+	unirocket.o
 
 include $(ROCKET_ROOT)/Makefile.common

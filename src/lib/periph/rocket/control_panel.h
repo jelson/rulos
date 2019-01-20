@@ -18,6 +18,7 @@
 #define _control_panel_h
 
 #include "periph/hpam/hpam.h"
+#include "periph/rocket/calculator.h"
 #include "periph/rocket/disco.h"
 #include "periph/rocket/display_docking.h"
 #include "periph/rocket/idle.h"
@@ -38,6 +39,12 @@ typedef struct s_control_child {
   UIEventHandler *uie_handler;
   char *name;
 } ControlChild;
+
+typedef struct {
+  UIEventHandler *uie_handler;
+  const char *name;
+  Calculator calc;
+} CCLocalCalc;
 
 typedef struct {
   UIEventHandler *uie_handler;
@@ -88,6 +95,7 @@ typedef struct s_control_panel {
   Booster booster;
 
   // actual children listed here to allocate their storage statically.
+  CCLocalCalc cclc;
   CCRemoteCalc ccrc;
   CCLaunch ccl;
   CCDock ccdock;
@@ -103,6 +111,7 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
                         Network *network, HPAM *hpam, AudioClient *audioClient,
                         IdleAct *idle, ScreenBlanker *screenblanker,
                         JoystickState_t *joystick,
-                        InputInjectorIfc *volume_input_ifc /*optional*/);
+                        InputInjectorIfc *volume_input_ifc /*optional*/,
+                        FetchCalcDecorationValuesIfc *decoration_ifc);
 
 #endif  // _control_panel_h

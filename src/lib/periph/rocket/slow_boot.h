@@ -26,6 +26,7 @@
 typedef struct s_slow_boot {
   ScreenBlanker *screenblanker;
 #if BORROW_SCREENBLANKER_BUFS
+#error THIS CODE IS A BAD IDEA. DO NOT ACTIVATE
   BoardBuffer *buffer;
 #else   // BORROW_SCREENBLANKER_BUFS
   BoardBuffer buffer[SLOW_MAX_BUFFERS];

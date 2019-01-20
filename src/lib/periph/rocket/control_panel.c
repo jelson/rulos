@@ -20,6 +20,15 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
+void init_cc_local_calc(CCLocalCalc *cclc,
+                        FetchCalcDecorationValuesIfc *decoration_ifc) {
+  calculator_init(&cclc->calc, 10 /*and 11*/, NULL, decoration_ifc);
+  cclc->uie_handler = (UIEventHandler *)&cclc->calc.focus;
+  cclc->name = "Computer";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void init_cc_remote_calc(CCRemoteCalc *ccrc, Network *network) {
   init_remote_keyboard_send(&ccrc->rks, network, ROCKET1_ADDR,
                             REMOTE_SUBFOCUS_PORT0);
@@ -74,7 +83,8 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
                         Network *network, HPAM *hpam, AudioClient *audioClient,
                         IdleAct *idle, ScreenBlanker *screenblanker,
                         JoystickState_t *joystick,
-                        InputInjectorIfc *volume_input_ifc) {
+                        InputInjectorIfc *volume_input_ifc,
+                        FetchCalcDecorationValuesIfc *decoration_ifc) {
   cp->handler_func = (UIEventHandlerFunc)cp_uie_handler;
 
   init_screen4(&cp->s4, board0);
@@ -86,8 +96,13 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
 
   cp->child_count = 0;
 
+#if defined(BOARDCONFIG_ROCKET0) || defined(BOARDCONFIG_NETROCKET)
   cp->children[cp->child_count++] = (ControlChild *)&cp->ccrc;
   init_cc_remote_calc(&cp->ccrc, network);
+#else
+  cp->children[cp->child_count++] = (ControlChild *)&cp->cclc;
+  init_cc_local_calc(&cp->cclc, decoration_ifc);
+#endif
 
   cp->children[cp->child_count++] = (ControlChild *)&cp->ccl;
   init_cc_launch(&cp->ccl, &cp->s4, &cp->booster, audioClient, screenblanker);

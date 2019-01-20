@@ -30,17 +30,16 @@
 #include "periph/7seg_panel/remote_bbuf.h"
 #include "periph/bss_canary/bss_canary.h"
 #include "periph/display_rtc/display_rtc.h"
-#include "periph/input_controller/focus.h"
 #include "periph/input_controller/input_controller.h"
 #include "periph/rasters/rasters.h"
 #include "periph/rocket/autotype.h"
-#include "periph/rocket/calculator.h"
 #include "periph/rocket/control_panel.h"
 #include "periph/rocket/display_aer.h"
 #include "periph/rocket/display_compass.h"
 #include "periph/rocket/display_docking.h"
 #include "periph/rocket/display_gratuitous_graph.h"
 #include "periph/rocket/display_scroll_msg.h"
+#include "periph/rocket/display_thruster_graph.h"
 #include "periph/rocket/display_thrusters.h"
 #include "periph/rocket/hobbs.h"
 #include "periph/rocket/idle.h"
@@ -81,11 +80,12 @@ typedef struct {
   IdleAct idle;
   Hobbs hobbs;
   ScreenBlanker screenblanker;
-  ScreenBlankerSender screenblanker_sender;
   SlowBoot slow_boot;
   PotSticker potsticker;
   VolumeControl volume_control;
   RemoteBBufSend rbs;
+  DisplayAzimuthElevationRoll daer;
+  DThrusterGraph dtg;
 } Rocket0;
 
 #if !defined(JOYSTICK_X_CHAN) || !defined(JOYSTICK_Y_CHAN)
@@ -113,16 +113,16 @@ void init_rocket0(Rocket0 *r0) {
   // r0->thrusterUpdate[2].data = &r0->idle;
 
   init_screenblanker(&r0->screenblanker, &r0->hpam, &r0->idle);
-  init_screenblanker_sender(&r0->screenblanker_sender, &r0->network);
-  r0->screenblanker.screenblanker_sender = &r0->screenblanker_sender;
 
   volume_control_init(&r0->volume_control, &r0->audio_client,
                       VOLUME_POT_CHANNEL, /*board*/ 0);
 
+  daer_init(&r0->daer, 8, ((Time)5) << 20);
+
   init_control_panel(&r0->cp, 3, 1, &r0->network, &r0->hpam, &r0->audio_client,
                      &r0->idle, &r0->screenblanker, &r0->ts.joystick_state,
                      &r0->volume_control.injector.iii,
-                     NULL /* local calc decoration ifc */);
+                     (FetchCalcDecorationValuesIfc *)&r0->daer.decoration_ifc);
   r0->cp.ccl.launch.main_rtc = &r0->dr;
   r0->cp.ccl.launch.lunar_distance = &r0->ld;
 
@@ -151,6 +151,7 @@ void init_rocket0(Rocket0 *r0) {
                   (InputInjectorIfc *)&r0->cp.direct_injector, 9, 'p', 'q');
 
   bss_canary_init();
+  dtg_init(&r0->dtg, 9, &r0->network);
 }
 
 static Rocket0 rocket0;  // allocate obj in .bss so it's easy to count
@@ -163,9 +164,7 @@ int main() {
   hal_uart_init(&uart, 38400, true, /* uart_id= */ 0);
   LOG("Log output running\n");
 
-  // Only init the rocketpanel module in the ROCKET0 configuration, not
-  // the TWI-output-only NETROCKET configuration.
-#ifdef BOARDCONFIG_ROCKET0
+#if NUM_LOCAL_BOARDS > 0
   hal_init_rocketpanel();
 #endif
 
