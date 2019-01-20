@@ -8714,7 +8714,7 @@ In this library the device names are the same as the pin names of the symbols, t
 <plain>
 <text x="35.56" y="-27.94" size="1.778" layer="91" rot="R90">Bus Header</text>
 <text x="66.04" y="-2.54" size="1.778" layer="91" rot="R90">Prog Header</text>
-<text x="45.72" y="7.62" size="1.778" layer="91">Spare GND</text>
+<text x="45.72" y="10.16" size="1.778" layer="91">Spare GND</text>
 </plain>
 <instances>
 <instance part="IC1" gate="1" x="25.4" y="55.88"/>
