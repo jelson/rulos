@@ -80,7 +80,7 @@ int main() {
   daer_init(&daer, 0, ((Time)5) << 20);
 
   DThrusterGraph dtg;
-  dtg_init(&dtg, 1, &network);
+  dtg_init_remote(&dtg, 1, &network);
 
   Calculator calc;
   calculator_init(&calc, 2, NULL,

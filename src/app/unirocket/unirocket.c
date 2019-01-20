@@ -65,12 +65,11 @@ typedef struct {
   Network network;
   LunarDistance ld;
   AudioClient audio_client;
-  ThrusterUpdate thrusterUpdate[4];
   HPAM hpam;
   ControlPanel cp;
   InputPollerAct ip;
   RemoteKeyboardRecv rkr;
-  ThrusterSendNetwork tsn;
+  ThrusterUpdate thrusterUpdate[4];
   ThrusterState_t ts;
   IdleAct idle;
   Hobbs hobbs;
@@ -104,9 +103,6 @@ void init_rocket0(Rocket0 *r0) {
   init_idle(&r0->idle);
   thrusters_init(&r0->ts, 7, JOYSTICK_X_CHAN, JOYSTICK_Y_CHAN, &r0->hpam,
                  &r0->idle);
-  // r0->thrusterUpdate[2].func = idle_thruster_listener_func;
-  // r0->thrusterUpdate[2].data = &r0->idle;
-
   init_screenblanker(&r0->screenblanker, &r0->hpam, &r0->idle);
 
   volume_control_init(&r0->volume_control, &r0->audio_client,
@@ -126,17 +122,22 @@ void init_rocket0(Rocket0 *r0) {
   input_poller_init(&r0->ip, (InputInjectorIfc *)&r0->cp.direct_injector);
 #endif
 
+  dtg_init_local(&r0->dtg, 9);
+
   // Remote receiver
   init_remote_keyboard_recv(&r0->rkr, &r0->network,
                             (InputInjectorIfc *)&r0->cp.direct_injector,
                             REMOTE_KEYBOARD_PORT);
 
+  // Register callbacks that should be fired when thruster state is updated
+  r0->thrusterUpdate[0].func = (ThrusterUpdateFunc)dtg_update_state;
+  r0->thrusterUpdate[0].data = &r0->dtg;
+
   r0->thrusterUpdate[1].func = (ThrusterUpdateFunc)ddock_thruster_update;
   r0->thrusterUpdate[1].data = &r0->cp.ccdock.dock;
 
-  init_thruster_send_network(&r0->tsn, &r0->network);
-  r0->thrusterUpdate[0].func = (ThrusterUpdateFunc)tsn_update;
-  r0->thrusterUpdate[0].data = &r0->tsn;
+  // r0->thrusterUpdate[2].func = idle_thruster_listener_func;
+  // r0->thrusterUpdate[2].data = &r0->idle;
 
   init_hobbs(&r0->hobbs, &r0->hpam, &r0->idle);
 
@@ -146,7 +147,6 @@ void init_rocket0(Rocket0 *r0) {
                   (InputInjectorIfc *)&r0->cp.direct_injector, 9, 'p', 'q');
 
   bss_canary_init();
-  dtg_init(&r0->dtg, 9, &r0->network);
 }
 
 static Rocket0 rocket0;  // allocate obj in .bss so it's easy to count

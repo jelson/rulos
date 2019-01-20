@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef display_thruster_graph_h
-#define display_thruster_graph_h
+#pragma once
 
 #include "core/clock.h"
 #include "core/network.h"
@@ -31,6 +30,6 @@ typedef struct s_d_thruster_graph {
   uint32_t value[4];
 } DThrusterGraph;
 
-void dtg_init(DThrusterGraph *dtg, uint8_t board, Network *network);
-
-#endif  // display_thruster_graph_h
+void dtg_init_local(DThrusterGraph *dtg, uint8_t board);
+void dtg_init_remote(DThrusterGraph *dtg, uint8_t board, Network *network);
+void dtg_update_state(DThrusterGraph *dtg, ThrusterPayload *tp);

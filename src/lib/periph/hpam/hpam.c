@@ -18,9 +18,6 @@
 
 #include "core/rulos.h"
 #include "periph/hpam/hpam.h"
-#if SIM
-#include "chip/sim/core/sim.h"
-#endif  // SIM
 
 void hpam_update(HPAM *hpam);
 

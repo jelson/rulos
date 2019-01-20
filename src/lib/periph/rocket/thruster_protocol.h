@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _thruster_protocol_h
-#define _thruster_protocol_h
+#pragma once
 
 #define THRUSTER_REPORT_INTERVAL 250000
 
@@ -41,5 +40,3 @@ typedef struct s_thruster_send_network {
 
 void init_thruster_send_network(ThrusterSendNetwork *tsn, Network *network);
 void tsn_update(ThrusterSendNetwork *tsn, ThrusterPayload *payload);
-
-#endif  // _thruster_protocol_h

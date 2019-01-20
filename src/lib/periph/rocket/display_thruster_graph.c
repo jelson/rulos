@@ -29,9 +29,15 @@ void dtg_draw_skinny_bars(BoardBuffer *bbuf, int v, SSBitmap bm);
 void dtg_draw_fat_bars(BoardBuffer *bbuf, int v, SSBitmap bm0, SSBitmap bm1);
 void dtg_recv_func(RecvSlot *recvSlot, uint8_t payload_len);
 
-void dtg_init(DThrusterGraph *dtg, uint8_t board, Network *network) {
+void dtg_init_local(DThrusterGraph *dtg, uint8_t board) {
   board_buffer_init(&dtg->bbuf DBG_BBUF_LABEL("thrustergraph"));
   board_buffer_push(&dtg->bbuf, board);
+
+  schedule_us(1, (ActivationFuncPtr)dtg_update, dtg);
+}
+
+void dtg_init_remote(DThrusterGraph *dtg, uint8_t board, Network *network) {
+  dtg_init_local(dtg, board);
 
   dtg->network = network;
   dtg->recvSlot.func = dtg_recv_func;
@@ -42,8 +48,6 @@ void dtg_init(DThrusterGraph *dtg, uint8_t board, Network *network) {
   dtg->recvSlot.user_data = dtg;
 
   net_bind_receiver(dtg->network, &dtg->recvSlot);
-
-  schedule_us(1, (ActivationFuncPtr)dtg_update, dtg);
 }
 
 void dtg_update(DThrusterGraph *dtg) {
@@ -108,11 +112,18 @@ void dtg_draw_fat_bars(BoardBuffer *bbuf, int v, SSBitmap bm0, SSBitmap bm1) {
   }
 }
 
+// Update thruster state bits. Can either be called directly in a single-
+// system image (unirocket), or can be called by the network-recive function
+// in a distributed rocket.
+void dtg_update_state(DThrusterGraph *dtg, ThrusterPayload *tp) {
+  dtg->thruster_bits = tp->thruster_bits;
+  dtg->recvSlot.msg_occupied = FALSE;
+  //	LOG("dtg_recv_func got bits %1x!\n", dtg->thruster_bits & 0x7);
+}
+
 void dtg_recv_func(RecvSlot *recvSlot, uint8_t payload_len) {
   DThrusterGraph *dtg = (DThrusterGraph *)recvSlot->user_data;
   ThrusterPayload *tp = (ThrusterPayload *)recvSlot->msg->data;
   assert(payload_len == sizeof(ThrusterPayload));
-  dtg->thruster_bits = tp->thruster_bits;
-  dtg->recvSlot.msg_occupied = FALSE;
-  //	LOG("dtg_recv_func got bits %1x!\n", dtg->thruster_bits & 0x7);
+  dtg_update_state(dtg, tp);
 }

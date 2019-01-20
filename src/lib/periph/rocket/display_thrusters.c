@@ -19,16 +19,13 @@
 #include "periph/rocket/rocket.h"
 
 static void thrusters_update(ThrusterState_t *ts) {
-  char buf[4];
-
   // get state from joystick
   joystick_poll(&ts->joystick_state);
 
-  /*
-          LOG("thrusters_update: got xpos %d, ypos %d\n",
-                    ts->joystick_state.x_pos,
-                    ts->joystick_state.y_pos);
-  */
+#ifdef LOG_JOYSTICK
+  LOG("thrusters_update: got xpos %d, ypos %d\n", ts->joystick_state.x_pos,
+      ts->joystick_state.y_pos);
+#endif
 
   if (ts->joystick_state.state & JOYSTICK_STATE_DISCONNECTED) {
     ascii_to_bitmap_str(&ts->bbuf.buffer[1], 3, " NO");
@@ -38,6 +35,8 @@ static void thrusters_update(ThrusterState_t *ts) {
       ascii_to_bitmap_str(&ts->bbuf.buffer[1], 3, "PSH");
       ascii_to_bitmap_str(&ts->bbuf.buffer[5], 3, "PSH");
     } else {
+      char buf[4];
+
       int_to_string2(buf, 3, 2, ts->joystick_state.x_pos);
       ascii_to_bitmap_str(&ts->bbuf.buffer[1], 3, buf);
       int_to_string2(buf, 3, 2, ts->joystick_state.y_pos);
