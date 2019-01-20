@@ -107,16 +107,16 @@ r_bool sim_adc_keystroke_handler(char c) {
 
     // Shortcuts for joystick.
     case '!':        // center ADC
-      adc[2] = 512;  // y
-      adc[3] = 512;  // x
+      adc[2] = 450;  // y
+      adc[3] = 450;  // x
       return true;
     case '@':         // back-left
       adc[2] = 1023;  // y
-      adc[3] = 11;    // x
+      adc[3] = 290;   // x
       return true;
     case '#':        // fwd
-      adc[2] = 11;   // y
-      adc[3] = 512;  // x
+      adc[2] = 290;  // y
+      adc[3] = 450;  // x
       return true;
     case '$':         // back-right
       adc[2] = 1023;  // y
