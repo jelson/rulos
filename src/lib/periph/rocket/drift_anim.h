@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef drift_anim_h
-#define drift_anim_h
+#pragma once
 
 #include <inttypes.h>
 #include "core/util.h"
@@ -47,5 +46,5 @@ void da_bound_velocity(DriftAnim *da);
 void da_set_value(DriftAnim *da, int32_t value);
 void da_set_random_value(DriftAnim *da);
 void _da_update_base(DriftAnim *da);
+void _da_randomize_velocity(DriftAnim *da);
 
-#endif  // drift_anim_h

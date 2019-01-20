@@ -23,7 +23,7 @@ void drift_anim_init(DriftAnim *da, uint8_t expscale, int32_t initValue,
   da->min = min << expscale;
   da->max = max << expscale;
   da->maxSpeed = maxSpeed << expscale;
-  da_random_impulse(da);  // assign a valid velocity.
+  _da_randomize_velocity(da);  // assign a valid velocity.
   da->base = initValue << expscale;
   da->base_time = clock_time_us();
 }
@@ -53,10 +53,13 @@ void _da_update_base(DriftAnim *da) {
   da->base_time = t;
 }
 
+void _da_randomize_velocity(DriftAnim *da) {
+  da->velocity = (deadbeef_rand() % (da->maxSpeed * 2 + 1)) - da->maxSpeed;
+}
+
 void da_random_impulse(DriftAnim *da) {
   _da_update_base(da);
-  // select a new velocity
-  da->velocity = (deadbeef_rand() % (da->maxSpeed * 2 + 1)) - da->maxSpeed;
+  _da_randomize_velocity(da);
 }
 
 void da_set_velocity(DriftAnim *da, int32_t velocity) {
