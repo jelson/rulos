@@ -30,6 +30,7 @@ void dtg_draw_fat_bars(BoardBuffer *bbuf, int v, SSBitmap bm0, SSBitmap bm1);
 void dtg_recv_func(RecvSlot *recvSlot, uint8_t payload_len);
 
 void dtg_init_local(DThrusterGraph *dtg, uint8_t board) {
+  memset(dtg, 0, sizeof(*dtg));
   board_buffer_init(&dtg->bbuf DBG_BBUF_LABEL("thrustergraph"));
   board_buffer_push(&dtg->bbuf, board);
 
