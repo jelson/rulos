@@ -50,7 +50,7 @@
 #include "periph/rocket/numeric_input.h"
 #include "periph/rocket/pong.h"
 #include "periph/rocket/potsticker.h"
-#include "periph/rocket/remote_keyboard.h"
+#include "periph/remote_keyboard/remote_keyboard.h"
 #include "periph/rocket/remote_uie.h"
 #include "periph/rocket/rocket.h"
 #include "periph/rocket/screenblanker.h"

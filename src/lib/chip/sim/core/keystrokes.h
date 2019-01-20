@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include "core/util.h"
+
 // Top-mode composable handler; returns false to fall through to next handler.
 typedef r_bool (*sim_keystroke_handler)(char k);
 
