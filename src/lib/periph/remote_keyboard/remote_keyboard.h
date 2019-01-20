@@ -20,7 +20,6 @@
 #include "core/network.h"
 #include "core/network_ports.h"
 #include "periph/input_controller/input_controller.h"
-#include "periph/rocket/rocket.h"
 
 typedef struct {
   char key;

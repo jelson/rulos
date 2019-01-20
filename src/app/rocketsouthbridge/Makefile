@@ -15,20 +15,17 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr sim
-PERIPHERALS := rocket 7seg_panel twi display_rtc hpam audio adc rasters joystick uart input_controller keypad remote_keyboard
-EXTRA_AVR_CFLAGS := -DLOG_TO_SERIAL=UART0
+PERIPHERALS := quadknob twi input_controller keypad remote_keyboard
+MCU := atmega328p
+BOARD := SOUTHBRIDGE
 
-## Uncomment this block for LPEM2
-MCU := atmega1284
-#BOARD := LPEM2
-#ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_UNIROCKET
-BOARD := LPEM
-PERIPHERALS += 7seg_panel_hardware
-ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_UNIROCKET_LOCALSIM
+# Configuration for no panels
+ALL_PLATFORM_CFLAGS :=
 
-TARGET := unirocket
+TARGET := rocketsouthbridge
 
 TARGET_OBJECTS := \
-	unirocket.o
+	rocketsouthbridge.o
 
 include $(ROCKET_ROOT)/Makefile.common
+

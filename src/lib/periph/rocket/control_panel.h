@@ -18,12 +18,12 @@
 #define _control_panel_h
 
 #include "periph/hpam/hpam.h"
+#include "periph/remote_keyboard/remote_keyboard.h"
 #include "periph/rocket/calculator.h"
 #include "periph/rocket/disco.h"
 #include "periph/rocket/display_docking.h"
 #include "periph/rocket/idle.h"
 #include "periph/rocket/pong.h"
-#include "periph/rocket/remote_keyboard.h"
 #include "periph/rocket/remote_uie.h"
 #include "periph/rocket/rocket.h"
 #include "periph/rocket/screenblanker.h"

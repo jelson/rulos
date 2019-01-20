@@ -14,7 +14,7 @@
  *
  ************************************************************************/
 
-#include "periph/rocket/quadknob.h"
+#include "periph/quadknob/quadknob.h"
 
 #define XX 0 /* invalid transition */
 // TODO this is 4 bytes of table, stored in 16 bytes.

@@ -19,32 +19,7 @@
 #include "core/rulos.h"
 #include "periph/7seg_panel/cursor.h"
 #include "periph/7seg_panel/region.h"
-
-struct s_focus_handler;
-typedef uint8_t UIEvent;
-
-typedef enum {
-  uie_focus = 0x81,
-  uie_select = 'c',
-  uie_escape = 'd',
-  uie_right = 'a',
-  uie_left = 'b',
-  evt_notify = 0x80,
-  evt_remote_escape = 0x82,
-  evt_idle_nowidle = 0x83,
-  evt_idle_nowactive = 0x84,
-} EventName;
-
-typedef enum {
-  uied_accepted,  // child consumed event
-  uied_blur       // child releases focus
-} UIEventDisposition;
-
-typedef UIEventDisposition (*UIEventHandlerFunc)(
-    struct s_focus_handler *handler, UIEvent evt);
-typedef struct s_focus_handler {
-  UIEventHandlerFunc func;
-} UIEventHandler;
+#include "periph/input_controller/ui_event_handler_ifc.h"
 
 struct s_focus_act;
 

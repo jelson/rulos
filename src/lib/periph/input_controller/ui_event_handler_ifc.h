@@ -14,32 +14,32 @@
  *
  ************************************************************************/
 
-#ifndef _QUADKNOB_H
-#define _QUADKNOB_H
+#pragma once
 
-#include "periph/input_controller/input_controller.h"
-#include "periph/rocket/rocket.h"
+#include "core/rulos.h"
 
-#ifndef SIM
-#include "core/hardware.h"
-#endif  // SIM
+struct s_focus_handler;
+typedef uint8_t UIEvent;
 
-typedef struct s_quadknob {
-  uint8_t oldState;
-  InputInjectorIfc *ifi;
+typedef enum {
+  uie_focus = 0x81,
+  uie_select = 'c',
+  uie_escape = 'd',
+  uie_right = 'a',
+  uie_left = 'b',
+  evt_notify = 0x80,
+  evt_remote_escape = 0x82,
+  evt_idle_nowidle = 0x83,
+  evt_idle_nowactive = 0x84,
+} EventName;
 
-#ifndef SIM
-  IOPinDef *pin0;
-  IOPinDef *pin1;
-#endif
-  char fwd;
-  char back;
-} QuadKnob;
+typedef enum {
+  uied_accepted,  // child consumed event
+  uied_blur       // child releases focus
+} UIEventDisposition;
 
-void init_quadknob(QuadKnob *qk, InputInjectorIfc *ifi,
-#ifndef SIM
-                   IOPinDef *pin0, IOPinDef *pin1,
-#endif
-                   char fwd, char back);
-
-#endif  // _QUADKNOB_H
+typedef UIEventDisposition (*UIEventHandlerFunc)(
+    struct s_focus_handler *handler, UIEvent evt);
+typedef struct s_focus_handler {
+  UIEventHandlerFunc func;
+} UIEventHandler;

@@ -193,6 +193,17 @@
 #define DATA GPIO_C1
 #define STROBE GPIO_C2
 
+#elif defined(BOARD_SOUTHBRIDGE)
+
+#define KEYPAD_ROW0 GPIO_D4
+#define KEYPAD_ROW1 GPIO_B2
+#define KEYPAD_ROW2 GPIO_B3
+#define KEYPAD_ROW3 GPIO_B4
+#define KEYPAD_COL0 GPIO_D0
+#define KEYPAD_COL1 GPIO_D1
+#define KEYPAD_COL2 GPIO_D2
+#define KEYPAD_COL3 GPIO_D3
+
 #elif defined(BOARD_CUSTOM)
 
 #include "custom_board_defs.h"
