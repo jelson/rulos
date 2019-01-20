@@ -15,7 +15,7 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr sim
-PERIPHERALS := rocket 7seg_panel 7seg_panel_hardware twi display_rtc input_controller hpam audio adc rasters joystick keypad sdcard spi
+PERIPHERALS := rocket 7seg_panel 7seg_panel_hardware twi display_rtc input_controller hpam audio adc rasters joystick keypad sdcard spi quadknob remote_keyboard
 MCU := atmega328p
 BOARD := PCB11
 
