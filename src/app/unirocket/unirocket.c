@@ -58,11 +58,6 @@
 #include "periph/rocket/volume_control.h"
 #include "periph/uart/uart.h"
 
-#if SIM
-#include "chip/sim/core/sim.h"
-#endif
-
-/****************************************************************************/
 /****************************************************************************/
 
 typedef struct {
