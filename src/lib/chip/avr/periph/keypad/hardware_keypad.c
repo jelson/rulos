@@ -34,6 +34,7 @@
 
 #ifndef KEYPAD_COL0
 #error "Board definitions for this board don't include KEYPAD definitions."
+#include <stophere>
 #endif
 
 #define KEY_SCAN_INTERVAL_US 10000

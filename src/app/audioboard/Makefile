@@ -19,7 +19,7 @@ PERIPHERALS := uart audio twi spi sdcard ring_buffer
 #MCU := atmega8
 MCU := atmega328p
 BOARD := ROCKETAUDIO
-EXTRA_AVR_CFLAGS += -DCRYSTAL=20000000
+AVR_CFLAGS += -DCRYSTAL=20000000
 
 TARGET := audioboard
 

@@ -161,7 +161,8 @@ int main() {
   hal_init();
 
   hal_uart_init(&uart, 38400, true, /* uart_id= */ 0);
-  LOG("Log output running\n");
+  LOG("Log output running, %d local, %d remote\n", NUM_LOCAL_BOARDS,
+      NUM_REMOTE_BOARDS);
 
   // Only init the rocketpanel module in the ROCKET0 configuration, not
   // the TWI-output-only NETROCKET configuration.

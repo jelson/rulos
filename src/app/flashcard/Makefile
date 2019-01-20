@@ -20,7 +20,7 @@ PERIPHERALS := uart led_matrix_single keypad lcd_12232 eeprom input_controller \
 #MCU := atmega8
 MCU := atmega1284p
 BOARD := FLASHCARD
-#EXTRA_AVR_CFLAGS += -DCRYSTAL=20000000
+#AVR_CFLAGS += -DCRYSTAL=20000000
 ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_DEFAULT
 
 TARGET := flashcard
