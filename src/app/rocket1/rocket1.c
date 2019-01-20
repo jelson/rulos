@@ -81,7 +81,7 @@ int main() {
           init_remote_bbuf_recv(&rbr, &network);
   */
 
-  DAER daer;
+  DisplayAzimuthElevationRoll daer;
   daer_init(&daer, 0, ((Time)5) << 20);
 
   DThrusterGraph dtg;

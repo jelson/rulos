@@ -72,13 +72,15 @@ int rbs_find_changed_index(RemoteBBufSend *rbs) {
   { remote_addr, remote_idx }
 #define B_NO_BOARD /**/
 #define B_END      /**/
-#include "core/board_defs.h"
+// Yeah it's a little gross; remote_bbuf depends on rocket. Refactor if you
+// want to use it elsewhere!
+#include "periph/7seg_panel/display_tree.ch"
 
 typedef struct {
   uint8_t remote_addr;
   uint8_t remote_index;
 } RemoteMapping;
-RemoteMapping remote_mapping_def[] = {T_ROCKET0},
+RemoteMapping remote_mapping_def[] = {ROCKET_TREE},
               *remote_mapping = remote_mapping_def;
 int remote_mapping_count = sizeof(remote_mapping_def) / sizeof(RemoteMapping);
 

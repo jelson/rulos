@@ -35,16 +35,8 @@
 #define DBOARD(name, colors, x, y, remote_addr, remote_idx) _packed(colors 0)
 #define B_NO_BOARD /**/
 #define B_END      /**/
-
-#include "core/board_defs.h"
-
-#if defined(BOARDCONFIG_ROCKET0) || defined(BOARDCONFIG_NETROCKET)
-static uint32_t rocket_tree[] = {T_ROCKET0};
-#elif defined(BOARDCONFIG_ROCKET1)
-static uint32_t rocket_tree[] = {T_ROCKET1};
-#else
-#error "Screenblanker is confused"
-#endif
+#include "periph/7seg_panel/display_tree.ch"
+static uint32_t rocket_tree[] = {ROCKET_TREE};
 
 //////////////////////////////////////////////////////////////////////////////
 

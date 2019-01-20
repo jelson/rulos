@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef display_aer_h
-#define display_aer_h
+#pragma once
 
 #include "core/clock.h"
 #include "periph/7seg_panel/board_buffer.h"
@@ -37,8 +36,7 @@ typedef struct s_d_aer {
   Time impulse_frequency_us;
   Time last_impulse;
   decoration_ifc_t decoration_ifc;
-} DAER;
+} DisplayAzimuthElevationRoll;
 
-void daer_init(DAER *daer, uint8_t board, Time impulse_frequency_us);
-
-#endif  // display_aer_h
+void daer_init(DisplayAzimuthElevationRoll *daer, uint8_t board,
+               Time impulse_frequency_us);

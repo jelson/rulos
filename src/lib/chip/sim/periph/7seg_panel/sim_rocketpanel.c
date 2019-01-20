@@ -93,41 +93,14 @@ void hal_upside_down_led(SSBitmap *b) {}
 #define B_NO_BOARD {NULL},
 #define B_END \
   { NULL }
-#include "core/board_defs.h"
+#include "periph/7seg_panel/display_tree.ch"
 
-BoardLayout tree0_def[] = {T_ROCKET0}, *tree0 = tree0_def;
-
-BoardLayout tree1_def[] = {T_ROCKET1}, *tree1 = tree1_def;
-
-BoardLayout wallclock_tree_def[] = {{"Clock", {PG PG PG PG PG PG PB PB}, 15, 0},
-                                    B_NO_BOARD B_NO_BOARD B_NO_BOARD B_NO_BOARD
-                                        B_NO_BOARD B_NO_BOARD B_NO_BOARD B_END},
-            *wallclock_tree = wallclock_tree_def;
-
-BoardLayout chaseclock_tree_def[] =
-    {{"Clock", {PG PG PG PG PY PY PY PY}, 15, 0},
-     B_NO_BOARD B_NO_BOARD B_NO_BOARD B_NO_BOARD B_NO_BOARD B_NO_BOARD
-         B_NO_BOARD B_END},
-            *chaseclock_tree = chaseclock_tree_def;
-
-BoardLayout default_tree_def[] = {{"board0", {PG PG PG PG PG PG PG PG}, 15, 0},
-                                  {"board1", {PG PG PG PG PG PG PG PG}, 15, 4},
-                                  {"board2", {PG PG PG PG PG PG PG PG}, 15, 8},
-                                  {"board3", {PG PG PG PG PG PG PG PG}, 15, 12},
-                                  {"board4", {PG PG PG PG PG PG PG PG}, 15, 16},
-                                  {"board5", {PG PG PG PG PG PG PG PG}, 15, 20},
-                                  {"board6", {PG PG PG PG PG PG PG PG}, 15, 24},
-                                  {"board7", {PG PG PG PG PG PG PG PG}, 15, 28},
-                                  B_END},
-            *default_tree = default_tree_def;
-
-BoardLayout *g_sim_theTree = NULL;
-
-void sim_configure_tree(BoardLayout *tree) { g_sim_theTree = tree; }
+int hello;
+BoardLayout g_sim_theTree_def[] = {ROCKET_TREE}, *g_sim_theTree = g_sim_theTree_def;
+int goodbay;
 
 static void sim_program_labels() {
   BoardLayout *bl;
-  assert(g_sim_theTree != NULL);  // You forgot to call sim_configure_tree.
   for (bl = g_sim_theTree; bl->label != NULL; bl += 1) {
     attroff(A_BOLD);
     wcolor_set(mainwnd, PAIR_WHITE, NULL);
@@ -411,20 +384,6 @@ static void sim_curses_poll(void *data) {
 
 void hal_init_rocketpanel() {
   hal_init();
-
-#if defined(BOARDCONFIG_ROCKET0)
-  sim_configure_tree(tree0);
-#elif defined(BOARDCONFIG_ROCKET1)
-  sim_configure_tree(tree1);
-#elif defined(BOARDCONFIG_WALLCLOCK)
-  sim_configure_tree(wallclock_tree);
-#elif defined(BOARDCONFIG_CHASECLOCK)
-  sim_configure_tree(chaseclock_tree);
-#elif defined(BOARDCONFIG_DEFAULT) || defined(BOARDCONFIG_NETROCKET)
-  sim_configure_tree(default_tree);
-#else
-#error "Board config not defined for rocketpanel"
-#endif
 
   /* init input buffers */
   CharQueue_init((CharQueue *)keypad_buf, sizeof(keypad_buf));
