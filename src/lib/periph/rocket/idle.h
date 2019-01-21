@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _IDLE_H
-#define _IDLE_H
+#pragma once
 
 #include "periph/rocket/rocket.h"
 #include "periph/rocket/thruster_protocol.h"
@@ -38,5 +37,3 @@ void init_idle(IdleAct *idle);
 void idle_add_handler(IdleAct *idle, UIEventHandler *handler);
 void idle_touch(IdleAct *idle);
 void idle_thruster_listener_func(IdleAct *idle);
-
-#endif  // _IDLE_H

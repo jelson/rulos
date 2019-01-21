@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _SCREEN4_H
-#define _SCREEN4_H
+#pragma once
 
 #include "periph/7seg_panel/board_buffer.h"
 #include "periph/rocket/rocket.h"
@@ -34,5 +33,3 @@ void s4_show(Screen4 *s4);
 void s4_hide(Screen4 *s4);
 void s4_draw(Screen4 *s4);
 r_bool s4_visible(Screen4 *s4);
-
-#endif  // _SCREEN4_H

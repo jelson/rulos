@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _AUTOTYPE_H
-#define _AUTOTYPE_H
+#pragma once
 
 #include "periph/input_controller/input_controller.h"
 #include "periph/rocket/rocket.h"
@@ -28,5 +27,3 @@ typedef struct s_autotype {
 } Autotype;
 
 void init_autotype(Autotype *a, InputInjectorIfc *iii, char *str, Time period);
-
-#endif  // _AUTOTYPE_H

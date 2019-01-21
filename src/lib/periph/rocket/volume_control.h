@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _VOLUME_CONTROL_H
-#define _VOLUME_CONTROL_H
+#pragma once
 
 #include "periph/audio/audio_client.h"
 #include "periph/input_controller/input_controller.h"
@@ -66,5 +65,3 @@ void volume_control_init(VolumeControl *vc, AudioClient *ac,
 static inline uint8_t volume_get_mlvolume(VolumeControl *vc) {
   return vc->cur_vol;
 }
-
-#endif  // _VOLUME_CONTROL_H

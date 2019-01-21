@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _display_blinker_h
-#define _display_blinker_h
+#pragma once
 
 #include "core/clock.h"
 #include "periph/7seg_panel/board_buffer.h"
@@ -29,5 +28,3 @@ typedef struct {
 
 void blinker_init(DBlinker *blinker, uint16_t period);
 void blinker_set_msg(DBlinker *blinker, const char **msg);
-
-#endif  // _display_blinker_h

@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _remote_keyboard_h
-#define _remote_keyboard_h
+#pragma once
 
 #include "core/network.h"
 #include "core/network_ports.h"
@@ -46,5 +45,3 @@ typedef struct s_remote_keyboard_recv {
 
 void init_remote_keyboard_recv(RemoteKeyboardRecv *rk, Network *network,
                                InputInjectorIfc *acceptNetStrokes, Port port);
-
-#endif  // _remote_keyboard_h

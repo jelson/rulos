@@ -1,5 +1,4 @@
-#ifndef _AUFILE_H
-#define _AUFILE_H
+#pragma once
 
 // http://www.opengroup.org/public/pubs/external/auformat.html
 
@@ -28,5 +27,3 @@ typedef struct {
 #define AUDIO_FILE_ENCODING_ADPCM_G723_3 (25) /* CCITT g.723 3-bit ADPCM */
 #define AUDIO_FILE_ENCODING_ADPCM_G723_5 (26) /* CCITT g.723 5-bit ADPCM */
 #define AUDIO_FILE_ENCODING_ALAW_8 (27)       /* 8-bit ISDN A-law */
-
-#endif  // _AUFILE_H

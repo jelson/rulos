@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef __numeric_input_h__
-#define __numeric_input_h__
+#pragma once
 
 #include "periph/rocket/rocket.h"
 
@@ -51,5 +50,3 @@ void numeric_input_init(NumericInputAct *act, RowRegion region,
 void numeric_input_set_value(NumericInputAct *act,
                              DecimalFloatingPoint new_value);
 void numeric_input_set_msg(NumericInputAct *act, const char *msg);
-
-#endif  // numeric_input_h

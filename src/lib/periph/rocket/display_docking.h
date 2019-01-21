@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef display_docking_h
-#define display_docking_h
+#pragma once
 
 #include "core/clock.h"
 #include "periph/7seg_panel/board_buffer.h"
@@ -60,5 +59,3 @@ void ddock_init(DDockAct *act, Screen4 *s4, uint8_t auxboard_base,
                 JoystickState_t *joystick);
 void ddock_reset(DDockAct *dd);
 void ddock_thruster_update(DDockAct *act, ThrusterPayload *tp);
-
-#endif  // display_docking_h

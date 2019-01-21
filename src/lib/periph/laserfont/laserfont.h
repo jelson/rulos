@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _laserfont_h
-#define _laserfont_h
+#pragma once
 
 #include <inttypes.h>
 
@@ -31,5 +30,3 @@ typedef struct {
 
 uint8_t laserfont_draw_char(LaserFont *lf, SSBitmap *bm, int size, char c);
 int laserfont_draw_string(LaserFont *lf, SSBitmap *bm, int size, char *s);
-
-#endif  // _laserfont_h

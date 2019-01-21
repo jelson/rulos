@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _HOBBS_H
-#define _HOBBS_H
+#pragma once
 
 #include "periph/hpam/hpam.h"
 #include "periph/rocket/idle.h"
@@ -27,5 +26,3 @@ typedef struct {
 } Hobbs;
 
 void init_hobbs(Hobbs *hobbs, HPAM *hpam, IdleAct *idle);
-
-#endif  // _HOBBS_H

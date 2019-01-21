@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _POTSTICKER_H
-#define _POTSTICKER_H
+#pragma once
 
 #include "periph/input_controller/input_controller.h"
 #include "periph/rocket/rocket.h"
@@ -33,5 +32,3 @@ typedef struct s_potsticker {
 
 void init_potsticker(PotSticker *ps, uint8_t adc_channel, InputInjectorIfc *ifi,
                      uint8_t detents, char fwd, char back);
-
-#endif  // _POTSTICKER_H

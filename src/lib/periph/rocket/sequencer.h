@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef __sequencer_h__
-#define __sequencer_h__
+#pragma once
 
 /*
  * play a scripted storyboard.
@@ -84,5 +83,3 @@ typedef struct s_launch {
 void launch_init(Launch *launch, Screen4 *s4, Booster *booster,
                  AudioClient *audioClient,
                  struct s_screen_blanker *screenblanker);
-
-#endif  // _sequencer_h

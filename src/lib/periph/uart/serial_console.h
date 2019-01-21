@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _SERIAL_CONSOLE_H
-#define _SERIAL_CONSOLE_H
+#pragma once
 
 #include "periph/uart/uart.h"
 
@@ -30,5 +29,3 @@ void serial_console_init(SerialConsole *sca, ActivationFuncPtr line_func,
                          void *line_data);
 void serial_console_sync_send(SerialConsole *act, const char *buf,
                               uint16_t buflen);
-
-#endif  //_SERIAL_CONSOLE_H

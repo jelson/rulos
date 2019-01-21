@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _labeled_display_h
-#define _labeled_display_h
+#pragma once
 
 #include "periph/display_rtc/display_rtc.h"
 #include "periph/input_controller/focus.h"
@@ -30,4 +29,3 @@ typedef struct {
 
 void labeled_display_init(LabeledDisplayHandler *ldh, int b0,
                           FocusManager *focus);
-#endif  // _labeled_display_h

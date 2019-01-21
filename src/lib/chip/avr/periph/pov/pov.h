@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _POV_H
-#define _POV_H
+#pragma once
 
 #include "periph/rocket/rocket.h"
 
@@ -54,5 +53,3 @@ void pov_write(PovAct *povAct, char *msg);
 void pov_set_visible(PovAct *povAct, r_bool visible);
 
 void pov_paint(uint8_t bitmap);
-
-#endif  // _POV_H

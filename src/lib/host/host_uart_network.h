@@ -1,5 +1,4 @@
-#ifndef _HOST_UART_NETWORK_H
-#define _HOST_UART_NETWORK_H
+#pragma once
 
 #include "periph/uart/uart_net_media.h"
 // host-side uart network stack
@@ -21,5 +20,3 @@ void host_uart_network_init(HostUartNetwork *hun, const char *port_path);
 void host_uart_network_send_buffer(HostUartNetwork *hun, uint8_t addr,
                                    uint8_t port, uint8_t len);
 void host_uart_receive(HostUartNetwork *hun);
-
-#endif  // _HOST_UART_NETWORK_H

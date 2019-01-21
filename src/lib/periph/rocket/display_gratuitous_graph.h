@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef display_gratuitous_graph_h
-#define display_gratuitous_graph_h
+#pragma once
 
 #include "core/clock.h"
 #include "periph/7seg_panel/board_buffer.h"
@@ -31,5 +30,3 @@ typedef struct s_d_gratuitous_graph {
 
 void dgg_init(DGratuitousGraph *dgg, uint8_t board, char *name,
               Time impulse_frequency_us);
-
-#endif  // display_gratuitous_graph_h

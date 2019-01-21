@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _BOOSTER_H
-#define _BOOSTER_H
+#pragma once
 
 #include "periph/audio/audio_client.h"
 #include "periph/hpam/hpam.h"
@@ -36,5 +35,3 @@ void booster_init(Booster *booster, HPAM *hpam, AudioClient *audioClient,
                   ScreenBlanker *screenblanker);
 void booster_set_context(Booster *booster, BoosterContext bcontext);
 void booster_set(Booster *booster, r_bool status);
-
-#endif  // _BOOSTER_H

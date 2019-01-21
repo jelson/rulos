@@ -1,5 +1,4 @@
-#ifndef _uart_net_media_preamble_h
-#define _uart_net_media_preamble_h
+#pragma once
 
 #include "core/media.h"
 
@@ -12,5 +11,3 @@ typedef struct {
   Addr dest_addr;
   uint8_t len;
 } UartPreamble;
-
-#endif  // _uart_net_media_preamble_h

@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _TILTY_INPUT_H
-#define _TILTY_INPUT_H
+#pragma once
 
 #include "periph/rocket/rocket.h"
 
@@ -63,5 +62,3 @@ void _tilty_input_issue_event(TiltyInputAct *tia, TiltyInputState evt);
 void tilty_input_update(TiltyInputAct *tia);
 void tilty_input_init(TiltyInputAct *tia, Vect3D *accelValue,
                       UIEventHandler *event_handler);
-
-#endif  // _TILTY_INPUT_H

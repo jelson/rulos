@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _calculator_decoration_h
-#define _calculator_decoration_h
+#pragma once
 
 #include "periph/rocket/numeric_input.h"
 #include "periph/rocket/rocket.h"
@@ -27,5 +26,3 @@ typedef void (*FetchCalcDecorationValuesFunc)(struct s_decoration_state *state,
 typedef struct s_decoration_state {
   FetchCalcDecorationValuesFunc func;
 } FetchCalcDecorationValuesIfc;
-
-#endif  // _calculator_decoration_h

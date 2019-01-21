@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _idle_display_h
-#define _idle_display_h
+#pragma once
 
 #include "core/cpumon.h"
 #include "periph/rocket/display_scroll_msg.h"
@@ -28,5 +27,3 @@ typedef struct {
 
 void idle_display_init(IdleDisplayAct *act, DScrollMsgAct *scrollAct,
                        CpumonAct *cpumonAct);
-
-#endif  // _idle_display_h

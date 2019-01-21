@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef display_compass_h
-#define display_compass_h
+#pragma once
 
 #include "core/clock.h"
 #include "periph/7seg_panel/board_buffer.h"
@@ -39,5 +38,3 @@ typedef struct s_dcompassact {
 } DCompassAct;
 
 void dcompass_init(DCompassAct *act, uint8_t board, FocusManager *focus);
-
-#endif  // display_compass_h

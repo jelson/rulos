@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _remote_uie_h
-#define _remote_uie_h
+#pragma once
 
 #include "periph/input_controller/focus.h"
 #include "periph/input_controller/input_controller.h"
@@ -39,5 +38,3 @@ typedef struct {
 void init_cascaded_input_injector(CascadedInputInjector *cii,
                                   UIEventHandler *uie_handler,
                                   InputInjectorIfc *escape_ifi);
-
-#endif  // _remote_uie_h

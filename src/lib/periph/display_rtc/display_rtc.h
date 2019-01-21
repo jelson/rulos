@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef display_rtc_h
-#define display_rtc_h
+#pragma once
 
 #include "core/clock.h"
 #include "periph/7seg_panel/board_buffer.h"
@@ -28,5 +27,3 @@ typedef struct {
 void drtc_init(DRTCAct *act, uint8_t board, Time base_time);
 void drtc_set_base_time(DRTCAct *act, Time base_time);
 Time drtc_get_base_time(DRTCAct *act);
-
-#endif  // display_rtc_h

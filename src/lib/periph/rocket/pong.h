@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _pong_h
-#define _pong_h
+#pragma once
 
 #include "periph/audio/audio_client.h"
 #include "periph/rocket/rocket.h"
@@ -47,5 +46,3 @@ typedef struct s_pong {
 } Pong;
 
 void pong_init(Pong *pong, Screen4 *s4, AudioClient *audioClient);
-
-#endif  // _pong_h

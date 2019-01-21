@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef __display_scroll_msg_h__
-#define __display_scroll_msg_h__
+#pragma once
 
 #include "core/clock.h"
 #include "periph/7seg_panel/board_buffer.h"
@@ -32,5 +31,3 @@ void dscrlmsg_init(struct s_dscrollmsgact *act, uint8_t board, const char *msg,
                    uint8_t speed_ms);
 
 void dscrlmsg_set_msg(DScrollMsgAct *act, const char *msg);
-
-#endif  // display_scroll_msg_h

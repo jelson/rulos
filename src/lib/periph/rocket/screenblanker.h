@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _SCREENBLANKER_H
-#define _SCREENBLANKER_H
+#pragma once
 
 #include "periph/hpam/hpam.h"
 #include "periph/rocket/idle.h"
@@ -83,5 +82,3 @@ typedef struct s_screenblanker_sender {
 
 void init_screenblanker_sender(ScreenBlankerSender *sbs, Network *network);
 void sbs_send(ScreenBlankerSender *sbs, ScreenBlanker *sb);
-
-#endif  // _SCREENBLANKER_H

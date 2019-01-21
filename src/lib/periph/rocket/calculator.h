@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _calculator_h
-#define _calculator_h
+#pragma once
 
 #include "periph/7seg_panel/board_buffer.h"
 #include "periph/input_controller/focus.h"
@@ -41,5 +40,3 @@ typedef struct s_calculator {
 
 void calculator_init(Calculator *calc, int board0, FocusManager *fa,
                      FetchCalcDecorationValuesIfc *fetchDecorationValuesObj);
-
-#endif  // _calculator_h

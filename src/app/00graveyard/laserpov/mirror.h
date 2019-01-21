@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _mirror_h
-#define _mirror_h
+#pragma once
 
 #include "periph/rocket/rocket.h"
 
@@ -27,5 +26,3 @@ typedef struct {
 // NB this can only be called once per program, because it owns the
 // hardware interrupt handler.
 void mirror_init(MirrorHandler *mirror);
-
-#endif  // _mirror_h

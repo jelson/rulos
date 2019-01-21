@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _UART_NET_MEDIA_H
-#define _UART_NET_MEDIA_H
+#pragma once
 
 #include "core/hal.h"
 #include "core/media.h"
@@ -68,5 +67,3 @@ typedef struct s_UartMedia {
 
 MediaStateIfc *uart_media_init(UartMedia *um, MediaRecvSlot *mrs,
                                uint8_t uart_id);
-
-#endif  // _UART_NET_MEDIA_H

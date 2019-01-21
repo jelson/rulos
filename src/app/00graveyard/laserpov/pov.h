@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _pov_h
-#define _pov_h
+#pragma once
 
 #include "mirror.h"
 #include "periph/rocket/rocket.h"
@@ -32,5 +31,3 @@ typedef struct {
 
 void pov_init(PovHandler *pov, MirrorHandler *mirror, uint8_t laser_board,
               uint8_t laser_digit);
-
-#endif  // _pov_h

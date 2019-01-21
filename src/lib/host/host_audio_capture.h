@@ -1,5 +1,4 @@
-#ifndef _HOST_AUDIO_CAPTURE_H
-#define _HOST_AUDIO_CAPTURE_H
+#pragma once
 
 #include <alsa/asoundlib.h>
 #include <stdint.h>
@@ -13,5 +12,3 @@ typedef struct {
 void host_audio_init(HostAudio *ha);
 void host_audio_close(HostAudio *ha);
 void host_audio_fetch_ulaw_samples(HostAudio *ha, uint8_t *ulaw_buf, int len);
-
-#endif  // _HOST_AUDIO_CAPTURE_H

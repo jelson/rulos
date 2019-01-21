@@ -1,4 +1,1 @@
-#ifndef _HARDWARE_AUDIO_H
-#define _HARDWARE_AUDIO_H
-
-#endif  // _HARDWARE_AUDIO_H
+#pragma once

@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _QUADKNOB_H
-#define _QUADKNOB_H
+#pragma once
 
 #include "core/clock.h"
 #include "periph/input_controller/input_controller.h"
@@ -42,5 +41,3 @@ void init_quadknob(QuadKnob *qk, InputInjectorIfc *ifi,
                    IOPinDef *pin0, IOPinDef *pin1,
 #endif
                    char fwd, char back);
-
-#endif  // _QUADKNOB_H

@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _spiflash_h
-#define _spiflash_h
+#pragma once
 
 #include "core/hal.h"
 #include "periph/ring_buffer/rocket_ring_buffer.h"
@@ -49,5 +48,3 @@ typedef struct s_spiflash {
 void init_spiflash(SPIFlash *spif);
 r_bool spiflash_next_buffer_ready(SPIFlash *spif);
 void spiflash_fill_buffer(SPIFlash *spif, SPIBuffer *spib);
-
-#endif  // _spiflash_h

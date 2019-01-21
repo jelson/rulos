@@ -14,8 +14,7 @@
  *
  ************************************************************************/
 
-#ifndef _control_panel_h
-#define _control_panel_h
+#pragma once
 
 #include "periph/hpam/hpam.h"
 #include "periph/remote_keyboard/remote_keyboard.h"
@@ -113,5 +112,3 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
                         JoystickState_t *joystick,
                         InputInjectorIfc *volume_input_ifc /*optional*/,
                         FetchCalcDecorationValuesIfc *decoration_ifc);
-
-#endif  // _control_panel_h

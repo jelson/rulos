@@ -1,5 +1,4 @@
-#ifndef _FUNCSEQ_H
-#define _FUNCSEQ_H
+#pragma once
 
 #include "periph/rocket/rocket.h"
 
@@ -13,5 +12,3 @@ typedef struct funcseq_t {
 
 void init_funcseq(FuncSeq *fs, void *param, SequencableFunc *func_array);
 void funcseq_next(FuncSeq *fs);
-
-#endif  // _FUNCSEQ_H

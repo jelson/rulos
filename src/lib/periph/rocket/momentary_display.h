@@ -1,5 +1,4 @@
-#ifndef _MOMENTARY_DISPLAY_H
-#define _MOMENTARY_DISPLAY_H
+#pragma once
 
 #include "core/network.h"
 #include "periph/rocket/momentary_display_message.h"
@@ -16,5 +15,3 @@ typedef struct {
   r_bool is_visible;
   Time last_display;
 } MomentaryDisplay;
-
-#endif  // _MOMENTARY_DISPLAY_H
