@@ -91,7 +91,10 @@ endif
 ARM_CORE = CORE_$(ARM_MX)
 
 ## Options common to compile, link and assembly rules
-ARM_COMMON_FLAGS = -Wall -Werror -DRULOS_ARM
+ARM_COMMON_FLAGS = -Wall -Werror -DRULOS_ARM --specs=nano.specs
+# Jeremy adds nano.specs because without it, we use ~1k of RAM on
+# a section called impure_data, which is gcc internal stuff.
+# See https://stackoverflow.com/questions/48711221/how-to-prevent-inclusion-of-c-library-destructors-and-atexit
 
 ## Compile options common for all C compilation units.
 ARM_CFLAGS = $(ARM_COMMON_FLAGS)
@@ -108,7 +111,7 @@ ARM_CFLAGS += $(EXTRA_ARM_CFLAGS)
 ## Linker flags
 ARM_LD_SCRIPT ?= gcc_arm_$(ARM_FLASHK)k_$(ARM_RAMK)k.ld -L$(ARM_LIB_ROOT)/linker
 ARM_LDFLAGS = $(ARM_COMMON_FLAGS)
-ARM_LDFLAGS += -Wl,-Map=$(ARM_ARCHTARG).map -L$(ARM_OBJDIR) -l$(ARM_LIBNAME) 
+ARM_LDFLAGS += -Wl,-Map=$(ARM_ARCHTARG).map,--cref -L$(ARM_OBJDIR) -l$(ARM_LIBNAME) 
 ARM_LDFLAGS += -Wl,--gc-sections # Garbage-collect ununused functions
 ARM_LDFLAGS += -lc -lm -static -T $(ARM_LD_SCRIPT)
 ARM_LDFLAGS += $(EXTRA_ARM_LDFLAGS)

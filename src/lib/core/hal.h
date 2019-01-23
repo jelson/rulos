@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <inttypes.h>
+
 #include "core/hardware_types.h"
 #include "core/heap.h"
 #include "core/media.h"
