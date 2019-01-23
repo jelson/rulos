@@ -46,7 +46,7 @@ ARM_LIB_FILE = $(ARM_OBJDIR)/lib$(ARM_LIBNAME).a
 ARM_GCC_PREFIX = $(ARM_COMPILER_BINDIR)/arm-none-eabi
 
 CURR_OBJDIR := $(ARM_OBJDIR)
--include $(foreach dir, $(sort $(dir $(ARM_SOURCES))), $(wildcard $(dir)/../Makefile.extra))
+-include $(foreach dir, $(sort $(dir $(ARM_SOURCES))), $(wildcard $(dir)/Makefile.extra))
 
 #####################################################################################
 #####################################################################################
@@ -97,7 +97,7 @@ ARM_COMMON_FLAGS = -Wall -Werror -DRULOS_ARM --specs=nano.specs
 # See https://stackoverflow.com/questions/48711221/how-to-prevent-inclusion-of-c-library-destructors-and-atexit
 
 ## Compile options common for all C compilation units.
-ARM_CFLAGS = $(ARM_COMMON_FLAGS)
+ARM_CFLAGS = $(ARM_COMMON_FLAGS) $(ALL_PLATFORM_CFLAGS)
 ARM_CFLAGS += -I$(ARM_OBJDIR) $(ARM_INCLUDES)
 ARM_CFLAGS += -D__STACK_SIZE=$(STACK_SIZE) -D__HEAP_SIZE=$(HEAP_SIZE)
 ARM_CFLAGS += -fno-strict-aliasing -funsigned-bitfields -fpack-struct -fshort-enums
@@ -204,4 +204,3 @@ DIR_LIST := $(sort $(dir $(ARM_LIB_OBJECTS) $(ARM_TARGET_OBJECTS)))
 
 arm-program: $(ARM_ARCHTARG).lss $(ARM_ARCHTARG).hex $(ARMCONFIG)
 	sudo avrdude -c usbtiny $(ARMOPTS) -u -U flash:w:$(ARM_ARCHTARG).hex
-
