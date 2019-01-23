@@ -17,7 +17,7 @@
 # the right makefile based on what LPCxpresso does:
 # https://bitbucket.org/smartavionics/lpcopen-make/src
 
-ARM_COMPILER_BINDIR := /usr/local/bin/gcc-arm-none-eabi-7-2018-q2-update/bin
+ARM_COMPILER_BINDIR := /usr/local/bin/gcc-arm-none-eabi-8-2018-q4-major/bin
 
 PLATFORM_TARGET_LIST += arm-all
 CLEAN_TARGET_LIST += arm-clean
