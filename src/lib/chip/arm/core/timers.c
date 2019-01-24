@@ -6,9 +6,12 @@
 #include "chip/arm/lpc_chip_11cxx_lib/chip.h"
 #include "chip/arm/lpc_chip_11cxx_lib/gpio_11xx_2.h"
 
+extern int main(void);
+
 void SystemInit()
 {
   Chip_SystemInit();
+  main();
 }
 
 void hal_init()
@@ -35,7 +38,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t ti
 
 void hal_idle()
 {
-  //  __WFI();
+  __WFI();
 }
 
 
