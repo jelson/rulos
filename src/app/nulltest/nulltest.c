@@ -29,25 +29,17 @@
 #endif
 
 void test_func(void *data) {
+  gpio_set(TEST_PIN);
+  gpio_clr(TEST_PIN);
   schedule_us(FREQ_USEC, (ActivationFuncPtr)test_func, NULL);
 }
 
 int main() {
   hal_init();
-  init_clock(10000, 0);
-  bss_canary_init();
-
-  gpio_make_output(TEST_PIN);
-  while (1) {
-    gpio_set(TEST_PIN);
-    gpio_clr(TEST_PIN);
-    gpio_set(TEST_PIN);
-    gpio_clr(TEST_PIN);
-    gpio_set(TEST_PIN);
-    gpio_clr(TEST_PIN);
-  }
-
   init_clock(FREQ_USEC, TIMER1);
+  gpio_make_output(TEST_PIN);
+
+  // bss_canary_init();
 
   schedule_now((ActivationFuncPtr)test_func, NULL);
 
