@@ -60,16 +60,15 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void* data,
   g_timer_handler = handler;
   g_timer_data = data;
 
-  // Configure systick's clock source and to generate interrupts.
-  reg32_set(&SysTick->CTRL,
-            SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk);
-
   // Set initial value and rollover value.
   SysTick->VAL = 0;
   SysTick->LOAD = ticks_per_interrupt;
 
-  // Enable systick timer
-  reg32_set(&SysTick->CTRL, SysTick_CTRL_ENABLE_Msk);
+  // Configure systick's clock source and to generate interrupts,
+  // and enable the timer.
+  reg32_set(&SysTick->CTRL, SysTick_CTRL_CLKSOURCE_Msk |
+                                SysTick_CTRL_TICKINT_Msk |
+                                SysTick_CTRL_ENABLE_Msk);
 
   // Enable interrupts
   __enable_irq();
