@@ -48,10 +48,18 @@ void SysTick_Handler() {
 // any pin inputs or outputs.
 uint32_t hal_start_clock_us(uint32_t us, Handler handler, void* data,
                             uint8_t timer_id) {
-  const uint32_t clock_rate = Chip_Clock_GetMainClockRate();
-  uint64_t ticks_per_interrupt = clock_rate;
-  ticks_per_interrupt *= (uint64_t)us;
-  ticks_per_interrupt /= (uint64_t)1000000;
+  // The correct formula for ticks-per-clock-period is just the
+  // frequency of the CPU in MHz times the desired period in
+  // microseconds. However, we don't want to divide by the clock by 1M
+  // because we might have a chip with fractional MHz in it and don't
+  // want to lose the precision. So we divide by 10,000 (giving us
+  // clock-frequency resolution down to 0.01 Mhz), and divide the
+  // desired period by 100 before multiplying (giving us period
+  // resolution down to 100 microseconds). Dividing the period first
+  // prevents overflow of a 32-bit int for reasonable (< 1 second)
+  // jiffy periods.
+  const uint32_t clock_rate_div_10k = Chip_Clock_GetMainClockRate() / 10000;
+  uint32_t ticks_per_interrupt = clock_rate_div_10k * (us / 100);
 
   // Ensure we're not trying to make the clock too long. For a 48mhz
   // crystal the maximum allowable jiffy clock is about 349ms.
@@ -73,9 +81,11 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void* data,
   // Enable interrupts
   __enable_irq();
 
-  uint64_t us_per_tick = ticks_per_interrupt;
-  us_per_tick *= 1000000;
-  us_per_tick /= clock_rate;
+  // Reverse the process to get the (possibly rounded off)
+  // microseconds per tick.
+  uint32_t us_per_tick = ticks_per_interrupt;
+  us_per_tick *= 100;
+  us_per_tick /= clock_rate_div_10k;
   return us_per_tick;
 }
 
