@@ -156,6 +156,7 @@ void hal_init_rocketpanel() {
   }
 
 #if defined(BOARDCONFIG_ROCKET0)
+  displayConfiguration[0] = BRT_WALLCLOCK;
   displayConfiguration[3] = BRT_SOLDERED_DN_BOARD_DN;
   displayConfiguration[4] = BRT_SOLDERED_DN_BOARD_DN;
 #elif defined(BOARDCONFIG_ROCKET1)
