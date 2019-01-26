@@ -36,10 +36,10 @@ void test_func(void *data) {
 
 int main() {
   hal_init();
-  init_clock(FREQ_USEC, TIMER1);
+  init_clock(10000, TIMER1);
   gpio_make_output(TEST_PIN);
 
-  // bss_canary_init();
+  bss_canary_init();
 
   schedule_now((ActivationFuncPtr)test_func, NULL);
 
