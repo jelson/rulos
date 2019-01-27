@@ -20,10 +20,6 @@ MCU := attiny84
 BOARD := GENERIC
 TARGET := diodebetter
 
-CORE_ONLY := 1
-NO_TWI := 1
-NO_SIM := 1
-
 TARGET_OBJECTS := \
 	diodebetter.o
 
