@@ -21,8 +21,14 @@
 #define FETCH_RETRY_TIME 1000000
 
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
+
+#if defined(SIM) || defined(RULOS_ARM)
+#define SYNCPRINT(x, y, z) \
+  {}
+#else
 #define SYNCPRINT(x, y, z) syncdebug(x, y, z)
-//#define SYNCPRINT(x,y,z)	{}
+#endif
+
 #define SYNCDEBUG() SYNCPRINT(0, 'U', __LINE__)
 
 void ac_send_complete(SendSlot *sendSlot);
