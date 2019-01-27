@@ -3,5 +3,10 @@
 # Auto-formats all code that ends in .c or .h that's been changed in subversion.
 # I should have called it "g4 fix".
 
-svn status | cut -c9- | grep '.*\.h$\|.*\.c$' | grep -v lib/chip/arm/lpc_chip | xargs clang-format -i --style=google --verbose
+svn status \
+    | egrep '^M|A' \
+    | cut -c9- \
+    | grep '.*\.h$\|.*\.c$' \
+    | grep -v lib/chip/arm/lpc_chip \
+    | xargs clang-format -i --style=google --verbose
 
