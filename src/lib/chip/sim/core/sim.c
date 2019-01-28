@@ -196,9 +196,9 @@ typedef struct {
 } SimTwiState;
 SimTwiState g_sim_twi_state = {{NULL}, FALSE};
 
-static void sim_twi_send(MediaStateIfc *media, Addr dest_addr, const char *data,
-                         uint8_t len, MediaSendDoneFunc sendDoneCB,
-                         void *sendDoneCBData);
+static void sim_twi_send(MediaStateIfc *media, Addr dest_addr,
+                         const unsigned char *data, uint8_t len,
+                         MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
 static void sim_twi_poll(void *data);
 
 MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
@@ -280,9 +280,9 @@ static void doSendCallback(sendCallbackAct_t *sca) {
   sca->sendDoneCB(sca->sendDoneCBData);
 }
 
-static void sim_twi_send(MediaStateIfc *media, Addr dest_addr, const char *data,
-                         uint8_t len, MediaSendDoneFunc sendDoneCB,
-                         void *sendDoneCBData) {
+static void sim_twi_send(MediaStateIfc *media, Addr dest_addr,
+                         const unsigned char *data, uint8_t len,
+                         MediaSendDoneFunc sendDoneCB, void *sendDoneCBData) {
   SimTwiState *twi_state = (SimTwiState *)media;
 
 #if 0

@@ -22,7 +22,7 @@
 
 void audioled_set(r_bool red, r_bool yellow);
 
-void _um_send(MediaStateIfc *media, Addr dest_addr, const char *data,
+void _um_send(MediaStateIfc *media, Addr dest_addr, const unsigned char *data,
               uint8_t len, MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
 
 void _um_recv_handler(struct s_HalUart *u, char c);
@@ -75,7 +75,7 @@ r_bool _um_send_handler(struct s_HalUart *u, char *c /*OUT*/) {
   }
 }
 
-void _um_send(MediaStateIfc *media, Addr dest_addr, const char *data,
+void _um_send(MediaStateIfc *media, Addr dest_addr, const unsigned char *data,
               uint8_t len, MediaSendDoneFunc sendDoneCB, void *sendDoneCBData) {
   UartMedia *um = ((UartMediaPtr *)media)->uart_media;
   if (um->send_which != US_none) {

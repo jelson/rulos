@@ -2,4 +2,4 @@
 
 #include <stdint.h>
 
-uint8_t net_compute_checksum(char *buf, int size);
+uint8_t net_compute_checksum(const unsigned char *buf, int size);

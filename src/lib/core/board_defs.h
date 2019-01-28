@@ -146,6 +146,13 @@
 #define JOYSTICK_Y_CHAN 0
 #define AVAILABLE_ADCS 0xff
 
+#elif defined(BOARD_ARMPEM_REVA)
+
+#define JOYSTICK_TRIGGER GPIO1_08
+#define JOYSTICK_X_CHAN 1
+#define JOYSTICK_Y_CHAN 0
+#define AVAILABLE_ADCS 0xff
+
 #elif defined(BOARD_FLASHCARD)
 
 #define KEYPAD_ROW0 GPIO_B7

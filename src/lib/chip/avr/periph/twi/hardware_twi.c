@@ -33,7 +33,7 @@ struct s_TwiState {
   uint8_t dont_ack;
 
   // master-transmitter state
-  const char *out_pkt;
+  const unsigned char *out_pkt;
   uint8_t out_len;
   uint8_t out_n;
   uint8_t out_destaddr;
@@ -324,11 +324,11 @@ static void twi_update(TwiState *const twi, uint8_t status) {
   twi_set_control_register(twi, _BV(TWINT));
 }
 
-static void hal_twi_send(MediaStateIfc *media, Addr dest_addr, const char *data,
-                         uint8_t len, MediaSendDoneFunc sendDoneCB,
-                         void *sendDoneCBData);
+static void hal_twi_send(MediaStateIfc *media, Addr dest_addr,
+                         const unsigned char *data, uint8_t len,
+                         MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
 
-TwiState g_twi;
+static TwiState g_twi;
 
 ISR(TWI_vect) { twi_update(&g_twi, TW_STATUS); }
 
@@ -376,9 +376,9 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
 }
 
 // Send a packet in master-transmitter mode.
-static void hal_twi_send(MediaStateIfc *media, Addr dest_addr, const char *data,
-                         uint8_t len, MediaSendDoneFunc sendDoneCB,
-                         void *sendDoneCBData) {
+static void hal_twi_send(MediaStateIfc *media, Addr dest_addr,
+                         const unsigned char *data, uint8_t len,
+                         MediaSendDoneFunc sendDoneCB, void *sendDoneCBData) {
   TwiState *twi = (TwiState *)media;
   assert(twi->initted == TWI_MAGIC);
 

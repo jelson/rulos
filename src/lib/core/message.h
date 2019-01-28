@@ -27,5 +27,5 @@ typedef struct s_message {
   Port dest_port;
   uint8_t checksum;
   uint8_t payload_len;
-  char data[0];
+  unsigned char data[0];
 } Message, *MessagePtr;

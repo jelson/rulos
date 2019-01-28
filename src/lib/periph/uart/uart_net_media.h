@@ -23,7 +23,7 @@
 struct s_UartMedia;
 
 typedef struct {
-  const char *data;
+  const unsigned char *data;
   uint8_t len;
   MediaSendDoneFunc sendDoneCB;
   void *sendDoneCBData;

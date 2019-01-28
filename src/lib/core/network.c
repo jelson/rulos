@@ -118,7 +118,7 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len) {
   incoming_checksum = msg->checksum;
   msg->checksum = 0;
 
-  if (net_compute_checksum((char *)msg, len) != incoming_checksum) {
+  if (net_compute_checksum((unsigned char *)msg, len) != incoming_checksum) {
     LOG("netstack error: checksum mismatch\n");
 #ifdef DEBUG_STACK_WITH_UART
     hal_uart_sync_send("drp2", 4);
@@ -234,11 +234,13 @@ static void net_send_next_message_down(Network *net) {
   uint8_t len = sizeof(Message) + sendSlot->msg->payload_len;
   assert(len > 0);
   sendSlot->msg->checksum = 0;
-  sendSlot->msg->checksum = net_compute_checksum((char *)sendSlot->msg, len);
+  sendSlot->msg->checksum =
+      net_compute_checksum((unsigned char *)sendSlot->msg, len);
 
   // send down
-  (net->media->send)(net->media, sendSlot->dest_addr, (char *)sendSlot->msg,
-                     len, net_send_done_cb, net);
+  (net->media->send)(net->media, sendSlot->dest_addr,
+                     (unsigned char *)sendSlot->msg, len, net_send_done_cb,
+                     net);
 }
 
 // Called when media has finished sending down the stack.
