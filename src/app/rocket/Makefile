@@ -14,13 +14,16 @@
 
 ROCKET_ROOT := ../..
 
-PLATFORMS := avr sim
+PLATFORMS := sim
 PERIPHERALS := rocket 7seg_panel twi display_rtc hpam audio adc rasters joystick uart input_controller remote_keyboard
-ARM_CHIP_FAMILY := 11xx
 AVR_CFLAGS := -DLOG_TO_SERIAL=UART0
 
-#MCU := atmega8
+# Change SIM_CFLAGS to NETROCKET to debug remote bbufs
+SIM_PERIPHERALS += keypad
+SIM_CFLAGS := -DBOARDCONFIG_ROCKET0
+#SIM_CFLAGS := -DBOARDCONFIG_NETROCKET
 
+#MCU := atmega8
 #MCU := atmega328p
 #BOARD := PCB11
 
@@ -30,15 +33,18 @@ AVR_CFLAGS := -DLOG_TO_SERIAL=UART0
 #PERIPHERALS += 7seg_panel_hardware keypad
 
 ## Uncomment this block for LPEM2 with remote bbufs
+PLATFORMS += avr
 MCU := atmega1284
 BOARD := LPEM2
-SIM_PERIPHERALS := keypad
 AVR_CFLAGS := -DBOARDCONFIG_NETROCKET
-ARM_CFLAGS := -DBOARDCONFIG_NETROCKET
 
-SIM_CFLAGS := -DBOARDCONFIG_ROCKET0
-# Change SIM_CFLAGS to NETROCKET to debug remote bbufs
-#SIM_CFLAGS := -DBOARDCONFIG_NETROCKET
+## Uncomment this block for test rocket on ARM
+#PLATFORMS += arm
+#ARM_CHIP_FAMILY := 11xx
+#ARM_CFLAGS := -DBOARDCONFIG_NETROCKET
+#BOARD := ARMPEM_REVA
+
+##################################
 
 TARGET := rocket
 
