@@ -14,22 +14,28 @@
 
 ROCKET_ROOT := ../..
 
-PLATFORMS := avr sim
+PLATFORMS := sim
 PERIPHERALS := rocket 7seg_panel twi display_rtc hpam audio adc rasters joystick uart input_controller remote_keyboard
 AVR_CFLAGS := -DLOG_TO_SERIAL=UART0
 
-## Uncomment this block for local simulator
-#BOARD := LPEM
-#PERIPHERALS += 7seg_panel_hardware keypad
-#ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_UNIROCKET_LOCALSIM
+## SIM CFLAGS can be one of:
+## -DBOARDCONFIG_UNIROCKET_LOCALSIM, to view boards in local sim
+## -DBOARDCONFIG_UNIROCKET, to debug remote bbuf protocol/dongles
+#SIM_CFLAGS := -DBOARDCONFIG_UNIROCKET
+SIM_CFLAGS := -DBOARDCONFIG_UNIROCKET_LOCALSIM
+SIM_PERIPHERALS := keypad
 
 ## Uncomment this block for LPEM2
+PLATFORMS += avr
 MCU := atmega1284
 BOARD := LPEM2
 AVR_CFLAGS += -DBOARDCONFIG_UNIROCKET
-# Change SIM_CFLAGS to -DBOARDCONFIG_UNIROCKET to debug remote bbufs
-SIM_CFLAGS := -DBOARDCONFIG_UNIROCKET_LOCALSIM
-SIM_PERIPHERALS := keypad
+
+## Uncomment this block for ARM test
+#PLATFORMS += arm
+#ARM_CHIP_FAMILY := 11xx
+#ARM_CFLAGS += -DBOARDCONFIG_UNIROCKET
+#BOARD := ARMPEM_REVA
 
 TARGET := unirocket
 

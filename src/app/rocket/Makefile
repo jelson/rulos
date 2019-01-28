@@ -16,6 +16,7 @@ ROCKET_ROOT := ../..
 
 PLATFORMS := avr sim
 PERIPHERALS := rocket 7seg_panel twi display_rtc hpam audio adc rasters joystick uart input_controller remote_keyboard
+ARM_CHIP_FAMILY := 11xx
 AVR_CFLAGS := -DLOG_TO_SERIAL=UART0
 
 #MCU := atmega8
@@ -33,6 +34,7 @@ MCU := atmega1284
 BOARD := LPEM2
 SIM_PERIPHERALS := keypad
 AVR_CFLAGS := -DBOARDCONFIG_NETROCKET
+ARM_CFLAGS := -DBOARDCONFIG_NETROCKET
 
 SIM_CFLAGS := -DBOARDCONFIG_ROCKET0
 # Change SIM_CFLAGS to NETROCKET to debug remote bbufs
