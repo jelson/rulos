@@ -24,6 +24,14 @@
 #include "core/hardware.h"
 #endif
 
+#ifndef LOG_CLOCK_STATS
+#define LOG_CLOCK_STATS 0
+#endif
+
+#ifndef SCHEDULER_NOW_QUEUE_CAPACITY
+#define SCHEDULER_NOW_QUEUE_CAPACITY 4
+#endif
+
 void schedule_us_internal(Time offset_us, ActivationFuncPtr func, void *data);
 
 // usec between timer interrupts
@@ -40,16 +48,44 @@ uint32_t g_spin_counter;
 
 extern volatile uint8_t run_scheduler_now;
 
-#ifndef SCHEDULER_NOW_QUEUE_CAPACITY
-#define SCHEDULER_NOW_QUEUE_CAPACITY 4
-#endif
-
 typedef struct {
   Heap heap;
   ActivationRecord now_queue[SCHEDULER_NOW_QUEUE_CAPACITY];
   uint8_t now_queue_size;
+
+#if LOG_CLOCK_STATS
+  // Scheduler stats collection
+  Time min_period;
+  ActivationFuncPtr min_period_func;
+  Time max_period;
+  ActivationFuncPtr max_period_func;
+  uint8_t peak_heap;
+  uint8_t peak_now;
+#endif
 } SchedulerState_t;
 static SchedulerState_t sched_state;
+
+#if LOG_CLOCK_STATS
+static void reset_stats() {
+  sched_state.min_period = 0;
+  sched_state.min_period_func = NULL;
+  sched_state.max_period = 0;
+  sched_state.max_period_func = NULL;
+  sched_state.peak_heap = 0;
+  sched_state.peak_now = 0;
+}
+#endif
+
+void clock_log_stats() {
+#if LOG_CLOCK_STATS
+  LOG("peak %d scheduled, range %d (%p) to %d (%p); now peak %d\n",
+      sched_state.peak_heap, sched_state.min_period,
+      sched_state.min_period_func, sched_state.max_period,
+      sched_state.max_period_func, sched_state.peak_now);
+
+  reset_stats();
+#endif
+}
 
 void clock_handler(void *data) {
 #ifdef TIMING_DEBUG
@@ -68,6 +104,10 @@ void clock_handler(void *data) {
 void init_clock(Time interval_us, uint8_t timer_id) {
   heap_init(&sched_state.heap);
   sched_state.now_queue_size = 0;
+
+#if LOG_CLOCK_STATS
+  reset_stats();
+#endif
 
 #ifdef TIMING_DEBUG
   gpio_make_output(GPIO_D4);
@@ -89,20 +129,50 @@ void schedule_us(Time offset_us, ActivationFuncPtr func, void *data) {
   schedule_us_internal(offset_us, func, data);
 }
 
+void scheduler_insert(Time key, ActivationFuncPtr func, void *data) {
+#if LOG_CLOCK_STATS
+  uint8_t heap_count =
+#endif
+      heap_insert(&sched_state.heap, key, func, data);
+
+#if LOG_CLOCK_STATS
+  if (heap_count > sched_state.peak_heap) {
+    sched_state.peak_heap = heap_count;
+  }
+#endif
+}
+
 void schedule_now(ActivationFuncPtr func, void *data) {
   rulos_irq_state_t old_interrupts = hal_start_atomic();
   if (sched_state.now_queue_size < SCHEDULER_NOW_QUEUE_CAPACITY) {
     sched_state.now_queue[sched_state.now_queue_size].func = func;
     sched_state.now_queue[sched_state.now_queue_size].data = data;
     sched_state.now_queue_size++;
+
+#if LOG_CLOCK_STATS
+    if (sched_state.now_queue_size > sched_state.peak_now) {
+      sched_state.peak_now = sched_state.now_queue_size;
+    }
+#endif
   } else {
-    heap_insert(&sched_state.heap, clock_time_us(), func, data);
+    scheduler_insert(clock_time_us(), func, data);
   }
   hal_end_atomic(old_interrupts);
   run_scheduler_now = TRUE;
 }
 
 void schedule_us_internal(Time offset_us, ActivationFuncPtr func, void *data) {
+#if LOG_CLOCK_STATS
+  if (sched_state.min_period == 0 || sched_state.min_period > offset_us) {
+    sched_state.min_period = offset_us;
+    sched_state.min_period_func = func;
+  }
+  if (sched_state.max_period < offset_us) {
+    sched_state.max_period = offset_us;
+    sched_state.max_period_func = func;
+  }
+#endif
+
   schedule_absolute(clock_time_us() + offset_us, func, data);
 }
 
@@ -113,7 +183,7 @@ void schedule_absolute(Time at_time, ActivationFuncPtr func, void *data) {
   gpio_set(GPIO_D6);
 #endif
   rulos_irq_state_t old_interrupts = hal_start_atomic();
-  heap_insert(&sched_state.heap, at_time, func, data);
+  scheduler_insert(at_time, func, data);
   hal_end_atomic(old_interrupts);
 #ifdef TIMING_DEBUG
   gpio_clr(GPIO_D6);

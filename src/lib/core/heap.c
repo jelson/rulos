@@ -40,8 +40,8 @@ void heap_bubble(HeapEntry *he, int ptr) {
   }
 }
 
-void heap_insert(Heap *heap, Time key, ActivationFuncPtr func, void *data) {
-  int hc = heap->heap_count;
+uint8_t heap_insert(Heap *heap, Time key, ActivationFuncPtr func, void *data) {
+  uint8_t hc = heap->heap_count;
   assert(hc < SCHEDULER_CAPACITY);  // heap overflow
   heap->heap[hc].key = key;
   heap->heap[hc].activation.func = func;
@@ -49,8 +49,11 @@ void heap_insert(Heap *heap, Time key, ActivationFuncPtr func, void *data) {
   heap_bubble(heap->heap, hc);
   heap->heap_count = hc + 1;
 
-#if 0
-	LOG("heap_count %d this act func %08x period %d\n", heap->heap_count, (unsigned) (act->func), key-_last_scheduler_run_us);
+  return heap->heap_count;
+
+#if PRINT_ALL_SCHEDULES
+  LOG("heap_count %d this act func %08x period %d\n", heap->heap_count,
+      (unsigned)(act->func), key - _last_scheduler_run_us);
 #endif
 }
 
@@ -72,7 +75,7 @@ void heap_pop(Heap *heap) {
   assert(heap->heap_count > 0);  // heap underflow
   heap->heap[0] = heap->heap[heap->heap_count - 1];
   heap->heap_count -= 1;
-  int hc = heap->heap_count;
+  const int hc = heap->heap_count;
 
   HeapEntry *he = heap->heap;
   /* down-heap */

@@ -49,6 +49,10 @@ void schedule_now(ActivationFuncPtr func, void *data);
 // never advances past now until the queue empties).
 void schedule_absolute(Time at_time, ActivationFuncPtr func, void *data);
 
+// LOG stats about the scheduler: the number of tasks scheduled, and their
+// minimum and maximum periods.
+void clock_log_stats();
+
 #define Exp2Time(v) (((Time)1) << (v))
 //#define schedule_ms(ms,act) { schedule_us(ms*1000, act); }
 

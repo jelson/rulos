@@ -38,13 +38,13 @@ typedef struct {
 
 typedef struct {
   HeapEntry heap[SCHEDULER_CAPACITY];
-  int heap_count;
+  uint8_t heap_count;
 } Heap;
 
 void heap_init(Heap *heap);
 // NB: got an old ref to heap_init() (no args) in your main()?
 // Just discard it; it's now handeld by init_clock().
-void heap_insert(Heap *heap, Time key, ActivationFuncPtr func, void *data);
+uint8_t heap_insert(Heap *heap, Time key, ActivationFuncPtr func, void *data);
 int heap_peek(Heap *heap, /*out*/ Time *key, /*out*/ ActivationRecord *act);
 /* rc nonzero => heap empty */
 void heap_pop(Heap *heap);

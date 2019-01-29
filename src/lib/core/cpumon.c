@@ -56,7 +56,7 @@ void cpumon_main_loop() {
       gpio_clr(TIMING_DEBUG_PIN);
 #endif
       hal_idle();
-#ifdef TIMING_DEBUG
+#ifdef TIMING_DEBUG_PIN
       gpio_set(TIMING_DEBUG_PIN);
 #endif
     } while (!run_scheduler_now);
@@ -100,12 +100,14 @@ void cpumon_act(void *data) {
     case cpumon_phase_periodic_sample: {
       act->sample_spin_counts = spins - act->last_spin_counter;
       act->sample_interval = time - act->last_time;
-      /*
+
+#if LOG_CPU_USAGE
       LOG("calib %d/%dms sample %d/%dms idle %d%%\n",
-              act->calibration_spin_counts, act->calibration_interval,
-              act->sample_spin_counts, act->sample_interval,
-              cpumon_get_idle_percentage(act));
-      */
+          act->calibration_spin_counts, act->calibration_interval,
+          act->sample_spin_counts, act->sample_interval,
+          cpumon_get_idle_percentage(act));
+#endif
+      clock_log_stats();
       schedule_us(1000000, cpumon_act, act);
       break;
     }
