@@ -98,13 +98,10 @@
 
 typedef uint8_t SSBitmap;
 
-void program_cell(uint8_t board, uint8_t digit, SSBitmap bitmap);
-void program_board(uint8_t board, SSBitmap *bitmap);
-// void program_string(uint8_t board, char *string);
-
-// debug routines: spray one character across a row or entire display
-void program_row(uint8_t board, SSBitmap bitmap);
-void program_matrix(SSBitmap bitmap);
+void display_controller_program_cell(uint8_t board, uint8_t digit,
+                                     SSBitmap bitmap);
+void display_controller_program_board(uint8_t board, SSBitmap *bitmap);
+void display_controller_enter_sleep();
 
 SSBitmap ascii_to_bitmap(char a);
 void ascii_to_bitmap_str(SSBitmap *b, int max_len, const char *a);

@@ -37,6 +37,10 @@
 #include <stophere>
 #endif
 
+bool g_boardbus_is_awake;
+void boardbus_wake();
+void boardbus_sleep();
+
 //////////////////////////////////////////////////////////////////////////////
 
 static uint8_t segmentRemapTables[4][8] = {
@@ -91,12 +95,11 @@ void epb_delay() {
   }
 }
 
-/*
- * 0x1738 - 0x16ca new
- * 0x1708 - 0x16c8 old
- */
 void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
                          uint8_t onoff) {
+  if (!g_boardbus_is_awake) {
+    boardbus_wake();
+  }
   BoardRemap *br = &boardRemapTables[displayConfiguration[board]];
   uint8_t rdigit;
   if (br->reverseDigits) {
@@ -133,10 +136,11 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
   epb_delay();
 }
 
+void hal_7seg_bus_enter_sleep() { boardbus_sleep(); }
+
 /*************************************************************************************/
 
-void hal_init_rocketpanel() {
-  // Init pins used by rocketpanel bus
+void boardbus_wake() {
   gpio_make_output(BOARDSEL0);
   gpio_make_output(BOARDSEL1);
   gpio_make_output(BOARDSEL2);
@@ -148,6 +152,36 @@ void hal_init_rocketpanel() {
   gpio_make_output(SEGSEL2);
   gpio_make_output(DATA);
   gpio_make_output(STROBE);
+  g_boardbus_is_awake = TRUE;
+}
+
+void boardbus_sleep() {
+  // Context: When a dongle is powered and the underlying display board is not,
+  // we see the CPU dumping ~60mA. The hypothesis is that unpowered latches can
+  // deliver current through their inputs (which would be high-Z if powered).
+
+  // Send all other lines to high-Z to avoid current flowing.
+  gpio_make_input_disable_pullup(BOARDSEL0);
+  gpio_make_input_disable_pullup(BOARDSEL1);
+  gpio_make_input_disable_pullup(BOARDSEL2);
+  gpio_make_input_disable_pullup(DIGSEL0);
+  gpio_make_input_disable_pullup(DIGSEL1);
+  gpio_make_input_disable_pullup(DIGSEL2);
+  gpio_make_input_disable_pullup(SEGSEL0);
+  gpio_make_input_disable_pullup(SEGSEL1);
+  gpio_make_input_disable_pullup(SEGSEL2);
+  gpio_make_input_disable_pullup(DATA);
+
+  // Strobe stays weakly high to prevent floating values from spuriously triggering
+  // latches.
+  gpio_make_input_enable_pullup(STROBE);
+
+  g_boardbus_is_awake = FALSE;
+}
+
+void hal_init_rocketpanel() {
+  // Init pins used by rocketpanel bus
+  boardbus_sleep();
 
   // This code is static per binary; could save some code space
   // by using #ifdefs instead of dynamic code.

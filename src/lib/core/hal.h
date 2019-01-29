@@ -52,6 +52,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
 
 void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
                          uint8_t onoff);
+void hal_7seg_bus_enter_sleep();  // Call to stop driving 7seg bus
 char hal_read_keybuf();
 char hal_scan_keypad();
 // used for "hold a key at startup" check.

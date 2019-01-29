@@ -24,7 +24,8 @@ static const uint8_t sevseg_ascii[] PROGMEM = {
 #include "lib/periph/7seg_panel/sevseg_bitmaps.ch"
 };
 
-void program_cell(uint8_t board, uint8_t digit, SSBitmap bitmap) {
+void display_controller_program_cell(uint8_t board, uint8_t digit,
+                                     SSBitmap bitmap) {
   int segment; /* must be signed! */
   uint8_t shape = (uint8_t)bitmap;
 
@@ -37,33 +38,15 @@ void program_cell(uint8_t board, uint8_t digit, SSBitmap bitmap) {
   hal_program_segment(board, digit, 7, shape);
 }
 
-void program_board(uint8_t board, SSBitmap *bitmap) {
+void display_controller_program_board(uint8_t board, SSBitmap *bitmap) {
   int i;
   for (i = 0; i < NUM_DIGITS; i++) {
-    program_cell(board, i, bitmap[i]);
+    display_controller_program_cell(board, i, bitmap[i]);
   }
+  display_controller_enter_sleep();
 }
 
-void program_decimal(uint8_t board, uint8_t digit, uint8_t onoff) {
-  /*
-   * The decimal point is segment number 7
-   */
-  hal_program_segment(board, digit, 7, onoff);
-}
-
-void program_row(uint8_t board, SSBitmap bitmap) {
-  uint8_t digit;
-
-  for (digit = 0; digit < NUM_DIGITS; digit++) {
-    program_cell(board, digit, bitmap);
-  }
-}
-
-void program_matrix(SSBitmap bitmap) {
-  uint8_t board;
-
-  for (board = 0; board < NUM_LOCAL_BOARDS; board++) program_row(board, bitmap);
-}
+void display_controller_enter_sleep() { hal_7seg_bus_enter_sleep(); }
 
 SSBitmap ascii_to_bitmap(char a) {
   if (a < ' ' || a >= 127) {
@@ -94,7 +77,7 @@ void debug_msg_hex(uint8_t board, char *m, uint16_t hex) {
   buf[6] = hexmap[(hex >> 4) & 0x0f];
   buf[7] = hexmap[(hex)&0x0f];
   ascii_to_bitmap_str(bm, 8, buf);
-  program_board(board, bm);
+  display_controller_program_board(board, bm);
 }
 
 void board_debug_msg(uint16_t line) {
@@ -106,5 +89,5 @@ void board_debug_msg(uint16_t line) {
   buf[8] = 0;
   SSBitmap bm[8];
   ascii_to_bitmap_str(bm, 8, buf);
-  program_board(0, bm);
+  display_controller_program_board(0, bm);
 }

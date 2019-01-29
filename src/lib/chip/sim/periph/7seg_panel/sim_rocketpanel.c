@@ -125,6 +125,10 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
   wrefresh(curses_get_window());
 }
 
+void hal_7seg_bus_enter_sleep() {
+  // simulator can spare some power.
+}
+
 void hal_init_rocketpanel() {
   hal_init();
 
@@ -137,7 +141,7 @@ void hal_init_rocketpanel() {
   int board, digit;
   for (board = 0; board < NUM_LOCAL_BOARDS; board++) {
     for (digit = 0; digit < NUM_DIGITS; digit++) {
-      program_cell(board, digit, value);
+      display_controller_program_cell(board, digit, value);
     }
   }
 }

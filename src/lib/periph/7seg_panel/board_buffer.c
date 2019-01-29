@@ -78,12 +78,20 @@ void _board_buffer_compute_mask(BoardBuffer *buf, uint8_t redraw) {
   }
 }
 
+void clear_board(uint8_t index) {
+  SSBitmap empty[NUM_DIGITS];
+  for (int i = 0; i < NUM_DIGITS; i++) {
+    empty[i] = 0;
+  }
+  display_controller_program_board(index, empty);
+}
+
 void board_buffer_pop(BoardBuffer *buf) {
   if (board_buffer_is_foreground(buf)) {
     if (buf->next == NULL) {
       // will the last buffer to leave, please turn out the lights?
 #if NUM_LOCAL_BOARDS > 0
-      program_row(buf->board_index, 0);
+      clear_board(buf->board_index);
 #endif
       foreground[buf->board_index] = NULL;
     } else {
@@ -166,9 +174,10 @@ void board_buffer_paint(SSBitmap *bm, uint8_t board_index, uint8_t mask) {
   for (idx = 0; idx < NUM_DIGITS; idx++, mask <<= 1) {
     if (mask & 0x80) {
       SSBitmap tmp = bm[idx];
-      program_cell(board_index, idx, tmp);
+      display_controller_program_cell(board_index, idx, tmp);
     }
   }
+  display_controller_enter_sleep();
 }
 
 uint8_t board_buffer_is_foreground(BoardBuffer *buf) {
