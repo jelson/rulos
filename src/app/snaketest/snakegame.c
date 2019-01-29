@@ -28,167 +28,167 @@
 #define BALLMINY PS(0)
 #define BALLMAXY PS(24 - BALLDIA)
 
-void pong_serve(Pong *pong, uint8_t from_player);
-void pong_update(Pong *pong);
-void pong_paint_once(Pong *pong);
-void pong_paint_paddle(Pong *pong, int x, int y);
-void pong_score_one(Pong *pong, uint8_t player);
-UIEventDisposition pong_event_handler(UIEventHandler *raw_handler, UIEvent evt);
+void snake_serve(Snake *snake, uint8_t from_player);
+void snake_update(Snake *snake);
+void snake_paint_once(Snake *snake);
+void snake_paint_paddle(Snake *snake, int x, int y);
+void snake_score_one(Snake *snake, uint8_t player);
+UIEventDisposition snake_event_handler(UIEventHandler *raw_handler, UIEvent evt);
 
-void pong_init(Pong *pong, Screen4 *s4, AudioClient *audioClient) {
-  pong->s4 = s4;
+void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient) {
+  snake->s4 = s4;
 #if 0
-	pong->board0 = b0;
+	snake->board0 = b0;
 	int i;
 	for (i=0; i<PONG_HEIGHT; i++)
 	{
-		board_buffer_init(&pong->bbuf[i] DBG_BBUF_LABEL("pong"));
-		board_buffer_push(&pong->bbuf[i], b0+i);
-		pong->btable[i] = &pong->bbuf[i];
+		board_buffer_init(&snake->bbuf[i] DBG_BBUF_LABEL("snake"));
+		board_buffer_push(&snake->bbuf[i], b0+i);
+		snake->btable[i] = &snake->bbuf[i];
 	}
-	pong->rrect.bbuf = pong->btable;
-	pong->rrect.ylen = PONG_HEIGHT;
-	pong->rrect.x = 0;
-	pong->rrect.xlen = 8;
+	snake->rrect.bbuf = snake->btable;
+	snake->rrect.ylen = PONG_HEIGHT;
+	snake->rrect.x = 0;
+	snake->rrect.xlen = 8;
 
 #endif
-  pong->handler.func = (UIEventHandlerFunc)pong_event_handler;
-  pong->handler.pong = pong;
+  snake->handler.func = (UIEventHandlerFunc)snake_event_handler;
+  snake->handler.snake = snake;
 
-  pong_serve(pong, 0);
+  snake_serve(snake, 0);
 
-  pong->paddley[0] = 8;
-  pong->paddley[1] = 10;
+  snake->paddley[0] = 8;
+  snake->paddley[1] = 10;
 
-  pong->score[0] = 0;
-  pong->score[1] = 0;
-  pong->lastScore = clock_time_us();
+  snake->score[0] = 0;
+  snake->score[1] = 0;
+  snake->lastScore = clock_time_us();
 
-  pong->audioClient = audioClient;
+  snake->audioClient = audioClient;
 
-  pong->focused = FALSE;
+  snake->focused = FALSE;
 
-  schedule_us(1, (ActivationFuncPtr)pong_update, pong);
+  schedule_us(1, (ActivationFuncPtr)snake_update, snake);
 }
 
-void pong_serve(Pong *pong, uint8_t from_player) {
-  pong->x = BALLMINX;
-  pong->y = (deadbeef_rand() % (BALLMAXY - BALLMINY)) + BALLMINY;
-  pong->dx = PS(((deadbeef_rand() & 7) + 7) << 1);
-  pong->dy = PS(((deadbeef_rand() & 7) + 4) << 1);
+void snake_serve(Snake *snake, uint8_t from_player) {
+  snake->x = BALLMINX;
+  snake->y = (deadbeef_rand() % (BALLMAXY - BALLMINY)) + BALLMINY;
+  snake->dx = PS(((deadbeef_rand() & 7) + 7) << 1);
+  snake->dy = PS(((deadbeef_rand() & 7) + 4) << 1);
   if (from_player) {
-    pong->x = BALLMAXX;
-    pong->dx = -pong->dx;
+    snake->x = BALLMAXX;
+    snake->dx = -snake->dx;
   }
 }
 
-uint8_t pong_is_paused(Pong *pong) {
-  Time dl = clock_time_us() - pong->lastScore;
+uint8_t snake_is_paused(Snake *snake) {
+  Time dl = clock_time_us() - snake->lastScore;
   return (0 < dl && dl < SCORE_PAUSE_TIME);
 }
 
-void pong_intersect_paddle(Pong *pong, uint8_t player, int by1) {
-  int by0 = pong->y;
+void snake_intersect_paddle(Snake *snake, uint8_t player, int by1) {
+  int by0 = snake->y;
   if (by0 > by1) {
     int tmp = by1;
     by1 = by0;
     by0 = tmp;
   }
-  int py0 = PS(pong->paddley[player]);
-  int py1 = PS(pong->paddley[player] + PADDLEHEIGHT);
+  int py0 = PS(snake->paddley[player]);
+  int py1 = PS(snake->paddley[player] + PADDLEHEIGHT);
   if (by1 < py0 || by0 > py1) {
-    ac_skip_to_clip(pong->audioClient, AUDIO_STREAM_BURST_EFFECTS,
+    ac_skip_to_clip(snake->audioClient, AUDIO_STREAM_BURST_EFFECTS,
                     sound_pong_score, sound_silence);
-    pong_score_one(pong, 1 - player);
+    snake_score_one(snake, 1 - player);
   } else {
-    ac_skip_to_clip(pong->audioClient, AUDIO_STREAM_BURST_EFFECTS,
+    ac_skip_to_clip(snake->audioClient, AUDIO_STREAM_BURST_EFFECTS,
                     sound_pong_paddle_bounce, sound_silence);
-    pong->dx += PS((deadbeef_rand() % 5) - 2);
-    pong->dy += PS((deadbeef_rand() % 5) - 2);
+    snake->dx += PS((deadbeef_rand() % 5) - 2);
+    snake->dy += PS((deadbeef_rand() % 5) - 2);
   }
 }
 
-void pong_advance_ball(Pong *pong) {
-  int newx = pong->x + (pong->dx >> PONG_FREQ2);
-  int newy = pong->y + (pong->dy >> PONG_FREQ2);
+void snake_advance_ball(Snake *snake) {
+  int newx = snake->x + (snake->dx >> PONG_FREQ2);
+  int newy = snake->y + (snake->dy >> PONG_FREQ2);
   if (newx > BALLMAXX) {
-    pong_intersect_paddle(pong, 1, newy);
-    pong->dx = -pong->dx;
+    snake_intersect_paddle(snake, 1, newy);
+    snake->dx = -snake->dx;
     newx = BALLMAXX - (newx - BALLMAXX);
   }
   if (newx < BALLMINX) {
-    pong_intersect_paddle(pong, 0, newy);
-    pong->dx = -pong->dx;
+    snake_intersect_paddle(snake, 0, newy);
+    snake->dx = -snake->dx;
     newx = BALLMINX + (BALLMINX - newx);
   }
   if (newy > BALLMAXY) {
-    pong->dy = -pong->dy;
+    snake->dy = -snake->dy;
     newy = BALLMAXY - (newy - BALLMAXY);
-    ac_skip_to_clip(pong->audioClient, AUDIO_STREAM_BURST_EFFECTS,
+    ac_skip_to_clip(snake->audioClient, AUDIO_STREAM_BURST_EFFECTS,
                     sound_pong_wall_bounce, sound_silence);
   }
   if (newy < BALLMINY) {
-    pong->dy = -pong->dy;
+    snake->dy = -snake->dy;
     newy = BALLMINY + (BALLMINY - newy);
-    ac_skip_to_clip(pong->audioClient, AUDIO_STREAM_BURST_EFFECTS,
+    ac_skip_to_clip(snake->audioClient, AUDIO_STREAM_BURST_EFFECTS,
                     sound_pong_wall_bounce, sound_silence);
   }
-  pong->x = newx;
-  pong->y = newy;
+  snake->x = newx;
+  snake->y = newy;
 }
 
-void pong_score_one(Pong *pong, uint8_t player) {
-  pong->lastScore = clock_time_us();
-  pong->score[player] += 1;
-  pong_serve(pong, player);
-  pong_paint_once(pong);
+void snake_score_one(Snake *snake, uint8_t player) {
+  snake->lastScore = clock_time_us();
+  snake->score[player] += 1;
+  snake_serve(snake, player);
+  snake_paint_once(snake);
 }
 
-void pong_update(Pong *pong) {
-  schedule_us(1000000 / PONG_FREQ, (ActivationFuncPtr)pong_update, pong);
-  if (!pong_is_paused(pong) && pong->focused) {
-    pong_advance_ball(pong);
+void snake_update(Snake *snake) {
+  schedule_us(1000000 / PONG_FREQ, (ActivationFuncPtr)snake_update, snake);
+  if (!snake_is_paused(snake) && snake->focused) {
+    snake_advance_ball(snake);
   }
-  pong_paint_once(pong);
+  snake_paint_once(snake);
 }
 
-void pong_paint_once(Pong *pong) {
-  if (!pong->focused) {
+void snake_paint_once(Snake *snake) {
+  if (!snake->focused) {
     // don't paint on borrowed s4 surface
     return;
   }
 
-  Screen4 *s4 = pong->s4;
+  Screen4 *s4 = snake->s4;
   RectRegion *rrect = &s4->rrect;
   raster_clear_buffers(rrect);
 
-  if (pong_is_paused(pong)) {
+  if (snake_is_paused(snake)) {
     ascii_to_bitmap_str(s4->bbuf[1].buffer + 1, 6, "P0  P1");
 
     char scoretext[3];
-    int_to_string2(scoretext, 2, 0, pong->score[0] % 100);
+    int_to_string2(scoretext, 2, 0, snake->score[0] % 100);
     ascii_to_bitmap_str(s4->bbuf[2].buffer + 1, 2, scoretext);
 
-    int_to_string2(scoretext, 2, 0, pong->score[1] % 100);
+    int_to_string2(scoretext, 2, 0, snake->score[1] % 100);
     ascii_to_bitmap_str(s4->bbuf[2].buffer + 5, 2, scoretext);
   } else {
     int xo, yo;
     for (xo = 0; xo < BALLDIA; xo++) {
       for (yo = 0; yo < BALLDIA; yo++) {
-        raster_paint_pixel(rrect, (pong->x >> PONG_SCALE2) + xo,
-                           (pong->y >> PONG_SCALE2) + yo);
+        raster_paint_pixel(rrect, (snake->x >> PONG_SCALE2) + xo,
+                           (snake->y >> PONG_SCALE2) + yo);
       }
     }
   }
 
-  pong_paint_paddle(pong, 0, pong->paddley[0]);
-  pong_paint_paddle(pong, 28, pong->paddley[1]);
+  snake_paint_paddle(snake, 0, snake->paddley[0]);
+  snake_paint_paddle(snake, 28, snake->paddley[1]);
 
   raster_draw_buffers(rrect);
 }
 
-void pong_paint_paddle(Pong *pong, int x, int y) {
-  RectRegion *rrect = &pong->s4->rrect;
+void snake_paint_paddle(Snake *snake, int x, int y) {
+  RectRegion *rrect = &snake->s4->rrect;
   raster_paint_pixel(rrect, x + 1, y);
   raster_paint_pixel(rrect, x + 1, y + PADDLEHEIGHT);
   int yo;
@@ -198,42 +198,42 @@ void pong_paint_paddle(Pong *pong, int x, int y) {
   }
 }
 
-UIEventDisposition pong_event_handler(UIEventHandler *raw_handler,
+UIEventDisposition snake_event_handler(UIEventHandler *raw_handler,
                                       UIEvent evt) {
-  Pong *pong = ((PongHandler *)raw_handler)->pong;
+  Snake *snake = ((SnakeHandler *)raw_handler)->snake;
 
   UIEventDisposition result = uied_accepted;
   switch (evt) {
     case '1':
     case 'p':
-      pong->paddley[0] = max(pong->paddley[0] - 2, 0);
+      snake->paddley[0] = max(snake->paddley[0] - 2, 0);
       break;
     case '4':
     case 'q':
-      pong->paddley[0] = min(pong->paddley[0] + 2, 22 - PADDLEHEIGHT);
+      snake->paddley[0] = min(snake->paddley[0] + 2, 22 - PADDLEHEIGHT);
       break;
     case '3':
     case 'e':
-      pong->paddley[1] = max(pong->paddley[1] - 2, 0);
+      snake->paddley[1] = max(snake->paddley[1] - 2, 0);
       break;
     case '6':
     case 'f':
-      pong->paddley[1] = min(pong->paddley[1] + 2, 22 - PADDLEHEIGHT);
+      snake->paddley[1] = min(snake->paddley[1] + 2, 22 - PADDLEHEIGHT);
       break;
     case uie_focus:
-      if (!pong->focused) {
-        s4_show(pong->s4);
+      if (!snake->focused) {
+        s4_show(snake->s4);
       }
-      pong->focused = TRUE;
+      snake->focused = TRUE;
       break;
     case uie_escape:
-      if (pong->focused) {
-        s4_hide(pong->s4);
+      if (snake->focused) {
+        s4_hide(snake->s4);
       }
-      pong->focused = FALSE;
+      snake->focused = FALSE;
       result = uied_blur;
       break;
   }
-  pong_paint_once(pong);
+  snake_paint_once(snake);
   return result;
 }

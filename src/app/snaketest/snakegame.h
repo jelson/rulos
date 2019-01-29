@@ -26,23 +26,23 @@
 #define PONG_FREQ2 5
 #define PONG_FREQ (1 << PONG_FREQ2)
 
-typedef struct s_pong_handler {
+typedef struct s_snake_handler {
   UIEventHandlerFunc func;
-  struct s_pong *pong;
-} PongHandler;
+  struct s_snake *snake;
+} SnakeHandler;
 
-typedef struct s_pong {
+typedef struct s_snake {
   //	BoardBuffer bbuf[PONG_HEIGHT];
   //	BoardBuffer *btable[PONG_HEIGHT];
   //	RectRegion rrect;
   Screen4 *s4;
-  PongHandler handler;
+  SnakeHandler handler;
   int x, y, dx, dy;  // scaled by PONG_SCALE
   int paddley[2];
   int score[2];
   Time lastScore;
   r_bool focused;
   AudioClient *audioClient;
-} Pong;
+} Snake;
 
-void pong_init(Pong *pong, Screen4 *s4, AudioClient *audioClient);
+void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient);

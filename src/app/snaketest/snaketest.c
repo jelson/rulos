@@ -45,14 +45,14 @@
 
 HalUart uart;
 CpumonAct cpumon;
-Pong pong;
+Snake snake;
 
 typedef struct s_direct_injector {
   InputInjectorFunc injector_func;
 } direct_injector_t;
 
 void cp_inject(struct s_direct_injector *di, char k) {
-  pong.handler.func((UIEventHandler *)(&pong.handler), k);
+  snake.handler.func((UIEventHandler *)(&snake.handler), k);
 }
 
 int main() {
@@ -87,9 +87,9 @@ int main() {
   injector.injector_func = (InputInjectorFunc) cp_inject;
   InputPollerAct ip;
   input_poller_init(&ip, (InputInjectorIfc *)&injector);    // TODO pass keystrokes straight to snake
-  pong_init(&pong, &s4, &audio_client);
+  snake_init(&snake, &s4, &audio_client);
 
-  pong.handler.func((UIEventHandler *) &pong.handler, uie_focus);  // EWW
+  snake.handler.func((UIEventHandler *) &snake.handler, uie_focus);  // EWW
   cpumon_main_loop();
 
   return 0;
