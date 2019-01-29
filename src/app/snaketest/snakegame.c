@@ -19,137 +19,130 @@
 #include "periph/rasters/rasters.h"
 #include "periph/rocket/sound.h"
 
-#define PS(v) ((v) << PONG_SCALE2)
-#define BALLDIA 3
-#define PADDLEHEIGHT 8
-#define SCORE_PAUSE_TIME (((Time)1) << 20)
-#define BALLMINX PS(2)
-#define BALLMAXX PS(29 - BALLDIA)
-#define BALLMINY PS(0)
-#define BALLMAXY PS(24 - BALLDIA)
+#define SNAKE_FREQ 15
 
-void snake_serve(Snake *snake, uint8_t from_player);
 void snake_update(Snake *snake);
-void snake_paint_once(Snake *snake);
-void snake_paint_paddle(Snake *snake, int x, int y);
-void snake_score_one(Snake *snake, uint8_t player);
 UIEventDisposition snake_event_handler(UIEventHandler *raw_handler, UIEvent evt);
+void snake_paint_once(Snake *snake);
+void snake_init_map(Map* map);
+Direction get_cell(Map* map, uint8_t x, uint8_t y);
 
 void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient) {
   snake->s4 = s4;
-#if 0
-	snake->board0 = b0;
-	int i;
-	for (i=0; i<PONG_HEIGHT; i++)
-	{
-		board_buffer_init(&snake->bbuf[i] DBG_BBUF_LABEL("snake"));
-		board_buffer_push(&snake->bbuf[i], b0+i);
-		snake->btable[i] = &snake->bbuf[i];
-	}
-	snake->rrect.bbuf = snake->btable;
-	snake->rrect.ylen = PONG_HEIGHT;
-	snake->rrect.x = 0;
-	snake->rrect.xlen = 8;
-
-#endif
   snake->handler.func = (UIEventHandlerFunc)snake_event_handler;
   snake->handler.snake = snake;
-
-  snake_serve(snake, 0);
-
-  snake->paddley[0] = 8;
-  snake->paddley[1] = 10;
-
-  snake->score[0] = 0;
-  snake->score[1] = 0;
-  snake->lastScore = clock_time_us();
-
   snake->audioClient = audioClient;
-
   snake->focused = FALSE;
+
+  snake_init_map(&snake->map);
+  snake->head.x = CANVAS_W/2;
+  snake->head.y = CANVAS_H/2;
+  snake->tail.x = CANVAS_W/2;
+  snake->tail.y = CANVAS_H/2;
+  snake->direction = UP;
 
   schedule_us(1, (ActivationFuncPtr)snake_update, snake);
 }
 
-void snake_serve(Snake *snake, uint8_t from_player) {
-  snake->x = BALLMINX;
-  snake->y = (deadbeef_rand() % (BALLMAXY - BALLMINY)) + BALLMINY;
-  snake->dx = PS(((deadbeef_rand() & 7) + 7) << 1);
-  snake->dy = PS(((deadbeef_rand() & 7) + 4) << 1);
-  if (from_player) {
-    snake->x = BALLMAXX;
-    snake->dx = -snake->dx;
+void snake_init_map(Map* map) {
+  for (uint8_t y=0; y<CANVAS_H; y++) {
+    for (uint8_t x=0; x<CANVAS_W; x++) {
+      map->cell[y][x] = EMPTY;
+    }
   }
 }
 
-uint8_t snake_is_paused(Snake *snake) {
-  Time dl = clock_time_us() - snake->lastScore;
-  return (0 < dl && dl < SCORE_PAUSE_TIME);
+bool in_bounds(uint8_t x, uint8_t y) {
+  return (x>=0 && x<CANVAS_W && y>=0 && y<CANVAS_H);
 }
 
-void snake_intersect_paddle(Snake *snake, uint8_t player, int by1) {
-  int by0 = snake->y;
-  if (by0 > by1) {
-    int tmp = by1;
-    by1 = by0;
-    by0 = tmp;
+inline Point add(Point a, Direction d) {
+  Point r = a;
+  switch (d) {
+    case RIGHT:
+      r.x += 1;
+      break;
+    case UP:
+      r.y -= 1;
+      break;
+    case LEFT:
+      r.x -= 1;
+      break;
+    case DOWN:
+      r.y += 1;
+      break;
+    default:
+      assert(false);
   }
-  int py0 = PS(snake->paddley[player]);
-  int py1 = PS(snake->paddley[player] + PADDLEHEIGHT);
-  if (by1 < py0 || by0 > py1) {
-    ac_skip_to_clip(snake->audioClient, AUDIO_STREAM_BURST_EFFECTS,
-                    sound_pong_score, sound_silence);
-    snake_score_one(snake, 1 - player);
-  } else {
-    ac_skip_to_clip(snake->audioClient, AUDIO_STREAM_BURST_EFFECTS,
-                    sound_pong_paddle_bounce, sound_silence);
-    snake->dx += PS((deadbeef_rand() % 5) - 2);
-    snake->dy += PS((deadbeef_rand() % 5) - 2);
-  }
+  return r;
 }
 
-void snake_advance_ball(Snake *snake) {
-  int newx = snake->x + (snake->dx >> PONG_FREQ2);
-  int newy = snake->y + (snake->dy >> PONG_FREQ2);
-  if (newx > BALLMAXX) {
-    snake_intersect_paddle(snake, 1, newy);
-    snake->dx = -snake->dx;
-    newx = BALLMAXX - (newx - BALLMAXX);
-  }
-  if (newx < BALLMINX) {
-    snake_intersect_paddle(snake, 0, newy);
-    snake->dx = -snake->dx;
-    newx = BALLMINX + (BALLMINX - newx);
-  }
-  if (newy > BALLMAXY) {
-    snake->dy = -snake->dy;
-    newy = BALLMAXY - (newy - BALLMAXY);
-    ac_skip_to_clip(snake->audioClient, AUDIO_STREAM_BURST_EFFECTS,
-                    sound_pong_wall_bounce, sound_silence);
-  }
-  if (newy < BALLMINY) {
-    snake->dy = -snake->dy;
-    newy = BALLMINY + (BALLMINY - newy);
-    ac_skip_to_clip(snake->audioClient, AUDIO_STREAM_BURST_EFFECTS,
-                    sound_pong_wall_bounce, sound_silence);
-  }
-  snake->x = newx;
-  snake->y = newy;
+inline bool occupied(Map* map, Point a) {
+  return get_cell(map, a.x, a.y) != EMPTY
+    || get_cell(map, a.x-1, a.y)==RIGHT || get_cell(map, a.x+1, a.y) == LEFT
+    || get_cell(map, a.x, a.y-1)==DOWN || get_cell(map, a.x, a.y+1) == UP;
 }
 
-void snake_score_one(Snake *snake, uint8_t player) {
-  snake->lastScore = clock_time_us();
-  snake->score[player] += 1;
-  snake_serve(snake, player);
-  snake_paint_once(snake);
+inline bool get_game_over(Snake* snake) {
+  bool rc = snake->direction == EMPTY;
+  if (rc) { LOG("game over"); }
+  return rc;
+}
+
+inline void set_game_over(Snake* snake) {
+  snake->direction = EMPTY;
+}
+
+void snake_advance_head(Snake *snake) {
+  if (get_game_over(snake)) {
+    return;
+  }
+  Point head = snake->head;
+  Point next_head = add(head, snake->direction);
+  if (!in_bounds(next_head.x, next_head.y)) {
+    LOG("wall collision");
+    set_game_over(snake);
+    return;
+  }
+  if (occupied(&snake->map, next_head)) {
+    LOG("self collision");
+    set_game_over(snake);
+    return;
+  }
+  assert(in_bounds(head.x, head.y));
+  snake->map.cell[head.y][head.x] = snake->direction;
+  snake->head = next_head;
+}
+
+void snake_advance_tail(Snake *snake) {
+  if (get_game_over(snake)) {
+    return;
+  }
+  Point tail = snake->tail;
+  Direction tdir = get_cell(&snake->map, tail.x, tail.y);
+  if (tdir==EMPTY) {
+    // zero-length snake
+    return;
+  }
+  snake->map.cell[tail.y][tail.x] = EMPTY;
+  snake->tail =add(tail, tdir);
 }
 
 void snake_update(Snake *snake) {
-  schedule_us(1000000 / PONG_FREQ, (ActivationFuncPtr)snake_update, snake);
-  if (!snake_is_paused(snake) && snake->focused) {
-    snake_advance_ball(snake);
+  schedule_us(1000000 / SNAKE_FREQ, (ActivationFuncPtr)snake_update, snake);
+  if (snake->focused) {
+    //snake_advance_head(snake);
+    //snake_advance_tail(snake);
   }
   snake_paint_once(snake);
+}
+
+// Returns the direction the snake leaves cell. Out-of-bounds x,y return EMPTY.
+Direction get_cell(Map* map, uint8_t x, uint8_t y) {
+  if (!in_bounds(x, y)) {
+    return EMPTY;
+  }
+  return map->cell[y][x];
 }
 
 void snake_paint_once(Snake *snake) {
@@ -161,41 +154,21 @@ void snake_paint_once(Snake *snake) {
   Screen4 *s4 = snake->s4;
   RectRegion *rrect = &s4->rrect;
   raster_clear_buffers(rrect);
+  Map* map = &snake->map;
 
-  if (snake_is_paused(snake)) {
-    ascii_to_bitmap_str(s4->bbuf[1].buffer + 1, 6, "P0  P1");
-
-    char scoretext[3];
-    int_to_string2(scoretext, 2, 0, snake->score[0] % 100);
-    ascii_to_bitmap_str(s4->bbuf[2].buffer + 1, 2, scoretext);
-
-    int_to_string2(scoretext, 2, 0, snake->score[1] % 100);
-    ascii_to_bitmap_str(s4->bbuf[2].buffer + 5, 2, scoretext);
-  } else {
-    int xo, yo;
-    for (xo = 0; xo < BALLDIA; xo++) {
-      for (yo = 0; yo < BALLDIA; yo++) {
-        raster_paint_pixel(rrect, (snake->x >> PONG_SCALE2) + xo,
-                           (snake->y >> PONG_SCALE2) + yo);
-      }
+  // paint horizontal segments
+  for (uint8_t y=0; y<CANVAS_H; y++) {
+    for (uint8_t x=0; x<CANVAS_W; x++) {
+      uint8_t py = 2*y;
+      uint8_t px = 2*x;
+      raster_paint_pixel_v(rrect, px+1, py,
+        get_cell(map, x, y)==RIGHT || get_cell(map, x+1, y)==LEFT);
+      raster_paint_pixel_v(rrect, px, py+1,
+        get_cell(map, x, y)==DOWN || get_cell(map, x, y+1)==UP);
     }
   }
 
-  snake_paint_paddle(snake, 0, snake->paddley[0]);
-  snake_paint_paddle(snake, 28, snake->paddley[1]);
-
   raster_draw_buffers(rrect);
-}
-
-void snake_paint_paddle(Snake *snake, int x, int y) {
-  RectRegion *rrect = &snake->s4->rrect;
-  raster_paint_pixel(rrect, x + 1, y);
-  raster_paint_pixel(rrect, x + 1, y + PADDLEHEIGHT);
-  int yo;
-  for (yo = 1; yo < PADDLEHEIGHT; yo++) {
-    raster_paint_pixel(rrect, x + 0, y + yo);
-    raster_paint_pixel(rrect, x + 2, y + yo);
-  }
 }
 
 UIEventDisposition snake_event_handler(UIEventHandler *raw_handler,
@@ -206,19 +179,17 @@ UIEventDisposition snake_event_handler(UIEventHandler *raw_handler,
   switch (evt) {
     case '1':
     case 'p':
-      snake->paddley[0] = max(snake->paddley[0] - 2, 0);
+      snake->direction = (snake->direction + 1) % 4;
       break;
     case '4':
     case 'q':
-      snake->paddley[0] = min(snake->paddley[0] + 2, 22 - PADDLEHEIGHT);
+      snake->direction = (snake->direction - 1 + 4) % 4;
       break;
-    case '3':
-    case 'e':
-      snake->paddley[1] = max(snake->paddley[1] - 2, 0);
+    case 'a':
+      snake_advance_head(snake);
       break;
-    case '6':
-    case 'f':
-      snake->paddley[1] = min(snake->paddley[1] + 2, 22 - PADDLEHEIGHT);
+    case 'b':
+      snake_advance_tail(snake);
       break;
     case uie_focus:
       if (!snake->focused) {

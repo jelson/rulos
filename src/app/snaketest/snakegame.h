@@ -20,16 +20,30 @@
 #include "periph/rocket/rocket.h"
 #include "periph/rocket/screen4.h"
 
-#define PONG_HEIGHT 4
-#define PONG_SCALE2 6
-#define PONG_SCALE (1 << PONG_SCALE2)
-#define PONG_FREQ2 5
-#define PONG_FREQ (1 << PONG_FREQ2)
+#define CANVAS_W  16
+#define CANVAS_H  12
 
 typedef struct s_snake_handler {
   UIEventHandlerFunc func;
   struct s_snake *snake;
 } SnakeHandler;
+
+typedef struct s_point {
+  uint8_t x, y;
+} Point;
+
+enum {
+  RIGHT = 0,
+  UP = 1,
+  LEFT = 2,
+  DOWN = 3,
+  EMPTY = 4,
+};
+typedef uint8_t Direction;
+
+typedef struct s_map {
+  Direction cell[CANVAS_H][CANVAS_W];
+} Map;
 
 typedef struct s_snake {
   //	BoardBuffer bbuf[PONG_HEIGHT];
@@ -37,12 +51,13 @@ typedef struct s_snake {
   //	RectRegion rrect;
   Screen4 *s4;
   SnakeHandler handler;
-  int x, y, dx, dy;  // scaled by PONG_SCALE
-  int paddley[2];
-  int score[2];
-  Time lastScore;
-  r_bool focused;
   AudioClient *audioClient;
+  bool focused;
+
+  Map map;
+  Point head;
+  Point tail;
+  Direction direction;
 } Snake;
 
 void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient);
