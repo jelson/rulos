@@ -46,9 +46,6 @@ typedef struct s_map {
 } Map;
 
 typedef struct s_snake {
-  //	BoardBuffer bbuf[PONG_HEIGHT];
-  //	BoardBuffer *btable[PONG_HEIGHT];
-  //	RectRegion rrect;
   Screen4 *s4;
   SnakeHandler handler;
   AudioClient *audioClient;
