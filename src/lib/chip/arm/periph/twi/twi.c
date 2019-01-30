@@ -42,7 +42,7 @@ static void handle_interrupt(I2C_ID_T id) {
   }
 }
 
-void I2C_Handler(void) { handle_interrupt(I2C0); }
+void I2C_IRQHandler(void) { handle_interrupt(I2C0); }
 
 static void twi_send(MediaStateIfc *media, Addr dest_addr,
                      const unsigned char *data, uint8_t len,
@@ -57,9 +57,10 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
   gpio_iocon(GPIO0_04, IOCON_FUNC1 | IOCON_FASTI2C_EN);
   gpio_iocon(GPIO0_05, IOCON_FUNC1 | IOCON_FASTI2C_EN);
   Chip_I2C_Init(I2C0);
-  Chip_I2C_SetClockRate(I2C0, speed_khz);
+  Chip_I2C_SetClockRate(I2C0, speed_khz * 1000);
   Chip_I2C_SetMasterEventHandler(I2C0, Chip_I2C_EventHandler);
   NVIC_EnableIRQ(I2C0_IRQn);
+  LPC_I2C->CONSET = I2C_CON_I2EN;
 
   memset(&g_twi, 0, sizeof(g_twi));
   g_twi.media.send = &twi_send;
