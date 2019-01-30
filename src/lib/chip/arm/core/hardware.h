@@ -22,6 +22,9 @@
 #include "chip/arm/lpc_chip_11cxx_lib/chip.h"
 #include "chip/arm/lpc_chip_11cxx_lib/gpio_11xx_2.h"
 
+void arm_assert(uint32_t line);
+void arm_log(const char *fmt, ...);
+
 /*
  * This silliness is required because the LPC11[UEA]XX do IO Control
  * differently than the other chips in the line. The chip libraries that NXP

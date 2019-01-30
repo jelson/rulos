@@ -14,7 +14,9 @@
  *
  ************************************************************************/
 
+#include "core/hardware.h"
 #include "core/hal.h"
+#include "core/logging.h"
 
 #undef FALSE
 #undef TRUE
@@ -55,4 +57,9 @@ rulos_irq_state_t hal_start_atomic() {
 
 void hal_end_atomic(rulos_irq_state_t old_interrupts) {
   __set_PRIMASK(old_interrupts);
+}
+
+void arm_assert(const uint32_t line) {
+  LOG("assertion failed: line %d", line);
+  __builtin_trap();
 }

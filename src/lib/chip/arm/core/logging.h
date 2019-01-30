@@ -19,12 +19,21 @@
 #include "core/hardware.h"
 #include "core/util.h"
 
+#define assert(x)           \
+  do {                      \
+    if (!(x)) {             \
+      arm_assert(__LINE__); \
+    }                       \
+  } while (0)
+
 #ifdef LOG_TO_SERIAL
 
-#define LOG(fmt, ...)                        \
-  do {                                       \
+#include <stdio.h>
+
+#define LOG(fmt, ...)                \
+  do {                               \
     static const char fmt_p[] = fmt; \
-    arm_log(fmt_p, ##__VA_ARGS__);           \
+    arm_log(fmt_p, ##__VA_ARGS__);   \
   } while (0)
 
 #else  // LOG_TO_SERIAL
@@ -32,19 +41,3 @@
 #define LOG(...)
 
 #endif  // LOG_TO_SERIAL
-
-//arm_assert(__LINE__);
-//    char buf[100];      
-// char *p =NULL;         
-//    sprintf(buf, "hi there %p", p);               
-//*p = buf[0]; 
-
-#include <stdio.h>
-
-#define assert(x)           \
-  do {                      \
-    if (!(x)) {             \
-    do {} while (1); \
-    }                       \
-  } while (0)
-
