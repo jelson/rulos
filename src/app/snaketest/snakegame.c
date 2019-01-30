@@ -25,8 +25,8 @@
 
 // TODO: add snake-advance and snake-turn and snake explosion sounds?
 // TODO: S6? :v)
-// TODO: flashy explosion on failure, or score display
 // TODO: speed up pace as it gets longer?
+// TODO: Blink GameOver message?
 
 void snake_update(Snake *snake);
 UIEventDisposition snake_event_handler(UIEventHandler *raw_handler,
@@ -42,13 +42,15 @@ void snake_exploding_tick(Snake *snake);
 void snake_game_over_tick(Snake *snake);
 
 void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient,
-                uint8_t score_boardnum) {
+                uint8_t score_boardnum, uint8_t status_boardnum) {
   snake->s4 = s4;
   snake->handler.func = (UIEventHandlerFunc)snake_event_handler;
   snake->handler.snake = snake;
   snake->audioClient = audioClient;
   snake->score_boardnum = score_boardnum;
   board_buffer_init(&snake->score_bbuf DBG_BBUF_LABEL("snake score"));
+  snake->status_boardnum = status_boardnum;
+  board_buffer_init(&snake->status_bbuf DBG_BBUF_LABEL("snake status"));
   snake->focused = FALSE;
   snake_reset_game(snake);
 
@@ -266,6 +268,18 @@ void snake_paint_once(Snake *snake) {
     ascii_to_bitmap_str(snake->score_bbuf.buffer, NUM_DIGITS, buf);
     board_buffer_draw(&snake->score_bbuf);
   }
+  switch (snake->mode) {
+    case PLAYING:
+      ascii_to_bitmap_str(snake->status_bbuf.buffer, NUM_DIGITS, "Slither.");
+      break;
+    case EXPLODING:
+      ascii_to_bitmap_str(snake->status_bbuf.buffer, NUM_DIGITS, " Ouch!  ");
+      break;
+    case GAME_OVER:
+      ascii_to_bitmap_str(snake->status_bbuf.buffer, NUM_DIGITS, "GameOver");
+      break;
+  }
+  board_buffer_draw(&snake->status_bbuf);
 }
 
 void snake_turn(Snake *snake, int8_t dir) {
@@ -305,6 +319,7 @@ UIEventDisposition snake_event_handler(UIEventHandler *raw_handler,
       if (!snake->focused) {
         s4_show(snake->s4);
         board_buffer_push(&snake->score_bbuf, snake->score_boardnum);
+        board_buffer_push(&snake->status_bbuf, snake->status_boardnum);
       }
       snake->focused = TRUE;
       break;
@@ -312,6 +327,7 @@ UIEventDisposition snake_event_handler(UIEventHandler *raw_handler,
       if (snake->focused) {
         s4_hide(snake->s4);
         board_buffer_pop(&snake->score_bbuf);
+        board_buffer_pop(&snake->status_bbuf);
       }
       snake->focused = FALSE;
       result = uied_blur;

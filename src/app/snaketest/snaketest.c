@@ -19,18 +19,18 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "../app/snaketest/snakegame.h"  // TODO move into lib
 #include "core/board_defs.h"
 #include "core/clock.h"
 #include "core/cpumon.h"
 #include "core/hal.h"
 #include "core/network.h"
 #include "core/util.h"
-#include "periph/rasters/rasters.h"
-#include "../app/snaketest/snakegame.h" // TODO move into lib
-#include "periph/uart/uart.h"
-#include "periph/audio/audio_client.h"
 #include "periph/7seg_panel/7seg_panel.h"
+#include "periph/audio/audio_client.h"
 #include "periph/input_controller/input_controller.h"
+#include "periph/rasters/rasters.h"
+#include "periph/uart/uart.h"
 
 /****************************************************************************/
 
@@ -84,12 +84,14 @@ int main() {
   init_screen4(&s4, board0);
 
   direct_injector_t injector;
-  injector.injector_func = (InputInjectorFunc) cp_inject;
+  injector.injector_func = (InputInjectorFunc)cp_inject;
   InputPollerAct ip;
-  input_poller_init(&ip, (InputInjectorIfc *)&injector);    // TODO pass keystrokes straight to snake
-  snake_init(&snake, &s4, &audio_client, 2);
+  input_poller_init(
+      &ip,
+      (InputInjectorIfc *)&injector);  // TODO pass keystrokes straight to snake
+  snake_init(&snake, &s4, &audio_client, 2, 1);
 
-  snake.handler.func((UIEventHandler *) &snake.handler, uie_focus);  // EWW
+  snake.handler.func((UIEventHandler *)&snake.handler, uie_focus);  // EWW
   cpumon_main_loop();
 
   return 0;
