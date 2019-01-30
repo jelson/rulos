@@ -52,7 +52,9 @@ typedef struct s_snake {
   Screen4 *s4;
   SnakeHandler handler;
   AudioClient *audioClient;
+  uint8_t score_boardnum;
   bool focused;
+  BoardBuffer score_bbuf;
 
   Map map;
   Point head;
@@ -61,8 +63,8 @@ typedef struct s_snake {
 
   uint8_t ticks_per_grow;
   uint8_t grow_clock;
-  uint8_t goal_length;
-  uint8_t length;
+  uint16_t goal_length;
+  uint16_t length;
 } Snake;
 
-void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient);
+void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient, uint8_t score_boardnum);

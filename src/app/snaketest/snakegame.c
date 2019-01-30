@@ -30,11 +30,13 @@ Direction get_cell(Map* map, uint8_t x, uint8_t y);
 void snake_advance_head(Snake *snake);
 void snake_advance_tail(Snake *snake);
 
-void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient) {
+void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient, uint8_t score_boardnum) {
   snake->s4 = s4;
   snake->handler.func = (UIEventHandlerFunc)snake_event_handler;
   snake->handler.snake = snake;
   snake->audioClient = audioClient;
+  snake->score_boardnum = score_boardnum;
+  board_buffer_init(&snake->score_bbuf DBG_BBUF_LABEL("snake score"));
   snake->focused = FALSE;
   snake_reset_game(snake);
 
@@ -196,6 +198,14 @@ void snake_paint_once(Snake *snake) {
   }
 
   raster_draw_buffers(rrect);
+
+  // Paint the score.
+  {
+    char buf[16], *p = buf;
+    p += int_to_string2(p, NUM_DIGITS, 1, snake->length);
+    ascii_to_bitmap_str(snake->score_bbuf.buffer, NUM_DIGITS, buf);
+    board_buffer_draw(&snake->score_bbuf);
+  }
 }
 
 UIEventDisposition snake_event_handler(UIEventHandler *raw_handler,
@@ -221,12 +231,14 @@ UIEventDisposition snake_event_handler(UIEventHandler *raw_handler,
     case uie_focus:
       if (!snake->focused) {
         s4_show(snake->s4);
+        board_buffer_push(&snake->score_bbuf, snake->score_boardnum);
       }
       snake->focused = TRUE;
       break;
     case uie_escape:
       if (snake->focused) {
         s4_hide(snake->s4);
+        board_buffer_pop(&snake->score_bbuf);
       }
       snake->focused = FALSE;
       result = uied_blur;

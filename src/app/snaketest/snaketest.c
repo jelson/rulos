@@ -87,7 +87,7 @@ int main() {
   injector.injector_func = (InputInjectorFunc) cp_inject;
   InputPollerAct ip;
   input_poller_init(&ip, (InputInjectorIfc *)&injector);    // TODO pass keystrokes straight to snake
-  snake_init(&snake, &s4, &audio_client);
+  snake_init(&snake, &s4, &audio_client, 2);
 
   snake.handler.func((UIEventHandler *) &snake.handler, uie_focus);  // EWW
   cpumon_main_loop();
