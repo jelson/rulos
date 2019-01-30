@@ -108,18 +108,21 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
 
   int x_origin = g_sim_theTree[board].x + (digit)*DIGIT_WIDTH;
   int y_origin = g_sim_theTree[board].y + 1;
-  int i;
 
   x_origin += segment_defs[segment].xoff;
   y_origin += segment_defs[segment].yoff;
 
-  attron(A_BOLD);
-  wcolor_set(curses_get_window(), g_sim_theTree[board].colors[digit], NULL);
   if (onoff) {
+    attron(A_BOLD);
+    wcolor_set(curses_get_window(), g_sim_theTree[board].colors[digit], NULL);
     mvwprintw(curses_get_window(), y_origin, x_origin, segment_defs[segment].s);
   } else {
-    for (i = strlen(segment_defs[segment].s); i; i--)
-      mvwprintw(curses_get_window(), y_origin, x_origin + i - 1, " ");
+    attroff(A_BOLD);
+    wcolor_set(curses_get_window(), PAIR_WHITE, NULL);
+    mvwprintw(curses_get_window(), y_origin, x_origin, segment_defs[segment].s);
+//    for (int i = strlen(segment_defs[segment].s); i; i--) {
+//      mvwprintw(curses_get_window(), y_origin, x_origin + i - 1, " ");
+//    }
   }
 
   wrefresh(curses_get_window());
