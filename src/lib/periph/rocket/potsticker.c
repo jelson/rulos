@@ -49,7 +49,7 @@ void ps_update(PotSticker *ps) {
   program_board(2, bm);
 #endif  // DEBUG_BRUTE_DISPLAY
 
-  schedule_us(10000, (ActivationFuncPtr)ps_update, ps);
+  schedule_us(50000, (ActivationFuncPtr)ps_update, ps);
 }
 
 void init_potsticker(PotSticker *ps, uint8_t adc_channel, InputInjectorIfc *ifi,
