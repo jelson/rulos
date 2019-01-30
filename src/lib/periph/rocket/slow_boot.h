@@ -19,7 +19,7 @@
 #include "periph/audio/audio_client.h"
 #include "periph/rocket/screenblanker.h"
 
-#define SLOW_MAX_BUFFERS 7
+#define SLOW_MAX_BUFFERS NUM_TOTAL_BOARDS
 
 //#define BORROW_SCREENBLANKER_BUFS 1
 
