@@ -172,12 +172,35 @@ STATIC I2C_SLAVE_ID lookupSlaveIndex(LPC_I2C_T *pI2C, uint8_t slaveAddr)
 	return I2C_SLAVE_GENERAL;
 }
 
+// jelson addition
+#define INTLOG_SIZE 10
+static volatile uint32_t intlog[10];
+static uint32_t num_log_entries = 0;
+static uint32_t last_log_index = 0;
+
+void init_intlog() {
+	for (int i = 0; i < INTLOG_SIZE; i++) {
+		intlog[i] = 0;
+	}
+	num_log_entries = 0;
+	last_log_index = 0;
+}
+
 /* Master transfer state change handler handler */
 int handleMasterXferState(LPC_I2C_T *pI2C, I2C_XFER_T  *xfer)
 {
 	uint32_t cclr = I2C_CON_FLAGS;
 
-	switch (getCurState(pI2C)) {
+	uint32_t curr_state = getCurState(pI2C);
+
+	// jelson addition
+	num_log_entries++;
+	intlog[last_log_index++] = curr_state;
+	if (last_log_index == INTLOG_SIZE) {
+		last_log_index = 0;
+	}
+	
+	switch (curr_state) {
 	case 0x08:		/* Start condition on bus */
 	case 0x10:		/* Repeated start condition */
 		pI2C->DAT = (xfer->slaveAddr << 1) | (xfer->txSz == 0);
@@ -413,6 +436,8 @@ I2C_EVENTHANDLER_T Chip_I2C_GetMasterEventHandler(I2C_ID_T id)
 /* Transmit and Receive data in master mode */
 int Chip_I2C_MasterTransfer(I2C_ID_T id, I2C_XFER_T *xfer)
 {
+	init_intlog();
+	
 	struct i2c_interface *iic = &i2c[id];
 
 	iic->mEvent(id, I2C_EVENT_LOCK);
@@ -436,6 +461,15 @@ int Chip_I2C_MasterTransfer(I2C_ID_T id, I2C_XFER_T *xfer)
 
 	iic->mEvent(id, I2C_EVENT_UNLOCK);
 	return (int) xfer->status;
+}
+
+// jelson addition
+void Chip_I2C_MasterSend_Nonblocking(I2C_ID_T id, I2C_XFER_T *mXfer)
+{
+	init_intlog();
+	struct i2c_interface *iic = &i2c[id];
+	iic->mXfer = mXfer;
+	startMasterXfer(iic->ip);
 }
 
 /* Master tx only */
@@ -485,6 +519,10 @@ int Chip_I2C_IsMasterActive(I2C_ID_T id)
 void Chip_I2C_MasterStateHandler(I2C_ID_T id)
 {
 	if (!handleMasterXferState(i2c[id].ip, i2c[id].mXfer)) {
+		// jelson addition. Makes more sense here, I'm not
+		// sure why they put it in the "Event handler".
+		i2c[id].mXfer = 0;
+
 		i2c[id].mEvent(id, I2C_EVENT_DONE);
 	}
 }
@@ -548,6 +586,19 @@ void Chip_I2C_Disable(I2C_ID_T id)
 int Chip_I2C_IsStateChanged(I2C_ID_T id)
 {
 	return (LPC_I2Cx(id)->CONSET & I2C_CON_SI) != 0;
+}
+
+// jelson addition
+void Chip_I2C_BusReset(I2C_ID_T id)
+{
+	struct i2c_interface *iic = &i2c[id];
+
+	LPC_I2Cx(id)->CONSET = I2C_CON_STO;
+
+	if (iic->mXfer != 0) {
+		iic->mXfer = 0;
+		i2c[id].mEvent(id, I2C_EVENT_DONE);
+	}
 }
 
 #endif /* !defined(CHIP_LPC110X) */
