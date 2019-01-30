@@ -58,6 +58,11 @@ typedef struct s_snake {
   Point head;
   Point tail;
   Direction direction;
+
+  uint8_t ticks_per_grow;
+  uint8_t grow_clock;
+  uint8_t goal_length;
+  uint8_t length;
 } Snake;
 
 void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient);

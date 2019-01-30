@@ -19,13 +19,16 @@
 #include "periph/rasters/rasters.h"
 #include "periph/rocket/sound.h"
 
-#define SNAKE_FREQ 15
+#define SNAKE_FREQ 8
 
 void snake_update(Snake *snake);
 UIEventDisposition snake_event_handler(UIEventHandler *raw_handler, UIEvent evt);
 void snake_paint_once(Snake *snake);
 void snake_init_map(Map* map);
+void snake_reset_game(Snake *snake);
 Direction get_cell(Map* map, uint8_t x, uint8_t y);
+void snake_advance_head(Snake *snake);
+void snake_advance_tail(Snake *snake);
 
 void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient) {
   snake->s4 = s4;
@@ -33,15 +36,21 @@ void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient) {
   snake->handler.snake = snake;
   snake->audioClient = audioClient;
   snake->focused = FALSE;
-
-  snake_init_map(&snake->map);
-  snake->head.x = CANVAS_W/2;
-  snake->head.y = CANVAS_H/2;
-  snake->tail.x = CANVAS_W/2;
-  snake->tail.y = CANVAS_H/2;
-  snake->direction = UP;
+  snake_reset_game(snake);
 
   schedule_us(1, (ActivationFuncPtr)snake_update, snake);
+}
+
+void snake_reset_game(Snake *snake) {
+  snake_init_map(&snake->map);
+  snake->head.x = CANVAS_W/4;
+  snake->head.y = CANVAS_H/2;
+  snake->tail = snake->head;
+  snake->direction = RIGHT;
+  snake->ticks_per_grow = 6;
+  snake->grow_clock = snake->ticks_per_grow;
+  snake->goal_length = 4;
+  snake->length = 0;
 }
 
 void snake_init_map(Map* map) {
@@ -85,12 +94,27 @@ inline bool occupied(Map* map, Point a) {
 
 inline bool get_game_over(Snake* snake) {
   bool rc = snake->direction == EMPTY;
-  if (rc) { LOG("game over"); }
+  //if (rc) { LOG("game over\n"); }
   return rc;
 }
 
 inline void set_game_over(Snake* snake) {
   snake->direction = EMPTY;
+  snake_reset_game(snake);  //XXX
+}
+
+void snake_tick(Snake *snake) {
+  snake->grow_clock--;
+  if (snake->grow_clock == 0) {
+    snake->grow_clock = snake->ticks_per_grow;
+    snake->goal_length++;
+  }
+
+  snake_advance_head(snake);
+  if (snake->length > snake->goal_length) {
+    snake_advance_tail(snake);
+  }
+  //LOG("grow clock %d length %d goal %d\n", snake->grow_clock, snake->length, snake->goal_length);
 }
 
 void snake_advance_head(Snake *snake) {
@@ -100,18 +124,20 @@ void snake_advance_head(Snake *snake) {
   Point head = snake->head;
   Point next_head = add(head, snake->direction);
   if (!in_bounds(next_head.x, next_head.y)) {
-    LOG("wall collision");
+    //LOG("wall collision\n");
     set_game_over(snake);
     return;
   }
   if (occupied(&snake->map, next_head)) {
-    LOG("self collision");
+    //LOG("self collision\n");
     set_game_over(snake);
     return;
   }
   assert(in_bounds(head.x, head.y));
   snake->map.cell[head.y][head.x] = snake->direction;
   snake->head = next_head;
+  snake->length++;
+  //LOG("grow\n");
 }
 
 void snake_advance_tail(Snake *snake) {
@@ -126,13 +152,14 @@ void snake_advance_tail(Snake *snake) {
   }
   snake->map.cell[tail.y][tail.x] = EMPTY;
   snake->tail =add(tail, tdir);
+  snake->length--;
+  //LOG("shrink\n");
 }
 
 void snake_update(Snake *snake) {
   schedule_us(1000000 / SNAKE_FREQ, (ActivationFuncPtr)snake_update, snake);
   if (snake->focused) {
-    //snake_advance_head(snake);
-    //snake_advance_tail(snake);
+    snake_tick(snake);
   }
   snake_paint_once(snake);
 }
