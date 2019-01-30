@@ -69,9 +69,9 @@ void calculator_init(Calculator *calc, int board0, FocusManager *fa,
   schedule_us(1, (ActivationFuncPtr)calculator_timeout_func, calc);
 }
 
-const char *err_overflow = "Ovrf";
-const char *err_divzero = "div0";
-const char *err_negative = "Neg ";
+const char err_overflow[] = "Ovrf";
+const char err_divzero[] = "div0";
+const char err_negative[] = "Neg ";
 
 UIEventDisposition calculator_notify(UIEventHandler *notify, UIEvent evt) {
   Calculator *calc = (Calculator *)notify;
