@@ -20,8 +20,8 @@
 #include "periph/rocket/rocket.h"
 #include "periph/rocket/screen4.h"
 
-#define CANVAS_W  16
-#define CANVAS_H  12
+#define CANVAS_W 16
+#define CANVAS_H 12
 
 typedef struct s_snake_handler {
   UIEventHandlerFunc func;
@@ -45,6 +45,13 @@ typedef struct s_map {
   Direction cell[CANVAS_H][CANVAS_W];
 } Map;
 
+enum {
+  PLAYING = 0,
+  EXPLODING = 1,
+  GAME_OVER = 2,
+};
+typedef uint8_t Mode;
+
 typedef struct s_snake {
   Screen4 *s4;
   SnakeHandler handler;
@@ -58,10 +65,13 @@ typedef struct s_snake {
   Point tail;
   Direction direction;
 
-  uint8_t ticks_per_grow;
+  uint8_t move_clock;
   uint8_t grow_clock;
   uint16_t goal_length;
   uint16_t length;
+  Mode mode;
+  uint8_t explosion_radius;  // during game-over animation
 } Snake;
 
-void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient, uint8_t score_boardnum);
+void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient,
+                uint8_t score_boardnum);
