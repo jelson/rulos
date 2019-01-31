@@ -15,7 +15,7 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := arm avr
-ARM_CHIP_FAMILY := 11xx
+ARM_CHIP := lpc1114-102
 MCU := atmega328p
 TARGET := nulltest
 BOARD := GENERIC

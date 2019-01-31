@@ -16,7 +16,7 @@ ROCKET_ROOT := ../..
 
 PLATFORMS := sim
 PERIPHERALS := rocket 7seg_panel twi display_rtc hpam audio adc rasters joystick uart input_controller remote_keyboard
-AVR_CFLAGS := -DLOG_TO_SERIAL=UART0
+ALL_PLATFORM_CFLAGS := -DLOG_TO_SERIAL=UART0
 
 ## SIM CFLAGS can be one of:
 ## -DBOARDCONFIG_UNIROCKET_LOCALSIM, to view boards in local sim
@@ -33,7 +33,7 @@ AVR_CFLAGS += -DBOARDCONFIG_UNIROCKET
 
 ## Uncomment this block for ARM test
 #PLATFORMS += arm
-#ARM_CHIP_FAMILY := 11xx
+#ARM_CHIP := lpc1114-102
 #ARM_CFLAGS += -DBOARDCONFIG_UNIROCKET
 #BOARD := ARMPEM_REVA
 

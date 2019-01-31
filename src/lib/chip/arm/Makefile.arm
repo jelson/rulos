@@ -37,7 +37,7 @@ ARM_SOURCES += $(foreach periph, $(PERIPHERALS), $(wildcard $(ARM_LIB_ROOT)/peri
 ARM_SOURCES += $(ALL_PLATFORM_SOURCES)
 ARM_INCLUDES += $(ALL_PLATFORM_INCLUDES)
 
-ARM_ARCHTARG := $(TARGET).arm-$(ARM_CHIP_FAMILY).$(BOARD)
+ARM_ARCHTARG := $(TARGET).arm-$(ARM_CHIP).$(BOARD)
 
 # Compilation
 ARM_OBJDIR = obj.$(ARM_ARCHTARG)
@@ -48,48 +48,88 @@ ARM_GCC_PREFIX = $(ARM_COMPILER_BINDIR)/arm-none-eabi
 CURR_OBJDIR := $(ARM_OBJDIR)
 -include $(foreach dir, $(sort $(dir $(ARM_SOURCES))), $(wildcard $(dir)/Makefile.extra))
 
-#####################################################################################
-#####################################################################################
+###############################################################################
+###############################################################################
 
-STACK_SIZE ?= 0x180
+STACK_SIZE ?= 0x200
 HEAP_SIZE ?= 0x0
 
-ifeq ($(ARM_CHIP_FAMILY),11xx)
-ARM_ARCH = armv6-m
-ARM_CPU = cortex-m0
-ARM_MX = M0
-ARM_CHIP ?= CHIP_LPC11CXX
-ARM_FLASHK ?= 32
-ARM_RAMK ?= 8
-ARM_STARTUP ?= $(ARM_OBJDIR)/lib/chip/arm/startup/startup_ARMC$(ARM_MX).o
-ARM_SOURCES += $(wildcard $(ARM_LIB_ROOT)/lpc_chip_11cxx_lib/*.c)
-ARM_INCLUDES += -I$(ARM_LIB_ROOT)/lpc_chip_11cxx_lib -I$(ARM_LIB_ROOT)/core
+ifeq ($(ARM_CHIP),lpc1114-102)
+ARM_CHIP_FAMILY := CHIP_LPC11CXX
+ARM_FLASHK := 32
+ARM_RAMK := 4
+ARM_MX := M0
 endif
 
-ifeq ($(ARM_CHIP_FAMILY),13xx)
+ifeq ($(ARM_CHIP),lpc11u67jbd48)
+ARM_CHIP_FAMILY := CHIP_LPC11U6X
+ARM_FLASHK := 128
+ARM_RAMK := 16
+ARM_MX := M0PLUS
+endif
+
+ifeq ($(ARM_CHIP),lpc1343)
+ARM_CHIP_FAMILY := CHIP_LPC13XX
+ARM_FLASHK := 32
+ARM_RAMK := 8
+ARM_MX := M3
+endif
+
+######################################################################
+
+ifeq ($(ARM_MX),M0)
+ARM_GCC_ARCH = armv6-m
+ARM_GCC_CPU = cortex-m0
+endif
+ifeq ($(ARM_MX),M0PLUS)
+ARM_GCC_ARCH = armv6-m
+ARM_GCC_CPU = cortex-m0plus
+endif
+ifeq ($(ARM_MX),M3)
 ARM_ARCH = armv7-m
 ARM_CPU = cortex-m3
-ARM_MX = M3
-ARM_CHIP ?= CHIP_LPC1343
-ifeq ($(ARM_CHIP),CHIP_LPC1347)
-ARM_FLASHK ?= 64
-ARM_RAMK ?= 8
-endif
-ARM_FLASHK ?= 32
-ARM_RAMK ?= 8
 endif
 
-ifeq ($(ARM_CHIP_FAMILY),17xx_40xx)
-ARM_ARCH = armv7-m
-ARM_CPU = cortex-m3
-ARM_MX = M3
-ARM_CHIP ?= CHIP_LPC175X_6X
-ARM_FLASHK ?= 512
-ARM_RAMK ?= 64
+ARM_CPUTYPE_FLAGS := -mcpu=$(ARM_GCC_CPU) -mthumb -march=$(ARM_GCC_ARCH)
+ARM_CPUTYPE_FLAGS += -DCORE_$(ARM_MX)=1 -D$(ARM_CHIP_FAMILY)=1
+
+ifeq ($(ARM_CHIP_FAMILY),CHIP_LPC11CXX)
+ARM_STARTUP := startup_ARMCM0.o
+ARM_DRIVER_LIB := lpc_chip_11cxx_lib
 endif
 
-ARM_CORE := CORE_$(ARM_MX)
-ARM_CPUTYPE_FLAGS := -mcpu=$(ARM_CPU) -mthumb -march=$(ARM_ARCH) -D$(ARM_CORE)=1 -D$(ARM_CHIP)=1
+ARM_CFLAGS += -I$(ARM_LIB_ROOT)/$(ARM_DRIVER_LIB)
+ARM_SOURCES += $(wildcard $(ARM_LIB_ROOT)/$(ARM_DRIVER_LIB)/*.c)
+
+#######################################################################
+# Make sure ARM_CHIP_FAMILY is defined
+.PHONY: arm-mcu-defined-check
+
+arm-mcu-defined-check:
+ifeq ($(ARM_CHIP),)
+	@echo "ARM_CHIP must be defined in your local Makefile (lpc1114/102, for example)"
+	@false
+else
+	@true
+endif
+ifeq ($(ARM_MX),)
+	@echo "Unknown ARM_CHIP. Modify definitions in lib/chip/arm/Makefile.arm."
+	@false
+else
+	@true
+endif
+ifeq ($(ARM_STARTUP),)
+	@echo "Unknown ARM_CHIP_FAMILY $(ARM_CHIP_FAMILY). Modify definitions in lib/chip/arm/Makefile.arm."
+	@false
+else
+	@true
+endif
+ifeq ($(BOARD),)
+	@echo "BOARD must be defined in your local Makefile (LPEM, GENERIC, etc)"
+	@false
+else
+	@true
+endif
 
 ## Options common to compile, link and assembly rules
 ARM_COMMON_FLAGS = -Wall -Werror -DRULOS_ARM --specs=nano.specs
@@ -124,28 +164,6 @@ ARM_LDFLAGS += $(EXTRA_ARM_LDFLAGS)
 ## Intel Hex file production flags
 HEX_FLASH_FLAGS = -R .eeprom -R .fuse -R .lock -R .signature
 
-HEX_EEPROM_FLAGS = -j .eeprom
-HEX_EEPROM_FLAGS += --set-section-flags=.eeprom="alloc,load"
-HEX_EEPROM_FLAGS += --change-section-lma .eeprom=0 --no-change-warnings
-
-# Make sure ARM_CHIP_FAMILY is defined
-.PHONY: mcu-defined-check
-
-arm-mcu-defined-check:
-ifeq ($(ARM_CHIP_FAMILY),)
-	@echo "ARM_CHIP_FAMILY must be defined in your local Makefile (11xx, 13xx)"
-	@false
-else
-	@true
-endif
-ifeq ($(BOARD),)
-	@echo "BOARD must be defined in your local Makefile (PCB10, PCB11, CUSTOM)"
-	@false
-else
-	@true
-endif
-
-
 ## Build
 arm-all: arm-mcu-defined-check $(ARM_ARCHTARG).elf $(ARM_ARCHTARG).hex $(ARM_ARCHTARG).lss $(ARM_ARCHTARG).size
 
@@ -167,7 +185,7 @@ $(ARM_LIB_FILE): $(ARM_LIB_OBJECTS)
 
 # TARGET_OBJECTS comes from the app's Makefile
 ARM_TARGET_OBJECTS := $(patsubst %.o,$(ARM_OBJDIR)/app/%.o, $(TARGET_OBJECTS))
-ARM_TARGET_OBJECTS += $(ARM_STARTUP)
+ARM_TARGET_OBJECTS += $(ARM_OBJDIR)/lib/chip/arm/startup/$(ARM_STARTUP)
 
 ##Link
 $(ARM_ARCHTARG).elf: $(ARM_LIB_FILE) $(ARM_TARGET_OBJECTS)
@@ -177,7 +195,10 @@ $(ARM_ARCHTARG).hex: $(ARM_ARCHTARG).elf
 	$(ARM_GCC_PREFIX)-objcopy -O ihex $(HEX_FLASH_FLAGS)  $< $@
 
 # removed dependency from arm-all to: $(ARM_ARCHTARG).eep
-# Holdover from the AVR toolchain to generate some sort of eeprom file?
+# Holdover from the AVR toolchain to generate eeprom file
+#HEX_EEPROM_FLAGS = -j .eeprom
+#HEX_EEPROM_FLAGS += --set-section-flags=.eeprom="alloc,load"
+#HEX_EEPROM_FLAGS += --change-section-lma .eeprom=0 --no-change-warnings
 #$(ARM_ARCHTARG).eep: $(ARM_ARCHTARG).elf
 #	$(ARM_GCC_PREFIX)-objcopy $(HEX_EEPROM_FLAGS) -O ihex $< $@ || exit 0
 
@@ -187,7 +208,6 @@ $(ARM_ARCHTARG).lss: $(ARM_ARCHTARG).elf
 .PHONY:
 $(ARM_ARCHTARG).size: $(ARM_ARCHTARG).elf
 	@echo
-#	@avr-size -C --mcu=${MCU} $(ARM_ARCHTARG).elf
 	$(ARM_GCC_PREFIX)-size $(ARM_ARCHTARG).elf
 
 ## Clean target

@@ -33,16 +33,16 @@ SIM_CFLAGS := -DBOARDCONFIG_ROCKET0
 #PERIPHERALS += 7seg_panel_hardware keypad
 
 ## Uncomment this block for LPEM2 with remote bbufs
-PLATFORMS += avr
-MCU := atmega1284
-BOARD := LPEM2
-AVR_CFLAGS := -DBOARDCONFIG_NETROCKET
+#PLATFORMS += avr
+#MCU := atmega1284
+#BOARD := LPEM2
+#AVR_CFLAGS := -DBOARDCONFIG_NETROCKET
 
 ## Uncomment this block for test rocket on ARM
-#PLATFORMS += arm
-#ARM_CHIP_FAMILY := 11xx
-#ARM_CFLAGS := -DBOARDCONFIG_NETROCKET
-#BOARD := ARMPEM_REVA
+PLATFORMS += arm
+ARM_CHIP := lpc1114-102
+ARM_CFLAGS := -DBOARDCONFIG_NETROCKET
+BOARD := ARMPEM_REVA
 
 ##################################
 
