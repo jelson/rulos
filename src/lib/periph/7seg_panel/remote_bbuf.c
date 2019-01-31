@@ -72,17 +72,15 @@ int rbs_find_changed_index(RemoteBBufSend *rbs) {
   { remote_addr, remote_idx }
 #define B_NO_BOARD /**/
 #define B_END      /**/
-// Yeah it's a little gross; remote_bbuf depends on rocket. Refactor if you
-// want to use it elsewhere!
 #include "periph/7seg_panel/display_tree.ch"
 
 typedef struct {
   uint8_t remote_addr;
   uint8_t remote_index;
 } RemoteMapping;
-RemoteMapping remote_mapping_def[] = {ROCKET_TREE},
-              *remote_mapping = remote_mapping_def;
-int remote_mapping_count = sizeof(remote_mapping_def) / sizeof(RemoteMapping);
+static const RemoteMapping remote_mapping[] = {ROCKET_TREE};
+
+int remote_mapping_count = sizeof(remote_mapping) / sizeof(RemoteMapping);
 
 // This thread looks for a board that has been changed since we last sent it,
 // and transmits it. It finds boards round-robin to avoid starvation. It runs
@@ -109,7 +107,7 @@ void rbs_update(RemoteBBufSend *rbs) {
 #endif
 
   // send a packet for this changed line
-  RemoteMapping *mapping = &remote_mapping[index];
+  const RemoteMapping *mapping = &remote_mapping[index];
   rbs->sendSlot.dest_addr = DONGLE_BASE_ADDR + mapping->remote_addr;
   rbs->sendSlot.msg->dest_port = REMOTE_BBUF_PORT;
   rbs->sendSlot.msg->payload_len = sizeof(BBufMessage);
