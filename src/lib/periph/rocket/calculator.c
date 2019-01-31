@@ -19,6 +19,8 @@
 #include "periph/rocket/calculator.h"
 #include "periph/rocket/rocket.h"
 
+//#define LOG_CALC 1
+
 enum { op_add = 0, op_sub = 1, op_mul = 2, op_div = 3 };
 const char *operator_strs[] = {"add", "sub", "mul", "div"};
 
@@ -88,8 +90,10 @@ UIEventDisposition calculator_notify_internal(Calculator *calc, UIEvent evt) {
   const char *error = NULL;
   DecimalFloatingPoint op0 = calc->operands[0].cur_value;
   DecimalFloatingPoint op1 = calc->operands[1].cur_value;
-  //	LOG("start  op0 %3de%d o1 %3de%d",
-  //		op0.mantissa, op0.neg_exponent, op1.mantissa, op1.neg_exponent);
+#if LOG_CALC
+  LOG("start  op0 %3de%d o1 %3de%d", op0.mantissa, op0.neg_exponent,
+      op1.mantissa, op1.neg_exponent);
+#endif
   uint32_t mantissa = 0;
   switch (calc->op.selected) {
     case op_mul: {
@@ -114,8 +118,9 @@ UIEventDisposition calculator_notify_internal(Calculator *calc, UIEvent evt) {
       mantissa /= ((uint32_t)op1.mantissa);
       out.neg_exponent = op0.neg_exponent;
 
-      //			LOG("div  out %3de%d",
-      //				out.mantissa, out.neg_exponent);
+#if LOG_CALC
+      LOG("div  out %3de%d", out.mantissa, out.neg_exponent);
+#endif
       break;
     }
     case op_add:
@@ -135,9 +140,10 @@ UIEventDisposition calculator_notify_internal(Calculator *calc, UIEvent evt) {
         m0 *= 10;
         op0.neg_exponent += 1;
       }
-      //			LOG("setup2 op0 %3de%d o1 %3de%d",
-      //				m0, op0.neg_exponent, m1,
-      // op1.neg_exponent);
+#if LOG_CALC
+      LOG("setup2 op0 %3de%d o1 %3de%d", m0, op0.neg_exponent, m1,
+          op1.neg_exponent);
+#endif
       assert(op0.neg_exponent == op1.neg_exponent);
       // swap mantissas back so subtraction makes sense
       if (swapped) {
@@ -161,8 +167,9 @@ UIEventDisposition calculator_notify_internal(Calculator *calc, UIEvent evt) {
       out.neg_exponent = op0.neg_exponent;
     }
   }
-  //	LOG("after  op0 %3de%d",
-  //		mantissa, out.neg_exponent);
+#if LOG_CALC
+  LOG("after  op0 %3de%d", mantissa, out.neg_exponent);
+#endif
   // shift away digits until mantissa is legal
   while (mantissa >> 16) {
     if (out.neg_exponent == 0) {
@@ -172,11 +179,13 @@ UIEventDisposition calculator_notify_internal(Calculator *calc, UIEvent evt) {
     mantissa /= 10;
     out.neg_exponent -= 1;
 
-    //		LOG("16bit  op0 %3de%d",
-    //			mantissa, out.neg_exponent);
+#if LOG_CALC
+    LOG("16bit  op0 %3de%d", mantissa, out.neg_exponent);
+#endif
   }
-  //	LOG("cleanup op0 %3de%d",
-  //			mantissa, out.neg_exponent);
+#if LOG_CALC
+  LOG("cleanup op0 %3de%d", mantissa, out.neg_exponent);
+#endif
   out.mantissa = mantissa;
   // now shift away significant digits until it can be represented
   while (dfp_draw(&out, NULL, 4, FALSE) > 4) {
@@ -186,8 +195,9 @@ UIEventDisposition calculator_notify_internal(Calculator *calc, UIEvent evt) {
     }
     out.mantissa /= 10;
     out.neg_exponent -= 1;
-    //		LOG("4char  op0 %3de%d",
-    //			out.mantissa, out.neg_exponent);
+#if LOG_CALC
+    LOG("4char  op0 %3de%d", out.mantissa, out.neg_exponent);
+#endif
   }
 
 done:
@@ -208,14 +218,18 @@ done:
 void calculator_timeout_func(Calculator *calc) {
   schedule_us(DECORATION_UPDATE_INTERVAL,
               (ActivationFuncPtr)calculator_timeout_func, calc);
-  //	LOG("calc: calculator_timeout_func");
+#if LOG_CALC
+  LOG("calc: calculator_timeout_func");
+#endif
 
   if (focus_is_active(&calc->focus)) {
     // focus means activity.
     calc->decorationTimeout.last_activity = clock_time_us();
   } else if (later_than(clock_time_us(), calc->decorationTimeout.last_activity +
                                              DECORATION_TIMEOUT)) {
-    //		LOG("calc: timed out");
+#if LOG_CALC
+    LOG("calc: timed out");
+#endif
     // update last_activity to keep it from rolling over
     calc->decorationTimeout.last_activity =
         clock_time_us() - DECORATION_TIMEOUT - 1;
