@@ -39,6 +39,8 @@ typedef struct {
 
 static TwiState g_twi;
 
+#define MASTER_ACTIVE(twi) ((twi)->send_done_cb != NULL)
+
 static void handle_interrupt(I2C_ID_T id) {
   if (Chip_I2C_IsMasterActive(id)) {
     Chip_I2C_MasterStateHandler(id);
@@ -60,7 +62,7 @@ static void master_event_handler(I2C_ID_T id, I2C_EVENT_T event) {
   TwiState *twi = &g_twi;
 
   if (event == I2C_EVENT_DONE) {
-    assert(twi->send_done_cb != NULL);
+    assert(MASTER_ACTIVE(twi));
 
     // NB: send_done_cb must be nulled before the callback runs, since
     // the callback is likely to want to send another packet. But,
@@ -83,7 +85,7 @@ static void twi_send(MediaStateIfc *media, Addr dest_addr,
   // id here.
   TwiState *twi = &g_twi;
 
-  assert(twi->send_done_cb == NULL);
+  assert(!MASTER_ACTIVE(twi));
   assert(send_done_cb != NULL);
 
   twi->send_done_cb = send_done_cb;

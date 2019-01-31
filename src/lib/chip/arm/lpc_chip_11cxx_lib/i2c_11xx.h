@@ -533,7 +533,6 @@ int Chip_I2C_IsStateChanged(I2C_ID_T id);
 /**
  * jelson additions
  */
-void Chip_I2C_BusReset(I2C_ID_T id);
 void Chip_I2C_MasterSend_Nonblocking(I2C_ID_T id, I2C_XFER_T *mXfer);
 
 #endif /* !defined(CHIP_LPC110X) */

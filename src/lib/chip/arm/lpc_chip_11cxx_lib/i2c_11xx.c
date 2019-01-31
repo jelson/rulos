@@ -588,17 +588,4 @@ int Chip_I2C_IsStateChanged(I2C_ID_T id)
 	return (LPC_I2Cx(id)->CONSET & I2C_CON_SI) != 0;
 }
 
-// jelson addition
-void Chip_I2C_BusReset(I2C_ID_T id)
-{
-	struct i2c_interface *iic = &i2c[id];
-
-	LPC_I2Cx(id)->CONSET = I2C_CON_STO;
-
-	if (iic->mXfer != 0) {
-		iic->mXfer = 0;
-		i2c[id].mEvent(id, I2C_EVENT_DONE);
-	}
-}
-
 #endif /* !defined(CHIP_LPC110X) */
