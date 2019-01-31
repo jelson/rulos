@@ -81,7 +81,7 @@ void cpumon_act(void *data) {
       act->calibration_interval = time - act->last_time;
       act->phase = cpumon_phase_periodic_sample;
       // we won't get run again until real main loop starts.
-      //			LOG("calib %d/%dms\n",
+      //			LOG("calib %d/%dms",
       //				act->calibration_spin_counts,
       // act->calibration_interval);
       act->num_calibrations--;
@@ -102,7 +102,7 @@ void cpumon_act(void *data) {
       act->sample_interval = time - act->last_time;
 
 #if LOG_CPU_USAGE
-      LOG("calib %d/%dms sample %d/%dms idle %d%%\n",
+      LOG("calib %d/%dms sample %d/%dms idle %d%%",
           act->calibration_spin_counts, act->calibration_interval,
           act->sample_spin_counts, act->sample_interval,
           cpumon_get_idle_percentage(act));

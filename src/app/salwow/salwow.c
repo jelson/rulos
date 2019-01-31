@@ -42,7 +42,7 @@ void send_one(void *data) {
   static int ctr;
   mark_point(16 + ((ctr++) & 15));
 
-  LOG("done %d\n", ctr);
+  LOG("done %d", ctr);
 }
 
 void send_done(void *data) { schedule_us(1, send_one, data); }
@@ -63,14 +63,14 @@ int main() {
   mark_point(4);
   uart_init(&uart[0], 38400, TRUE, 0);
   uart_init(&uart[1], 38400, TRUE, 1);
-  LOG("SALWOW up.\n");
+  LOG("SALWOW up.");
 
 #if 0
 	uint8_t f = 0;
 	while(1) {
 		f+=1;
 		mark_point((f&1) | 16);
-		LOG("my dog. worms.\n");
+		LOG("my dog. worms.");
 	}
 #endif
 

@@ -30,7 +30,7 @@ void update_autotype(Autotype *a) {
   char c = *(a->ptr);
   if (c != '\0') {
     a->ptr += 1;
-    LOG("Autotype(%c)\n", c);
+    LOG("Autotype(%c)", c);
     a->iii->func(a->iii, c);
     schedule_us(a->period, (ActivationFuncPtr)update_autotype, a);
   }

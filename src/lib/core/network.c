@@ -35,7 +35,7 @@ void net_log_buffer(uint8_t *buf, int len)
 	{
 		LOG("%02x ", buf[i]);
 	}
-	LOG("\n");
+	LOG("");
 }
 #endif
 
@@ -91,7 +91,7 @@ void net_bind_receiver(Network *net, RecvSlot *recvSlot) {
   uint8_t slotIdx = net_find_empty_receive_slot(net);
   assert(slotIdx != SLOT_NONE);
   net->recvSlots[slotIdx] = recvSlot;
-  LOG("netstack: listener bound to port %d (0x%x), slot %d\n", recvSlot->port,
+  LOG("netstack: listener bound to port %d (0x%x), slot %d", recvSlot->port,
       recvSlot->port, slotIdx);
 }
 
@@ -107,7 +107,7 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len) {
 
   // make sure it's at least as long as we're expecting
   if (len < sizeof(Message)) {
-    LOG("netstack error: got short pkt only %d bytes\n", len);
+    LOG("netstack error: got short pkt only %d bytes", len);
 #ifdef DEBUG_STACK_WITH_UART
     hal_uart_sync_send("drp1", 4);
 #endif
@@ -119,7 +119,7 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len) {
   msg->checksum = 0;
 
   if (net_compute_checksum((unsigned char *)msg, len) != incoming_checksum) {
-    LOG("netstack error: checksum mismatch\n");
+    LOG("netstack error: checksum mismatch");
 #ifdef DEBUG_STACK_WITH_UART
     hal_uart_sync_send("drp2", 4);
     hal_uart_sync_send((char *)msg, len);
@@ -131,7 +131,7 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len) {
   slotIdx = net_find_receive_slot(net, msg->dest_port);
 
   if (slotIdx == SLOT_NONE) {
-    LOG("netstack error: dropped packet to port %d (0x%x) with no listener\n",
+    LOG("netstack error: dropped packet to port %d (0x%x) with no listener",
         msg->dest_port, msg->dest_port);
 #ifdef DEBUG_STACK_WITH_UART
     hal_uart_sync_send("drp3", 4);
@@ -143,7 +143,7 @@ static void net_recv_upcall(MediaRecvSlot *mrs, uint8_t len) {
 
   // if slot is occupied, drop
   if (rs->msg_occupied) {
-    LOG("netstack error: dropped packet to port %d (0x%x) with full buffer\n",
+    LOG("netstack error: dropped packet to port %d (0x%x) with full buffer",
         msg->dest_port, msg->dest_port);
 #ifdef DEBUG_STACK_WITH_UART
     hal_uart_sync_send("drp4", 4);
@@ -195,7 +195,7 @@ static void net_send_done_cb(void *user_data);
 // External visible API from above to launch a packet.
 r_bool net_send_message(Network *net, SendSlot *sendSlot) {
 #if 0
-  LOG("netstack: queueing %d-byte payload to %d:%d (0x%x:0x%x)\n",
+  LOG("netstack: queueing %d-byte payload to %d:%d (0x%x:0x%x)",
       sendSlot->msg->payload_len, sendSlot->dest_addr, sendSlot->msg->dest_port,
       sendSlot->dest_addr, sendSlot->msg->dest_port);
 #endif
@@ -222,7 +222,7 @@ static void net_send_next_message_down(Network *net) {
   if (rc == FALSE) return;
 
 #if 0
-  LOG("netstack: releasing %d-byte payload to %d:%d (0x%x:0x%x)\n",
+  LOG("netstack: releasing %d-byte payload to %d:%d (0x%x:0x%x)",
       sendSlot->msg->payload_len, sendSlot->dest_addr, sendSlot->msg->dest_port,
       sendSlot->dest_addr, sendSlot->msg->dest_port);
 #endif

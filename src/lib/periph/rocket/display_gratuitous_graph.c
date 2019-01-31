@@ -52,7 +52,7 @@ void dgg_update(DGratuitousGraph *dgg) {
 		// display label
 		char str[8];
 		int_to_string2(str, 4, 0, da_read(&dgg->drift));
-		//LOG("dgg int str '%s'\n", str);
+		//LOG("dgg int str '%s'", str);
 		ascii_to_bitmap_str(dgg->bbuf.buffer, 4, str);
 		ascii_to_bitmap_str(dgg->bbuf.buffer, NUM_DIGITS, dgg->name);
 	}
@@ -70,7 +70,7 @@ void dgg_update(DGratuitousGraph *dgg) {
 		}
 	}
 #endif
-  //	LOG("da = %d, %d, %d\n",
+  //	LOG("da = %d, %d, %d",
   //		da_read(&dgg->drift[0]),
   //		da_read(&dgg->drift[1]),
   //		da_read(&dgg->drift[2])

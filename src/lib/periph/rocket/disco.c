@@ -46,7 +46,7 @@ void disco_paint_once(Disco *disco) {
   if (disco->focused) {
     screenblanker_setmode(disco->screenblanker, sb_disco);
     uint8_t disco_color = deadbeef_rand() % 6;
-    // LOG("disco color %x\n", disco_color);
+    // LOG("disco color %x", disco_color);
     screenblanker_setdisco(disco->screenblanker, (DiscoColor)disco_color);
   }
 }

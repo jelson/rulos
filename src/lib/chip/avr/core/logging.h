@@ -21,10 +21,10 @@
 
 #ifdef LOG_TO_SERIAL
 
-#define LOG(fmt, ...)                        \
-  do {                                       \
-    static const char fmt_p[] PROGMEM = fmt; \
-    avr_log(fmt_p, ##__VA_ARGS__);           \
+#define LOG(fmt, ...)                             \
+  do {                                            \
+    static const char fmt_p[] PROGMEM = fmt "\n"; \
+    avr_log(fmt_p, ##__VA_ARGS__);                \
   } while (0)
 
 #else  // LOG_TO_SERIAL

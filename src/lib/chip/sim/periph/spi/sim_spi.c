@@ -81,7 +81,7 @@ void hal_spi_send(uint8_t byte) {
   uint8_t result = 0;
   switch (g_spi.state) {
     case sss_ready:
-      LOG("sim:spi cmd %x\n", byte);
+      LOG("sim:spi cmd %x", byte);
       if (byte == SPIFLASH_CMD_READ_DATA) {
         g_spi.state = sss_read_addr;
         g_spi.addr_off = 0;
@@ -90,19 +90,19 @@ void hal_spi_send(uint8_t byte) {
       }
       break;
     case sss_read_addr:
-      // LOG("sim:spi addr[%d] == %x\n", g_spi.addr_off, byte);
+      // LOG("sim:spi addr[%d] == %x", g_spi.addr_off, byte);
       g_spi.addr[g_spi.addr_off++] = byte;
       if (g_spi.addr_off == 3) {
         int addr = (((int)g_spi.addr[0]) << 16) | (((int)g_spi.addr[1]) << 8) |
                    (((int)g_spi.addr[2]) << 0);
-        LOG("sim:spi addr == %x\n", addr);
+        LOG("sim:spi addr == %x", addr);
         fseek(g_spi.fp, addr, SEEK_SET);
         g_spi.state = sss_read_fetch;
       }
       break;
     case sss_read_fetch:
       result = fgetc(g_spi.fp);
-      // LOG("sim:spi read fetch == %x\n", result);
+      // LOG("sim:spi read fetch == %x", result);
       break;
   }
 
@@ -120,7 +120,7 @@ static void sim_spi_poll(void *data) {
     return;
   }
 
-  // LOG("sim_spi_poke delivering deferred result\n");
+  // LOG("sim_spi_poke delivering deferred result");
   if (g_spi.result >= 0) {
     uint8_t result = g_spi.result;
     g_spi.result = -1;

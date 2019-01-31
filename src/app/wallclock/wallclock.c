@@ -123,7 +123,7 @@ static void calibrate_clock(WallClockActivation_t *wca, uint8_t hour,
     error = 0;
   }
 
-  LOG("got pulse at %d, last at %d, diff is %d, error %d\n", reception_us,
+  LOG("got pulse at %d, last at %d, diff is %d, error %d", reception_us,
       wca->last_reception_us, reception_diff_us, error);
   wca->last_reception_us = reception_us;
   wca->mins_since_last_sync = 0;
@@ -141,7 +141,7 @@ static void calibrate_clock(WallClockActivation_t *wca, uint8_t hour,
   // If it's off by 5 seconds or more, don't use this as a
   // calibration.
   if (error > 5 * MILLION || error < -5 * MILLION) {
-    LOG("error too large -- not correcting\n");
+    LOG("error too large -- not correcting");
     return;
   }
 
@@ -210,7 +210,7 @@ static void check_uart(WallClockActivation_t *wca) {
 
   // In case of framing error, clear the queue
   if (CharQueue_peek(wca->recvQueue->q, &msg[0]) && msg[0] != 'T') {
-    LOG("first char mismatch\n");
+    LOG("first char mismatch");
     uart_reset_recvq(wca->recvQueue);
     goto done;
   }

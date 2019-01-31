@@ -133,8 +133,6 @@ void hal_7seg_bus_enter_sleep() {
 }
 
 void hal_init_rocketpanel() {
-  hal_init();
-
   /* init curses */
   init_curses();
 

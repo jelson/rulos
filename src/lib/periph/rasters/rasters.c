@@ -45,7 +45,7 @@ void raster_draw_sym(RectRegion *rrect, char sym, int8_t dx, int8_t dy) {
     ri++;
   }
   if (ri->sym == '\0') {
-    LOG("sym = %d (%c)\n", sym, sym);
+    LOG("sym = %d (%c)", sym, sym);
     assert(FALSE);  // symbol not found
     return;
   }
@@ -60,11 +60,11 @@ void raster_draw_sym(RectRegion *rrect, char sym, int8_t dx, int8_t dy) {
     if (ybit) {
       y += 1;
     }
-    // LOG("raster_draw_sym(%c idx %2d/%2d) y%d x0 %2d x1 %2d\n", sym, idx,
+    // LOG("raster_draw_sym(%c idx %2d/%2d) y%d x0 %2d x1 %2d", sym, idx,
     // ri->len, y, x0, x1);
     int x;
     for (x = x0; x < x1; x++) {
-      // LOG("paintpixel(%d,%d)\n", dx+x, dy+y);
+      // LOG("paintpixel(%d,%d)", dx+x, dy+y);
       raster_paint_pixel(rrect, dx + x, dy + y);
     }
   }
@@ -88,15 +88,15 @@ void raster_paint_pixel_v(RectRegion *rrect, int x, int y, r_bool on) {
   int maj_y = int_div_with_correct_truncation(y, 6);
   int min_y = y - (maj_y * 6);
 
-  // LOG("x-painted y%2d.%d x%2d.%d\n", maj_y, min_y, maj_x, min_x);
+  // LOG("x-painted y%2d.%d x%2d.%d", maj_y, min_y, maj_x, min_x);
   if (maj_y < 0 || maj_y >= rrect->ylen || maj_x < rrect->x ||
       maj_x >= rrect->x + rrect->xlen) {
-    // LOG("discard: %d %d ; %d %d\n", 0, rrect->ylen, rrect->x,
+    // LOG("discard: %d %d ; %d %d", 0, rrect->ylen, rrect->x,
     // rrect->x+rrect->xlen);
     return;
   }
 
-  // LOG("PAINT!\n");
+  // LOG("PAINT!");
   if (on) {
     rrect->bbuf[maj_y]->buffer[maj_x] |= _sevseg_pixel_mask[min_y][min_x];
   } else {

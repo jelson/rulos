@@ -52,7 +52,7 @@ uint8_t heap_insert(Heap *heap, Time key, ActivationFuncPtr func, void *data) {
   return heap->heap_count;
 
 #if PRINT_ALL_SCHEDULES
-  LOG("heap_count %d this act func %08x period %d\n", heap->heap_count,
+  LOG("heap_count %d this act func %08x period %d", heap->heap_count,
       (unsigned)(act->func), key - _last_scheduler_run_us);
 #endif
 }

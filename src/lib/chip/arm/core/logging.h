@@ -30,10 +30,10 @@
 
 #include <stdio.h>
 
-#define LOG(fmt, ...)                \
-  do {                               \
-    static const char fmt_p[] = fmt; \
-    arm_log(fmt_p, ##__VA_ARGS__);   \
+#define LOG(fmt, ...)                     \
+  do {                                    \
+    static const char fmt_p[] = fmt "\n"; \
+    arm_log(fmt_p, ##__VA_ARGS__);        \
   } while (0)
 
 #define LOG_FLUSH()  \

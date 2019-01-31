@@ -80,7 +80,7 @@ static void sim_curses_poll(void *data) {
 
   if (c == ERR) return;
 
-  LOG("poll_kb got char: %c (%x)\n", c, c);
+  LOG("poll_kb got char: %c (%x)", c, c);
 
   // if we're in normal mode and hit 'q', terminate the simulator
   if (sim_special_input_handler == NULL && c == 'q') {
@@ -104,5 +104,5 @@ static void sim_curses_poll(void *data) {
       return;
     }
   }
-  LOG("** No handler for: %c (%x)\n", c, c);
+  LOG("** No handler for: %c (%x)", c, c);
 }

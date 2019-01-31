@@ -30,7 +30,7 @@ typedef struct {
 } RolloverTest_t;
 
 static void update(RolloverTest_t *rt) {
-  LOG("task %d running at jiffy %d\n", rt->task, clock_time_us());
+  LOG("task %d running at jiffy %d", rt->task, clock_time_us());
   schedule_us(rt->interval, (Activation *)rt);
 }
 

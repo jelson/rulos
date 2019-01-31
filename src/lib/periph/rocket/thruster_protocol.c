@@ -52,7 +52,7 @@ void tsn_timer_func(ThrusterSendNetwork *tsn) {
   schedule_us(1000000 / 20, (ActivationFuncPtr)tsn_timer_func, tsn);
 
   if (tsn->state_changed && !tsn->sendSlot.sending) {
-    // LOG("tsn: state change, sending packet\n");
+    // LOG("tsn: state change, sending packet");
 
     ThrusterPayload *tp = (ThrusterPayload *)tsn->sendSlot.msg->data;
     tp->thruster_bits = tsn->last_state.thruster_bits;

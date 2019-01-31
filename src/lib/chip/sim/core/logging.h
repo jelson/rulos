@@ -20,7 +20,8 @@
 
 #include "chip/sim/core/sim.h"
 
-#define LOG(args...) \
-  do {               \
-    sim_log(args);   \
-  } while (0);
+#define LOG(fmt, ...)                     \
+  do {                                    \
+    static const char fmt_p[] = fmt "\n"; \
+    sim_log(fmt_p, ##__VA_ARGS__);        \
+  } while (0)

@@ -110,7 +110,7 @@ static void draw_uart_input_window() {
 }
 
 static void uart_simulator_input(int c) {
-  LOG("sim inserting to uart: %c\n", c);
+  LOG("sim inserting to uart: %c", c);
 
   // display on screen
   if (strlen(recent_uart_buf) == sizeof(recent_uart_buf) - 1) {
@@ -126,7 +126,7 @@ static void uart_simulator_input(int c) {
 
   // upcall to the uart code
   if (g_sim_uart_handler == NULL) {
-    LOG("dropping uart char - uart not initted\n");
+    LOG("dropping uart char - uart not initted");
     return;
   }
   (g_sim_uart_handler->recv)(g_sim_uart_handler, c);

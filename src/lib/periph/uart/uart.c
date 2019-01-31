@@ -30,7 +30,7 @@ void _uart_receive(HalUart *handler, char c) {
   }
 
 #ifdef UART_DEBUG
-  LOG("uart_receive: got char at %d, msgtime=%d\n", precise_clock_time_us(),
+  LOG("uart_receive: got char at %d, msgtime=%d", precise_clock_time_us(),
       u->recvQueue.reception_time_us);
 #endif
 

@@ -94,7 +94,7 @@ void control_start(Control *ctl) {
 }
 
 void _test_sentence_done(GPSInput *gpsi) {
-  LOG("Read %f,%f\n", (double)gpsi->lat, (double)gpsi->lon);
+  LOG("Read %f,%f", (double)gpsi->lat, (double)gpsi->lon);
 }
 
 void _control_gps_read(void *v_ctl) {
@@ -122,7 +122,7 @@ void _control_gps_read(void *v_ctl) {
 }
 
 void _control_start_observing(void *v_ctl) {
-  LOG("_control_start_observing\n");
+  LOG("_control_start_observing");
   Control *ctl = (Control *)v_ctl;
   _control_set_rudder(ctl, RUDDER_STRAIGHT);
   ctl->sample_num = 0;
@@ -150,11 +150,11 @@ void _control_start_turning(Control *ctl) {
   while (TRUE) {
     turn_request = navigation_compute(&ctl->nav, &ctl->p0, &ctl->p1);
     if (turn_request == ABEAM) {
-      LOG("sequence waypoint\n");
+      LOG("sequence waypoint");
       int next_index = ctl->waypoint_index + 1;
       if (next_index >= ctl->n_waypoints) {
         // OMFSM DONE!
-        LOG("task complete\n");
+        LOG("task complete");
         ctl->state = Completed;
         control_set_motor_state(ctl, 0);
         return;
@@ -166,7 +166,7 @@ void _control_start_turning(Control *ctl) {
     break;
   }
 
-  LOG("turn %s %d deg\n", turn_request > 0 ? "right" : "left", turn_request);
+  LOG("turn %s %d deg", turn_request > 0 ? "right" : "left", turn_request);
   _control_set_rudder(ctl, turn_request > 0 ? RUDDER_RIGHT : RUDDER_LEFT);
   Time turn_duration_us = INTABS(turn_request) * US_PER_DEGREE;
   ctl->state = Turning;

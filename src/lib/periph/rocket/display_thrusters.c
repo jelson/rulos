@@ -23,7 +23,7 @@ static void thrusters_update(ThrusterState_t *ts) {
   joystick_poll(&ts->joystick_state);
 
 #ifdef LOG_JOYSTICK
-  LOG("thrusters_update: got xpos %d, ypos %d\n", ts->joystick_state.x_pos,
+  LOG("thrusters_update: got xpos %d, ypos %d", ts->joystick_state.x_pos,
       ts->joystick_state.y_pos);
 #endif
 
@@ -77,7 +77,7 @@ static void thrusters_update(ThrusterState_t *ts) {
   if ((ts->joystick_state.state &
        (JOYSTICK_STATE_UP | JOYSTICK_STATE_LEFT | JOYSTICK_STATE_RIGHT |
         JOYSTICK_STATE_TRIGGER)) != 0) {
-    // LOG("idle touch due to nonzero joystick: %d\n",
+    // LOG("idle touch due to nonzero joystick: %d",
     // ts->joystick_state.state);
     if (ts->idle != NULL) idle_touch(ts->idle);
   }

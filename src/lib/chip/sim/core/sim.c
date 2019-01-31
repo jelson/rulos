@@ -254,12 +254,12 @@ static void sim_twi_poll(void *data) {
   assert(rc != 0);
 
   if (twi_state->mrs->occupied_len > 0) {
-    LOG("TWI SIM: Packet arrived but network stack buffer busy; dropping\n");
+    LOG("TWI SIM: Packet arrived but network stack buffer busy; dropping");
     return;
   }
 
   if (rc > twi_state->mrs->capacity) {
-    LOG("TWI SIM: Discarding %d-byte packet; too long for net stack's buffer\n",
+    LOG("TWI SIM: Discarding %d-byte packet; too long for net stack's buffer",
         rc);
     return;
   }
@@ -286,7 +286,7 @@ static void sim_twi_send(MediaStateIfc *media, Addr dest_addr,
   SimTwiState *twi_state = (SimTwiState *)media;
 
 #if 0
-	LOG("hal_twi_send_byte(%02x [%c])\n",
+	LOG("hal_twi_send_byte(%02x [%c])",
 		byte,
 		(byte>=' ' && byte<127) ? byte : '_');
 #endif
@@ -316,8 +316,6 @@ uint64_t curr_time_usec() {
   gettimeofday(&tv, NULL);
   return ((uint64_t)1000000) * tv.tv_sec + tv.tv_usec;
 }
-
-void hal_bind_logging_to_uart(HalUart *uart) {}
 
 void sim_log(const char *fmt, ...) {
   va_list ap;

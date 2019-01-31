@@ -55,7 +55,7 @@ void slowboot_update(SlowBoot *slowboot) {
 
   int8_t step = elapsedTime / SB_ANIM_INTERVAL;
 
-  // LOG("\n");
+  // LOG("");
   if (step < 4) {
     goto exit;
   }
@@ -63,7 +63,7 @@ void slowboot_update(SlowBoot *slowboot) {
   if (step < 28) {
     for (bi = 0; bi < SLOW_MAX_BUFFERS; bi++) {
       int dist = (step + ((bi * 131) % SLOW_MAX_BUFFERS)) / 4 - 2;
-      // LOG("step %2d bi %2d dist %2d\n", step, bi, dist);
+      // LOG("step %2d bi %2d dist %2d", step, bi, dist);
       if (dist < 0 || dist > 4) {
         continue;
       }

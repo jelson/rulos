@@ -242,7 +242,7 @@ void sbl_recv_func(RecvSlot *recvSlot, uint8_t payload_len) {
   screenblanker_setdisco(&sbl->screenblanker, sp->disco_color);
   screenblanker_setmode(&sbl->screenblanker, sp->mode);
   sbl->recvSlot.msg_occupied = FALSE;
-  // LOG("sbl_recv_func got bits %x %x!\n", sp->mode, sp->disco_color);
+  // LOG("sbl_recv_func got bits %x %x!", sp->mode, sp->disco_color);
 }
 
 //////////////////////////////////////////////////////////////////////////////

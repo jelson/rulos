@@ -80,10 +80,10 @@ void sendMessage(sendAct_t *sa) {
   sa->sendSlot->msg->payload_len = strlen(sa->sendSlot->msg->data);
 
   if (sa->sendSlot->sending) {
-    LOG("twisendtest: can't send message: outgoing buffer is busy\n");
+    LOG("twisendtest: can't send message: outgoing buffer is busy");
   } else {
     net_send_message(sa->net, sa->sendSlot);
-    LOG("sent message\n");
+    LOG("sent message");
   }
 
   schedule_us(INTER_MESSAGE_DELAY_US, (ActivationFuncPtr)sendMessage, sa);

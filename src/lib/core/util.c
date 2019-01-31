@@ -101,7 +101,7 @@ int int_to_string2(char *strp, uint8_t min_width, uint8_t min_zeros,
   int neg = 0;
   char *ptr = 0;
 
-  // LOG("i %d\n", );
+  // LOG("i %d", );
   if (strp != 0) {
     int ct = int_to_string2(0, min_width, min_zeros, i);
     ptr = strp + ct - 1;
@@ -144,7 +144,7 @@ int int_to_string2(char *strp, uint8_t min_width, uint8_t min_zeros,
     }
     c += 1;
   }
-  // LOG("  ct %d str %s\n", c, strp);
+  // LOG("  ct %d str %s", c, strp);
   return c;
 }
 

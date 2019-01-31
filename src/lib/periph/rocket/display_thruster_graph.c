@@ -82,7 +82,7 @@ void dtg_update_expwa(DThrusterGraph *dtg, int alpha, int i, uint8_t input) {
   uint32_t oldValue = dtg->value[i];
   dtg->value[i] =
       ((oldValue * (256 - alpha)) + (((uint32_t)input) << 16) * alpha) >> 8;
-  //	LOG("Old %08x ~ input %08x => new %08x\n",
+  //	LOG("Old %08x ~ input %08x => new %08x",
   //		oldValue, (((uint32_t) input) << 16), dtg->value[i]);
 }
 
@@ -119,7 +119,7 @@ void dtg_draw_fat_bars(BoardBuffer *bbuf, int v, SSBitmap bm0, SSBitmap bm1) {
 void dtg_update_state(DThrusterGraph *dtg, ThrusterPayload *tp) {
   dtg->thruster_bits = tp->thruster_bits;
   dtg->recvSlot.msg_occupied = FALSE;
-  //	LOG("dtg_recv_func got bits %1x!\n", dtg->thruster_bits & 0x7);
+  //	LOG("dtg_recv_func got bits %1x!", dtg->thruster_bits & 0x7);
 }
 
 void dtg_recv_func(RecvSlot *recvSlot, uint8_t payload_len) {

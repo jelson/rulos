@@ -89,7 +89,7 @@ void rbs_update(RemoteBBufSend *rbs) {
   schedule_us(REMOTE_BBUF_SEND_RATE, (ActivationFuncPtr)rbs_update, rbs);
 
   if (rbs->sendSlot.sending) {
-    LOG("rbs_update: dropping update; sender busy\n");
+    LOG("rbs_update: dropping update; sender busy");
     return;
   }
 
@@ -97,13 +97,13 @@ void rbs_update(RemoteBBufSend *rbs) {
   if (index == -1) {
 #if BBDEBUG
     // no changed lines
-    LOG("rbs_update: idle\n");
+    LOG("rbs_update: idle");
 #endif
     return;
   }
 
 #if BBDEBUG
-  LOG("rbs_update: update[%d]\n", index);
+  LOG("rbs_update: update[%d]", index);
 #endif
 
   // send a packet for this changed line
@@ -155,7 +155,7 @@ void rbr_recv(RecvSlot *recvSlot, uint8_t payload_len) {
   BBufMessage *bbm = (BBufMessage *)&recvSlot->msg->data;
 
 #if BBDEBUG
-  LOG("rbs: updating board %d with data %x%x%x%x%x%x%x%x\n", bbm->index,
+  LOG("rbs: updating board %d with data %x%x%x%x%x%x%x%x", bbm->index,
       bbm->buf[0], bbm->buf[1], bbm->buf[2], bbm->buf[3], bbm->buf[4],
       bbm->buf[5], bbm->buf[6], bbm->buf[7]);
 #endif

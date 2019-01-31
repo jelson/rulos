@@ -203,7 +203,7 @@ void debug_audio_rate() {
     time_t tv_sec = end_time.tv_sec - start_time.tv_sec;
     tv_usec += tv_sec * 1000000;
     float rate = 900.0 / tv_usec * 1000000.0;
-    LOG("output rate %f samples/sec\n", rate);
+    LOG("output rate %f samples/sec", rate);
     counter = 0;
   }
 }
@@ -225,7 +225,7 @@ static void sim_audio_poll(void *data) {
   while (simAudioState->write_avail > 0 &&
          ring_remove_avail(simAudioState->ring) > 0) {
     uint8_t sample = ring_remove(simAudioState->ring);
-    // LOG("sim_audio_poll removes sample %2x\n", sample);
+    // LOG("sim_audio_poll removes sample %2x", sample);
     int wrote = write(simAudioState->audiofd, &sample, 1);
     assert(wrote == 1);
 

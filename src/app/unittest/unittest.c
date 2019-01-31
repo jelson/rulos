@@ -38,19 +38,19 @@ void test_shortqueue() {
       r_bool rc = shortQueue_append(sq, in);
       if (rc) {
         in++;
-        LOG("in: %d\n", in);
+        LOG("in: %d", in);
       } else {
-        LOG("full\n");
+        LOG("full");
       }
     } else {
       short val;
       r_bool rc = shortQueue_pop(sq, &val);
       if (rc) {
         assert(val == out);
-        LOG("        out: %d\n", out);
+        LOG("        out: %d", out);
         out++;
       } else {
-        LOG("empty\n");
+        LOG("empty");
       }
     }
   }
@@ -67,22 +67,22 @@ void test_ring_buffer() {
     if (deadbeef_rand() & 1) {
       if (ring_insert_avail(rb) > 0) {
         ring_insert(rb, in);
-        LOG("in: %d\n", in);
+        LOG("in: %d", in);
         in++;
       } else {
-        LOG("full\n");
+        LOG("full");
       }
     } else {
       uint8_t ra = ring_remove_avail(rb);
-      LOG("ra %d\n", ra);
+      LOG("ra %d", ra);
       if (ra) {
         uint8_t val;
         val = ring_remove(rb);
         assert(val == out);
-        LOG("        out: %d\n", out);
+        LOG("        out: %d", out);
         out++;
       } else {
-        LOG("empty\n");
+        LOG("empty");
       }
     }
   }

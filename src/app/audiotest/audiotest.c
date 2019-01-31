@@ -59,7 +59,7 @@ static inline void latch_output() {
 }
 #else  // sim
 
-static inline void shift_out_8bits(uint8_t num) { LOG("%d,\n", num); }
+static inline void shift_out_8bits(uint8_t num) { LOG("%d,", num); }
 
 static inline void latch_output() {}
 static void init_audio_pins() {}
@@ -90,7 +90,7 @@ void emit_waveform(waveformAct_t *wa) {
 }
 
 void start_frequency(waveformAct_t *ta, float frequency) {
-  LOG("starting frequency %f\n", frequency);
+  LOG("starting frequency %f", frequency);
 
   // silence
   if (frequency == 0) {

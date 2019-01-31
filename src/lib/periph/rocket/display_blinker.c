@@ -36,7 +36,7 @@ void blinker_set_msg(DBlinker *blinker, const char **msg) {
 }
 
 void blinker_update_once(DBlinker *blinker) {
-  // LOG("blinker->cur_line = %d\n", blinker->cur_line);
+  // LOG("blinker->cur_line = %d", blinker->cur_line);
   memset(&blinker->bbuf.buffer, 0, NUM_DIGITS);
   if (blinker->msg != NULL && blinker->msg[blinker->cur_line] != NULL) {
     ascii_to_bitmap_str(blinker->bbuf.buffer, NUM_DIGITS,

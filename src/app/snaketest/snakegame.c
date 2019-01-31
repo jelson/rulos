@@ -114,7 +114,7 @@ inline bool occupied(Map *map, Point a) {
 
 inline bool get_game_over(Snake *snake) {
   bool rc = snake->direction == EMPTY;
-  // if (rc) { LOG("game over\n"); }
+  // if (rc) { LOG("game over"); }
   return rc;
 }
 
@@ -149,7 +149,7 @@ void snake_playing_tick(Snake *snake) {
       snake_advance_tail(snake);
     }
   }
-  // LOG("grow clock %d length %d goal %d\n", snake->grow_clock, snake->length,
+  // LOG("grow clock %d length %d goal %d", snake->grow_clock, snake->length,
   // snake->goal_length);
 }
 
@@ -159,7 +159,7 @@ void snake_exploding_tick(Snake *snake) {
     snake->explosion_radius = 0;
     snake->mode = GAME_OVER;
   }
-  LOG("Exploding; %d\n", snake->explosion_radius);
+  LOG("Exploding; %d", snake->explosion_radius);
 }
 
 void snake_game_over_tick(Snake *snake) { snake->explosion_radius = 0; }
@@ -168,12 +168,12 @@ void snake_advance_head(Snake *snake) {
   Point head = snake->head;
   Point next_head = add(head, snake->direction);
   if (!in_bounds(next_head.x, next_head.y)) {
-    // LOG("wall collision\n");
+    // LOG("wall collision");
     explode(snake);
     return;
   }
   if (occupied(&snake->map, next_head)) {
-    // LOG("self collision\n");
+    // LOG("self collision");
     explode(snake);
     return;
   }
@@ -181,7 +181,7 @@ void snake_advance_head(Snake *snake) {
   snake->map.cell[head.y][head.x] = snake->direction;
   snake->head = next_head;
   snake->length++;
-  // LOG("grow\n");
+  // LOG("grow");
 }
 
 void snake_advance_tail(Snake *snake) {
@@ -194,7 +194,7 @@ void snake_advance_tail(Snake *snake) {
   snake->map.cell[tail.y][tail.x] = EMPTY;
   snake->tail = add(tail, tdir);
   snake->length--;
-  // LOG("shrink\n");
+  // LOG("shrink");
 }
 
 void snake_update(Snake *snake) {
@@ -243,7 +243,7 @@ void snake_paint_once(Snake *snake) {
   Point head = snake->head;
   head.x *= 2;
   head.y *= 2;
-  LOG("center %d, %d\n", head.x, head.y);
+  LOG("center %d, %d", head.x, head.y);
   if (radius > 0) {
     for (int dy = -radius; dy <= radius; dy++) {
       int y = head.y + dy;

@@ -41,7 +41,7 @@ void rk_send(InputInjectorIfc *injector, char key) {
   KeystrokeMessage *km = (KeystrokeMessage *)&rk->sendSlot.msg->data;
 
   if (rk->sendSlot.sending) {
-    LOG("RemoteKeyboard drops a message due to full send queue.\n");
+    LOG("RemoteKeyboard drops a message due to full send queue.");
     return;
   }
 
@@ -67,7 +67,7 @@ void rk_recv(RecvSlot *recvSlot, uint8_t payload_len) {
   RemoteKeyboardRecv *rk = (RemoteKeyboardRecv *)recvSlot->user_data;
   KeystrokeMessage *km = (KeystrokeMessage *)recvSlot->msg->data;
   assert(payload_len == sizeof(KeystrokeMessage));
-  LOG("remote key: %c\n", km->key);
+  LOG("remote key: %c", km->key);
   rk->acceptNetStrokes->func(rk->acceptNetStrokes, km->key);
   recvSlot->msg_occupied = FALSE;
 }

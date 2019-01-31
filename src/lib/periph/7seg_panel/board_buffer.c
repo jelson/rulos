@@ -27,7 +27,7 @@ BoardBuffer *foreground[NUM_TOTAL_BOARDS];
 #if BBDEBUG
 void dump(const char *prefix) {
   int b;
-  LOG("-----\n");
+  LOG("-----");
   for (b = 0; b < NUM_TOTAL_BOARDS; b++) {
     LOG("%s b%2d: ", prefix, b);
     BoardBuffer *buf = foreground[b];
@@ -35,7 +35,7 @@ void dump(const char *prefix) {
       LOG("%s ", buf->label);
       buf = buf->next;
     }
-    LOG("<end>\n");
+    LOG("<end>");
   }
 }
 #endif  // BBDEBUG
@@ -147,8 +147,8 @@ void board_buffer_set_alpha(BoardBuffer *buf, uint8_t alpha) {
 void board_buffer_draw(BoardBuffer *buf) {
   uint8_t board_index = buf->board_index;
 #if BBDEBUG
-  LOG("bb_draw(3, buf %016" PRIxPTR " %s, mask %x)\n", (uintptr_t)buf,
-      buf->label, buf->mask);
+  LOG("bb_draw(3, buf %016" PRIxPTR " %s, mask %x)", (uintptr_t)buf, buf->label,
+      buf->mask);
 #endif  // BBDEBUG
 
 // draw locally, if we can.

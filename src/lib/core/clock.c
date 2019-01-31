@@ -78,7 +78,7 @@ static void reset_stats() {
 
 void clock_log_stats() {
 #if LOG_CLOCK_STATS
-  LOG("peak %d scheduled, range %d (%p) to %d (%p); now peak %d\n",
+  LOG("peak %d scheduled, range %d (%p) to %d (%p); now peak %d",
       sched_state.peak_heap, sched_state.min_period,
       sched_state.min_period_func, sched_state.max_period,
       sched_state.max_period_func, sched_state.peak_now);
@@ -177,7 +177,7 @@ void schedule_us_internal(Time offset_us, ActivationFuncPtr func, void *data) {
 }
 
 void schedule_absolute(Time at_time, ActivationFuncPtr func, void *data) {
-  // LOG("scheduling act %08x func %08x\n", (int) act, (int) act->func);
+  // LOG("scheduling act %08x func %08x", (int) act, (int) act->func);
 
 #ifdef TIMING_DEBUG
   gpio_set(GPIO_D6);
@@ -248,11 +248,11 @@ void scheduler_run_once() {
       break;
     }
 
-    // LOG("popping act %08x func %08x\n", (uint32_t) act, (uint32_t)
+    // LOG("popping act %08x func %08x", (uint32_t) act, (uint32_t)
     // act->func);
 
     act.func(act.data);
-    // LOG("returned act %08x func %08x\n", (uint32_t) act, (uint32_t)
+    // LOG("returned act %08x func %08x", (uint32_t) act, (uint32_t)
     // act->func);
   }
 }
