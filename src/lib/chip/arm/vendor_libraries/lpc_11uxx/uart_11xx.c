@@ -29,7 +29,7 @@
  * this code.
  */
 
-#include "chip/arm/lpc_chip_11cxx_lib/chip.h"
+#include "chip.h"
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -231,7 +231,7 @@ uint32_t Chip_UART_SetBaudFDR(LPC_USART_T *pUART, uint32_t baudrate)
 
 {
 	uint32_t uClk;
-    uint32_t dval, mval=1;
+    uint32_t dval, mval = 0;
     uint32_t dl;
     uint32_t rate16 = 16 * baudrate;
 	uint32_t actualRate = 0;

@@ -1,9 +1,11 @@
 /*
- * @brief LPC11xx IOCON driver
+ * @brief 16/32-bit Timer/PWM control functions
  *
+ * @note
  * Copyright(C) NXP Semiconductors, 2012
  * All rights reserved.
  *
+ * @par
  * Software that is described herein is for illustrative purposes only
  * which provides customers with programming information regarding the
  * LPC products.  This software is supplied "AS IS" without any warranties of
@@ -18,6 +20,7 @@
  * representation or warranty that such application will be suitable for the
  * specified use without further testing or modification.
  *
+ * @par
  * Permission to use, copy, modify, and distribute this software and its
  * documentation is hereby granted, under NXP Semiconductors' and its
  * licensor's relevant copyrights in the software, without fee, provided that it
@@ -26,7 +29,7 @@
  * this code.
  */
 
-#include "chip/arm/lpc_chip_11cxx_lib/chip.h"
+#include "chip.h"
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -40,20 +43,73 @@
  * Private functions
  ****************************************************************************/
 
+/* Returns clock index for a specific timer referenced by IP block address */
+STATIC CHIP_SYSCTL_CLOCK_T Chip_TIMER_GetClock(LPC_TIMER_T *pTMR)
+{
+  CHIP_SYSCTL_CLOCK_T tmrClk;
+  if (pTMR == LPC_TIMER32_1) {
+	  tmrClk = SYSCTL_CLOCK_CT32B1;
+  }
+  else if (pTMR == LPC_TIMER16_0) {
+	  tmrClk = SYSCTL_CLOCK_CT16B0;
+  }
+  else if (pTMR == LPC_TIMER16_1) {
+	  tmrClk = SYSCTL_CLOCK_CT16B1;
+  }
+  else {
+	  tmrClk = SYSCTL_CLOCK_CT32B0;
+  }
+
+  return tmrClk;
+}
+
 /*****************************************************************************
  * Public functions
  ****************************************************************************/
-#if defined(CHIP_LPC11UXX) || defined(CHIP_LPC11EXX) || defined(CHIP_LPC11AXX)
 
-/* Sets I/O Control pin mux */
-void Chip_IOCON_PinMuxSet(LPC_IOCON_T *pIOCON, uint8_t port, uint8_t pin, uint32_t modefunc)
+/* Initialize a timer */
+void Chip_TIMER_Init(LPC_TIMER_T *pTMR)
 {
-	if (port == 0) {
-		pIOCON->PIO0[pin] = modefunc;
-	}
-	else {
-		pIOCON->PIO1[pin] = modefunc;
-	}
+	Chip_Clock_EnablePeriphClock(Chip_TIMER_GetClock(pTMR));
 }
 
-#endif
+/*	Shutdown a timer */
+void Chip_TIMER_DeInit(LPC_TIMER_T *pTMR)
+{
+	Chip_Clock_DisablePeriphClock(Chip_TIMER_GetClock(pTMR));
+}
+
+/* Resets the timer terminal and prescale counts to 0 */
+void Chip_TIMER_Reset(LPC_TIMER_T *pTMR)
+{
+	uint32_t reg;
+
+	/* Disable timer, set terminal count to non-0 */
+	reg = pTMR->TCR;
+	pTMR->TCR = 0;
+	pTMR->TC = 1;
+
+	/* Reset timer counter */
+	pTMR->TCR = TIMER_RESET;
+
+	/* Wait for terminal count to clear */
+	while (pTMR->TC != 0) {}
+
+	/* Restore timer state */
+	pTMR->TCR = reg;
+}
+
+/* Sets external match control (MATn.matchnum) pin control */
+void Chip_TIMER_ExtMatchControlSet(LPC_TIMER_T *pTMR, int8_t initial_state,
+								   TIMER_PIN_MATCH_STATE_T matchState, int8_t matchnum)
+{
+	uint32_t mask, reg;
+
+	/* Clear bits corresponding to selected match register */
+	mask = (1 << matchnum) | (0x03 << (4 + (matchnum * 2)));
+	reg = pTMR->EMR &= ~mask;
+
+	/* Set new configuration for selected match register */
+	pTMR->EMR = reg | (((uint32_t) initial_state) << matchnum) |
+				(((uint32_t) matchState) << (4 + (matchnum * 2)));
+}

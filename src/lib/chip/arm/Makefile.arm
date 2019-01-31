@@ -61,6 +61,13 @@ ARM_RAMK := 4
 ARM_MX := M0
 endif
 
+ifeq ($(ARM_CHIP),lpc11a14-301)
+ARM_CHIP_FAMILY := CHIP_LPC11AXX
+ARM_FLASHK := 32
+ARM_RAMK := 8
+ARM_MX := M0
+endif
+
 ifeq ($(ARM_CHIP),lpc11u67jbd48)
 ARM_CHIP_FAMILY := CHIP_LPC11U6X
 ARM_FLASHK := 128
@@ -95,11 +102,12 @@ ARM_CPUTYPE_FLAGS += -DCORE_$(ARM_MX)=1 -D$(ARM_CHIP_FAMILY)=1
 
 ifeq ($(ARM_CHIP_FAMILY),CHIP_LPC11CXX)
 ARM_STARTUP := startup_ARMCM0.o
-ARM_DRIVER_LIB := lpc_chip_11cxx_lib
+ARM_DRIVER_LIB := lpc_11uxx
 endif
 
-ARM_CFLAGS += -I$(ARM_LIB_ROOT)/$(ARM_DRIVER_LIB)
-ARM_SOURCES += $(wildcard $(ARM_LIB_ROOT)/$(ARM_DRIVER_LIB)/*.c)
+ARM_DRIVER_LIB_PATH := $(ARM_LIB_ROOT)/vendor_libraries/$(ARM_DRIVER_LIB)
+ARM_CFLAGS += -I$(ARM_DRIVER_LIB_PATH)
+ARM_SOURCES += $(wildcard $(ARM_DRIVER_LIB_PATH)/*.c)
 
 #######################################################################
 # Make sure ARM_CHIP_FAMILY is defined

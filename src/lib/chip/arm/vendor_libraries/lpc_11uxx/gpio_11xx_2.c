@@ -30,7 +30,7 @@
  * this code.
  */
 
-#include "chip/arm/lpc_chip_11cxx_lib/chip.h"
+#include "chip.h"
 
 #if defined(CHIP_LPC11CXX) || defined(CHIP_LPC110X) || defined(CHIP_LPC11XXLV) || defined(CHIP_LPC1125)
 

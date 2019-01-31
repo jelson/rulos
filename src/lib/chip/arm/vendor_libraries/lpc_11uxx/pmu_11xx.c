@@ -1,6 +1,5 @@
 /*
- * @brief LPC11xx GPIO driver for CHIP_LPC11AXX, CHIP_LPC11EXX, and
- * CHIP_LPC11UXX families only.
+ * @brief LPC11xx PMU chip driver
  *
  * @note
  * Copyright(C) NXP Semiconductors, 2013
@@ -30,9 +29,9 @@
  * this code.
  */
 
-#include "chip/arm/lpc_chip_11cxx_lib/chip.h"
+#include "chip.h"
 
-#if defined(CHIP_LPC11AXX) || defined(CHIP_LPC11EXX) || defined(CHIP_LPC11UXX)
+#if defined(CHIP_LPC11AXX) || defined(CHIP_LPC11CXX) || defined(CHIP_LPC11EXX) || defined(CHIP_LPC11UXX) || defined(CHIP_LPC1125)
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -49,61 +48,70 @@
 /*****************************************************************************
  * Public functions
  ****************************************************************************/
- 
-/* Initialize GPIO block */
-void Chip_GPIO_Init(LPC_GPIO_T *pGPIO)
+
+/* Enter MCU Sleep mode */
+void Chip_PMU_SleepState(LPC_PMU_T *pPMU)
 {
-	Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_GPIO);
+	pPMU->PCON = PMU_PCON_PM_SLEEP;
+
+	/* Enter sleep mode */
+	__WFI();
 }
 
-/* De-Initialize GPIO block */
-void Chip_GPIO_DeInit(LPC_GPIO_T *pGPIO)
+#if defined(CHIP_LPC11AXX) || defined(CHIP_LPC11EXX) || defined(CHIP_LPC11UXX)
+/* Enter MCU Deep Sleep mode */
+void Chip_PMU_DeepSleepState(LPC_PMU_T *pPMU)
 {
-	Chip_Clock_DisablePeriphClock(SYSCTL_CLOCK_GPIO);
+	SCB->SCR |= (1UL << SCB_SCR_SLEEPDEEP_Pos);
+	pPMU->PCON = PMU_PCON_PM_DEEPSLEEP;
+
+	/* Enter sleep mode */
+	__WFI();
 }
 
-/* Set a GPIO direction */
-void Chip_GPIO_WriteDirBit(LPC_GPIO_T *pGPIO, uint32_t port, uint8_t bit, bool setting)
+/* Enter MCU Power down mode */
+void Chip_PMU_PowerDownState(LPC_PMU_T *pPMU)
 {
-	if (setting) {
-		pGPIO->DIR[port] |= 1UL << bit;
-	}
-	else {
-		pGPIO->DIR[port] &= ~(1UL << bit);
-	}
-}
+	SCB->SCR |= (1UL << SCB_SCR_SLEEPDEEP_Pos);
+	pPMU->PCON = PMU_PCON_PM_POWERDOWN;
 
-/* Set Direction for a GPIO port */
-void Chip_GPIO_SetDir(LPC_GPIO_T *pGPIO, uint8_t portNum, uint32_t bitValue, uint8_t out)
-{
-	if (out) {
-		pGPIO->DIR[portNum] |= bitValue;
-	}
-	else {
-		pGPIO->DIR[portNum] &= ~bitValue;
-	}
+	/* Enter sleep mode */
+	__WFI();
 }
-
-/* Set GPIO direction for a single GPIO pin */
-void Chip_GPIO_SetPinDIR(LPC_GPIO_T *pGPIO, uint8_t port, uint8_t pin, bool output)
-{
-	if (output) {
-		Chip_GPIO_SetPinDIROutput(pGPIO, port, pin);
-	}
-	else {
-		Chip_GPIO_SetPinDIRInput(pGPIO, port, pin);
-	}
-}
-
-/* Set GPIO direction for a all selected GPIO pins to an input or output */
-void Chip_GPIO_SetPortDIR(LPC_GPIO_T *pGPIO, uint8_t port, uint8_t pinMask, bool outSet)
-{
-	if (outSet) {
-		Chip_GPIO_SetPortDIROutput(pGPIO, port, pinMask);
-	}
-	else {
-		Chip_GPIO_SetPortDIRInput(pGPIO, port, pinMask);
-	}
-}
-
 #endif /* defined(CHIP_LPC11AXX) || defined(CHIP_LPC11EXX) || defined(CHIP_LPC11UXX) */
+
+/* Enter MCU Deep Power down mode */
+void Chip_PMU_DeepPowerDownState(LPC_PMU_T *pPMU)
+{
+	SCB->SCR |= (1UL << SCB_SCR_SLEEPDEEP_Pos);
+	pPMU->PCON = PMU_PCON_PM_DEEPPOWERDOWN;
+
+	/* Enter sleep mode */
+	__WFI();
+}
+
+/* Put some of the peripheral in sleep mode */
+void Chip_PMU_Sleep(LPC_PMU_T *pPMU, CHIP_PMU_MCUPOWER_T SleepMode)
+{
+#if defined(CHIP_LPC11AXX) || defined(CHIP_LPC11EXX) || defined(CHIP_LPC11UXX)
+	if (SleepMode == PMU_MCU_DEEP_SLEEP) {
+		Chip_PMU_DeepSleepState(pPMU);
+	}
+	else if (SleepMode == PMU_MCU_POWER_DOWN) {
+		Chip_PMU_PowerDownState(pPMU);
+	}
+	else if (SleepMode == PMU_MCU_DEEP_PWRDOWN) {
+		Chip_PMU_DeepPowerDownState(pPMU);
+	}
+	else {
+		/* PMU_MCU_SLEEP */
+		Chip_PMU_SleepState(pPMU);
+	}
+#elif defined(CHIP_LPC11CXX)
+	if (SleepMode == PMU_MCU_DEEP_PWRDOWN) {
+		Chip_PMU_DeepPowerDownState(pPMU);
+	}
+#endif /* defined(CHIP_LPC11AXX) || defined(CHIP_LPC11EXX) || defined(CHIP_LPC11UXX) */
+}
+
+#endif /* defined(CHIP_LPC11AXX) || defined(CHIP_LPC11CXX) || ... */

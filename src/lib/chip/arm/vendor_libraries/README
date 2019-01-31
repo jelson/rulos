@@ -1,0 +1,43 @@
+RULAV Vendor Library Sources
+
+lpc_11uxx
+	Supports:
+		CHIP_LPC110X
+		CHIP_LPC1125
+		CHIP_LPC11AXX
+		CHIP_LPC11CXX
+		CHIP_LPC11EXX
+		CHIP_LPC11UXX
+		CHIP_LPC11XXLV
+
+	Source:
+		LPCXpresso LPC11U14 board 2.00a 9/13/2013
+		https://www.nxp.com/support/developer-resources/software-development-tools/lpc-developer-resources-/lpcopen-libraries-and-examples/lpcopen-software-development-platform-lpc11xx:LPCOPEN-SOFTWARE-FOR-LPC11XX
+
+		...with some files added from
+		LPCXpresso LPC11C24 board v2.00a
+
+	Notes:
+		The LPC1114 is covered under LPC11CXX.
+
+		The LPCopen library for the 11UXX is diff-identical to the 11CXX except:
+
+		    * The 11CXX library doesn't have the USB support
+                      library, since those parts don't have USB.
+
+		    * The 11CXX library has some extra files for doing
+                      a different style of GPIO, and the CMSIS.h
+                      header for the 11Cxx line. I combined all the
+                      files into the 11UXX directory. Unfortunately,
+                      the 11Axx, 11Exx headers are missing. I really
+                      wish LPCopen would just give you a centralized
+                      single place to download drivers instead of
+                      giving different subsets of the files out
+                      piecemeal. There doesn't seem to be an 11AXX
+                      LPCxpresso board so who knows where
+                      cmsis_11axx.h is?
+
+		    * A different CHIP constant was defined by default
+                      in sys_config.h. I've commented out all CHIP
+                      definitions so the build system can define it
+                      instead.

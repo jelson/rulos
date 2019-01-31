@@ -1,5 +1,5 @@
 /*
- * @brief LPC11xx WWDT chip driver
+ * @brief LPC11xx Miscellaneous chip specific functions
  *
  * @note
  * Copyright(C) NXP Semiconductors, 2012
@@ -29,7 +29,7 @@
  * this code.
  */
 
-#include "chip/arm/lpc_chip_11cxx_lib/chip.h"
+#include "chip.h"
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -39,6 +39,9 @@
  * Public types/enumerations/variables
  ****************************************************************************/
 
+/* System Clock Frequency (Core Clock) */
+uint32_t SystemCoreClock;
+
 /*****************************************************************************
  * Private functions
  ****************************************************************************/
@@ -47,34 +50,10 @@
  * Public functions
  ****************************************************************************/
 
-/* Initialize the Watchdog timer */
-void Chip_WWDT_Init(LPC_WWDT_T *pWWDT)
+/* Update system core clock rate, should be called if the system has
+   a clock rate change */
+void SystemCoreClockUpdate(void)
 {
-	Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_WDT);
-
-	/* Disable watchdog */
-	pWWDT->MOD       = 0;
-	pWWDT->TC        = 0xFF;
-#if defined(WATCHDOG_WINDOW_SUPPORT)
-	pWWDT->WARNINT   = 0xFFFF;
-	pWWDT->WINDOW    = 0xFFFFFF;
-#endif
-}
-
-/* Shutdown the Watchdog timer */
-void Chip_WWDT_DeInit(LPC_WWDT_T *pWWDT)
-{
-	Chip_Clock_DisablePeriphClock(SYSCTL_CLOCK_WDT);
-}
-
-/* Clear WWDT interrupt status flags */
-void Chip_WWDT_ClearStatusFlag(LPC_WWDT_T *pWWDT, uint32_t status)
-{
-	if (status & WWDT_WDMOD_WDTOF) {
-		pWWDT->MOD &= (~WWDT_WDMOD_WDTOF) & WWDT_WDMOD_BITMASK;
-	}
-
-	if (status & WWDT_WDMOD_WDINT) {
-		pWWDT->MOD |= WWDT_WDMOD_WDINT;
-	}
+	/* CPU core speed */
+	SystemCoreClock = Chip_Clock_GetSystemClockRate();
 }

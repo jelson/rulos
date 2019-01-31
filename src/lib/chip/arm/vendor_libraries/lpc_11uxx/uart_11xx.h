@@ -32,7 +32,7 @@
 #ifndef __UART_11XX_H_
 #define __UART_11XX_H_
 
-#include "chip/arm/lpc_chip_11cxx_lib/ring_buffer.h"
+#include "ring_buffer.h"
 
 #ifdef __cplusplus
 extern "C" {

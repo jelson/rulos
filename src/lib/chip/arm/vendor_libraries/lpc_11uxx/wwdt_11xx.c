@@ -1,8 +1,8 @@
 /*
- * @brief LPC11xx PMU chip driver
+ * @brief LPC11xx WWDT chip driver
  *
  * @note
- * Copyright(C) NXP Semiconductors, 2013
+ * Copyright(C) NXP Semiconductors, 2012
  * All rights reserved.
  *
  * @par
@@ -29,9 +29,7 @@
  * this code.
  */
 
-#include "chip/arm/lpc_chip_11cxx_lib/chip.h"
-
-#if defined(CHIP_LPC11AXX) || defined(CHIP_LPC11CXX) || defined(CHIP_LPC11EXX) || defined(CHIP_LPC11UXX) || defined(CHIP_LPC1125)
+#include "chip.h"
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -49,69 +47,34 @@
  * Public functions
  ****************************************************************************/
 
-/* Enter MCU Sleep mode */
-void Chip_PMU_SleepState(LPC_PMU_T *pPMU)
+/* Initialize the Watchdog timer */
+void Chip_WWDT_Init(LPC_WWDT_T *pWWDT)
 {
-	pPMU->PCON = PMU_PCON_PM_SLEEP;
+	Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_WDT);
 
-	/* Enter sleep mode */
-	__WFI();
+	/* Disable watchdog */
+	pWWDT->MOD       = 0;
+	pWWDT->TC        = 0xFF;
+#if defined(WATCHDOG_WINDOW_SUPPORT)
+	pWWDT->WARNINT   = 0xFFFF;
+	pWWDT->WINDOW    = 0xFFFFFF;
+#endif
 }
 
-#if defined(CHIP_LPC11AXX) || defined(CHIP_LPC11EXX) || defined(CHIP_LPC11UXX)
-/* Enter MCU Deep Sleep mode */
-void Chip_PMU_DeepSleepState(LPC_PMU_T *pPMU)
+/* Shutdown the Watchdog timer */
+void Chip_WWDT_DeInit(LPC_WWDT_T *pWWDT)
 {
-	SCB->SCR |= (1UL << SCB_SCR_SLEEPDEEP_Pos);
-	pPMU->PCON = PMU_PCON_PM_DEEPSLEEP;
-
-	/* Enter sleep mode */
-	__WFI();
+	Chip_Clock_DisablePeriphClock(SYSCTL_CLOCK_WDT);
 }
 
-/* Enter MCU Power down mode */
-void Chip_PMU_PowerDownState(LPC_PMU_T *pPMU)
+/* Clear WWDT interrupt status flags */
+void Chip_WWDT_ClearStatusFlag(LPC_WWDT_T *pWWDT, uint32_t status)
 {
-	SCB->SCR |= (1UL << SCB_SCR_SLEEPDEEP_Pos);
-	pPMU->PCON = PMU_PCON_PM_POWERDOWN;
+	if (status & WWDT_WDMOD_WDTOF) {
+		pWWDT->MOD &= (~WWDT_WDMOD_WDTOF) & WWDT_WDMOD_BITMASK;
+	}
 
-	/* Enter sleep mode */
-	__WFI();
+	if (status & WWDT_WDMOD_WDINT) {
+		pWWDT->MOD |= WWDT_WDMOD_WDINT;
+	}
 }
-#endif /* defined(CHIP_LPC11AXX) || defined(CHIP_LPC11EXX) || defined(CHIP_LPC11UXX) */
-
-/* Enter MCU Deep Power down mode */
-void Chip_PMU_DeepPowerDownState(LPC_PMU_T *pPMU)
-{
-	SCB->SCR |= (1UL << SCB_SCR_SLEEPDEEP_Pos);
-	pPMU->PCON = PMU_PCON_PM_DEEPPOWERDOWN;
-
-	/* Enter sleep mode */
-	__WFI();
-}
-
-/* Put some of the peripheral in sleep mode */
-void Chip_PMU_Sleep(LPC_PMU_T *pPMU, CHIP_PMU_MCUPOWER_T SleepMode)
-{
-#if defined(CHIP_LPC11AXX) || defined(CHIP_LPC11EXX) || defined(CHIP_LPC11UXX)
-	if (SleepMode == PMU_MCU_DEEP_SLEEP) {
-		Chip_PMU_DeepSleepState(pPMU);
-	}
-	else if (SleepMode == PMU_MCU_POWER_DOWN) {
-		Chip_PMU_PowerDownState(pPMU);
-	}
-	else if (SleepMode == PMU_MCU_DEEP_PWRDOWN) {
-		Chip_PMU_DeepPowerDownState(pPMU);
-	}
-	else {
-		/* PMU_MCU_SLEEP */
-		Chip_PMU_SleepState(pPMU);
-	}
-#elif defined(CHIP_LPC11CXX)
-	if (SleepMode == PMU_MCU_DEEP_PWRDOWN) {
-		Chip_PMU_DeepPowerDownState(pPMU);
-	}
-#endif /* defined(CHIP_LPC11AXX) || defined(CHIP_LPC11EXX) || defined(CHIP_LPC11UXX) */
-}
-
-#endif /* defined(CHIP_LPC11AXX) || defined(CHIP_LPC11CXX) || ... */

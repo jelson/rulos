@@ -29,9 +29,9 @@
 #ifndef __CHIP_H_
 #define __CHIP_H_
 
-#include "chip/arm/lpc_chip_11cxx_lib/lpc_types.h"
-#include "chip/arm/lpc_chip_11cxx_lib/sys_config.h"
-#include "chip/arm/lpc_chip_11cxx_lib/cmsis.h"
+#include "lpc_types.h"
+#include "sys_config.h"
+#include "cmsis.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -229,20 +229,20 @@ extern const uint32_t ExtRateIn;
  * @}
  */
 
-#include "chip/arm/lpc_chip_11cxx_lib/pmu_11xx.h"
-#include "chip/arm/lpc_chip_11cxx_lib/fmc_11xx.h"
-#include "chip/arm/lpc_chip_11cxx_lib/sysctl_11xx.h"
-#include "chip/arm/lpc_chip_11cxx_lib/clock_11xx.h"
-#include "chip/arm/lpc_chip_11cxx_lib/iocon_11xx.h"
-#include "chip/arm/lpc_chip_11cxx_lib/timer_11xx.h"
-#include "chip/arm/lpc_chip_11cxx_lib/uart_11xx.h"
-#include "chip/arm/lpc_chip_11cxx_lib/wwdt_11xx.h"
-#include "chip/arm/lpc_chip_11cxx_lib/ssp_11xx.h"
-#include "chip/arm/lpc_chip_11cxx_lib/romapi_11xx.h"
+#include "pmu_11xx.h"
+#include "fmc_11xx.h"
+#include "sysctl_11xx.h"
+#include "clock_11xx.h"
+#include "iocon_11xx.h"
+#include "timer_11xx.h"
+#include "uart_11xx.h"
+#include "wwdt_11xx.h"
+#include "ssp_11xx.h"
+#include "romapi_11xx.h"
 
 #if !defined(CHIP_LPC1125)
 /* All LPC1xx devices except the LPC1125 */
-#include "chip/arm/lpc_chip_11cxx_lib/adc_11xx.h"
+#include "adc_11xx.h"
 
 #else
 /* LPC1125 has different IP than other LPC11xx devices */
@@ -251,11 +251,11 @@ extern const uint32_t ExtRateIn;
 
 /* Different GPIO/GPIOGROUP/PININT blocks for parts with similar numbers */
 #if defined(CHIP_LPC11CXX) || defined(CHIP_LPC110X) || defined(CHIP_LPC11XXLV) || defined(CHIP_LPC1125)
-#include "chip/arm/lpc_chip_11cxx_lib/gpio_11xx_2.h"
+#include "gpio_11xx_2.h"
 #else
 #include "gpio_11xx_1.h"
-#include "chip/arm/lpc_chip_11cxx_lib/gpiogroup_11xx.h"
-#include "chip/arm/lpc_chip_11cxx_lib/pinint_11xx.h"
+#include "gpiogroup_11xx.h"
+#include "pinint_11xx.h"
 #endif
 
 /* Family specific drivers */
@@ -264,10 +264,10 @@ extern const uint32_t ExtRateIn;
 #include "dac_11xx.h"
 #endif
 #if !defined(CHIP_LPC110X)
-#include "chip/arm/lpc_chip_11cxx_lib/i2c_11xx.h"
+#include "periph/twi/i2c_11xx.h"
 #endif
 #if defined(CHIP_LPC11CXX)
-#include "chip/arm/lpc_chip_11cxx_lib/ccand_11xx.h"
+#include "ccand_11xx.h"
 #endif
 #if defined(CHIP_LPC11UXX)
 #include "usbd_11xx.h"

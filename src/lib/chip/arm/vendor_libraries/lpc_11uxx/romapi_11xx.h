@@ -1,5 +1,5 @@
 /*
- * @brief LPC11xx Miscellaneous chip specific functions
+ * @brief LPC11xx ROM API declarations and functions
  *
  * @note
  * Copyright(C) NXP Semiconductors, 2012
@@ -29,31 +29,50 @@
  * this code.
  */
 
-#include "chip/arm/lpc_chip_11cxx_lib/chip.h"
+#ifndef __ROMAPI_11XX_H_
+#define __ROMAPI_11XX_H_
 
-/*****************************************************************************
- * Private types/enumerations/variables
- ****************************************************************************/
+#include "error.h"
 
-/*****************************************************************************
- * Public types/enumerations/variables
- ****************************************************************************/
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-/* System Clock Frequency (Core Clock) */
-uint32_t SystemCoreClock;
+/** @defgroup ROMAPI_11XX CHIP: LPC11XX ROM API declarations and functions
+ * @ingroup CHIP_11XX_Drivers
+ * @{
+ */
 
-/*****************************************************************************
- * Private functions
- ****************************************************************************/
+/**
+ * @brief LPC11XX High level ROM API structure
+ */
+typedef struct {
+	const uint32_t usbdApiBase;				/*!< USBD API function table base address */
+	const uint32_t reserved0;				/*!< Reserved */
+	const uint32_t candApiBase;				/*!< CAN API function table base address */
+	const uint32_t pwrApiBase;				/*!< Power API function table base address */
+	const uint32_t reserved1;				/*!< Reserved */
+	const uint32_t reserved2;				/*!< Reserved */
+	const uint32_t reserved3;				/*!< Reserved */
+	const uint32_t reserved4;				/*!< Reserved */
+} LPC_ROM_API_T;
 
-/*****************************************************************************
- * Public functions
- ****************************************************************************/
+/**
+ * @brief LPC11XX IAP_ENTRY API function type
+ */
+typedef void (*IAP_ENTRY_T)(unsigned int[], unsigned int[]);
 
-/* Update system core clock rate, should be called if the system has
-   a clock rate change */
-void SystemCoreClockUpdate(void)
+static INLINE void iap_entry(unsigned int cmd_param[], unsigned int status_result[])
 {
-	/* CPU core speed */
-	SystemCoreClock = Chip_Clock_GetSystemClockRate();
+	((IAP_ENTRY_T) IAP_ENTRY_LOCATION)(cmd_param, status_result);
 }
+
+/**
+ * @}
+ */
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ROMAPI_11XX_H_ */

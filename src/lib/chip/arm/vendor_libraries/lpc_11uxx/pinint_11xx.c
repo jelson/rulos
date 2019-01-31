@@ -1,16 +1,15 @@
 /*
- * @brief LPC11xx GPIO group driver for CHIP_LPC11AXX, CHIP_LPC11EXX, and
- * CHIP_LPC11UXX families only.
+ * @brief LPC11xx Pin Interrupt and Pattern Match driver
  *
  * @note
- * Copyright(C) NXP Semiconductors, 2013
+ * Copyright(C) NXP Semiconductors, 2012
  * All rights reserved.
  *
  * @par
  * Software that is described herein is for illustrative purposes only
  * which provides customers with programming information regarding the
  * LPC products.  This software is supplied "AS IS" without any warranties of
- * any kind, and NXP Semiconductors and its licensor disclaim any and
+ * any kind, and NXP Semiconductors and its licenser disclaim any and
  * all warranties, express or implied, including all implied warranties of
  * merchantability, fitness for a particular purpose and non-infringement of
  * intellectual property rights.  NXP Semiconductors assumes no responsibility
@@ -30,7 +29,7 @@
  * this code.
  */
 
-#include "chip/arm/lpc_chip_11cxx_lib/chip.h"
+#include "chip.h"
 
 #if defined(CHIP_LPC11AXX) || defined(CHIP_LPC11EXX) || defined(CHIP_LPC11UXX)
 

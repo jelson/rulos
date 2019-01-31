@@ -26,7 +26,7 @@
  * this code.
  */
 
-#include "chip/arm/lpc_chip_11cxx_lib/chip.h"
+#include "chip.h"
 
 /*****************************************************************************
  * Private types/enumerations/variables

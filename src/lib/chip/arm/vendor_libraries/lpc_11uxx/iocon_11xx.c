@@ -1,11 +1,9 @@
 /*
- * @brief LPC11xx Chip specific SystemInit
+ * @brief LPC11xx IOCON driver
  *
- * @note
  * Copyright(C) NXP Semiconductors, 2012
  * All rights reserved.
  *
- * @par
  * Software that is described herein is for illustrative purposes only
  * which provides customers with programming information regarding the
  * LPC products.  This software is supplied "AS IS" without any warranties of
@@ -20,7 +18,6 @@
  * representation or warranty that such application will be suitable for the
  * specified use without further testing or modification.
  *
- * @par
  * Permission to use, copy, modify, and distribute this software and its
  * documentation is hereby granted, under NXP Semiconductors' and its
  * licensor's relevant copyrights in the software, without fee, provided that it
@@ -29,7 +26,7 @@
  * this code.
  */
 
-#include "chip/arm/lpc_chip_11cxx_lib/chip.h"
+#include "chip.h"
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -46,42 +43,17 @@
 /*****************************************************************************
  * Public functions
  ****************************************************************************/
+#if defined(CHIP_LPC11UXX) || defined(CHIP_LPC11EXX) || defined(CHIP_LPC11AXX)
 
-/* Set up and initialize hardware prior to call to main */
-void Chip_SystemInit(void)
+/* Sets I/O Control pin mux */
+void Chip_IOCON_PinMuxSet(LPC_IOCON_T *pIOCON, uint8_t port, uint8_t pin, uint32_t modefunc)
 {
-	/* IRC should be powered up */
-	Chip_SYSCTL_PowerUp(SYSCTL_POWERDOWN_IRC_PD);
-	Chip_SYSCTL_PowerUp(SYSCTL_POWERDOWN_IRCOUT_PD);
-
-	/* Set system PLL input to main oscillator */
-	Chip_Clock_SetSystemPLLSource(SYSCTL_PLLCLKSRC_IRC);
-
-	/* Power down PLL to change the PLL divider ratio */
-	Chip_SYSCTL_PowerDown(SYSCTL_POWERDOWN_SYSPLL_PD);
-
-	/* Setup PLL for main oscillator rate (FCLKIN = 12MHz) * 4 = 48MHz
-	   MSEL = 3 (this is pre-decremented), PSEL = 1 (for P = 2)
-	   FCLKOUT = FCLKIN * (MSEL + 1) = 12MHz * 4 = 48MHz
-	   FCCO = FCLKOUT * 2 * P = 48MHz * 2 * 2 = 192MHz (within FCCO range) */
-	Chip_Clock_SetupSystemPLL(3, 1);
-
-	/* Powerup system PLL */
-	Chip_SYSCTL_PowerUp(SYSCTL_POWERDOWN_SYSPLL_PD);
-
-	/* Wait for PLL to lock */
-	while (!Chip_Clock_IsSystemPLLLocked()) {}
-
-	/* Set system clock divider to 1 */
-	Chip_Clock_SetSysClockDiv(1);
-
-	/* Setup FLASH access to 3 clocks */
-	Chip_FMC_SetFLASHAccess(FLASHTIM_50MHZ_CPU);
-
-	/* Set main clock source to the system PLL. This will drive 48MHz
-	   for the main clock and 48MHz for the system clock */
-	Chip_Clock_SetMainClockSource(SYSCTL_MAINCLKSRC_PLLOUT);
-
-	/* Enable IOCON clock */
-	Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_IOCON);
+	if (port == 0) {
+		pIOCON->PIO0[pin] = modefunc;
+	}
+	else {
+		pIOCON->PIO1[pin] = modefunc;
+	}
 }
+
+#endif

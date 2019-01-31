@@ -1,5 +1,5 @@
 /*
- * @brief LPC11xx ROM API declarations and functions
+ * @brief LPC11xx USB device register block
  *
  * @note
  * Copyright(C) NXP Semiconductors, 2012
@@ -29,43 +29,40 @@
  * this code.
  */
 
-#ifndef __ROMAPI_11XX_H_
-#define __ROMAPI_11XX_H_
-
-#include "chip/arm/lpc_chip_11cxx_lib/error.h"
+#ifndef __USBD_11XX_H_
+#define __USBD_11XX_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** @defgroup ROMAPI_11XX CHIP: LPC11XX ROM API declarations and functions
+/** @defgroup USBD_11XX CHIP: LPC11xx USB Device driver
  * @ingroup CHIP_11XX_Drivers
  * @{
  */
 
+#if defined(CHIP_LPC11UXX)
 /**
- * @brief LPC11XX High level ROM API structure
+ * @brief USB device register block structure
  */
-typedef struct {
-	const uint32_t usbdApiBase;				/*!< USBD API function table base address */
-	const uint32_t reserved0;				/*!< Reserved */
-	const uint32_t candApiBase;				/*!< CAN API function table base address */
-	const uint32_t pwrApiBase;				/*!< Power API function table base address */
-	const uint32_t reserved1;				/*!< Reserved */
-	const uint32_t reserved2;				/*!< Reserved */
-	const uint32_t reserved3;				/*!< Reserved */
-	const uint32_t reserved4;				/*!< Reserved */
-} LPC_ROM_API_T;
+typedef struct {				/*!< (@ 0x40080000) USB Structure */
+	__IO uint32_t DEVCMDSTAT;	/*!< (@ 0x40080000) USB Device Command/Status register */
+	__IO uint32_t INFO;			/*!< (@ 0x40080004) USB Info register */
+	__IO uint32_t EPLISTSTART;	/*!< (@ 0x40080008) USB EP Command/Status List start address */
+	__IO uint32_t DATABUFSTART;	/*!< (@ 0x4008000C) USB Data buffer start address */
+	__IO uint32_t LPM;			/*!< (@ 0x40080010) Link Power Management register */
+	__IO uint32_t EPSKIP;		/*!< (@ 0x40080014) USB Endpoint skip */
+	__IO uint32_t EPINUSE;		/*!< (@ 0x40080018) USB Endpoint Buffer in use */
+	__IO uint32_t EPBUFCFG;		/*!< (@ 0x4008001C) USB Endpoint Buffer Configuration register */
+	__IO uint32_t INTSTAT;		/*!< (@ 0x40080020) USB interrupt status register */
+	__IO uint32_t INTEN;		/*!< (@ 0x40080024) USB interrupt enable register */
+	__IO uint32_t INTSETSTAT;	/*!< (@ 0x40080028) USB set interrupt status register */
+	__IO uint32_t INTROUTING;	/*!< (@ 0x4008002C) USB interrupt routing register */
+	__I  uint32_t RESERVED0[1];
+	__I  uint32_t EPTOGGLE;		/*!< (@ 0x40080034) USB Endpoint toggle register */
+} LPC_USB_T;
 
-/**
- * @brief LPC11XX IAP_ENTRY API function type
- */
-typedef void (*IAP_ENTRY_T)(unsigned int[], unsigned int[]);
-
-static INLINE void iap_entry(unsigned int cmd_param[], unsigned int status_result[])
-{
-	((IAP_ENTRY_T) IAP_ENTRY_LOCATION)(cmd_param, status_result);
-}
+#endif /* defined(CHIP_LPC11UXX) */
 
 /**
  * @}
@@ -75,4 +72,4 @@ static INLINE void iap_entry(unsigned int cmd_param[], unsigned int status_resul
 }
 #endif
 
-#endif /* __ROMAPI_11XX_H_ */
+#endif /* __USBD_11XX_H_ */
