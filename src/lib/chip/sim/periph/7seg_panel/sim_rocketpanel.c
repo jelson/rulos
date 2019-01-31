@@ -120,9 +120,9 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
     attroff(A_BOLD);
     wcolor_set(curses_get_window(), PAIR_WHITE, NULL);
     mvwprintw(curses_get_window(), y_origin, x_origin, segment_defs[segment].s);
-//    for (int i = strlen(segment_defs[segment].s); i; i--) {
-//      mvwprintw(curses_get_window(), y_origin, x_origin + i - 1, " ");
-//    }
+    //    for (int i = strlen(segment_defs[segment].s); i; i--) {
+    //      mvwprintw(curses_get_window(), y_origin, x_origin + i - 1, " ");
+    //    }
   }
 
   wrefresh(curses_get_window());

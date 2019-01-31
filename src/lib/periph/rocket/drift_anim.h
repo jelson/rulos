@@ -47,4 +47,3 @@ void da_set_value(DriftAnim *da, int32_t value);
 void da_set_random_value(DriftAnim *da);
 void _da_update_base(DriftAnim *da);
 void _da_randomize_velocity(DriftAnim *da);
-

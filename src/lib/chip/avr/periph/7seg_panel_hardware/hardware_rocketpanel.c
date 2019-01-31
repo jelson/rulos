@@ -172,8 +172,8 @@ void boardbus_sleep() {
   gpio_make_input_disable_pullup(SEGSEL2);
   gpio_make_input_disable_pullup(DATA);
 
-  // Strobe stays weakly high to prevent floating values from spuriously triggering
-  // latches.
+  // Strobe stays weakly high to prevent floating values from spuriously
+  // triggering latches.
   gpio_make_input_enable_pullup(STROBE);
 
   g_boardbus_is_awake = FALSE;
