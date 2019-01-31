@@ -1,0 +1,4 @@
+startup files, makefile base and linker script came from
+https://bitbucket.org/smartavionics/lpcopen-make/
+
+chip-specific libs came from NXP lpcopen
