@@ -26,7 +26,7 @@ typedef struct {
   uint16_t offset_bits;  // units: bits
 } RasterIndex;
 
-extern RasterIndex rasterIndex[];
+extern const RasterIndex rasterIndex[];
 extern const uint8_t rasterData[];
 
 void raster_draw_sym(RectRegion *rrect, char sym, int8_t dx, int8_t dy);

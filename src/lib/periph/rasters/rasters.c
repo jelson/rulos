@@ -40,7 +40,7 @@ uint16_t get_bitfield(uint16_t offset, uint8_t len) {
 }
 
 void raster_draw_sym(RectRegion *rrect, char sym, int8_t dx, int8_t dy) {
-  RasterIndex *ri = rasterIndex;
+  const RasterIndex *ri = rasterIndex;
   while (ri->sym != '\0' && ri->sym != sym) {
     ri++;
   }

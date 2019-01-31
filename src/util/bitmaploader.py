@@ -55,7 +55,7 @@ class DataBlock:
 		self.offset_bits = 0
 
 	def emit(self, fp):
-		fp.write("RasterIndex rasterIndex[] = {\n")
+		fp.write("const RasterIndex rasterIndex[] = {\n")
 		idxs = self.index.items()
 		idxs.sort()
 		for (k,idx) in idxs:
