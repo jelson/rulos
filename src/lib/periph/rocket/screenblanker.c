@@ -36,7 +36,7 @@
 #define B_NO_BOARD /**/
 #define B_END      /**/
 #include "periph/7seg_panel/display_tree.ch"
-static uint32_t rocket_tree[] = {ROCKET_TREE};
+static const uint32_t rocket_tree[] = {ROCKET_TREE};
 
 //////////////////////////////////////////////////////////////////////////////
 

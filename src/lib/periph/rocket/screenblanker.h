@@ -47,7 +47,7 @@ typedef struct s_screen_blanker {
   uint8_t num_buffers;
   ScreenBlankerMode mode;
   HPAM *hpam;
-  uint32_t *tree;
+  const uint32_t *tree;
   DiscoColor disco_color;
   struct s_screenblanker_sender *screenblanker_sender;
 } ScreenBlanker;
