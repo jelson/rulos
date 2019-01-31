@@ -42,6 +42,10 @@ void uart_sync_send_by_id(const uint8_t uart_id, const char* s) {
   // TODO: send
 }
 
+void uart_flush(const uint8_t uart_id) {
+  // TODO: flush
+}
+
 void hal_uart_sync_send(HalUart* handler, const char* s) {
   uart_sync_send_by_id(handler->uart_id, s);
 }
@@ -76,5 +80,7 @@ void arm_log(const char* fmt, ...) {
   va_end(ap);
   uart_sync_send_by_id(LOGGING_UART, message);
 }
+
+void arm_log_flush() { uart_flush(LOGGING_UART); }
 
 #endif  // LOG_TO_SERIAL

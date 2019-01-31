@@ -61,5 +61,6 @@ void hal_end_atomic(rulos_irq_state_t old_interrupts) {
 
 void arm_assert(const uint32_t line) {
   LOG("assertion failed: line %d", line);
+  LOG_FLUSH();
   __builtin_trap();
 }

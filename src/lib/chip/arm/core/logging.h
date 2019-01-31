@@ -36,8 +36,14 @@
     arm_log(fmt_p, ##__VA_ARGS__);   \
   } while (0)
 
+#define LOG_FLUSH()  \
+  do {               \
+    arm_log_flush(); \
+  } while (0);
+
 #else  // LOG_TO_SERIAL
 
 #define LOG(...)
+#define LOG_FLUSH(...)
 
 #endif  // LOG_TO_SERIAL
