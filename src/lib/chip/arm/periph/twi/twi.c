@@ -28,7 +28,7 @@
 
 #include "chip.h"
 
-#define TIMING_DEBUG_PIN GPIO0_08
+//#define TIMING_DEBUG_PIN GPIO0_08
 
 typedef struct {
   MediaStateIfc media;
