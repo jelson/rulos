@@ -21,7 +21,7 @@ MCU := atmega8
 TARGET := wallclock
 BOARD := PCB11
 
-ARM_CHIP_FAMILY := 11xx
+ARM_CHIP := lpc1114-102
 
 TARGET_OBJECTS := \
 	wallclock.o \
