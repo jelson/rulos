@@ -22,7 +22,7 @@
 #define MAX_HEIGHT 5
 
 // Sentinel value used in cursor_set_label.
-extern const char cursor_label_white[1];
+extern char cursor_label_white[1];
 
 typedef struct s_cursor_act {
   BoardBuffer bbuf[MAX_HEIGHT];
