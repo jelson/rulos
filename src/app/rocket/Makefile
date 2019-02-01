@@ -17,7 +17,7 @@ ROCKET_ROOT := ../..
 PLATFORMS := sim
 PERIPHERALS := rocket 7seg_panel twi display_rtc hpam audio adc rasters joystick uart input_controller remote_keyboard
 AVR_CFLAGS := -DLOG_TO_SERIAL=UART0
-ARM_CFLAGS := -DLOG_TO_SERIAL=UART0
+#ARM_CFLAGS := -DLOG_TO_SERIAL=UART0
 
 # Change SIM_CFLAGS to NETROCKET to debug remote bbufs
 SIM_PERIPHERALS += keypad

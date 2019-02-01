@@ -21,8 +21,7 @@
 #undef FALSE
 #undef TRUE
 
-#include "chip/arm/lpc_chip_11cxx_lib/chip.h"
-#include "chip/arm/lpc_chip_11cxx_lib/gpio_11xx_2.h"
+#include "chip.h"
 
 // This is the first entry point defined by the linker script:
 // meant for early setup such as clock configuration. This is done before, for

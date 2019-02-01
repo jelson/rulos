@@ -19,7 +19,7 @@
 #undef FALSE
 #undef TRUE
 
-#include "chip/arm/lpc_chip_11cxx_lib/chip.h"
+#include "chip.h"
 
 void hal_init_adc(Time scan_period) {}
 void hal_init_adc_channel(uint8_t idx) {}

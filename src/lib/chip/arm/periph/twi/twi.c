@@ -26,7 +26,7 @@
 #undef TRUE
 #undef FALSE
 
-#include "chip/arm/lpc_chip_11cxx_lib/i2c_11xx.h"
+#include "chip.h"
 
 #define TIMING_DEBUG_PIN GPIO0_08
 

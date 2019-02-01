@@ -22,7 +22,7 @@
 
 #undef TRUE
 #undef FALSE
-#include "chip/arm/lpc_chip_11cxx_lib/chip.h"
+#include "chip.h"
 
 #ifndef CRYSTAL
 #define CRYSTAL 0
