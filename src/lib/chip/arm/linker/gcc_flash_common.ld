@@ -13,9 +13,10 @@
  * I want CM0PLUS too, so I decided to switch over to LPCopen's startup files
  * instead.
  *
- * They use slightly different symbols, so I changed this linker script to add
- * some synonymous symboles (_data, _edata, _bss, _ebss, _vStackTop) to match
- * what LPCopen's startup files expect.
+ * The LPCOpen startup files use slightly different symbols than the standard
+ * ARM CMSIS files, so I changed this linker script to add some synonymous
+ * symbols (_data, _edata, _bss, _ebss, _vStackTop) to match what LPCopen's
+ * startup files expect.
  * 
  * -JE Jan 2019
  */
