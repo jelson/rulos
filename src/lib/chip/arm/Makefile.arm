@@ -101,7 +101,6 @@ ARM_CPUTYPE_FLAGS := -mcpu=$(ARM_GCC_CPU) -mthumb -march=$(ARM_GCC_ARCH)
 ARM_CPUTYPE_FLAGS += -DCORE_$(ARM_MX)=1 -D$(ARM_CHIP_FAMILY)=1
 
 ifeq ($(ARM_CHIP_FAMILY),CHIP_LPC11CXX)
-ARM_STARTUP := startup_ARMCM0.o
 ARM_DRIVER_LIB := lpc_11uxx
 endif
 
@@ -122,12 +121,6 @@ else
 endif
 ifeq ($(ARM_MX),)
 	@echo "Unknown ARM_CHIP. Modify definitions in lib/chip/arm/Makefile.arm."
-	@false
-else
-	@true
-endif
-ifeq ($(ARM_STARTUP),)
-	@echo "Unknown ARM_CHIP_FAMILY $(ARM_CHIP_FAMILY). Modify definitions in lib/chip/arm/Makefile.arm."
 	@false
 else
 	@true
@@ -193,7 +186,6 @@ $(ARM_LIB_FILE): $(ARM_LIB_OBJECTS)
 
 # TARGET_OBJECTS comes from the app's Makefile
 ARM_TARGET_OBJECTS := $(patsubst %.o,$(ARM_OBJDIR)/app/%.o, $(TARGET_OBJECTS))
-ARM_TARGET_OBJECTS += $(ARM_OBJDIR)/lib/chip/arm/startup/$(ARM_STARTUP)
 
 ##Link
 $(ARM_ARCHTARG).elf: $(ARM_LIB_FILE) $(ARM_TARGET_OBJECTS)

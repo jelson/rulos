@@ -1,3 +1,25 @@
+/*
+ * note from jelson re: RULOS file
+ *
+ * This linker config came from a guy on the web
+ * (https://bitbucket.org/smartavionics/lpcopen-make/) who gives out matching
+ * linker scripts, startup files in Assembler, and makefiles that are
+ * compatible with NXP LPC's chips. The linker script was, as far as I can
+ * tell, an exact copy of the gcc linker script from ARM's official CMSIS
+ * repository (https://github.com/ARM-software/CMSIS/blob/master/Device/ARM/ARMCM0/Source/GCC/gcc_arm.ld)
+ *
+ * The 'smartavionics' guy wrote a couple of startup files meant to match
+ * ARM's standard linker file. However, he only supports CM0 and CM3 devices;
+ * I want CM0PLUS too, so I decided to switch over to LPCopen's startup files
+ * instead.
+ *
+ * They use slightly different symbols, so I changed this linker script to add
+ * some synonymous symboles (_data, _edata, _bss, _ebss, _vStackTop) to match
+ * what LPCopen's startup files expect.
+ * 
+ * -JE Jan 2019
+ */
+
 /* Library configurations */
 GROUP(libgcc.a libc.a libm.a libnosys.a)
 
@@ -27,7 +49,7 @@ GROUP(libgcc.a libc.a libm.a libnosys.a)
  *   __StackTop
  *   __stack
  */
-ENTRY(Reset_Handler)
+ENTRY(ResetISR)
 
 SECTIONS
 {
@@ -76,9 +98,11 @@ SECTIONS
 	__exidx_end = .;
 
 	__etext = .;
+	_etext = .;
 
 	.data : AT (__etext)
 	{
+		_data = .;
 		__data_start__ = .;
 		*(vtable)
 		*(.data*)
@@ -107,15 +131,18 @@ SECTIONS
 		. = ALIGN(4);
 		/* All data end */
 		__data_end__ = .;
+		_edata = .;
 
 	} > RAM
 
 	.bss :
 	{
 		__bss_start__ = .;
+		_bss = .;
 		*(.bss*)
 		*(COMMON)
 		__bss_end__ = .;
+		_ebss = .;
 	} > RAM
 
 	.ahb_ram0 (NOLOAD):
@@ -147,6 +174,7 @@ SECTIONS
 	/* Set stack top to end of RAM, and stack limit move down by
 	 * size of stack_dummy section */
 	__StackTop = ORIGIN(RAM) + LENGTH(RAM);
+	_vStackTop = ORIGIN(RAM) + LENGTH(RAM);
 	__StackLimit = __StackTop - SIZEOF(.stack_dummy);
 	PROVIDE(__stack = __StackTop);
 
