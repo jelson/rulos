@@ -149,8 +149,6 @@ void init_rocket0(Rocket0 *r0) {
 
   init_potsticker(&r0->potsticker, POTSTICKER_CHANNEL,
                   (InputInjectorIfc *)&r0->cp.direct_injector, 9, 'p', 'q');
-
-  bss_canary_init();
 }
 
 static Rocket0 rocket0;  // allocate obj in .bss so it's easy to count
@@ -172,6 +170,7 @@ int main() {
 
   // start the jiffy clock
   init_clock(10000, TIMER1);
+  bss_canary_init();
 
   // includes slow calibration phase
   cpumon_init(&cpumon);
