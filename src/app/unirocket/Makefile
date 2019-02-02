@@ -30,6 +30,9 @@ PLATFORMS += avr
 MCU := atmega1284
 BOARD := LPEM2
 AVR_CFLAGS += -DBOARDCONFIG_UNIROCKET
+# Change SIM_CFLAGS to -DBOARDCONFIG_UNIROCKET to debug remote bbufs
+SIM_CFLAGS := -DBOARDCONFIG_UNIROCKET
+SIM_PERIPHERALS := keypad
 
 ## Uncomment this block for ARM test
 #PLATFORMS += arm

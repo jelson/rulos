@@ -42,10 +42,17 @@ void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network);
 void send_remote_bbuf(RemoteBBufSend *rbs, SSBitmap *bm, uint8_t index,
                       uint8_t mask);
 
+#define RING_SIZE 4
+#define RING_NEXT(x) ((x + 1) % RING_SIZE)
 // Thread context for rbs_update and rbs_refresh.
+#define RING_INVALID_INDEX (255)
+
 typedef struct s_remote_bbuf_recv {
-  uint8_t recv_msg_alloc[sizeof(Message) + sizeof(BBufMessage)];
   RecvSlot recvSlot;
+  uint8_t recv_msg_alloc[sizeof(Message) + sizeof(BBufMessage)];
+  uint8_t recv_msg_ring[RING_SIZE][sizeof(BBufMessage)];
+  uint8_t nextEmptyIdx;
+  uint8_t nextOccupiedIdx;
 } RemoteBBufRecv;
 
 // Initialize the remote bbuf service.

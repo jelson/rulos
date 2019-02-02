@@ -135,24 +135,62 @@ void rbs_refresh(RemoteBBufSend *rbs) {
 #endif
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Receive side
+// TODO we should probably put this in a separate file, huh?
+
+void rbr_process(RemoteBBufRecv *rbr);
+
 void init_remote_bbuf_recv(RemoteBBufRecv *rbr, Network *network) {
   rbr->recvSlot.func = rbr_recv;
   rbr->recvSlot.port = REMOTE_BBUF_PORT;
   rbr->recvSlot.payload_capacity = sizeof(BBufMessage);
   rbr->recvSlot.msg_occupied = FALSE;
   rbr->recvSlot.msg = (Message *)rbr->recv_msg_alloc;
+  rbr->nextEmptyIdx = 0;
+  rbr->nextOccupiedIdx = RING_INVALID_INDEX;  // None are occupied.
 
   net_bind_receiver(network, &rbr->recvSlot);
 }
 
 void rbr_recv(RecvSlot *recvSlot, uint8_t payload_len) {
+  // NB nasty struct layout dependency.
+  RemoteBBufRecv *rbr = (RemoteBBufRecv *)recvSlot;
+
   if (payload_len != sizeof(BBufMessage)) {
-    LOG("Error: expected BBufMessage of size %ld, got %d bytes",
+    LOG("rbr_recv: Error: expected BBufMessage of size %ld, got %d bytes",
         sizeof(BBufMessage), payload_len);
     return;
   }
 
-  BBufMessage *bbm = (BBufMessage *)&recvSlot->msg->data;
+  if (rbr->nextEmptyIdx == RING_INVALID_INDEX) {
+    LOG("rbr_recv: overflow");
+    return;
+  }
+
+  uint8_t thisPacketIndex = rbr->nextEmptyIdx;
+  memcpy(rbr->recv_msg_ring[thisPacketIndex], &rbr->recvSlot.msg->data,
+         payload_len);
+  rbr->nextEmptyIdx = RING_NEXT(thisPacketIndex);
+  if (rbr->nextEmptyIdx == rbr->nextOccupiedIdx) {
+    rbr->nextEmptyIdx = RING_INVALID_INDEX;
+  }
+
+  if (rbr->nextOccupiedIdx == RING_INVALID_INDEX) {
+    // This is the first packet since a drought. Restart the buffer-processor.
+    rbr->nextOccupiedIdx = thisPacketIndex;
+    schedule_now((ActivationFuncPtr)rbr_process, rbr);
+  } else {
+    // The buffer-processor must already be running. Let it advance the
+    // nextOccupiedIdx pointer by itself.
+  }
+  recvSlot->msg_occupied = FALSE;
+}
+
+void rbr_process(RemoteBBufRecv *rbr) {
+  assert(rbr->nextOccupiedIdx != RING_INVALID_INDEX);
+
+  BBufMessage *bbm = (BBufMessage *)rbr->recv_msg_ring[rbr->nextOccupiedIdx];
 
 #if BBDEBUG
   LOG("rbs: updating board %d with data %x%x%x%x%x%x%x%x", bbm->index,
@@ -161,5 +199,13 @@ void rbr_recv(RecvSlot *recvSlot, uint8_t payload_len) {
 #endif
 
   board_buffer_paint(bbm->buf, bbm->index, 0xff);
-  recvSlot->msg_occupied = FALSE;
+
+  rbr->nextOccupiedIdx = RING_NEXT(rbr->nextOccupiedIdx);
+  if (rbr->nextOccupiedIdx == rbr->nextEmptyIdx) {
+    // rbr_recv will restart me when he runs again.
+    rbr->nextOccupiedIdx = RING_INVALID_INDEX;
+  } else {
+    // I have more work to do!
+    schedule_now((ActivationFuncPtr)rbr_process, rbr);
+  }
 }
