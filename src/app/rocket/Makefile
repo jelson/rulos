@@ -29,9 +29,9 @@ SIM_CFLAGS := -DBOARDCONFIG_ROCKET0
 #BOARD := PCB11
 
 ## Uncomment this block for classic LPEM talking to an EPB
-#MCU := atmega1284p
-#BOARD := LPEM
-#PERIPHERALS += 7seg_panel_hardware keypad
+MCU := atmega1284p
+BOARD := LPEM
+PERIPHERALS += 7seg_panel_hardware keypad
 
 ## Uncomment this block for LPEM2 with remote bbufs
 #PLATFORMS += avr
@@ -40,11 +40,11 @@ SIM_CFLAGS := -DBOARDCONFIG_ROCKET0
 #AVR_CFLAGS := -DBOARDCONFIG_NETROCKET
 
 ## Uncomment this block for test rocket on ARM
-PLATFORMS += arm
-#ARM_CHIP := lpc1114-102
-ARM_CHIP := lpc1115
-ARM_CFLAGS += -DBOARDCONFIG_NETROCKET
-BOARD := ARMPEM_REVA
+#PLATFORMS += arm
+##ARM_CHIP := lpc1114-102
+#ARM_CHIP := lpc1115
+#ARM_CFLAGS += -DBOARDCONFIG_NETROCKET
+#BOARD := ARMPEM_REVA
 
 ##################################
 
