@@ -30,9 +30,15 @@
 
 /************************************************************************/
 
+HalUart uart;
+
 int main() {
   hal_init();
   bss_canary_init();
+
+  hal_uart_init(&uart, 38400, true, /* uart_id= */ 0);
+  LOG("South bridge serial logging up");
+  
   init_clock(10000, TIMER1);
 
   CpumonAct cpumon;

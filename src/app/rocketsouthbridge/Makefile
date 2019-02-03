@@ -15,12 +15,10 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr sim
-PERIPHERALS := quadknob twi input_controller keypad remote_keyboard
+PERIPHERALS := quadknob twi input_controller keypad remote_keyboard uart
 MCU := atmega328p
 BOARD := SOUTHBRIDGE
-
-# Configuration for no panels
-ALL_PLATFORM_CFLAGS :=
+AVR_CFLAGS := -DLOG_TO_SERIAL=UART0
 
 TARGET := rocketsouthbridge
 
