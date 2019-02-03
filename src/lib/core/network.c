@@ -79,7 +79,6 @@ static MessageRecvBuffer *net_allocate_free_buffer(AppReceiver *app_receiver) {
     MessageRecvBuffer *buffer =
         (MessageRecvBuffer *)(app_receiver->message_recv_buffers + offset);
     if (buffer->payload_len == 0) {
-      LOG("XXX using ring buffer %d", idx);
       return buffer;
     }
   }

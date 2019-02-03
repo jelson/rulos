@@ -19,9 +19,14 @@
 #include "periph/7seg_panel/7seg_panel.h"
 #include "periph/7seg_panel/remote_bbuf.h"
 
+HalUart uart;
+
 int main() {
   hal_init();
   hal_init_rocketpanel();
+
+  hal_uart_init(&uart, 38400, true, /* uart_id= */ 0);
+  LOG("Rocket dongle running");
 
   /*board_say(" rEAdy  "); */
 

@@ -34,8 +34,18 @@ void test_func(void *data) {
   schedule_us(FREQ_USEC, (ActivationFuncPtr)test_func, NULL);
 }
 
+HalUart uart;
+
 int main() {
   hal_init();
+  hal_uart_init(&uart, 38400, true, /* uart_id= */ 0);
+  while (1) {
+      for (int i=0; i<255; i++) {
+        //hal_uart_sync_send(&uart, "ABCDEFG\n");
+         LOG("Log output running %d", i);
+      }
+    }
+  
   init_clock(10000, TIMER1);
   gpio_make_output(TEST_PIN);
 
