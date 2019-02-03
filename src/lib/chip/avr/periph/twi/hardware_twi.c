@@ -42,7 +42,6 @@ struct s_TwiState {
 
   // slave-receiver state
   MediaRecvSlot *slaveRecvSlot;
-  int8_t slaveRecvLen;  // we use -1 as a sentinel so must be signed
 
   // master-receiver state
   MediaRecvSlot *masterRecvSlot;
@@ -84,25 +83,20 @@ static void end_xmit(TwiState *const twi) {
   }
 }
 
-// A trampoline function for the receive upcall.  Scheduled by
-// initiateRecvCallback, above.
-static void doRecvCallback(MediaRecvSlot *const mrs) {
-  assert(mrs != NULL);
-  assert(mrs->func != NULL);
-  assert(mrs->occupied_len > 0);
-
-#ifdef DEBUG_STACK_WITH_UART
-  hal_uart_sync_send("U", 1);
-#endif
-  mrs->func(mrs, mrs->occupied_len);
-#ifdef DEBUG_STACK_WITH_UART
-  hal_uart_sync_send("u", 1);
-#endif
+static inline bool sr_is_valid_packet(MediaRecvSlot *slaveRecvSlot) {
+  return slaveRecvSlot->packet_len > 0 &&
+         slaveRecvSlot->packet_len <= slaveRecvSlot->capacity;
 }
 
-static void abortSlaveRecv(TwiState *const twi) {
-  twi->slaveRecvLen = -1;
-  twi->slaveRecvSlot->occupied_len = 0;
+static inline void sr_deliver(MediaRecvSlot *slaveRecvSlot) {
+  if (sr_is_valid_packet(slaveRecvSlot)) {
+    slaveRecvSlot->func(slaveRecvSlot);
+  }
+  slaveRecvSlot->packet_len = 0;
+}
+
+static inline void mark_packet_invalid(MediaRecvSlot *recvSlot) {
+  recvSlot->packet_len = recvSlot->capacity + 1;
 }
 
 static void mr_maybe_dont_ack(TwiState *const twi) {
@@ -111,12 +105,16 @@ static void mr_maybe_dont_ack(TwiState *const twi) {
     twi->dont_ack = TRUE;
 }
 
-static void end_mr(TwiState *const twi) {
-  assert(twi->masterRecvSlot != NULL);
-  twi->masterRecvSlot->occupied_len = twi->masterRecvLen;
-  schedule_now((ActivationFuncPtr)doRecvCallback, twi->masterRecvSlot);
+static void mr_deliver(TwiState *const twi) {
+  MediaRecvSlot *const masterRecvSlot = twi->masterRecvSlot;
+  assert(masterRecvSlot != NULL);
+
+  // Let the generic socket layer dispatch the new data at interrupt time.
+  masterRecvSlot->func(masterRecvSlot);
+
+  // Caller is responsible to hal_twi_start_master_read for the next receive
+  // request.
   twi->masterRecvSlot = NULL;
-  twi->masterRecvLen = -1;
 }
 
 static void twi_set_control_register(TwiState *const twi, uint8_t bits) {
@@ -152,10 +150,8 @@ static void twi_update(TwiState *const twi, uint8_t status) {
   // Mask off the prescaler bits
   status &= 0b11111000;
 
-#ifdef DEBUG_STACK_WITH_UART
-  char c = twi->slaveRecvSlot->occupied_len;
-  hal_uart_sync_send(&c, 1);
-#endif
+  MediaRecvSlot *const slaveRecvSlot = twi->slaveRecvSlot;
+  MediaRecvSlot *const masterRecvSlot = twi->masterRecvSlot;
 
   switch (status) {
     case TW_REP_START:
@@ -163,17 +159,15 @@ static void twi_update(TwiState *const twi, uint8_t status) {
       // if we just acquired the bus, decide if we're going into
       // master transmit or master receive mode.
 
-      assert(twi->out_pkt != NULL || twi->masterRecvSlot != NULL);
-
       if (twi->out_pkt != NULL) {
         // master transmit
         TWDR = twi->out_destaddr << 1 | TW_WRITE;
         twi->out_n = 0;
         twi->have_bus = 1;
-      } else if (twi->masterRecvSlot != NULL) {
+      } else if (masterRecvSlot != NULL) {
         // master receive
         TWDR = twi->masterRecvAddr << 1 | TW_READ;
-        twi->masterRecvLen = 0;
+        masterRecvSlot->packet_len = 0;
         twi->have_bus = 1;
       } else {
         assert(FALSE);
@@ -225,50 +219,34 @@ static void twi_update(TwiState *const twi, uint8_t status) {
     case TW_SR_SLA_ACK:
       // new packet arriving addressed to us.  If the receive buffer
       // is available, start receiving.
-      if (twi->slaveRecvSlot != NULL && twi->slaveRecvSlot->occupied_len == 0 &&
-          twi->slaveRecvLen == -1) {
-        twi->slaveRecvLen = 0;
-      } else {
+      if (twi->slaveRecvSlot == NULL || twi->slaveRecvSlot->packet_len != 0) {
         LOG("dropping packet because receive buffer is busy");
-        twi->slaveRecvLen = -1;
         twi->dont_ack = TRUE;
       }
+      // Ready to receive: packet_len accumulator is zero.
       break;
 
     case TW_SR_DATA_ACK:
-      // one byte was received and acked.  If we're in "drop the
-      // rest of this packet" mode, do nothing.  If we've overrun
-      // the buffer, drop packet (including this byte).
-      if (twi->slaveRecvLen == -1) {
-        twi->dont_ack = TRUE;
-        break;
-      }
-
       // overflowed the receive buffer?  if so, drop entire packet.
-      if (twi->slaveRecvSlot->capacity <= twi->slaveRecvLen) {
+      if (slaveRecvSlot->packet_len >= slaveRecvSlot->capacity) {
         LOG("dropping packet too long for local receive buffer");
-        abortSlaveRecv(twi);
         twi->dont_ack = TRUE;
-        break;
+        mark_packet_invalid(slaveRecvSlot);
+      } else {
+        // store next byte
+        slaveRecvSlot->data[slaveRecvSlot->packet_len++] = TWDR;
       }
-
-      // store next byte
-      twi->slaveRecvSlot->data[twi->slaveRecvLen++] = TWDR;
       break;
 
     case TW_SR_DATA_NACK:
       // we didn't ack a byte for some reason.  if we're in
       // the middle of a packet, abandon it.
-      if (twi->slaveRecvLen >= 0) abortSlaveRecv(twi);
+      mark_packet_invalid(slaveRecvSlot);
       break;
 
     case TW_SR_STOP:
       // end of packet, yay!  upcall into network stack
-      if (twi->slaveRecvLen > 0) {
-        twi->slaveRecvSlot->occupied_len = twi->slaveRecvLen;
-        schedule_now((ActivationFuncPtr)doRecvCallback, twi->slaveRecvSlot);
-      }
-      twi->slaveRecvLen = -1;
+      sr_deliver(slaveRecvSlot);
       break;
 
     case TW_SR_ARB_LOST_GCALL_ACK:
@@ -297,17 +275,20 @@ static void twi_update(TwiState *const twi, uint8_t status) {
     case TW_MR_DATA_ACK:
     case TW_MR_DATA_NACK:
       // received a byte -- that we might have acked, or not acked
-      if (twi->masterRecvSlot &&
-          twi->masterRecvLen < twi->masterRecvSlot->capacity) {
-        twi->masterRecvSlot->data[twi->masterRecvLen++] = TWDR;
+      if (masterRecvSlot == NULL ||
+          masterRecvSlot->packet_len >= twi->masterRecvSlot->capacity) {
+        mark_packet_invalid(masterRecvSlot);
+      } else {
+        // store next byte
+        slaveRecvSlot->data[slaveRecvSlot->packet_len++] = TWDR;
 
         // if this was the next-to-the-last byte, don't ack
         mr_maybe_dont_ack(twi);
 
         // if we've received the entire packet, send a NACK and
         // send the packet up.
-        if (twi->masterRecvLen == twi->masterRecvSlot->capacity) {
-          end_mr(twi);
+        if (masterRecvSlot->packet_len == masterRecvSlot->capacity) {
+          mr_deliver(twi);
         }
       }
 
@@ -315,7 +296,7 @@ static void twi_update(TwiState *const twi, uint8_t status) {
 
     case TW_MR_SLA_NACK:
       // device didn't reply.  Just send up what we have.
-      end_mr(twi);
+      mr_deliver(twi);
       break;
   }
 
@@ -336,15 +317,15 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
                             MediaRecvSlot *const slaveRecvSlot) {
   TwiState *const twi = &g_twi;
 
-#ifdef DEBUG_STACK_WITH_UART
-  hal_uart_init(NULL, 250000, 0);
-#endif
-
   /* initialize our local state */
   memset(twi, 0, sizeof(TwiState));
   twi->media.send = &hal_twi_send;
   twi->slaveRecvSlot = slaveRecvSlot;
-  twi->slaveRecvLen = -1;
+  if (twi->slaveRecvSlot != NULL) {
+    // We use packet_len>capacity to signal a receive overrun.
+    assert(twi->slaveRecvSlot->capacity < 255);
+    twi->slaveRecvSlot->packet_len = 0;
+  }
 
   twi->out_pkt = NULL;
   twi->out_len = 0;

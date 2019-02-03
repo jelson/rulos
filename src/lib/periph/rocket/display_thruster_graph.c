@@ -27,7 +27,7 @@ void dtg_draw_one_skinny(DThrusterGraph *dtg, int i, uint8_t input,
                          SSBitmap mask);
 void dtg_draw_skinny_bars(BoardBuffer *bbuf, int v, SSBitmap bm);
 void dtg_draw_fat_bars(BoardBuffer *bbuf, int v, SSBitmap bm0, SSBitmap bm1);
-void dtg_recv_func(RecvSlot *recvSlot, uint8_t payload_len);
+void dtg_recv_func(MessageRecvBuffer *msg);
 
 void dtg_init_local(DThrusterGraph *dtg, uint8_t board) {
   memset(dtg, 0, sizeof(*dtg));
@@ -41,14 +41,14 @@ void dtg_init_remote(DThrusterGraph *dtg, uint8_t board, Network *network) {
   dtg_init_local(dtg, board);
 
   dtg->network = network;
-  dtg->recvSlot.func = dtg_recv_func;
-  dtg->recvSlot.port = THRUSTER_PORT;
-  dtg->recvSlot.payload_capacity = sizeof(ThrusterPayload);
-  dtg->recvSlot.msg_occupied = FALSE;
-  dtg->recvSlot.msg = (Message *)dtg->thruster_message_storage;
-  dtg->recvSlot.user_data = dtg;
+  dtg->app_receiver.recv_complete_func = dtg_recv_func;
+  dtg->app_receiver.port = THRUSTER_PORT;
+  dtg->app_receiver.payload_capacity = sizeof(ThrusterPayload);
+  dtg->app_receiver.num_receive_buffers = 1;
+  dtg->app_receiver.message_recv_buffers = dtg->thruster_ring_storage;
+  dtg->app_receiver.user_data = dtg;
 
-  net_bind_receiver(dtg->network, &dtg->recvSlot);
+  net_bind_receiver(dtg->network, &dtg->app_receiver);
 }
 
 void dtg_update(DThrusterGraph *dtg) {
@@ -118,13 +118,13 @@ void dtg_draw_fat_bars(BoardBuffer *bbuf, int v, SSBitmap bm0, SSBitmap bm1) {
 // in a distributed rocket.
 void dtg_update_state(DThrusterGraph *dtg, ThrusterPayload *tp) {
   dtg->thruster_bits = tp->thruster_bits;
-  dtg->recvSlot.msg_occupied = FALSE;
   //	LOG("dtg_recv_func got bits %1x!", dtg->thruster_bits & 0x7);
 }
 
-void dtg_recv_func(RecvSlot *recvSlot, uint8_t payload_len) {
-  DThrusterGraph *dtg = (DThrusterGraph *)recvSlot->user_data;
-  ThrusterPayload *tp = (ThrusterPayload *)recvSlot->msg->data;
-  assert(payload_len == sizeof(ThrusterPayload));
+void dtg_recv_func(MessageRecvBuffer *msg) {
+  DThrusterGraph *dtg = (DThrusterGraph *)msg->app_receiver->user_data;
+  ThrusterPayload *tp = (ThrusterPayload *)msg->data;
+  assert(msg->payload_len == sizeof(ThrusterPayload));
   dtg_update_state(dtg, tp);
+  net_free_received_message_buffer(msg);
 }

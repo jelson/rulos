@@ -29,24 +29,38 @@
 #define SEND_QUEUE_SIZE 4
 #define NET_MAX_PAYLOAD_SIZE 10
 
-struct s_recv_slot;
-typedef void (*RecvCompleteFunc)(struct s_recv_slot *recv_slot,
-                                 uint8_t payload_size);
-typedef struct s_recv_slot {
-  RecvCompleteFunc func;
+// We allocate num_receive_buffers of these things.
+typedef struct {
+  struct app_receiver_t *app_receiver;  // back pointer for access to user_data
+  uint8_t payload_len;
+  uint8_t data[0];
+} MessageRecvBuffer;
+
+typedef void (*RecvCompleteFunc)(MessageRecvBuffer *msg);
+
+#define RECEIVE_BUFFER_SIZE(payload_capacity) \
+  (sizeof(MessageRecvBuffer) + payload_capacity)
+#define RECEIVE_RING_SIZE(num_receive_buffers, payload_capacity) \
+  (RECEIVE_BUFFER_SIZE(payload_capacity) * num_receive_buffers)
+
+typedef struct app_receiver_t {
+  RecvCompleteFunc recv_complete_func;
   Port port;
-  Message *msg;  // must contain enough space
   uint8_t payload_capacity;
-  uint8_t msg_occupied;  // message in use by app; can't refill now.
-  void *user_data;       // pointer can be used for user functions
-} RecvSlot;
+  uint8_t num_receive_buffers;
+  void *user_data;  // pointer can be used for user functions
+
+  // message_recv_buffers should point to RECEIVE_RING_SIZE(...) bytes.
+  uint8_t *message_recv_buffers;
+} AppReceiver;
 
 struct s_send_slot;
 typedef void (*SendCompleteFunc)(struct s_send_slot *send_slot);
 typedef struct s_send_slot {
   SendCompleteFunc func;
   Addr dest_addr;
-  Message *msg;
+  uint8_t payload_len;  // Size of application payload at msg->data
+  WireMessage *wire_msg;
   r_bool sending;
 } SendSlot, *SendSlotPtr;
 
@@ -54,21 +68,23 @@ typedef struct s_send_slot {
 
 QUEUE_DECLARE(SendSlotPtr)
 
-typedef struct s_network {
-  RecvSlot *recvSlots[MAX_LISTENERS];
+typedef struct {
+  AppReceiver *app_receivers[MAX_LISTENERS];
   uint8_t sendQueue_storage[sizeof(SendSlotPtrQueue) +
                             sizeof(SendSlotPtr) * SEND_QUEUE_SIZE];
-  union {
-    char MediaRecvSlotStorage[sizeof(MediaRecvSlot) + sizeof(Message) +
-                              NET_MAX_PAYLOAD_SIZE];
-    MediaRecvSlot mrs;
-  };
+  struct {
+    MediaRecvSlot media_recv_slot;
+    WireMessage wire_message;
+    uint8_t payload[NET_MAX_PAYLOAD_SIZE];
+  } media_recv_alloc;
+
   MediaStateIfc *media;
 } Network;
 
 // Public API
 void init_network(Network *net, MediaStateIfc *media);
-void net_bind_receiver(Network *net, RecvSlot *recvSlot);
+void net_bind_receiver(Network *net, AppReceiver *appReceiver);
+void net_free_received_message_buffer(MessageRecvBuffer *msg);
 r_bool net_send_message(Network *net, SendSlot *sendSlot);
 
 //////////////////////////////////////////////////////////////////////////////

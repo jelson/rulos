@@ -28,7 +28,7 @@ typedef struct {
 
 typedef struct s_remote_bbuf_send {
   Network *network;
-  uint8_t send_msg_alloc[sizeof(Message) + sizeof(BBufMessage)];
+  uint8_t send_msg_alloc[sizeof(WireMessage) + sizeof(BBufMessage)];
   SendSlot sendSlot;
   struct s_remote_bbuf_send *send_this;
   SSBitmap offscreen[NUM_REMOTE_BOARDS][NUM_DIGITS];
@@ -48,18 +48,9 @@ void send_remote_bbuf(RemoteBBufSend *rbs, SSBitmap *bm, uint8_t index,
 #define RING_INVALID_INDEX (255)
 
 typedef struct s_remote_bbuf_recv {
-  RecvSlot recvSlot;
-  uint8_t recv_msg_alloc[sizeof(Message) + sizeof(BBufMessage)];
-  uint8_t recv_msg_ring[RING_SIZE][sizeof(BBufMessage)];
-  uint8_t nextEmptyIdx;
-  uint8_t nextOccupiedIdx;
+  uint8_t recv_ring_alloc[RECEIVE_RING_SIZE(RING_SIZE, sizeof(BBufMessage))];
+  AppReceiver app_receiver;
 } RemoteBBufRecv;
 
 // Initialize the remote bbuf service.
 void init_remote_bbuf_recv(RemoteBBufRecv *rbr, Network *network);
-
-// private
-void rbs_update(RemoteBBufSend *rbs);
-void rbs_refresh(RemoteBBufSend *rbs);
-void rbs_send_complete(SendSlot *slot);
-void rbr_recv(RecvSlot *recvSlot, uint8_t payload_len);

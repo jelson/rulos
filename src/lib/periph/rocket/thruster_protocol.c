@@ -23,10 +23,10 @@ void init_thruster_send_network(ThrusterSendNetwork *tsn, Network *network) {
   tsn->network = network;
 
   tsn->sendSlot.func = NULL;
-  tsn->sendSlot.msg = (Message *)tsn->thruster_message_storage;
   tsn->sendSlot.dest_addr = ROCKET1_ADDR;
-  tsn->sendSlot.msg->dest_port = THRUSTER_PORT;
-  tsn->sendSlot.msg->payload_len = sizeof(ThrusterPayload);
+  tsn->sendSlot.wire_msg = (WireMessage *)tsn->thruster_message_storage;
+  tsn->sendSlot.wire_msg->dest_port = THRUSTER_PORT;
+  tsn->sendSlot.payload_len = sizeof(ThrusterPayload);
   tsn->sendSlot.sending = FALSE;
 
   tsn->last_state.thruster_bits = 0;
@@ -54,7 +54,7 @@ void tsn_timer_func(ThrusterSendNetwork *tsn) {
   if (tsn->state_changed && !tsn->sendSlot.sending) {
     // LOG("tsn: state change, sending packet");
 
-    ThrusterPayload *tp = (ThrusterPayload *)tsn->sendSlot.msg->data;
+    ThrusterPayload *tp = (ThrusterPayload *)tsn->sendSlot.wire_msg->data;
     tp->thruster_bits = tsn->last_state.thruster_bits;
 
     if (net_send_message(tsn->network, &tsn->sendSlot)) {

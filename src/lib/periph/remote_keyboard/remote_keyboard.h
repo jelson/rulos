@@ -27,7 +27,7 @@ typedef struct {
 typedef struct s_remote_keyboard_send {
   Network *network;
   Port port;
-  uint8_t send_msg_alloc[sizeof(Message) + sizeof(KeystrokeMessage)];
+  uint8_t send_msg_alloc[sizeof(WireMessage) + sizeof(KeystrokeMessage)];
   SendSlot sendSlot;
 
   InputInjectorIfc forwardLocalStrokes;
@@ -38,8 +38,8 @@ void init_remote_keyboard_send(RemoteKeyboardSend *rk, Network *network,
                                Addr addr, Port port);
 
 typedef struct s_remote_keyboard_recv {
-  uint8_t recv_msg_alloc[sizeof(Message) + sizeof(KeystrokeMessage)];
-  RecvSlot recvSlot;
+  uint8_t recv_ring_alloc[RECEIVE_RING_SIZE(1, sizeof(KeystrokeMessage))];
+  AppReceiver app_receiver;
   InputInjectorIfc *acceptNetStrokes;
 } RemoteKeyboardRecv;
 

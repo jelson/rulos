@@ -24,15 +24,15 @@ void init_audio_client(AudioClient *ac, Network *network) {
   ac->network = network;
 
   ac->arm_send_slot.func = NULL;
-  ac->arm_send_slot.msg = (Message *)ac->arm_send_msg_alloc;
+  ac->arm_send_slot.wire_msg = (WireMessage *)ac->arm_send_msg_alloc;
   ac->arm_send_slot.sending = FALSE;
 
   ac->avm_send_slot.func = NULL;
-  ac->avm_send_slot.msg = (Message *)ac->avm_send_msg_alloc;
+  ac->avm_send_slot.wire_msg = (WireMessage *)ac->avm_send_msg_alloc;
   ac->avm_send_slot.sending = FALSE;
 
   ac->mcm_send_slot.func = NULL;
-  ac->mcm_send_slot.msg = (Message *)ac->mcm_send_msg_alloc;
+  ac->mcm_send_slot.wire_msg = (WireMessage *)ac->mcm_send_msg_alloc;
   ac->mcm_send_slot.sending = FALSE;
 
   ac->cached_music_volume = 2;  // should be immediately overwritten
@@ -47,10 +47,10 @@ r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx,
   }
 
   ac->arm_send_slot.dest_addr = AUDIO_ADDR;
-  ac->arm_send_slot.msg->dest_port = AUDIO_PORT;
-  ac->arm_send_slot.msg->payload_len = sizeof(AudioRequestMessage);
+  ac->arm_send_slot.wire_msg->dest_port = AUDIO_PORT;
+  ac->arm_send_slot.payload_len = sizeof(AudioRequestMessage);
   AudioRequestMessage *arm =
-      (AudioRequestMessage *)&ac->arm_send_slot.msg->data;
+      (AudioRequestMessage *)&ac->arm_send_slot.wire_msg->data;
   arm->stream_id = stream_idx;
   arm->skip = TRUE;
   arm->skip_cmd.token = cur_token;
@@ -87,9 +87,10 @@ r_bool ac_change_volume(AudioClient *ac, uint8_t stream_id, uint8_t mlvolume) {
   }
 
   ac->avm_send_slot.dest_addr = AUDIO_ADDR;
-  ac->avm_send_slot.msg->dest_port = SET_VOLUME_PORT;
-  ac->avm_send_slot.msg->payload_len = sizeof(AudioVolumeMessage);
-  AudioVolumeMessage *avm = (AudioVolumeMessage *)&ac->avm_send_slot.msg->data;
+  ac->avm_send_slot.wire_msg->dest_port = SET_VOLUME_PORT;
+  ac->avm_send_slot.payload_len = sizeof(AudioVolumeMessage);
+  AudioVolumeMessage *avm =
+      (AudioVolumeMessage *)&ac->avm_send_slot.wire_msg->data;
   avm->stream_id = stream_id;
   avm->mlvolume = mlvolume;
   net_send_message(ac->network, &ac->avm_send_slot);
@@ -103,10 +104,10 @@ r_bool ac_send_music_control(AudioClient *ac, int8_t advance) {
   }
 
   ac->mcm_send_slot.dest_addr = AUDIO_ADDR;
-  ac->mcm_send_slot.msg->dest_port = MUSIC_CONTROL_PORT;
-  ac->mcm_send_slot.msg->payload_len = sizeof(MusicControlMessage);
+  ac->mcm_send_slot.wire_msg->dest_port = MUSIC_CONTROL_PORT;
+  ac->mcm_send_slot.payload_len = sizeof(MusicControlMessage);
   MusicControlMessage *mcm =
-      (MusicControlMessage *)&ac->mcm_send_slot.msg->data;
+      (MusicControlMessage *)&ac->mcm_send_slot.wire_msg->data;
   mcm->advance = advance;
   net_send_message(ac->network, &ac->mcm_send_slot);
 

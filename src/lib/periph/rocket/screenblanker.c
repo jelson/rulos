@@ -221,28 +221,28 @@ void screenblanker_update_once(ScreenBlanker *sb) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void sbl_recv_func(RecvSlot *recvSlot, uint8_t payload_len);
+void sbl_recv_func(MessageRecvBuffer *msg) {
+  AppReceiver *const app_receiver = msg->app_receiver;
+  ScreenBlankerListener *const sbl =
+      (ScreenBlankerListener *)app_receiver->user_data;
+  ScreenblankerPayload *const sp = (ScreenblankerPayload *)msg->data;
+  assert(msg->payload_len == sizeof(ScreenblankerPayload));
+  screenblanker_setdisco(&sbl->screenblanker, sp->disco_color);
+  screenblanker_setmode(&sbl->screenblanker, sp->mode);
+  net_free_received_message_buffer(msg);
+  // LOG("sbl_recv_func got bits %x %x!", sp->mode, sp->disco_color);
+}
 
 void init_screenblanker_listener(ScreenBlankerListener *sbl, Network *network) {
   init_screenblanker(&sbl->screenblanker, NULL, NULL);
-  sbl->recvSlot.func = sbl_recv_func;
-  sbl->recvSlot.port = SCREENBLANKER_PORT;
-  sbl->recvSlot.payload_capacity = sizeof(ScreenblankerPayload);
-  sbl->recvSlot.msg_occupied = FALSE;
-  sbl->recvSlot.msg = (Message *)sbl->message_storage;
-  sbl->recvSlot.user_data = sbl;
+  sbl->app_receiver.recv_complete_func = sbl_recv_func;
+  sbl->app_receiver.port = SCREENBLANKER_PORT;
+  sbl->app_receiver.num_receive_buffers = 1;
+  sbl->app_receiver.payload_capacity = sizeof(ScreenblankerPayload);
+  sbl->app_receiver.user_data = sbl;
+  sbl->app_receiver.message_recv_buffers = sbl->app_receiver_storage;
 
-  net_bind_receiver(network, &sbl->recvSlot);
-}
-
-void sbl_recv_func(RecvSlot *recvSlot, uint8_t payload_len) {
-  ScreenBlankerListener *sbl = (ScreenBlankerListener *)recvSlot->user_data;
-  ScreenblankerPayload *sp = (ScreenblankerPayload *)sbl->recvSlot.msg->data;
-  assert(payload_len == sizeof(ScreenblankerPayload));
-  screenblanker_setdisco(&sbl->screenblanker, sp->disco_color);
-  screenblanker_setmode(&sbl->screenblanker, sp->mode);
-  sbl->recvSlot.msg_occupied = FALSE;
-  // LOG("sbl_recv_func got bits %x %x!", sp->mode, sp->disco_color);
+  net_bind_receiver(network, &sbl->app_receiver);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -253,17 +253,20 @@ void init_screenblanker_sender(ScreenBlankerSender *sbs, Network *network) {
   sbs->network = network;
 
   sbs->sendSlot.func = NULL;
-  sbs->sendSlot.msg = (Message *)sbs->message_storage;
+  sbs->sendSlot.wire_msg = (WireMessage *)sbs->send_slot_storage;
   sbs->sendSlot.dest_addr = ROCKET1_ADDR;
-  sbs->sendSlot.msg->dest_port = SCREENBLANKER_PORT;
-  sbs->sendSlot.msg->payload_len = sizeof(ScreenblankerPayload);
+  sbs->sendSlot.wire_msg->dest_port = SCREENBLANKER_PORT;
+  sbs->sendSlot.payload_len = sizeof(ScreenblankerPayload);
   sbs->sendSlot.sending = FALSE;
 }
 
 void sbs_send(ScreenBlankerSender *sbs, ScreenBlanker *sb) {
-  if (sbs->sendSlot.sending) return;
+  if (sbs->sendSlot.sending) {
+    return;
+  }
 
-  ScreenblankerPayload *sp = (ScreenblankerPayload *)sbs->sendSlot.msg->data;
+  ScreenblankerPayload *sp =
+      (ScreenblankerPayload *)sbs->sendSlot.wire_msg->data;
   sp->mode = sb->mode;
   sp->disco_color = sb->disco_color;
   net_send_message(sbs->network, &sbs->sendSlot);

@@ -21,13 +21,12 @@
 typedef uint8_t Addr;
 
 struct s_MediaRecvSlot;
-typedef void (*MediaRecvDoneFunc)(struct s_MediaRecvSlot *recvSlot,
-                                  uint8_t len);
+typedef void (*MediaRecvDispatcher)(struct s_MediaRecvSlot *recvSlot);
 typedef struct s_MediaRecvSlot {
-  MediaRecvDoneFunc func;
+  MediaRecvDispatcher func;
   uint8_t capacity;
-  uint8_t occupied_len;
-  void *user_data;  // storage for a pointer back to your state structure
+  uint8_t packet_len;  // 0 tells hardware handler this slot is empty.
+  void *user_data;     // storage for a pointer back to your state structure
   char data[0];
 } MediaRecvSlot;
 

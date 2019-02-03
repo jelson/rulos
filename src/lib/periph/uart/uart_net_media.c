@@ -99,7 +99,7 @@ void _um_send(MediaStateIfc *media, Addr dest_addr, const unsigned char *data,
 
 void _um_recv_handler(struct s_HalUart *u, char c) {
   UartMedia *um = (UartMedia *)u;
-  if (um->mrs->occupied_len > 0) {
+  if (um->mrs->packet_len > 0) {
     um->recv_state = UR_sync0;
     return;
   }
@@ -134,9 +134,9 @@ void _um_recv_handler(struct s_HalUart *u, char c) {
       if (um->recv_dataidx == um->recv_len) {
         // end of packet.
         if (um->recv_len <= um->mrs->capacity) {
-          um->mrs->occupied_len = um->recv_len;
+          um->mrs->packet_len = um->recv_len;
           audioled_set(1, 0);
-          (um->mrs->func)(um->mrs, um->recv_len);
+          (um->mrs->func)(um->mrs);
           audioled_set(1, 1);
         }
         // else:

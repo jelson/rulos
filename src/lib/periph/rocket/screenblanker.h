@@ -68,15 +68,16 @@ typedef struct s_screenblanker_payload {
 
 typedef struct s_screenblanker_listener {
   ScreenBlanker screenblanker;
-  RecvSlot recvSlot;
-  uint8_t message_storage[sizeof(Message) + sizeof(ScreenblankerPayload)];
+  uint8_t
+      app_receiver_storage[RECEIVE_RING_SIZE(1, sizeof(ScreenblankerPayload))];
+  AppReceiver app_receiver;
 } ScreenBlankerListener;
 
 void init_screenblanker_listener(ScreenBlankerListener *sbl, Network *network);
 
 typedef struct s_screenblanker_sender {
   Network *network;
-  uint8_t message_storage[sizeof(Message) + sizeof(ScreenblankerPayload)];
+  uint8_t send_slot_storage[sizeof(WireMessage) + sizeof(ScreenblankerPayload)];
   SendSlot sendSlot;
 } ScreenBlankerSender;
 

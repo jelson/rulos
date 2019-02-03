@@ -232,10 +232,6 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
   return &twi_state->media;
 }
 
-static void doRecvCallback(MediaRecvSlot *mrs) {
-  mrs->func(mrs, mrs->occupied_len);
-}
-
 static void sim_twi_poll(void *data) {
   SimTwiState *twi_state = &g_sim_twi_state;
   if (!twi_state->initted) {
@@ -253,20 +249,22 @@ static void sim_twi_poll(void *data) {
 
   assert(rc != 0);
 
-  if (twi_state->mrs->occupied_len > 0) {
+  MediaRecvSlot *const mrs = twi_state->mrs;
+  if (mrs->packet_len > 0) {
     LOG("TWI SIM: Packet arrived but network stack buffer busy; dropping");
     return;
   }
 
-  if (rc > twi_state->mrs->capacity) {
+  if (rc > mrs->capacity) {
     LOG("TWI SIM: Discarding %d-byte packet; too long for net stack's buffer",
         rc);
     return;
   }
 
-  twi_state->mrs->occupied_len = rc;
-  memcpy(twi_state->mrs->data, buf, rc);
-  schedule_now((ActivationFuncPtr)doRecvCallback, twi_state->mrs);
+  mrs->packet_len = rc;
+  memcpy(mrs->data, buf, rc);
+  mrs->func(mrs);
+  mrs->packet_len = 0;
 }
 
 typedef struct {

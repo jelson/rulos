@@ -20,13 +20,20 @@
 #include "core/rulos.h"
 #include "periph/7seg_panel/remote_bbuf.h"
 
+//////////////////////////////////////////////////////////////////////////////
+// Send side
+
 #define REMOTE_BBUF_SEND_RATE 10000            // 100 board msgs per sec
 #define REMOTE_BBUF_REFRESH_PERIOD_US 1000000  // 1s refresh rate
+
+void rbs_update(RemoteBBufSend *rbs);
+void rbs_refresh(RemoteBBufSend *rbs);
+void rbs_send_complete(SendSlot *slot);
 
 void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network) {
   rbs->network = network;
   rbs->sendSlot.func = NULL;
-  rbs->sendSlot.msg = (Message *)rbs->send_msg_alloc;
+  rbs->sendSlot.wire_msg = (WireMessage *)rbs->send_msg_alloc;
   rbs->sendSlot.sending = FALSE;
 #if NUM_REMOTE_BOARDS > 0
   memset(rbs->offscreen, 0, NUM_REMOTE_BOARDS * NUM_DIGITS * sizeof(SSBitmap));
@@ -109,9 +116,9 @@ void rbs_update(RemoteBBufSend *rbs) {
   // send a packet for this changed line
   const RemoteMapping *mapping = &remote_mapping[index];
   rbs->sendSlot.dest_addr = DONGLE_BASE_ADDR + mapping->remote_addr;
-  rbs->sendSlot.msg->dest_port = REMOTE_BBUF_PORT;
-  rbs->sendSlot.msg->payload_len = sizeof(BBufMessage);
-  BBufMessage *bbm = (BBufMessage *)&rbs->sendSlot.msg->data;
+  rbs->sendSlot.wire_msg->dest_port = REMOTE_BBUF_PORT;
+  rbs->sendSlot.payload_len = sizeof(BBufMessage);
+  BBufMessage *bbm = (BBufMessage *)&rbs->sendSlot.wire_msg->data;
   memcpy(bbm->buf, rbs->offscreen[index], NUM_DIGITS);
   bbm->index = mapping->remote_index;
 
@@ -139,58 +146,26 @@ void rbs_refresh(RemoteBBufSend *rbs) {
 // Receive side
 // TODO we should probably put this in a separate file, huh?
 
-void rbr_process(RemoteBBufRecv *rbr);
+void rbr_recv(MessageRecvBuffer *msg);
 
 void init_remote_bbuf_recv(RemoteBBufRecv *rbr, Network *network) {
-  rbr->recvSlot.func = rbr_recv;
-  rbr->recvSlot.port = REMOTE_BBUF_PORT;
-  rbr->recvSlot.payload_capacity = sizeof(BBufMessage);
-  rbr->recvSlot.msg_occupied = FALSE;
-  rbr->recvSlot.msg = (Message *)rbr->recv_msg_alloc;
-  rbr->nextEmptyIdx = 0;
-  rbr->nextOccupiedIdx = RING_INVALID_INDEX;  // None are occupied.
+  rbr->app_receiver.recv_complete_func = rbr_recv;
+  rbr->app_receiver.port = REMOTE_BBUF_PORT;
+  rbr->app_receiver.num_receive_buffers = RING_SIZE;
+  rbr->app_receiver.payload_capacity = sizeof(BBufMessage);
+  rbr->app_receiver.message_recv_buffers = rbr->recv_ring_alloc;
 
-  net_bind_receiver(network, &rbr->recvSlot);
+  net_bind_receiver(network, &rbr->app_receiver);
 }
 
-void rbr_recv(RecvSlot *recvSlot, uint8_t payload_len) {
-  // NB nasty struct layout dependency.
-  RemoteBBufRecv *rbr = (RemoteBBufRecv *)recvSlot;
-
-  if (payload_len != sizeof(BBufMessage)) {
+void rbr_recv(MessageRecvBuffer *msg) {
+  if (msg->payload_len != sizeof(BBufMessage)) {
     LOG("rbr_recv: Error: expected BBufMessage of size %ld, got %d bytes",
-        sizeof(BBufMessage), payload_len);
+        sizeof(BBufMessage), msg->payload_len);
     return;
   }
 
-  if (rbr->nextEmptyIdx == RING_INVALID_INDEX) {
-    LOG("rbr_recv: overflow");
-    return;
-  }
-
-  uint8_t thisPacketIndex = rbr->nextEmptyIdx;
-  memcpy(rbr->recv_msg_ring[thisPacketIndex], &rbr->recvSlot.msg->data,
-         payload_len);
-  rbr->nextEmptyIdx = RING_NEXT(thisPacketIndex);
-  if (rbr->nextEmptyIdx == rbr->nextOccupiedIdx) {
-    rbr->nextEmptyIdx = RING_INVALID_INDEX;
-  }
-
-  if (rbr->nextOccupiedIdx == RING_INVALID_INDEX) {
-    // This is the first packet since a drought. Restart the buffer-processor.
-    rbr->nextOccupiedIdx = thisPacketIndex;
-    schedule_now((ActivationFuncPtr)rbr_process, rbr);
-  } else {
-    // The buffer-processor must already be running. Let it advance the
-    // nextOccupiedIdx pointer by itself.
-  }
-  recvSlot->msg_occupied = FALSE;
-}
-
-void rbr_process(RemoteBBufRecv *rbr) {
-  assert(rbr->nextOccupiedIdx != RING_INVALID_INDEX);
-
-  BBufMessage *bbm = (BBufMessage *)rbr->recv_msg_ring[rbr->nextOccupiedIdx];
+  BBufMessage *bbm = (BBufMessage *)msg->data;
 
 #if BBDEBUG
   LOG("rbs: updating board %d with data %x%x%x%x%x%x%x%x", bbm->index,
@@ -200,12 +175,5 @@ void rbr_process(RemoteBBufRecv *rbr) {
 
   board_buffer_paint(bbm->buf, bbm->index, 0xff);
 
-  rbr->nextOccupiedIdx = RING_NEXT(rbr->nextOccupiedIdx);
-  if (rbr->nextOccupiedIdx == rbr->nextEmptyIdx) {
-    // rbr_recv will restart me when he runs again.
-    rbr->nextOccupiedIdx = RING_INVALID_INDEX;
-  } else {
-    // I have more work to do!
-    schedule_now((ActivationFuncPtr)rbr_process, rbr);
-  }
+  net_free_received_message_buffer(msg);
 }

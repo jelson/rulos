@@ -33,35 +33,35 @@ extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 
 void ac_send_complete(SendSlot *sendSlot);
 
-void aserv_recv_arm(RecvSlot *recvSlot, uint8_t payload_len);
-void aserv_recv_avm(RecvSlot *recvSlot, uint8_t payload_len);
-void aserv_recv_mcm(RecvSlot *recvSlot, uint8_t payload_len);
+void aserv_recv_arm(MessageRecvBuffer *msg);
+void aserv_recv_avm(MessageRecvBuffer *msg);
+void aserv_recv_mcm(MessageRecvBuffer *msg);
 void aserv_fetch_start(AudioServer *as);
 void aserv_fetch_complete(AudioServer *as);
 void aserv_start_play(AudioServer *as);
 void aserv_advance(AudioServer *as);
 
 void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id) {
-  aserv->arm_recvSlot.func = aserv_recv_arm;
-  aserv->arm_recvSlot.port = AUDIO_PORT;
-  aserv->arm_recvSlot.payload_capacity = sizeof(AudioRequestMessage);
-  aserv->arm_recvSlot.msg_occupied = FALSE;
-  aserv->arm_recvSlot.msg = (Message *)aserv->arm_recv_msg_alloc;
-  aserv->arm_recvSlot.user_data = aserv;
+  aserv->arm_app_receiver.recv_complete_func = aserv_recv_arm;
+  aserv->arm_app_receiver.port = AUDIO_PORT;
+  aserv->arm_app_receiver.num_receive_buffers = 1;
+  aserv->arm_app_receiver.payload_capacity = sizeof(AudioRequestMessage);
+  aserv->arm_app_receiver.message_recv_buffers = aserv->arm_recv_ring_alloc;
+  aserv->arm_app_receiver.user_data = aserv;
 
-  aserv->avm_recvSlot.func = aserv_recv_avm;
-  aserv->avm_recvSlot.port = SET_VOLUME_PORT;
-  aserv->avm_recvSlot.payload_capacity = sizeof(AudioVolumeMessage);
-  aserv->avm_recvSlot.msg_occupied = FALSE;
-  aserv->avm_recvSlot.msg = (Message *)aserv->avm_recv_msg_alloc;
-  aserv->avm_recvSlot.user_data = aserv;
+  aserv->avm_app_receiver.recv_complete_func = aserv_recv_avm;
+  aserv->avm_app_receiver.port = SET_VOLUME_PORT;
+  aserv->avm_app_receiver.num_receive_buffers = 1;
+  aserv->avm_app_receiver.payload_capacity = sizeof(AudioVolumeMessage);
+  aserv->avm_app_receiver.message_recv_buffers = aserv->avm_recv_ring_alloc;
+  aserv->avm_app_receiver.user_data = aserv;
 
-  aserv->mcm_recvSlot.func = aserv_recv_mcm;
-  aserv->mcm_recvSlot.port = MUSIC_CONTROL_PORT;
-  aserv->mcm_recvSlot.payload_capacity = sizeof(AudioVolumeMessage);
-  aserv->mcm_recvSlot.msg_occupied = FALSE;
-  aserv->mcm_recvSlot.msg = (Message *)aserv->mcm_recv_msg_alloc;
-  aserv->mcm_recvSlot.user_data = aserv;
+  aserv->mcm_app_receiver.recv_complete_func = aserv_recv_mcm;
+  aserv->mcm_app_receiver.port = MUSIC_CONTROL_PORT;
+  aserv->mcm_app_receiver.num_receive_buffers = 1;
+  aserv->mcm_app_receiver.payload_capacity = sizeof(MusicControlMessage);
+  aserv->mcm_app_receiver.message_recv_buffers = aserv->mcm_recv_ring_alloc;
+  aserv->mcm_app_receiver.user_data = aserv;
 
   uint8_t stream_id;
   for (stream_id = 0; stream_id < AUDIO_NUM_STREAMS; stream_id++) {
@@ -81,9 +81,9 @@ void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id) {
   aserv->index_ready = FALSE;
   aserv_fetch_start(aserv);
 
-  net_bind_receiver(network, &aserv->arm_recvSlot);
-  net_bind_receiver(network, &aserv->avm_recvSlot);
-  net_bind_receiver(network, &aserv->mcm_recvSlot);
+  net_bind_receiver(network, &aserv->arm_app_receiver);
+  net_bind_receiver(network, &aserv->avm_app_receiver);
+  net_bind_receiver(network, &aserv->mcm_app_receiver);
 }
 
 void aserv_fetch_start(AudioServer *aserv) {
@@ -174,11 +174,11 @@ void aserv_skip_stream(AudioServer *aserv, uint8_t stream_id) {
   }
 }
 
-void aserv_recv_arm(RecvSlot *recvSlot, uint8_t payload_len) {
+void aserv_recv_arm(MessageRecvBuffer *msg) {
   SYNCDEBUG();
-  AudioServer *aserv = (AudioServer *)recvSlot->user_data;
-  assert(payload_len == sizeof(AudioRequestMessage));
-  AudioRequestMessage *arm = (AudioRequestMessage *)&recvSlot->msg->data;
+  AudioServer *aserv = (AudioServer *)msg->app_receiver->user_data;
+  assert(msg->payload_len == sizeof(AudioRequestMessage));
+  AudioRequestMessage *arm = (AudioRequestMessage *)&msg->data;
   assert(arm->stream_id < AUDIO_NUM_STREAMS);
 
   aserv->audio_stream[arm->stream_id].loop_cmd = arm->loop_cmd;
@@ -191,14 +191,14 @@ void aserv_recv_arm(RecvSlot *recvSlot, uint8_t payload_len) {
     aserv_skip_stream(aserv, arm->stream_id);
   }
 
-  recvSlot->msg_occupied = FALSE;
+  net_free_received_message_buffer(msg);
 }
 
-void aserv_recv_avm(RecvSlot *recvSlot, uint8_t payload_len) {
+void aserv_recv_avm(MessageRecvBuffer *msg) {
   SYNCDEBUG();
-  AudioServer *aserv = (AudioServer *)recvSlot->user_data;
-  assert(payload_len == sizeof(AudioVolumeMessage));
-  AudioVolumeMessage *avm = (AudioVolumeMessage *)&recvSlot->msg->data;
+  AudioServer *aserv = (AudioServer *)msg->app_receiver->user_data;
+  assert(msg->payload_len == sizeof(AudioVolumeMessage));
+  AudioVolumeMessage *avm = (AudioVolumeMessage *)&msg->data;
 
   assert(avm->stream_id < AUDIO_NUM_STREAMS);
   aserv->audio_stream[avm->stream_id].mlvolume = avm->mlvolume;
@@ -206,14 +206,14 @@ void aserv_recv_avm(RecvSlot *recvSlot, uint8_t payload_len) {
     as_set_volume(&aserv->audio_streamer, avm->mlvolume);
   }
 
-  recvSlot->msg_occupied = FALSE;
+  net_free_received_message_buffer(msg);
 }
 
-void aserv_recv_mcm(RecvSlot *recvSlot, uint8_t payload_len) {
+void aserv_recv_mcm(MessageRecvBuffer *msg) {
   SYNCDEBUG();
-  AudioServer *aserv = (AudioServer *)recvSlot->user_data;
-  assert(payload_len == sizeof(MusicControlMessage));
-  MusicControlMessage *mcm = (MusicControlMessage *)&recvSlot->msg->data;
+  AudioServer *aserv = (AudioServer *)msg->app_receiver->user_data;
+  assert(msg->payload_len == sizeof(MusicControlMessage));
+  MusicControlMessage *mcm = (MusicControlMessage *)&msg->data;
 
   if (aserv->index_ready) {
     if (!aserv->music_random_seeded) {
@@ -241,7 +241,7 @@ void aserv_recv_mcm(RecvSlot *recvSlot, uint8_t payload_len) {
     aserv_skip_stream(aserv, AUDIO_STREAM_MUSIC);
   }
 
-  recvSlot->msg_occupied = FALSE;
+  net_free_received_message_buffer(msg);
 }
 
 void aserv_dbg_play(AudioServer *aserv, SoundToken skip, SoundToken loop) {

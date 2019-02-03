@@ -23,9 +23,9 @@ typedef uint8_t Port;
 // Checksum
 // Payload_Len
 // [Payload_Len * uint8_t]
-typedef struct s_message {
+
+typedef struct {
   Port dest_port;
   uint8_t checksum;
-  uint8_t payload_len;
   unsigned char data[0];
-} Message, *MessagePtr;
+} WireMessage;

@@ -25,11 +25,11 @@
 
 typedef struct s_audio_client {
   Network *network;
-  uint8_t arm_send_msg_alloc[sizeof(Message) + sizeof(AudioRequestMessage)];
+  uint8_t arm_send_msg_alloc[sizeof(WireMessage) + sizeof(AudioRequestMessage)];
   SendSlot arm_send_slot;
-  uint8_t avm_send_msg_alloc[sizeof(Message) + sizeof(AudioVolumeMessage)];
+  uint8_t avm_send_msg_alloc[sizeof(WireMessage) + sizeof(AudioVolumeMessage)];
   SendSlot avm_send_slot;
-  uint8_t mcm_send_msg_alloc[sizeof(Message) + sizeof(MusicControlMessage)];
+  uint8_t mcm_send_msg_alloc[sizeof(WireMessage) + sizeof(MusicControlMessage)];
   SendSlot mcm_send_slot;
   uint8_t cached_music_volume;
   AmbientNoise ambient_noise;
