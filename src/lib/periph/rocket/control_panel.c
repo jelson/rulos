@@ -65,6 +65,14 @@ void init_cc_pong(CCPong *ccp, Screen4 *s4, AudioClient *audioClient) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
+//
+void init_cc_snake(CCSnake *ccs, Screen4 *s4, AudioClient *audioClient) {
+  snake_init(&ccs->snake, s4, audioClient, 1, 2);
+  ccs->uie_handler = (UIEventHandler *)&ccs->snake.handler;
+  ccs->name = "Snake";
+}
+
+//////////////////////////////////////////////////////////////////////////////
 
 void init_cc_disco(CCDisco *ccp, AudioClient *audioClient,
                    ScreenBlanker *screenblanker, IdleAct *idle) {
@@ -113,6 +121,9 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
 
   cp->children[cp->child_count++] = (ControlChild *)&cp->ccpong;
   init_cc_pong(&cp->ccpong, &cp->s4, audioClient);
+
+  cp->children[cp->child_count++] = (ControlChild *)&cp->ccsnake;
+  init_cc_snake(&cp->ccsnake, &cp->s4, audioClient);
 
   cp->children[cp->child_count++] = (ControlChild *)&cp->ccdisco;
   init_cc_disco(&cp->ccdisco, audioClient, screenblanker, idle);

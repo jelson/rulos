@@ -31,7 +31,6 @@ SIM_PERIPHERALS := keypad 7seg_panel_hardware
 TARGET := snaketest
 
 TARGET_OBJECTS := \
-	snaketest.o \
-	snakegame.o
+	snaketest.o
 
 include $(ROCKET_ROOT)/Makefile.common

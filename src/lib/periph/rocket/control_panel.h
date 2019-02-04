@@ -27,9 +27,10 @@
 #include "periph/rocket/rocket.h"
 #include "periph/rocket/screenblanker.h"
 #include "periph/rocket/sequencer.h"
+#include "periph/rocket/snakegame.h"
 
 #define CONTROL_PANEL_HEIGHT 4
-#define CONTROL_PANEL_NUM_CHILDREN 5
+#define CONTROL_PANEL_NUM_CHILDREN 6
 #define CP_NO_CHILD (0xff)
 
 struct s_control_child;
@@ -73,6 +74,12 @@ typedef struct {
 typedef struct {
   UIEventHandler *uie_handler;
   const char *name;
+  Snake snake;
+} CCSnake;
+
+typedef struct {
+  UIEventHandler *uie_handler;
+  const char *name;
   Disco disco;
 } CCDisco;
 
@@ -99,6 +106,7 @@ typedef struct s_control_panel {
   CCLaunch ccl;
   CCDock ccdock;
   CCPong ccpong;
+  CCSnake ccsnake;
   CCDisco ccdisco;
 
   InputInjectorIfc *volume_input_ifc;

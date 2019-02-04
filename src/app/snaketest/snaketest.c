@@ -19,7 +19,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../app/snaketest/snakegame.h"  // TODO move into lib
 #include "core/board_defs.h"
 #include "core/clock.h"
 #include "core/cpumon.h"
@@ -30,6 +29,7 @@
 #include "periph/audio/audio_client.h"
 #include "periph/input_controller/input_controller.h"
 #include "periph/rasters/rasters.h"
+#include "periph/rocket/snakegame.h"
 #include "periph/uart/uart.h"
 
 /****************************************************************************/

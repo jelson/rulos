@@ -14,14 +14,14 @@
  *
  ************************************************************************/
 
-#include "../app/snaketest/snakegame.h"  // TODO move into lib
+#include "periph/rocket/snakegame.h"
 #include "core/rulos.h"
 #include "periph/rasters/rasters.h"
 #include "periph/rocket/sound.h"
 
 #define SNAKE_FREQ 32  // Animation frequency, Hz.
-#define MOVE_RATE 4    // Moves per animation tick
-#define GROW_RATE 24   // Growths per animation tick
+#define MOVE_RATE 3    // Ticks per moves animation
+#define GROW_RATE 24   // Ticks per snake growth
 
 // TODO: add snake-advance and snake-turn and snake explosion sounds?
 // TODO: S6? :v)
@@ -155,7 +155,7 @@ void snake_playing_tick(Snake *snake) {
 
 void snake_exploding_tick(Snake *snake) {
   snake->explosion_radius++;
-  if (snake->explosion_radius > 2 * CANVAS_W) {
+  if (snake->explosion_radius > CANVAS_W) {
     snake->explosion_radius = 0;
     snake->mode = GAME_OVER;
   }
@@ -303,17 +303,15 @@ UIEventDisposition snake_event_handler(UIEventHandler *raw_handler,
   switch (evt) {
     case '1':
     case 'p':
-      snake_turn(snake, 1);
+    case 'a':
+    case 'e':
+      snake_turn(snake, -1);
       break;
     case '4':
     case 'q':
-      snake_turn(snake, -1);
-      break;
-    case 'a':
-      snake_advance_head(snake);
-      break;
     case 'b':
-      snake_advance_tail(snake);
+    case 'f':
+      snake_turn(snake, 1);
       break;
     case uie_focus:
       if (!snake->focused) {
