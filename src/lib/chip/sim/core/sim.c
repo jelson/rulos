@@ -272,12 +272,6 @@ typedef struct {
   void *sendDoneCBData;
 } sendCallbackAct_t;
 
-sendCallbackAct_t sendCallbackAct_g;
-
-static void doSendCallback(sendCallbackAct_t *sca) {
-  sca->sendDoneCB(sca->sendDoneCBData);
-}
-
 static void sim_twi_send(MediaStateIfc *media, Addr dest_addr,
                          const unsigned char *data, uint8_t len,
                          MediaSendDoneFunc sendDoneCB, void *sendDoneCBData) {
@@ -297,10 +291,8 @@ static void sim_twi_send(MediaStateIfc *media, Addr dest_addr,
   sendto(twi_state->udp_socket, data, len, 0, (struct sockaddr *)&sai,
          sizeof(sai));
 
-  if (sendDoneCB) {
-    sendCallbackAct_g.sendDoneCB = sendDoneCB;
-    sendCallbackAct_g.sendDoneCBData = sendDoneCBData;
-    schedule_now((ActivationFuncPtr)doSendCallback, &sendCallbackAct_g);
+  if (sendDoneCB != NULL) {
+    schedule_now((ActivationFuncPtr)sendDoneCB, sendDoneCBData);
   }
 }
 
