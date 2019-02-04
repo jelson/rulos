@@ -7,7 +7,7 @@ svn status \
     | egrep '^M|A' \
     | cut -c9- \
     | grep '.*\.h$\|.*\.c$' \
-    | grep -v lib/chip/arm/lpc_chip \
+    | grep -v vendor_libraries \
     | xargs clang-format -i --style=google --verbose
 
 exit
@@ -15,6 +15,6 @@ exit
 # Or, to autoformat everything, remove the exit above
 find . -name '*.[ch]' -type f -print \
     | fgrep -v /obj. \
-    | grep -v lib/chip/arm/lpc_chip \
+    | grep -v vendor_libraries \
     | xargs clang-format -i --style=google --verbose
 
