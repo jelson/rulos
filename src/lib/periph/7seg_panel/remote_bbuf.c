@@ -26,15 +26,16 @@
 #define REMOTE_BBUF_SEND_RATE 10000            // 100 board msgs per sec
 #define REMOTE_BBUF_REFRESH_PERIOD_US 1000000  // 1s refresh rate
 
-void rbs_update(RemoteBBufSend *rbs);
+static void rbs_update(RemoteBBufSend *rbs);
 void rbs_refresh(RemoteBBufSend *rbs);
 void rbs_send_complete(SendSlot *slot);
 
 void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network) {
   rbs->network = network;
-  rbs->sendSlot.func = NULL;
+  rbs->sendSlot.func = rbs_send_complete;
   rbs->sendSlot.wire_msg = (WireMessage *)rbs->send_msg_alloc;
   rbs->sendSlot.sending = FALSE;
+  rbs->sendSlot.user_data = rbs;
 #if NUM_REMOTE_BOARDS > 0
   memset(rbs->offscreen, 0, NUM_REMOTE_BOARDS * NUM_DIGITS * sizeof(SSBitmap));
 #endif
@@ -89,23 +90,24 @@ static const RemoteMapping remote_mapping[] = {ROCKET_TREE};
 
 int remote_mapping_count = sizeof(remote_mapping) / sizeof(RemoteMapping);
 
+void rbs_send_complete(SendSlot *sendSlot) {
+  RemoteBBufSend *rbs = (RemoteBBufSend *)sendSlot->user_data;
+  rbs_update(rbs);
+}
+
 // This thread looks for a board that has been changed since we last sent it,
 // and transmits it. It finds boards round-robin to avoid starvation. It runs
 // on a regular schedule avoid swamping the network with board traffic.
 void rbs_update(RemoteBBufSend *rbs) {
-  schedule_us(REMOTE_BBUF_SEND_RATE, (ActivationFuncPtr)rbs_update, rbs);
-
-  if (rbs->sendSlot.sending) {
-    LOG("rbs_update: dropping update; sender busy");
-    return;
-  }
+  assert(!rbs->sendSlot.sending);
 
   int index = rbs_find_changed_index(rbs);
   if (index == -1) {
+    // no changed lines; try again later.
 #if BBDEBUG
-    // no changed lines
     LOG("rbs_update: idle");
 #endif
+    schedule_us(REMOTE_BBUF_SEND_RATE, (ActivationFuncPtr)rbs_update, rbs);
     return;
   }
 

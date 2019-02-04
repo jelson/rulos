@@ -62,6 +62,7 @@ typedef struct s_send_slot {
   uint8_t payload_len;  // Size of application payload at msg->data
   WireMessage *wire_msg;
   r_bool sending;
+  void *user_data;  // pointer can be used for user functions
 } SendSlot, *SendSlotPtr;
 
 #include "queue.mh"

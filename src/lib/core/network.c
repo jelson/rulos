@@ -200,7 +200,7 @@ static void net_recv_interrupt_handler(MediaRecvSlot *mrs) {
 
 /////////////// Sending ///////////////////////////////////////////////
 
-static void net_send_next_message_down(Network *net);
+static void maybe_net_send_next_message_down(Network *net);
 static void net_send_done_cb(void *user_data);
 
 // External visible API from above to launch a packet.
@@ -212,25 +212,22 @@ r_bool net_send_message(Network *net, SendSlot *sendSlot) {
 #endif
 
   assert(sendSlot->sending == FALSE);
-  r_bool need_wake = (SendSlotPtrQueue_length(SendQueue(net)) == 0);
   r_bool fit = SendSlotPtrQueue_append(SendQueue(net), sendSlot);
-
-  if (fit) {
-    sendSlot->sending = TRUE;
-  }
-  if (need_wake) {
-    net_send_next_message_down(net);
-  }
+  maybe_net_send_next_message_down(net);
   return fit;
 }
 
 // Send a message down the stack.
-static void net_send_next_message_down(Network *net) {
+static void maybe_net_send_next_message_down(Network *net) {
   // Get the next sendSlot out of our queue.  Return if none.
   SendSlot *sendSlot;
   r_bool rc = SendSlotPtrQueue_peek(SendQueue(net), &sendSlot);
 
   if (rc == FALSE) {
+    return;
+  }
+  if (sendSlot->sending) {
+    // The queue-head packet is already in-flight (in the media layer).
     return;
   }
 
@@ -240,8 +237,8 @@ static void net_send_next_message_down(Network *net) {
       sendSlot->dest_addr, sendSlot->msg->dest_port);
 #endif
 
-  // Make sure this guy thinks he's sending.
-  assert(sendSlot->sending == TRUE);
+  // Mark the head packet of queue as in-flight.
+  sendSlot->sending = TRUE;
 
   // compute length and checksum.
   uint8_t packet_len = sizeof(WireMessage) + sendSlot->payload_len;
@@ -269,10 +266,12 @@ static void net_send_done_cb(void *user_data) {
   // mark the packet as no-longer-sending and call the user's
   // callback
   sendSlot->sending = FALSE;
-  if (sendSlot->func) sendSlot->func(sendSlot);
+  if (sendSlot->func) {
+    sendSlot->func(sendSlot);
+  }
 
   // launch the next queued packet if any
-  net_send_next_message_down(net);
+  maybe_net_send_next_message_down(net);
 }
 
 //////////////////////////////////////////////////////////////////////////////
