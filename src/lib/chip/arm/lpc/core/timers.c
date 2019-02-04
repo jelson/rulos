@@ -16,7 +16,7 @@
 
 #include <inttypes.h>
 
-#include "chip/arm/core/bits.h"
+#include "chip/arm/common/core/bits.h"
 #include "core/hal.h"
 #include "core/logging.h"
 

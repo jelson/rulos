@@ -1,0 +1,69 @@
+#
+# This file is part of RulOS, Ravenna Ultra-Low-Altitude Operating
+# System -- the free, open-source operating system for microcontrollers.
+#
+# Written by Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com),
+# May 2009.
+#
+# This operating system is in the public domain.  Copyright is waived.
+# All source code is completely free to use by anyone for any purpose
+# with no restrictions whatsoever.
+#
+# For more information about the project, see: www.jonh.net/rulos
+#
+
+# LPC-specific makefile came partially from seeing what LPCxpresso does,
+# partially from the lpcopen-make project, which aims to also figure out
+# the right makefile based on what LPCxpresso does:
+# https://bitbucket.org/smartavionics/lpcopen-make/src
+
+ARM_SUBLIB_ROOT := $(ARM_LIB_ROOT)/lpc
+
+ifeq ($(ARM_CHIP),lpc1114-102)
+ARM_CHIP_FAMILY := CHIP_LPC11CXX
+ARM_FLASHK := 32
+ARM_RAMK := 4
+ARM_MX := M0
+endif
+
+ifeq ($(ARM_CHIP),lpc1115)
+ARM_CHIP_FAMILY := CHIP_LPC11CXX
+ARM_FLASHK := 64
+ARM_RAMK := 8
+ARM_MX := M0
+endif
+
+ifeq ($(ARM_CHIP),lpc11a14-301)
+ARM_CHIP_FAMILY := CHIP_LPC11AXX
+ARM_FLASHK := 32
+ARM_RAMK := 8
+ARM_MX := M0
+endif
+
+ifeq ($(ARM_CHIP),lpc11u67jbd48)
+ARM_CHIP_FAMILY := CHIP_LPC11U6X
+ARM_FLASHK := 128
+ARM_RAMK := 16
+ARM_MX := M0PLUS
+endif
+
+ifeq ($(ARM_CHIP),lpc1343)
+ARM_CHIP_FAMILY := CHIP_LPC13XX
+ARM_FLASHK := 32
+ARM_RAMK := 8
+ARM_MX := M3
+endif
+
+######################################################################
+
+ifeq ($(ARM_CHIP_FAMILY),CHIP_LPC11CXX)
+ARM_DRIVER_LIB := lpc_11uxx
+endif
+
+# Add startup file to source list, based on Cortex type type (M0, M0PLUS, M3)
+ARM_SOURCES += $(ARM_SUBLIB_ROOT)/startup/startup_ARMC$(ARM_MX).S
+
+ARM_DRIVER_LIB_PATH := $(ARM_SUBLIB_ROOT)/vendor_libraries/$(ARM_DRIVER_LIB)
+ARM_CFLAGS += -I$(ARM_DRIVER_LIB_PATH)
+ARM_SOURCES += $(wildcard $(ARM_DRIVER_LIB_PATH)/*.c)
+

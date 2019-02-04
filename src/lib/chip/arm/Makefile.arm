@@ -1,38 +1,29 @@
- #
- # This file is part of RulOS, Ravenna Ultra-Low-Altitude Operating
- # System -- the free, open-source operating system for microcontrollers.
- #
- # Written by Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com),
- # May 2009.
- #
- # This operating system is in the public domain.  Copyright is waived.
- # All source code is completely free to use by anyone for any purpose
- # with no restrictions whatsoever.
- #
- # For more information about the project, see: www.jonh.net/rulos
- #
-
-# ARM-specific makefile came partially from seeing what LPCxpresso does,
-# partially frmo the lpcopen-make project, which aims to also figure out
-# the right makefile based on what LPCxpresso does:
-# https://bitbucket.org/smartavionics/lpcopen-make/src
+#
+# This file is part of RulOS, Ravenna Ultra-Low-Altitude Operating
+# System -- the free, open-source operating system for microcontrollers.
+#
+# Written by Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com),
+# May 2009.
+#
+# This operating system is in the public domain.  Copyright is waived.
+# All source code is completely free to use by anyone for any purpose
+# with no restrictions whatsoever.
+#
+# For more information about the project, see: www.jonh.net/rulos
+#
 
 ARM_COMPILER_BINDIR := /usr/local/bin/gcc-arm-none-eabi-8-2018-q4-major/bin
+
+# These are just "advisory" - so the linker can warn you if you don't
+# have at least STACK_SIZE bytes available on the stack.
+STACK_SIZE ?= 0x400
+HEAP_SIZE ?= 0x0
 
 PLATFORM_TARGET_LIST += arm-all
 CLEAN_TARGET_LIST += arm-clean
 
 ARM_SOURCES :=
 ARM_INCLUDES :=
-
-ARM_LIB_ROOT := $(ROCKET_ROOT)/lib/chip/arm
-
-# Add platform-specific core sources to the all-platform sources
-ARM_SOURCES += $(wildcard $(ARM_LIB_ROOT)/core/*.c)
-ARM_INCLUDES += -I$(ARM_LIB_ROOT)
-
-# Add platform-specific peripheral sources
-ARM_SOURCES += $(foreach periph, $(PERIPHERALS), $(wildcard $(ARM_LIB_ROOT)/periph/$(periph)/*.c))
 
 ARM_SOURCES += $(ALL_PLATFORM_SOURCES)
 ARM_INCLUDES += $(ALL_PLATFORM_INCLUDES)
@@ -46,61 +37,36 @@ ARM_LIB_FILE = $(ARM_OBJDIR)/lib$(ARM_LIBNAME).a
 ARM_GCC_PREFIX = $(ARM_COMPILER_BINDIR)/arm-none-eabi
 
 CURR_OBJDIR := $(ARM_OBJDIR)
--include $(foreach dir, $(sort $(dir $(ARM_SOURCES))), $(wildcard $(dir)/Makefile.extra))
 
 ###############################################################################
 ###############################################################################
 
-STACK_SIZE ?= 0x400
-HEAP_SIZE ?= 0x0
-
-ifeq ($(ARM_CHIP),lpc1114-102)
-ARM_CHIP_FAMILY := CHIP_LPC11CXX
-ARM_FLASHK := 32
-ARM_RAMK := 4
-ARM_MX := M0
+ifneq ($(findstring chip-is-lpc,chip-is-$(ARM_CHIP)),)
+ARM_SUBTYPE := lpc
 endif
 
-ifeq ($(ARM_CHIP),lpc1115)
-ARM_CHIP_FAMILY := CHIP_LPC11CXX
-ARM_FLASHK := 64
-ARM_RAMK := 8
-ARM_MX := M0
-endif
-
-ifeq ($(ARM_CHIP),lpc11a14-301)
-ARM_CHIP_FAMILY := CHIP_LPC11AXX
-ARM_FLASHK := 32
-ARM_RAMK := 8
-ARM_MX := M0
-endif
-
-ifeq ($(ARM_CHIP),lpc11u67jbd48)
-ARM_CHIP_FAMILY := CHIP_LPC11U6X
-ARM_FLASHK := 128
-ARM_RAMK := 16
-ARM_MX := M0PLUS
-endif
-
-ifeq ($(ARM_CHIP),lpc1343)
-ARM_CHIP_FAMILY := CHIP_LPC13XX
-ARM_FLASHK := 32
-ARM_RAMK := 8
-ARM_MX := M3
+ifneq ($(findstring chip-is-stm32,chip-is-$(ARM_CHIP)),)
+ARM_SUBTYPE := stm32
 endif
 
 ######################################################################
+# Add platform-specific core sources to the all-platform sources
 
-ifeq ($(ARM_CHIP_FAMILY),CHIP_LPC11CXX)
-ARM_DRIVER_LIB := lpc_11uxx
-endif
+ARM_LIB_ROOT := $(ROCKET_ROOT)/lib/chip/arm
 
-# Add startup file to source list, based on Cortex type type (M0, M0PLUS, M3)
-ARM_SOURCES += $(ARM_LIB_ROOT)/startup/startup_ARMC$(ARM_MX).S
+# Add files common across all ARM platforms - both core and
+# peripherals
+ARM_SOURCES += $(wildcard $(ARM_LIB_ROOT)/common/core/*.c)
+ARM_SOURCES += $(foreach periph, $(PERIPHERALS), $(wildcard $(ARM_LIB_ROOT)/common/periph/$(periph)/*.c))
+ARM_INCLUDES += -I$(ARM_LIB_ROOT)/common
 
-ARM_DRIVER_LIB_PATH := $(ARM_LIB_ROOT)/vendor_libraries/$(ARM_DRIVER_LIB)
-ARM_CFLAGS += -I$(ARM_DRIVER_LIB_PATH)
-ARM_SOURCES += $(wildcard $(ARM_DRIVER_LIB_PATH)/*.c)
+# Add the chip-specific support libraries
+include $(ARM_LIB_ROOT)/$(ARM_SUBTYPE)/Makefile.arm-subtype
+
+# Add the chip-specific core sources and peripherals
+ARM_SOURCES += $(wildcard $(ARM_SUBLIB_ROOT)/core/*.c)
+ARM_SOURCES += $(foreach periph, $(PERIPHERALS), $(wildcard $(ARM_SUBLIB_ROOT)/periph/$(periph)/*.c))
+ARM_INCLUDES += -I$(ARM_SUBLIB_ROOT)
 
 ######################################################################
 # Set gcc arch flags according to Cortex CPU type
@@ -132,6 +98,18 @@ ifeq ($(ARM_CHIP),)
 else
 	@true
 endif
+ifeq ($(ARM_SUBTYPE),)
+	@echo "ARM_CHIP doesn't start with a recognized manufacturer prefix"
+	@false
+else
+	@true
+endif
+ifeq ($(ARM_FLASHK),)
+	@echo "ARM_CHIP doesn't seem to be recognized. Typo? Or new support needed?"
+	@false
+else
+	@true
+endif
 ifeq ($(ARM_MX),)
 	@echo "Unknown ARM_MX. Modify definitions in lib/chip/arm/Makefile.arm."
 	@false
@@ -144,6 +122,8 @@ ifeq ($(BOARD),)
 else
 	@true
 endif
+
+-include $(foreach dir, $(sort $(dir $(ARM_SOURCES))), $(wildcard $(dir)/Makefile.extra))
 
 ## Options common to compile, link and assembly rules
 ARM_COMMON_FLAGS = -Wall -Werror -DRULOS_ARM --specs=nano.specs
@@ -169,7 +149,7 @@ ARM_LD_SCRIPT ?= gcc_arm_$(ARM_FLASHK)k_$(ARM_RAMK)k.ld
 ARM_LDFLAGS = $(ARM_COMMON_FLAGS)
 ARM_LDFLAGS += -Wl,-Map=$(ARM_ARCHTARG).map,--cref -L$(ARM_OBJDIR) -l$(ARM_LIBNAME) 
 ARM_LDFLAGS += -Wl,--gc-sections # Garbage-collect ununused functions
-ARM_LDFLAGS += -static -L$(ARM_LIB_ROOT)/linker -T $(ARM_LD_SCRIPT)
+ARM_LDFLAGS += -static -L$(ARM_LIB_ROOT)/common/linker -T $(ARM_LD_SCRIPT)
 ARM_LDFLAGS += -nostartfiles
 ARM_LDFLAGS += $(ARM_CPUTYPE_FLAGS)
 ARM_LDFLAGS += $(EXTRA_ARM_LDFLAGS)
