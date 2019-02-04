@@ -191,7 +191,7 @@ static void net_recv_interrupt_handler(MediaRecvSlot *mrs) {
     return;
   }
   recv_buffer->payload_len = payload_len;
-  memcpy(recv_buffer->data, mrs->data + sizeof(WireMessage), mrs->packet_len);
+  memcpy(recv_buffer->data, mrs->data + sizeof(WireMessage), payload_len);
 
   // Schedule the upcall.
   schedule_now((ActivationFuncPtr)app_receiver->recv_complete_func,
