@@ -19,6 +19,10 @@
 #include "core/hardware.h"
 #include "core/util.h"
 
+void arm_assert(uint32_t line);
+void arm_log(const char *fmt, ...);
+void arm_log_flush();
+
 #define assert(x)           \
   do {                      \
     if (!(x)) {             \

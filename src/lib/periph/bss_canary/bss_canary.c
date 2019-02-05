@@ -22,7 +22,7 @@
 #if defined(RULOS_AVR)
 #define BSS_END_SYM _end
 #elif defined(RULOS_ARM)
-#define BSS_END_SYM __end__
+#define BSS_END_SYM __bss_end__
 #elif defined(SIM)
 #define BSS_END_SYM _end
 #else

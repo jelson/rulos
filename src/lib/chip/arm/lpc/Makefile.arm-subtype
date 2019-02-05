@@ -60,10 +60,18 @@ ifeq ($(ARM_CHIP_FAMILY),CHIP_LPC11CXX)
 ARM_DRIVER_LIB := lpc_11uxx
 endif
 
+ARM_CFLAGS += -DRULOS_ARM_LPC
+
 # Add startup file to source list, based on Cortex type type (M0, M0PLUS, M3)
 ARM_SOURCES += $(ARM_SUBLIB_ROOT)/startup/startup_ARMC$(ARM_MX).S
 
+# Add linker script
+ARM_LD_SCRIPT ?= gcc_arm_$(ARM_FLASHK)k_$(ARM_RAMK)k.ld
+ARM_LDFLAGS += -static -L$(ARM_LIB_ROOT)/common/linker -T $(ARM_LD_SCRIPT)
+
+# Add device drivers
 ARM_DRIVER_LIB_PATH := $(ARM_SUBLIB_ROOT)/vendor_libraries/$(ARM_DRIVER_LIB)
 ARM_CFLAGS += -I$(ARM_DRIVER_LIB_PATH)
 ARM_SOURCES += $(wildcard $(ARM_DRIVER_LIB_PATH)/*.c)
+
 

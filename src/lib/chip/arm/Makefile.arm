@@ -80,8 +80,8 @@ ARM_GCC_ARCH = armv6-m
 ARM_GCC_CPU = cortex-m0plus
 endif
 ifeq ($(ARM_MX),M3)
-ARM_ARCH = armv7-m
-ARM_CPU = cortex-m3
+ARM_GCC_ARCH = armv7-m
+ARM_GCC_CPU = cortex-m3
 endif
 
 ARM_CPUTYPE_FLAGS := -mcpu=$(ARM_GCC_CPU) -mthumb -march=$(ARM_GCC_ARCH)
@@ -99,19 +99,19 @@ else
 	@true
 endif
 ifeq ($(ARM_SUBTYPE),)
-	@echo "ARM_CHIP doesn't start with a recognized manufacturer prefix"
+	@echo "ARM_CHIP $(ARM_CHIP) doesn't start with a recognized manufacturer prefix"
 	@false
 else
 	@true
 endif
 ifeq ($(ARM_FLASHK),)
-	@echo "ARM_CHIP doesn't seem to be recognized. Typo? Or new support needed?"
+	@echo "ARM_CHIP $(ARM_CHIP) doesn't seem to be recognized. Typo? Or new support needed?"
 	@false
 else
 	@true
 endif
 ifeq ($(ARM_MX),)
-	@echo "Unknown ARM_MX. Modify definitions in lib/chip/arm/Makefile.arm."
+	@echo "ARM_MX not defined. Modify definitions in lib/chip/arm/<subtype>/Makefile.arm-subtype."
 	@false
 else
 	@true
@@ -145,11 +145,10 @@ ARM_CFLAGS += $(EXTRA_ARM_CFLAGS)
 
 
 ## Linker flags
-ARM_LD_SCRIPT ?= gcc_arm_$(ARM_FLASHK)k_$(ARM_RAMK)k.ld
-ARM_LDFLAGS = $(ARM_COMMON_FLAGS)
+ARM_LDFLAGS += $(ARM_COMMON_FLAGS)
 ARM_LDFLAGS += -Wl,-Map=$(ARM_ARCHTARG).map,--cref -L$(ARM_OBJDIR) -l$(ARM_LIBNAME) 
 ARM_LDFLAGS += -Wl,--gc-sections # Garbage-collect ununused functions
-ARM_LDFLAGS += -static -L$(ARM_LIB_ROOT)/common/linker -T $(ARM_LD_SCRIPT)
+ARM_LDFLAGS += -static
 ARM_LDFLAGS += -nostartfiles
 ARM_LDFLAGS += $(ARM_CPUTYPE_FLAGS)
 ARM_LDFLAGS += $(EXTRA_ARM_LDFLAGS)
@@ -164,6 +163,8 @@ arm-all: arm-mcu-defined-check $(ARM_ARCHTARG).elf $(ARM_ARCHTARG).hex $(ARM_ARC
 ## Compile
 $(ARM_OBJDIR)/lib/%.o: $(ROCKET_ROOT)/lib/%.c
 	$(ARM_GCC_PREFIX)-gcc $(ARM_CFLAGS) -c $< -o $@
+$(ARM_OBJDIR)/lib/%.o: $(ROCKET_ROOT)/lib/%.s
+	$(ARM_GCC_PREFIX)-gcc $(ARM_CFLAGS) -c $< -o $@
 $(ARM_OBJDIR)/lib/%.o: $(ROCKET_ROOT)/lib/%.S
 	$(ARM_GCC_PREFIX)-gcc $(ARM_CFLAGS) -c $< -o $@
 $(ARM_OBJDIR)/app/%.o: %.c
@@ -172,6 +173,7 @@ $(ARM_OBJDIR)/app/%.o: %.c
 
 ## Objects from each source file in the RULOS library
 ARM_LIB_OBJECTS := $(patsubst $(ROCKET_ROOT)/lib/%.c,$(ARM_OBJDIR)/lib/%.o, $(ARM_SOURCES))
+ARM_LIB_OBJECTS += $(patsubst $(ROCKET_ROOT)/lib/%.s,$(ARM_OBJDIR)/lib/%.o, $(ARM_SOURCES))
 ARM_LIB_OBJECTS += $(patsubst $(ROCKET_ROOT)/lib/%.S,$(ARM_OBJDIR)/lib/%.o, $(ARM_SOURCES))
 
 $(ARM_LIB_FILE): $(ARM_LIB_OBJECTS)

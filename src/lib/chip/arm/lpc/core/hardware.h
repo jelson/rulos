@@ -180,9 +180,3 @@ static inline int gpio_is_clr(const uint8_t port, const uint8_t pin,
                               const CHIP_IOCON_PIO_T iocon) {
   return !gpio_is_set(port, pin, iocon);
 }
-
-/// other arm-specific functions
-
-void arm_assert(uint32_t line);
-void arm_log(const char *fmt, ...);
-void arm_log_flush();

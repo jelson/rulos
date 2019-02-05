@@ -20,8 +20,10 @@
 
 #define FREQ_USEC 50000
 
-#if defined(RULOS_ARM)
+#if defined(RULOS_ARM_LPC)
 #define TEST_PIN GPIO0_08
+#elif defined(RULOS_ARM_STM32)
+#define TEST_PIN GPIO_A8
 #elif defined(RULOS_AVR)
 #define TEST_PIN GPIO_B3
 #else
@@ -38,6 +40,8 @@ HalUart uart;
 
 int main() {
   hal_init();
+
+#if 0
   hal_uart_init(&uart, 38400, true, /* uart_id= */ 0);
   while (1) {
       for (int i=0; i<255; i++) {
@@ -45,7 +49,8 @@ int main() {
          LOG("Log output running %d", i);
       }
     }
-  
+#endif
+
   init_clock(10000, TIMER1);
   gpio_make_output(TEST_PIN);
 

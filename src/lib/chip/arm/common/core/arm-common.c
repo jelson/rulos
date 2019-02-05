@@ -14,34 +14,31 @@
  *
  ************************************************************************/
 
-#include <inttypes.h>
-
-#include "chip/arm/common/core/bits.h"
+#include "core/arm-hal.h"
 #include "core/hal.h"
 #include "core/logging.h"
 
-#undef TRUE
-#undef FALSE
-#include "chip.h"
-
-#ifndef CRYSTAL
-#define CRYSTAL 0
-#endif
-
-// A variable called OscRateIn is expected to be defined by the LPC
-// libraries to define the rate of external oscillator or crystal, if
-// there is one. This statement binds to the value provided from the
-// RULOS build system.
-const uint32_t OscRateIn = CRYSTAL;
-
-static void* g_timer_data = NULL;
-static Handler g_timer_handler = NULL;
-
-void SysTick_Handler() {
-  if (g_timer_handler != NULL) {
-    g_timer_handler(g_timer_data);
-  }
+// This is the entry point defined by the startup file after
+// initialization is complete. We call the program's main().
+//
+// LPC startup files to SystemInit() first, but both STM32 and LPC
+// startup files call _start last.
+void _start() {
+  extern int main(void);
+  main();
 }
+
+rulos_irq_state_t hal_start_atomic() {
+  rulos_irq_state_t old_interrupts = __get_PRIMASK();
+  __disable_irq();
+  return old_interrupts;
+}
+
+void hal_end_atomic(rulos_irq_state_t old_interrupts) {
+  __set_PRIMASK(old_interrupts);
+}
+
+void hal_idle() { __WFI(); }
 
 // timer_id is ignored for now; we just use the LPC SysTick clock,
 // which is meant for use for a system clock because it doesn't have
@@ -58,18 +55,14 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void* data,
   // resolution down to 100 microseconds). Dividing the period first
   // prevents overflow of a 32-bit int for reasonable (< 1 second)
   // jiffy periods.
-  const uint32_t clock_rate_div_10k = Chip_Clock_GetMainClockRate() / 10000;
+  const uint32_t clock_rate_div_10k = arm_hal_get_clock_rate() / 10000;
   uint32_t ticks_per_interrupt = clock_rate_div_10k * (us / 100);
 
   // Ensure we're not trying to make the clock too long. For a 48mhz
   // crystal the maximum allowable jiffy clock is about 349ms.
   assert(ticks_per_interrupt < (1 << 24));
 
-  g_timer_handler = handler;
-  g_timer_data = data;
-
-  // Setup the timer to fire interrupts at the requested interval.
-  SysTick_Config(ticks_per_interrupt);
+  arm_hal_start_clock_us(ticks_per_interrupt, handler, data);
 
   // Enable interrupts
   __enable_irq();
@@ -82,6 +75,8 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void* data,
   return us_per_tick;
 }
 
-void hal_idle() { __WFI(); }
-
-void hardware_assert(uint16_t line) {}
+void arm_assert(const uint32_t line) {
+  LOG("assertion failed: line %d", line);
+  LOG_FLUSH();
+  __builtin_trap();
+}
