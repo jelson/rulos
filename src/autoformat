@@ -10,6 +10,13 @@ svn status \
     | grep -v vendor_libraries \
     | xargs clang-format -i --style=google --verbose
 
+svn status \
+    | egrep '^M|A' \
+    | cut -c9- \
+    | grep '.*\.h$\|.*\.c$' \
+    | grep -v vendor_libraries \
+    | xargs dos2unix
+
 exit
 
 # Or, to autoformat everything, remove the exit above
