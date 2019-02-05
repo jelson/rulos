@@ -1,0 +1,130 @@
+#
+# This file is part of RulOS, Ravenna Ultra-Low-Altitude Operating
+# System -- the free, open-source operating system for microcontrollers.
+#
+# Written by Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com),
+# May 2009.
+#
+# This operating system is in the public domain.  Copyright is waived.
+# All source code is completely free to use by anyone for any purpose
+# with no restrictions whatsoever.
+#
+# For more information about the project, see: www.jonh.net/rulos
+#
+
+# LPC-specific makefile came partially from seeing what LPCxpresso does,
+# partially from the lpcopen-make project, which aims to also figure out
+# the right makefile based on what LPCxpresso does:
+# https://bitbucket.org/smartavionics/lpcopen-make/src
+
+ARM_SUBLIB_ROOT := $(ARM_LIB_ROOT)/stm32
+
+######################################################################
+
+# 4 and 6 chips are both the 4 family
+ifeq ($(ARM_CHIP),stm32f103x4)
+ARM_CHIP_FAMILY := STM32F103x6
+ARM_FLASHK := 16
+ARM_RAMK := 6
+endif
+
+ifeq ($(ARM_CHIP),stm32f103x6)
+ARM_CHIP_FAMILY := STM32F103x6
+ARM_FLASHK := 32
+ARM_RAMK := 10
+endif
+
+# 8 and B chips are both the B family
+ifeq ($(ARM_CHIP),stm32f103x8)
+ARM_CHIP_FAMILY := STM32F103xB
+ARM_FLASHK := 64
+ARM_RAMK := 20
+endif
+
+ifeq ($(ARM_CHIP),stm32f103xb)
+ARM_CHIP_FAMILY := STM32F103xB
+ARM_FLASHK := 128
+ARM_RAMK := 20
+endif
+
+# C, D, and E chips are all the E family
+ifeq ($(ARM_CHIP),stm32f103xc)
+ARM_CHIP_FAMILY := STM32F103xE
+ARM_FLASHK := 256
+ARM_RAMK := 64
+endif
+
+ifeq ($(ARM_CHIP),stm32f103xd)
+ARM_CHIP_FAMILY := STM32F103xE
+ARM_FLASHK := 384
+ARM_RAMK := 64
+endif
+
+ifeq ($(ARM_CHIP),stm32f103xe)
+ARM_CHIP_FAMILY := STM32F103xE
+ARM_FLASHK := 512
+ARM_RAMK := 64
+endif
+
+# F and G chips are both the G family
+ifeq ($(ARM_CHIP),stm32f103xf)
+ARM_CHIP_FAMILY := STM32F103xG
+ARM_FLASHK := 768
+ARM_RAMK := 96
+endif
+
+ifeq ($(ARM_CHIP),stm32f103xg)
+ARM_CHIP_FAMILY := STM32F103xG
+ARM_FLASHK := 1024
+ARM_RAMK := 96
+endif
+
+###### Set CPU family based on chip prefix
+
+# STM32F0: ARM Cortex M0
+ifneq ($(findstring chip-is-stm32f0,chip-is-$(ARM_CHIP)),)
+ARM_MX := M0
+ARM_CHIP_MAJOR_FAMILY := stm32f0
+ARM_DRIVER_ROOT := $(ARM_SUBLIB_ROOT)/vendor_libraries/stm32f0/Drivers
+ARM_CMSIS_ROOT := $(ARM_DRIVER_ROOT)/CMSIS/Device/ST/STM32F0xx
+ARM_HAL_ROOT := $(ARM_DRIVER_ROOT)/STM32F0xx_HAL_Driver
+ARM_SOURCES += $(ARM_CMSIS_ROOT)/Source/Templates/system_stm32f0xx.c
+endif
+
+# STM32F1: ARM Cortex M3
+ifneq ($(findstring chip-is-stm32f1,chip-is-$(ARM_CHIP)),)
+ARM_MX := M3
+ARM_CHIP_MAJOR_FAMILY := stm32f1
+ARM_DRIVER_ROOT := $(ARM_SUBLIB_ROOT)/vendor_libraries/stm32f1/Drivers
+ARM_CMSIS_ROOT := $(ARM_DRIVER_ROOT)/CMSIS/Device/ST/STM32F1xx
+ARM_HAL_ROOT := $(ARM_DRIVER_ROOT)/STM32F1xx_HAL_Driver
+ARM_SOURCES += $(ARM_CMSIS_ROOT)/Source/Templates/system_stm32f1xx.c
+endif
+
+######################################################################
+
+# Cortex-level includes
+ARM_INCLUDES += -I$(ARM_DRIVER_ROOT)/CMSIS/Include
+
+# Definitions for the particular STM32 chip
+ARM_INCLUDES += -I$(ARM_CMSIS_ROOT)/Include
+
+# STM32 HAL-level includes
+ARM_INCLUDES += -I$(ARM_HAL_ROOT)/Inc
+
+ARM_CFLAGS += -DRULOS_ARM_STM32
+ARM_CFLAGS += -DRULOS_ARM_$(ARM_CHIP_MAJOR_FAMILY)
+
+# Add device drivers to sources list
+ARM_SOURCES += $(wildcard $(ARM_HAL_ROOT)/Src/*.c)
+
+# Unfortunately we need the name in both capitals and lower-case. So
+# we configure one and convert for the other.
+ARM_CHIP_FAMILY_LC := $(shell echo $(ARM_CHIP_FAMILY) | tr [A-Z] [a-z])
+
+# Add startup file to sources list
+ARM_SOURCES += $(ARM_CMSIS_ROOT)/Source/Templates/gcc/startup_$(ARM_CHIP_FAMILY_LC).s
+
+# Add linker script
+ARM_CHIP_FAMILY_UC :=  $(shell echo $(ARM_CHIP_FAMILY) | tr [a-z] [A-Z])
+ARM_LDFLAGS += -T $(ARM_CMSIS_ROOT)/Source/Templates/gcc/linker/$(ARM_CHIP_FAMILY_UC)_FLASH.ld
