@@ -67,7 +67,7 @@ ARM_SOURCES += $(ARM_SUBLIB_ROOT)/startup/startup_ARMC$(ARM_MX).S
 
 # Add linker script
 ARM_LD_SCRIPT ?= gcc_arm_$(ARM_FLASHK)k_$(ARM_RAMK)k.ld
-ARM_LDFLAGS += -static -L$(ARM_LIB_ROOT)/common/linker -T $(ARM_LD_SCRIPT)
+ARM_LDFLAGS += -static -L$(ARM_SUBLIB_ROOT)/linker -T $(ARM_LD_SCRIPT)
 
 # Add device drivers
 ARM_DRIVER_LIB_PATH := $(ARM_SUBLIB_ROOT)/vendor_libraries/$(ARM_DRIVER_LIB)
