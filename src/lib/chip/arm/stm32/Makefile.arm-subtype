@@ -115,8 +115,9 @@ ARM_INCLUDES += -I$(ARM_HAL_ROOT)/Inc
 ARM_CFLAGS += -DRULOS_ARM_STM32
 ARM_CFLAGS += -DRULOS_ARM_$(ARM_CHIP_MAJOR_FAMILY)
 
-# Add device drivers to sources list
-ARM_SOURCES += $(wildcard $(ARM_HAL_ROOT)/Src/*.c)
+# Add device drivers to sources list; ignore "template" files that we're
+# meant to copy and modify locally if we want them.
+ARM_SOURCES += $(filter-out %template.c,$(wildcard $(ARM_HAL_ROOT)/Src/*.c))
 
 # Unfortunately we need the name in both capitals and lower-case. So
 # we configure one and convert for the other.

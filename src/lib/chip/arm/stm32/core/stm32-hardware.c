@@ -24,6 +24,11 @@ void hal_init() {
   // Initialize the STM32 HAL library. (Good thing the name didn't
   // collide...)
   HAL_Init();
+
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
 }
 
 uint32_t arm_hal_get_clock_rate() { return HAL_RCC_GetSysClockFreq(); }
