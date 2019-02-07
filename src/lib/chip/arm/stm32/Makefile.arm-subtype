@@ -113,6 +113,7 @@ ARM_INCLUDES += -I$(ARM_CMSIS_ROOT)/Include
 ARM_INCLUDES += -I$(ARM_HAL_ROOT)/Inc
 
 ARM_CFLAGS += -DRULOS_ARM_STM32
+ARM_CFLAGS += -DUSE_FULL_LL_DRIVER -DUSE_HAL_DRIVER
 ARM_CFLAGS += -DRULOS_ARM_$(ARM_CHIP_MAJOR_FAMILY)
 
 # Add device drivers to sources list; ignore "template" files that we're

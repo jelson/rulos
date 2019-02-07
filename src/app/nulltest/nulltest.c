@@ -33,6 +33,11 @@
 void test_func(void *data) {
   gpio_set(TEST_PIN);
   gpio_clr(TEST_PIN);
+  gpio_set(TEST_PIN);
+  gpio_clr(TEST_PIN);
+  gpio_set(TEST_PIN);
+  gpio_clr(TEST_PIN);
+
   schedule_us(FREQ_USEC, (ActivationFuncPtr)test_func, NULL);
 }
 
