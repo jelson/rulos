@@ -53,8 +53,14 @@
 // CLK_ENABLE must match port above
 #define rUART1_RX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
 
-#define rUART1_DMA_TXCHAN DMA1_Channel7
-#define rUART1_DMA_RXCHAN DMA1_Channel6
+#define rUART1_DMA_TX_CHAN DMA1_Channel4
+#define rUART1_DMA_TX_IRQn DMA1_Channel4_IRQn
+#define rUART1_DMA_TX_IRQHandler DMA1_Channel4_IRQHandler
+
+#define rUART1_DMA_RX_CHAN DMA1_Channel5
+#define rUART1_DMA_RX_IRQn DMA1_Channel5_IRQn
+#define rUART1_DMA_RX_IRQHandler DMA1_Channel5_IRQHandler
+
 // CLK_ENABLE must match DMA unit above
 #define rUART1_DMA_CLK_ENABLE() __HAL_RCC_DMA1_CLK_ENABLE()
 
@@ -64,11 +70,13 @@
 
 typedef struct {
   // UART handle from STM32's HAL
-  UART_HandleTypeDef UartHandle;
+  UART_HandleTypeDef hal_uart_handle;
 
-  // Transmit and receive DMA buffers
-  uint8_t txbuff[UART_TXBUF_SIZE];
-  uint8_t rxbuff[UART_RXBUF_SIZE];
+  // Transmit and receive DMA buffers and DMA handles
+  DMA_HandleTypeDef hal_dma_tx_handle;
+  DMA_HandleTypeDef hal_dma_rx_handle;
+  uint8_t txbuf[UART_TXBUF_SIZE];
+  uint8_t rxbuf[UART_RXBUF_SIZE];
 } uart_t;
 
 // Eventually this should be conditional depending on what kind of
@@ -76,7 +84,17 @@ typedef struct {
 #define NUM_UARTS 1
 static uart_t g_uarts[NUM_UARTS] = {};
 
-void UART_IRQHandler(void) {}
+void rUART1_DMA_TX_IRQHandler(void) {
+  HAL_DMA_IRQHandler(g_uarts[0].hal_uart_handle.hdmatx);
+}
+
+void rUART1_DMA_RX_IRQHandler(void) {
+  HAL_DMA_IRQHandler(g_uarts[0].hal_uart_handle.hdmarx);
+}
+
+void USART1_IRQHandler(void) {
+  HAL_UART_IRQHandler(&g_uarts[0].hal_uart_handle);
+}
 
 static void stm32_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2) {
   uart_t *uart = &g_uarts[uart_id];
@@ -111,17 +129,61 @@ static void stm32_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2) {
       }
 
       // Configure UART HAL
-      uart->UartHandle.Instance = USART1;
-      uart->UartHandle.Init.BaudRate = baud;
-      uart->UartHandle.Init.WordLength = UART_WORDLENGTH_8B;
-      uart->UartHandle.Init.Parity = UART_PARITY_NONE;
-      uart->UartHandle.Init.StopBits =
+      uart->hal_uart_handle.Instance = USART1;
+      uart->hal_uart_handle.Init.BaudRate = baud;
+      uart->hal_uart_handle.Init.WordLength = UART_WORDLENGTH_8B;
+      uart->hal_uart_handle.Init.Parity = UART_PARITY_NONE;
+      uart->hal_uart_handle.Init.StopBits =
           stop2 ? UART_STOPBITS_2 : UART_STOPBITS_1;
-      uart->UartHandle.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-      uart->UartHandle.Init.Mode = UART_MODE_TX_RX;
-      if (HAL_UART_Init(&uart->UartHandle) != HAL_OK) {
+      uart->hal_uart_handle.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+      uart->hal_uart_handle.Init.Mode = UART_MODE_TX_RX;
+      if (HAL_UART_Init(&uart->hal_uart_handle) != HAL_OK) {
         __builtin_trap();
       }
+
+      // Configure the DMA controller for TX
+      uart->hal_dma_tx_handle.Instance = rUART1_DMA_TX_CHAN;
+      uart->hal_dma_tx_handle.Init.Direction = DMA_MEMORY_TO_PERIPH;
+      uart->hal_dma_tx_handle.Init.PeriphInc = DMA_PINC_DISABLE;
+      uart->hal_dma_tx_handle.Init.MemInc = DMA_MINC_ENABLE;
+      uart->hal_dma_tx_handle.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+      uart->hal_dma_tx_handle.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+      uart->hal_dma_tx_handle.Init.Mode = DMA_NORMAL;
+      uart->hal_dma_tx_handle.Init.Priority = DMA_PRIORITY_LOW;
+      if (HAL_DMA_Init(&uart->hal_dma_tx_handle) != HAL_OK) {
+        __builtin_trap();
+      }
+
+      // Associate the initialized DMA handle to the UART handle
+      __HAL_LINKDMA(&uart->hal_uart_handle, hdmatx, uart->hal_dma_tx_handle);
+
+      // Configure the DMA handler for reception process */
+      uart->hal_dma_rx_handle.Instance = rUART1_DMA_RX_CHAN;
+      uart->hal_dma_rx_handle.Init.Direction = DMA_PERIPH_TO_MEMORY;
+      uart->hal_dma_rx_handle.Init.PeriphInc = DMA_PINC_DISABLE;
+      uart->hal_dma_rx_handle.Init.MemInc = DMA_MINC_ENABLE;
+      uart->hal_dma_rx_handle.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+      uart->hal_dma_rx_handle.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+      uart->hal_dma_rx_handle.Init.Mode = DMA_NORMAL;
+      uart->hal_dma_rx_handle.Init.Priority = DMA_PRIORITY_HIGH;
+      if (HAL_DMA_Init(&uart->hal_dma_rx_handle) != HAL_OK) {
+        __builtin_trap();
+      }
+
+      __HAL_LINKDMA(&uart->hal_uart_handle, hdmarx, uart->hal_dma_rx_handle);
+
+      // Set up interrupts
+      HAL_NVIC_SetPriority(rUART1_DMA_TX_IRQn, 0, 1);
+      HAL_NVIC_EnableIRQ(rUART1_DMA_TX_IRQn);
+
+      /* NVIC configuration for DMA transfer complete interrupt (USARTx_RX) */
+      HAL_NVIC_SetPriority(rUART1_DMA_RX_IRQn, 0, 0);
+      HAL_NVIC_EnableIRQ(rUART1_DMA_RX_IRQn);
+
+      /* NVIC for USART, to catch the TX complete */
+      HAL_NVIC_SetPriority(USART1_IRQn, 0, 1);
+      HAL_NVIC_EnableIRQ(USART1_IRQn);
+
       break;
 
     default:
@@ -137,18 +199,38 @@ void hal_uart_init(HalUart *hal_uart, uint32_t baud, r_bool stop2,
   stm32_uart_init(uart_id, baud, stop2);
 }
 
+// This function will try to immediately unblock the sender as long as
+// the number of bytes being transmitted is less than the size of the
+// txbuf and the previous transmission has completed. If the previous
+// transmission has not yet completed or a single message is larger
+// than UART_TXBUF_SIZE, this function will block. If you expect to
+// send single messages larger than the default txbuf size, consider
+// increasing it using ARM_CFLAGS += -DUART_TXBUF_SIZE=nnnn in your
+// Makefile.
 static void arm_uart_sync_send_bytes_by_id(uint8_t uart_id, const uint8_t *s,
                                            uint32_t len) {
   uart_t *uart = &g_uarts[uart_id];
 
   while (len > 0) {
     // Wait until a previous transmission has completed, if any
-    while (HAL_UART_GetState(&uart->UartHandle) != HAL_UART_STATE_READY) {
+    while (HAL_UART_GetState(&uart->hal_uart_handle) != HAL_UART_STATE_READY) {
       __WFI();
     }
 
-    HAL_UART_Transmit(&uart->UartHandle, s, len, HAL_MAX_DELAY);
-    len = 0;
+    // Copy as much of the message as will fit into the DMA buffer
+    uint32_t num_copied = len;
+    if (num_copied > UART_TXBUF_SIZE) {
+      num_copied = UART_TXBUF_SIZE;
+    }
+    memcpy(uart->txbuf, s, num_copied);
+
+    // Start the transfer
+    if (HAL_UART_Transmit_DMA(&uart->hal_uart_handle, uart->txbuf, num_copied) !=
+        HAL_OK) {
+      __builtin_trap();
+    }
+    len -= num_copied;
+    s += num_copied;
   }
 }
 
