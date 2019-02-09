@@ -94,14 +94,14 @@ static inline void _handle_send_ready_name() {
 ISR(_USART_RXC_vect) { _handle_recv_ready_name(_UDR); }
 ISR(_USART_UDRE_vect) { _handle_send_ready_name(); }
 
-static inline void sync_send_byte_name(const char c) {
+static inline void sync_send_byte_name(const uint8_t c) {
   while (!(_UCSRA & _BV(_UDRE))) {
     ;
   }
   _UDR = c;
 }
 
-void hal_uart_sync_send_bytes_name(const char *s, uint8_t len) {
+void hal_uart_sync_send_bytes_name(const uint8_t *s, uint8_t len) {
   for (uint8_t i = 0; i < len; i++) {
     sync_send_byte_name(*s++);
   }

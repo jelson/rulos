@@ -126,7 +126,7 @@ endif
 -include $(foreach dir, $(sort $(dir $(ARM_SOURCES))), $(wildcard $(dir)/Makefile.extra))
 
 ## Options common to compile, link and assembly rules
-ARM_COMMON_FLAGS = -Wall -Werror -DRULOS_ARM --specs=nano.specs
+ARM_COMMON_FLAGS = -Wall -Werror -DRULOS_ARM --specs=nano.specs --specs=nosys.specs
 # Jeremy adds nano.specs because without it, we use ~1k of RAM on
 # a section called impure_data, which is gcc internal stuff.
 # See https://stackoverflow.com/questions/48711221/how-to-prevent-inclusion-of-c-library-destructors-and-atexit
