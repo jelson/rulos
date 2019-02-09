@@ -17,6 +17,13 @@ svn status \
     | grep -v vendor_libraries \
     | xargs dos2unix
 
+svn status \
+    | egrep '^M|A' \
+    | cut -c9- \
+    | grep '.*\.h$\|.*\.c$' \
+    | grep -v vendor_libraries \
+    | xargs chmod ugo-x           
+
 exit
 
 # Or, to autoformat everything, remove the exit above
