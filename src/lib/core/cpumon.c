@@ -119,6 +119,9 @@ void cpumon_act(void *data) {
 uint16_t cpumon_get_idle_percentage(CpumonAct *act) {
   // (sample_spin/sample_time)/(calib_spin/calib_time) * 100
   // = (sample_spin*calib_time*100)/(sample_time*calib_spin)
+  if (act->sample_interval == 0 || act->calibration_spin_counts == 0) {
+    return 0;
+  }
 
   // order doodled to avoid int div underflow, int32 overflow
   uint32_t x = act->sample_spin_counts;
