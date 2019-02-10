@@ -85,7 +85,7 @@ bool in_bounds(uint8_t x, uint8_t y) {
   return (x >= 0 && x < CANVAS_W && y >= 0 && y < CANVAS_H);
 }
 
-inline Point add(Point a, Direction d) {
+static inline Point add(Point a, Direction d) {
   Point r = a;
   switch (d) {
     case RIGHT:
@@ -106,7 +106,7 @@ inline Point add(Point a, Direction d) {
   return r;
 }
 
-inline bool occupied(Map *map, Point a) {
+static inline bool occupied(Map *map, Point a) {
   return get_cell(map, a.x, a.y) != EMPTY ||
          get_cell(map, a.x - 1, a.y) == RIGHT ||
          get_cell(map, a.x + 1, a.y) == LEFT ||
@@ -114,13 +114,13 @@ inline bool occupied(Map *map, Point a) {
          get_cell(map, a.x, a.y + 1) == UP;
 }
 
-inline bool get_game_over(Snake *snake) {
+static inline bool get_game_over(Snake *snake) {
   bool rc = snake->direction == EMPTY;
   // if (rc) { LOG("game over"); }
   return rc;
 }
 
-inline void explode(Snake *snake) { snake->mode = EXPLODING; }
+static inline void explode(Snake *snake) { snake->mode = EXPLODING; }
 
 void snake_tick(Snake *snake) {
   switch (snake->mode) {
