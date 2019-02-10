@@ -16,7 +16,7 @@ ROCKET_ROOT := ../..
 
 PLATFORMS := sim
 PERIPHERALS := rocket 7seg_panel twi display_rtc hpam audio adc rasters joystick uart input_controller remote_keyboard
-ALL_PLATFORM_CFLAGS := -DLOG_TO_SERIAL=UART0 -DSCHEDULER_CAPACITY=64
+ALL_PLATFORM_CFLAGS := -DLOG_TO_SERIAL=UART0 -DSCHEDULER_CAPACITY=64 -DLOG_CPU_USAGE
 
 ## SIM CFLAGS can be one of:
 ## -DBOARDCONFIG_UNIROCKET_LOCALSIM, to view boards in local sim
