@@ -254,11 +254,12 @@ void snake_paint_once(Snake *snake) {
   Point head = snake->head;
   head.x *= 2;
   head.y *= 2;
+  int radius2 = radius * radius;
   LOG("center %d, %d", head.x, head.y);
   if (radius > 0) {
     for (int dy = -radius; dy <= radius; dy++) {
       int y = head.y + dy;
-      int dx2 = radius * radius - dy * dy;
+      int dx2 = radius2 - dy * dy;
       int dx = 0;
       if (dx2 >= 0 && dx2 < MAX_SQRT) {
         dx = sqrt_table[dx2];
