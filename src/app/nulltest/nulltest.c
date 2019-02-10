@@ -30,12 +30,19 @@
 #error "No test pin defined"
 #endif
 
+#ifdef LOG_TO_SERIAL
 HalUart uart;
-
+#endif
 void test_func(void *data) {
   gpio_set(TEST_PIN);
-  hal_uart_sync_send(&uart, "hello there this is an extremely long message, one that actually exceeds the send buffer size of 128 bytes. why would you want to send a message this long? who knows. i don't judge. i just transmit.\n\n");
+#ifdef LOG_TO_SERIAL
+  hal_uart_sync_send(
+      &uart,
+      "hello there this is an extremely long message, one that actually "
+      "exceeds the send buffer size of 128 bytes. why would you want to send a "
+      "message this long? who knows. i don't judge. i just transmit.\n\n");
   //  LOG("serial output %d emitted", i++);
+#endif
   gpio_clr(TEST_PIN);
 
   schedule_us(FREQ_USEC, (ActivationFuncPtr)test_func, NULL);
@@ -44,8 +51,11 @@ void test_func(void *data) {
 int main() {
   hal_init();
 
+#ifdef LOG_TO_SERIAL
   hal_uart_init(&uart, 115200, true, /* uart_id= */ 0);
   LOG("Log output running");
+#endif
+
   init_clock(10000, TIMER1);
   gpio_make_output(TEST_PIN);
 
