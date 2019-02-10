@@ -174,21 +174,16 @@ static inline void gpio_clr_set_or_clr(GPIO_TypeDef *port, const uint32_t pin,
   }
 }
 
-#if 0
 /*
  * returns true if an input is being asserted LOW, false otherwise
  */
-static inline int gpio_is_clr(volatile uint8_t *ddr, volatile uint8_t *port,
-                              volatile uint8_t *pin, uint8_t bit) {
-  return reg_is_clr(pin, bit);
+static inline int gpio_is_clr(GPIO_TypeDef *port, const uint32_t pin) {
+  return (LL_GPIO_ReadInputPort(port) & pin) == 0;
 }
 
 /*
  * returns true if an input is being asserted HIGH, false otherwise
  */
-static inline int gpio_is_set(volatile uint8_t *ddr, volatile uint8_t *port,
-                              volatile uint8_t *pin, uint8_t bit) {
-  return !(gpio_is_clr(ddr, port, pin, bit));
+static inline int gpio_is_set(GPIO_TypeDef *port, const uint32_t pin) {
+  return !(gpio_is_clr(port, pin));
 }
-
-#endif
