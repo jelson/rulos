@@ -156,7 +156,7 @@ CpumonAct cpumon;
 int main() {
   hal_init();
 
-  hal_uart_init(&uart, 38400, true, /* uart_id= */ 0);
+  hal_uart_init(&uart, 115200, true, /* uart_id= */ 0);
   LOG("Log output running");
 
 #if NUM_LOCAL_BOARDS > 0
