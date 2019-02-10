@@ -40,6 +40,7 @@ void snake_advance_tail(Snake *snake);
 void snake_playing_tick(Snake *snake);
 void snake_exploding_tick(Snake *snake);
 void snake_game_over_tick(Snake *snake);
+void populate_sqrt_table();
 
 void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient,
                 uint8_t score_boardnum, uint8_t status_boardnum) {
@@ -53,6 +54,7 @@ void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient,
   board_buffer_init(&snake->status_bbuf DBG_BBUF_LABEL("snake status"));
   snake->focused = FALSE;
   snake_reset_game(snake);
+  populate_sqrt_table();
 
   schedule_us(1, (ActivationFuncPtr)snake_update, snake);
 }
@@ -213,6 +215,15 @@ Direction get_cell(Map *map, uint8_t x, uint8_t y) {
   return map->cell[y][x];
 }
 
+#define MAX_SQRT (CANVAS_W*CANVAS_W)
+int sqrt_table[MAX_SQRT];
+
+void populate_sqrt_table() {
+    for (int i=0; i<MAX_SQRT; i++) {
+        sqrt_table[i] = isqrt(i);
+    }
+}
+
 void snake_paint_once(Snake *snake) {
   if (!snake->focused) {
     // don't paint on borrowed s4 surface
@@ -249,8 +260,8 @@ void snake_paint_once(Snake *snake) {
       int y = head.y + dy;
       int dx2 = radius * radius - dy * dy;
       int dx = 0;
-      if (dx2 >= 0) {
-        dx = isqrt(dx2);
+      if (dx2 >= 0 && dx2 < MAX_SQRT) {
+        dx = sqrt_table[dx2];
       }
       int xlim = head.x + dx;
       for (int x = head.x - dx; x <= xlim; x++) {
