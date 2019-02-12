@@ -83,7 +83,8 @@ typedef struct {
 } Network;
 
 // Public API
-void init_network(Network *net, MediaStateIfc *media);
+void init_network(Network *net);
+void net_bind_media(Network *net, MediaStateIfc *media);
 void net_bind_receiver(Network *net, AppReceiver *appReceiver);
 void net_free_received_message_buffer(MessageRecvBuffer *msg);
 r_bool net_send_message(Network *net, SendSlot *sendSlot);

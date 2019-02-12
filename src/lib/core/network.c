@@ -44,7 +44,8 @@ void net_log_buffer(uint8_t *buf, int len)
 
 static void net_recv_interrupt_handler(MediaRecvSlot *mrs);
 
-void init_network(Network *net, MediaStateIfc *media) {
+void init_network(Network *net) {
+  memset(net, 0, sizeof(Network));
   for (uint8_t i = 0; i < MAX_LISTENERS; i++) {
     net->app_receivers[i] = NULL;
   }
@@ -56,7 +57,9 @@ void init_network(Network *net, MediaStateIfc *media) {
   mrs->capacity = sizeof(net->media_recv_alloc) - sizeof(MediaRecvSlot);
   mrs->packet_len = 0;
   mrs->user_data = net;
+}
 
+void net_bind_media(Network *net, MediaStateIfc *media) {
   // Set up underlying physical network
   net->media = media;
 }
@@ -277,6 +280,7 @@ static void net_send_done_cb(void *user_data) {
 //////////////////////////////////////////////////////////////////////////////
 
 void init_twi_network(Network *net, uint32_t speed_khz, Addr local_addr) {
-  init_network(net, hal_twi_init(speed_khz, local_addr,
-                                 &net->media_recv_alloc.media_recv_slot));
+  init_network(net);
+  net_bind_media(net, hal_twi_init(speed_khz, local_addr,
+                                   &net->media_recv_alloc.media_recv_slot));
 }
