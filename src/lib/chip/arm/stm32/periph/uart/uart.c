@@ -225,8 +225,8 @@ static void arm_uart_sync_send_bytes_by_id(uint8_t uart_id, const uint8_t *s,
     memcpy(uart->txbuf, s, num_copied);
 
     // Start the transfer
-    if (HAL_UART_Transmit_DMA(&uart->hal_uart_handle, uart->txbuf, num_copied) !=
-        HAL_OK) {
+    if (HAL_UART_Transmit_DMA(&uart->hal_uart_handle, uart->txbuf,
+                              num_copied) != HAL_OK) {
       __builtin_trap();
     }
     len -= num_copied;
