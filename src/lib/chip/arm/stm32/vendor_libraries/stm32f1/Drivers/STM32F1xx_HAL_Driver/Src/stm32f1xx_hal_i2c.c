@@ -618,8 +618,8 @@ HAL_StatusTypeDef HAL_I2C_Master_Transmit(I2C_HandleTypeDef *hi2c, uint16_t DevA
       __HAL_I2C_ENABLE(hi2c);
     }
 
-    /* Disable Pos */
-    hi2c->Instance->CR1 &= ~I2C_CR1_POS;
+    /* Disable Pos (jelson: and stop) */
+    hi2c->Instance->CR1 &= ~(I2C_CR1_POS | I2C_CR1_STOP);
 
     hi2c->State     = HAL_I2C_STATE_BUSY_TX;
     hi2c->Mode      = HAL_I2C_MODE_MASTER;
@@ -750,8 +750,8 @@ HAL_StatusTypeDef HAL_I2C_Master_Receive(I2C_HandleTypeDef *hi2c, uint16_t DevAd
       __HAL_I2C_ENABLE(hi2c);
     }
 
-    /* Disable Pos */
-    hi2c->Instance->CR1 &= ~I2C_CR1_POS;
+    /* Disable Pos (jelson: and stop) */
+    hi2c->Instance->CR1 &= ~(I2C_CR1_POS | I2C_CR1_STOP);
 
     hi2c->State       = HAL_I2C_STATE_BUSY_RX;
     hi2c->Mode        = HAL_I2C_MODE_MASTER;
@@ -1273,8 +1273,8 @@ HAL_StatusTypeDef HAL_I2C_Master_Transmit_IT(I2C_HandleTypeDef *hi2c, uint16_t D
       __HAL_I2C_ENABLE(hi2c);
     }
 
-    /* Disable Pos */
-    hi2c->Instance->CR1 &= ~I2C_CR1_POS;
+    /* Disable Pos (jelson: and stop) */
+    hi2c->Instance->CR1 &= ~(I2C_CR1_POS | I2C_CR1_STOP);
 
     hi2c->State     = HAL_I2C_STATE_BUSY_TX;
     hi2c->Mode      = HAL_I2C_MODE_MASTER;
@@ -1350,8 +1350,8 @@ HAL_StatusTypeDef HAL_I2C_Master_Receive_IT(I2C_HandleTypeDef *hi2c, uint16_t De
       __HAL_I2C_ENABLE(hi2c);
     }
 
-    /* Disable Pos */
-    hi2c->Instance->CR1 &= ~I2C_CR1_POS;
+    /* Disable Pos (jelson: and stop) */
+    hi2c->Instance->CR1 &= ~(I2C_CR1_POS | I2C_CR1_STOP);
 
     hi2c->State     = HAL_I2C_STATE_BUSY_RX;
     hi2c->Mode      = HAL_I2C_MODE_MASTER;
@@ -1441,8 +1441,8 @@ HAL_StatusTypeDef HAL_I2C_Master_Sequential_Transmit_IT(I2C_HandleTypeDef *hi2c,
       __HAL_I2C_ENABLE(hi2c);
     }
 
-    /* Disable Pos */
-    hi2c->Instance->CR1 &= ~I2C_CR1_POS;
+    /* Disable Pos (jelson: and stop) */
+    hi2c->Instance->CR1 &= ~(I2C_CR1_POS | I2C_CR1_STOP);
 
     hi2c->State     = HAL_I2C_STATE_BUSY_TX;
     hi2c->Mode      = HAL_I2C_MODE_MASTER;
@@ -1543,8 +1543,8 @@ HAL_StatusTypeDef HAL_I2C_Master_Sequential_Receive_IT(I2C_HandleTypeDef *hi2c, 
       __HAL_I2C_ENABLE(hi2c);
     }
 
-    /* Disable Pos */
-    hi2c->Instance->CR1 &= ~I2C_CR1_POS;
+    /* Disable Pos (jelson: and stop) */
+    hi2c->Instance->CR1 &= ~(I2C_CR1_POS | I2C_CR1_STOP);
 
     hi2c->State     = HAL_I2C_STATE_BUSY_RX;
     hi2c->Mode      = HAL_I2C_MODE_MASTER;
@@ -1997,8 +1997,8 @@ HAL_StatusTypeDef HAL_I2C_Master_Transmit_DMA(I2C_HandleTypeDef *hi2c, uint16_t 
       __HAL_I2C_ENABLE(hi2c);
     }
 
-    /* Disable Pos */
-    hi2c->Instance->CR1 &= ~I2C_CR1_POS;
+    /* Disable Pos (jelson: and stop) */
+    hi2c->Instance->CR1 &= ~(I2C_CR1_POS | I2C_CR1_STOP);
 
     hi2c->State     = HAL_I2C_STATE_BUSY_TX;
     hi2c->Mode      = HAL_I2C_MODE_MASTER;
@@ -2115,8 +2115,8 @@ HAL_StatusTypeDef HAL_I2C_Master_Receive_DMA(I2C_HandleTypeDef *hi2c, uint16_t D
       __HAL_I2C_ENABLE(hi2c);
     }
 
-    /* Disable Pos */
-    hi2c->Instance->CR1 &= ~I2C_CR1_POS;
+    /* Disable Pos (jelson: and stop) */
+    hi2c->Instance->CR1 &= ~(I2C_CR1_POS | I2C_CR1_STOP);
     
     hi2c->State     = HAL_I2C_STATE_BUSY_RX;
     hi2c->Mode      = HAL_I2C_MODE_MASTER;
