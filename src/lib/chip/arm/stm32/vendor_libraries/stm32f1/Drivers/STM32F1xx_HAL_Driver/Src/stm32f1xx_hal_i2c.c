@@ -1933,7 +1933,12 @@ HAL_StatusTypeDef HAL_I2C_DisableListen_IT(I2C_HandleTypeDef *hi2c)
   uint32_t tmp;
 
   /* Disable Address listen mode only if a transfer is not ongoing */
-  if(hi2c->State == HAL_I2C_STATE_LISTEN)
+  if(hi2c->State == HAL_I2C_STATE_BUSY_RX) {
+    // new case from jelson: allow abort of dma rx
+    I2C_ITError(hi2c);
+    return HAL_OK;
+  }
+  else if(hi2c->State == HAL_I2C_STATE_LISTEN)
   {
     tmp = (uint32_t)(hi2c->State) & I2C_STATE_MSK;
     hi2c->PreviousState = tmp | (uint32_t)(hi2c->Mode);
@@ -5255,8 +5260,9 @@ static void I2C_DMAError(DMA_HandleTypeDef *hdma)
   
   /* Disable Acknowledge */
   hi2c->Instance->CR1 &= ~I2C_CR1_ACK;
-  
-  hi2c->XferCount = 0U;
+
+  //jelson
+  //hi2c->XferCount = 0U;
   
   hi2c->State = HAL_I2C_STATE_READY;
   hi2c->Mode = HAL_I2C_MODE_NONE;
@@ -5279,7 +5285,8 @@ static void I2C_DMAAbort(DMA_HandleTypeDef *hdma)
   /* Disable Acknowledge */
   hi2c->Instance->CR1 &= ~I2C_CR1_ACK;
 
-  hi2c->XferCount = 0U;
+  //jelson
+  //hi2c->XferCount = 0U;
 
   /* Reset XferAbortCallback */
   hi2c->hdmatx->XferAbortCallback = NULL;
