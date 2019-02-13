@@ -24,26 +24,30 @@
 #include "core/hardware_types.h"
 #include "core/rulos.h"
 
-#define USE_DMA
+#include "stm32f1xx_ll_dma.h"
+#include "stm32f1xx_ll_i2c.h"
+#include "stm32f1xx_ll_rcc.h"
 
 #if defined(RULOS_ARM_stm32f1)
-#define I2C1_CLK_ENABLE() __HAL_RCC_I2C1_CLK_ENABLE()
-#define I2C1_SDA_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
-#define I2C1_SCL_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
-#define I2C1_DMA_CLK_ENABLE() __HAL_RCC_DMA1_CLK_ENABLE()
-#define I2C1_FORCE_RESET() __HAL_RCC_I2C1_FORCE_RESET()
-#define I2C1_RELEASE_RESET() __HAL_RCC_I2C1_RELEASE_RESET()
-#define I2C1_SCL_PIN GPIO_PIN_6
-#define I2C1_SCL_GPIO_PORT GPIOB
-#define I2C1_SDA_PIN GPIO_PIN_7
-#define I2C1_SDA_GPIO_PORT GPIOB
-#define I2C1_DMA DMA1
-#define I2C1_DMA_TX_CHAN DMA1_Channel6
-#define I2C1_DMA_TX_IRQn DMA1_Channel6_IRQn
-#define I2C1_DMA_TX_IRQHandler DMA1_Channel6_IRQHandler
-#define I2C1_DMA_RX_CHAN DMA1_Channel7
-#define I2C1_DMA_RX_IRQn DMA1_Channel7_IRQn
-#define I2C1_DMA_RX_IRQHandler DMA1_Channel7_IRQHandler
+#define rI2C1_CLK_ENABLE() __HAL_RCC_I2C1_CLK_ENABLE()
+#define rI2C1_SDA_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
+#define rI2C1_SCL_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
+#define rI2C1_DMA_CLK_ENABLE() __HAL_RCC_DMA1_CLK_ENABLE()
+#define rI2C1_FORCE_RESET() __HAL_RCC_I2C1_FORCE_RESET()
+#define rI2C1_RELEASE_RESET() __HAL_RCC_I2C1_RELEASE_RESET()
+#define rI2C1_SCL_PIN GPIO_PIN_6
+#define rI2C1_SCL_GPIO_PORT GPIOB
+#define rI2C1_SDA_PIN GPIO_PIN_7
+#define rI2C1_SDA_GPIO_PORT GPIOB
+#define rI2C1_DMA DMA1
+#define rI2C1_DMA_TX_CHAN LL_DMA_CHANNEL_6
+#define rI2C1_DMA_TX_IRQn DMA1_Channel6_IRQn
+#define rI2C1_DMA_TX_IRQHandler DMA1_Channel6_IRQHandler
+#define rI2C1_DMA_TX_ClearTCFlag() LL_DMA_ClearFlag_TC6(DMA1)
+#define rI2C1_DMA_RX_CHAN LL_DMA_CHANNEL_7
+#define rI2C1_DMA_RX_IRQn DMA1_Channel7_IRQn
+#define rI2C1_DMA_RX_IRQHandler DMA1_Channel7_IRQHandler
+#define rI2C1_DMA_RX_ClearTCFlag() LL_DMA_ClearFlag_TC7(DMA1)
 #else
 #error "Your chip's definitions for I2C registers could use some help."
 #include <stophere>
@@ -51,13 +55,14 @@
 
 typedef struct {
   MediaStateIfc media;
+
+  // sending
   MediaSendDoneFunc send_done_cb;
   void *send_done_cb_data;
-  I2C_HandleTypeDef hal_i2c_handle;
-  DMA_HandleTypeDef hal_dma_tx_handle;
-  DMA_HandleTypeDef hal_dma_rx_handle;
+  uint8_t send_addr;
+
+  // receiving
   MediaRecvSlot *slaveRecvSlot;
-  bool entering_send;
 } TwiState;
 
 // Right now the RULOS HAL interface doesn't even support multiple
@@ -66,90 +71,130 @@ typedef struct {
 #define NUM_TWI 1
 static TwiState g_twi[NUM_TWI];
 
-void I2C1_EV_IRQHandler(void) {
-  HAL_I2C_EV_IRQHandler(&g_twi[0].hal_i2c_handle);
+/// util ////
+
+static void reset_bus(TwiState *twi) {
+  LL_I2C_EnableReset(I2C1);
+  LL_I2C_DisableReset(I2C1);
 }
 
-void I2C1_ER_IRQHandler(void) {
-  HAL_I2C_ER_IRQHandler(&g_twi[0].hal_i2c_handle);
-}
-
-void I2C1_DMA_TX_IRQHandler(void) {
-  HAL_DMA_IRQHandler(g_twi[0].hal_i2c_handle.hdmatx);
-}
-
-void I2C1_DMA_RX_IRQHandler(void) {
-  HAL_DMA_IRQHandler(g_twi[0].hal_i2c_handle.hdmarx);
-}
-
-#define MASTER_ACTIVE(twi) ((twi)->send_done_cb != NULL)
-static void twi_slave_listen(TwiState *twi);
+/////////////////////// sending /////////////////////////////////////////
 
 // Warning: runs in interrupt context.
-void twi_send_done(TwiState *twi) {
-  assert(MASTER_ACTIVE(twi));
-  // NB: send_done_cb must be nulled before the callback runs, since
-  // the callback is likely to want to send another packet. But,
-  // schedule_now doesn't run the callback until the scheduler runs
-  // again, so this works.
-  schedule_now((ActivationFuncPtr)twi->send_done_cb, twi->send_done_cb_data);
-  twi->send_done_cb = NULL;
-  twi->send_done_cb_data = NULL;
-
-  // re-enable listen mode
-  twi_slave_listen(twi);
-}
-
-void twi_recv_done(TwiState *twi) {
-  // This might be a "synthetic" error we injected to stop listening,
-  // so we can send. If so, don't send the packet up or start a new
-  // listen.
-  if (twi->entering_send) {
-    return;
-  }
-
+static void twi_recv_done(TwiState *twi) {
   // Real packet received!
   assert(twi->slaveRecvSlot != NULL);
-  int packet_len = twi->slaveRecvSlot->capacity - twi->hal_i2c_handle.XferCount;
+  int packet_len = twi->slaveRecvSlot->capacity -
+                   LL_DMA_GetDataLength(rI2C1_DMA, rI2C1_DMA_RX_CHAN);
 
   if (packet_len > 0) {
     twi->slaveRecvSlot->packet_len = packet_len;
     twi->slaveRecvSlot->func(twi->slaveRecvSlot);
   }
-  twi_slave_listen(twi);
 }
 
-void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
-  // Add more cases to this if we ever have more than once device
-  if (hi2c == &g_twi[0].hal_i2c_handle) {
-    twi_send_done(&g_twi[0]);
-  } else {
-    __builtin_trap();
-  }
-}
-
-void error_callback(TwiState *twi) {
-  if (MASTER_ACTIVE(twi)) {
-    twi_send_done(twi);
-  } else {
+// Warning: runs in interrupt context.
+static void twi_recv_event_interrupt(TwiState *twi) {
+  // TODO: make I2C1 a constant inside TwiState if we ever have a
+  // second TWI interface
+  if (LL_I2C_IsActiveFlag_ADDR(I2C1)) {
+    // New packet has arrived. Set up a DMA transfer and ack the packet.
+    LL_DMA_ConfigAddresses(
+        rI2C1_DMA, rI2C1_DMA_RX_CHAN, LL_I2C_DMA_GetRegAddr(I2C1),
+        (uint32_t)&twi->slaveRecvSlot->data[0],
+        LL_DMA_GetDataTransferDirection(rI2C1_DMA, rI2C1_DMA_RX_CHAN));
+    LL_DMA_SetDataLength(rI2C1_DMA, rI2C1_DMA_RX_CHAN,
+                         twi->slaveRecvSlot->capacity);
+    LL_DMA_EnableChannel(rI2C1_DMA, rI2C1_DMA_RX_CHAN);
+    LL_I2C_EnableDMAReq_RX(I2C1);
+    LL_I2C_ClearFlag_ADDR(I2C1);
+  } else if (LL_I2C_IsActiveFlag_STOP(I2C1)) {
+    // Stop detected. Clear the stop flag and run the receive handler.
+    LL_I2C_ClearFlag_STOP(I2C1);
+    LL_I2C_DisableDMAReq_RX(I2C1);
+    LL_DMA_DisableChannel(rI2C1_DMA, rI2C1_DMA_RX_CHAN);
     twi_recv_done(twi);
   }
 }
 
-// Can be generated by both a sender and receiver
-void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c) {
-  if (hi2c == &g_twi[0].hal_i2c_handle) {
-    error_callback(&g_twi[0]);
-  } else {
-    __builtin_trap();
+// Warning: runs in interrupt context.
+static void twi_recv_error_interrupt(TwiState *twi) {
+  LL_I2C_DisableDMAReq_RX(I2C1);
+}
+
+void I2C1_DMA_RX_IRQHandler(void) {
+  // The only time we should ever get an interrupt from the RX channel
+  // of the DMA controller is if the receive buffer fills or there's
+  // an error. Either way, we should stop DMA and no longer ACK any
+  // futher data that's received.
+  rI2C1_DMA_RX_ClearTCFlag();
+  LL_I2C_DisableDMAReq_RX(I2C1);
+  LL_I2C_AcknowledgeNextData(I2C1, LL_I2C_NACK);
+}
+
+/////////////////////// sending /////////////////////////////////////////
+
+#define MASTER_ACTIVE(twi) ((twi)->send_done_cb != NULL)
+
+// Warning: runs in interrupt context.
+static void twi_send_done(TwiState *twi) {
+  assert(MASTER_ACTIVE(twi));
+  LL_I2C_GenerateStopCondition(I2C1);
+
+  // The ST I2C application note AN2824 says you're supposed to wait
+  // for STOP to be cleared by the hardware after setting it.
+  // https://www.st.com/content/ccc/resource/technical/document/application_note/5d/ae/a3/6f/08/69/4e/9b/CD00209826.pdf/files/CD00209826.pdf/jcr:content/translations/en.CD00209826.pdf
+  // I've noticed that sometimes, under heavy load, this waits
+  // forever. I'm not sure why. So we time out.
+  int timeout = 1000;
+  while (timeout > 0 && READ_BIT(I2C1->CR1, I2C_CR1_STOP)) {
+    timeout--;
+  }
+  if (timeout == 0) {
+    reset_bus(twi);
+  }
+
+  // NB: send_done_cb must be nulled before the callback runs, since
+  // the callback is likely to want to send another packet. But,
+  // schedule_now doesn't run the callback until the scheduler runs
+  // again, so this works.
+  schedule_now((ActivationFuncPtr)twi->send_done_cb, twi->send_done_cb_data);
+  // schedule_us(100000, (ActivationFuncPtr)twi->send_done_cb,
+  // twi->send_done_cb_data);
+  twi->send_done_cb = NULL;
+  twi->send_done_cb_data = NULL;
+}
+
+// Warning: runs in interrupt context.
+static void twi_send_event_interrupt(TwiState *twi) {
+  // TODO: make I2C1 a constant inside TwiState if we ever have a
+  // second TWI interface
+  if (LL_I2C_IsActiveFlag_SB(I2C1)) {
+    // Start has been transmitted. Transmit the target address.
+    LL_I2C_TransmitData8(I2C1, twi->send_addr << 1);
+  } else if (LL_I2C_IsActiveFlag_ADDR(I2C1)) {
+    // Address has been acknowledged. Enable the DMA transfer for the
+    // outgoing data.
+    LL_I2C_EnableDMAReq_TX(I2C1);
+    LL_I2C_ClearFlag_ADDR(I2C1);
+  } else if (LL_I2C_IsActiveFlag_BTF(I2C1) || LL_I2C_IsActiveFlag_TXE(I2C1)) {
+    // After DMA has been disabled, BTF or TXE indicates the hardware
+    // is ready for the next outgoing byte. We can either respond with
+    // data or a STOP to indicate there's no more. We send a stop.
+    twi_send_done(twi);
   }
 }
 
-void HAL_I2C_AbortCpltCallback(I2C_HandleTypeDef *hi2c) {
-  HAL_I2C_ErrorCallback(hi2c);
-}
+// Warning: runs in interrupt context.
+static void twi_send_error_interrupt(TwiState *twi) { twi_send_done(twi); }
 
-void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c) {}
+// Interrupt called when either the transmit-side DMA is complete or
+// encountered an error. Disable DMA for I2C so that a BTF event is
+// generated.
+void rI2C1_DMA_TX_IRQHandler(void) {
+  rI2C1_DMA_TX_ClearTCFlag();
+  LL_I2C_DisableDMAReq_TX(I2C1);
+}
 
 static void twi_send(MediaStateIfc *media, Addr dest_addr,
                      const unsigned char *data, uint8_t len,
@@ -163,43 +208,38 @@ static void twi_send(MediaStateIfc *media, Addr dest_addr,
   TwiState *twi = &g_twi[0];
 
   assert(!MASTER_ACTIVE(twi));
-  assert(send_done_cb != NULL);
-  assert(HAL_DMA_GetState(&twi->hal_dma_tx_handle) == HAL_DMA_STATE_READY);
 
-  if (HAL_I2C_GetState(&twi->hal_i2c_handle) == HAL_I2C_STATE_BUSY_RX) {
-    // Generate a synthetic error so the HAL goes out of listening
-    // mode.  We set twi->entering_send so that the receiver callback
-    // doesn't start a new listen.
-    twi->entering_send = true;
-    HAL_I2C_DisableListen_IT(&twi->hal_i2c_handle);
-    twi->entering_send = false;
+  // Wait for the current transaction to be complete, if any.
+  while (LL_I2C_IsActiveFlag_BUSY(I2C1)) {
+    __WFI();
   }
-
-  assert(HAL_I2C_GetState(&twi->hal_i2c_handle) == HAL_I2C_STATE_READY);
 
   twi->send_done_cb = send_done_cb;
   twi->send_done_cb_data = send_done_cb_data;
+  twi->send_addr = dest_addr;
 
-#ifdef USE_DMA
-  rulos_irq_state_t old_interrupts = hal_start_atomic();
-  int ret = HAL_I2C_Master_Transmit_DMA(&twi->hal_i2c_handle, dest_addr << 1,
-                                        (uint8_t *)data, len);
-  hal_end_atomic(old_interrupts);
-  if (ret != HAL_OK) {
-    __builtin_trap();
-    twi_send_done(twi);
-    return;
-  }
-#else
-  HAL_I2C_Master_Transmit(&twi->hal_i2c_handle, dest_addr << 1, (uint8_t *)data,
-                          len, HAL_MAX_DELAY);
-  twi_send_done(twi);
-#endif
+  LL_DMA_DisableChannel(rI2C1_DMA, rI2C1_DMA_TX_CHAN);
+  LL_DMA_ConfigAddresses(
+      rI2C1_DMA, rI2C1_DMA_TX_CHAN, (uint32_t)data, LL_I2C_DMA_GetRegAddr(I2C1),
+      LL_DMA_GetDataTransferDirection(rI2C1_DMA, rI2C1_DMA_TX_CHAN));
+  LL_DMA_SetDataLength(rI2C1_DMA, rI2C1_DMA_TX_CHAN, len);
+  LL_DMA_EnableChannel(rI2C1_DMA, rI2C1_DMA_TX_CHAN);
+
+  LL_I2C_DisableBitPOS(I2C1);
+  LL_I2C_AcknowledgeNextData(I2C1, LL_I2C_ACK);
+
+  // Hardware bug fix? Sometimes stop isn't cleared.
+  CLEAR_BIT(I2C1->CR1, I2C_CR1_STOP);
+
+  // Generate a start condition!
+  LL_I2C_GenerateStartCondition(I2C1);
 
 #ifdef TIMING_DEBUG_PIN
   gpio_clr(TIMING_DEBUG_PIN);
 #endif
 }
+
+//////////////////////////////////////////////////////////////////////////
 
 MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
                             MediaRecvSlot *const slaveRecvSlot) {
@@ -210,87 +250,120 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
   twi->media.send = &twi_send;
   twi->slaveRecvSlot = slaveRecvSlot;
 
-  I2C1_SCL_GPIO_CLK_ENABLE();
-  I2C1_SDA_GPIO_CLK_ENABLE();
-  I2C1_CLK_ENABLE();
-  I2C1_FORCE_RESET();
-  I2C1_RELEASE_RESET();
-  I2C1_DMA_CLK_ENABLE();
+  // Enable clocks
+  rI2C1_SCL_GPIO_CLK_ENABLE();
+  rI2C1_SDA_GPIO_CLK_ENABLE();
+  rI2C1_CLK_ENABLE();
+  rI2C1_DMA_CLK_ENABLE();
 
+  reset_bus(twi);
+
+  // Configure GPIO
   GPIO_InitTypeDef GPIO_InitStruct;
-  GPIO_InitStruct.Pin = I2C1_SCL_PIN;
+  GPIO_InitStruct.Pin = rI2C1_SCL_PIN;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(I2C1_SCL_GPIO_PORT, &GPIO_InitStruct);
+  HAL_GPIO_Init(rI2C1_SCL_GPIO_PORT, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = I2C1_SDA_PIN;
-  HAL_GPIO_Init(I2C1_SDA_GPIO_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = rI2C1_SDA_PIN;
+  HAL_GPIO_Init(rI2C1_SDA_GPIO_PORT, &GPIO_InitStruct);
 
   // Configure DMA TX channel
-  twi->hal_dma_tx_handle.Instance = I2C1_DMA_TX_CHAN;
-  twi->hal_dma_tx_handle.Init.Direction = DMA_MEMORY_TO_PERIPH;
-  twi->hal_dma_tx_handle.Init.PeriphInc = DMA_PINC_DISABLE;
-  twi->hal_dma_tx_handle.Init.MemInc = DMA_MINC_ENABLE;
-  twi->hal_dma_tx_handle.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-  twi->hal_dma_tx_handle.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-  twi->hal_dma_tx_handle.Init.Mode = DMA_NORMAL;
-  twi->hal_dma_tx_handle.Init.Priority = DMA_PRIORITY_LOW;
-  HAL_DMA_Init(&twi->hal_dma_tx_handle);
-  __HAL_LINKDMA(&twi->hal_i2c_handle, hdmatx, twi->hal_dma_tx_handle);
-  HAL_NVIC_SetPriority(I2C1_DMA_TX_IRQn, 0, 1);
-  HAL_NVIC_EnableIRQ(I2C1_DMA_TX_IRQn);
+  LL_DMA_ConfigTransfer(rI2C1_DMA, rI2C1_DMA_TX_CHAN,
+                        LL_DMA_DIRECTION_MEMORY_TO_PERIPH |
+                            LL_DMA_PRIORITY_LOW | LL_DMA_MODE_NORMAL |
+                            LL_DMA_PERIPH_NOINCREMENT |
+                            LL_DMA_MEMORY_INCREMENT | LL_DMA_PDATAALIGN_BYTE |
+                            LL_DMA_MDATAALIGN_BYTE);
+  NVIC_SetPriority(rI2C1_DMA_TX_IRQn, 0x4);
+  NVIC_EnableIRQ(rI2C1_DMA_TX_IRQn);
+
+  // Enable transfer-complete and transfer-error interrupt generation for DMA.
+  LL_DMA_EnableIT_TC(rI2C1_DMA, rI2C1_DMA_TX_CHAN);
+  LL_DMA_EnableIT_TE(rI2C1_DMA, rI2C1_DMA_TX_CHAN);
 
   // Configure DMA RX channel
-  twi->hal_dma_rx_handle.Instance = I2C1_DMA_RX_CHAN;
-  twi->hal_dma_rx_handle.Init.Direction = DMA_PERIPH_TO_MEMORY;
-  twi->hal_dma_rx_handle.Init.PeriphInc = DMA_PINC_DISABLE;
-  twi->hal_dma_rx_handle.Init.MemInc = DMA_MINC_ENABLE;
-  twi->hal_dma_rx_handle.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-  twi->hal_dma_rx_handle.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-  twi->hal_dma_rx_handle.Init.Mode = DMA_NORMAL;
-  twi->hal_dma_rx_handle.Init.Priority = DMA_PRIORITY_HIGH;
-  HAL_DMA_Init(&twi->hal_dma_rx_handle);
-  __HAL_LINKDMA(&twi->hal_i2c_handle, hdmarx, twi->hal_dma_rx_handle);
-  HAL_NVIC_SetPriority(I2C1_DMA_RX_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(I2C1_DMA_RX_IRQn);
+  LL_DMA_ConfigTransfer(rI2C1_DMA, rI2C1_DMA_RX_CHAN,
+                        LL_DMA_DIRECTION_PERIPH_TO_MEMORY |
+                            LL_DMA_PRIORITY_HIGH | LL_DMA_MODE_NORMAL |
+                            LL_DMA_PERIPH_NOINCREMENT |
+                            LL_DMA_MEMORY_INCREMENT | LL_DMA_PDATAALIGN_BYTE |
+                            LL_DMA_MDATAALIGN_BYTE);
+  NVIC_SetPriority(rI2C1_DMA_RX_IRQn, 0x1);
+  NVIC_EnableIRQ(rI2C1_DMA_RX_IRQn);
+  LL_DMA_EnableIT_TC(rI2C1_DMA, rI2C1_DMA_RX_CHAN);
+  LL_DMA_EnableIT_TE(rI2C1_DMA, rI2C1_DMA_RX_CHAN);
 
-  // Set up interrupts and their priorities
-  HAL_NVIC_SetPriority(I2C1_ER_IRQn, 0, 1);
-  HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);
-  HAL_NVIC_SetPriority(I2C1_EV_IRQn, 0, 2);
-  HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
+  // Set up I2C
+  LL_I2C_Disable(I2C1);
+  LL_RCC_ClocksTypeDef rcc_clocks;
+  LL_RCC_GetSystemClocksFreq(&rcc_clocks);
+  LL_I2C_ConfigSpeed(I2C1, rcc_clocks.PCLK1_Frequency, speed_khz * 1000,
+                     LL_I2C_DUTYCYCLE_2);
+  LL_I2C_SetOwnAddress1(I2C1, local_addr << 1, LL_I2C_OWNADDRESS1_7BIT);
+  LL_I2C_EnableClockStretching(I2C1);
+  LL_I2C_SetMode(I2C1, LL_I2C_MODE_I2C);
 
-  twi->hal_i2c_handle.Instance = I2C1;
-  twi->hal_i2c_handle.Init.ClockSpeed = speed_khz * 1000;
-  twi->hal_i2c_handle.Init.DutyCycle = I2C_DUTYCYCLE_2;
-  twi->hal_i2c_handle.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-  twi->hal_i2c_handle.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-  twi->hal_i2c_handle.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-  twi->hal_i2c_handle.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-  twi->hal_i2c_handle.Init.OwnAddress1 = local_addr << 1;
-  twi->hal_i2c_handle.Init.OwnAddress2 = 0xFF;
+  // Turn on interrupts
+  NVIC_SetPriority(I2C1_ER_IRQn, 0x2);
+  NVIC_EnableIRQ(I2C1_ER_IRQn);
+  NVIC_SetPriority(I2C1_EV_IRQn, 0x2);
+  NVIC_EnableIRQ(I2C1_EV_IRQn);
+  LL_I2C_EnableIT_EVT(I2C1);
+  LL_I2C_EnableIT_ERR(I2C1);
 
-  if (HAL_I2C_Init(&twi->hal_i2c_handle) != HAL_OK) {
-    __builtin_trap();
-  }
+  // Enable!
+  LL_I2C_Enable(I2C1);
 
-  while (HAL_I2C_GetState(&twi->hal_i2c_handle) != HAL_I2C_STATE_READY) {
-  }
+  // Turn on acks for incoming receives
+  LL_I2C_AcknowledgeNextData(I2C1, LL_I2C_ACK);
 
-  twi_slave_listen(twi);
 #ifdef TIMING_DEBUG_PIN
   gpio_make_output(TIMING_DEBUG_PIN);
 #endif
 
-  LOG("twi init done");
   return &twi->media;
 }
 
-static void twi_slave_listen(TwiState *twi) {
-  if (HAL_I2C_Slave_Receive_DMA(&twi->hal_i2c_handle,
-                                (uint8_t *)&twi->slaveRecvSlot->data[0],
-                                twi->slaveRecvSlot->capacity) != HAL_OK) {
-    __builtin_trap();
+//// interrupt handler trampolines
+
+void I2C1_EV_IRQHandler(void) {
+  TwiState *twi = &g_twi[0];
+
+  if (MASTER_ACTIVE(twi)) {
+    twi_send_event_interrupt(twi);
+  } else {
+    twi_recv_event_interrupt(twi);
+  }
+}
+
+void I2C1_ER_IRQHandler(void) {
+  TwiState *twi = &g_twi[0];
+
+  // In the future, if the send-done callback wants to differentiate
+  // between different kinds of error, it can be recorded here and
+  // passed into twi_send_done.
+  if (LL_I2C_IsActiveFlag_BERR(I2C1)) {
+    // Bus error. Reset the I2C interface in hopes of recovering.
+    LL_I2C_ClearFlag_BERR(I2C1);
+    reset_bus(twi);
+  }
+  if (LL_I2C_IsActiveFlag_ARLO(I2C1)) {
+    // Arbitration lost, meaning we couldn't acquire the bus.
+    LL_I2C_ClearFlag_ARLO(I2C1);
+  }
+  if (LL_I2C_IsActiveFlag_AF(I2C1)) {
+    // Destination address didn't ack when we sent their address.
+    LL_I2C_ClearFlag_AF(I2C1);
+  }
+  if (LL_I2C_IsActiveFlag_OVR(I2C1)) {
+    LL_I2C_ClearFlag_OVR(I2C1);
+  }
+
+  if (MASTER_ACTIVE(twi)) {
+    twi_send_error_interrupt(twi);
+  } else {
+    twi_recv_error_interrupt(twi);
   }
 }
