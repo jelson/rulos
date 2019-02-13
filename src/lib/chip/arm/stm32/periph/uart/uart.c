@@ -40,7 +40,31 @@
 #define UART_RXBUF_SIZE 128 /* Receive */
 #endif
 
-#if defined(STM32F103xB)
+#if defined(STM32F031x6)
+
+#define rUART1_TX_PORT GPIOA
+#define rUART1_TX_PIN GPIO_PIN_8
+// CLK_ENABLE must match port above
+#define rUART1_TX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
+
+// RX, TX can also be put on B7, B6 as remap pins
+#define rUART1_RX_PORT GPIOA
+#define rUART1_RX_PIN GPIO_PIN_9
+// CLK_ENABLE must match port above
+#define rUART1_RX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
+
+#define rUART1_DMA_TX_CHAN DMA1_Channel2
+#define rUART1_DMA_TX_IRQn DMA1_Channel2_3_IRQn
+#define rUART1_DMA_TX_IRQHandler DMA1_Channel2_3_IRQHandler
+
+#define rUART1_DMA_RX_CHAN DMA1_Channel3
+#define rUART1_DMA_RX_IRQn DMA1_Channel2_3_IRQn
+#define rUART1_DMA_RX_IRQHandler DMA1_Channel2_3_IRQHandler
+
+// CLK_ENABLE must match DMA unit above
+#define rUART1_DMA_CLK_ENABLE() __HAL_RCC_DMA1_CLK_ENABLE()
+
+#elif defined(STM32F103xB)
 
 #define rUART1_TX_PORT GPIOA
 #define rUART1_TX_PIN GPIO_PIN_9
@@ -66,6 +90,7 @@
 
 #else
 #error "Tell the UART code about your chip's UART."
+#include <stophere>
 #endif
 
 typedef struct {
@@ -84,6 +109,16 @@ typedef struct {
 #define NUM_UARTS 1
 static uart_t g_uarts[NUM_UARTS] = {};
 
+#if rUART1_DMA_TX_IRQHandler == rUART1_DMA_RX_IRQHandler
+// If the DMA RX and TX events share an interrupt, call both from the
+// handler.
+void rUART1_DMA_TX_IRQHandler(void) {
+  HAL_DMA_IRQHandler(g_uarts[0].hal_uart_handle.hdmatx);
+  HAL_DMA_IRQHandler(g_uarts[0].hal_uart_handle.hdmarx);
+}
+
+#else
+
 void rUART1_DMA_TX_IRQHandler(void) {
   HAL_DMA_IRQHandler(g_uarts[0].hal_uart_handle.hdmatx);
 }
@@ -91,6 +126,8 @@ void rUART1_DMA_TX_IRQHandler(void) {
 void rUART1_DMA_RX_IRQHandler(void) {
   HAL_DMA_IRQHandler(g_uarts[0].hal_uart_handle.hdmarx);
 }
+
+#endif  // rUART1_DMA_TX_IRQHandler == rUART1_DMA_RX_IRQHandler
 
 void USART1_IRQHandler(void) {
   HAL_UART_IRQHandler(&g_uarts[0].hal_uart_handle);
@@ -107,7 +144,9 @@ static void stm32_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2) {
       // Enable peripherals and GPIO clocks
       rUART1_TX_GPIO_CLK_ENABLE();
       rUART1_RX_GPIO_CLK_ENABLE();
+#ifdef __HAL_RCC_AFIO_CLK_ENABLE
       __HAL_RCC_AFIO_CLK_ENABLE();
+#endif
 
       // Enable USART clock
       __HAL_RCC_USART1_CLK_ENABLE();

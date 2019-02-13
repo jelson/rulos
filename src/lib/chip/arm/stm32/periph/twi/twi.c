@@ -24,11 +24,16 @@
 #include "core/hardware_types.h"
 #include "core/rulos.h"
 
+#if defined(RULOS_ARM_stm32f0)
+#include "stm32f0xx_ll_dma.h"
+#include "stm32f0xx_ll_i2c.h"
+#include "stm32f0xx_ll_rcc.h"
+
+#elif defined(RULOS_ARM_stm32f1)
 #include "stm32f1xx_ll_dma.h"
 #include "stm32f1xx_ll_i2c.h"
 #include "stm32f1xx_ll_rcc.h"
 
-#if defined(RULOS_ARM_stm32f1)
 #define rI2C1_CLK_ENABLE() __HAL_RCC_I2C1_CLK_ENABLE()
 #define rI2C1_SDA_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
 #define rI2C1_SCL_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
