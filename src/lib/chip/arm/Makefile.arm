@@ -70,7 +70,7 @@ ARM_INCLUDES += -I$(ARM_SUBLIB_ROOT)
 
 ######################################################################
 # Set gcc arch flags according to Cortex CPU type
-# see https://launchpadlibrarian.net/177524521/readme.txt
+# see $(GCC_ROOT)/../share/doc/gcc-arm-none-eabi/readme.txt
 
 ifeq ($(ARM_MX),M0)
 ARM_GCC_ARCH := armv6-m
