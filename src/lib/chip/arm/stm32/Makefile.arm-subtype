@@ -21,6 +21,8 @@ ARM_SUBLIB_ROOT := $(ARM_LIB_ROOT)/stm32
 
 ######################################################################
 
+########## STM32 F1 #############
+
 # 4 and 6 chips are both the 4 family
 ifeq ($(ARM_CHIP),stm32f103x4)
 ARM_CHIP_FAMILY := STM32F103x6
@@ -78,6 +80,22 @@ ARM_CHIP_FAMILY := STM32F103xG
 ARM_FLASHK := 1024
 ARM_RAMK := 96
 endif
+
+########## STM32 F3 #############
+
+# 6 and 8 chips are both the 8 family
+ifeq ($(ARM_CHIP),stm32f303x6)
+ARM_CHIP_FAMILY := STM32F303x8
+ARM_FLASHK := 1024
+ARM_RAMK := 96
+endif
+
+ifeq ($(ARM_CHIP),stm32f303x8)
+ARM_CHIP_FAMILY := STM32F303x8
+ARM_FLASHK := 1024
+ARM_RAMK := 96
+endif
+
 
 ###### Set CPU family based on chip prefix
 
