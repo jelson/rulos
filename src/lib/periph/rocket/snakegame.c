@@ -60,6 +60,7 @@ void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient,
 }
 
 void snake_reset_game(Snake *snake) {
+  LOG("playing snake!");
   snake_init_map(&snake->map);
   snake->head.x = CANVAS_W / 4;
   snake->head.y = CANVAS_H / 2;
@@ -116,7 +117,9 @@ static inline bool occupied(Map *map, Point a) {
 
 static inline bool get_game_over(Snake *snake) {
   bool rc = snake->direction == EMPTY;
-  // if (rc) { LOG("game over"); }
+  if (rc) {
+    LOG("snake: game over");
+  }
   return rc;
 }
 
@@ -215,13 +218,13 @@ Direction get_cell(Map *map, uint8_t x, uint8_t y) {
   return map->cell[y][x];
 }
 
-#define MAX_SQRT (CANVAS_W*CANVAS_W)
+#define MAX_SQRT (CANVAS_W * CANVAS_W)
 int sqrt_table[MAX_SQRT];
 
 void populate_sqrt_table() {
-    for (int i=0; i<MAX_SQRT; i++) {
-        sqrt_table[i] = isqrt(i);
-    }
+  for (int i = 0; i < MAX_SQRT; i++) {
+    sqrt_table[i] = isqrt(i);
+  }
 }
 
 void snake_paint_once(Snake *snake) {
@@ -255,7 +258,7 @@ void snake_paint_once(Snake *snake) {
   head.x *= 2;
   head.y *= 2;
   int radius2 = radius * radius;
-  LOG("center %d, %d", head.x, head.y);
+  // LOG("center %d, %d", head.x, head.y);
   if (radius > 0) {
     for (int dy = -radius; dy <= radius; dy++) {
       int y = head.y + dy;
