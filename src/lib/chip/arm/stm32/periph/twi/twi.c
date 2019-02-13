@@ -209,15 +209,6 @@ static void twi_send(MediaStateIfc *media, Addr dest_addr,
 
   assert(!MASTER_ACTIVE(twi));
 
-  // Wait for the current transaction to be complete, if any.
-  while (LL_I2C_IsActiveFlag_BUSY(I2C1)) {
-    __WFI();
-  }
-
-  twi->send_done_cb = send_done_cb;
-  twi->send_done_cb_data = send_done_cb_data;
-  twi->send_addr = dest_addr;
-
   LL_DMA_DisableChannel(rI2C1_DMA, rI2C1_DMA_TX_CHAN);
   LL_DMA_ConfigAddresses(
       rI2C1_DMA, rI2C1_DMA_TX_CHAN, (uint32_t)data, LL_I2C_DMA_GetRegAddr(I2C1),
@@ -226,13 +217,25 @@ static void twi_send(MediaStateIfc *media, Addr dest_addr,
   LL_DMA_EnableChannel(rI2C1_DMA, rI2C1_DMA_TX_CHAN);
 
   LL_I2C_DisableBitPOS(I2C1);
-  LL_I2C_AcknowledgeNextData(I2C1, LL_I2C_ACK);
 
   // Hardware bug fix? Sometimes stop isn't cleared.
   CLEAR_BIT(I2C1->CR1, I2C_CR1_STOP);
 
-  // Generate a start condition!
+  // Wait for the current transaction to be complete, if any. Then,
+  // atomically enable master mode.
+  rulos_irq_state_t old_interrupts = hal_start_atomic();
+  while (LL_I2C_IsActiveFlag_BUSY(I2C1)) {
+    hal_end_atomic(old_interrupts);
+    __WFI();
+    old_interrupts = hal_start_atomic();
+  }
+
+  twi->send_done_cb = send_done_cb;
+  twi->send_done_cb_data = send_done_cb_data;
+  twi->send_addr = dest_addr;
+  LL_I2C_AcknowledgeNextData(I2C1, LL_I2C_ACK);
   LL_I2C_GenerateStartCondition(I2C1);
+  hal_end_atomic(old_interrupts);
 
 #ifdef TIMING_DEBUG_PIN
   gpio_clr(TIMING_DEBUG_PIN);
