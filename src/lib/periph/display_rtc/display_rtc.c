@@ -29,7 +29,7 @@ void drtc_init(DRTCAct *act, uint8_t board, Time base_time) {
 }
 
 void drtc_update(DRTCAct *act) {
-  schedule_us(Exp2Time(15), (ActivationFuncPtr)drtc_update, act);
+  schedule_us(10000, (ActivationFuncPtr)drtc_update, act);
   drtc_update_once(act);
 }
 
