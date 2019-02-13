@@ -70,21 +70,31 @@ ARM_INCLUDES += -I$(ARM_SUBLIB_ROOT)
 
 ######################################################################
 # Set gcc arch flags according to Cortex CPU type
+# see https://launchpadlibrarian.net/177524521/readme.txt
 
 ifeq ($(ARM_MX),M0)
-ARM_GCC_ARCH = armv6-m
-ARM_GCC_CPU = cortex-m0
+ARM_GCC_ARCH := armv6-m
+ARM_GCC_CPU := cortex-m0
 endif
 ifeq ($(ARM_MX),M0PLUS)
-ARM_GCC_ARCH = armv6-m
-ARM_GCC_CPU = cortex-m0plus
+ARM_GCC_ARCH := armv6-m
+ARM_GCC_CPU := cortex-m0plus
 endif
 ifeq ($(ARM_MX),M3)
-ARM_GCC_ARCH = armv7-m
-ARM_GCC_CPU = cortex-m3
+ARM_GCC_ARCH := armv7-m
+ARM_GCC_CPU := cortex-m3
+endif
+ifeq ($(ARM_MX),M4)
+ARM_GCC_ARCH = armv7e-m
+ARM_GCC_CPU = cortex-m4
+endif
+ifeq ($(ARM_MX),M4F)
+ARM_GCC_ARCH = armv7e-m
+ARM_GCC_CPU = cortex-m4
+ARM_CPUTYPE_FLAGS += -mfloat-abi=hard -mfpu=fpv4-sp-d16
 endif
 
-ARM_CPUTYPE_FLAGS := -mcpu=$(ARM_GCC_CPU) -mthumb -march=$(ARM_GCC_ARCH)
+ARM_CPUTYPE_FLAGS += -mcpu=$(ARM_GCC_CPU) -mthumb -march=$(ARM_GCC_ARCH)
 ARM_CPUTYPE_FLAGS += -DCORE_$(ARM_MX)=1 -D$(ARM_CHIP_FAMILY)=1
 
 #######################################################################
