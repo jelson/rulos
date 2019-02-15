@@ -112,10 +112,11 @@ void joystick_poll(JoystickState_t *js) {
     js->state &= ~(JOYSTICK_STATE_DOWN);
   }
 
-  if (hal_read_joystick_button())
+  if (hal_read_joystick_button()) {
     js->state |= JOYSTICK_STATE_TRIGGER;
-  else
+  } else {
     js->state &= ~(JOYSTICK_STATE_TRIGGER);
+  }
 }
 
 void joystick_init(JoystickState_t *js) {
