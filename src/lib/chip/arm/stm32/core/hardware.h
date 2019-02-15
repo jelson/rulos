@@ -148,7 +148,7 @@ static inline void gpio_make_input_enable_pulldown(GPIO_TypeDef *port,
 /*
  * Configure a pin as input and disable its pullup and pulldown resistors.
  */
-#ifdef RULOS_ARM_stm32f0
+#if defined(RULOS_ARM_stm32f0) || defined(RULOS_ARM_stm32f3)
 static inline void gpio_make_input_disable_pullup(GPIO_TypeDef *port,
                                                   const uint32_t pin) {
   stm32_gpio_configure(port, pin, LL_GPIO_MODE_INPUT, LL_GPIO_PULL_NO);

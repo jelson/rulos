@@ -182,6 +182,16 @@ ARM_HAL_ROOT := $(ARM_DRIVER_ROOT)/STM32F1xx_HAL_Driver
 ARM_SOURCES += $(ARM_CMSIS_ROOT)/Source/Templates/system_stm32f1xx.c
 endif
 
+# STM32F3: ARM Cortex M4
+ifneq ($(findstring chip-is-stm32f3,chip-is-$(ARM_CHIP)),)
+ARM_MX := M4F
+ARM_CHIP_MAJOR_FAMILY := stm32f3
+ARM_DRIVER_ROOT := $(ARM_SUBLIB_ROOT)/vendor_libraries/stm32f3/Drivers
+ARM_CMSIS_ROOT := $(ARM_DRIVER_ROOT)/CMSIS/Device/ST/STM32F3xx
+ARM_HAL_ROOT := $(ARM_DRIVER_ROOT)/STM32F3xx_HAL_Driver
+ARM_SOURCES += $(ARM_CMSIS_ROOT)/Source/Templates/system_stm32f3xx.c
+endif
+
 ######################################################################
 
 # Cortex-level includes
