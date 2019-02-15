@@ -209,5 +209,11 @@ ARM_CHIP_FAMILY_LC := $(shell echo $(ARM_CHIP_FAMILY) | tr '[A-Z]' '[a-z]')
 ARM_SOURCES += $(ARM_CMSIS_ROOT)/Source/Templates/gcc/startup_$(ARM_CHIP_FAMILY_LC).s
 
 # Add linker script
-ARM_CHIP_FAMILY_UC :=  $(shell echo $(ARM_CHIP_FAMILY) | tr '[a-z]' '[A-Z]')
-ARM_LDFLAGS += -T $(ARM_CMSIS_ROOT)/Source/Templates/gcc/linker/$(ARM_CHIP_FAMILY_UC)_FLASH.ld
+ARM_LINKSCRIPT := $(ARM_OBJDIR)/$(ARM_CHIP)-linker-script.ld
+
+$(ARM_LINKSCRIPT): $(ARM_SUBLIB_ROOT)/linker/stm32-generic.ld
+	sed "s/%RULOS_FLASHK%/$(ARM_FLASHK)/; s/%RULOS_RAMK%/$(ARM_RAMK)/" $< > $@
+
+ARM_EXTRA_ELFDEPS += $(ARM_LINKSCRIPT)
+
+ARM_LDFLAGS += -T $(ARM_LINKSCRIPT)
