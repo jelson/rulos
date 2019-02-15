@@ -203,11 +203,11 @@ ARM_SOURCES += $(filter-out %template.c,$(wildcard $(ARM_HAL_ROOT)/Src/*.c))
 
 # Unfortunately we need the name in both capitals and lower-case. So
 # we configure one and convert for the other.
-ARM_CHIP_FAMILY_LC := $(shell echo $(ARM_CHIP_FAMILY) | tr [A-Z] [a-z])
+ARM_CHIP_FAMILY_LC := $(shell echo $(ARM_CHIP_FAMILY) | tr '[A-Z]' '[a-z]')
 
 # Add startup file to sources list
 ARM_SOURCES += $(ARM_CMSIS_ROOT)/Source/Templates/gcc/startup_$(ARM_CHIP_FAMILY_LC).s
 
 # Add linker script
-ARM_CHIP_FAMILY_UC :=  $(shell echo $(ARM_CHIP_FAMILY) | tr [a-z] [A-Z])
+ARM_CHIP_FAMILY_UC :=  $(shell echo $(ARM_CHIP_FAMILY) | tr '[a-z]' '[A-Z]')
 ARM_LDFLAGS += -T $(ARM_CMSIS_ROOT)/Source/Templates/gcc/linker/$(ARM_CHIP_FAMILY_UC)_FLASH.ld

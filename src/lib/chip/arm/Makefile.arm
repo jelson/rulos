@@ -183,9 +183,10 @@ $(ARM_OBJDIR)/app/%.o: %.c
 
 
 ## Objects from each source file in the RULOS library
-ARM_LIB_OBJECTS := $(patsubst $(ROCKET_ROOT)/lib/%.c,$(ARM_OBJDIR)/lib/%.o, $(ARM_SOURCES))
-ARM_LIB_OBJECTS += $(patsubst $(ROCKET_ROOT)/lib/%.s,$(ARM_OBJDIR)/lib/%.o, $(ARM_SOURCES))
-ARM_LIB_OBJECTS += $(patsubst $(ROCKET_ROOT)/lib/%.S,$(ARM_OBJDIR)/lib/%.o, $(ARM_SOURCES))
+ARM_LIB_OBJECTS :=
+ARM_LIB_OBJECTS += $(patsubst $(ROCKET_ROOT)/lib/%.c,$(ARM_OBJDIR)/lib/%.o, $(filter $(ROCKET_ROOT)/lib/%.c,$(ARM_SOURCES)))
+ARM_LIB_OBJECTS += $(patsubst $(ROCKET_ROOT)/lib/%.s,$(ARM_OBJDIR)/lib/%.o, $(filter $(ROCKET_ROOT)/lib/%.s,$(ARM_SOURCES)))
+ARM_LIB_OBJECTS += $(patsubst $(ROCKET_ROOT)/lib/%.S,$(ARM_OBJDIR)/lib/%.o, $(filter $(ROCKET_ROOT)/lib/%.S,$(ARM_SOURCES)))
 
 $(ARM_LIB_FILE): $(ARM_LIB_OBJECTS)
 	rm -f $@
@@ -232,8 +233,3 @@ arm-clean:
 DIR_LIST := $(sort $(dir $(ARM_LIB_OBJECTS) $(ARM_TARGET_OBJECTS)))
 -include $(shell mkdir -p $(DIR_LIST)) $(foreach dir, $(DIR_LIST), $(wildcard $(dir)/*.d))
 
-##############################################################################
-
-
-arm-program: $(ARM_ARCHTARG).lss $(ARM_ARCHTARG).hex $(ARMCONFIG)
-	sudo avrdude -c usbtiny $(ARMOPTS) -u -U flash:w:$(ARM_ARCHTARG).hex
