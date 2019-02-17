@@ -89,5 +89,10 @@ char translate_to_keybuf(char c) {
 
   if (c == 'p' || c == '#') return 'p';
 
+    // volume quads
+  if (c == 'j' || c == 'k') return c;
+  // pong quads
+  if (c == 'm' || c == 'n' || c == 'e' || c == 'f') return c;
+
   return 0;
 }

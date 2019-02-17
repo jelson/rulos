@@ -21,7 +21,7 @@
 #include "periph/input_controller/input_controller.h"
 
 typedef struct {
-  char key;
+  Keystroke key;
 } KeystrokeMessage;
 
 typedef struct s_remote_keyboard_send {

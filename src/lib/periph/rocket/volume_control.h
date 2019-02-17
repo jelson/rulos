@@ -18,13 +18,8 @@
 
 #include "periph/audio/audio_client.h"
 #include "periph/input_controller/input_controller.h"
-#include "periph/rocket/potsticker.h"
+#include "periph/quadknob/quadknob.h"
 #include "periph/rocket/rocket.h"
-
-#define VOL_UP_KEY 't'
-#define VOL_DN_KEY 'u'
-//#define VOL_UP_KEY '9'
-//#define VOL_DN_KEY '7'
 
 #define DISPLAY_VOLUME_ADJUSTMENTS 1
 
@@ -46,7 +41,6 @@ typedef struct s_volume_control {
 #if DISPLAY_VOLUME_ADJUSTMENTS
 #endif  // DISPLAY_VOLUME_ADJUSTMENTS
   VolumeControlInjector injector;
-  PotSticker potsticker;
   AudioClient *ac;
 
   uint8_t cur_vol;
@@ -57,10 +51,14 @@ typedef struct s_volume_control {
   uint8_t boardnum;
   BoardBuffer bbuf;
 #endif  // DISPLAY_VOLUME_ADJUSTMENTS
+
+  Keystroke vol_up;
+  Keystroke vol_down;
 } VolumeControl;
 
 void volume_control_init(VolumeControl *vc, AudioClient *ac,
-                         uint8_t adc_channel, uint8_t boardnum);
+                         uint8_t boardnum,
+                         Keystroke vol_up, Keystroke vol_down);
 
 static inline uint8_t volume_get_mlvolume(VolumeControl *vc) {
   return vc->cur_vol;

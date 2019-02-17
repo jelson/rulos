@@ -49,7 +49,6 @@
 #include "periph/rocket/lunar_distance.h"
 #include "periph/rocket/numeric_input.h"
 #include "periph/rocket/pong.h"
-#include "periph/rocket/potsticker.h"
 #include "periph/rocket/remote_uie.h"
 #include "periph/rocket/rocket.h"
 #include "periph/rocket/screenblanker.h"
@@ -75,8 +74,9 @@ typedef struct {
   Hobbs hobbs;
   ScreenBlanker screenblanker;
   SlowBoot slow_boot;
-  PotSticker potsticker;
+  QuadKnob volknob;
   VolumeControl volume_control;
+  QuadKnob pongknob;
   RemoteBBufSend rbs;
   DisplayAzimuthElevationRoll daer;
   DThrusterGraph dtg;
@@ -87,8 +87,28 @@ typedef struct {
 #include <stophere>
 #endif
 
-#define POTSTICKER_CHANNEL 0
-#define VOLUME_POT_CHANNEL 1
+/*
+ * south-side quads:
+ *  a,b (overlaps menu keys)
+ *  e,f (pong)
+ *
+ * north-side quads:
+ *  j,k (volume)
+ *  m,n (pong)
+ */
+
+#define KEY_VOL_DOWN    KeystrokeCtor('j')
+#define KEY_VOL_UP  KeystrokeCtor('k')
+#define KEY_NPONG_LEFT KeystrokeCtor('m')
+#define KEY_NPONG_RIGHT KeystrokeCtor('n')
+
+#ifndef SIM
+IOPinDef pin_vol_q0= PINDEF(GPIO_A6);
+IOPinDef pin_vol_q1= PINDEF(GPIO_A7);
+IOPinDef pin_npong_q0= PINDEF(GPIO_A4);
+IOPinDef pin_npong_q1= PINDEF(GPIO_A5);
+#endif
+
 #define USE_LOCAL_KEYPAD 0
 
 void init_rocket0(Rocket0 *r0) {
@@ -106,12 +126,14 @@ void init_rocket0(Rocket0 *r0) {
   init_screenblanker(&r0->screenblanker, &r0->hpam, &r0->idle);
 
   volume_control_init(&r0->volume_control, &r0->audio_client,
-                      VOLUME_POT_CHANNEL, /*board*/ 0);
+                      /*board*/ 0,
+                      KEY_VOL_UP, KEY_VOL_DOWN);
 
   daer_init(&r0->daer, 8, ((Time)5) << 20);
 
   init_control_panel(&r0->cp, 3, 1, &r0->network, &r0->hpam, &r0->audio_client,
                      &r0->idle, &r0->screenblanker, &r0->ts.joystick_state,
+                      KEY_VOL_UP, KEY_VOL_DOWN,
                      &r0->volume_control.injector.iii,
                      (FetchCalcDecorationValuesIfc *)&r0->daer.decoration_ifc);
   r0->cp.ccl.launch.main_rtc = &r0->dr;
@@ -143,8 +165,17 @@ void init_rocket0(Rocket0 *r0) {
 
   init_slow_boot(&r0->slow_boot, &r0->screenblanker, &r0->audio_client);
 
-  init_potsticker(&r0->potsticker, POTSTICKER_CHANNEL,
-                  (InputInjectorIfc *)&r0->cp.direct_injector, 9, 'p', 'q');
+  init_quadknob(&r0->volknob, (InputInjectorIfc *)&r0->cp.direct_injector,
+#ifndef SIM
+      &pin_vol_q0, &pin_vol_q1,
+#endif
+        KEY_VOL_DOWN, KEY_VOL_UP);
+
+  init_quadknob(&r0->pongknob, (InputInjectorIfc *)&r0->cp.direct_injector,
+#ifndef SIM
+      &pin_npong_q0, &pin_npong_q1,
+#endif
+        KEY_NPONG_LEFT, KEY_NPONG_RIGHT);
 
   bss_canary_init();
 }
@@ -156,7 +187,7 @@ CpumonAct cpumon;
 int main() {
   hal_init();
 
-  hal_uart_init(&uart, 115200, true, /* uart_id= */ 0);
+  hal_uart_init(&uart, 38400, true, /* uart_id= */ 0);
   LOG("Log output running");
 
 #if NUM_LOCAL_BOARDS > 0

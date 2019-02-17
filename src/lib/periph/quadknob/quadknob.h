@@ -32,12 +32,12 @@ typedef struct s_quadknob {
   IOPinDef *pin0;
   IOPinDef *pin1;
 #endif
-  char fwd;
-  char back;
+  Keystroke fwd;
+  Keystroke back;
 } QuadKnob;
 
 void init_quadknob(QuadKnob *qk, InputInjectorIfc *ifi,
 #ifndef SIM
                    IOPinDef *pin0, IOPinDef *pin1,
 #endif
-                   char fwd, char back);
+                   Keystroke fwd, Keystroke back);

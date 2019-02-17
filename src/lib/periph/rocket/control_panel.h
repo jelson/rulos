@@ -109,6 +109,8 @@ typedef struct s_control_panel {
   CCSnake ccsnake;
   CCDisco ccdisco;
 
+  Keystroke vol_up_key;
+  Keystroke vol_down_key;
   InputInjectorIfc *volume_input_ifc;
 
   IdleAct *idle;
@@ -118,5 +120,6 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
                         Network *network, HPAM *hpam, AudioClient *audioClient,
                         IdleAct *idle, ScreenBlanker *screenblanker,
                         JoystickState_t *joystick,
+                        Keystroke vol_up_key, Keystroke vol_down_key,
                         InputInjectorIfc *volume_input_ifc /*optional*/,
                         FetchCalcDecorationValuesIfc *decoration_ifc);

@@ -18,8 +18,21 @@
 
 #include "periph/input_controller/ui_event_handler_ifc.h"
 
+typedef struct Keystroke {
+    unsigned char key;
+} Keystroke;
+
+static inline Keystroke KeystrokeCtor(unsigned char c) {
+    Keystroke k = {c};
+    return k;
+}
+
+static inline bool KeystrokeCmp(Keystroke k1, Keystroke k2) {
+    return k1.key == k2.key;
+}
+
 struct s_input_injector_ifc;
-typedef void (*InputInjectorFunc)(struct s_input_injector_ifc *ii, char key);
+typedef void (*InputInjectorFunc)(struct s_input_injector_ifc *ii, Keystroke key);
 typedef struct s_input_injector_ifc {
   InputInjectorFunc func;
 } InputInjectorIfc;

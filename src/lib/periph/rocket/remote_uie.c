@@ -24,7 +24,7 @@ void init_remote_uie(RemoteUIE *ruie, InputInjectorIfc *iii) {
 }
 
 UIEventDisposition remote_uie_handler(RemoteUIE *ruie, UIEvent evt) {
-  ruie->iii->func(ruie->iii, evt);
+  ruie->iii->func(ruie->iii, KeystrokeCtor(evt));
   return uied_accepted;
 }
 
@@ -48,6 +48,6 @@ void cii_deliver(CascadedInputInjector *cii, char k) {
     // This hack assumes deep knowledge of the layout of trees, boards,
     // and keyboards in this rocket; it won't generalize well to
     // ... um ... future rockets.
-    cii->escape_ifi->func(cii->escape_ifi, evt_remote_escape);
+    cii->escape_ifi->func(cii->escape_ifi, KeystrokeCtor(evt_remote_escape));
   }
 }

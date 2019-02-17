@@ -57,14 +57,14 @@ void qk_update(QuadKnob *qk) {
     qk->ifi->func(qk->ifi, qk->fwd);
   }
 
-  schedule_us(50000, (ActivationFuncPtr)qk_update, qk);
+  schedule_us(10000, (ActivationFuncPtr)qk_update, qk);
 }
 
 void init_quadknob(QuadKnob *qk, InputInjectorIfc *ifi,
 #ifndef SIM
                    IOPinDef *pin0, IOPinDef *pin1,
 #endif  // SIM
-                   char fwd, char back) {
+                   Keystroke fwd, Keystroke back) {
   qk->ifi = ifi;
   qk->fwd = fwd;
   qk->back = back;

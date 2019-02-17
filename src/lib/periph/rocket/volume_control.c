@@ -4,19 +4,21 @@
 
 #define VOLUME_DISPLAY_PERSISTENCE (4 * 1000000)
 
-void _volume_input(InputInjectorIfc *ii, char key);
+void _volume_input(InputInjectorIfc *ii, Keystroke key);
 void _volume_update(VolumeControl *vc);
 
 void volume_control_init(VolumeControl *vc, AudioClient *ac,
-                         uint8_t adc_channel, uint8_t boardnum) {
+                         uint8_t boardnum,
+                         Keystroke vol_up, Keystroke vol_down) {
   vc->injector.iii.func = _volume_input;
   vc->injector.vc = vc;
-  init_potsticker(&vc->potsticker, adc_channel, &vc->injector.iii,
-                  100 /* detent width in 1/1024s of a revolution */, 't', 'u');
   vc->ac = ac;
 
   // cache correct volume so next music play starts at the right place
   vc->cur_vol = 3;
+
+  vc->vol_up = vol_up;
+  vc->vol_down = vol_down;
 
   ac_change_volume(vc->ac, AUDIO_STREAM_MUSIC, vc->cur_vol);
 
@@ -30,11 +32,11 @@ void volume_control_init(VolumeControl *vc, AudioClient *ac,
 #endif  // DISPLAY_VOLUME_ADJUSTMENTS
 }
 
-void _volume_input(InputInjectorIfc *ii, char key) {
+void _volume_input(InputInjectorIfc *ii, Keystroke key) {
   VolumeControl *vc = ((VolumeControlInjector *)ii)->vc;
-  if (key == VOL_DN_KEY && (vc->cur_vol < VOL_MIN)) {
+  if (KeystrokeCmp(key, vc->vol_down) && (vc->cur_vol < VOL_MIN)) {
     vc->cur_vol += 1;
-  } else if (key == VOL_UP_KEY && (vc->cur_vol > VOL_MAX)) {
+  } else if (KeystrokeCmp(key, vc->vol_up) && (vc->cur_vol > VOL_MAX)) {
     vc->cur_vol -= 1;
   } else {
     return;

@@ -53,7 +53,7 @@ void ps_update(PotSticker *ps) {
 }
 
 void init_potsticker(PotSticker *ps, uint8_t adc_channel, InputInjectorIfc *ifi,
-                     uint8_t detents, char fwd, char back) {
+                     uint8_t detents, Keystroke fwd, Keystroke back) {
   ps->adc_channel = adc_channel;
   hal_init_adc_channel(ps->adc_channel);
   ps->ifi = ifi;

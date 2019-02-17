@@ -31,7 +31,7 @@ void update_autotype(Autotype *a) {
   if (c != '\0') {
     a->ptr += 1;
     LOG("Autotype(%c)", c);
-    a->iii->func(a->iii, c);
+    a->iii->func(a->iii, KeystrokeCtor(c));
     schedule_us(a->period, (ActivationFuncPtr)update_autotype, a);
   }
 }

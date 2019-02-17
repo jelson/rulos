@@ -16,8 +16,6 @@
 
 #include "periph/rocket/control_panel.h"
 
-#include "periph/rocket/volume_control.h"  // for VOL_UP_KEY & VOL_DN_KEY
-
 //////////////////////////////////////////////////////////////////////////////
 
 void init_cc_local_calc(CCLocalCalc *cclc,
@@ -91,6 +89,7 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
                         Network *network, HPAM *hpam, AudioClient *audioClient,
                         IdleAct *idle, ScreenBlanker *screenblanker,
                         JoystickState_t *joystick,
+                        Keystroke vol_up_key, Keystroke vol_down_key,
                         InputInjectorIfc *volume_input_ifc,
                         FetchCalcDecorationValuesIfc *decoration_ifc) {
   cp->handler_func = (UIEventHandlerFunc)cp_uie_handler;
@@ -130,6 +129,8 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
 
   assert(cp->child_count <= CONTROL_PANEL_NUM_CHILDREN);
 
+    cp->vol_up_key = vol_up_key;
+    cp->vol_down_key = vol_down_key;
   cp->volume_input_ifc = volume_input_ifc;
 
   cp->selected_child = 0;
@@ -149,9 +150,10 @@ UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt) {
   UIEventDisposition result = uied_accepted;
 
   if (cp->volume_input_ifc != NULL &&
-      (evt == VOL_UP_KEY || evt == VOL_DN_KEY)) {
+      (KeystrokeCmp(KeystrokeCtor(evt), cp->vol_up_key)
+      || KeystrokeCmp(KeystrokeCtor(evt), cp->vol_down_key))) {
     // steal these events for volume control
-    (cp->volume_input_ifc->func)(cp->volume_input_ifc, evt);
+    (cp->volume_input_ifc->func)(cp->volume_input_ifc, KeystrokeCtor(evt));
     return result;
   }
 

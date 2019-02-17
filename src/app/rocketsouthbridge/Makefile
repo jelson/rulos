@@ -16,7 +16,7 @@ ROCKET_ROOT := ../..
 
 PLATFORMS := avr sim
 PERIPHERALS := quadknob twi input_controller keypad remote_keyboard uart
-MCU := atmega328p
+MCU := atmega328
 BOARD := SOUTHBRIDGE
 AVR_CFLAGS := -DLOG_TO_SERIAL=UART0
 

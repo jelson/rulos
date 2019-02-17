@@ -205,11 +205,11 @@ UIEventDisposition pong_event_handler(UIEventHandler *raw_handler,
   UIEventDisposition result = uied_accepted;
   switch (evt) {
     case '1':
-    case 'p':
+    case 'm':
       pong->paddley[0] = max(pong->paddley[0] - 2, 0);
       break;
     case '4':
-    case 'q':
+    case 'n':
       pong->paddley[0] = min(pong->paddley[0] + 2, 22 - PADDLEHEIGHT);
       break;
     case '3':

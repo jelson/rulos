@@ -16,7 +16,7 @@
 
 #include "periph/remote_keyboard/remote_keyboard.h"
 
-void rk_send(InputInjectorIfc *injector, char key);
+void rk_send(InputInjectorIfc *injector, Keystroke key);
 void rk_send_complete(SendSlot *sendSlot);
 void rk_recv(MessageRecvBuffer *msg);
 
@@ -36,7 +36,7 @@ void init_remote_keyboard_send(RemoteKeyboardSend *rk, Network *network,
   rk->forward_this = rk;
 }
 
-void rk_send(InputInjectorIfc *injector, char key) {
+void rk_send(InputInjectorIfc *injector, Keystroke key) {
   RemoteKeyboardSend *rk = *(RemoteKeyboardSend **)(injector + 1);
   KeystrokeMessage *km = (KeystrokeMessage *)&rk->sendSlot.wire_msg->data;
 
@@ -67,7 +67,7 @@ void rk_recv(MessageRecvBuffer *msg) {
   RemoteKeyboardRecv *rk = (RemoteKeyboardRecv *)msg->app_receiver->user_data;
   KeystrokeMessage *km = (KeystrokeMessage *)msg->data;
   assert(msg->payload_len == sizeof(KeystrokeMessage));
-  LOG("remote key: %c", km->key);
+  LOG("remote key: %c", km->key.key);
   rk->acceptNetStrokes->func(rk->acceptNetStrokes, km->key);
   net_free_received_message_buffer(msg);
 }

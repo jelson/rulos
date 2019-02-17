@@ -28,7 +28,7 @@ void input_poller_init(InputPollerAct *ip, InputInjectorIfc *injector) {
 void input_poller_update(InputPollerAct *ip) {
   char k = hal_read_keybuf();
   if (k != 0) {
-    ip->injector->func(ip->injector, k);
+    ip->injector->func(ip->injector, KeystrokeCtor(k));
   }
   schedule_us(50000, (ActivationFuncPtr)input_poller_update, ip);
 }

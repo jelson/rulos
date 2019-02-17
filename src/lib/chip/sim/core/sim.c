@@ -88,7 +88,7 @@ static void sim_generic_fire_handlers(SimActivation_t *handlerList,
   rulos_irq_state_t old_interrupts = hal_start_atomic();
   int i;
 
-  for (i = 0; i < numHandlers; i++) handlerList[i].func(handlerList[i].data);
+  for (i = 0; i < numHandlers; i++) { handlerList[i].func(handlerList[i].data); }
   hal_end_atomic(old_interrupts);
 }
 

@@ -63,12 +63,14 @@ int main() {
   IOPinDef q0pin0 = PINDEF(GPIO_C0);
   IOPinDef q0pin1 = PINDEF(GPIO_C1);
   QuadKnob q0;
-  init_quadknob(&q0, &rks.forwardLocalStrokes, &q0pin0, &q0pin1, 'e', 'f');
+  init_quadknob(&q0, &rks.forwardLocalStrokes, &q0pin0, &q0pin1,
+    KeystrokeCtor('e'), KeystrokeCtor('f'));
 
   IOPinDef q1pin0 = PINDEF(GPIO_C2);
   IOPinDef q1pin1 = PINDEF(GPIO_C3);
   QuadKnob q1;
-  init_quadknob(&q1, &rks.forwardLocalStrokes, &q1pin0, &q1pin1, 'a', 'b');
+  init_quadknob(&q1, &rks.forwardLocalStrokes, &q1pin0, &q1pin1,
+    KeystrokeCtor('a'), KeystrokeCtor('b'));
 #endif
 
   cpumon_main_loop();
