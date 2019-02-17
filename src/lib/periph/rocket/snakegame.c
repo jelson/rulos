@@ -60,7 +60,7 @@ void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient,
 }
 
 void snake_reset_game(Snake *snake) {
-  LOG("playing snake!");
+  //LOG("playing snake!");
   snake_init_map(&snake->map);
   snake->head.x = CANVAS_W / 4;
   snake->head.y = CANVAS_H / 2;
