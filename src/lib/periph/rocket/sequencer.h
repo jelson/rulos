@@ -34,6 +34,7 @@
 
 #include "periph/audio/audio_server.h"
 #include "periph/display_rtc/display_rtc.h"
+#include "periph/hpam/hpam.h"
 #include "periph/input_controller/focus.h"
 #include "periph/rasters/rasters.h"
 #include "periph/rocket/booster.h"
@@ -75,12 +76,19 @@ typedef struct s_launch {
 
   Booster *booster;
   AudioClient *audioClient;
+  HPAM *hpam;
   uint16_t launch_code;
   char launch_code_str[45];
+
+  // for the "thruster spinner" during the launch
+  char thrusterSpinnerOn;
+  Time thrusterSpinnerNextTimeout;
+  Time thrusterSpinnerPeriod;
+  int thrusterSpinnerNextThruster;
 
   struct s_screen_blanker *screenblanker;
 } Launch;
 
-void launch_init(Launch *launch, Screen4 *s4, Booster *booster,
+void launch_init(Launch *launch, Screen4 *s4, Booster *booster, HPAM *hpam,
                  AudioClient *audioClient,
                  struct s_screen_blanker *screenblanker);

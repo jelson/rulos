@@ -27,17 +27,53 @@
 #define L_LAUNCH_DURATION_MS 10001
 #define LAUNCH_CLOCK_PERIOD 10000
 
+// How much countdown time is left before thruster-spinner starts
+#define THRUSTER_SPINNER_COUNTDOWN_TIME_LEFT_MS 6500
+
+// How long between thruster-spinner firings, at first
+#define THRUSTER_SPINNER_INITIAL_PERIOD_US 750000
+
+// How quickly the thruster-spin gets faster
+#define THRUSTER_SPINNER_SPEEDUP_PERCENT 12
+
+// The lower limit of thruster-spinner period
+#define THRUSTER_SPINNER_MIN_PERIOD_US 120000
+
+// How long the thruster is on for each thruster-spin firing
+#define THRUSTER_SPINNER_ON_TIME_US 20000
+
+#define NUM_THRUSTERS 3
+
+static HPAMIndex thruster_to_hpam(uint8_t thruster_num) {
+  if (thruster_num == 0) {
+    return HPAM_THRUSTER_FRONTLEFT;
+  } else if (thruster_num == 1) {
+    return HPAM_THRUSTER_FRONTRIGHT;
+  } else {
+    return HPAM_THRUSTER_REAR;
+  }
+}
+
+static void thruster_set(Launch *launch, uint8_t thruster_num, r_bool state) {
+#if 0
+  LOG("THR %d %s next %d", thruster_num, state ? "ON" : "OFF",
+      launch->thrusterSpinnerPeriod);
+#endif
+  hpam_set_port(launch->hpam, thruster_to_hpam(thruster_num), state);
+}
+
 void launch_configure_state(Launch *launch, LaunchState newState);
 void launch_clock_update(Launch *launch);
 void launch_configure_lunar_distance(Launch *launch);
 UIEventDisposition launch_uie_handler(Launch *launch, UIEvent event);
 
-void launch_init(Launch *launch, Screen4 *s4, Booster *booster,
+void launch_init(Launch *launch, Screen4 *s4, Booster *booster, HPAM *hpam,
                  AudioClient *audioClient,
                  struct s_screen_blanker *screenblanker) {
   launch->func = (UIEventHandlerFunc)launch_uie_handler;
 
   launch->booster = booster;
+  launch->hpam = hpam;
   launch->audioClient = audioClient;
 
   launch->state = launch_state_init;  // force configuration
@@ -183,6 +219,13 @@ void launch_configure_state(Launch *launch, LaunchState newState) {
     }
     ac_skip_to_clip(launch->audioClient, AUDIO_STREAM_BURST_EFFECTS,
                     sound_apollo_11_countdown, sound_silence);
+
+    launch->thrusterSpinnerOn = FALSE;
+    launch->thrusterSpinnerNextThruster = 0;
+    launch->thrusterSpinnerPeriod = THRUSTER_SPINNER_INITIAL_PERIOD_US;
+    launch->thrusterSpinnerNextTimeout =
+        clock_time_us() + LAUNCH_COUNTDOWN_TIME -
+        ((uint32_t)THRUSTER_SPINNER_COUNTDOWN_TIME_LEFT_MS * 1000);
   }
 
   if (launch->state == launch_state_launching) {
@@ -194,6 +237,9 @@ void launch_configure_state(Launch *launch, LaunchState newState) {
   }
 
   if (launch->state == launch_state_complete) {
+    for (int i = 0; i < NUM_THRUSTERS; i++) {
+      thruster_set(launch, i, FALSE);
+    }
     booster_set_context(launch->booster, bcontext_liftoff);
     booster_set(launch->booster, FALSE);
     ascii_to_bitmap_str(launch->s4->bbuf[1].buffer, 8, " boost");
@@ -214,6 +260,36 @@ void launch_clock_update(Launch *launch) {
 
   // animation elements -- evaluate every tick
   launch_configure_lunar_distance(launch);
+
+  // "animate" thruster spinner
+  if ((launch->state == launch_state_countdown ||
+       launch->state == launch_state_launching) &&
+      later_than(clock_time_us(), launch->thrusterSpinnerNextTimeout)) {
+    if (!launch->thrusterSpinnerOn) {
+      thruster_set(launch, launch->thrusterSpinnerNextThruster, TRUE);
+      launch->thrusterSpinnerOn = TRUE;
+      launch->thrusterSpinnerNextTimeout =
+          clock_time_us() + THRUSTER_SPINNER_ON_TIME_US;
+    } else {
+      // If the thruster is currently on, turn it off, and set the
+      // next event to use the next thruster.
+      thruster_set(launch, launch->thrusterSpinnerNextThruster, FALSE);
+      launch->thrusterSpinnerOn = FALSE;
+      launch->thrusterSpinnerNextThruster =
+          (launch->thrusterSpinnerNextThruster + 1) % NUM_THRUSTERS;
+
+      // Reduce the inter-thruster time and set the next timeout.
+      launch->thrusterSpinnerPeriod -=
+          ((uint32_t)launch->thrusterSpinnerPeriod *
+           THRUSTER_SPINNER_SPEEDUP_PERCENT) /
+          100;
+      if (launch->thrusterSpinnerPeriod < THRUSTER_SPINNER_MIN_PERIOD_US) {
+        launch->thrusterSpinnerPeriod = THRUSTER_SPINNER_MIN_PERIOD_US;
+      }
+      launch->thrusterSpinnerNextTimeout =
+          clock_time_us() + launch->thrusterSpinnerPeriod;
+    }
+  }
 
   // timeout elements -- evaluate once timer expires.
   if (!later_than(clock_time_us(), launch->nextEventTimeout)) {

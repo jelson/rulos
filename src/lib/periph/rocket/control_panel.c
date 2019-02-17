@@ -37,9 +37,9 @@ void init_cc_remote_calc(CCRemoteCalc *ccrc, Network *network) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_cc_launch(CCLaunch *ccl, Screen4 *s4, Booster *booster,
+void init_cc_launch(CCLaunch *ccl, Screen4 *s4, Booster *booster, HPAM *hpam,
                     AudioClient *audioClient, ScreenBlanker *screenblanker) {
-  launch_init(&ccl->launch, s4, booster, audioClient, screenblanker);
+  launch_init(&ccl->launch, s4, booster, hpam, audioClient, screenblanker);
   ccl->uie_handler = (UIEventHandler *)&ccl->launch;
   ccl->name = "Launch";
 }
@@ -88,8 +88,8 @@ void cp_paint(ControlPanel *cp);
 void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
                         Network *network, HPAM *hpam, AudioClient *audioClient,
                         IdleAct *idle, ScreenBlanker *screenblanker,
-                        JoystickState_t *joystick,
-                        Keystroke vol_up_key, Keystroke vol_down_key,
+                        JoystickState_t *joystick, Keystroke vol_up_key,
+                        Keystroke vol_down_key,
                         InputInjectorIfc *volume_input_ifc,
                         FetchCalcDecorationValuesIfc *decoration_ifc) {
   cp->handler_func = (UIEventHandlerFunc)cp_uie_handler;
@@ -112,7 +112,8 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
 #endif
 
   cp->children[cp->child_count++] = (ControlChild *)&cp->ccl;
-  init_cc_launch(&cp->ccl, &cp->s4, &cp->booster, audioClient, screenblanker);
+  init_cc_launch(&cp->ccl, &cp->s4, &cp->booster, hpam, audioClient,
+                 screenblanker);
 
   cp->children[cp->child_count++] = (ControlChild *)&cp->ccdock;
   init_cc_dock(&cp->ccdock, &cp->s4, aux_board0, audioClient, &cp->booster,
@@ -129,8 +130,8 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
 
   assert(cp->child_count <= CONTROL_PANEL_NUM_CHILDREN);
 
-    cp->vol_up_key = vol_up_key;
-    cp->vol_down_key = vol_down_key;
+  cp->vol_up_key = vol_up_key;
+  cp->vol_down_key = vol_down_key;
   cp->volume_input_ifc = volume_input_ifc;
 
   cp->selected_child = 0;
@@ -150,8 +151,8 @@ UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt) {
   UIEventDisposition result = uied_accepted;
 
   if (cp->volume_input_ifc != NULL &&
-      (KeystrokeCmp(KeystrokeCtor(evt), cp->vol_up_key)
-      || KeystrokeCmp(KeystrokeCtor(evt), cp->vol_down_key))) {
+      (KeystrokeCmp(KeystrokeCtor(evt), cp->vol_up_key) ||
+       KeystrokeCmp(KeystrokeCtor(evt), cp->vol_down_key))) {
     // steal these events for volume control
     (cp->volume_input_ifc->func)(cp->volume_input_ifc, KeystrokeCtor(evt));
     return result;
