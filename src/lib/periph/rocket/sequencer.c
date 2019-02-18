@@ -55,7 +55,7 @@ static HPAMIndex thruster_to_hpam(uint8_t thruster_num) {
 }
 
 static void thruster_set(Launch *launch, uint8_t thruster_num, r_bool state) {
-#if 1
+#if 0
   LOG("THR %d %s next %d", thruster_num, state ? "ON" : "OFF",
       launch->thrusterSpinnerPeriod);
 #endif
