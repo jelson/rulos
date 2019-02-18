@@ -1,0 +1,24 @@
+[preferences]
+use_system_monospace_font=true
+font=Monospace 10
+font_color=black
+background_color=white
+highlight_color=#2020ff
+record_launch=true
+enable_timeout=false
+timeout=30
+
+[port_settings]
+device=/dev/ttyUSB0
+baud_rate=38400
+data_bits=8
+stop_bits=2
+parity=0
+handshake=0
+access_mode=0
+local_echo=false
+
+[window]
+width=898
+height=651
+paned_pos=221

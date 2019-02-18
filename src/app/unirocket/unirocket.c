@@ -169,7 +169,7 @@ void init_rocket0(Rocket0 *r0) {
 #ifndef SIM
       &pin_vol_q0, &pin_vol_q1,
 #endif
-        KEY_VOL_DOWN, KEY_VOL_UP);
+        KEY_VOL_UP, KEY_VOL_DOWN);
 
   init_quadknob(&r0->pongknob, (InputInjectorIfc *)&r0->cp.direct_injector,
 #ifndef SIM

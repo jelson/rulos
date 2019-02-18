@@ -83,10 +83,16 @@ typedef struct {
   ScreenBlanker screenblanker;
   ScreenBlankerSender screenblanker_sender;
   SlowBoot slow_boot;
-  PotSticker potsticker;
+  PotSticker volsticker;
+  PotSticker pongsticker;
   VolumeControl volume_control;
   RemoteBBufSend rbs;
 } Rocket0;
+
+#define KEY_VOL_DOWN    KeystrokeCtor('j')
+#define KEY_VOL_UP  KeystrokeCtor('k')
+#define KEY_NPONG_LEFT KeystrokeCtor('m')
+#define KEY_NPONG_RIGHT KeystrokeCtor('n')
 
 #if !defined(JOYSTICK_X_CHAN) || !defined(JOYSTICK_Y_CHAN)
 #error "JOYSTICK_X_CHAN and JOYSTICK_Y_CHAN must be defined."
@@ -117,10 +123,12 @@ void init_rocket0(Rocket0 *r0) {
   r0->screenblanker.screenblanker_sender = &r0->screenblanker_sender;
 
   volume_control_init(&r0->volume_control, &r0->audio_client,
-                      VOLUME_POT_CHANNEL, /*board*/ 0);
+                      /*board*/ 0,
+                      KEY_VOL_UP, KEY_VOL_DOWN);
 
   init_control_panel(&r0->cp, 3, 1, &r0->network, &r0->hpam, &r0->audio_client,
                      &r0->idle, &r0->screenblanker, &r0->ts.joystick_state,
+                      KEY_VOL_UP, KEY_VOL_DOWN,
                      &r0->volume_control.injector.iii,
                      NULL /* local calc decoration ifc */);
   r0->cp.ccl.launch.main_rtc = &r0->dr;
@@ -147,8 +155,10 @@ void init_rocket0(Rocket0 *r0) {
 
   init_slow_boot(&r0->slow_boot, &r0->screenblanker, &r0->audio_client);
 
-  init_potsticker(&r0->potsticker, POTSTICKER_CHANNEL,
-                  (InputInjectorIfc *)&r0->cp.direct_injector, 9, 'p', 'q');
+  init_potsticker(&r0->pongsticker, POTSTICKER_CHANNEL,
+                  (InputInjectorIfc *)&r0->cp.direct_injector, 9, KEY_NPONG_LEFT, KEY_NPONG_RIGHT);
+  init_potsticker(&r0->volsticker, POTSTICKER_CHANNEL,
+                  (InputInjectorIfc *)&r0->cp.direct_injector, 9, KEY_VOL_DOWN, KEY_VOL_UP);
 }
 
 static Rocket0 rocket0;  // allocate obj in .bss so it's easy to count

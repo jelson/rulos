@@ -29,6 +29,8 @@ SIM_CFLAGS := -DBOARDCONFIG_ROCKET0
 #BOARD := PCB11
 
 ## Uncomment this block for classic LPEM talking to an EPB
+PLATFORMS += avr
+AVR_CFLAGS := -DBOARDCONFIG_ROCKET0
 MCU := atmega1284p
 BOARD := LPEM
 PERIPHERALS += 7seg_panel_hardware keypad
