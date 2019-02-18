@@ -38,8 +38,10 @@ void init_cc_remote_calc(CCRemoteCalc *ccrc, Network *network) {
 //////////////////////////////////////////////////////////////////////////////
 
 void init_cc_launch(CCLaunch *ccl, Screen4 *s4, Booster *booster, HPAM *hpam,
-                    AudioClient *audioClient, ScreenBlanker *screenblanker) {
-  launch_init(&ccl->launch, s4, booster, hpam, audioClient, screenblanker);
+                    ThrusterState_t *thrusterState, AudioClient *audioClient,
+                    ScreenBlanker *screenblanker) {
+  launch_init(&ccl->launch, s4, booster, hpam, thrusterState, audioClient,
+              screenblanker);
   ccl->uie_handler = (UIEventHandler *)&ccl->launch;
   ccl->name = "Launch";
 }
@@ -88,7 +90,8 @@ void cp_paint(ControlPanel *cp);
 void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
                         Network *network, HPAM *hpam, AudioClient *audioClient,
                         IdleAct *idle, ScreenBlanker *screenblanker,
-                        JoystickState_t *joystick, Keystroke vol_up_key,
+                        JoystickState_t *joystick,
+                        ThrusterState_t *thrusterState, Keystroke vol_up_key,
                         Keystroke vol_down_key,
                         InputInjectorIfc *volume_input_ifc,
                         FetchCalcDecorationValuesIfc *decoration_ifc) {
@@ -112,8 +115,8 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
 #endif
 
   cp->children[cp->child_count++] = (ControlChild *)&cp->ccl;
-  init_cc_launch(&cp->ccl, &cp->s4, &cp->booster, hpam, audioClient,
-                 screenblanker);
+  init_cc_launch(&cp->ccl, &cp->s4, &cp->booster, hpam, thrusterState,
+                 audioClient, screenblanker);
 
   cp->children[cp->child_count++] = (ControlChild *)&cp->ccdock;
   init_cc_dock(&cp->ccdock, &cp->s4, aux_board0, audioClient, &cp->booster,

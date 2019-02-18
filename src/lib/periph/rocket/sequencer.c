@@ -40,7 +40,7 @@
 #define THRUSTER_SPINNER_MIN_PERIOD_US 120000
 
 // How long the thruster is on for each thruster-spin firing
-#define THRUSTER_SPINNER_ON_TIME_US 20000
+#define THRUSTER_SPINNER_ON_TIME_US 50000
 
 #define NUM_THRUSTERS 3
 
@@ -55,7 +55,7 @@ static HPAMIndex thruster_to_hpam(uint8_t thruster_num) {
 }
 
 static void thruster_set(Launch *launch, uint8_t thruster_num, r_bool state) {
-#if 0
+#if 1
   LOG("THR %d %s next %d", thruster_num, state ? "ON" : "OFF",
       launch->thrusterSpinnerPeriod);
 #endif
@@ -68,12 +68,13 @@ void launch_configure_lunar_distance(Launch *launch);
 UIEventDisposition launch_uie_handler(Launch *launch, UIEvent event);
 
 void launch_init(Launch *launch, Screen4 *s4, Booster *booster, HPAM *hpam,
-                 AudioClient *audioClient,
+                 ThrusterState_t *thrusterState, AudioClient *audioClient,
                  struct s_screen_blanker *screenblanker) {
   launch->func = (UIEventHandlerFunc)launch_uie_handler;
 
   launch->booster = booster;
   launch->hpam = hpam;
+  launch->thrusterState = thrusterState;
   launch->audioClient = audioClient;
 
   launch->state = launch_state_init;  // force configuration
@@ -240,6 +241,7 @@ void launch_configure_state(Launch *launch, LaunchState newState) {
     for (int i = 0; i < NUM_THRUSTERS; i++) {
       thruster_set(launch, i, FALSE);
     }
+    unmute_joystick(launch->thrusterState);
     booster_set_context(launch->booster, bcontext_liftoff);
     booster_set(launch->booster, FALSE);
     ascii_to_bitmap_str(launch->s4->bbuf[1].buffer, 8, " boost");
@@ -265,14 +267,18 @@ void launch_clock_update(Launch *launch) {
   if ((launch->state == launch_state_countdown ||
        launch->state == launch_state_launching) &&
       later_than(clock_time_us(), launch->thrusterSpinnerNextTimeout)) {
+    // Stop the joystick from overriding our thruster contro
+    mute_joystick(launch->thrusterState);
+
     if (!launch->thrusterSpinnerOn) {
+      // If a thruster is currently off, turn on the next one in line
       thruster_set(launch, launch->thrusterSpinnerNextThruster, TRUE);
       launch->thrusterSpinnerOn = TRUE;
       launch->thrusterSpinnerNextTimeout =
           clock_time_us() + THRUSTER_SPINNER_ON_TIME_US;
     } else {
-      // If the thruster is currently on, turn it off, and set the
-      // next event to use the next thruster.
+      // If a thruster is currently on, turn it off, and set the next
+      // event to use the next thruster.
       thruster_set(launch, launch->thrusterSpinnerNextThruster, FALSE);
       launch->thrusterSpinnerOn = FALSE;
       launch->thrusterSpinnerNextThruster =

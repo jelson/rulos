@@ -21,6 +21,7 @@
 #include "periph/rocket/calculator.h"
 #include "periph/rocket/disco.h"
 #include "periph/rocket/display_docking.h"
+#include "periph/rocket/display_thrusters.h"
 #include "periph/rocket/idle.h"
 #include "periph/rocket/pong.h"
 #include "periph/rocket/remote_uie.h"
@@ -120,6 +121,7 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
                         Network *network, HPAM *hpam, AudioClient *audioClient,
                         IdleAct *idle, ScreenBlanker *screenblanker,
                         JoystickState_t *joystick,
-                        Keystroke vol_up_key, Keystroke vol_down_key,
+                        ThrusterState_t *thrusterState, Keystroke vol_up_key,
+                        Keystroke vol_down_key,
                         InputInjectorIfc *volume_input_ifc /*optional*/,
                         FetchCalcDecorationValuesIfc *decoration_ifc);

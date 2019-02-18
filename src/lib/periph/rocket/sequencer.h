@@ -40,6 +40,7 @@
 #include "periph/rocket/booster.h"
 #include "periph/rocket/display_blinker.h"
 #include "periph/rocket/display_scroll_msg.h"
+#include "periph/rocket/display_thrusters.h"
 #include "periph/rocket/lunar_distance.h"
 #include "periph/rocket/numeric_input.h"
 #include "periph/rocket/screen4.h"
@@ -77,6 +78,7 @@ typedef struct s_launch {
   Booster *booster;
   AudioClient *audioClient;
   HPAM *hpam;
+  ThrusterState_t *thrusterState;
   uint16_t launch_code;
   char launch_code_str[45];
 
@@ -90,5 +92,5 @@ typedef struct s_launch {
 } Launch;
 
 void launch_init(Launch *launch, Screen4 *s4, Booster *booster, HPAM *hpam,
-                 AudioClient *audioClient,
+                 ThrusterState_t *thrusterState, AudioClient *audioClient,
                  struct s_screen_blanker *screenblanker);

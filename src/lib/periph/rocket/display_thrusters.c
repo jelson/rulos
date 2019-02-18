@@ -65,21 +65,25 @@ static void thrusters_update(ThrusterState_t *ts) {
   // UP         = thruster A.
   // DOWN&LEFT  = thruster B.
   // DOWN&RIGHT = thruster C.
-  hpam_set_port(ts->hpam, HPAM_THRUSTER_REAR,
-                ts->joystick_state.state & JOYSTICK_STATE_UP);
-  hpam_set_port(ts->hpam, HPAM_THRUSTER_FRONTRIGHT,
-                ts->joystick_state.state & JOYSTICK_STATE_DOWN &&
-                    ts->joystick_state.state & JOYSTICK_STATE_LEFT);
-  hpam_set_port(ts->hpam, HPAM_THRUSTER_FRONTLEFT,
-                ts->joystick_state.state & JOYSTICK_STATE_DOWN &&
-                    ts->joystick_state.state & JOYSTICK_STATE_RIGHT);
+  if (!ts->joystick_muted) {
+    hpam_set_port(ts->hpam, HPAM_THRUSTER_REAR,
+                  ts->joystick_state.state & JOYSTICK_STATE_UP);
+    hpam_set_port(ts->hpam, HPAM_THRUSTER_FRONTRIGHT,
+                  ts->joystick_state.state & JOYSTICK_STATE_DOWN &&
+                      ts->joystick_state.state & JOYSTICK_STATE_LEFT);
+    hpam_set_port(ts->hpam, HPAM_THRUSTER_FRONTLEFT,
+                  ts->joystick_state.state & JOYSTICK_STATE_DOWN &&
+                      ts->joystick_state.state & JOYSTICK_STATE_RIGHT);
+  }
 
   if ((ts->joystick_state.state &
        (JOYSTICK_STATE_UP | JOYSTICK_STATE_LEFT | JOYSTICK_STATE_RIGHT |
         JOYSTICK_STATE_TRIGGER)) != 0) {
     // LOG("idle touch due to nonzero joystick: %d",
     // ts->joystick_state.state);
-    if (ts->idle != NULL) idle_touch(ts->idle);
+    if (ts->idle != NULL) {
+      idle_touch(ts->idle);
+    }
   }
 
   // draw digits
@@ -102,6 +106,11 @@ void thrusters_init(ThrusterState_t *ts, uint8_t board, uint8_t x_adc_channel,
 
   ts->hpam = hpam;
   ts->idle = idle;
+  ts->joystick_muted = FALSE;
 
   schedule_us(1, (ActivationFuncPtr)thrusters_update, ts);
 }
+
+void mute_joystick(ThrusterState_t *ts) { ts->joystick_muted = TRUE; };
+
+void unmute_joystick(ThrusterState_t *ts) { ts->joystick_muted = FALSE; };
