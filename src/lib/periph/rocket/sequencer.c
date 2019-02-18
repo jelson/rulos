@@ -37,10 +37,10 @@
 #define THRUSTER_SPINNER_SPEEDUP_PERCENT 12
 
 // The lower limit of thruster-spinner period
-#define THRUSTER_SPINNER_MIN_PERIOD_US 120000
+#define THRUSTER_SPINNER_MIN_PERIOD_US 100000
 
 // How long the thruster is on for each thruster-spin firing
-#define THRUSTER_SPINNER_ON_TIME_US 50000
+#define THRUSTER_SPINNER_ON_TIME_US 150000
 
 #define NUM_THRUSTERS 3
 
