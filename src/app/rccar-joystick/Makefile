@@ -15,10 +15,11 @@
 ROCKET_ROOT := ../..
 
 PLATFORMS := avr
-PERIPHERALS := 
+PERIPHERALS := uart adc
 MCU := atmega328p
 BOARD := CUSTOM
 TARGET := rccar
+AVR_CFLAGS := -DLOG_TO_SERIAL=UART0
 
 TARGET_OBJECTS := \
 	rccar.o

@@ -15,6 +15,8 @@
  ************************************************************************/
 
 #include "core/rulos.h"
+#include "core/logging.h"
+#include "periph/uart/uart.h"
 
 typedef struct {
   bool state;
@@ -23,7 +25,29 @@ typedef struct {
 void blinkfunc(Blink* blink) {
   gpio_set_or_clr(GPIO_C5, blink->state & 1);
   blink->state = 1 - blink->state;
-  schedule_us(100000, (ActivationFuncPtr)blinkfunc, &blink);
+  schedule_us(100000, (ActivationFuncPtr)blinkfunc, blink);
+}
+
+#define JOYPERIOD 100000   // later 20ms
+
+typedef struct {
+    uint8_t x_adc_channel;
+    uint8_t y_adc_channel;
+} Joy;
+
+void init_joy(Joy* joy) {
+    hal_init_adc(JOYPERIOD);
+    joy->x_adc_channel = 0;
+    joy->y_adc_channel = 1;
+    hal_init_adc_channel(joy->x_adc_channel);
+    hal_init_adc_channel(joy->y_adc_channel);
+}
+
+void joyfunc(Joy* joy) {
+   int16_t xval = hal_read_adc(joy->x_adc_channel);
+   int16_t yval = hal_read_adc(joy->y_adc_channel);
+   LOG("x joy %4d y %4d", xval, yval);
+    schedule_us(JOYPERIOD, (ActivationFuncPtr)joyfunc, joy);
 }
 
 /************************************************************************************/
@@ -31,6 +55,8 @@ void blinkfunc(Blink* blink) {
 
 int main() {
   hal_init();
+    UartState_t uart;
+  uart_init(&uart, 38400, TRUE, 0);
   init_clock(10000, TIMER1);
   gpio_make_output(GPIO_C5);
 
@@ -40,6 +66,10 @@ int main() {
   Blink blink;
   blink.state = 1;
   schedule_us(100000, (ActivationFuncPtr)blinkfunc, &blink);
+
+  Joy joy;
+  init_joy(&joy);
+    schedule_us(JOYPERIOD, (ActivationFuncPtr)joyfunc, &joy);
 
   // install_handler(ADC, adc_handler);
 
