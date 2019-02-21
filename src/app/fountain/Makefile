@@ -17,7 +17,7 @@ ROCKET_ROOT := ../..
 PLATFORMS := avr sim
 MCU := attiny85
 PERIPHERALS :=
-BOARD := CUSTOM
+BOARD := GENERIC
 TARGET := fountain
 
 TARGET_OBJECTS := \
