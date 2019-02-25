@@ -86,6 +86,8 @@ endif
 
 ### STM32F1
 
+## STM32F103
+
 # 4 and 6 chips are both the 4 family
 ifeq ($(ARM_CHIP),stm32f103x4)
 ARM_CHIP_FAMILY := STM32F103x6
@@ -144,7 +146,9 @@ ARM_FLASHK := 1024
 ARM_RAMK := 96
 endif
 
-########## STM32 F3 #############
+### STM32F3
+
+## STM32F303
 
 # 6 and 8 chips are both the 8 family
 ifeq ($(ARM_CHIP),stm32f303x6)
@@ -159,6 +163,36 @@ ARM_CHIP_FAMILY := STM32F303x8
 ARM_FLASHK := 64
 # Note there's also 4k of CCM RAM
 ARM_RAMK := 12
+endif
+
+# B and C chips are both the C family
+ifeq ($(ARM_CHIP),stm32f303xb)
+ARM_CHIP_FAMILY := STM32F303xC
+ARM_FLASHK := 128
+# Note there's also 8k of CCM RAM
+ARM_RAMK := 32
+endif
+
+ifeq ($(ARM_CHIP),stm32f303xc)
+ARM_CHIP_FAMILY := STM32F303xC
+ARM_FLASHK := 256
+# Note there's also 8k of CCM RAM
+ARM_RAMK := 40
+endif
+
+# D and E chips are both the E family
+ifeq ($(ARM_CHIP),stm32f303xd)
+ARM_CHIP_FAMILY := STM32F303xD
+ARM_FLASHK := 384
+# Note there's also 16k of CCM RAM
+ARM_RAMK := 64
+endif
+
+ifeq ($(ARM_CHIP),stm32f303xd)
+ARM_CHIP_FAMILY := STM32F303xD
+ARM_FLASHK := 512
+# Note there's also 16k of CCM RAM
+ARM_RAMK := 64
 endif
 
 ###### Set CPU family based on chip prefix
