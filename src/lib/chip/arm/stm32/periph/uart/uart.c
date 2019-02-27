@@ -40,7 +40,7 @@
 #define UART_RXBUF_SIZE 128 /* Receive */
 #endif
 
-#if defined(STM32F031x6)
+#if defined(RULOS_ARM_stm32f0)
 
 #define rUART1_TX_PORT GPIOA
 #define rUART1_TX_PIN GPIO_PIN_8
@@ -64,7 +64,7 @@
 // CLK_ENABLE must match DMA unit above
 #define rUART1_DMA_CLK_ENABLE() __HAL_RCC_DMA1_CLK_ENABLE()
 
-#elif defined(STM32F103xB)
+#elif defined(RULOS_ARM_stm32f1)
 
 #define rUART1_TX_PORT GPIOA
 #define rUART1_TX_PIN GPIO_PIN_9
@@ -72,6 +72,30 @@
 #define rUART1_TX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
 
 // RX, TX can also be put on B7, B6 as remap pins
+#define rUART1_RX_PORT GPIOA
+#define rUART1_RX_PIN GPIO_PIN_10
+// CLK_ENABLE must match port above
+#define rUART1_RX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
+
+#define rUART1_DMA_TX_CHAN DMA1_Channel4
+#define rUART1_DMA_TX_IRQn DMA1_Channel4_IRQn
+#define rUART1_DMA_TX_IRQHandler DMA1_Channel4_IRQHandler
+
+#define rUART1_DMA_RX_CHAN DMA1_Channel5
+#define rUART1_DMA_RX_IRQn DMA1_Channel5_IRQn
+#define rUART1_DMA_RX_IRQHandler DMA1_Channel5_IRQHandler
+
+// CLK_ENABLE must match DMA unit above
+#define rUART1_DMA_CLK_ENABLE() __HAL_RCC_DMA1_CLK_ENABLE()
+
+#elif defined(RULOS_ARM_stm32f3)
+
+#define rUART1_TX_PORT GPIOA
+#define rUART1_TX_PIN GPIO_PIN_9
+// CLK_ENABLE must match port above
+#define rUART1_TX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
+
+// RX, TX can also be put on B7, B6 or C5, C4
 #define rUART1_RX_PORT GPIOA
 #define rUART1_RX_PIN GPIO_PIN_10
 // CLK_ENABLE must match port above
@@ -161,6 +185,9 @@ static void stm32_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2) {
         GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
         GPIO_InitStruct.Pull = GPIO_PULLUP;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+#ifdef RULOS_ARM_stm32f3
+        GPIO_InitStruct.Alternate = GPIO_AF7_USART1;
+#endif
         HAL_GPIO_Init(rUART1_TX_PORT, &GPIO_InitStruct);
 
         GPIO_InitStruct.Pin = rUART1_RX_PIN;
