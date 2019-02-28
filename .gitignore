@@ -1,0 +1,58 @@
+
+# /Patch/
+/Patch/.picasa.ini
+/Patch/Thumbs.db
+
+# /papers/sensys/
+/papers/sensys/*.aux
+/papers/sensys/*.bbl
+/papers/sensys/*.blg
+/papers/sensys/*.log
+
+# /papers/sensys/figs/
+/papers/sensys/figs/projector-controller.eps
+/papers/sensys/figs/projector.eps
+/papers/sensys/figs/raster.eps
+/papers/sensys/figs/synchronized-clock.eps
+/papers/sensys/figs/thread-graph.eps
+
+# /src/app/
+/src/app/*/core
+/src/app/*/*.hex
+/src/app/*/*.elf
+/src/app/*/*.eep
+/src/app/*/*sim
+/src/app/*/*.map
+/src/app/*/*.lss
+/src/app/*/log
+/src/app/*/obj.*
+
+# /src/app/wallclock/PCClockService/
+/src/app/wallclock/PCClockService/Debug
+/src/app/wallclock/PCClockService/PCClockService.ncb
+/src/app/wallclock/PCClockService/PCClockService.suo
+/src/app/wallclock/PCClockService/PCClockService.vcproj.GYPSY.jelson.user
+
+# /src/audio/
+/src/audio/
+
+# /website/
+/website/img-cache
+/website/build
+
+# /website/rocket_images/2011-02-12 Rocket Stills/
+/website/rocket_images/2011-02-12 Rocket Stills/.picasa.ini
+
+# /website/v2/root/
+/website/v2/root/assembly.html
+/website/v2/root/software.html
+/website/v2/root/credits.html
+/website/v2/root/downloads.html
+/website/v2/root/electronics.html
+/website/v2/root/feedback.html
+/website/v2/root/gallery.html
+/website/v2/root/history.html
+/website/v2/root/intro.html
+/website/v2/root/mechanics.html
+/website/v2/root/patch.html
+/website/v2/root/pneumatics.html
