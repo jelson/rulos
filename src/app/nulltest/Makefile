@@ -20,8 +20,8 @@ MCU := atmega328
 TARGET := nulltest
 BOARD := GENERIC
 
-ARM_CHIP := stm32f303x8
-#ARM_CHIP := stm32f031x6
+#ARM_CHIP := stm32f303x8
+ARM_CHIP := stm32f031x6
 #ARM_CHIP := stm32f103x8
 #ARM_CHIP := lpc1114-102
 #AVR_CFLAGS := -DCRYSTAL=12000000 -DTIMING_DEBUG
@@ -32,4 +32,3 @@ TARGET_OBJECTS := \
 	nulltest.o
 
 include $(ROCKET_ROOT)/Makefile.common
-
