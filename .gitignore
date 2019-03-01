@@ -1,7 +1,6 @@
-
-# /Patch/
-/Patch/.picasa.ini
-/Patch/Thumbs.db
+*~
+.picasa.ini
+Thumbs.db
 
 # /papers/sensys/
 /papers/sensys/*.aux
@@ -39,9 +38,6 @@
 # /website/
 /website/img-cache
 /website/build
-
-# /website/rocket_images/2011-02-12 Rocket Stills/
-/website/rocket_images/2011-02-12 Rocket Stills/.picasa.ini
 
 # /website/v2/root/
 /website/v2/root/assembly.html
