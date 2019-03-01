@@ -7,8 +7,7 @@
 void _volume_input(InputInjectorIfc *ii, Keystroke key);
 void _volume_update(VolumeControl *vc);
 
-void volume_control_init(VolumeControl *vc, AudioClient *ac,
-                         uint8_t boardnum,
+void volume_control_init(VolumeControl *vc, AudioClient *ac, uint8_t boardnum,
                          Keystroke vol_up, Keystroke vol_down) {
   vc->injector.iii.func = _volume_input;
   vc->injector.vc = vc;

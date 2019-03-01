@@ -1,16 +1,17 @@
 /*
- * Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com).
- * 
+ * Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson
+ * (jelson@gmail.com).
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -90,8 +91,8 @@ typedef struct {
   RemoteBBufSend rbs;
 } Rocket0;
 
-#define KEY_VOL_DOWN    KeystrokeCtor('j')
-#define KEY_VOL_UP  KeystrokeCtor('k')
+#define KEY_VOL_DOWN KeystrokeCtor('j')
+#define KEY_VOL_UP KeystrokeCtor('k')
 #define KEY_NPONG_LEFT KeystrokeCtor('m')
 #define KEY_NPONG_RIGHT KeystrokeCtor('n')
 
@@ -124,13 +125,11 @@ void init_rocket0(Rocket0 *r0) {
   r0->screenblanker.screenblanker_sender = &r0->screenblanker_sender;
 
   volume_control_init(&r0->volume_control, &r0->audio_client,
-                      /*board*/ 0,
-                      KEY_VOL_UP, KEY_VOL_DOWN);
+                      /*board*/ 0, KEY_VOL_UP, KEY_VOL_DOWN);
 
   init_control_panel(&r0->cp, 3, 1, &r0->network, &r0->hpam, &r0->audio_client,
                      &r0->idle, &r0->screenblanker, &r0->ts.joystick_state,
-                      KEY_VOL_UP, KEY_VOL_DOWN,
-                     &r0->volume_control.injector.iii,
+                     KEY_VOL_UP, KEY_VOL_DOWN, &r0->volume_control.injector.iii,
                      NULL /* local calc decoration ifc */);
   r0->cp.ccl.launch.main_rtc = &r0->dr;
   r0->cp.ccl.launch.lunar_distance = &r0->ld;
@@ -157,9 +156,11 @@ void init_rocket0(Rocket0 *r0) {
   init_slow_boot(&r0->slow_boot, &r0->screenblanker, &r0->audio_client);
 
   init_potsticker(&r0->pongsticker, POTSTICKER_CHANNEL,
-                  (InputInjectorIfc *)&r0->cp.direct_injector, 9, KEY_NPONG_LEFT, KEY_NPONG_RIGHT);
+                  (InputInjectorIfc *)&r0->cp.direct_injector, 9,
+                  KEY_NPONG_LEFT, KEY_NPONG_RIGHT);
   init_potsticker(&r0->volsticker, POTSTICKER_CHANNEL,
-                  (InputInjectorIfc *)&r0->cp.direct_injector, 9, KEY_VOL_DOWN, KEY_VOL_UP);
+                  (InputInjectorIfc *)&r0->cp.direct_injector, 9, KEY_VOL_DOWN,
+                  KEY_VOL_UP);
 }
 
 static Rocket0 rocket0;  // allocate obj in .bss so it's easy to count
