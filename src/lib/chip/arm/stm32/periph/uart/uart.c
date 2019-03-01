@@ -44,15 +44,17 @@
 #if defined(RULOS_ARM_stm32f0)
 
 #define rUART1_TX_PORT GPIOA
-#define rUART1_TX_PIN GPIO_PIN_8
+#define rUART1_TX_PIN GPIO_PIN_9
 // CLK_ENABLE must match port above
 #define rUART1_TX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
 
 // RX, TX can also be put on B7, B6 as remap pins
 #define rUART1_RX_PORT GPIOA
-#define rUART1_RX_PIN GPIO_PIN_9
+#define rUART1_RX_PIN GPIO_PIN_10
 // CLK_ENABLE must match port above
 #define rUART1_RX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
+
+#define rUART1_GPIO_ALTFUNC GPIO_AF1_USART1
 
 #define rUART1_DMA_TX_CHAN DMA1_Channel2
 #define rUART1_DMA_TX_IRQn DMA1_Channel2_3_IRQn
@@ -101,6 +103,8 @@
 #define rUART1_RX_PIN GPIO_PIN_10
 // CLK_ENABLE must match port above
 #define rUART1_RX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
+
+#define rUART1_GPIO_ALTFUNC GPIO_AF7_USART1
 
 #define rUART1_DMA_TX_CHAN DMA1_Channel4
 #define rUART1_DMA_TX_IRQn DMA1_Channel4_IRQn
@@ -186,8 +190,8 @@ static void stm32_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2) {
         GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
         GPIO_InitStruct.Pull = GPIO_PULLUP;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-#ifdef RULOS_ARM_stm32f3
-        GPIO_InitStruct.Alternate = GPIO_AF7_USART1;
+#ifdef rUART1_GPIO_ALTFUNC
+        GPIO_InitStruct.Alternate = rUART1_GPIO_ALTFUNC;
 #endif
         HAL_GPIO_Init(rUART1_TX_PORT, &GPIO_InitStruct);
 
