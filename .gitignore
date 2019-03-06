@@ -2,12 +2,6 @@
 .picasa.ini
 Thumbs.db
 
-# /papers/sensys/
-/papers/sensys/*.aux
-/papers/sensys/*.bbl
-/papers/sensys/*.blg
-/papers/sensys/*.log
-
 # /papers/sensys/figs/
 /papers/sensys/figs/projector-controller.eps
 /papers/sensys/figs/projector.eps
