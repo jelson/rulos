@@ -1,3 +1,3 @@
 [submodule "Media"]
 	path = Media
-	url = git@svn.circlemud.org:rulos-media
+	url = ssh://git@svn.circlemud.org:2244/~git/rulos-media
