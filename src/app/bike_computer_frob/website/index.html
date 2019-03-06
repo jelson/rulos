@@ -1,0 +1,133 @@
+<title>Bike computer odometer setter</title>
+
+<h1>Bike computer odometer setter</h1>
+
+Here's a silly afternoon project.
+<p>
+I commute and recreate by bike,
+and I like keeping track of my cumulative miles
+with a little bike computer.
+Maybe I'm too OCD, but it kind of ticks me off when the connections
+corrode and the bike computer has the temerity to
+<i>miss some of my miles</i>.
+But the worst is when the battery runs out, and I don't know how many
+miles were on the computer when it died.
+Plus, I've got these oddball miles accumulating on my mountain bike
+that don't get counted. The tragedy!
+<p>
+Well, the road bike odometer started getting dim a couple weeks ago,
+so I ordered a pack of new batteries direct from Hong Kong ($1.28 for 10!).
+I made a point of tracking my mileage, so I knew it when it died.
+I track miles by the whole thousands on a web page,
+but what do I do with the odds and ends of odometry I have lying around?
+<p>
+The new batteries showed up this week.
+So, as a fun afternoon hack, I decided to whip up a little breadboard
+to drive the bike computer, to put the miles back on the odometer.
+<p>
+Jeremy and I came across the Atmega1248. Atmegas are awesome to begin
+with: give them ground and power, and
+without any other parts, you've got a computer.
+The 1284 is particularly awesome: it's a dip package, so it's easy to pop
+into a breadboard. It's 40 pins, so it's hard to run out of I/O pins.
+It has 16K of RAM and 128K of program flash: very cushy.
+And the pin layout is very thoughtful.
+Six adjacent pins form the programming header;
+solder up a single cable to your USBTiny,
+and now you can have a breadboard running just by plugging in one cable.
+The UART pins are near the power pins, too, so with one more simple cable,
+you've got a serial console for debugging.
+<p>
+So I plugged my 1284 into my breadboard,
+hung a mosfet off an I/O pin,
+and started driving the computer.
+I learned that, past about 69mph, it starts missing beats.
+(I've never been past 51mph, so I doubt that's a problem in practice. :v)
+I coded up the program to compute the correct driving interval
+and number of counts to arrive at a desired mileage.
+
+<p>
+<center>
+<img src="IMG_2279.resized.JPG">
+</center>
+<p>
+
+Today, I need the odometer to read 370 miles, which is going to take around
+five hours. So I've left the little breadboard plugged into a wall wart,
+doing its thing. Fun!
+
+<p>
+
+If you want to try making one, here's a schematic.
+Yes, it only has two parts: a microcontroller
+to generate pulses at a suitable frequency (about 14Hz max, for my computer)
+and to count them;
+and a MOSFET to translate those voltage pulses
+into the switching behavior the computer expects to see
+from its reed switch.
+(Being a semiconductor, the MOSFET will only conduct electricity
+in one direction, so you'll need to either measure your bike computer's
+steady-state voltage with a voltmeter,
+or just try the circuit both directions.)
+
+<p>
+<center>
+<img src="schematic">
+</center>
+<p>
+
+<p>
+<hr>
+<p>
+
+<h2>This little rolly-cart is my "electronics lab."</h2>
+
+<p>
+<center>
+<img src="IMG_2274.resized.JPG">
+</center>
+<p>
+It used to be that the best recommendation for equipping your hobby
+electronics lab was to find a used high-end soldering iron or a used
+Tektronix oscilloscope, where the price had come down an order of
+magnitude from sticker.
+
+<p>
+Times have changed. Nowadays (2011), you can get a surprisingly capable (and
+pleasantly portable: no 50-pound CRT) digital storage oscilloscope
+for under $400. I've been playing with Jeremy's Rigol 1062E, and
+love it so much I just ordered the (newer) 1052E model for $341 via
+dealextreme. 50MHz bandwidth, automatic measurement functions, spectrum
+analysis, and upload of data &amp; screen shots via usb stick or usb to a
+PC. Pretty sweet.
+
+<p>
+I've been soldering with the same Radio Shack $15 open-loop soldering iron
+since Andy taught me to solder in the 80's. Thermostatically-controlled
+irons are much nicer: they heat up really fast, and handle both small
+and large parts well. That's because they can dump power in when needed,
+and then shut it off when the temperature back up. I'd never gotten one,
+because commercial units run several hundred bucks, or $100 for a basic
+Weller. So then I was over at Jeremy's, and got spoiled by his, and said,
+hey, why isn't there an affordable knock-off? Then I came across the
+CSI-STATION1A from Circuit Specialists -- $30; $40 shipped. I've used
+mine once, and am already in love. And at barely twice the cost of the
+Radio Shack, I advise electronics hobbyists to not even waste their time
+with a non-thermostatic iron.
+You can see my iron zip-tied to the top of the cart in the photo.
+
+<p>
+<i>(Beware: there's a model of iron floating around on eBay that has a
+knob, but no clear indication that it's actually a thermostat; it's
+calibrated in power, not temperature. Don't get that thing. Get a
+thermostatically-controlled iron.)</i>
+
+<p>
+Then I decked out my lab with a 2000-piece assortment of resistors,
+some assortments of capacitors (little ceramic and big electrolytic),
+an assortment of diodes and transistors, and a few baggies of LEDs; all
+told, less than $50 on ebay. I'll probably spend more on little plastic
+bins to sort them in.
+<p>
+I'm still trying to find a great value on a dual bench power supply with
+current limiting.
