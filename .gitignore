@@ -20,21 +20,3 @@ Thumbs.db
 /src/app/wallclock/PCClockService/PCClockService.ncb
 /src/app/wallclock/PCClockService/PCClockService.suo
 /src/app/wallclock/PCClockService/PCClockService.vcproj.GYPSY.jelson.user
-
-# /website/
-/website/img-cache
-/website/build
-
-# /website/v2/root/
-/website/v2/root/assembly.html
-/website/v2/root/software.html
-/website/v2/root/credits.html
-/website/v2/root/downloads.html
-/website/v2/root/electronics.html
-/website/v2/root/feedback.html
-/website/v2/root/gallery.html
-/website/v2/root/history.html
-/website/v2/root/intro.html
-/website/v2/root/mechanics.html
-/website/v2/root/patch.html
-/website/v2/root/pneumatics.html
