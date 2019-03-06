@@ -15,25 +15,11 @@ Thumbs.db
 /papers/sensys/figs/synchronized-clock.eps
 /papers/sensys/figs/thread-graph.eps
 
-# /src/app/
-/src/app/*/core
-/src/app/*/*.hex
-/src/app/*/*.elf
-/src/app/*/*.eep
-/src/app/*/*sim
-/src/app/*/*.map
-/src/app/*/*.lss
-/src/app/*/log
-/src/app/*/obj.*
-
 # /src/app/wallclock/PCClockService/
 /src/app/wallclock/PCClockService/Debug
 /src/app/wallclock/PCClockService/PCClockService.ncb
 /src/app/wallclock/PCClockService/PCClockService.suo
 /src/app/wallclock/PCClockService/PCClockService.vcproj.GYPSY.jelson.user
-
-# /src/audio/
-/src/audio/
 
 # /website/
 /website/img-cache
