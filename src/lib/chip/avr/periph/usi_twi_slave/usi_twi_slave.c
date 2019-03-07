@@ -122,7 +122,7 @@ ISR(USI_START_VECT) {
   usi.state = USI_SLAVE_CHECK_ADDRESS;
 
   // Set SDA as input
-  gpio_make_input(USI_SDA);
+  _gpio_make_input(USI_SDA);
 
   // wait for SCL to go low to ensure the Start Condition has completed (the
   // start detector will hold SCL low). If a Stop Condition arises then leave
@@ -212,7 +212,7 @@ ISR(USI_OVF_VECT) {
         // Slave-receive mode. Send an ack only if we have buffer space
         // available; otherwise, NACK.
         DEBUG_STROBE(5);
-        if (usi.recv_slot != NULL && usi.recv_slot->occupied_len == 0 &&
+        if (usi.recv_slot != NULL && usi.recv_slot->packet_len == 0 &&
             usi.recv_len == -1) {
           schedule_now(usi_poll_for_stop, NULL);
           usi.recv_len = 0;
@@ -233,7 +233,7 @@ ISR(USI_OVF_VECT) {
       //  Prepares to wait 8 clocks to receive a data byte from the master.
     case USI_SLAVE_RECV_DATA_WAIT: {
       usi.state = USI_SLAVE_RECV_DATA_ACK_SEND;
-      gpio_make_input(USI_SDA);
+      _gpio_make_input(USI_SDA);
       usi_twi_slave_ack_overflow(USI_WANT_8_BITS);
       break;
     }
@@ -269,7 +269,7 @@ ISR(USI_OVF_VECT) {
       // If master NACKs, it means that master doesn't want any more data.
     case USI_SLAVE_REQUEST_REPLY_FROM_SEND_DATA: {
       // After sending, set SDA as input.
-      gpio_make_input(USI_SDA);
+      _gpio_make_input(USI_SDA);
       USIDR = 0;
       usi_twi_slave_ack_overflow(USI_WANT_1_BIT);
       usi.state = USI_SLAVE_CHECK_REPLY_FROM_SEND_DATA;
@@ -321,8 +321,8 @@ static void usi_poll_for_stop(void* data) {
   // If a packet was received, call the user's callback.
   if (usi.recv_len > 0 && usi.recv_slot->func != NULL) {
     DEBUG_STROBE(8);
-    usi.recv_slot->occupied_len = usi.recv_len;
-    usi.recv_slot->func(usi.recv_slot, usi.recv_len);
+    usi.recv_slot->packet_len = usi.recv_len;
+    usi.recv_slot->func(usi.recv_slot);
     DEBUG_STROBE(8);
   }
   usi.recv_len = -1;
@@ -342,7 +342,7 @@ void usi_twi_slave_init(char address, MediaRecvSlot* recv_slot,
   gpio_set(USI_SCL);
   gpio_set(USI_SDA);
   gpio_make_output(USI_SCL);
-  gpio_make_input(USI_SDA);
+  _gpio_make_input(USI_SDA);
 
   usi_twi_slave_idle_bus();
 
