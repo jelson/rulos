@@ -364,7 +364,7 @@ struct s_flashcard {
 void _fl_new_problem(Flashcard *fl);
 void _flashcard_startup(Flashcard *fl);
 void _flashcard_update(Flashcard *fl);
-void _flashcard_do_input(InputInjectorIfc *iii, char key);
+void _flashcard_do_input(InputInjectorIfc *iii, Keystroke key);
 void _flashcard_draw(Flashcard *fl);
 uint8_t _fl_num_problems_left(Flashcard *fl);
 void _flashcard_paint(Flashcard *fl, const char *s);
@@ -611,9 +611,10 @@ void _flashcard_enter(Flashcard *fl) {
   schedule_us(1000000, (ActivationFuncPtr)_flashcard_update, fl);
 }
 
-void _flashcard_do_input(InputInjectorIfc *iii, char key) {
+void _flashcard_do_input(InputInjectorIfc *iii, Keystroke keystroke) {
   Flashcard *fl = ((FlashcardInjector *)iii)->fl;
 
+  char key = keystroke.key;
   syncdebug(7, 'k', key);
 
   if (fl->asking_reset) {
@@ -785,7 +786,7 @@ void shell_func(Shell *shell) {
   if (strncmp(line, "key", 3) == 0) {
     SYNCDEBUG();
     char k = line[4];
-    (shell->fl->fi.iii.func)(&shell->fl->fi.iii, k);
+    (shell->fl->fi.iii.func)(&shell->fl->fi.iii, KeystrokeCtor(k));
   } else if (strncmp(line, "row", 3) == 0) {
     SYNCDEBUG();
     shell->rowdata = atoi_hex(&line[4]);
