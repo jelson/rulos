@@ -99,6 +99,7 @@ void slowboot_update(SlowBoot *slowboot) {
     for (bi = 0; bi < SLOW_MAX_BUFFERS; bi++) {
       memset(slowboot->buffer[bi].buffer, 0, NUM_DIGITS);
     }
+#if SLOW_MAX_BUFFERS > 6
     switch (step) {
       case 4:
         ascii_to_bitmap_str(slowboot->buffer[6].buffer, NUM_DIGITS, " Vehicle");
@@ -111,6 +112,7 @@ void slowboot_update(SlowBoot *slowboot) {
       case 0:
         ascii_to_bitmap_str(slowboot->buffer[3].buffer, NUM_DIGITS, "Ravenna ");
     }
+#endif
     for (bi = 0; bi < SLOW_MAX_BUFFERS; bi++) {
       board_buffer_draw(&slowboot->buffer[bi]);
     }
