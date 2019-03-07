@@ -26,10 +26,9 @@
 #include "core/rulos.h"
 #include "core/twi.h"
 
-//#define STATUS_TO_LOCAL_PANEL
-
 #ifdef STATUS_TO_LOCAL_PANEL
 #include "periph/7seg_panel/7seg_panel.h"
+#include "periph/7seg_panel/display_controller.h"
 #endif
 
 #define INTER_MESSAGE_DELAY_US 125000
@@ -40,7 +39,8 @@ void test_without_netstack() {
   trs->capacity = sizeof(inbuf) - sizeof(MediaRecvSlot);
 
   MediaStateIfc *media = hal_twi_init(100, 0x8, trs);
-  (media->send)(media, 0x1, "hello", 5, NULL, NULL);
+  const unsigned char msg[] = "hello";
+  (media->send)(media, 0x1, msg, 5, NULL, NULL);
   while (1) {
   }
 
@@ -63,7 +63,9 @@ void board_say(const char *s) {
 
   ascii_to_bitmap_str(bm, 8, s);
 
-  for (i = 0; i < 8; i++) program_board(i, bm);
+  for (i = 0; i < 8; i++) {
+    display_controller_program_board(i, bm);
+  }
 }
 #endif
 
@@ -77,13 +79,14 @@ void sendMessage(sendAct_t *sa) {
   board_say(buf);
 #endif
 
-  strcpy(sa->sendSlot->msg->data, "HELLO");
-  int_to_string2(&sa->sendSlot->msg->data[5], 3, 0, sa->i);
-  sa->sendSlot->msg->payload_len = strlen(sa->sendSlot->msg->data);
-
   if (sa->sendSlot->sending) {
     LOG("twisendtest: can't send message: outgoing buffer is busy");
   } else {
+    char buf[8];
+    strcpy(buf, "HELLO");
+    int_to_string2(&buf[5], 3, 0, sa->i);
+    sa->sendSlot->payload_len = strlen(buf);
+    memcpy(&sa->sendSlot->wire_msg->data, buf, sa->sendSlot->payload_len);
     net_send_message(sa->net, sa->sendSlot);
     LOG("sent message");
   }
@@ -91,18 +94,19 @@ void sendMessage(sendAct_t *sa) {
   schedule_us(INTER_MESSAGE_DELAY_US, (ActivationFuncPtr)sendMessage, sa);
 }
 
+char sendslot_storage[30];
+
 void test_netstack() {
   Network net;
 
   init_clock(10000, TIMER1);
 
-  char data[30];
   SendSlot sendSlot;
 
   sendSlot.func = NULL;
   sendSlot.dest_addr = AUDIO_ADDR;
-  sendSlot.msg = (Message *)data;
-  sendSlot.msg->dest_port = AUDIO_PORT;
+  sendSlot.wire_msg = (WireMessage *)sendslot_storage;
+  sendSlot.wire_msg->dest_port = AUDIO_PORT;
   sendSlot.sending = FALSE;
 
   init_twi_network(&net, 100, 0x5);
