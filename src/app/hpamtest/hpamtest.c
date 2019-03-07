@@ -17,6 +17,7 @@
  */
 
 #include "core/board_defs.h"
+#include "periph/7seg_panel/7seg_panel.h"
 #include "periph/hpam/hpam.h"
 #include "periph/joystick/joystick.h"
 #include "periph/rocket/rocket.h"
