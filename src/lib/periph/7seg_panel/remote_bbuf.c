@@ -155,7 +155,7 @@ void rbr_recv(MessageRecvBuffer *msg);
 void init_remote_bbuf_recv(RemoteBBufRecv *rbr, Network *network) {
   rbr->app_receiver.recv_complete_func = rbr_recv;
   rbr->app_receiver.port = REMOTE_BBUF_PORT;
-  rbr->app_receiver.num_receive_buffers = RING_SIZE;
+  rbr->app_receiver.num_receive_buffers = REMOTE_BBUF_RING_SIZE;
   rbr->app_receiver.payload_capacity = sizeof(BBufMessage);
   rbr->app_receiver.message_recv_buffers = rbr->recv_ring_alloc;
 

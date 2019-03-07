@@ -68,39 +68,45 @@ void board_say(const char *s) {
 
   ascii_to_bitmap_str(bm, 8, s);
 
-  for (i = 0; i < 8; i++) program_board(i, bm);
+  for (i = 0; i < 8; i++) {
+    display_controller_program_board(i, bm);
+  }
 }
 
-static void recv_func(RecvSlot *recvSlot, uint8_t payload_size) {
-  char buf[payload_size + 1];
-  memcpy(buf, recvSlot->msg->data, payload_size);
-  buf[payload_size] = '\0';
-  LOG("Got network message [%d bytes]: '%s'", payload_size, buf);
+static void recv_func(MessageRecvBuffer *msg) {
+  const int payload_len = msg->payload_len;
+  char buf[payload_len + 1];
+  memcpy(buf, msg->data, payload_len);
+  buf[payload_len] = '\0';
+  net_free_received_message_buffer(msg);
+  LOG("Got network message [%d bytes]: '%s'", payload_len, buf);
   SYNCDEBUG();
 
   // display the first 8 chars to the leds
-  buf[min(payload_size, 8)] = '\0';
+  buf[min(payload_len, 8)] = '\0';
   board_say(buf);
 }
 
 void test_netstack() {
   Network net;
-  char data[20];
-  RecvSlot recvSlot;
+  const int MESSAGE_SIZE = 20;
+  const int RING_SIZE = 4;
+  unsigned char data[RECEIVE_RING_SIZE(RING_SIZE, MESSAGE_SIZE)];
+  AppReceiver recv;
 
   board_say(" rEAdy  ");
 
   init_clock(10000, TIMER1);
 
-  recvSlot.func = recv_func;
-  recvSlot.port = AUDIO_PORT;
-  recvSlot.msg = (Message *)data;
-  recvSlot.payload_capacity = sizeof(data) - sizeof(Message);
-  recvSlot.msg_occupied = FALSE;
+  recv.recv_complete_func = recv_func;
+  recv.port = AUDIO_PORT;
+  recv.num_receive_buffers = RING_SIZE;
+  recv.payload_capacity = MESSAGE_SIZE;
+  recv.message_recv_buffers = data;
 
   SYNCDEBUG();
   init_twi_network(&net, 100, AUDIO_ADDR);
-  net_bind_receiver(&net, &recvSlot);
+  net_bind_receiver(&net, &recv);
   SYNCDEBUG();
 
   CpumonAct cpumon;
