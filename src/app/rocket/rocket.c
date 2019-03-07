@@ -129,7 +129,8 @@ void init_rocket0(Rocket0 *r0) {
 
   init_control_panel(&r0->cp, 3, 1, &r0->network, &r0->hpam, &r0->audio_client,
                      &r0->idle, &r0->screenblanker, &r0->ts.joystick_state,
-                     KEY_VOL_UP, KEY_VOL_DOWN, &r0->volume_control.injector.iii,
+                     &r0->ts, KEY_VOL_UP, KEY_VOL_DOWN,
+                     &r0->volume_control.injector.iii,
                      NULL /* local calc decoration ifc */);
   r0->cp.ccl.launch.main_rtc = &r0->dr;
   r0->cp.ccl.launch.lunar_distance = &r0->ld;
