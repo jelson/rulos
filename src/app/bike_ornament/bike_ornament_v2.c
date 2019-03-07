@@ -183,8 +183,8 @@ void bike_sleep() {
   // Shut down headlight and taillight
   gpio_clr(HEADLIGHT);
   gpio_clr(TAILLIGHT);
-  gpio_make_input(HEADLIGHT);
-  gpio_make_input(TAILLIGHT);
+  gpio_make_input_disable_pullup(HEADLIGHT);
+  gpio_make_input_disable_pullup(TAILLIGHT);
 
   // Shut down LED drivers
   shutdown_led_driver(L_WHEEL_ADDR);
