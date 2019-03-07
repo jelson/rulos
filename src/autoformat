@@ -5,6 +5,11 @@
 
 filelist=`git diff --relative --name-only | grep '.*\.h$\|.*\.c$' | grep -v vendor_libraries`
 
+if [ -z "$filelist" ]; then
+    echo No changed files
+    exit
+fi
+
 clang-format -i --style=google --verbose $filelist
 dos2unix $filelist
 chmod ugo-x $filelist
