@@ -58,8 +58,8 @@ struct locatorAct {
   uint8_t uartSending;
 
   // twi
-  char TWIsendBuf[10];
-  char TWIrecvBuf[16];
+  unsigned char TWIsendBuf[10];
+  unsigned char TWIrecvBuf[16];
   MediaRecvSlot *mrs;
   MediaStateIfc *twiState;
   PeripheralSendCompleteFunc sendFunc;
@@ -179,8 +179,9 @@ void _peripheralSendComplete(void *user_data) {
   locatorAct->sendFunc(locatorAct);
 }
 
-void sendToPeripheral(locatorAct_t *locatorAct, uint8_t twiAddr, char *data,
-                      uint8_t len, PeripheralSendCompleteFunc f) {
+void sendToPeripheral(locatorAct_t *locatorAct, uint8_t twiAddr,
+                      unsigned char *data, uint8_t len,
+                      PeripheralSendCompleteFunc f) {
   locatorAct->sendFunc = f;
   (locatorAct->twiState->send)(locatorAct->twiState, twiAddr, data, len,
                                _peripheralSendComplete, locatorAct);
@@ -189,7 +190,7 @@ void sendToPeripheral(locatorAct_t *locatorAct, uint8_t twiAddr, char *data,
 /*** receiving data from a locator peripheral, using the
          write-address-then-read protocol ***/
 
-void _locatorReadComplete(MediaRecvSlot *mrs, uint8_t len) {
+void _locatorReadComplete(MediaRecvSlot *mrs) {
   locatorAct_t *locatorAct = (locatorAct_t *)mrs->user_data;
   locatorAct->recvFunc(locatorAct, mrs->data, locatorAct->readLen);
 }
