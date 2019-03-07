@@ -3,26 +3,11 @@
 # Auto-formats all code that ends in .c or .h that's been changed in subversion.
 # I should have called it "g4 fix".
 
-svn status \
-    | egrep '^M|A' \
-    | cut -c9- \
-    | grep '.*\.h$\|.*\.c$' \
-    | grep -v vendor_libraries \
-    | xargs clang-format -i --style=google --verbose
+filelist=`git diff --relative --name-only | grep '.*\.h$\|.*\.c$' | grep -v vendor_libraries`
 
-svn status \
-    | egrep '^M|A' \
-    | cut -c9- \
-    | grep '.*\.h$\|.*\.c$' \
-    | grep -v vendor_libraries \
-    | xargs dos2unix
-
-svn status \
-    | egrep '^M|A' \
-    | cut -c9- \
-    | grep '.*\.h$\|.*\.c$' \
-    | grep -v vendor_libraries \
-    | xargs chmod ugo-x           
+clang-format -i --style=google --verbose $filelist
+dos2unix $filelist
+chmod ugo-x $filelist
 
 exit
 
