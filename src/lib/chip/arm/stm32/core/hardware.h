@@ -101,7 +101,7 @@
 
 // For when you simply must store the pin definition dynamically.
 typedef struct {
-  volatile uint8_t *port;
+  GPIO_TypeDef *port;
   uint32_t pin;
 } IOPinDef;
 #define PINDEF(IOPIN) \
