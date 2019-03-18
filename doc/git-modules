@@ -1,0 +1,4 @@
+git clone git@github.com:jelson/rulos.git
+cd rulos
+git submodule init
+git submodule update
