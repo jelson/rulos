@@ -31,7 +31,12 @@ void drtc_init(DRTCAct *act, uint8_t board, Time base_time) {
 }
 
 void drtc_update(DRTCAct *act) {
-  schedule_us(10000, (ActivationFuncPtr)drtc_update, act);
+  // Even though we only intend to update every 10ms, we schedule
+  // every 9999, so that the clock update happens before
+  // remote-board-buffer-draw, which also happens every 10ms. Even
+  // though the rocket clock res is only 10000, the 9999 will be
+  // pulled out of the heap first.
+  schedule_us(9999, (ActivationFuncPtr)drtc_update, act);
   drtc_update_once(act);
 }
 
