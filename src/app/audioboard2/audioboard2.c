@@ -27,16 +27,15 @@
 #include "periph/sdcard/sdcard.h"
 #include "periph/uart/serial_console.h"
 
-
 /*
  * PIN MAPPINGS:
  *
- * STM32F303CB   STM32Func  AK4430    AudioFunction 
+ * STM32F303CB   STM32Func  AK4430    AudioFunction
  * -----------   ---------- -------   --------------
- * 29/PA8  AF5   I2S2_MCK      4           MCLK        
- * 26/PB13 AF5   I2S2_CK       5           BICK 
- * 28/PB15 AF5   I2S2_SD       6           SDTI    
- * 25/PB12 AF5   I2S2_WS       7           LRCK  
+ * 29/PA8  AF5   I2S2_MCK      4           MCLK
+ * 26/PB13 AF5   I2S2_CK       5           BICK
+ * 28/PB15 AF5   I2S2_SD       6           SDTI
+ * 25/PB12 AF5   I2S2_WS       7           LRCK
  */
 
 //////////////////////////////////////////////////////////////////////////////
@@ -47,7 +46,6 @@ typedef struct {
   int32_t buffer[NUM_SAMPLES];
   I2S_HandleTypeDef i2s_handle;
 } AudioState;
-
 
 void init_i2s(AudioState* as) {
   GPIO_InitTypeDef GPIO_InitStruct;
@@ -80,14 +78,14 @@ void init_i2s(AudioState* as) {
   __HAL_RCC_SPI2_RELEASE_RESET();
 
   /* I2S peripheral configuration */
-  I2S_HandleTypeDef * const h = &as->i2s_handle;
-  h->Instance         = SPI2;
-  h->Init.Mode        = I2S_MODE_MASTER_TX;
-  h->Init.Standard    = I2S_STANDARD_PHILIPS;
-  h->Init.DataFormat  = I2S_DATAFORMAT_24B;
-  h->Init.MCLKOutput  = I2S_MCLKOUTPUT_ENABLE;
-  h->Init.AudioFreq   = I2S_AUDIOFREQ_48K;
-  h->Init.CPOL        = I2S_CPOL_LOW;
+  I2S_HandleTypeDef* const h = &as->i2s_handle;
+  h->Instance = SPI2;
+  h->Init.Mode = I2S_MODE_MASTER_TX;
+  h->Init.Standard = I2S_STANDARD_PHILIPS;
+  h->Init.DataFormat = I2S_DATAFORMAT_24B;
+  h->Init.MCLKOutput = I2S_MCLKOUTPUT_ENABLE;
+  h->Init.AudioFreq = I2S_AUDIOFREQ_48K;
+  h->Init.CPOL = I2S_CPOL_LOW;
   h->Init.ClockSource = I2S_CLOCK_SYSCLK;
 
   /* Disable I2S block */
@@ -96,15 +94,14 @@ void init_i2s(AudioState* as) {
   if (HAL_I2S_Init(h) != HAL_OK) {
     __builtin_trap();
   }
-
 }
 
 uint32_t htoi2s(uint32_t v) {
-  //uint32_t b3 = (v>>24) & 0xff;
-  uint32_t b2 = (v>>16) & 0xff;
-  uint32_t b1 = (v>>8) & 0xff;
-  uint32_t b0 = (v) & 0xff;
-  return (b0<<24) | (b2<<8) | b1;
+  // uint32_t b3 = (v>>24) & 0xff;
+  uint32_t b2 = (v >> 16) & 0xff;
+  uint32_t b1 = (v >> 8) & 0xff;
+  uint32_t b0 = (v)&0xff;
+  return (b0 << 24) | (b2 << 8) | b1;
 }
 
 void init_samples(AudioState* as) {
@@ -134,15 +131,16 @@ void init_samples(AudioState* as) {
 #endif
   int sample = 0;
   float scalefactor = (1 << 19);
-  for (int i = 0; i < NUM_SAMPLES/2; i++) {
-    float sinewave = (1.0 + sin((3.1415926535*2 * i * 32) / (NUM_SAMPLES/2)));
+  for (int i = 0; i < NUM_SAMPLES / 2; i++) {
+    float sinewave =
+        (1.0 + sin((3.1415926535 * 2 * i * 32) / (NUM_SAMPLES / 2)));
     int32_t intsinewave = (sinewave * scalefactor) - scalefactor;
     uint32_t value = htoi2s(intsinewave);
     as->buffer[sample++] = value;
     as->buffer[sample++] = value;
   }
 }
-  
+
 int main() {
   hal_init();
   init_clock(10000, TIMER1);
@@ -158,13 +156,12 @@ int main() {
   init_i2s(&as);
   init_samples(&as);
 
-  int num=0;
+  int num = 0;
   while (true) {
     num++;
-    //LOG("iteration %d", num);
-    if (HAL_I2S_Transmit(&as.i2s_handle, (uint16_t *) as.buffer,
-			 NUM_SAMPLES,
-			 HAL_MAX_DELAY) != HAL_OK) {
+    // LOG("iteration %d", num);
+    if (HAL_I2S_Transmit(&as.i2s_handle, (uint16_t*)as.buffer, NUM_SAMPLES,
+                         HAL_MAX_DELAY) != HAL_OK) {
       __builtin_trap();
     }
 #if 0
@@ -172,8 +169,8 @@ int main() {
     }
 #endif
   }
-  
+
   cpumon_main_loop();
-  
+
   return 0;
 }
