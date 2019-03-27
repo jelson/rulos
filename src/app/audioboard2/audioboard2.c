@@ -43,7 +43,7 @@
 #define NUM_SAMPLES 4096
 
 typedef struct {
-  int32_t buffer[NUM_SAMPLES];
+  int16_t buffer[NUM_SAMPLES];
   I2S_HandleTypeDef i2s_handle;
 } AudioState;
 
@@ -82,7 +82,7 @@ void init_i2s(AudioState* as) {
   h->Instance = SPI2;
   h->Init.Mode = I2S_MODE_MASTER_TX;
   h->Init.Standard = I2S_STANDARD_PHILIPS;
-  h->Init.DataFormat = I2S_DATAFORMAT_24B;
+  h->Init.DataFormat = I2S_DATAFORMAT_16B;
   h->Init.MCLKOutput = I2S_MCLKOUTPUT_ENABLE;
   h->Init.AudioFreq = I2S_AUDIOFREQ_48K;
   h->Init.CPOL = I2S_CPOL_LOW;
@@ -96,7 +96,10 @@ void init_i2s(AudioState* as) {
   }
 }
 
-uint32_t htoi2s(uint32_t v) {
+// Converts a 24-bit sample value to a 32-bit value in the proper
+// format for the STM32 I2S peripheral to talk to the AK4430, which
+// expects a 24-bit value padded out to 32.
+uint32_t htoi2s_24(uint32_t v) {
   // uint32_t b3 = (v>>24) & 0xff;
   uint32_t b2 = (v >> 16) & 0xff;
   uint32_t b1 = (v >> 8) & 0xff;
@@ -130,12 +133,12 @@ void init_samples(AudioState* as) {
   }
 #endif
   int sample = 0;
-  float scalefactor = (1 << 19);
+  float scalefactor = (1 << 14);
   for (int i = 0; i < NUM_SAMPLES / 2; i++) {
     float sinewave =
-        (1.0 + sin((3.1415926535 * 2 * i * 32) / (NUM_SAMPLES / 2)));
-    int32_t intsinewave = (sinewave * scalefactor) - scalefactor;
-    uint32_t value = htoi2s(intsinewave);
+      (sinf(((float) 3.14159 * 2 * i * 32) / (NUM_SAMPLES / 2)));
+    int32_t intsinewave = sinewave * scalefactor;
+    int16_t value = ((intsinewave >> 8) & 0xff) | ((intsinewave & 0xff) << 8);
     as->buffer[sample++] = value;
     as->buffer[sample++] = value;
   }
