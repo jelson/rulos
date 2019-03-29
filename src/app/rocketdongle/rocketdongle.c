@@ -30,8 +30,6 @@ int main() {
   hal_uart_init(&uart, 38400, true, /* uart_id= */ 0);
   LOG("Rocket dongle running");
 
-  /*board_say(" rEAdy  "); */
-
   init_clock(10000, TIMER1);
 
   Network net;
