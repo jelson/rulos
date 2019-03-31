@@ -9423,8 +9423,7 @@ JE</description>
 <wire x1="-6.325" y1="-2.55" x2="6.325" y2="-2.55" width="0.2" layer="21"/>
 <wire x1="6.325" y1="-2.55" x2="6.325" y2="2.55" width="0.2" layer="21"/>
 <wire x1="6.325" y1="2.55" x2="-6.325" y2="2.55" width="0.2" layer="21"/>
-<text x="-7.86355" y="-2.72033125" size="1.272040625" layer="21">1</text>
-<text x="-7.86611875" y="1.448359375" size="1.27253125" layer="51">2</text>
+<text x="-6.59355" y="-3.99033125" size="1.272040625" layer="21">1</text>
 <text x="-4.6967" y="-5.995009375" size="1.90823125" layer="25">&gt;NAME</text>
 <circle x="-2.54" y="-0.635" radius="0.622503125" width="0" layer="29"/>
 <circle x="-2.54" y="-0.635" radius="0.622503125" width="0" layer="30"/>
@@ -10357,7 +10356,7 @@ Source: DCJ0202.pdf</description>
 <classes>
 <class number="0" name="default" width="0" drill="0">
 </class>
-<class number="1" name="power" width="0.3048" drill="0.3048">
+<class number="1" name="power" width="0.3048" drill="0">
 <clearance class="0" value="0.1524"/>
 <clearance class="1" value="0.1524"/>
 </class>
@@ -10804,6 +10803,7 @@ in audio circuit</text>
 </sheet>
 <sheet>
 <plain>
+<text x="109.22" y="147.32" size="5.08" layer="97">Audio DAC</text>
 </plain>
 <instances>
 <instance part="FRAME2" gate="G$1" x="0" y="0" smashed="yes"/>
