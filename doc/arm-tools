@@ -1,0 +1,20 @@
+Fetch a toolchain tarball here:
+
+https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads
+tar -C /usr/local/bin/ xjf ~/Downloads/gcc-arm-none-eabi-8-2018-q4-major-linux.tar.bz2
+
+With the black-magic probe:
+
+/usr/local/bin/gcc-arm-none-eabi-8-2018-q4-major/bin/arm-none-eabi-gdb *.elf
+target extended-remote /dev/ttyACM0
+tar ext /dev/ttyACM0
+monitor help
+mon tpwr enable
+mon swdp_scan
+attach 1
+load
+run
+
+Read serial from ttyACM1.
+moserial /dev/ttyACM1
+Add VCC pin if programmer is not 'tpwr enable'

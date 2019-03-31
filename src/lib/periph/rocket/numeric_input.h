@@ -21,7 +21,7 @@
 #include "periph/rocket/rocket.h"
 
 typedef struct {
-  uint16_t mantissa;
+  uint32_t mantissa;
   uint8_t neg_exponent;  // base 10
 } DecimalFloatingPoint;
 

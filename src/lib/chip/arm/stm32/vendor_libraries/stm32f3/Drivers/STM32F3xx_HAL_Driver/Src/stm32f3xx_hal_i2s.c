@@ -215,6 +215,7 @@ static HAL_StatusTypeDef  I2S_WaitFlagStateUntilTimeout(I2S_HandleTypeDef *hi2s,
   *         the configuration information for I2S module
   * @retval HAL status
   */
+#if 0 // jelson
 __weak HAL_StatusTypeDef HAL_I2S_Init(I2S_HandleTypeDef *hi2s)
 {
   /* Prevent unused argument(s) compilation warning */
@@ -227,6 +228,7 @@ __weak HAL_StatusTypeDef HAL_I2S_Init(I2S_HandleTypeDef *hi2s)
   /* Return error status as not implemented here */
   return HAL_ERROR;
 }
+#endif
 
 /**
   * @brief DeInitializes the I2S peripheral 

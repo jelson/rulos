@@ -45,8 +45,8 @@ void qk_update(QuadKnob *qk) {
   c0 = 0;
   c1 = 0;
 #else
-  c0 = reg_is_set(qk->pin0->pin, qk->pin0->bit);
-  c1 = reg_is_set(qk->pin1->pin, qk->pin1->bit);
+  c0 = gpio_is_set(PINUSE(*(qk->pin0)));
+  c1 = gpio_is_set(PINUSE(*(qk->pin1)));
 #endif
   uint8_t newState = (c1 << 1) | c0;
   uint8_t transition = (qk->oldState << 2) | newState;

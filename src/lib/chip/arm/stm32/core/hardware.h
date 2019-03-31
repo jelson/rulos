@@ -101,7 +101,7 @@
 
 // For when you simply must store the pin definition dynamically.
 typedef struct {
-  volatile uint8_t *port;
+  GPIO_TypeDef *port;
   uint32_t pin;
 } IOPinDef;
 #define PINDEF(IOPIN) \
@@ -179,8 +179,8 @@ static inline void gpio_clr(GPIO_TypeDef *port, const uint32_t pin) {
 /*
  * assert an output either high or low depending on the 'onoff' parameter
  */
-static inline void gpio_clr_set_or_clr(GPIO_TypeDef *port, const uint32_t pin,
-                                       const uint32_t state) {
+static inline void gpio_set_or_clr(GPIO_TypeDef *port, const uint32_t pin,
+                                   const uint32_t state) {
   if (state) {
     gpio_set(port, pin);
   } else {

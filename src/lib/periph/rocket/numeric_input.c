@@ -23,7 +23,7 @@ uint8_t dfp_draw(DecimalFloatingPoint *dfp, SSBitmap *bm, uint8_t len,
                  uint8_t show_decimal) {
   uint8_t width = dfp->neg_exponent + 1;
   uint8_t mantissa_width = 0;
-  uint16_t mant_copy = dfp->mantissa;
+  uint32_t mant_copy = dfp->mantissa;
   while (mant_copy > 0) {
     mantissa_width += 1;
     mant_copy = mant_copy / 10;
@@ -122,7 +122,7 @@ void ni_cancel_input(NumericInputAct *act) {
 
 void ni_add_digit(NumericInputAct *act, uint8_t digit) {
   DecimalFloatingPoint new_value;
-  new_value.mantissa = act->cur_value.mantissa * 10 + digit;
+  new_value.mantissa = (act->cur_value.mantissa * 10) + digit;
   new_value.neg_exponent = act->cur_value.neg_exponent;
   if (act->decimal_present) {
     new_value.neg_exponent += 1;
