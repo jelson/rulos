@@ -10391,7 +10391,7 @@ Source: DCJ0202.pdf</description>
 <part name="P+3" library="supply1" library_urn="urn:adsk.eagle:library:371" deviceset="VCC" device=""/>
 <part name="C2" library="rcl" library_urn="urn:adsk.eagle:library:334" deviceset="C-US" device="025-025X050" package3d_urn="urn:adsk.eagle:package:23629/2" value="1uF"/>
 <part name="J1" library="503398-1892" deviceset="503398-1892" device=""/>
-<part name="X2" library="con-molex" library_urn="urn:adsk.eagle:library:165" deviceset="22-23-2031" device="" package3d_urn="urn:adsk.eagle:package:8078634/1"/>
+<part name="SERIAL" library="con-molex" library_urn="urn:adsk.eagle:library:165" deviceset="22-23-2031" device="" package3d_urn="urn:adsk.eagle:package:8078634/1"/>
 <part name="GND4" library="supply1" library_urn="urn:adsk.eagle:library:371" deviceset="GND" device=""/>
 <part name="FRAME2" library="frames" library_urn="urn:adsk.eagle:library:229" deviceset="LETTER_L" device=""/>
 <part name="IC4" library="AK4430ET" deviceset="AK4430ET" device=""/>
@@ -10480,13 +10480,13 @@ in audio circuit</text>
 <attribute name="NAME" x="241.3217" y="119.354" size="1.78103125" layer="95" rot="R180"/>
 <attribute name="VALUE" x="241.304" y="152.4056" size="1.778559375" layer="96" rot="MR0"/>
 </instance>
-<instance part="X2" gate="-1" x="182.88" y="147.32" smashed="yes">
+<instance part="SERIAL" gate="-1" x="182.88" y="147.32" smashed="yes">
 <attribute name="NAME" x="185.42" y="146.558" size="1.524" layer="95"/>
 </instance>
-<instance part="X2" gate="-2" x="182.88" y="149.86" smashed="yes">
+<instance part="SERIAL" gate="-2" x="182.88" y="149.86" smashed="yes">
 <attribute name="NAME" x="185.42" y="149.098" size="1.524" layer="95"/>
 </instance>
-<instance part="X2" gate="-3" x="182.88" y="152.4" smashed="yes">
+<instance part="SERIAL" gate="-3" x="182.88" y="152.4" smashed="yes">
 <attribute name="NAME" x="185.42" y="151.638" size="1.524" layer="95"/>
 </instance>
 <instance part="GND4" gate="1" x="180.34" y="157.48" smashed="yes" rot="R180">
@@ -10566,7 +10566,7 @@ in audio circuit</text>
 <wire x1="121.92" y1="30.48" x2="121.92" y2="25.4" width="0.1524" layer="91"/>
 </segment>
 <segment>
-<pinref part="X2" gate="-3" pin="S"/>
+<pinref part="SERIAL" gate="-3" pin="S"/>
 <pinref part="GND4" gate="1" pin="GND"/>
 <wire x1="180.34" y1="154.94" x2="180.34" y2="152.4" width="0.1524" layer="91"/>
 </segment>
@@ -10701,7 +10701,7 @@ in audio circuit</text>
 </net>
 <net name="RX" class="0">
 <segment>
-<pinref part="X2" gate="-2" pin="S"/>
+<pinref part="SERIAL" gate="-2" pin="S"/>
 <wire x1="175.26" y1="149.86" x2="180.34" y2="149.86" width="0.1524" layer="91"/>
 <label x="167.64" y="149.86" size="1.778" layer="95"/>
 <wire x1="175.26" y1="149.86" x2="165.1" y2="149.86" width="0.1524" layer="91"/>
@@ -10711,7 +10711,7 @@ in audio circuit</text>
 </net>
 <net name="TX" class="0">
 <segment>
-<pinref part="X2" gate="-1" pin="S"/>
+<pinref part="SERIAL" gate="-1" pin="S"/>
 <wire x1="180.34" y1="147.32" x2="165.1" y2="147.32" width="0.1524" layer="91"/>
 <pinref part="IC3" gate="G$1" pin="PA9/I2C2_SCL"/>
 <wire x1="165.1" y1="147.32" x2="162.56" y2="147.32" width="0.1524" layer="91"/>
