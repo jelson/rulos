@@ -69,13 +69,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //----------------------------------------------
 //(ONLY 1 SHOULD BE INCLUDED, COMMENT OUT OTHERS - ALSO SET IN THE OTHER DRIVER
 //.h FILE) #define	FFS_USING_MICROCHIP_C18_COMPILER #define
-//FFS_USING_MICROCHIP_C30_COMPILER #define	FFS_USING_MICROCHIP_C32_COMPILER
+// FFS_USING_MICROCHIP_C30_COMPILER #define	FFS_USING_MICROCHIP_C32_COMPILER
 //#define	MMCSD_USING_CROSSWORKS_ARM_COMPILER
 //<< add other compiler types here
 
 //---------------------------------------
-//----- CLEAR WATCHDOG TIMER DEFINE -----					//<<<<<
-//CHECK FOR A NEW APPLICATION <<<<<
+//----- CLEAR WATCHDOG TIMER DEFINE -----
+////<<<<< CHECK FOR A NEW APPLICATION <<<<<
 //---------------------------------------
 // Use this if you have a watchdog timer that needs to be reset for operations
 // that can take a long time Comment out if not requried.
@@ -105,11 +105,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
      // bytes or memory requried per file.
 
 //---------------------------
-//----- REAL TIME CLOCK -----						//<<<<< CHECK
-//FOR A NEW APPLICATION <<<<<
+//----- REAL TIME CLOCK -----						//<<<<<
+//CHECK FOR A NEW APPLICATION <<<<<
 //---------------------------
-//#define	USE_REAL_TIME_CLOCK						//Comment
-//out if you do not have a real time clock
+//#define	USE_REAL_TIME_CLOCK
+////Comment out if you do not have a real time clock
 #ifdef USE_REAL_TIME_CLOCK  // Defines to your real time clock varaibles.  Add
                             // an include to the file that contains the variable
                             // definitions to the top of mem-ffs.c
@@ -123,7 +123,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 //-------------------------------------------------
 //----- USING STANDRD TYPE AND FUNCTION NAMES -----			//<<<<<
-//CHECK FOR A NEW APPLICATION <<<<<
+// CHECK FOR A NEW APPLICATION <<<<<
 //-------------------------------------------------
 // For ease of interoperability this driver uses modified version of the
 // standard ANSI-C function names and FILE type. To avoid conflicting with your
@@ -164,8 +164,8 @@ typedef struct _FFS_FILE {
   DWORD directory_entry_sector;  // The sector that contains the entry for the
                                  // file being accessed
   BYTE directory_entry_within_sector;  // The entry number within that sector
-                                       // (512 / 32 = 16 so max range is 0-15 for
-                                       // a 512 bytes per sector disk)
+                                       // (512 / 32 = 16 so max range is 0-15
+                                       // for a 512 bytes per sector disk)
   DWORD current_cluster;  // The current cluster being accessed for the file
   BYTE current_sector;    // The current sector within the current cluster
   WORD current_byte;      // The current byte within the current sector
@@ -179,10 +179,10 @@ typedef struct _FFS_FILE {
       unsigned int read_permitted : 1;
       unsigned int write_permitted : 1;
       unsigned int write_append_only : 1;
-      unsigned int
-          inc_posn_before_next_rw : 1;  // The location of the current byte
-                                        // pointer needs to be incremented before
-                                        // the next read or write operation
+      unsigned int inc_posn_before_next_rw : 1;  // The location of the current
+                                                 // byte pointer needs to be
+                                                 // incremented before the next
+                                                 // read or write operation
       unsigned int access_error : 1;
       unsigned int end_of_file : 1;
       unsigned int file_size_has_changed : 1;
@@ -277,8 +277,8 @@ BYTE ffs_is_card_available(void);
 //------------------------------
 extern void ffs_process(
     void);  //< This function is not actually in our matching c file, but we
-            //include here so that application files that use this driver only
-            //have to #include "mem-ffs.h" and not the lower level card driver
+            // include here so that application files that use this driver only
+            // have to #include "mem-ffs.h" and not the lower level card driver
             //.h file
 extern FFS_FILE *ffs_fopen(const char *filename, const char *access_mode);
 extern int ffs_fseek(FFS_FILE *file_pointer, long offset, int origin);
@@ -341,11 +341,11 @@ WORD ffs_bytes_per_sector;
 #pragma udata \
     ffs_512_byte_ram_section  // This is the PIC C18 compiler command to use the
                               // specially defined section in the linker script
-                              // (PIC18 project uses a modified linker script for
-                              // this)
-BYTE
-    ffs_general_buffer[512];  //(C18 large array requirement to use a special
-                              //big section of ram defined in the linker script)
+                              // (PIC18 project uses a modified linker script
+                              // for this)
+BYTE ffs_general_buffer[512];  //(C18 large array requirement to use a special
+                               // big section of ram defined in the linker
+                               // script)
 #pragma udata
 #else
 BYTE ffs_general_buffer[512];
@@ -369,11 +369,11 @@ extern WORD ffs_bytes_per_sector;
 #pragma udata \
     ffs_512_byte_ram_section  // This is the PIC C18 compiler command to use the
                               // specially defined section in the linker script
-                              // (PIC18 project uses a modified linker script for
-                              // this)
-extern BYTE
-    ffs_general_buffer[512];  //(C18 large array requirement to use a special
-                              //big section of ram defined in the linker script)
+                              // (PIC18 project uses a modified linker script
+                              // for this)
+extern BYTE ffs_general_buffer[512];  //(C18 large array requirement to use a
+                                      //special big section of ram defined in
+                                      // the linker script)
 #pragma udata
 #else
 extern BYTE ffs_general_buffer[512];

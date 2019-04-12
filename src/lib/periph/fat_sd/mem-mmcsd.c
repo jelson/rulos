@@ -82,7 +82,7 @@ void ffs_process(void) {
       //----- CARD INSERTED - WAIT FOR IT TO BE FULLY INSERTED -----
       //------------------------------------------------------------
       //(To allow for users that don't insert the card in one nice quick
-      //movement)
+      // movement)
 
       // Ensure card is still inserted
       if (ffs_is_card_present() == 0) {
@@ -126,7 +126,7 @@ void ffs_process(void) {
   //----------------------------------------
   //----------------------------------------
   //(The only state that exits the switch statement above is
-  //FFS_PROCESS_WAIT_FOR_CARD_RESET when it completes)
+  // FFS_PROCESS_WAIT_FOR_CARD_RESET when it completes)
 
   SPI_BUS_SET_TO_LOW_SPEED;
 
@@ -189,7 +189,7 @@ void ffs_process(void) {
     if ((b_temp & 0x0f) != 0x01)
       goto init_new_ffs_card_fail;  // Our standard voltage range is not
                                     // accepted by this card
-    b_temp = ffs_read_byte();  // Copy of our check pattern
+    b_temp = ffs_read_byte();       // Copy of our check pattern
     if (b_temp != 0xaa) card_is_high_capacity = 0;
   } else {
     card_is_high_capacity =
@@ -212,7 +212,8 @@ void ffs_process(void) {
   //----- SEND COMMAND ACMD41 -----
   // SD card Do initialise - send until the card has completed its
   // initialisation and is ready (This can take some time, especially on larger
-  //cards - 100's of mS) If card is MMC we expect it to fail this process as MMC
+  // cards - 100's of mS) If card is MMC we expect it to fail this process as
+  // MMC
   // cards do not accept ACMD41 (this is how we detect card is not MMC)
   ffs_10ms_timer = 250;
   b_temp = 0;
@@ -306,7 +307,7 @@ void ffs_process(void) {
     b_temp =
         chk_cmd_response_data;  // Get the response byte that
                                 // ffs_check_command_response_byte just received
-    if (b_temp != 0)  // Response should be 0
+    if (b_temp != 0)            // Response should be 0
     {
       b_temp = 0;
       continue;
@@ -377,7 +378,7 @@ init_new_ffs_card_init_mmc:
   while ((b_temp & 0x01) == 0) {
     ffs_write_byte(0x40 + 1);  // Command
     ffs_write_byte(0x40);      // Bit 30 high to indicate high capacity support,
-                           // remaining bits must be zero
+                               // remaining bits must be zero
     ffs_write_byte(0);
     ffs_write_byte(0);
     ffs_write_byte(0);
@@ -427,7 +428,7 @@ init_new_ffs_card_init_mmc:
     b_temp =
         chk_cmd_response_data;  // Get the response byte that
                                 // ffs_check_command_response_byte just received
-    if (b_temp != 0)  // Response should be 0
+    if (b_temp != 0)            // Response should be 0
     {
       b_temp = 0;
       continue;
@@ -477,7 +478,7 @@ init_new_ffs_card_init_mmc_done:
   FFS_CE(1);             // De-select card
   ffs_write_byte(0xff);  // Send extra clock pulses in case card is still
                          // completing an operation
-  FFS_CE(0);  // Re-select card
+  FFS_CE(0);             // Re-select card
 
   //---------------------------------------
   //----- READ THE MASTER BOOT RECORD -----
@@ -492,7 +493,7 @@ init_new_ffs_card_init_mmc_done:
   // Now at start of the partition table [0x000001be]
   // Check for Partition 1 active (0x00 = inactive, 0x80 = active) [1]
   //(We allow a value of 0x00 for partition 1 as this partition must be present
-  //and on some disks a value of 0x00 has been found) if (*buffer_pointer++ !=
+  // and on some disks a value of 0x00 has been found) if (*buffer_pointer++ !=
   // 0x80) 	goto init_new_ffs_card_fail
   buffer_pointer++;
 
@@ -616,14 +617,14 @@ init_new_ffs_card_init_mmc_done:
 
   // Get 'sectors per fat'  [# + 0x0016]
   //(Used by FAT16, but not for FAT32 - for FAT32 the value is a double word and
-  //located later on in this table - variable will be overwritten)
+  // located later on in this table - variable will be overwritten)
   sectors_per_fat = (DWORD)*buffer_pointer++;
   sectors_per_fat |= (DWORD)(*buffer_pointer++) << 8;
 
   if (disk_is_fat_32 == 0) {
     //---------------------------------------------------------------------------------------
     //----- PARTITION IS FAT 16 - COMPLETE BOOT RECORD & INITAILISATION FOR THIS
-    //SYSTEM -----
+    // SYSTEM -----
     //---------------------------------------------------------------------------------------
 
     // CALCULATE THE PARTITION AREAS START ADDRESSES
@@ -651,7 +652,7 @@ init_new_ffs_card_init_mmc_done:
   } else {
     //---------------------------------------------------------------------------------------
     //----- PARTITION IS FAT 32 - COMPLETE BOOT RECORD & INITAILISATION FOR THIS
-    //SYSTEM -----
+    // SYSTEM -----
     //---------------------------------------------------------------------------------------
 
     // Dump sectors per track, # of heads, # of hidden sectors in partition (12
@@ -667,7 +668,7 @@ init_new_ffs_card_init_mmc_done:
     // Get 'Flags' [# + 0x0028]
     //(Bits 0-4 Indicate Active FAT Copy)
     //(Bit 7 Indicates whether FAT Mirroring is Enabled or Disabled <Clear is
-    //Enabled>) (If FAT Mirroringis Disabled, the FAT Information is only
+    // Enabled>) (If FAT Mirroringis Disabled, the FAT Information is only
     // written to the copy indicated by bits 0-4)
     w_temp = (DWORD)*buffer_pointer++;
     w_temp |= (DWORD)(*buffer_pointer++) << 8;
@@ -716,7 +717,7 @@ init_new_ffs_card_init_mmc_done:
 
     // Get 'Sector Number of the File System Information Sector' [# + 0x0030]
     //(Referenced from the Start of the Partition. Usually 1, but not requried
-    //to be 1)
+    // to be 1)
     file_system_information_sector = (DWORD)*buffer_pointer++;
     file_system_information_sector |= (DWORD)(*buffer_pointer++) << 8;
 
@@ -842,7 +843,7 @@ void ffs_read_sector_to_buffer(DWORD sector_lba) {
   BYTE read_successful = 0;
 
   //----- IF LBA MATCHES THE LAST LBA DON'T BOTHER RE-READING AS THE DATA IS
-  //STILL IN THE BUFFER -----
+  // STILL IN THE BUFFER -----
   if (ffs_buffer_contains_lba == sector_lba) {
     return;
   }
@@ -858,7 +859,7 @@ void ffs_read_sector_to_buffer(DWORD sector_lba) {
                       // to be cleared
 
   //----- IF THE BUFFER CONTAINS DATA THAT IS WAITING TO BE WRITTEN THEN WRITE
-  //IT FIRST -----
+  // IT FIRST -----
   if (ffs_buffer_needs_writing_to_card) {
     if (ffs_buffer_contains_lba !=
         0xffffffff)  // This should not be possible but check is made just in
@@ -1006,8 +1007,8 @@ void ffs_write_sector_from_buffer(DWORD sector_lba) {
       // Get command response
       if (ffs_check_command_response_byte(0xff, 0x00) ==
           0)  // R1 response: | 0 | ParameterError | AddressError | Erase
-              // Sequence Error | Com CRC Error | Illegal Command | Erase Reset |
-              // In Idle State |
+              // Sequence Error | Com CRC Error | Illegal Command | Erase Reset
+              // | In Idle State |
         goto ffs_write_sector_from_buffer_exit;
 
       // Send the data token
@@ -1043,8 +1044,8 @@ void ffs_write_sector_from_buffer(DWORD sector_lba) {
     }
 
     // Give 8 clocks for the card to complete the operation
-    // ffs_write_byte(0xff);							//Don't do this - causes
-    // errors
+    // ffs_write_byte(0xff);							//Don't do this -
+    // causes errors
 
   }  // while ((write_successful == 0) && (ffs_10ms_timer))
 }
@@ -1054,6 +1055,7 @@ void ffs_write_sector_from_buffer(DWORD sector_lba) {
 //********** WRITE BYTE TO CARD **********
 //****************************************
 //****************************************
+
 BYTE ffs_write_byte(BYTE data) {
   BYTE data_rx;
 
@@ -1106,6 +1108,7 @@ BYTE ffs_read_byte(void) {
 //********** CHECK COMMAND RESPONSE FROM CARD **********
 //******************************************************
 //******************************************************
+
 BYTE ffs_check_command_response_byte(BYTE mask, BYTE data_requried) {
   BYTE count;
 
@@ -1121,6 +1124,7 @@ BYTE ffs_check_command_response_byte(BYTE mask, BYTE data_requried) {
     chk_cmd_response_data = FFS_SPI_RX_BYTE_BUFFER;
 
     if ((chk_cmd_response_data & mask) == (data_requried & mask)) return (1);
+
   }
 
   // Valid response was not received

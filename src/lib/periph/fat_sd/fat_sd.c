@@ -17,20 +17,20 @@
  */
 
 #include "periph/fat_sd/fat_sd.h"
-#include "periph/fat_sd/mem-ffs.h"
-#include "periph/fat_sd/mem-mmcsd.h"
 #include "core/hardware.h"
 #include "core/rulos.h"
+#include "periph/fat_sd/mem-ffs.h"
+#include "periph/fat_sd/mem-mmcsd.h"
 
 #ifdef RULOS_ARM
 
-#include "stm32f3xx_ll_spi.h"
 #include "stm32f3xx_ll_bus.h"
+#include "stm32f3xx_ll_spi.h"
 
 // Called every 10ms.
 static void ffs_update(void *data) {
-  // This is a timer internal to the SD/FAT library; part of the API is that we're
-  // required to do this every 10ms.
+  // This is a timer internal to the SD/FAT library; part of the API is that
+  // we're required to do this every 10ms.
   if (ffs_10ms_timer) {
     ffs_10ms_timer--;
   }
@@ -44,7 +44,10 @@ void ffs_init() {
   // Disable SPI1 so parameters can be changed
   LL_SPI_Disable(SPI1);
 
-  // Configure SCK Pin 
+  // Enable GPIOB peripheral clock
+  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOB);
+
+  // Configure SCK Pin
   LL_GPIO_SetPinMode(GPIOB, LL_GPIO_PIN_3, LL_GPIO_MODE_ALTERNATE);
   LL_GPIO_SetAFPin_0_7(GPIOB, LL_GPIO_PIN_3, LL_GPIO_AF_5);
   LL_GPIO_SetPinSpeed(GPIOB, LL_GPIO_PIN_3, LL_GPIO_SPEED_FREQ_HIGH);
@@ -70,6 +73,7 @@ void ffs_init() {
   LL_SPI_SetTransferBitOrder(SPI1, LL_SPI_MSB_FIRST);
   LL_SPI_SetDataWidth(SPI1, LL_SPI_DATAWIDTH_8BIT);
   LL_SPI_SetNSSMode(SPI1, LL_SPI_NSS_SOFT);
+  LL_SPI_SetRxFIFOThreshold(SPI1, LL_SPI_RX_FIFO_TH_QUARTER);
   LL_SPI_SetMode(SPI1, LL_SPI_MODE_MASTER);
 
   // Enable SPI1!

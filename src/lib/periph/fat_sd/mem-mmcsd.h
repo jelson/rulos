@@ -44,14 +44,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define MMCSD_C_INIT
 
 //----------------------------------------------
-//----- DEFINE TARGET COMPILER & PROCESSOR -----				//<<<<<
-//CHECK FOR A NEW APPLICATION <<<<<
+//----- DEFINE TARGET COMPILER & PROCESSOR -----
+////<<<<< CHECK FOR A NEW APPLICATION <<<<<
 //----------------------------------------------
 //(ONLY 1 SHOULD BE INCLUDED, COMMENT OUT OTHERS - ALSO SET IN THE OTHER DRIVER
 //.h FILE) #define	MMCSD_USING_MICROCHIP_C18_COMPILER #define
-//MMCSD_USING_MICROCHIP_C30_COMPILER #define
-//MMCSD_USING_MICROCHIP_C32_COMPILER #define
-//MMCSD_USING_CROSSWORKS_ARM_COMPILER
+// MMCSD_USING_MICROCHIP_C30_COMPILER #define
+// MMCSD_USING_MICROCHIP_C32_COMPILER #define
+// MMCSD_USING_CROSSWORKS_ARM_COMPILER
 //<< add other compiler types here
 
 //--------------------------------
@@ -79,13 +79,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //----- SPI BUS CONTROL REGISTERS -----
 //#define	FFS_SPI_BUF_FULL			SSP1STATbits.BF
 ////>0 when the SPI receive buffer contains a received byte, also signifying
-//that transmit is complete
+// that transmit is complete
 //#define	FFS_SPI_TX_BYTE(data)		SSP1BUF = data
 ////Macro to write a byte and start transmission over the SPI bus #define
-//FFS_SPI_RX_BYTE_BUFFER		SSP1BUF
+// FFS_SPI_RX_BYTE_BUFFER		SSP1BUF
 ////Register to read last received byte from
 //##### Due to silicon bugs in the PIC18F4620 the following alternative defines
-//are needed as workarounds #####
+// are needed as workarounds #####
 #define FFS_SPI_BUF_FULL PIR1bits.SSPIF
 #define FFS_SPI_TX_BYTE(data) \
   PIR1bits.SSPIF = 0;         \
@@ -96,7 +96,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // SPI BUS LOW SPEED (Min 100KHz, Max 400KHz)  (Min speed required for ACDM41
 // initalisation)
 //- Adjust as required for the microcontroller and instruction clock frequency
-//being used
+// being used
 #define SPI_BUS_SET_TO_LOW_SPEED \
   SSPCON1bits.SSPM3 = 0;         \
   SSPCON1bits.SSPM2 = 0;         \
@@ -105,7 +105,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 // SPI BUS FULL SPEED FOR MMC CARD (Max 20MHz)
 //- Adjust as required for the microcontroller and instruction clock frequency
-//being used
+// being used
 #define SPI_BUS_SET_TO_FULL_SPEED_MMC \
   SSPCON1bits.SSPM3 = 0;              \
   SSPCON1bits.SSPM2 = 0;              \
@@ -114,7 +114,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 // SPI BUS FULL SPEED FOR SD CARD (Max 25MHz)
 //- Adjust as required for the microcontroller and instruction clock frequency
-//being used
+// being used
 #define SPI_BUS_SET_TO_FULL_SPEED_SD \
   SSPCON1bits.SSPM3 = 0;             \
   SSPCON1bits.SSPM2 = 0;             \
@@ -123,27 +123,27 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 //----- CARD DETECT PIN -----
 //(Defined like this so the pin can be connected to an input latch IC instead of
-//directly to the processor if desired)
+// directly to the processor if desired)
 #define FFS_CD_PIN_REGISTER PORTC
 #define FFS_CD_PIN_BIT \
   0x01  //(0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02 or 0x01)
 //#define	FFS_CD_PIN_FUNCTION
 ////Optional function to call to get the FFS_RESET_PIN_REGISTER.  Comment out if
-//not requried
+// not requried
 //#define	FFS_CD_PIN_NC
 ////Include if card detect pin is normally closed (breaks when card inserted) or
-//comment out if normally open (0V common assumed)
+// comment out if normally open (0V common assumed)
 
 //----- WRITE PROTECT PIN -----
 //(Defined like this so the pin can be connected to an input latch IC instead of
-//directly to the processor if desired)
+// directly to the processor if desired)
 #define FFS_WP_PIN_REGISTER \
   PORTC  // To disable write protect pin checking comment out this define
 #define FFS_WP_PIN_BIT \
   0x04  //(0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02 or 0x01)
 //#define	FFS_WP_PIN_FUNCTION
 ////Optional function to call to get the FFS_RESET_PIN_REGISTER.  Comment out if
-//not requried
+// not requried
 #define FFS_WP_PIN_NC  // Include if card detect pin is normally closed (breaks
                        // when write protect is active) or comment out if
                        // normally open (closes when write protect is active)(0V
@@ -155,8 +155,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #define DO_BUSY_STATE_ACCESS_DELAY \
   Nop()  //('Nop()' is a single cycle null instruction for the C18 compiler,
-         //include multiple times if required to provide time for the card to
-         //drive the DO line if it needs to)
+         // include multiple times if required to provide time for the card to
+         // drive the DO line if it needs to)
 
 //###############################################
 //##### END OF USING MICROCHIP C18 COMPILER #####
@@ -178,7 +178,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //----- SPI BUS CONTROL REGISTERS -----
 #define FFS_SPI_BUF_FULL \
   IFS0bits.SPI1IF  //>0 when the SPI receive buffer contains a received byte,
-                   //also signifying that transmit is complete
+                   // also signifying that transmit is complete
 #define FFS_SPI_TX_BYTE(data) \
   IFS0bits.SPI1IF = 0;        \
   SPI1BUF =                   \
@@ -190,7 +190,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // SPI BUS LOW SPEED (Min 100KHz, Max 400KHz)  (Min speed required for ACDM41
 // initalisation)
 //- Adjust as required for the microcontroller and instruction clock frequency
-//being used Prescallers 16:1, 8:1 = 312.5KHz
+// being used Prescallers 16:1, 8:1 = 312.5KHz
 #define SPI_BUS_SET_TO_LOW_SPEED \
   SPI1STATbits.SPIEN = 0;        \
   SPI1CON1bits.PPRE1 = 0;        \
@@ -202,7 +202,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 // SPI BUS FULL SPEED FOR MMC CARD (Max 20MHz)
 //- Adjust as required for the microcontroller and instruction clock frequency
-//being used Prescallers 4:1 1:1 = 10MHz (max possible from this device)
+// being used Prescallers 4:1 1:1 = 10MHz (max possible from this device)
 #define SPI_BUS_SET_TO_FULL_SPEED_MMC \
   SPI1STATbits.SPIEN = 0;             \
   SPI1CON1bits.PPRE1 = 1;             \
@@ -214,7 +214,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 // SPI BUS FULL SPEED FOR SD CARD (Max 25MHz)
 //- Adjust as required for the microcontroller and instruction clock frequency
-//being used Prescallers 4:1 1:1 = 10MHz (max possible from this device)
+// being used Prescallers 4:1 1:1 = 10MHz (max possible from this device)
 #define SPI_BUS_SET_TO_FULL_SPEED_SD \
   SPI1STATbits.SPIEN = 0;            \
   SPI1CON1bits.PPRE1 = 1;            \
@@ -226,26 +226,26 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 //----- CARD DETECT PIN -----
 //(Defined like this so the pin can be connected to an input latch IC instead of
-//directly to the processor if desired)
+// directly to the processor if desired)
 #define FFS_CD_PIN_REGISTER PORTG
 #define FFS_CD_PIN_BIT 0x01  //(0x0008, 0x0004, 0x0002, 0x0001 etc)
 //#define	FFS_CD_PIN_FUNCTION
 ////Optional function to call to get the FFS_RESET_PIN_REGISTER.  Comment out if
-//not requried
+// not requried
 //#define	FFS_CD_PIN_NC
 ////Include if card detect pin is normally closed (breaks when card inserted) or
-//comment out if normally open (0V common assumed)
+// comment out if normally open (0V common assumed)
 
 //----- WRITE PROTECT PIN -----
 //(Defined like this so the pin can be connected to an input latch IC instead of
-//directly to the processor if desired)
+// directly to the processor if desired)
 #define FFS_WP_PIN_REGISTER \
   PORTG  // To disable write protect pin checking comment out this define
 #define FFS_WP_PIN_BIT \
   0x02  //(0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02 or 0x01)
 //#define	FFS_WP_PIN_FUNCTION
 ////Optional function to call to get the FFS_RESET_PIN_REGISTER.  Comment out if
-//not requried
+// not requried
 #define FFS_WP_PIN_NC  // Include if card detect pin is normally closed (breaks
                        // when write protect is active) or comment out if
                        // normally open (closes when write protect is active)(0V
@@ -254,14 +254,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //----- MISC -----
 #define FFS_DRIVER_GEN_512_BYTE_BUFFER \
   ffs_general_buffer  // This general buffer is used by routines and may be the
-                      // same as the buffer that the application uses to read and
-                      // write data from and to the card if ram is limited
+                      // same as the buffer that the application uses to read
+                      // and write data from and to the card if ram is limited
 
 #define DO_BUSY_STATE_ACCESS_DELAY \
   Nop();                           \
   Nop()  //('Nop()' is a single cycle null instruction for the C30 compiler,
-         //include multiple times if required to provide time for the card to
-         //drive the DO line if it needs to)
+         // include multiple times if required to provide time for the card to
+         // drive the DO line if it needs to)
 
 //###############################################
 //##### END OF USING MICROCHIP C30 COMPILER #####
@@ -274,7 +274,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //########################################
 
 //~~~~ WARNING - C32 COMPILER SPI_CHANNEL# DEFINITIONS ARE NON LOGICAL!
-//SPI_CHANNEL2 = SPI1 etc ~~~~~
+// SPI_CHANNEL2 = SPI1 etc ~~~~~
 
 //----- CONTROL PINS -----
 #define FFS_CE(state)           \
@@ -288,7 +288,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //----- SPI BUS CONTROL REGISTERS -----
 #define FFS_SPI_BUF_FULL \
   SpiChnDataRdy(2)  //>0 when the SPI receive buffer contains a received byte,
-                    //also signifying that transmit is complete
+                    // also signifying that transmit is complete
 #define FFS_SPI_TX_BYTE(data) \
   WriteSPI2((unsigned int)data)  // Macro to write a byte and start transmission
                                  // over the SPI bus
@@ -299,14 +299,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // SPI BUS LOW SPEED (Min 100KHz, Max 400KHz)  (Min speed required for ACDM41
 // initalisation)
 //- Adjust as required for the microcontroller and instruction clock frequency
-//being used Prescallers 16:1, 8:1 = 312.5KHz
+// being used Prescallers 16:1, 8:1 = 312.5KHz
 #define SPI_BUS_SET_TO_LOW_SPEED                                    \
   SpiChnOpen(2, (SPI_CON_MSTEN | SPI_OPEN_CKE_REV | SPI_CON_MODE8), \
              50);  // 20MHz fpb / 50 = 400kHz
 
 // SPI BUS FULL SPEED FOR MMC CARD (Max 20MHz)
 //- Adjust as required for the microcontroller and instruction clock frequency
-//being used Prescallers 4:1 1:1 = 10MHz (max possible from this device)
+// being used Prescallers 4:1 1:1 = 10MHz (max possible from this device)
 #define SPI_BUS_SET_TO_FULL_SPEED_MMC                        \
   SpiChnOpen(                                                \
       2, (SPI_CON_MSTEN | SPI_OPEN_CKE_REV | SPI_CON_MODE8), \
@@ -315,7 +315,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 // SPI BUS FULL SPEED FOR SD CARD (Max 25MHz)
 //- Adjust as required for the microcontroller and instruction clock frequency
-//being used Prescallers 4:1 1:1 = 10MHz (max possible from this device)
+// being used Prescallers 4:1 1:1 = 10MHz (max possible from this device)
 #define SPI_BUS_SET_TO_FULL_SPEED_SD                         \
   SpiChnOpen(                                                \
       2, (SPI_CON_MSTEN | SPI_OPEN_CKE_REV | SPI_CON_MODE8), \
@@ -324,26 +324,26 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 //----- CARD DETECT PIN -----
 //(Defined like this so the pin can be connected to an input latch IC instead of
-//directly to the processor if desired)
+// directly to the processor if desired)
 #define FFS_CD_PIN_REGISTER mPORTFRead()
 #define FFS_CD_PIN_BIT 0x0001  //(0x0008, 0x0004, 0x0002, 0x0001 etc)
 //#define	FFS_CD_PIN_FUNCTION
 ////Optional function to call to get the FFS_RESET_PIN_REGISTER.  Comment out if
-//not requried
+// not requried
 //#define	FFS_CD_PIN_NC
 ////Include if card detect pin is normally closed (breaks when card inserted) or
-//comment out if normally open (0V common assumed)
+// comment out if normally open (0V common assumed)
 
 //----- WRITE PROTECT PIN -----
 //(Defined like this so the pin can be connected to an input latch IC instead of
-//directly to the processor if desired) #define	FFS_WP_PIN_REGISTER
-//mPORTFRead			//To disable write protect pin checking comment
-//out this define
+// directly to the processor if desired) #define	FFS_WP_PIN_REGISTER
+// mPORTFRead			//To disable write protect pin checking comment
+// out this define
 #define FFS_WP_PIN_BIT \
   0x0002  //(0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02 or 0x01)
 //#define	FFS_WP_PIN_FUNCTION
 ////Optional function to call to get the FFS_RESET_PIN_REGISTER.  Comment out if
-//not requried
+// not requried
 #define FFS_WP_PIN_NC  // Include if card detect pin is normally closed (breaks
                        // when write protect is active) or comment out if
                        // normally open (closes when write protect is active)(0V
@@ -352,14 +352,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //----- MISC -----
 #define FFS_DRIVER_GEN_512_BYTE_BUFFER \
   ffs_general_buffer  // This general buffer is used by routines and may be the
-                      // same as the buffer that the application uses to read and
-                      // write data from and to the card if ram is limited
+                      // same as the buffer that the application uses to read
+                      // and write data from and to the card if ram is limited
 
 #define DO_BUSY_STATE_ACCESS_DELAY \
   Nop();                           \
   Nop()  //('Nop()' is a single cycle null instruction for the C30 compiler,
-         //include multiple times if required to provide time for the card to
-         //drive the DO line if it needs to)
+         // include multiple times if required to provide time for the card to
+         // drive the DO line if it needs to)
 
 //###############################################
 //##### END OF USING MICROCHIP C32 COMPILER #####
@@ -387,13 +387,13 @@ BYTE spi_rx_dummy_reg;  // We need this register for the FFS_SPI_TX_BYTE define
 //----- SPI BUS CONTROL REGISTERS -----
 #define FFS_SPI_BUF_FULL \
   (SSP0SR & SSP0SR_RNE)  //>0 when the SPI receive buffer contains a received
-                         //byte, also signifying that transmit is complete
+                         // byte, also signifying that transmit is complete
 #define FFS_SPI_TX_BYTE(data)                            \
   while (SSP0SR & SSP0SR_RNE) spi_rx_dummy_reg = SSP0DR; \
   SSP0DR =                                               \
       data  // Macro to write a byte and start transmission over the SPI bus
-            // (the check for empty shouldn't strictly be required, but with this
-            // part not including it can cause occasional failure)
+            // (the check for empty shouldn't strictly be required, but with
+            // this part not including it can cause occasional failure)
 #define FFS_SPI_RX_BYTE_BUFFER \
   (BYTE) SSP0DR  // Register to read last received byte from
 
@@ -401,17 +401,17 @@ BYTE spi_rx_dummy_reg;  // We need this register for the FFS_SPI_TX_BYTE define
 // SPI BUS LOW SPEED (Min 100KHz, Max 400KHz)  (Min speed required for ACDM41
 // initalisation)
 //- Adjust as required for the microcontroller and instruction clock frequency
-//being used
-//#define	SPI_BUS_SET_TO_LOW_SPEED	S0SPCCR = 150		//SPI PCLK
-//= 60MHz.  400KHz = 2.5uS = 150
+// being used
+//#define	SPI_BUS_SET_TO_LOW_SPEED	S0SPCCR = 150		//SPI
+//PCLK = 60MHz.  400KHz = 2.5uS = 150
 #define SPI_BUS_SET_TO_LOW_SPEED \
   SSP0CPSR = 150  // SPI PCLK = 60MHz.  400KHz = 2.5uS = 150
 
 // SPI BUS FULL SPEED FOR MMC CARD (Max 20MHz)
 //- Adjust as required for the microcontroller and instruction clock frequency
-//being used
+// being used
 //#define	SPI_BUS_SET_TO_FULL_SPEED_MMC	S0SPCCR = 8		//SPI
-//PCLK = 60MHz.  20MHz = 50nS = 8(min allowed) = 7.5MHz actual speed
+// PCLK = 60MHz.  20MHz = 50nS = 8(min allowed) = 7.5MHz actual speed
 #define SPI_BUS_SET_TO_FULL_SPEED_MMC \
   SSP0CR1 = 0;                        \
   SSP0CPSR = 4;                       \
@@ -419,9 +419,9 @@ BYTE spi_rx_dummy_reg;  // We need this register for the FFS_SPI_TX_BYTE define
 
 // SPI BUS FULL SPEED FOR SD CARD (Max 25MHz)
 //- Adjust as required for the microcontroller and instruction clock frequency
-//being used
+// being used
 //#define	SPI_BUS_SET_TO_FULL_SPEED_SD	S0SPCCR = 8		//SPI
-//PCLK = 60MHz.  25MHz = 40nS = 8(min allowed) = 7.5MHz actual speed
+// PCLK = 60MHz.  25MHz = 40nS = 8(min allowed) = 7.5MHz actual speed
 #define SPI_BUS_SET_TO_FULL_SPEED_SD \
   SSP0CR1 = 0;                       \
   SSP0CPSR = 4;                      \
@@ -429,33 +429,32 @@ BYTE spi_rx_dummy_reg;  // We need this register for the FFS_SPI_TX_BYTE define
 
 //----- CARD DETECT PIN -----
 //(Defined like this so the pin can be connected to an input latch IC instead of
-//directly to the processor if desired)
+// directly to the processor if desired)
 #define FFS_CD_PIN_REGISTER FIO0PIN
 #define FFS_CD_PIN_BIT 0x00080000
 //#define	FFS_CD_PIN_FUNCTION
 ////Optional function to call to get the FFS_RESET_PIN_REGISTER.  Comment out if
-//not requried
+// not requried
 //#define	FFS_CD_PIN_NC
 ////Include if card detect pin is normally closed (breaks when card inserted) or
-//comment out if normally open (0V common assumed)
+// comment out if normally open (0V common assumed)
 
 //----- WRITE PROTECT PIN -----
 //(Defined like this so the pin can be connected to an input latch IC instead of
-//directly to the processor if desired) #define	FFS_WP_PIN_REGISTER
-//PORTG			//To disable write protect pin checking comment out this
-//define #define	FFS_WP_PIN_BIT				0x02
+// directly to the processor if desired) #define	FFS_WP_PIN_REGISTER
+// PORTG			//To disable write protect pin checking comment out
+// this define #define	FFS_WP_PIN_BIT				0x02
 ////(0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02 or 0x01) #define
-//FFS_WP_PIN_FUNCTION							//Optional
-//function to call to get the FFS_RESET_PIN_REGISTER.  Comment out if not
-//requried #define	FFS_WP_PIN_NC
+// FFS_WP_PIN_FUNCTION //Optional function to call to get the
+// FFS_RESET_PIN_REGISTER.  Comment out if not requried #define	FFS_WP_PIN_NC
 ////Include if card detect pin is normally closed (breaks when write protect is
-//active) or comment out if normally open (closes when write protect is
+// active) or comment out if normally open (closes when write protect is
 // active)(0V common assumed)
 //----- MISC -----
 #define FFS_DRIVER_GEN_512_BYTE_BUFFER \
   ffs_general_buffer  // This general buffer is used by routines and may be the
-                      // same as the buffer that the application uses to read and
-                      // write data from and to the card if ram is limited
+                      // same as the buffer that the application uses to read
+                      // and write data from and to the card if ram is limited
 
 #define DO_BUSY_STATE_ACCESS_DELAY \
   __asm("nop");                    \
@@ -470,8 +469,8 @@ BYTE spi_rx_dummy_reg;  // We need this register for the FFS_SPI_TX_BYTE define
   __asm("nop");                    \
   __asm("nop");                    \
   __asm("nop")  //('Nop()' is a single cycle null instruction, include multiple
-                //times if required to provide time for the card to drive the DO
-                //line if it needs to)
+                // times if required to provide time for the card to drive the
+                // DO line if it needs to)
 
 //################################################
 //##### END OF USING CROSSWORKS ARM COMPILER #####
@@ -486,7 +485,10 @@ BYTE spi_rx_dummy_reg;  // We need this register for the FFS_SPI_TX_BYTE define
 #define FFC_DI gpio_is_set(GPIO_B4)
 #define FFS_SPI_TX_BYTE(data) LL_SPI_TransmitData8(SPI1, data)
 #define FFS_SPI_RX_BYTE_BUFFER LL_SPI_ReceiveData8(SPI1)
-#define FFS_SPI_BUF_FULL LL_SPI_IsActiveFlag_BSY(SPI1)
+
+// This is badly named; it means "returns true when operation is
+// complete".
+#define FFS_SPI_BUF_FULL (!LL_SPI_IsActiveFlag_BSY(SPI1))
 
 #define SPI_BUS_SET_TO_LOW_SPEED
 #define SPI_BUS_SET_TO_FULL_SPEED_SD

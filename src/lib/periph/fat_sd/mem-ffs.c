@@ -38,37 +38,39 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //*******************************
 //*******************************
 // For ease of use this driver does not differentiate between text and binary
-// mode.  You may open a file in either mode (or neither) and all file operations
-// will be exactly the same (basically is if the file was opened in binary mode.
-// LF characters will not be converted to a pair CRLF characters and vice versa.
-// This makes using functions like fseek much simpler and avoids operating system
-// difference issues.  (If you are not aware there is no difference between a
-// binary file and a text file - the difference is in how the operating system
-// chooses to handle text files)
+// mode.  You may open a file in either mode (or neither) and all file
+// operations will be exactly the same (basically is if the file was opened in
+// binary mode. LF characters will not be converted to a pair CRLF characters
+// and vice versa. This makes using functions like fseek much simpler and avoids
+// operating system difference issues.  (If you are not aware there is no
+// difference between a binary file and a text file - the difference is in how
+// the operating system chooses to handle text files)
 //
 // filename
 //	Only 8 character DOS compatible root directory filenames are allowed.
-//Format is F.E where F may be between 1 and 8 characters 	and E may be between 1
-//and 3 characters, null terminated, non-case sensitive.  The '*' and '?'
-//wildcard characters may be used.
+// Format is F.E where F may be between 1 and 8 characters 	and E may be
+// between 1 and 3 characters, null terminated, non-case sensitive.  The '*' and
+// '?' wildcard characters may be used.
 //
 // access_mode
 //	"r"		Open a file for reading. The file must exist.
 //	"r+"	Open a file for reading and writing. The file must exist.
-//	"w"		Create an empty file for writing. If a file with the same
-//name already exists its content is erased. 	"w+"	Create an empty file for
-//writing and reading. If a file with the same name already exists its content
-//is erased before it is opened. 	"a"		Append to a file. Writing
-//operations append data at the end of the file. The file is created if it
-//doesn't exist. 	"a+"	Open a file for reading and appending. All writing
-//operations are done at the end of the file protecting the previous 			content
-//from being overwritten.  You can reposition (fseek) the pointer to anywhere in
-//the file for reading, but 			writing operations will move back to the end of
-//file.  The file is created if it doesn't exist.
+//	"w"		Create an empty file for writing. If a file with the
+//same
+// name already exists its content is erased. 	"w+"	Create an empty file for
+// writing and reading. If a file with the same name already exists its content
+// is erased before it is opened. 	"a"		Append to a file.
+// Writing operations append data at the end of the file. The file is created if
+// it doesn't exist. 	"a+"	Open a file for reading and appending. All
+// writing operations are done at the end of the file protecting the previous
+// content from being overwritten.  You can reposition (fseek) the pointer to
+// anywhere in
+// the file for reading, but 			writing operations will move back to
+// the end of file.  The file is created if it doesn't exist.
 //
 // Return value.
 //	If the file has been successfully opened the function will return a
-//pointer to the file. Otherwise a null pointer is returned (0x00).
+// pointer to the file. Otherwise a null pointer is returned (0x00).
 
 FFS_FILE *ffs_fopen(const char *filename, const char *access_mode) {
   BYTE file_number;
@@ -377,7 +379,7 @@ int ffs_fseek(FFS_FILE *file_pointer, long offset, int origin) {
 
     //--------------------------------------------------------------------------------------------------------------------------------------------
     //----- IF NEW LOCATION IS WITHIN CURRENT CLUSTER THEN DO ADJUSTMENT
-    //AVOIDING HAVING TO READ EVERY FAT CLUSTER ENTRY FROM THE FILE START -----
+    // AVOIDING HAVING TO READ EVERY FAT CLUSTER ENTRY FROM THE FILE START -----
     //--------------------------------------------------------------------------------------------------------------------------------------------
 
     if (bytes_to_new_posn == file_pointer->current_byte_within_file) {
@@ -464,7 +466,7 @@ int ffs_fseek(FFS_FILE *file_pointer, long offset, int origin) {
     if (calculate_new_posn) {
       //-------------------------------------------------------------------------------------------
       //----- NEW LOCATION IS NOT IN THE CURRENT CLUSTER - FIND IT FROM THE
-      //START OF THE FILE -----
+      // START OF THE FILE -----
       //-------------------------------------------------------------------------------------------
       file_pointer->current_cluster = get_file_start_cluster(file_pointer);
       file_pointer->current_sector = 0;
@@ -499,10 +501,11 @@ int ffs_fseek(FFS_FILE *file_pointer, long offset, int origin) {
 //************************************************
 //************************************************
 //(The value returned by ffs_getpos intended to be file system specific and to
-//be used with this function.  However as the position type is recomended to be
+// be used with this function.  However as the position type is recomended to be
 // a long we just use the ffs_ftell function as a long doesn't give us enough
-// space to store everything we need for the low level position) Returns 	0 if
-//successful, 1 otherwise
+// space to store everything we need for the low level position) Returns 	0
+// if
+// successful, 1 otherwise
 int ffs_fsetpos(FFS_FILE *file_pointer, long *position) {
   //----- EXIT IF THIS FILE ISN'T ACTUALLY OPEN -----
   if (file_pointer->flags.bits.file_is_open == 0) return (1);
@@ -535,10 +538,12 @@ long ffs_ftell(FFS_FILE *file_pointer) {
 //******************************************************
 //******************************************************
 //(The value returned is intended to be file system specific and only to be used
-//with fsetpos.  However as the position type is recomended to be a long we just
+// with fsetpos.  However as the position type is recomended to be a long we
+// just
 // use the ffs_ftell function as a long doesn't give us enough space to store
-// everything we need for the low level position) Returns 	0 if successful, 1
-//otherwise
+// everything we need for the low level position) Returns 	0 if successful,
+// 1
+// otherwise
 int ffs_fgetpos(FFS_FILE *file_pointer, long *position) {
   //----- EXIT IF THIS FILE ISN'T ACTUALLY OPEN -----
   if (file_pointer->flags.bits.file_is_open == 0) return (1);
@@ -585,7 +590,7 @@ int ffs_fputc(int data, FFS_FILE *file_pointer) {
 
   //---------------------------------------------------------------------------------------------------------------------------
   //----- CHECK THAT WRITING IN THIS POSITION IS PERMITTED FOR THE FOPEN MODE
-  //THAT WAS SPECIFIED WHEN THE FILE WAS OPENED -----
+  // THAT WAS SPECIFIED WHEN THE FILE WAS OPENED -----
   //---------------------------------------------------------------------------------------------------------------------------
   if (file_pointer->flags.bits.write_permitted == 0) {
     //----- WRITING IS NOT PERMITTED -----
@@ -594,7 +599,7 @@ int ffs_fputc(int data, FFS_FILE *file_pointer) {
   }
   if (file_pointer->flags.bits.write_append_only) {
     //----- APPEND MODE - WRITING MAY ONLY OCCUR AS NEW BYTES AT THE END OF THE
-    //FILE -----
+    // FILE -----
     dw_temp = file_pointer->current_byte_within_file;
     if (file_pointer->flags.bits.inc_posn_before_next_rw) {
       dw_temp++;
@@ -689,7 +694,7 @@ int ffs_fputc(int data, FFS_FILE *file_pointer) {
   //----- FLAG THAT WE NEED TO MOVE ON 1 BYTE NEXT TIME ACCESS IS MADE -----
   //------------------------------------------------------------------------
   //(we do this instead of incrementing now in case we have just done the last
-  //byte of the file)
+  // byte of the file)
   file_pointer->flags.bits.inc_posn_before_next_rw = 1;
 
   //----------------------------------------------------------
@@ -727,7 +732,7 @@ int ffs_fgetc(FFS_FILE *file_pointer) {
 
   //---------------------------------------------------------------------------------------------------------------------------
   //----- CHECK THAT READING IN THIS POSITION IS PERMITTED FOR THE FOPEN MODE
-  //THAT WAS SPECIFIED WHEN THE FILE WAS OPENED -----
+  // THAT WAS SPECIFIED WHEN THE FILE WAS OPENED -----
   //---------------------------------------------------------------------------------------------------------------------------
   if (file_pointer->flags.bits.read_permitted == 0) {
     // READ IS NOT PERMITTED
@@ -814,7 +819,7 @@ int ffs_fgetc(FFS_FILE *file_pointer) {
   //----- FLAG THAT WE NEED TO MOVE ON 1 BYTE NEXT TIME ACCESS IS MADE -----
   //------------------------------------------------------------------------
   //(we do this instead of incrementing now in case we have just doen the last
-  //byte of the file)
+  // byte of the file)
   file_pointer->flags.bits.inc_posn_before_next_rw = 1;
 
   //--------------------------------------------
@@ -883,13 +888,13 @@ int ffs_fputs_char(char *string, FFS_FILE *file_pointer) {
 //*******************************************
 // Reads characters from file and stores them into the specified buffer until a
 // newline (\n) or EOF character is read or (length - 1) characters have been
-//read. A newline character (\n) is not discarded.  A null termination is added
+// read. A newline character (\n) is not discarded.  A null termination is added
 // to the string
 //
 // Returns
 //	Pointer to the buffer if successful
 //	Null pointer if end-of-file or error (use ffs_ferror or ffs_feof to
-//check what happened)
+// check what happened)
 char *ffs_fgets(char *string, int length, FFS_FILE *file_pointer) {
   char *string_pointer;
   int return_value;
@@ -923,12 +928,12 @@ char *ffs_fgets(char *string, int length, FFS_FILE *file_pointer) {
 //**********************************************
 //**********************************************
 // Writes count number of items, each one with a size of size bytes, from the
-// specified buffer No translation occurs for files opened in text mode The total
-// number of bytes to be written is (size x count).
+// specified buffer No translation occurs for files opened in text mode The
+// total number of bytes to be written is (size x count).
 //
 // Returns
 //	Number of full items (not bytes) successfully written. This may be less
-//than the requested number if an error occurred.
+// than the requested number if an error occurred.
 
 int ffs_fwrite(const void *buffer, int size, int count,
                FFS_FILE *file_pointer) {
@@ -966,8 +971,8 @@ int ffs_fwrite(const void *buffer, int size, int count,
 //
 // Returns
 //	Number of items (not bytes) read is returned.  If this number differs
-//from the requested amount (count) an error has 	occurred or End Of File has
-//been reached (use ffs_ferror or ffs_feof to check what happened)
+// from the requested amount (count) an error has 	occurred or End Of File
+// has been reached (use ffs_ferror or ffs_feof to check what happened)
 int ffs_fread(void *buffer, int size, int count, FFS_FILE *file_pointer) {
   int size_count;
   int return_value;
@@ -1015,7 +1020,7 @@ int ffs_fflush(FFS_FILE *file_pointer) {
 
   // If the data buffer contains data that is waiting to be written then write
   // it (We just store any unwritten data regardless of what file this funciton
-  //is called with as there is only 1 buffer)
+  // is called with as there is only 1 buffer)
   if (ffs_buffer_needs_writing_to_card) {
     if (ffs_buffer_contains_lba !=
         0xffffffff)  // This should not be possible but check is made just in
@@ -1105,7 +1110,7 @@ int ffs_fclose(FFS_FILE *file_pointer) {
   ffs_fflush(file_pointer);
 
   //----- FLAG THAT THE FILE IS NO LOGER OPEN AND THIS FILE HANDLER IS AVAILABLE
-  //AGAIN -----
+  // AGAIN -----
   file_pointer->flags.bits.file_is_open = 0;
 
   //----- ENSURE CARD HAS COMPLETED LAST WRITE PROCESS -----
@@ -1188,7 +1193,7 @@ int ffs_remove(const char *filename) {
   //}
 
   //----- SET THE 1ST CHARACTER OF THE FILE NAME TO 0xE5 TO INDICATE ITS A
-  //DELETED ENTRY IN THE DIRECTORY -----
+  // DELETED ENTRY IN THE DIRECTORY -----
   converted_file_name[0] = 0xe5;
 
   //----- STORE THE MODIFIED DIRECTORY ENTRY BACK TO THE DISK -----
@@ -1197,7 +1202,7 @@ int ffs_remove(const char *filename) {
       &read_file_size, &read_cluster_number, 0x00);
 
   //----- CHANGE ALL ENTRIES IN THE FAT TABLE FOR THIS FILE BACK TO 0 TO
-  //INDICATE THE CLUSTERS ARE NOW FREE -----
+  // INDICATE THE CLUSTERS ARE NOW FREE -----
   if (disk_is_fat_32)
     fat_entries_per_sector = (DWORD)(
         ffs_bytes_per_sector >> 2);  // FAT32 - Divide no of bytes per sector by
@@ -1213,17 +1218,19 @@ int ffs_remove(const char *filename) {
 #endif
 
     // IF THE NEXT CLUSTER ENTRY IS IN THE SAME SECTOR AS THE LAST CLUSTER ENTRY
-    // THEN JUST UPDATE THE SECTOR BUFFER WITHOUT READ / WRITE TO THE CARD (If we
-    //don't do this then for each change to the FAT table we have to do a sector
-    //read followed by 2 sector writes as there are 2 FAT tables to update. This
+    // THEN JUST UPDATE THE SECTOR BUFFER WITHOUT READ / WRITE TO THE CARD (If
+    // we
+    // don't do this then for each change to the FAT table we have to do a
+    // sector read followed by 2 sector writes as there are 2 FAT tables to
+    // update. This
     // makes deleting increadibly slow as the efficiency of working on a single
     // sector as much as possible before writing it and reading the next is
     // lost.  This solution solves the problem based on the assumption that most
     // files will largely use concurrent clusters and therefore concurrent
     // entries in the FAT table).
 
-    // next_cluster = ffs_get_next_cluster_no(read_cluster_number);		//Instead
-    // we implement the working of this function directly here:-
+    // next_cluster = ffs_get_next_cluster_no(read_cluster_number);
+    // //Instead we implement the working of this function directly here:-
     current_cluster = read_cluster_number;
     lba = fat1_start_sector;
 
@@ -1271,9 +1278,9 @@ int ffs_remove(const char *filename) {
     next_cluster = lba;
 
     // ffs_modify_cluster_entry_in_fat(read_cluster_number,
-    // ((DWORD)0x00000000));		//Instead we implement the working of this
-    // function directly here (in the knowledge that we already have the correct
-    // sector loaded):-
+    // ((DWORD)0x00000000));		//Instead we implement the working of
+    // this function directly here (in the knowledge that we already have the
+    // correct sector loaded):-
     cluster_to_modify = read_cluster_number;
 
     //----- MOVE TO THE SECTOR FOR THIS CLUSTER ENTRY IN THE FAT1 TABLE -----
@@ -1351,7 +1358,7 @@ int ffs_remove(const char *filename) {
 
   //----- ENSURE CARD HAS COMPLETED LAST WRITE PROCESS -----
   // If the last write to the card before it is removed or powered down just
-  // occured some cards have been found to not store the last sector written.  If
+  // occured some cards have been found to not store the last sector written. If
   // the card is flagging that its busy then provide clock pulses to allow it to
   // complete its last operation
   DO_BUSY_STATE_ACCESS_DELAY;
@@ -1497,8 +1504,9 @@ int ffs_change_file_size(const char *filename, DWORD new_file_size) {
       next_cluster = ffs_get_next_cluster_no(read_cluster_number);
 
       // IF THE NEXT CLUSTER IS IN THE SAME AS THIS CLUSTER THEN JUST UPDATE THE
-      // SECTOR BUFFER (If we don't do this then for each change to the FAT table
-      //we have to do a sector read followed by 2 sector writes as there are 2
+      // SECTOR BUFFER (If we don't do this then for each change to the FAT
+      // table
+      // we have to do a sector read followed by 2 sector writes as there are 2
       // FAT tables to update.  This makes deleting increadibly slow as the
       // efficiency of working on a single sector as much as possible before
       // writing it and reading the next is lost.  This solution solves the
@@ -1527,7 +1535,7 @@ int ffs_change_file_size(const char *filename, DWORD new_file_size) {
 
       if (lba == ffs_buffer_contains_lba) {
         //----- NEXT CLUSTER ENTRY IS IN SAME FAT TABLE SECTOR AS THE CURRENT
-        //CLUSTER ENTRY -----
+        // CLUSTER ENTRY -----
         fat_needs_storing = 1;
         read_cluster_number -= (dw_temp * fat_entries_per_sector);
 
@@ -1550,7 +1558,7 @@ int ffs_change_file_size(const char *filename, DWORD new_file_size) {
         }
       } else {
         //----- NEXT CLUSTER ENTRY IS NOT IN THE SAME FAT TABLE SECTOR - DO
-        //UPDATE AS NORMAL -----
+        // UPDATE AS NORMAL -----
 
         // Store each fat table just modified
         if (fat_needs_storing) {
@@ -1683,7 +1691,7 @@ int ffs_change_file_size(const char *filename, DWORD new_file_size) {
 
   //----- ENSURE CARD HAS COMPLETED LAST WRITE PROCESS -----
   // If the last write to the card before it is removed or powered down just
-  // occured some cards have been found to not store the last sector written.  If
+  // occured some cards have been found to not store the last sector written. If
   // the card is flagging that its busy then provide clock pulses to allow it to
   // complete its last operation
   DO_BUSY_STATE_ACCESS_DELAY;
@@ -1837,26 +1845,27 @@ BYTE ffs_is_card_available(void) { return (ffs_card_ok); }
 //*******************************
 // filename
 //	Only 8 character DOS compatible root directory filenames are allowed.
-//Format is F.E where F may be between 1 and 8 characters 	and E may be between 1
-//and 3 characters, null terminated.  The '*' and '?' wildcard characters are
-//allowed. file_size 	File size (bytes) will be written to here attribute_byte
-//	Attribute byte will be written to here
+// Format is F.E where F may be between 1 and 8 characters 	and E may be
+// between 1 and 3 characters, null terminated.  The '*' and '?' wildcard
+// characters are allowed. file_size 	File size (bytes) will be written to
+// here attribute_byte 	Attribute byte will be written to here
 // directory_entry_sector
 //	Sector that contains the files directory entry will be written to here
 // directory_entry_within_sector
 //	The file directory entry number within the sector that contains the file
-//will be written to here read_file_name 	8 character buffer containing the
-//filename read from the directory entry (may be needed if using this function
-//with wildcard characters) read_file_extension 	3 character buffer containing
-//the filename extension read from the directory entry (may be needed if using
-//this function with wildcard characters)
+// will be written to here read_file_name 	8 character buffer containing
+// the filename read from the directory entry (may be needed if using this
+// function
+// with wildcard characters) read_file_extension 	3 character buffer
+// containing the filename extension read from the directory entry (may be needed
+// if using this function with wildcard characters)
 //
 // Returns
 //	file start cluster number (0xffffffff = file not found)
 //
 // NOTES
 //	ffs_overwrite_last_directory_file_name may be used to modify the file
-//entry in the directory after finding it with this function
+// entry in the directory after finding it with this function
 
 DWORD ffs_find_file(const char *filename, DWORD *file_size,
                     BYTE *attribute_byte, DWORD *directory_entry_sector,
@@ -1948,8 +1957,8 @@ DWORD ffs_find_file(const char *filename, DWORD *file_size,
 // Source filename is a case insensitive string with between 1 and 8 filename
 // characters, a period (full stop) character, between 1 and 3 extension
 // characters and a terminating null. Returns: 	1 if the filename contained any
-//wildcard characters, 0 if not (this allow calling functions to detect invalid
-//names if they are creating a new file)
+// wildcard characters, 0 if not (this allow calling functions to detect invalid
+// names if they are creating a new file)
 BYTE ffs_convert_filename_to_dos(const char *source_filename,
                                  BYTE *dos_filename, BYTE *dos_extension) {
   BYTE temp;
@@ -2049,13 +2058,13 @@ BYTE ffs_convert_filename_to_dos(const char *source_filename,
 //	start cluster for the file will be written to here
 // start_from_beginning
 //	set to cause routine to start from 1st directory entry (must be set if
-//the drivers data buffer has been modified since the last call)
+// the drivers data buffer has been modified since the last call)
 // directory_entry_sector
 //	Sector that contains the files directory entry will be written to here
 // directory_entry_within_sector
 //	The file directory entry number within the sector that contains the file
-//will be written to here Returns 	1 = file entry found 	0 = not found = end of
-//directory
+// will be written to here Returns 	1 = file entry found 	0 = not found =
+// end of directory
 BYTE ffs_read_next_directory_entry(BYTE *file_name, BYTE *file_extension,
                                    BYTE *attribute_byte, DWORD *file_size,
                                    DWORD *cluster_number,
@@ -2190,8 +2199,10 @@ BYTE ffs_read_next_directory_entry(BYTE *file_name, BYTE *file_extension,
   }
 
   // GET ATTRIBUTE BYTE [1]
-  // Bit	7-6					 5		   4		   3			  2		   1
-  // 0 		Reserved, set to 0 | Archive | Directory | Volume Label | System | Hidden
+  // Bit	7-6					 5		   4		   3			  2
+  // 1
+  // 0 		Reserved, set to 0 | Archive | Directory | Volume Label | System |
+  // Hidden
   //| Read Only
   *attribute_byte = *buffer_pointer++;
 
@@ -2266,8 +2277,9 @@ BYTE ffs_read_next_directory_entry(BYTE *file_name, BYTE *file_extension,
 // and any trailing unused characters set to 0x20) file_extension = 3 character
 // array filename extension (must be DOS compatible - uppercase and any trailing
 // unused characters set to 0x20) attribute_byte = file attribute byte file_size
-// = file size cluster_number = start cluster for the file write_time_date = Bit0
-// = overwrite created. Bit1 = overwrite accessed, Bit2 = overwrite modified
+// = file size cluster_number = start cluster for the file write_time_date =
+// Bit0 = overwrite created. Bit1 = overwrite accessed, Bit2 = overwrite
+// modified
 void ffs_overwrite_last_directory_entry(BYTE *file_name, BYTE *file_extension,
                                         BYTE *attribute_byte, DWORD *file_size,
                                         DWORD *cluster_number,
@@ -2298,8 +2310,10 @@ void ffs_overwrite_last_directory_entry(BYTE *file_name, BYTE *file_extension,
   *buffer_pointer++ = file_extension[2];
 
   // WRITE ATTRIBUTE BYTE [1]
-  // Bit	7-6					 5		   4		   3			  2		   1
-  // 0 		Reserved, set to 0 | Archive | Directory | Volume Label | System | Hidden
+  // Bit	7-6					 5		   4		   3			  2
+  // 1
+  // 0 		Reserved, set to 0 | Archive | Directory | Volume Label | System |
+  // Hidden
   //| Read Only
   *buffer_pointer++ = *attribute_byte;
 
@@ -2318,10 +2332,10 @@ void ffs_overwrite_last_directory_entry(BYTE *file_name, BYTE *file_extension,
   }
 
   // WRITE CREATED TIME (h + m) [2]
-  // Bits	15-11								10-5
-  // 4-0 		Hours - valid from 0-23 inclusive | Minutes - valid from 0-59 inclusive
+  // Bits	15-11 10-5 4-0 		Hours - valid from 0-23 inclusive |
+  // Minutes - valid from 0-59 inclusive
   //| Seconds / 2 - valid from 0-29 inclusive (0-58 seconds, use 0x0d for the
-  //extra resolution).
+  // extra resolution).
   if (write_time_date & 0x01) {
 #ifdef USE_REAL_TIME_CLOCK
     w_temp.val = ((WORD)FFS_RTC_HOURS << 11) | ((WORD)FFS_RTC_MINUTES << 5) |
@@ -2338,10 +2352,11 @@ void ffs_overwrite_last_directory_entry(BYTE *file_name, BYTE *file_extension,
   }
 
   // WRITE CREATED DATE [2]
-  // Bits	15-9													    8-5
-  // 4-0 		Years since 1980 - valid from 0-127 inclusive (1980-2107) | Month of
-  //year - valid from 1-12 inclusive(1 = Jan) | Day of the month - valid from
-  //1-31 inclusive.
+  // Bits	15-9
+  // 8-5 4-0 		Years since 1980 - valid from 0-127 inclusive
+  // (1980-2107) | Month of
+  // year - valid from 1-12 inclusive(1 = Jan) | Day of the month - valid from
+  // 1-31 inclusive.
   if (write_time_date & 0x01) {
 #ifdef USE_REAL_TIME_CLOCK
     w_temp.val = (((WORD)FFS_RTC_YEAR + 20) << 9) | ((WORD)FFS_RTC_MONTH << 5) |
@@ -2358,10 +2373,11 @@ void ffs_overwrite_last_directory_entry(BYTE *file_name, BYTE *file_extension,
   }
 
   // WRITE LAST ACESSED DATE [2]
-  // Bits	15-9													    8-5
-  // 4-0 		Years since 1980 - valid from 0-127 inclusive (1980-2107) | Month of
-  //year - valid from 1-12 inclusive(1 = Jan) | Day of the month - valid from
-  //1-31 inclusive.
+  // Bits	15-9
+  // 8-5 4-0 		Years since 1980 - valid from 0-127 inclusive
+  // (1980-2107) | Month of
+  // year - valid from 1-12 inclusive(1 = Jan) | Day of the month - valid from
+  // 1-31 inclusive.
   if (write_time_date & 0x02) {
 #ifdef USE_REAL_TIME_CLOCK
     w_temp.val = (((WORD)FFS_RTC_YEAR + 20) << 9) | ((WORD)FFS_RTC_MONTH << 5) |
@@ -2384,10 +2400,10 @@ void ffs_overwrite_last_directory_entry(BYTE *file_name, BYTE *file_extension,
   *buffer_pointer++ = (BYTE)(*cluster_number >> 24);
 
   // LAST MODIFIED TIME [2]
-  // Bits	15-11								10-5
-  // 4-0 		Hours - valid from 0-23 inclusive | Minutes - valid from 0-59 inclusive
+  // Bits	15-11 10-5 4-0 		Hours - valid from 0-23 inclusive |
+  // Minutes - valid from 0-59 inclusive
   //| Seconds / 2 - valid from 0-29 inclusive (0-58 seconds, use 0x0d for the
-  //extra resolution).
+  // extra resolution).
   if (write_time_date & 0x04) {
 #ifdef USE_REAL_TIME_CLOCK
     w_temp.val = ((WORD)FFS_RTC_HOURS << 11) | ((WORD)FFS_RTC_MINUTES << 5) |
@@ -2404,10 +2420,11 @@ void ffs_overwrite_last_directory_entry(BYTE *file_name, BYTE *file_extension,
   }
 
   // LAST MODIFIED DATE [2]
-  // Bits	15-9													    8-5
-  // 4-0 		Years since 1980 - valid from 0-127 inclusive (1980-2107) | Month of
-  //year - valid from 1-12 inclusive(1 = Jan) | Day of the month - valid from
-  //1-31 inclusive.
+  // Bits	15-9
+  // 8-5 4-0 		Years since 1980 - valid from 0-127 inclusive
+  // (1980-2107) | Month of
+  // year - valid from 1-12 inclusive(1 = Jan) | Day of the month - valid from
+  // 1-31 inclusive.
   if (write_time_date & 0x04) {
 #ifdef USE_REAL_TIME_CLOCK
     w_temp.val = (((WORD)FFS_RTC_YEAR + 20) << 9) | ((WORD)FFS_RTC_MONTH << 5) |
@@ -2493,7 +2510,7 @@ DWORD get_file_start_cluster(FFS_FILE *file_pointer) {
 //	Sector that contains the files directory entry will be written to here
 // directory_entry_within_sector
 //	The file directory entry number within the sector that contains the file
-//will be written to here
+// will be written to here
 //
 // Return value
 //	1 = successful
@@ -2550,7 +2567,7 @@ BYTE ffs_create_new_file(const char *file_name, DWORD *write_file_start_cluster,
 
   // Get each entry until we find an empty entry
   //(If 1st value is 0xe5 or 0x00 then entry is available - 0xe5 = deleted file,
-  //0 = unused entry)
+  // 0 = unused entry)
   while ((read_file_name[0] != 0xe5) && (read_file_name[0] != 0x00)) {
     // GET NEXT ENTRY
     if (ffs_read_next_directory_entry(
@@ -2596,7 +2613,7 @@ DWORD ffs_get_next_free_cluster(void) {
   BYTE *buffer_pointer;
 
   //----- START READING THE FAT TABLE FROM THE LAST ENTRY WHERE WE FOUND A FREE
-  //CLUSTER -----
+  // CLUSTER -----
   lba = fat1_start_sector;
 
   if (disk_is_fat_32)
@@ -2610,7 +2627,7 @@ DWORD ffs_get_next_free_cluster(void) {
 
   // Move to the sector the last free cluster was found in
   //(To avoid having to search from the start each time which could waste a lot
-  //of time)
+  // of time)
   dw_count = (last_found_free_cluster / fat_entries_per_sector);
   lba += dw_count;
   next_free_cluster = (dw_count * fat_entries_per_sector);
@@ -2621,7 +2638,7 @@ DWORD ffs_get_next_free_cluster(void) {
        dw_count++)  // We use (sectors_per_fat - 1) to avoid the need to
                     // calculate the total number of sectors per fat
   {  //(this saves code space and should only result in a relatively small
-     //amount of wasted clusters)
+     // amount of wasted clusters)
 #ifdef CLEAR_WATCHDOG_TIMER
     CLEAR_WATCHDOG_TIMER;
 #endif
