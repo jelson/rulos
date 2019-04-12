@@ -16,16 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "core/clock.h"
-#include "core/network.h"
 #include "core/rulos.h"
-#include "core/util.h"
-#include "periph/audio/audio_driver.h"
-#include "periph/audio/audio_server.h"
-#include "periph/audio/audio_streamer.h"
-#include "periph/audio/audioled.h"
-#include "periph/sdcard/sdcard.h"
-#include "periph/uart/serial_console.h"
+#include "periph/fat_sd/fat_sd.h"
 
 /*
  * PIN MAPPINGS:
@@ -133,15 +125,37 @@ void init_samples(AudioState* as) {
   }
 #endif
   int sample = 0;
-  float scalefactor = (1 << 14);
+  // float scalefactor = (1 << 14);
+  float scalefactor = (1 << 13);
   for (int i = 0; i < NUM_SAMPLES / 2; i++) {
-    float sinewave =
-      (sinf(((float) 3.14159 * 2 * i * 32) / (NUM_SAMPLES / 2)));
+    float sinewave = (sinf(((float)3.14159 * 2 * i * 32) / (NUM_SAMPLES / 2)));
     int32_t intsinewave = sinewave * scalefactor;
     int16_t value = ((intsinewave >> 8) & 0xff) | ((intsinewave & 0xff) << 8);
     as->buffer[sample++] = value;
     as->buffer[sample++] = value;
   }
+}
+
+static void try_read(void* data) {
+  if (ffs_card_ok) {
+    LOG("card ok!");
+    FFS_FILE *f = ffs_fopen("rocket2.txt", "r");
+    if (f == NULL) {
+      __builtin_trap();
+    }
+    /*
+    volatile int retval;
+    retval = ffs_fwrite("written from sd card\n", 1, 22, f);
+    ffs_fclose(f);
+    */
+    char buf[100];
+    volatile int retval = ffs_fread(buf, 1, sizeof(buf), f);
+    buf[retval] = 0;
+    LOG("retval %d, str is ", retval, buf);
+    __builtin_trap();
+  }
+
+  schedule_us(100000, try_read, NULL);
 }
 
 int main() {
@@ -159,6 +173,9 @@ int main() {
   init_i2s(&as);
   init_samples(&as);
 
+  ffs_init();
+
+#if 0  
   int num = 0;
   while (true) {
     num++;
@@ -167,12 +184,10 @@ int main() {
                          HAL_MAX_DELAY) != HAL_OK) {
       __builtin_trap();
     }
-#if 0
-    for (volatile int i = 0; i < 20000; i++) {
-    }
-#endif
   }
+#endif
 
+  schedule_us(1, try_read, NULL);
   cpumon_main_loop();
 
   return 0;

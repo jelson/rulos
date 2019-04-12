@@ -57,15 +57,15 @@ typedef enum _BOOL { FALSE = 0, TRUE } BOOL;
 // BYTE - 8 bit unsigned:
 typedef uint8_t BYTE;
 // SIGNED_BYTE - 8 bit signed:
-typedef signed char SIGNED_BYTE;
+typedef int8_t SIGNED_BYTE;
 // WORD - 16 bit unsigned:
-typedef unsigned int WORD;
+typedef uint16_t WORD;
 // SIGNED_WORD - 16 bit signed:
-typedef signed int SIGNED_WORD;
+typedef int16_t SIGNED_WORD;
 // DWORD - 32 bit unsigned:
-typedef unsigned long DWORD;
+typedef uint32_t DWORD;
 // SIGNED_DWORD - 32 bit signed:
-typedef signed long SIGNED_DWORD;
+typedef int32_t SIGNED_DWORD;
 
 // BYTE BIT ACCESS:
 typedef union _BYTE_VAL {
