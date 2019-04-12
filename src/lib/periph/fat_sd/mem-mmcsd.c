@@ -1044,8 +1044,8 @@ void ffs_write_sector_from_buffer(DWORD sector_lba) {
     }
 
     // Give 8 clocks for the card to complete the operation
-    // ffs_write_byte(0xff);							//Don't do this -
-    // causes errors
+    // ffs_write_byte(0xff);							//Don't do this
+    // - causes errors
 
   }  // while ((write_successful == 0) && (ffs_10ms_timer))
 }
@@ -1124,7 +1124,6 @@ BYTE ffs_check_command_response_byte(BYTE mask, BYTE data_requried) {
     chk_cmd_response_data = FFS_SPI_RX_BYTE_BUFFER;
 
     if ((chk_cmd_response_data & mask) == (data_requried & mask)) return (1);
-
   }
 
   // Valid response was not received

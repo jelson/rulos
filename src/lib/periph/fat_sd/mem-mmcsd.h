@@ -403,7 +403,7 @@ BYTE spi_rx_dummy_reg;  // We need this register for the FFS_SPI_TX_BYTE define
 //- Adjust as required for the microcontroller and instruction clock frequency
 // being used
 //#define	SPI_BUS_SET_TO_LOW_SPEED	S0SPCCR = 150		//SPI
-//PCLK = 60MHz.  400KHz = 2.5uS = 150
+// PCLK = 60MHz.  400KHz = 2.5uS = 150
 #define SPI_BUS_SET_TO_LOW_SPEED \
   SSP0CPSR = 150  // SPI PCLK = 60MHz.  400KHz = 2.5uS = 150
 
@@ -442,8 +442,8 @@ BYTE spi_rx_dummy_reg;  // We need this register for the FFS_SPI_TX_BYTE define
 //----- WRITE PROTECT PIN -----
 //(Defined like this so the pin can be connected to an input latch IC instead of
 // directly to the processor if desired) #define	FFS_WP_PIN_REGISTER
-// PORTG			//To disable write protect pin checking comment out
-// this define #define	FFS_WP_PIN_BIT				0x02
+// PORTG			//To disable write protect pin checking comment
+// out this define #define	FFS_WP_PIN_BIT				0x02
 ////(0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02 or 0x01) #define
 // FFS_WP_PIN_FUNCTION //Optional function to call to get the
 // FFS_RESET_PIN_REGISTER.  Comment out if not requried #define	FFS_WP_PIN_NC

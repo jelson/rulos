@@ -139,7 +139,7 @@ void init_samples(AudioState* as) {
 static void try_read(void* data) {
   if (ffs_card_ok) {
     LOG("card ok!");
-    FFS_FILE *f = ffs_fopen("rocket2.txt", "r");
+    FFS_FILE* f = ffs_fopen("rocket2.txt", "r");
     if (f == NULL) {
       __builtin_trap();
     }

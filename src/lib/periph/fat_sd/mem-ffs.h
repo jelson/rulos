@@ -106,7 +106,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 //---------------------------
 //----- REAL TIME CLOCK -----						//<<<<<
-//CHECK FOR A NEW APPLICATION <<<<<
+// CHECK FOR A NEW APPLICATION <<<<<
 //---------------------------
 //#define	USE_REAL_TIME_CLOCK
 ////Comment out if you do not have a real time clock
@@ -372,7 +372,7 @@ extern WORD ffs_bytes_per_sector;
                               // (PIC18 project uses a modified linker script
                               // for this)
 extern BYTE ffs_general_buffer[512];  //(C18 large array requirement to use a
-                                      //special big section of ram defined in
+                                      // special big section of ram defined in
                                       // the linker script)
 #pragma udata
 #else

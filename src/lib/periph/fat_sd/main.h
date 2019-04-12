@@ -34,7 +34,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <stdint.h>
 
 #ifndef GLOBAL_DATA_TYPE_INIT  //(Include this section only once for each source
-                               //file)
+                               // file)
 #define GLOBAL_DATA_TYPE_INIT
 
 #define CONSTANT \
@@ -117,9 +117,11 @@ typedef union _DWORD_VAL {
 // EXAMPLE OF HOW TO USE THE DATA TYPES:-
 //	WORD_VAL variable_name;				//Define the variable
 //	variable_name = 0xffffffff;			//Writing 32 bit value
-//	variable_name.LSW = 0xffff;			//Writing 16 bit value to
-//the lower word 	variable_name.LOLSB = 0xff;			//Writing 8 bit
-//value to the low word least significant byte 	variable_name.v[0] = 0xff;
+//	variable_name.LSW = 0xffff;			//Writing 16 bit value
+//to
+// the lower word 	variable_name.LOLSB = 0xff;			//Writing 8
+// bit value to the low word least significant byte 	variable_name.v[0] =
+// 0xff;
 ////Writing 8 bit value to byte 0 (least significant byte)
 
 #endif  // GLOBAL_DATA_TYPE_INIT

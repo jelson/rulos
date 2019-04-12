@@ -56,7 +56,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //	"r"		Open a file for reading. The file must exist.
 //	"r+"	Open a file for reading and writing. The file must exist.
 //	"w"		Create an empty file for writing. If a file with the
-//same
+// same
 // name already exists its content is erased. 	"w+"	Create an empty file for
 // writing and reading. If a file with the same name already exists its content
 // is erased before it is opened. 	"a"		Append to a file.
@@ -65,8 +65,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // writing operations are done at the end of the file protecting the previous
 // content from being overwritten.  You can reposition (fseek) the pointer to
 // anywhere in
-// the file for reading, but 			writing operations will move back to
-// the end of file.  The file is created if it doesn't exist.
+// the file for reading, but 			writing operations will move back
+// to the end of file.  The file is created if it doesn't exist.
 //
 // Return value.
 //	If the file has been successfully opened the function will return a
@@ -503,8 +503,7 @@ int ffs_fseek(FFS_FILE *file_pointer, long offset, int origin) {
 //(The value returned by ffs_getpos intended to be file system specific and to
 // be used with this function.  However as the position type is recomended to be
 // a long we just use the ffs_ftell function as a long doesn't give us enough
-// space to store everything we need for the low level position) Returns 	0
-// if
+// space to store everything we need for the low level position) Returns 0 if
 // successful, 1 otherwise
 int ffs_fsetpos(FFS_FILE *file_pointer, long *position) {
   //----- EXIT IF THIS FILE ISN'T ACTUALLY OPEN -----
@@ -1857,8 +1856,8 @@ BYTE ffs_is_card_available(void) { return (ffs_card_ok); }
 // the filename read from the directory entry (may be needed if using this
 // function
 // with wildcard characters) read_file_extension 	3 character buffer
-// containing the filename extension read from the directory entry (may be needed
-// if using this function with wildcard characters)
+// containing the filename extension read from the directory entry (may be
+// needed if using this function with wildcard characters)
 //
 // Returns
 //	file start cluster number (0xffffffff = file not found)
@@ -2199,10 +2198,11 @@ BYTE ffs_read_next_directory_entry(BYTE *file_name, BYTE *file_extension,
   }
 
   // GET ATTRIBUTE BYTE [1]
-  // Bit	7-6					 5		   4		   3			  2
+  // Bit	7-6					 5		   4		   3
+  // 2
   // 1
-  // 0 		Reserved, set to 0 | Archive | Directory | Volume Label | System |
-  // Hidden
+  // 0 		Reserved, set to 0 | Archive | Directory | Volume Label | System
+  // | Hidden
   //| Read Only
   *attribute_byte = *buffer_pointer++;
 
@@ -2310,10 +2310,11 @@ void ffs_overwrite_last_directory_entry(BYTE *file_name, BYTE *file_extension,
   *buffer_pointer++ = file_extension[2];
 
   // WRITE ATTRIBUTE BYTE [1]
-  // Bit	7-6					 5		   4		   3			  2
+  // Bit	7-6					 5		   4		   3
+  // 2
   // 1
-  // 0 		Reserved, set to 0 | Archive | Directory | Volume Label | System |
-  // Hidden
+  // 0 		Reserved, set to 0 | Archive | Directory | Volume Label | System
+  // | Hidden
   //| Read Only
   *buffer_pointer++ = *attribute_byte;
 
