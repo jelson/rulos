@@ -490,9 +490,15 @@ BYTE spi_rx_dummy_reg;  // We need this register for the FFS_SPI_TX_BYTE define
 // complete".
 #define FFS_SPI_BUF_FULL (!LL_SPI_IsActiveFlag_BSY(SPI1))
 
-#define SPI_BUS_SET_TO_LOW_SPEED
-#define SPI_BUS_SET_TO_FULL_SPEED_SD
-#define SPI_BUS_SET_TO_FULL_SPEED_MMC
+#define SPI_BUS_SET_TO_LOW_SPEED \
+  LL_SPI_SetBaudRatePrescaler(SPI1, LL_SPI_BAUDRATEPRESCALER_DIV256);
+
+#define SPI_BUS_SET_TO_FULL_SPEED_SD \
+  LL_SPI_SetBaudRatePrescaler(SPI1, LL_SPI_BAUDRATEPRESCALER_DIV2);
+
+#define SPI_BUS_SET_TO_FULL_SPEED_MMC \
+  LL_SPI_SetBaudRatePrescaler(SPI1, LL_SPI_BAUDRATEPRESCALER_DIV2);
+
 #define FFS_DRIVER_GEN_512_BYTE_BUFFER \
   ffs_general_buffer  // This general buffer is used by driver functions
 #define DO_BUSY_STATE_ACCESS_DELAY __NOP()
