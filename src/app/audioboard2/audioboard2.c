@@ -17,7 +17,7 @@
  */
 
 #include "core/rulos.h"
-#include "periph/fat_sd/fat_sd.h"
+#include "periph/fatfs/ff.h"
 
 /*
  * PIN MAPPINGS:
@@ -139,19 +139,30 @@ void init_samples(AudioState* as) {
 static void try_read(void* data) {
   if (ffs_card_ok) {
     LOG("card ok!");
-    FFS_FILE* f = ffs_fopen("rocket2.txt", "r");
+    FFS_FILE* f = ffs_fopen("1meg.txt", "r");
     if (f == NULL) {
+      LOG("file not found");
       __builtin_trap();
     }
-    /*
-    volatile int retval;
-    retval = ffs_fwrite("written from sd card\n", 1, 22, f);
-    ffs_fclose(f);
-    */
-    char buf[100];
-    volatile int retval = ffs_fread(buf, 1, sizeof(buf), f);
-    buf[retval] = 0;
-    LOG("retval %d, str is ", retval, buf);
+    char buf[1024];
+
+    long total = 0;
+    volatile Time start = precise_clock_time_us();
+    for (int i = 0; i < 1024; i++) {
+      int retval = ffs_fread(buf, 1, sizeof(buf), f);
+      total += retval;
+      if (retval != sizeof(buf)) {
+	LOG("unexpected retval of %d", retval);
+	__builtin_trap();
+      }
+    }
+    volatile Time end = precise_clock_time_us();
+    volatile Time elapsed = end - start;
+    LOG("read 1 mbyte in %ld usec", elapsed);
+    while (1) {
+      volatile int i = 0;
+      i++;
+    }
     __builtin_trap();
   }
 

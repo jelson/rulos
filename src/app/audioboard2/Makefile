@@ -21,7 +21,7 @@ ARM_CHIP := stm32f303xb
 TARGET := audioboard2
 BOARD := GENERIC
 ALL_PLATFORM_CFLAGS := -DLOG_TO_SERIAL=UART0
-PERIPHERALS := uart fat_sd
+PERIPHERALS := uart fatfs
 
 TARGET_OBJECTS := \
 	audioboard2.o
