@@ -56,6 +56,7 @@ uint32_t TM_DELAY_Time2() {
 #ifdef RULOS_ARM
 
 #include "stm32f3xx_ll_bus.h"
+#include "stm32f3xx_ll_dma.h"
 #include "stm32f3xx_ll_spi.h"
 
 void TM_SPI_Init() {
@@ -99,6 +100,22 @@ void TM_SPI_Init() {
 
   // Set chip-enable pin as an output
   gpio_make_output(SD_PIN_CHIPENABLE);
+
+  // Configure DMA
+  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
+
+  LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
+  LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
+
+  NVIC_SetPriority(DMA1_Channel2_IRQn, 0);
+  NVIC_EnableIRQ(DMA1_Channel2_IRQn);
+  NVIC_SetPriority(DMA1_Channel3_IRQn, 0);
+  NVIC_EnableIRQ(DMA1_Channel3_IRQn);
+
+  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_2);
+  LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_2);
+  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_3);
+  LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_3);
 }
 
 // void TM_SPI_SendMulti(SPI_TypeDef* SPIx, uint8_t* dataOut, uint8_t* dataIn,
@@ -113,7 +130,10 @@ void TM_SPI_SetFast() {
   LL_SPI_SetBaudRatePrescaler(SPI1, LL_SPI_BAUDRATEPRESCALER_DIV2);
 }
 
-void TM_SPI_WriteMulti(SPI_TypeDef* SPIx, uint8_t* dataOut, uint32_t count) {
+// This is the old implementation of SPI writing, using a loop in code
+// rather than DMA. Deprecated but still here in case we need it.
+void TM_SPI_WriteMulti_NonDMA(SPI_TypeDef* SPIx, uint8_t* dataOut,
+                              uint32_t count) {
   uint32_t i;
 
   /* Wait for previous transmissions to complete if DMA TX enabled for SPI */
@@ -131,8 +151,10 @@ void TM_SPI_WriteMulti(SPI_TypeDef* SPIx, uint8_t* dataOut, uint32_t count) {
   }
 }
 
-void TM_SPI_ReadMulti(SPI_TypeDef* SPIx, uint8_t* dataIn, uint8_t dummy,
-                      uint32_t count) {
+// This is the old implementation of SPI reading, using a loop in code
+// rather than DMA. Deprecated but still here in case we need it.
+void TM_SPI_ReadMulti_NonDMA(SPI_TypeDef* SPIx, uint8_t* dataIn, uint8_t dummy,
+                             uint32_t count) {
   uint32_t i;
 
   /* Wait for previous transmissions to complete if DMA TX enabled for SPI */
@@ -148,6 +170,114 @@ void TM_SPI_ReadMulti(SPI_TypeDef* SPIx, uint8_t* dataIn, uint8_t dummy,
     /* Save data to buffer */
     *dataIn++ = LL_SPI_ReceiveData8(SPIx);
   }
+}
+
+static int transmissionComplete;
+
+void DMA1_Channel2_IRQHandler(void) {
+  if (LL_DMA_IsActiveFlag_TC2(DMA1)) {
+    LL_DMA_ClearFlag_GI2(DMA1);
+    transmissionComplete = true;
+  } else if (LL_DMA_IsActiveFlag_TE2(DMA1)) {
+    transmissionComplete = true;
+  }
+}
+
+void DMA1_Channel3_IRQHandler(void) {
+  if (LL_DMA_IsActiveFlag_TC3(DMA1)) {
+    LL_DMA_ClearFlag_GI3(DMA1);
+    transmissionComplete = true;
+  } else if (LL_DMA_IsActiveFlag_TE3(DMA1)) {
+    transmissionComplete = true;
+  }
+}
+
+static void DMA_EnableAndWait(SPI_TypeDef* SPIx) {
+  transmissionComplete = false;
+
+  // Enable DMA for SPI
+  LL_SPI_EnableDMAReq_RX(SPI1);
+  LL_SPI_EnableDMAReq_TX(SPI1);
+  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_2);
+  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
+
+  // Block until the DMA finishes; the interrupt handler sets
+  // transmissionComplete to true.
+  while (!transmissionComplete) {
+    __WFI();
+  }
+
+  // Disable DMA again
+  LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
+  LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
+  LL_SPI_DisableDMAReq_RX(SPI1);
+  LL_SPI_DisableDMAReq_TX(SPI1);
+}
+
+void TM_SPI_WriteMulti(SPI_TypeDef* SPIx, uint8_t* dataOut, uint32_t count) {
+  uint8_t dummy;
+
+  // Configure RX side to write incoming data to dummy, since it's
+  // being discarded. Note that having *both* directions be
+  // NOINCREMENT is unusual: I'm *not* incrementing the destination
+  // address of the rx side so we pull all data out of the RX buffer
+  // and sink it to the same dummy memory location.
+  LL_DMA_ConfigTransfer(DMA1, LL_DMA_CHANNEL_2,
+                        LL_DMA_DIRECTION_PERIPH_TO_MEMORY |
+                            LL_DMA_PRIORITY_HIGH | LL_DMA_MODE_NORMAL |
+                            LL_DMA_PERIPH_NOINCREMENT |
+                            LL_DMA_MEMORY_NOINCREMENT | LL_DMA_PDATAALIGN_BYTE |
+                            LL_DMA_MDATAALIGN_BYTE);
+  LL_DMA_ConfigAddresses(
+      DMA1, LL_DMA_CHANNEL_2, LL_SPI_DMA_GetRegAddr(SPI1), (uint32_t)&dummy,
+      LL_DMA_GetDataTransferDirection(DMA1, LL_DMA_CHANNEL_2));
+  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_2, count);
+
+  // Configure TX side to send data from dataOut
+  LL_DMA_ConfigTransfer(DMA1, LL_DMA_CHANNEL_3,
+                        LL_DMA_DIRECTION_MEMORY_TO_PERIPH |
+                            LL_DMA_PRIORITY_HIGH | LL_DMA_MODE_NORMAL |
+                            LL_DMA_PERIPH_NOINCREMENT |
+                            LL_DMA_MEMORY_INCREMENT | LL_DMA_PDATAALIGN_BYTE |
+                            LL_DMA_MDATAALIGN_BYTE);
+  LL_DMA_ConfigAddresses(
+      DMA1, LL_DMA_CHANNEL_3, (uint32_t)dataOut, LL_SPI_DMA_GetRegAddr(SPI1),
+      LL_DMA_GetDataTransferDirection(DMA1, LL_DMA_CHANNEL_3));
+  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, count);
+
+  DMA_EnableAndWait(SPI1);
+}
+
+void TM_SPI_ReadMulti(SPI_TypeDef* SPIx, uint8_t* dataIn, uint8_t dummy,
+                      uint32_t count) {
+  // Configure RX side to write incoming data to dataIn
+  LL_DMA_ConfigTransfer(DMA1, LL_DMA_CHANNEL_2,
+                        LL_DMA_DIRECTION_PERIPH_TO_MEMORY |
+                            LL_DMA_PRIORITY_HIGH | LL_DMA_MODE_NORMAL |
+                            LL_DMA_PERIPH_NOINCREMENT |
+                            LL_DMA_MEMORY_INCREMENT | LL_DMA_PDATAALIGN_BYTE |
+                            LL_DMA_MDATAALIGN_BYTE);
+  LL_DMA_ConfigAddresses(
+      DMA1, LL_DMA_CHANNEL_2, LL_SPI_DMA_GetRegAddr(SPI1), (uint32_t)dataIn,
+      LL_DMA_GetDataTransferDirection(DMA1, LL_DMA_CHANNEL_2));
+  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_2, count);
+
+  // Configure TX side to keep sending dummy over and over.  Note that having
+  // *both* directions be NOINCREMENT is unusual: I'm *not* incrementing the
+  // source address of the tx side so we just transmit the same byte over and
+  // over.
+  LL_DMA_ConfigTransfer(DMA1, LL_DMA_CHANNEL_3,
+                        LL_DMA_DIRECTION_MEMORY_TO_PERIPH |
+                            LL_DMA_PRIORITY_HIGH | LL_DMA_MODE_NORMAL |
+                            LL_DMA_PERIPH_NOINCREMENT |
+                            LL_DMA_MEMORY_NOINCREMENT | LL_DMA_PDATAALIGN_BYTE |
+                            LL_DMA_MDATAALIGN_BYTE);
+  LL_DMA_ConfigAddresses(
+      DMA1, LL_DMA_CHANNEL_3, (uint32_t)&dummy, LL_SPI_DMA_GetRegAddr(SPI1),
+      LL_DMA_GetDataTransferDirection(DMA1, LL_DMA_CHANNEL_3));
+  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, count);
+
+  DMA_EnableAndWait(SPI1);
 }
 
 #endif
