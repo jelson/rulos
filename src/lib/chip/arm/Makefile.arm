@@ -149,7 +149,7 @@ ARM_CFLAGS += -I$(ARM_OBJDIR) $(ARM_INCLUDES)
 ARM_CFLAGS += -fdata-sections -ffunction-sections # Put all funcs/data in their own sections
 ARM_CFLAGS += -MD -MP # -MT $(ARM_OBJDIR)/$(*F).o -MF $(ARM_OBJDIR)/$(@F).d 
 ARM_CFLAGS += -std=gnu99 -g
-ARM_CFLAGS += -Os
+ARM_CFLAGS += -O2
 ARM_CFLAGS += $(ARM_CPUTYPE_FLAGS)
 ARM_CFLAGS += -D__STACK_SIZE=$(STACK_SIZE) -D__HEAP_SIZE=$(HEAP_SIZE)
 ARM_CFLAGS += -DBOARD_$(BOARD) # RULOS-specific board config
