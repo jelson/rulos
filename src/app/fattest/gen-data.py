@@ -39,7 +39,7 @@
 # ffcf f003
 #
 
-f = open("1meg.bin", "wb")
+f = open("4meg.bin", "wb")
 
 for i in range(1 << 20):
     num = i * 4093;
