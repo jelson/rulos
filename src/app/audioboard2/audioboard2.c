@@ -136,37 +136,31 @@ void init_samples(AudioState* as) {
   }
 }
 
-static void try_read(void* data) {
-  if (ffs_card_ok) {
-    LOG("card ok!");
-    FFS_FILE* f = ffs_fopen("1meg.txt", "r");
-    if (f == NULL) {
-      LOG("file not found");
-      __builtin_trap();
-    }
-    char buf[1024];
+FATFS fatfs;
+FIL f;
 
-    long total = 0;
-    volatile Time start = precise_clock_time_us();
-    for (int i = 0; i < 1024; i++) {
-      int retval = ffs_fread(buf, 1, sizeof(buf), f);
-      total += retval;
-      if (retval != sizeof(buf)) {
-	LOG("unexpected retval of %d", retval);
-	__builtin_trap();
-      }
-    }
-    volatile Time end = precise_clock_time_us();
-    volatile Time elapsed = end - start;
-    LOG("read 1 mbyte in %ld usec", elapsed);
-    while (1) {
-      volatile int i = 0;
-      i++;
-    }
+static void start_read(void* data) {
+  if (f_mount(&fatfs, "", 0) != FR_OK) {
+    LOG("can't mount");
     __builtin_trap();
   }
 
-  schedule_us(100000, try_read, NULL);
+  const char filename[] = "audio.wav";
+
+  LOG("card ok!");
+
+  if (f_open(&f, filename, FA_OPEN_EXISTING | FA_READ) != FR_OK) {
+    LOG("can't open %s", filename);
+    __builtin_trap();
+  }
+  char buf[1024];
+  UINT bytes_read;
+  FRESULT retval = f_read(&f, buf, sizeof(buf), &bytes_read);
+  if (retval != FR_OK) {
+    LOG("read error %d", retval);
+    __builtin_trap();
+  }
+  f_close(&f);
 }
 
 int main() {
@@ -184,8 +178,6 @@ int main() {
   init_i2s(&as);
   init_samples(&as);
 
-  ffs_init();
-
 #if 0  
   int num = 0;
   while (true) {
@@ -198,7 +190,7 @@ int main() {
   }
 #endif
 
-  schedule_us(1, try_read, NULL);
+  schedule_us(10000, start_read, NULL);
   cpumon_main_loop();
 
   return 0;
