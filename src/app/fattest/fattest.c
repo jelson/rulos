@@ -39,7 +39,7 @@ static void read_4meg_file(r_bool validate) {
   uint32_t num_validated = 0;
   UINT bytes_read;
   FRESULT retval;
-  
+
   volatile Time start = precise_clock_time_us();
   for (int i = 0; i < 1024; i++) {
     retval = f_read(&f, fatbuf, sizeof(fatbuf), &bytes_read);
@@ -55,27 +55,28 @@ static void read_4meg_file(r_bool validate) {
 
     if (validate) {
       uint32_t curr_num_bigendian;
-      uint8_t *ptr = (uint8_t *) &curr_num_bigendian;
-      uint32_t *fatbuf_uint32 = (uint32_t *) fatbuf;
+      uint8_t *ptr = (uint8_t *)&curr_num_bigendian;
+      uint32_t *fatbuf_uint32 = (uint32_t *)fatbuf;
 
       for (int j = 0; j < sizeof(fatbuf) / 4; j++) {
-	ptr[0] = expected_next_num >> 24;
-	ptr[1] = expected_next_num >> 16;
-	ptr[2] = expected_next_num >> 8;
-	ptr[3] = expected_next_num;
+        ptr[0] = expected_next_num >> 24;
+        ptr[1] = expected_next_num >> 16;
+        ptr[2] = expected_next_num >> 8;
+        ptr[3] = expected_next_num;
 
-	if (*fatbuf_uint32 != curr_num_bigendian) {
-	  LOG("validation error: ");
-	  LOG("  validation index: %lu", num_validated);
-	  LOG("  position within buffer: %d", j);
-	  LOG("  expected number: %lu", expected_next_num);
-	  LOG("  expected big-endian: %02x %02x %02x %02x", ptr[0], ptr[1], ptr[2], ptr[3]);
-	  LOG("  actual number: %lu", *fatbuf_uint32);
-	  __builtin_trap();
-	}
-	num_validated++;
-	fatbuf_uint32++;
-	expected_next_num += expected_increment;
+        if (*fatbuf_uint32 != curr_num_bigendian) {
+          LOG("validation error: ");
+          LOG("  validation index: %lu", num_validated);
+          LOG("  position within buffer: %d", j);
+          LOG("  expected number: %lu", expected_next_num);
+          LOG("  expected big-endian: %02x %02x %02x %02x", ptr[0], ptr[1],
+              ptr[2], ptr[3]);
+          LOG("  actual number: %lu", *fatbuf_uint32);
+          __builtin_trap();
+        }
+        num_validated++;
+        fatbuf_uint32++;
+        expected_next_num += expected_increment;
       }
     }
   }
@@ -93,17 +94,18 @@ static void read_4meg_file(r_bool validate) {
     LOG("expected an EOF on final read, but instead got %lu bytes", bytes_read);
     __builtin_trap();
   }
-  
+
   f_close(&f);
 
   if (validate) {
-    LOG("read and validated %lu kbyte in %ld msec", total / 1024, elapsed / 1000);
+    LOG("read and validated %lu kbyte in %ld msec", total / 1024,
+        elapsed / 1000);
   } else {
     LOG("read benchmark: %lu kbyte in %ld msec", total / 1024, elapsed / 1000);
   }
 }
 
-static void try_read(void* data) {
+static void try_read(void *data) {
   if (f_mount(&fatfs, "", 0) != FR_OK) {
     LOG("can't mount");
     __builtin_trap();
@@ -114,7 +116,7 @@ static void try_read(void* data) {
   UINT bytes_read;
   FRESULT retval;
   const char test_filename[] = "rocket2.txt";
-  
+
   if (f_open(&f, test_filename, FA_OPEN_EXISTING | FA_READ) != FR_OK) {
     LOG("can't open %s", test_filename);
     __builtin_trap();
@@ -127,7 +129,7 @@ static void try_read(void* data) {
   fatbuf[bytes_read] = '\0';
   LOG("read data from %s: %s", test_filename, fatbuf);
   f_close(&f);
-  
+
   read_4meg_file(true);
   read_4meg_file(false);
 
