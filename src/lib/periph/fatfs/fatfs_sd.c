@@ -3,7 +3,7 @@
 /*-----------------------------------------------------------------------*/
 
 #include "diskio.h"
-#include "fatfs_sd.h"
+#include "fatfs_rulos.h"
 
 /* MMC/SD command */
 #define CMD0	(0)			/* GO_IDLE_STATE */
@@ -43,13 +43,16 @@ static void init_spi (void) {
 	TM_DELAY_Init();
 	
 	/* Init SPI */
-	TM_SPI_Init(FATFS_SPI, FATFS_SPI_PINSPACK);
+	TM_SPI_Init();
 	
 	/* Set CS high */
 	FATFS_CS_HIGH;
 	
 	/* Wait for stable */
-	Delayms(10);
+	TM_DELAY_SetTime2(20);
+	while (TM_DELAY_Time2() > 0) {
+		__WFI();
+	}
 }
 
 
@@ -111,7 +114,9 @@ static void deselect_card (void)
 {
 	FATFS_CS_HIGH;			/* CS = H */
 	TM_SPI_Send(FATFS_SPI, 0xFF);			/* Dummy clock (force DO hi-z for multiple slave SPI) */
+#if 0
 	FATFS_DEBUG_SEND_USART("deselect: ok");
+#endif
 }
 
 
@@ -122,16 +127,23 @@ static void deselect_card (void)
 
 static int select_card (void)	/* 1:OK, 0:Timeout */
 {
-	FATFS_CS_LOW;
 	TM_SPI_Send(FATFS_SPI, 0xFF);	/* Dummy clock (force DO enabled) */
+	for (volatile int i = 0; i < 10; i++) {}
+	FATFS_CS_LOW;
+	for (volatile int i = 0; i < 10; i++) {}
+	return 1;
 
+#if 0
 	if (wait_ready(500)) {
 		FATFS_DEBUG_SEND_USART("select: OK");
 		return 1;	/* OK */
 	}
 	FATFS_DEBUG_SEND_USART("select: no");
 	deselect_card();
+	
 	return 0;	/* Timeout */
+#endif
+
 }
 
 
@@ -232,6 +244,7 @@ static BYTE send_cmd (		/* Return value: R1 resp (bit7==1:Failed to send) */
 	n = 0x01;										/* Dummy CRC + Stop */
 	if (cmd == CMD0) n = 0x95;						/* Valid CRC for CMD0(0) */
 	if (cmd == CMD8) n = 0x87;						/* Valid CRC for CMD8(0x1AA) */
+	if (cmd == 41) n = 0x77;
 	TM_SPI_Send(FATFS_SPI, n);
 
 	/* Receive command resp */
@@ -240,13 +253,21 @@ static BYTE send_cmd (		/* Return value: R1 resp (bit7==1:Failed to send) */
 	}
 	
 	n = 10;								/* Wait for response (10 bytes max) */
-	do {
-		res = TM_SPI_Send(FATFS_SPI, 0xFF);
-	} while ((res & 0x80) && --n);
 
+	if (cmd == 0) {
+	  do {
+	    res = TM_SPI_Send(FATFS_SPI, 0xFF);
+	  } while (res != 0x1 && --n);
+	} else {
+	  do {
+	    res = TM_SPI_Send(FATFS_SPI, 0xFF);
+	  } while ((res & 0x80) && --n);
+	}
 	return res;							/* Return received response */
 }
 
+#if 0
+// Disabled in RULOS.
 void TM_FATFS_InitPins(void) {
 	/* CS pin */
 	TM_GPIO_Init(FATFS_CS_PORT, FATFS_CS_PIN, TM_GPIO_Mode_OUT, TM_GPIO_OType_PP, TM_GPIO_PuPd_UP, TM_GPIO_Speed_Low);
@@ -261,6 +282,7 @@ void TM_FATFS_InitPins(void) {
 	TM_GPIO_Init(FATFS_USE_WRITEPROTECT_PIN_PORT, FATFS_USE_WRITEPROTECT_PIN_PIN, TM_GPIO_Mode_IN, TM_GPIO_OType_PP, TM_GPIO_PuPd_UP, TM_GPIO_Speed_Low);
 #endif
 }
+#endif
 
 uint8_t TM_FATFS_Detect(void) {
 #if FATFS_USE_DETECT_PIN > 0
@@ -281,13 +303,17 @@ uint8_t TM_FATFS_WriteEnabled(void) {
 DSTATUS TM_FATFS_SD_disk_initialize (void) {
 	BYTE n, cmd, ty, ocr[4];
 	
-	//Initialize CS pin
-	TM_FATFS_InitPins();
+	// RULOS: commented out; this is done in init_spi
+	//TM_FATFS_InitPins();
+
 	init_spi();
 	
 	if (!TM_FATFS_Detect()) {
 		return STA_NODISK;
 	}
+
+	TM_SPI_SetSlow();
+
 	for (n = 10; n; n--) {
 		TM_SPI_Send(FATFS_SPI, 0xFF);
 	}
@@ -334,6 +360,7 @@ DSTATUS TM_FATFS_SD_disk_initialize (void) {
 		TM_FATFS_SD_Stat &= ~STA_PROTECT;
 	}
 	
+	TM_SPI_SetFast();
 	return TM_FATFS_SD_Stat;
 }
 
@@ -522,7 +549,7 @@ DRESULT TM_FATFS_SD_disk_ioctl (
 		}
 		break;
 
-	case CTRL_ERASE_SECTOR :	/* Erase a block of sectors (used when _USE_ERASE == 1) */
+	case CTRL_TRIM :	/* Erase a block of sectors (used when _USE_ERASE == 1) */
 		if (!(TM_FATFS_SD_CardType & CT_SDC)) break;				/* Check if the card is SDC */
 		if (TM_FATFS_SD_disk_ioctl(MMC_GET_CSD, csd)) break;	/* Get CSD */
 		if (!(csd[0] >> 6) && !(csd[10] & 0x40)) break;	/* Check if sector erase can be applied to the card */
