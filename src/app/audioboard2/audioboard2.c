@@ -178,7 +178,7 @@ int main() {
   init_i2s(&as);
   init_samples(&as);
 
-#if 0  
+#if 1
   int num = 0;
   while (true) {
     num++;
