@@ -61,9 +61,9 @@
 #define rUART1_DMA_TX_IRQn DMA1_Channel2_3_IRQn
 #define rUART1_DMA_TX_IRQHandler DMA1_Channel2_3_IRQHandler
 
-#define rUART1_DMA_RX_CHAN DMA1_Channel3
-#define rUART1_DMA_RX_IRQn DMA1_Channel2_3_IRQn
-#define rUART1_DMA_RX_IRQHandler DMA1_Channel2_3_IRQHandler
+//#define rUART1_DMA_RX_CHAN DMA1_Channel3
+//#define rUART1_DMA_RX_IRQn DMA1_Channel2_3_IRQn
+//#define rUART1_DMA_RX_IRQHandler DMA1_Channel2_3_IRQHandler
 
 // CLK_ENABLE must match DMA unit above
 #define rUART1_DMA_CLK_ENABLE() __HAL_RCC_DMA1_CLK_ENABLE()
@@ -85,9 +85,9 @@
 #define rUART1_DMA_TX_IRQn DMA1_Channel4_IRQn
 #define rUART1_DMA_TX_IRQHandler DMA1_Channel4_IRQHandler
 
-#define rUART1_DMA_RX_CHAN DMA1_Channel5
-#define rUART1_DMA_RX_IRQn DMA1_Channel5_IRQn
-#define rUART1_DMA_RX_IRQHandler DMA1_Channel5_IRQHandler
+//#define rUART1_DMA_RX_CHAN DMA1_Channel5
+//#define rUART1_DMA_RX_IRQn DMA1_Channel5_IRQn
+//#define rUART1_DMA_RX_IRQHandler DMA1_Channel5_IRQHandler
 
 // CLK_ENABLE must match DMA unit above
 #define rUART1_DMA_CLK_ENABLE() __HAL_RCC_DMA1_CLK_ENABLE()
@@ -111,9 +111,9 @@
 #define rUART1_DMA_TX_IRQn DMA1_Channel4_IRQn
 #define rUART1_DMA_TX_IRQHandler DMA1_Channel4_IRQHandler
 
-#define rUART1_DMA_RX_CHAN DMA1_Channel5
-#define rUART1_DMA_RX_IRQn DMA1_Channel5_IRQn
-#define rUART1_DMA_RX_IRQHandler DMA1_Channel5_IRQHandler
+//#define rUART1_DMA_RX_CHAN DMA1_Channel5
+//#define rUART1_DMA_RX_IRQn DMA1_Channel5_IRQn
+//#define rUART1_DMA_RX_IRQHandler DMA1_Channel5_IRQHandler
 
 // CLK_ENABLE must match DMA unit above
 #define rUART1_DMA_CLK_ENABLE() __HAL_RCC_DMA1_CLK_ENABLE()
@@ -139,25 +139,11 @@ typedef struct {
 #define NUM_UARTS 1
 static uart_t g_uarts[NUM_UARTS] = {};
 
-#if rUART1_DMA_TX_IRQHandler == rUART1_DMA_RX_IRQHandler
 // If the DMA RX and TX events share an interrupt, call both from the
 // handler.
 void rUART1_DMA_TX_IRQHandler(void) {
   HAL_DMA_IRQHandler(g_uarts[0].hal_uart_handle.hdmatx);
-  HAL_DMA_IRQHandler(g_uarts[0].hal_uart_handle.hdmarx);
 }
-
-#else
-
-void rUART1_DMA_TX_IRQHandler(void) {
-  HAL_DMA_IRQHandler(g_uarts[0].hal_uart_handle.hdmatx);
-}
-
-error void rUART1_DMA_RX_IRQHandler(void) {
-  HAL_DMA_IRQHandler(g_uarts[0].hal_uart_handle.hdmarx);
-}
-
-#endif  // rUART1_DMA_TX_IRQHandler == rUART1_DMA_RX_IRQHandler
 
 void USART1_IRQHandler(void) {
   HAL_UART_IRQHandler(&g_uarts[0].hal_uart_handle);
@@ -230,6 +216,7 @@ static void stm32_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2) {
       __HAL_LINKDMA(&uart->hal_uart_handle, hdmatx, uart->hal_dma_tx_handle);
 
 #if 0
+      // NOTE: No longer using DMA for RX.
       // Configure the DMA handler for reception process */
       uart->hal_dma_rx_handle.Instance = rUART1_DMA_RX_CHAN;
       uart->hal_dma_rx_handle.Init.Direction = DMA_PERIPH_TO_MEMORY;
@@ -251,6 +238,7 @@ static void stm32_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2) {
       HAL_NVIC_EnableIRQ(rUART1_DMA_TX_IRQn);
 
 #if 0
+      // NOTE: No longer using DMA for RX.
       /* NVIC configuration for DMA transfer complete interrupt (USARTx_RX) */
       HAL_NVIC_SetPriority(rUART1_DMA_RX_IRQn, 0, 0);
       HAL_NVIC_EnableIRQ(rUART1_DMA_RX_IRQn);
