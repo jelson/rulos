@@ -153,7 +153,7 @@ void rUART1_DMA_TX_IRQHandler(void) {
   HAL_DMA_IRQHandler(g_uarts[0].hal_uart_handle.hdmatx);
 }
 
-void rUART1_DMA_RX_IRQHandler(void) {
+error void rUART1_DMA_RX_IRQHandler(void) {
   HAL_DMA_IRQHandler(g_uarts[0].hal_uart_handle.hdmarx);
 }
 
@@ -229,6 +229,7 @@ static void stm32_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2) {
       // Associate the initialized DMA handle to the UART handle
       __HAL_LINKDMA(&uart->hal_uart_handle, hdmatx, uart->hal_dma_tx_handle);
 
+#if 0
       // Configure the DMA handler for reception process */
       uart->hal_dma_rx_handle.Instance = rUART1_DMA_RX_CHAN;
       uart->hal_dma_rx_handle.Init.Direction = DMA_PERIPH_TO_MEMORY;
@@ -243,14 +244,17 @@ static void stm32_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2) {
       }
 
       __HAL_LINKDMA(&uart->hal_uart_handle, hdmarx, uart->hal_dma_rx_handle);
+#endif
 
       // Set up interrupts
       HAL_NVIC_SetPriority(rUART1_DMA_TX_IRQn, 0, 1);
       HAL_NVIC_EnableIRQ(rUART1_DMA_TX_IRQn);
 
+#if 0
       /* NVIC configuration for DMA transfer complete interrupt (USARTx_RX) */
       HAL_NVIC_SetPriority(rUART1_DMA_RX_IRQn, 0, 0);
       HAL_NVIC_EnableIRQ(rUART1_DMA_RX_IRQn);
+#endif
 
       /* NVIC for USART, to catch the TX complete */
       HAL_NVIC_SetPriority(USART1_IRQn, 0, 1);
