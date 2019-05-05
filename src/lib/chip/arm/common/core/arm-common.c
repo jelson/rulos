@@ -78,7 +78,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void* data,
 }
 
 void arm_assert(const uint32_t line) {
-  LOG("assertion failed: line %d", line);
+  LOG("assertion failed: line %lu", line);
   LOG_FLUSH();
   __builtin_trap();
 }

@@ -18,12 +18,12 @@ ROCKET_ROOT := ../..
 
 PLATFORMS := arm
 ARM_CHIP := stm32f303xb
-TARGET := audioboard2
+TARGET := fattest
 BOARD := GENERIC
 ALL_PLATFORM_CFLAGS := -DLOG_TO_SERIAL=UART0
-PERIPHERALS := uart fatfs i2s
+PERIPHERALS := uart fatfs
 
 TARGET_OBJECTS := \
-	audioboard2.o
+	fattest.o
 
 include $(ROCKET_ROOT)/Makefile.common

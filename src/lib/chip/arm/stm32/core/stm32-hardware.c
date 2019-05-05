@@ -224,3 +224,7 @@ void arm_hal_start_clock_us(uint32_t ticks_per_interrupt, Handler handler,
   // Setup the timer to fire interrupts at the requested interval.
   SysTick_Config(ticks_per_interrupt);
 }
+
+uint16_t hal_elapsed_milliintervals() {
+  return (1000 * SysTick->VAL) / SysTick->LOAD;
+}

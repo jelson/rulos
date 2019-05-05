@@ -16,16 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "core/clock.h"
-#include "core/network.h"
 #include "core/rulos.h"
-#include "core/util.h"
-#include "periph/audio/audio_driver.h"
-#include "periph/audio/audio_server.h"
-#include "periph/audio/audio_streamer.h"
-#include "periph/audio/audioled.h"
-#include "periph/sdcard/sdcard.h"
-#include "periph/uart/serial_console.h"
+#include "periph/fatfs/ff.h"
 
 /*
  * PIN MAPPINGS:
@@ -133,15 +125,42 @@ void init_samples(AudioState* as) {
   }
 #endif
   int sample = 0;
-  float scalefactor = (1 << 14);
+  // float scalefactor = (1 << 14);
+  float scalefactor = (1 << 13);
   for (int i = 0; i < NUM_SAMPLES / 2; i++) {
-    float sinewave =
-      (sinf(((float) 3.14159 * 2 * i * 32) / (NUM_SAMPLES / 2)));
+    float sinewave = (sinf(((float)3.14159 * 2 * i * 32) / (NUM_SAMPLES / 2)));
     int32_t intsinewave = sinewave * scalefactor;
     int16_t value = ((intsinewave >> 8) & 0xff) | ((intsinewave & 0xff) << 8);
     as->buffer[sample++] = value;
     as->buffer[sample++] = value;
   }
+}
+
+FATFS fatfs;
+FIL f;
+
+static void start_read(void* data) {
+  if (f_mount(&fatfs, "", 0) != FR_OK) {
+    LOG("can't mount");
+    __builtin_trap();
+  }
+
+  const char filename[] = "audio.wav";
+
+  LOG("card ok!");
+
+  if (f_open(&f, filename, FA_OPEN_EXISTING | FA_READ) != FR_OK) {
+    LOG("can't open %s", filename);
+    __builtin_trap();
+  }
+  char buf[1024];
+  UINT bytes_read;
+  FRESULT retval = f_read(&f, buf, sizeof(buf), &bytes_read);
+  if (retval != FR_OK) {
+    LOG("read error %d", retval);
+    __builtin_trap();
+  }
+  f_close(&f);
 }
 
 int main() {
@@ -159,6 +178,7 @@ int main() {
   init_i2s(&as);
   init_samples(&as);
 
+#if 1
   int num = 0;
   while (true) {
     num++;
@@ -167,12 +187,10 @@ int main() {
                          HAL_MAX_DELAY) != HAL_OK) {
       __builtin_trap();
     }
-#if 0
-    for (volatile int i = 0; i < 20000; i++) {
-    }
-#endif
   }
+#endif
 
+  schedule_us(10000, start_read, NULL);
   cpumon_main_loop();
 
   return 0;

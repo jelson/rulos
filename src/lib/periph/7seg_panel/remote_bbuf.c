@@ -164,7 +164,7 @@ void init_remote_bbuf_recv(RemoteBBufRecv *rbr, Network *network) {
 
 void rbr_recv(MessageRecvBuffer *msg) {
   if (msg->payload_len != sizeof(BBufMessage)) {
-    LOG("rbr_recv: Error: expected BBufMessage of size %ld, got %d bytes",
+    LOG("rbr_recv: Error: expected BBufMessage of size %zu, got %d bytes",
         sizeof(BBufMessage), msg->payload_len);
     return;
   }
