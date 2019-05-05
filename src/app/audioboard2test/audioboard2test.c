@@ -38,6 +38,10 @@ static void start_audio(void* user_data) {
   LOG("starting audio");
   AudioState* as = (AudioState*)user_data;
   as->num_buffers_filled = 0;
+  if (f_open(&as->fp, FAT_FILE, FA_OPEN_EXISTING | FA_READ) != FR_OK) {
+    LOG("can't open %s", FAT_FILE);
+    __builtin_trap();
+  }
 
   i2s_start(as->i2s);
 }
@@ -64,7 +68,13 @@ static void fill_buffer_cb(void* user_data, uint16_t* buffer_to_fill) {
 }
 
 static void audio_done_cb(void* user_data) {
+  AudioState* as = (AudioState*)user_data;
   LOG("audio done");
+
+#ifdef FAT_FILE
+  f_close(&as->fp);
+#endif
+
   schedule_us(500000, start_audio, user_data);
 }
 
@@ -97,10 +107,6 @@ int main() {
 #ifdef FAT_FILE
   if (f_mount(&as.fatfs, "", 0) != FR_OK) {
     LOG("can't mount");
-    __builtin_trap();
-  }
-  if (f_open(&as.fp, FAT_FILE, FA_OPEN_EXISTING | FA_READ) != FR_OK) {
-    LOG("can't open %s", FAT_FILE);
     __builtin_trap();
   }
 #else
