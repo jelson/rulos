@@ -70,6 +70,7 @@ static void i2s_buf_filled_internal(i2s_t* i2s, uint16_t samples_filled,
                                     uint8_t other_idx) {
   assert(i2s->buf_state[just_filled_idx] == FILLING);
   i2s->samples_in_buf[just_filled_idx] = samples_filled;
+  hal_i2s_condition_buffer(BUF_ADDR(i2s, just_filled_idx), samples_filled);
   i2s->buf_state[just_filled_idx] = FULL;
 
   // The HAL will play the entire buffer, so we must zero out the end of the

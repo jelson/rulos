@@ -61,9 +61,8 @@ void init_samples(AudioState* as) {
     float sinewave =
         (sinf(((float)3.14159 * 2 * i * 32) / (SAMPLE_BUF_COUNT / 2)));
     int32_t intsinewave = sinewave * scalefactor;
-    int16_t value = ((intsinewave >> 8) & 0xff) | ((intsinewave & 0xff) << 8);
-    as->samplebuffer[sample++] = value;
-    as->samplebuffer[sample++] = value;
+    as->samplebuffer[sample++] = intsinewave;
+    as->samplebuffer[sample++] = intsinewave;
   }
 }
 

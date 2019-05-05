@@ -20,9 +20,12 @@
 
 #include "core/rulos.h"
 
-// Assumptions: we're always playing 16-bit audio and always are using
-// exactly two buffers, though the caller can vary the size of those
-// buffers.
+// Assumptions:
+//
+// * The only format currently supported is 16-bit, signed, little-endian.
+//
+// * There are exactly two buffers (one playing, one filling), though the caller
+//   can vary the size of those buffers.
 #define I2S_BUFSIZE_BYTES(samples_per_buf) (samples_per_buf * sizeof(uint16_t))
 
 #define I2S_STATE_SIZE(samples_per_buf) \
@@ -36,7 +39,7 @@ typedef enum {
 } i2s_buf_state_t;
 
 // Upcall from library to caller indicating we want another sample
-// buffer filled.
+// buffer filled. Format is 16-bit, signed, little-endian.
 typedef void (*i2s_fill_buffer_cb_t)(void* user_data, uint16_t* buf);
 
 // Upcall from library to caller indicating audio play has completed.
