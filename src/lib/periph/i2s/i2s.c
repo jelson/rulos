@@ -141,6 +141,7 @@ static void i2s_buf_played_cb_internal(i2s_t* i2s, uint8_t just_played_idx,
     case FILLING:
       // Buffer underrun! Drat. Stop the audio. It'll be restarted when the
       // buffer fill completes.
+      LOG("i2s buffer underrun!");
       hal_i2s_stop();
       break;
 
