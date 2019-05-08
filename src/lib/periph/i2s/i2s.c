@@ -21,10 +21,13 @@
 
 #include "core/rulos.h"
 
+#define I2S_STATS 1
+
 #define BUF_ADDR(i2s, buf_num)           \
   ((uint16_t*)(&(i2s)->bufdata[buf_num * \
                                I2S_BUFSIZE_BYTES((i2s)->samples_per_buf)]))
 
+// Called at schedule time.
 static void i2s_request_buffer_fill_trampoline(void* data) {
   i2s_t* i2s = (i2s_t*)data;
   uint8_t idx_to_fill = 0;
@@ -42,7 +45,12 @@ static void i2s_request_buffer_fill_trampoline(void* data) {
 
 // Ask the layer above to fill a buffer with audio data and give us a down-call
 // when it's finished.
+//
+// WARNING: May be called at interrupt time.
 static void i2s_request_buffer_fill(i2s_t* i2s, uint8_t buf_num) {
+#if I2S_STATS
+  i2s->buf_fill_start_time = precise_clock_time_us();
+#endif  // I2S_STATS
   assert(i2s->buf_state[buf_num] == EMPTY);
   i2s->buf_state[buf_num] = FILLING;
   schedule_now(i2s_request_buffer_fill_trampoline, i2s);
@@ -51,6 +59,8 @@ static void i2s_request_buffer_fill(i2s_t* i2s, uint8_t buf_num) {
 // Called whenever a buffer has just started playing. This can happen either
 // when we just began playing audio or when the HAL informed us that it has
 // swapped over and begun playing the other buffer.
+//
+// WARNING: May be called at interrupt time.
 static void i2s_buf_is_playing(i2s_t* i2s, uint8_t play_idx,
                                uint8_t other_idx) {
   assert(i2s->buf_state[play_idx] == FULL);
@@ -113,12 +123,32 @@ static void i2s_buf_filled_internal(i2s_t* i2s, uint16_t samples_filled,
 
 // Downcall that indicates the buffer fill requested earlier has completed.
 void i2s_buf_filled(i2s_t* i2s, uint16_t* buf, uint16_t samples_filled) {
+#if I2S_STATS
+  assert(i2s->buf_fill_start_time != 0);
+  minmax_add_sample(&i2s->buf_load_time_mmm,
+                    precise_clock_time_us() - i2s->buf_fill_start_time);
+  i2s->buf_fill_start_time = 0;
+#endif  // I2S_STATS
+
   if (buf == BUF_ADDR(i2s, 0)) {
     i2s_buf_filled_internal(i2s, samples_filled, 0, 1);
   } else if (buf == BUF_ADDR(i2s, 1)) {
     i2s_buf_filled_internal(i2s, samples_filled, 1, 0);
   } else {
     assert(FALSE);
+  }
+}
+
+static void i2s_audio_done_trampoline(void* data) {
+  i2s_t* i2s = (i2s_t*)data;
+
+#if I2S_STATS
+  minmax_log(&i2s->buf_play_time_mmm, "buf play time");
+  minmax_log(&i2s->buf_load_time_mmm, "buf load time");
+#endif  // I2S_STATS
+
+  if (i2s->audio_done_cb != NULL) {
+    i2s->audio_done_cb(i2s->user_data);
   }
 }
 
@@ -149,7 +179,7 @@ static void i2s_buf_played_cb_internal(i2s_t* i2s, uint8_t just_played_idx,
       // Done playing! Stop the audio output and call the done upcall in the
       // layer above.
       hal_i2s_stop();
-      schedule_now(i2s->audio_done_cb, i2s->user_data);
+      schedule_now(i2s_audio_done_trampoline, i2s);
       break;
 
     default:
@@ -161,6 +191,15 @@ static void i2s_buf_played_cb_internal(i2s_t* i2s, uint8_t just_played_idx,
 // WARNING: Called at interrupt time!
 static void i2s_buf_played_cb(void* user_data, uint8_t just_played_idx) {
   i2s_t* i2s = (i2s_t*)user_data;
+
+#if I2S_STATS
+  uint32_t now = precise_clock_time_us();
+  if (i2s->last_play_done_time != 0) {
+    minmax_add_sample(&i2s->buf_play_time_mmm, now - i2s->last_play_done_time);
+  }
+  i2s->last_play_done_time = now;
+#endif  // I2S_STATS
+
   if (just_played_idx == 0) {
     i2s_buf_played_cb_internal(i2s, 0, 1);
   } else if (just_played_idx == 1) {
@@ -201,6 +240,13 @@ i2s_t* i2s_init(uint16_t samples_per_buf, uint32_t sample_rate, void* user_data,
 void i2s_start(i2s_t* i2s) {
   assert(i2s->buf_state[0] == EMPTY);
   assert(i2s->buf_state[1] == EMPTY);
+
+#if I2S_STATS
+  // Reset stats.
+  i2s->last_play_done_time = 0;
+  minmax_init(&i2s->buf_play_time_mmm);
+  minmax_init(&i2s->buf_load_time_mmm);
+#endif  // I2S_STATS
 
   // Start buffer 0 filling.
   i2s_request_buffer_fill(i2s, 0);

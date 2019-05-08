@@ -19,6 +19,7 @@
 #pragma once
 
 #include "core/rulos.h"
+#include "core/stats.h"
 
 // Assumptions:
 //
@@ -56,6 +57,10 @@ typedef struct {
   // internal state
   i2s_buf_state_t buf_state[2];
   uint16_t samples_in_buf[2];
+  Time last_play_done_time;
+  Time buf_fill_start_time;
+  MinMaxMean_t buf_play_time_mmm;
+  MinMaxMean_t buf_load_time_mmm;
 
   // Data for both buffers, required to be bufsize *
   uint8_t bufdata[0];
