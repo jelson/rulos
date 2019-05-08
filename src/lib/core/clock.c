@@ -194,15 +194,12 @@ void schedule_absolute(Time at_time, ActivationFuncPtr func, void *data) {
 
 // this is the expensive one, with a lock
 Time precise_clock_time_us() {
-  uint16_t milliintervals;
-  Time t;
-
   rulos_irq_state_t old_interrupts = hal_start_atomic();
-  milliintervals = hal_elapsed_milliintervals();
-  t = g_interrupt_driven_jiffy_clock_us;
+  uint16_t milliintervals = hal_elapsed_milliintervals();
+  Time t = g_interrupt_driven_jiffy_clock_us;
   hal_end_atomic(old_interrupts);
 
-  t += ((g_rtc_interval_us * milliintervals) / 1000);
+  t += (g_rtc_interval_us * milliintervals) / 1000;
   return t;
 }
 
