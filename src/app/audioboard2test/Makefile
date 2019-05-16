@@ -20,8 +20,11 @@ PLATFORMS := arm
 ARM_CHIP := stm32f303xb
 TARGET := audioboard2test
 BOARD := GENERIC
-ALL_PLATFORM_CFLAGS := -DLOG_TO_SERIAL=UART0
+ALL_PLATFORM_CFLAGS := -DLOG_TO_SERIAL=UART0 -DRULOS_I2C_ALT_MAPPING
 PERIPHERALS := uart fatfs i2s
+
+# Network test
+PERIPHERALS += twi remote_keyboard
 
 TARGET_OBJECTS := \
 	audioboard2test.o

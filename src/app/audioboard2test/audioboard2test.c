@@ -20,33 +20,49 @@
 #include "periph/fatfs/ff.h"
 #include "periph/i2s/i2s.h"
 
+// for network test
+#include "core/network.h"
+#include "core/network_ports.h"
+#include "periph/input_controller/input_controller.h"
+#include "periph/remote_keyboard/remote_keyboard.h"
+
 //////////////////////////////////////////////////////////////////////////////
 
 #define SAMPLE_BUF_COUNT 4096
-#define FAT_FILE "sample.raw"
+
+//#define FAT_FILE "silence.bin"
+//#define FAT_FILE "kool50.raw"
+#define FAT_FILE "chill50.raw"
 
 typedef struct {
   int num_buffers_filled;
   uint8_t i2s_storage[I2S_STATE_SIZE(SAMPLE_BUF_COUNT)];
   i2s_t* i2s;
-  uint16_t samplebuffer[SAMPLE_BUF_COUNT];
+  int16_t samplebuffer[SAMPLE_BUF_COUNT];
   FATFS fatfs;
   FIL fp;
 } AudioState;
 
+static void recv_keystroke(struct s_input_injector_ifc* iii, Keystroke k) {
+  LOG("app got keystroke %c", k.key);
+}
+
 static void start_audio(void* user_data) {
   LOG("starting audio");
   AudioState* as = (AudioState*)user_data;
-  as->num_buffers_filled = 0;
+#ifdef FAT_FILE
   if (f_open(&as->fp, FAT_FILE, FA_OPEN_EXISTING | FA_READ) != FR_OK) {
     LOG("can't open %s", FAT_FILE);
     __builtin_trap();
   }
+#else
+  as->num_buffers_filled = 0;
+#endif
 
   i2s_start(as->i2s);
 }
 
-static void fill_buffer_cb(void* user_data, uint16_t* buffer_to_fill) {
+static void fill_buffer_cb(void* user_data, int16_t* buffer_to_fill) {
   AudioState* as = (AudioState*)user_data;
 #ifdef FAT_FILE
   UINT bytes_read;
@@ -58,7 +74,7 @@ static void fill_buffer_cb(void* user_data, uint16_t* buffer_to_fill) {
   }
   i2s_buf_filled(as->i2s, buffer_to_fill, bytes_read / 2);
 #else
-  if (++as->num_buffers_filled == 11) {
+  if (++as->num_buffers_filled == 30) {
     i2s_buf_filled(as->i2s, buffer_to_fill, 0);
   } else {
     memcpy(buffer_to_fill, as->samplebuffer, sizeof(as->samplebuffer));
@@ -68,14 +84,14 @@ static void fill_buffer_cb(void* user_data, uint16_t* buffer_to_fill) {
 }
 
 static void audio_done_cb(void* user_data) {
-  AudioState* as = (AudioState*)user_data;
   LOG("audio done");
 
 #ifdef FAT_FILE
+  AudioState* as = (AudioState*)user_data;
   f_close(&as->fp);
 #endif
 
-  schedule_us(500000, start_audio, user_data);
+  schedule_us(2000000, start_audio, user_data);
 }
 
 void init_samples(AudioState* as) {
@@ -91,7 +107,12 @@ void init_samples(AudioState* as) {
   }
 }
 
+#include "core/stats.h"
+
 int main() {
+  volatile uint16_t testnum = 0xcc33;
+  testnum++;
+
   hal_init();
   init_clock(10000, TIMER1);
 
@@ -99,6 +120,23 @@ int main() {
   HalUart uart;
   hal_uart_init(&uart, 115200, true, /* uart_id= */ 0);
   LOG("Log output running");
+#endif
+
+#if 0
+  MinMaxMean_t mmm;
+  minmax_init(&mmm);
+  volatile Time now = precise_clock_time_us();
+  for (int i = 0; i < 1000; i++) {
+    for (volatile int j = 0; j < 10000; j++) {
+    }
+    volatile Time later = precise_clock_time_us();
+    volatile int elapsed = later - now;
+    assert(elapsed >= 0);
+    minmax_add_sample(&mmm, elapsed);
+    now = later;
+  }
+  minmax_log(&mmm, "test");
+  LOG("done");
 #endif
 
   AudioState as;
@@ -113,9 +151,18 @@ int main() {
   init_samples(&as);
 #endif
 
-  as.i2s = i2s_init(SAMPLE_BUF_COUNT, 48000, &as, fill_buffer_cb, audio_done_cb,
+  as.i2s = i2s_init(SAMPLE_BUF_COUNT, 50000, &as, fill_buffer_cb, audio_done_cb,
                     as.i2s_storage, sizeof(as.i2s_storage));
   schedule_now((ActivationFuncPtr)start_audio, &as);
+
+  // network receiver test
+  RemoteKeyboardRecv rk;
+  Network net;
+  InputInjectorIfc iii;
+  iii.func = &recv_keystroke;
+  init_twi_network(&net, 200, ROCKET_ADDR);
+  init_remote_keyboard_recv(&rk, &net, &iii, REMOTE_KEYBOARD_PORT);
+
   cpumon_main_loop();
 
   return 0;
