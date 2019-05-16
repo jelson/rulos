@@ -23,9 +23,9 @@
 
 #define I2S_STATS 1
 
-#define BUF_ADDR(i2s, buf_num)           \
-  ((uint16_t*)(&(i2s)->bufdata[buf_num * \
-                               I2S_BUFSIZE_BYTES((i2s)->samples_per_buf)]))
+#define BUF_ADDR(i2s, buf_num)          \
+  ((int16_t*)(&(i2s)->bufdata[buf_num * \
+                              I2S_BUFSIZE_BYTES((i2s)->samples_per_buf)]))
 
 // Called at schedule time.
 static void i2s_request_buffer_fill_trampoline(void* data) {
@@ -87,7 +87,7 @@ static void i2s_buf_filled_internal(i2s_t* i2s, uint16_t samples_filled,
   // buffer if the layer above didn't fill the entire thing with data.
   if (samples_filled < i2s->samples_per_buf) {
     memset(BUF_ADDR(i2s, just_filled_idx) + samples_filled, 0,
-           sizeof(uint16_t) * (i2s->samples_per_buf - samples_filled));
+           sizeof(int16_t) * (i2s->samples_per_buf - samples_filled));
   }
 
   switch (i2s->buf_state[other_idx]) {
@@ -100,7 +100,7 @@ static void i2s_buf_filled_internal(i2s_t* i2s, uint16_t samples_filled,
       // beginning.
       if (just_filled_idx == 1) {
         memcpy(BUF_ADDR(i2s, 0), BUF_ADDR(i2s, 1),
-               sizeof(uint16_t) * i2s->samples_per_buf);
+               sizeof(int16_t) * i2s->samples_per_buf);
         just_filled_idx = 0;
         other_idx = 1;
       }
@@ -122,7 +122,7 @@ static void i2s_buf_filled_internal(i2s_t* i2s, uint16_t samples_filled,
 }
 
 // Downcall that indicates the buffer fill requested earlier has completed.
-void i2s_buf_filled(i2s_t* i2s, uint16_t* buf, uint16_t samples_filled) {
+void i2s_buf_filled(i2s_t* i2s, int16_t* buf, uint16_t samples_filled) {
 #if I2S_STATS
   assert(i2s->buf_fill_start_time != 0);
   minmax_add_sample(&i2s->buf_load_time_mmm,

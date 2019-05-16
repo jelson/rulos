@@ -24,8 +24,8 @@
 // by any platform that supports I2S.
 
 typedef void (*hal_i2s_play_done_cb_t)(void* user_data, uint8_t buf_done_idx);
-void hal_i2s_condition_buffer(uint16_t* samples, uint16_t num_samples);
+void hal_i2s_condition_buffer(int16_t* samples, uint16_t num_samples);
 void hal_i2s_init(uint16_t sample_rate, hal_i2s_play_done_cb_t play_done_cb,
                   void* user_data);
-void hal_i2s_start(uint16_t* samples, uint16_t num_samples_per_halfbuffer);
+void hal_i2s_start(int16_t* samples, uint16_t num_samples_per_halfbuffer);
 void hal_i2s_stop();
