@@ -104,12 +104,6 @@ typedef struct s_HALSPIHandler {
 
 #define SPIFLASH_CMD_READ_DATA (0x03)
 
-void hal_init_spi();
-void hal_spi_set_fast(r_bool fast);
-void hal_spi_select_slave(r_bool select);
-void hal_spi_set_handler(HALSPIHandler *handler);
-void hal_spi_send(uint8_t bte);
-
 void hal_audio_init(void);
 void hal_audio_fire_latch(void);
 void hal_audio_shift_sample(uint8_t sample);
