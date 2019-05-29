@@ -20,19 +20,28 @@
 
 #include <stdint.h>
 
-#ifndef MAX_USB_ENDPOINTS
-#define MAX_USB_ENDPOINTS 4
-#endif
-
+// Maximum number of USB devices we can talk to simultaneously.
 #ifndef MAX_USB_DEVICES
 #define MAX_USB_DEVICES 2
 #endif
 
-#ifndef MAX_USB_BUFFER
-#define MAX_USB_BUFFER 32
+// Maximum number of USB endpoints per device, including the control endpoint.
+#ifndef MAX_USB_ENDPOINTS
+#define MAX_USB_ENDPOINTS 4
 #endif
 
+#ifndef USB_BUFSIZE
+#define USB_BUFSIZE 64
+#endif
+
+// The offset from the position of the device in the devices array to
+// its USB address. (During configuration the address might be zero.)
+#define ADDR_OFFSET 10
+
 typedef struct {
+  uint8_t endpoint_id;
+  uint8_t max_packet_len;
+
   // The USB standard dictates that every incoming and outgoing
   // packet, per-device, has a bit associated with it, called a "data
   // toggle". Each packet sent and received must alternate the value
@@ -43,7 +52,6 @@ typedef struct {
   // endpoint to another.
   uint8_t last_rx_toggle;
   uint8_t last_tx_toggle;
-  uint8_t endpoint_id;
 } usb_endpoint_t;
 
 typedef struct {
@@ -66,7 +74,7 @@ typedef struct {
   usb_device_t devices[MAX_USB_DEVICES];
 
   // transfer buffer
-  uint8_t xferbuf[MAX_USB_BUFFER];
+  uint8_t xferbuf[USB_BUFSIZE];
 } max3421e_t;
 
 // MAX3421E Registers in PERIPHERAL mode. Preshifted left three places

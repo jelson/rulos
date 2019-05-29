@@ -33,12 +33,20 @@
 #define USB_SETTLE_DELAY_MS 200
 #define USB_RESET_WAIT_PERIOD_MS 50
 
+// Debug options
 #define PRINT_DEVICE_INFO 1
+#define VERBOSE_LOGGING 0
 
 /////////////////////////////////////////////////////////////////////
 
-// Write multiple values to a MAX3421E register. "reg" is assumed to
-// be the register number shifted-left by 3.
+#if VERBOSE_LOGGING
+#define VLOG LOG
+#else
+#define VLOG(...)
+#endif
+
+// Write multiple values to a MAX3421E register. "reg" is assumed to be the
+// register number shifted-left by 3.
 static void multi_write_reg(uint8_t reg_shifted, uint8_t *buf, uint16_t len) {
   // Set bit 1, which indicates this is a write (not a read)
   reg_shifted |= 0x2;
@@ -53,14 +61,14 @@ static void multi_write_reg(uint8_t reg_shifted, uint8_t *buf, uint16_t len) {
   hal_spi_select_slave(FALSE);
 }
 
-// Write a value to a MAX3421E register. "reg" is assumed to be the
-// register number shifted-left by 3.
+// Write a value to a MAX3421E register. "reg" is assumed to be the register
+// number shifted-left by 3.
 static void write_reg(uint8_t reg_shifted, uint8_t val) {
   multi_write_reg(reg_shifted, &val, 1);
 }
 
-// Read a value from a MAX3421E register. "reg" is assumed to be the
-// register number shifted-left by 3.
+// Read a value from a MAX3421E register. "reg" is assumed to be the register
+// number shifted-left by 3.
 static uint8_t read_reg(uint8_t reg_shifted) {
   uint8_t bufOut[2], bufIn[2];
   bufOut[0] = reg_shifted;
@@ -79,32 +87,32 @@ usb_word_t host_word_to_usb(const uint16_t value) {
 }
 
 // Tell the max3421e to start a USB transaction with the specified
-// transaction_type and endpoint ID. Transaction type msut be one of the tokXXX
+// transaction_type and endpoint. Transaction type msut be one of the tokXXX
 // constants, e.g. tokSETUP for a setup packet, tokIN for an IN transaction,
 // etc.
 static uint8_t execute_transaction(const uint8_t transaction_type,
-                                   const uint8_t endpoint) {
-  assert(endpoint == 0);
-
+                                   usb_endpoint_t *endpoint) {
   uint16_t naks = 0;
   uint16_t timeouts = 0;
   while (true) {
-    write_reg(rHXFR, transaction_type | endpoint);
+    write_reg(rHXFR, transaction_type | endpoint->endpoint_id);
 
+    // Wait for a frame to arrive
     int wait_cycles = 0;
     do {
       wait_cycles++;
     } while (!(read_reg(rHIRQ) & bmHXFRDNIRQ));
     write_reg(rHIRQ, bmHXFRDNIRQ);
 
+    // Get the result of the transaction
     uint8_t result;
     do {
       wait_cycles++;
       result = read_reg(rHRSL) & 0x0F;
     } while (result == hrBUSY);
 
-    // LOG("transaction executed after %d cycles, result=%d", wait_cycles,
-    // result);
+    VLOG("transaction executed after %d cycles, result=%d", wait_cycles,
+         result);
 
     switch (result) {
       case hrNAK:
@@ -130,22 +138,22 @@ static uint8_t execute_transaction(const uint8_t transaction_type,
   }
 }
 
-static uint8_t read_data(const uint8_t endpoint, uint8_t *result_buf,
-                         const uint8_t max_packet_len, uint16_t max_result_len,
+static uint8_t read_data(usb_device_t *dev, usb_endpoint_t *endpoint,
+                         uint8_t *result_buf, uint16_t max_result_len,
                          uint16_t *result_len_received) {
-  assert(max_packet_len > 0);
+  assert(endpoint->max_packet_len > 0);
   assert(max_result_len > 0);
 
   uint16_t total_bytes_read = 0;
   while (true) {
     uint8_t result = execute_transaction(tokIN, endpoint);
 
-    // LOG("reading data: result=%d", result);
+    VLOG("reading data: result=%d", result);
     if (result) {
       return result;
     }
     uint8_t bytes_read = read_reg(rRCVBC);
-    // LOG("....reading %d bytes", bytes_read);
+    VLOG("....reading %d bytes", bytes_read);
 
     if (bytes_read > max_result_len) {
       LOG("after reading %d bytes, got more bytes (%d) than we expected (%d)!",
@@ -162,45 +170,59 @@ static uint8_t read_data(const uint8_t endpoint, uint8_t *result_buf,
 
     // The transfer is complete either after receiving a short packet or we've
     // read all data we expect.
-    if (bytes_read < max_packet_len || max_result_len == 0) {
+    if (bytes_read < endpoint->max_packet_len || max_result_len == 0) {
       *result_len_received = total_bytes_read;
       return 0;
     }
   }
 }
 
-static uint8_t control_req(const uint8_t addr, const uint8_t endpoint,
-                           USB_SETUP_PACKET *setup,
-                           const uint16_t max_packet_len, uint8_t *resultbuf,
-                           const uint16_t max_result_len,
+// Perform a control request to the specified device and endpoint, writing the
+// result to max->xferbuf. |setup| is assumed to be filled in with the desired
+// control request with the exception of the wLength field, which this function
+// fills in to match max_result_len. At most |max_result_len| bytes will be
+// written to |resultbuf|. |result_len_received| indicates how much data was
+// written. Return value is 0 if successful, an error code otherwise.
+static uint8_t control_req(usb_device_t *dev, USB_SETUP_PACKET *setup,
+                           uint8_t *resultbuf, const uint16_t max_result_len,
                            uint16_t *result_len_received) {
+  // Set the peer address in the max3421's address register.
+  write_reg(rPERADDR, dev->addr);
+
+  // Change the length field of the setup packet to match th
   setup->wLength = host_word_to_usb(max_result_len);
 
-  // Write the setup packet to the max3421e's control register
+  // Write the setup packet to the max3421e's control register.
   multi_write_reg(rSUDFIFO, (uint8_t *)setup, sizeof(USB_SETUP_PACKET));
 
+  // Set the data toggle to 1, which (I think!?) is always the data toggle value
+  // for control requests.
   write_reg(rHCTL, bmRCVTOG1);
 
+  // The control endpoint is always endpoint 0.
+  usb_endpoint_t *control_endpoint = &dev->endpoints[0];
+
   // Send the setup packet. Return if we get an error.
-  // LOG("sending setup");
-  uint8_t result = execute_transaction(tokSETUP, endpoint);
+  VLOG("sending setup");
+  uint8_t result = execute_transaction(tokSETUP, control_endpoint);
   if (result) {
     return result;
   }
 
-  // LOG("reading data");
-  result = read_data(endpoint, resultbuf, max_packet_len, max_result_len,
+  result = read_data(dev, control_endpoint, resultbuf, max_result_len,
                      result_len_received);
 
   if (result) {
     return result;
   }
 
-  // LOG("sending ack");
-  return execute_transaction(tokOUTHS, endpoint);
+  VLOG("sending ack");
+  return execute_transaction(tokOUTHS, control_endpoint);
 }
 
-static uint8_t get_device_descriptor(max3421e_t *max, const uint8_t addr,
+// Get a device descriptor from the device at |dev|, written to |udd|. Return
+// value is 0 if successful, an error code otherwise.
+static uint8_t get_device_descriptor(max3421e_t *max, usb_device_t *dev,
                                      USB_DEVICE_DESCRIPTOR *udd) {
   USB_SETUP_PACKET setup = {};
   setup.ReqType_u.bmRequestType = bmREQ_GET_DESCR;
@@ -208,26 +230,27 @@ static uint8_t get_device_descriptor(max3421e_t *max, const uint8_t addr,
   setup.wValue.high = USB_DESCRIPTOR_DEVICE;
 
   // First, read the first 8 bytes of the device descriptor, which is enough to
-  // give us the max packet len for endpoint 0.
+  // give us the max packet len for endpoint 0. This initial read assumes the
+  // max_packet_len is 8 until we find out the real value from the USB device
+  // descriptor.
+  dev->endpoints[0].max_packet_len = 8;
   uint16_t received_len;
-  uint8_t result = control_req(addr, /* endpoint=*/0, &setup,
-                               /* max_packet_len=*/8, (uint8_t *)udd,
+  uint8_t result = control_req(dev, &setup, (uint8_t *)udd,
                                /* max_result_len=*/8, &received_len);
   if (result) {
     return result;
   }
 
-  uint8_t max_packet_len = udd->bMaxPacketSize0;
-
-  if (max_packet_len == 0) {
-    LOG("invalid packet len!");
+  if (udd->bMaxPacketSize0 == 0) {
+    LOG("invalid max packet len %d!", udd->bMaxPacketSize0);
     return hrINVALID;
   }
 
-  // Execute the read again using the now-known max-packet-len for endpoint 0.
-  result =
-      control_req(addr, /*endpoint=*/0, &setup, max_packet_len, (uint8_t *)udd,
-                  sizeof(USB_DEVICE_DESCRIPTOR), &received_len);
+  dev->endpoints[0].max_packet_len = udd->bMaxPacketSize0;
+
+  // Execute the read again using the now-known max-packet-len for the device.
+  result = control_req(dev, &setup, (uint8_t *)udd,
+                       sizeof(USB_DEVICE_DESCRIPTOR), &received_len);
 
   if (result) {
     return result;
@@ -240,25 +263,25 @@ static uint8_t get_device_descriptor(max3421e_t *max, const uint8_t addr,
   return 0;
 }
 
-// Get the primary language from the USB string descriptor set. On
-// success, returns 0 and sets primary_language. On failure, returns a
-// non-zero error code and does not touch primary_language.
-static uint8_t get_primary_language(max3421e_t *max, const uint8_t addr,
-                                    const uint8_t max_packet_len,
+// Get the primary language from the USB string descriptor set. On success,
+// returns 0 and sets primary_language. On failure, returns a non-zero error
+// code and does not touch primary_language.
+static uint8_t get_primary_language(max3421e_t *max, usb_device_t *dev,
                                     usb_word_t *primary_language) {
   USB_SETUP_PACKET setup = {};
   setup.ReqType_u.bmRequestType = bmREQ_GET_DESCR;
   setup.bRequest = USB_REQUEST_GET_DESCRIPTOR;
   setup.wValue.high = USB_DESCRIPTOR_STRING;
 
-  // Make room for at least 5 languages
-  const size_t bufsize = sizeof(USB_LANG_DESCRIPTOR) + sizeof(usb_word_t) * 5;
-  uint8_t langbuf[bufsize];
-  USB_LANG_DESCRIPTOR *const uld = (USB_LANG_DESCRIPTOR *)&langbuf;
-  uint16_t received_len;
+  // Ensure the USB buffer is big enough for a descriptor containing at least 1
+  // language
+  assert(USB_BUFSIZE > sizeof(USB_LANG_DESCRIPTOR) + sizeof(usb_word_t));
 
-  uint8_t result = control_req(addr, /*endpoint=*/0, &setup, max_packet_len,
-                               langbuf, bufsize, &received_len);
+  // Retrieve the language descriptor
+  USB_LANG_DESCRIPTOR *const uld = (USB_LANG_DESCRIPTOR *)max->xferbuf;
+  uint16_t received_len;
+  uint8_t result = control_req(dev, &setup, max->xferbuf, sizeof(max->xferbuf),
+                               &received_len);
 
   if (result) {
     return result;
@@ -285,9 +308,8 @@ static uint8_t get_primary_language(max3421e_t *max, const uint8_t addr,
   return 0;
 }
 
-static uint8_t get_string_descriptor(max3421e_t *max, const uint8_t addr,
+static uint8_t get_string_descriptor(max3421e_t *max, usb_device_t *dev,
                                      const uint8_t string_index,
-                                     const uint8_t max_packet_len,
                                      const usb_word_t language, char *buf,
                                      uint16_t buflen) {
   USB_SETUP_PACKET setup = {};
@@ -298,8 +320,8 @@ static uint8_t get_string_descriptor(max3421e_t *max, const uint8_t addr,
   setup.wValue.low = string_index;
 
   uint16_t received_len;
-  uint8_t result = control_req(addr, /*endpoint=*/0, &setup, max_packet_len,
-                               (uint8_t *)buf, buflen - 1, &received_len);
+  uint8_t result =
+      control_req(dev, &setup, (uint8_t *)buf, buflen - 1, &received_len);
 
   // Do a bodged conversion from utf16 (which is what USB returns) to ASCII.
   char *converted = buf;
@@ -310,8 +332,8 @@ static uint8_t get_string_descriptor(max3421e_t *max, const uint8_t addr,
   return result;
 }
 
-static void print_one_device_string(max3421e_t *max, const char *prefix,
-                                    const uint8_t addr,
+static void print_one_device_string(max3421e_t *max, usb_device_t *dev,
+                                    const char *prefix,
                                     USB_DEVICE_DESCRIPTOR *udd,
                                     const uint8_t index,
                                     const usb_word_t language) {
@@ -320,8 +342,8 @@ static void print_one_device_string(max3421e_t *max, const char *prefix,
   }
 
   char buf[100];
-  uint8_t result = get_string_descriptor(max, 0, index, udd->bMaxPacketSize0,
-                                         language, buf, sizeof(buf));
+  uint8_t result =
+      get_string_descriptor(max, dev, index, language, buf, sizeof(buf));
   if (result) {
     LOG("error getting string: %d", result);
   } else {
@@ -329,20 +351,19 @@ static void print_one_device_string(max3421e_t *max, const char *prefix,
   }
 }
 
-static void print_device_info(max3421e_t *max, const uint8_t addr,
+static void print_device_info(max3421e_t *max, usb_device_t *dev,
                               USB_DEVICE_DESCRIPTOR *udd) {
   usb_word_t primary_language;
-  uint8_t result =
-      get_primary_language(max, addr, udd->bMaxPacketSize0, &primary_language);
+  uint8_t result = get_primary_language(max, dev, &primary_language);
 
   if (result) {
     LOG("error getting language list: %d", result);
     return;
   }
 
-  print_one_device_string(max, "Manufacturer", addr, udd, udd->iManufacturer,
+  print_one_device_string(max, dev, "Manufacturer", udd, udd->iManufacturer,
                           primary_language);
-  print_one_device_string(max, "Device", addr, udd, udd->iProduct,
+  print_one_device_string(max, dev, "Device", udd, udd->iProduct,
                           primary_language);
 }
 
@@ -374,9 +395,9 @@ void step3_enable_framemarker(void *data);
 void step4_delay_after_first_frameirq(void *data);
 void step5_configure(void *data);
 
-// Bus probe step 1: check
+// Bus probe step 1: check to see if anything new is attached to the bus.
 void step1_probe_bus(void *data) {
-  max3421e_t *max = (max3421e_t *)max;
+  max3421e_t *max = (max3421e_t *)data;
 
   // Probe bus to see if anything is attached
   write_reg(rHCTL, bmSAMPLEBUS);
@@ -397,21 +418,21 @@ void step1_probe_bus(void *data) {
   }
 }
 
-// Bus probe step 2: after the device has settled, perform a bus reset
-// to put the device into a known state.
+// Bus probe step 2: after the device has settled, perform a bus reset to put
+// the device into a known state.
 void step2_reset_device(void *data) {
-  max3421e_t *max = (max3421e_t *)max;
+  max3421e_t *max = (max3421e_t *)data;
 
-  LOG("bus probe step2");
+  VLOG("bus probe step2");
   write_reg(rHCTL, bmBUSRST);
   schedule_us(USB_RESET_WAIT_PERIOD_MS * 1000, step3_enable_framemarker, max);
 }
 
 // Bus probe step 3: enable frame markers, then wait for the first FRAMEIRQ.
 void step3_enable_framemarker(void *data) {
-  max3421e_t *max = (max3421e_t *)max;
+  max3421e_t *max = (max3421e_t *)data;
 
-  LOG("bus probe step3");
+  VLOG("bus probe step3");
   // Ensure reset has completed. If not, wait 10ms more.
   if (read_reg(rHCTL) & bmBUSRST) {
     schedule_us(10000, step3_enable_framemarker, max);
@@ -426,9 +447,9 @@ void step3_enable_framemarker(void *data) {
 // Bus probe step 4: After the first frameirq has been received, wait an
 // additional 20msec before configuring.
 void step4_delay_after_first_frameirq(void *data) {
-  max3421e_t *max = (max3421e_t *)max;
+  max3421e_t *max = (max3421e_t *)data;
 
-  LOG("bus probe step4");
+  VLOG("bus probe step4");
   if (read_reg(rHIRQ) & bmFRAMEIRQ) {
     schedule_us(20000, step5_configure, max);
   } else {
@@ -436,27 +457,43 @@ void step4_delay_after_first_frameirq(void *data) {
   }
 }
 
+// Bus probe step 5: Now that the bus traffic is flowing, query the new device
+// for its parameters, configure an address, etc.
 void step5_configure(void *data) {
-  max3421e_t *max = (max3421e_t *)max;
+  max3421e_t *max = (max3421e_t *)data;
   // schedule_now(step1_probe_bus, max);
 
-  LOG("bus probe step5");
+  VLOG("bus probe step5");
 
-  // Set peer address to 0 and set initial data toggle value, which the spec
-  // defines as 1
-  write_reg(rPERADDR, 0);
+  // Find an empty slot in the USB array
+  usb_device_t *dev = NULL;
+  uint8_t addr;
+  for (int i = 0; i < MAX_USB_DEVICES; i++) {
+    if (max->devices[i].addr == 0) {
+      dev = &max->devices[i];
+      addr = i + ADDR_OFFSET;
+      break;
+    }
+  }
+
+  // Make sure a slot was available!
+  if (dev == NULL) {
+    LOG("out of USB device slots!");
+    assert(FALSE);
+  }
 
   USB_DEVICE_DESCRIPTOR udd = {};
-  uint8_t result = get_device_descriptor(max, 0, &udd);
+  uint8_t result = get_device_descriptor(max, dev, &udd);
   if (result) {
     LOG("error getting usb device descriptor: %d", result);
     return;
   }
 
-  LOG("Got USB device descriptor! vid=0x%x, pid=0x%x", udd.idVendor,
-      udd.idProduct);
+  dev->vid = udd.idVendor;
+  dev->pid = udd.idProduct;
+  LOG("Got USB device descriptor! vid=0x%x, pid=0x%x", dev->vid, dev->pid);
 
-  result = get_device_descriptor(max, 0, &udd);
+  result = get_device_descriptor(max, dev, &udd);
   if (result) {
     LOG("error getting second usb device descriptor: %d", result);
     return;
@@ -464,11 +501,13 @@ void step5_configure(void *data) {
   LOG("got second device descriptor for fun");
 
 #if PRINT_DEVICE_INFO
-  print_device_info(max, /*addr=*/0, &udd);
+  print_device_info(max, dev, &udd);
 #endif
+  dev->addr = addr;
 }
 
 bool max3421e_init(max3421e_t *max) {
+  memset(max, 0, sizeof(max3421e_t));
   hal_init_spi();
 
   // Set full duplex SPI mode
