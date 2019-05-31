@@ -70,6 +70,12 @@ typedef struct {
   // revision number of the max3421
   uint8_t chip_ver;
 
+  // bus state the last time we scanned the bus
+  uint8_t last_bus_state;
+
+  // are we already connnected?
+  uint8_t connected;
+
   // array of all devices attached
   usb_device_t devices[MAX_USB_DEVICES];
 

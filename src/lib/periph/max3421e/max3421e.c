@@ -33,6 +33,11 @@
 #define USB_SETTLE_DELAY_MS 200
 #define USB_RESET_WAIT_PERIOD_MS 50
 
+// USB 2.0 section 9.2.6.3 requires a 2msec delay after setting an address but
+// apparently the older spec requires at least a 200msec wait? The USB Host
+// Shield waits 300 msec here. I don't know....
+#define USB_POST_ADDRESS_WAIT_MS 300
+
 // Debug options
 #define PRINT_DEVICE_INFO 1
 #define VERBOSE_LOGGING 0
@@ -90,11 +95,16 @@ usb_word_t host_word_to_usb(const uint16_t value) {
 // transaction_type and endpoint. Transaction type msut be one of the tokXXX
 // constants, e.g. tokSETUP for a setup packet, tokIN for an IN transaction,
 // etc.
-static uint8_t execute_transaction(const uint8_t transaction_type,
-                                   usb_endpoint_t *endpoint) {
+static uint8_t execute_transaction(usb_device_t *dev, usb_endpoint_t *endpoint,
+                                   const uint8_t transaction_type) {
+  // Set the peer address in the max3421's address register.
+  write_reg(rPERADDR, dev->addr);
+
   uint16_t naks = 0;
   uint16_t timeouts = 0;
   while (true) {
+    // Write to the transfer register to tell the max3421 to initiate the
+    // transaction
     write_reg(rHXFR, transaction_type | endpoint->endpoint_id);
 
     // Wait for a frame to arrive
@@ -146,7 +156,7 @@ static uint8_t read_data(usb_device_t *dev, usb_endpoint_t *endpoint,
 
   uint16_t total_bytes_read = 0;
   while (true) {
-    uint8_t result = execute_transaction(tokIN, endpoint);
+    uint8_t result = execute_transaction(dev, endpoint, tokIN);
 
     VLOG("reading data: result=%d", result);
     if (result) {
@@ -177,20 +187,15 @@ static uint8_t read_data(usb_device_t *dev, usb_endpoint_t *endpoint,
   }
 }
 
-// Perform a control request to the specified device and endpoint, writing the
-// result to max->xferbuf. |setup| is assumed to be filled in with the desired
-// control request with the exception of the wLength field, which this function
-// fills in to match max_result_len. At most |max_result_len| bytes will be
-// written to |resultbuf|. |result_len_received| indicates how much data was
-// written. Return value is 0 if successful, an error code otherwise.
-static uint8_t control_req(usb_device_t *dev, USB_SETUP_PACKET *setup,
-                           uint8_t *resultbuf, const uint16_t max_result_len,
-                           uint16_t *result_len_received) {
-  // Set the peer address in the max3421's address register.
-  write_reg(rPERADDR, dev->addr);
-
-  // Change the length field of the setup packet to match th
-  setup->wLength = host_word_to_usb(max_result_len);
+// Perform a control request to the specified device and endpoint. |setup| is
+// assumed to be filled in with the desired control request with the exception
+// of the wLength field, which this function fills in to match |data_length|.
+// Return value is 0 if successful, an error code otherwise.
+static uint8_t control_common(usb_device_t *dev, usb_endpoint_t *endpoint,
+                              USB_SETUP_PACKET *setup,
+                              const uint8_t data_length) {
+  // Convert the data_length field and write it to the setup packet.
+  setup->wLength = host_word_to_usb(data_length);
 
   // Write the setup packet to the max3421e's control register.
   multi_write_reg(rSUDFIFO, (uint8_t *)setup, sizeof(USB_SETUP_PACKET));
@@ -199,12 +204,23 @@ static uint8_t control_req(usb_device_t *dev, USB_SETUP_PACKET *setup,
   // for control requests.
   write_reg(rHCTL, bmRCVTOG1);
 
+  // Send the setup packet. Return if we get an error.
+  VLOG("sending setup packet");
+  return execute_transaction(dev, endpoint, tokSETUP);
+}
+
+// Execute a control request that has a data reading phase to the specified
+// device. |setup| is assumed to be filled in with all fields other than length,
+// which is filled automatically from |max_result_len|. The data read is written
+// to |resultbuf|. |result_len_received| indicates how much data was
+// written. Returns zero on success or a non-zero error code in case of failure.
+static uint8_t control_read(usb_device_t *dev, USB_SETUP_PACKET *setup,
+                            uint8_t *resultbuf, const uint16_t max_result_len,
+                            uint16_t *result_len_received) {
   // The control endpoint is always endpoint 0.
   usb_endpoint_t *control_endpoint = &dev->endpoints[0];
 
-  // Send the setup packet. Return if we get an error.
-  VLOG("sending setup");
-  uint8_t result = execute_transaction(tokSETUP, control_endpoint);
+  uint8_t result = control_common(dev, control_endpoint, setup, max_result_len);
   if (result) {
     return result;
   }
@@ -217,7 +233,58 @@ static uint8_t control_req(usb_device_t *dev, USB_SETUP_PACKET *setup,
   }
 
   VLOG("sending ack");
-  return execute_transaction(tokOUTHS, control_endpoint);
+  return execute_transaction(dev, control_endpoint, tokOUTHS);
+}
+
+// Execute a control request that has an optional data writing phase to the
+// specified device. |setup| is assumed to be filled in with all fields other
+// than length, which is filled automatically from |len|. Returns zero on
+// success or a non-zero error code in case of failure.
+//
+// NB: Currently does not support a data phase.
+static uint8_t control_write(usb_device_t *dev, USB_SETUP_PACKET *setup,
+                             uint8_t *data, const uint16_t len) {
+  // TODO: Support control writes with a data phase.
+  assert(len == 0);
+
+  // The control endpoint is always endpoint 0.
+  usb_endpoint_t *control_endpoint = &dev->endpoints[0];
+
+  uint8_t result = control_common(dev, control_endpoint, setup, len);
+  if (result) {
+    return result;
+  }
+
+  if (len == 0) {
+    // With no data stage, the last operation is to send an IN token to the
+    // peripheral as the STATUS (handshake) stage of this control transfer. We
+    // should get NAK or the DATA1 PID. When we get the DATA1 PID, the max3421
+    // automatically sends the closing ACK.
+    result = execute_transaction(dev, control_endpoint, tokINHS);
+  }
+
+  return result;
+}
+
+// Configures the device at |dev| to have new address |addr|. If successful, 0
+// is returned and dev->addr is updated to be addr. On failure, a non-zero
+// result is returned and dev->addr is not changed.
+static uint8_t configure_device_address(max3421e_t *max, usb_device_t *dev,
+                                        const uint8_t addr) {
+  LOG("Reconfiguring new device with address %d", addr);
+
+  USB_SETUP_PACKET setup = {};
+  setup.ReqType_u.bmRequestType = bmREQ_SET;
+  setup.bRequest = USB_REQUEST_SET_ADDRESS;
+  setup.wValue.low = addr;
+  uint8_t result = control_write(dev, &setup, NULL, 0);
+
+  // If the request succeeded, update our record of this device's address so
+  // that future requests go to the right place.
+  if (result == 0) {
+    dev->addr = addr;
+  }
+  return result;
 }
 
 // Get a device descriptor from the device at |dev|, written to |udd|. Return
@@ -235,8 +302,8 @@ static uint8_t get_device_descriptor(max3421e_t *max, usb_device_t *dev,
   // descriptor.
   dev->endpoints[0].max_packet_len = 8;
   uint16_t received_len;
-  uint8_t result = control_req(dev, &setup, (uint8_t *)udd,
-                               /* max_result_len=*/8, &received_len);
+  uint8_t result = control_read(dev, &setup, (uint8_t *)udd,
+                                /* max_result_len=*/8, &received_len);
   if (result) {
     return result;
   }
@@ -249,8 +316,8 @@ static uint8_t get_device_descriptor(max3421e_t *max, usb_device_t *dev,
   dev->endpoints[0].max_packet_len = udd->bMaxPacketSize0;
 
   // Execute the read again using the now-known max-packet-len for the device.
-  result = control_req(dev, &setup, (uint8_t *)udd,
-                       sizeof(USB_DEVICE_DESCRIPTOR), &received_len);
+  result = control_read(dev, &setup, (uint8_t *)udd,
+                        sizeof(USB_DEVICE_DESCRIPTOR), &received_len);
 
   if (result) {
     return result;
@@ -280,8 +347,8 @@ static uint8_t get_primary_language(max3421e_t *max, usb_device_t *dev,
   // Retrieve the language descriptor
   USB_LANG_DESCRIPTOR *const uld = (USB_LANG_DESCRIPTOR *)max->xferbuf;
   uint16_t received_len;
-  uint8_t result = control_req(dev, &setup, max->xferbuf, sizeof(max->xferbuf),
-                               &received_len);
+  uint8_t result = control_read(dev, &setup, max->xferbuf, sizeof(max->xferbuf),
+                                &received_len);
 
   if (result) {
     return result;
@@ -321,7 +388,7 @@ static uint8_t get_string_descriptor(max3421e_t *max, usb_device_t *dev,
 
   uint16_t received_len;
   uint8_t result =
-      control_req(dev, &setup, (uint8_t *)buf, buflen - 1, &received_len);
+      control_read(dev, &setup, (uint8_t *)buf, buflen - 1, &received_len);
 
   // Do a bodged conversion from utf16 (which is what USB returns) to ASCII.
   char *converted = buf;
@@ -390,32 +457,98 @@ static bool max_reset() {
 }
 
 void step1_probe_bus(void *data);
+void initiate_periph_config(max3421e_t *max, uint8_t is_lowspeed);
 void step2_reset_device(void *data);
 void step3_enable_framemarker(void *data);
 void step4_delay_after_first_frameirq(void *data);
-void step5_configure(void *data);
+void step5_configure_address(void *data);
+void step6_get_metadata(void *data);
+
+// Resets internal state when disconnect occurs.
+void handle_disconnect(max3421e_t *max) {
+  max->connected = false;
+
+  memset(max->devices, 0, sizeof(max->devices));
+}
 
 // Bus probe step 1: check to see if anything new is attached to the bus.
 void step1_probe_bus(void *data) {
   max3421e_t *max = (max3421e_t *)data;
 
+  VLOG("probing bus");
+
   // Probe bus to see if anything is attached
   write_reg(rHCTL, bmSAMPLEBUS);
-  uint8_t bus_state = read_reg(rHRSL);
+  uint8_t bus_state = read_reg(rHRSL) & (bmJSTATUS | bmKSTATUS);
 
-  if (bus_state & bmJSTATUS) {
-    write_reg(rMODE, bmDPPULLDN | bmDMPULLDN | bmHOST | bmSOFKAENAB);
-    LOG("Full-Speed Device Detected");
-    schedule_us(USB_SETTLE_DELAY_MS * 1000, step2_reset_device, max);
-  } else if (bus_state & bmKSTATUS) {
-    write_reg(rMODE,
-              bmDPPULLDN | bmDMPULLDN | bmHOST | bmSOFKAENAB | bmLOWSPEED);
-    LOG("Low-Speed Device Detected");
-    schedule_us(USB_SETTLE_DELAY_MS * 1000, step2_reset_device, max);
-  } else {
-    // No device was detected; just reschedule USB bus probe
-    schedule_us(USB_BUS_PROBE_PERIOD_MS * 1000, step1_probe_bus, max);
+  // If nothing has changed since our last probe, just reschedule another bus
+  // probe for later.
+  if (max->last_bus_state == bus_state) {
+    goto probe_again_later;
   }
+
+  // If we're in an illegal state, report an error and try again later.
+  if (bus_state == (bmJSTATUS | bmKSTATUS)) {
+    LOG("Warning: USB bus seems to be in an illegal state!");
+    goto probe_again_later;
+  }
+
+  max->last_bus_state = bus_state;
+  uint8_t is_lowspeed = read_reg(rMODE) & bmLOWSPEED;
+
+  switch (bus_state) {
+    case 0:
+      // If both lines are low, the device has disconnected.
+      LOG("USB: Disconnect detected");
+      max->connected = false;
+      handle_disconnect(max);
+      goto probe_again_later;
+
+    case bmJSTATUS:
+      // Idle state detected. If we're already connected, do nothing.
+      if (max->connected) {
+        goto probe_again_later;
+      }
+
+      // A device just connected with the "correct polarity" -- meaning the
+      // low-speed bit is already in the right position. Initiate a scan using
+      // the current speed setting.
+      initiate_periph_config(max, is_lowspeed);
+      return;
+
+    case bmKSTATUS:
+      if (max->connected) {
+        LOG("Got K status while already connected? USB is confused.");
+        goto probe_again_later;
+      } else {
+        // If we're not connected and we see a K status it means we have to flip
+        // the lowspeed bit.
+        initiate_periph_config(max, !is_lowspeed);
+        return;
+      }
+
+    default:
+      assert(false);
+  }
+
+probe_again_later:
+  schedule_us(USB_BUS_PROBE_PERIOD_MS * 1000, step1_probe_bus, max);
+  return;
+}
+
+void initiate_periph_config(max3421e_t *max, uint8_t is_lowspeed) {
+  uint8_t new_mode = bmDPPULLDN | bmDMPULLDN | bmHOST | bmSOFKAENAB;
+
+  if (is_lowspeed) {
+    new_mode |= bmLOWSPEED;
+    LOG("Low-Speed Device Detected");
+  } else {
+    LOG("USB: Full-Speed Device Detected");
+  }
+
+  max->connected = true;
+  write_reg(rMODE, new_mode);
+  schedule_us(USB_SETTLE_DELAY_MS * 1000, step2_reset_device, max);
 }
 
 // Bus probe step 2: after the device has settled, perform a bus reset to put
@@ -451,7 +584,7 @@ void step4_delay_after_first_frameirq(void *data) {
 
   VLOG("bus probe step4");
   if (read_reg(rHIRQ) & bmFRAMEIRQ) {
-    schedule_us(20000, step5_configure, max);
+    schedule_us(20000, step5_configure_address, max);
   } else {
     schedule_us(20000, step4_delay_after_first_frameirq, max);
   }
@@ -459,9 +592,8 @@ void step4_delay_after_first_frameirq(void *data) {
 
 // Bus probe step 5: Now that the bus traffic is flowing, query the new device
 // for its parameters, configure an address, etc.
-void step5_configure(void *data) {
+void step5_configure_address(void *data) {
   max3421e_t *max = (max3421e_t *)data;
-  // schedule_now(step1_probe_bus, max);
 
   VLOG("bus probe step5");
 
@@ -482,6 +614,17 @@ void step5_configure(void *data) {
     assert(FALSE);
   }
 
+  // Reconfigure the address of the new device. This updates the address field
+  // of 'dev'.
+  uint8_t result = configure_device_address(max, dev, addr);
+  if (result) {
+    LOG("couldn't configure device address: %d", result);
+  }
+
+  schedule_us(USB_POST_ADDRESS_WAIT_MS * 1000, step6_get_metadata, max);
+}
+
+static void get_metadata_one_device(max3421e_t *max, usb_device_t *dev) {
   USB_DEVICE_DESCRIPTOR udd = {};
   uint8_t result = get_device_descriptor(max, dev, &udd);
   if (result) {
@@ -493,17 +636,29 @@ void step5_configure(void *data) {
   dev->pid = udd.idProduct;
   LOG("Got USB device descriptor! vid=0x%x, pid=0x%x", dev->vid, dev->pid);
 
-  result = get_device_descriptor(max, dev, &udd);
-  if (result) {
-    LOG("error getting second usb device descriptor: %d", result);
-    return;
-  }
-  LOG("got second device descriptor for fun");
-
 #if PRINT_DEVICE_INFO
   print_device_info(max, dev, &udd);
 #endif
-  dev->addr = addr;
+}
+
+// Bus probe step 6: Get metadata from just-configured devices, which we can
+// identify because the vid/pid are 0.
+void step6_get_metadata(void *data) {
+  max3421e_t *max = (max3421e_t *)data;
+
+  VLOG("bus probe step6");
+
+  for (int i = 0; i < MAX_USB_DEVICES; i++) {
+    if (max->devices[i].addr != 0 && max->devices[i].vid == 0) {
+      get_metadata_one_device(max, &max->devices[i]);
+    }
+  }
+
+  // Now that the device address has been configured, we can also restart bus
+  // probing without seeing the same device again. Or, if address setting
+  // failed, bus probe will cause us to try again. Either way, we are ready to
+  // probe the bus again.
+  schedule_us(USB_BUS_PROBE_PERIOD_MS * 1000, step1_probe_bus, max);
 }
 
 bool max3421e_init(max3421e_t *max) {
