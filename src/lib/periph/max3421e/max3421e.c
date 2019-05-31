@@ -477,9 +477,27 @@ void step1_probe_bus(void *data) {
 
   VLOG("probing bus");
 
-  // Probe bus to see if anything is attached
-  write_reg(rHCTL, bmSAMPLEBUS);
-  uint8_t bus_state = read_reg(rHRSL) & (bmJSTATUS | bmKSTATUS);
+  // Probe bus to see if anything is attached. We sometimes see spurious
+  // disconnects for some reason, so we keep sampling the bus until we get 3 of
+  // the same value in a row.
+  //
+  // NB: The docs say that you're supposed to wait for bmSAMPLEBUS to be cleared
+  // to indicate sampling is complete before reading the status registers. The
+  // max3421e I have never seems to clear the bit, no matter how long I
+  // wait. The spurious disconnects might be due to a race if I'm reading the
+  // status register before bus sampling is complete.
+  uint8_t num_consistent_samples = 0;
+  uint8_t bus_state = 0xFF;
+  do {
+    write_reg(rHCTL, bmSAMPLEBUS);
+    uint8_t sample = read_reg(rHRSL) & (bmJSTATUS | bmKSTATUS);
+    if (bus_state == sample) {
+      num_consistent_samples++;
+    } else {
+      bus_state = sample;
+      num_consistent_samples = 0;
+    }
+  } while (num_consistent_samples < 3);
 
   // If nothing has changed since our last probe, just reschedule another bus
   // probe for later.
