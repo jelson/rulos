@@ -192,6 +192,14 @@ typedef struct {
   uint16_t wDescriptorLength;  // Total size of the Report descriptor
 } __attribute__((packed)) USB_HID_DESCRIPTOR;
 
+typedef struct {
+  // Length of this descriptor.
+  uint8_t bLength;
+
+  // INTERFACE descriptor type (USB_DESCRIPTOR_INTERFACE).
+  uint8_t bDescriptorType;
+} USB_DESCRIPTOR_HEADER;
+
 // clang-format off
 /* Standard Device Requests */
 #define USB_REQUEST_GET_STATUS                  0       // Standard Device Request - GET STATUS

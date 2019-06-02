@@ -105,7 +105,7 @@ static uint8_t execute_transaction(usb_device_t *dev, usb_endpoint_t *endpoint,
   while (true) {
     // Write to the transfer register to tell the max3421 to initiate the
     // transaction
-    write_reg(rHXFR, transaction_type | endpoint->endpoint_id);
+    write_reg(rHXFR, transaction_type | endpoint->endpoint_addr);
 
     // Wait for a frame to arrive
     int wait_cycles = 0;
@@ -287,6 +287,18 @@ static uint8_t configure_device_address(max3421e_t *max, usb_device_t *dev,
   return result;
 }
 
+static uint8_t activate_configuration(max3421e_t *max, usb_device_t *dev,
+                                      const uint8_t config_number) {
+  LOG("Device at address %d, activating configuration %d", dev->addr,
+      config_number);
+
+  USB_SETUP_PACKET setup = {};
+  setup.ReqType_u.bmRequestType = bmREQ_SET;
+  setup.bRequest = USB_REQUEST_SET_CONFIGURATION;
+  setup.wValue.low = config_number;
+  return control_write(dev, &setup, NULL, 0);
+}
+
 // Get a device descriptor from the device at |dev|, written to |udd|. Return
 // value is 0 if successful, an error code otherwise.
 static uint8_t get_device_descriptor(max3421e_t *max, usb_device_t *dev,
@@ -301,7 +313,7 @@ static uint8_t get_device_descriptor(max3421e_t *max, usb_device_t *dev,
   // max_packet_len is 8 until we find out the real value from the USB device
   // descriptor.
   dev->endpoints[0].max_packet_len = 8;
-  uint16_t received_len;
+  uint16_t received_len = 0;
   uint8_t result = control_read(dev, &setup, (uint8_t *)udd,
                                 /* max_result_len=*/8, &received_len);
   if (result) {
@@ -324,6 +336,38 @@ static uint8_t get_device_descriptor(max3421e_t *max, usb_device_t *dev,
   }
 
   if (received_len != sizeof(USB_DEVICE_DESCRIPTOR)) {
+    return hrSHORTPACKET;
+  }
+
+  if (udd->bDescriptorType != USB_DESCRIPTOR_DEVICE) {
+    LOG("Got unexpected device descriptor type 0x%x", udd->bDescriptorType);
+    return hrSHORTPACKET;
+  }
+
+  return 0;
+}
+
+// Get a config descriptor from the device at |dev|, written to |ucd|. Return
+// value is 0 if successful, an error code otherwise.
+static uint8_t get_config_descriptor(max3421e_t *max, usb_device_t *dev,
+                                     const uint8_t config_number,
+                                     uint8_t *resultbuf,
+                                     const uint16_t max_result_len,
+                                     uint16_t *result_len_received) {
+  USB_SETUP_PACKET setup = {};
+  setup.ReqType_u.bmRequestType = bmREQ_GET_DESCR;
+  setup.bRequest = USB_REQUEST_GET_DESCRIPTOR;
+  setup.wValue.high = USB_DESCRIPTOR_CONFIGURATION;
+  setup.wValue.low = config_number;
+
+  uint8_t result =
+      control_read(dev, &setup, resultbuf, max_result_len, result_len_received);
+
+  if (result) {
+    return result;
+  }
+
+  if (*result_len_received < sizeof(USB_CONFIGURATION_DESCRIPTOR)) {
     return hrSHORTPACKET;
   }
 
@@ -383,10 +427,10 @@ static uint8_t get_string_descriptor(max3421e_t *max, usb_device_t *dev,
   setup.ReqType_u.bmRequestType = bmREQ_GET_DESCR;
   setup.bRequest = USB_REQUEST_GET_DESCRIPTOR;
   setup.wValue.high = USB_DESCRIPTOR_STRING;
-  setup.wIndex = language;
   setup.wValue.low = string_index;
+  setup.wIndex = language;
 
-  uint16_t received_len;
+  uint16_t received_len = 0;
   uint8_t result =
       control_read(dev, &setup, (uint8_t *)buf, buflen - 1, &received_len);
 
@@ -464,11 +508,10 @@ void step4_delay_after_first_frameirq(void *data);
 void step5_configure_address(void *data);
 void step6_get_metadata(void *data);
 
-// Resets internal state when disconnect occurs.
-void handle_disconnect(max3421e_t *max) {
-  max->connected = false;
-
+// Resets internal state both when USB starts and when a disconnect occurs.
+static void reset_state(max3421e_t *max) {
   memset(max->devices, 0, sizeof(max->devices));
+  max->connected = false;
 }
 
 // Bus probe step 1: check to see if anything new is attached to the bus.
@@ -519,7 +562,7 @@ void step1_probe_bus(void *data) {
       // If both lines are low, the device has disconnected.
       LOG("USB: Disconnect detected");
       max->connected = false;
-      handle_disconnect(max);
+      reset_state(max);
       goto probe_again_later;
 
     case bmJSTATUS:
@@ -618,6 +661,7 @@ void step5_configure_address(void *data) {
   // Find an empty slot in the USB array
   usb_device_t *dev = NULL;
   uint8_t addr;
+
   for (int i = 0; i < MAX_USB_DEVICES; i++) {
     if (max->devices[i].addr == 0) {
       dev = &max->devices[i];
@@ -632,6 +676,9 @@ void step5_configure_address(void *data) {
     assert(FALSE);
   }
 
+  // Initialize device.
+  dev->num_endpoints = 1;  // configuration endpoint is always endpoint #0
+
   // Reconfigure the address of the new device. This updates the address field
   // of 'dev'.
   uint8_t result = configure_device_address(max, dev, addr);
@@ -640,6 +687,20 @@ void step5_configure_address(void *data) {
   }
 
   schedule_us(USB_POST_ADDRESS_WAIT_MS * 1000, step6_get_metadata, max);
+}
+
+static void parse_endpoint(usb_device_t *dev, USB_ENDPOINT_DESCRIPTOR *ued) {
+  if (dev->num_endpoints >= MAX_USB_ENDPOINTS) {
+    LOG("USB error: more endpoints in this device than we can store");
+    return;
+  }
+
+  usb_endpoint_t *endpoint = &dev->endpoints[dev->num_endpoints++];
+  endpoint->endpoint_addr = ued->bEndpointAddress;
+  endpoint->max_packet_len = ued->wMaxPacketSize;
+
+  LOG("device %d: endpoint #%d at addr 0x%x", dev->addr, dev->num_endpoints - 1,
+      endpoint->endpoint_addr);
 }
 
 static void get_metadata_one_device(max3421e_t *max, usb_device_t *dev) {
@@ -657,6 +718,84 @@ static void get_metadata_one_device(max3421e_t *max, usb_device_t *dev) {
 #if PRINT_DEVICE_INFO
   print_device_info(max, dev, &udd);
 #endif
+
+  // Make sure the number of configurations is what we expect
+  if (udd.bNumConfigurations == 0) {
+    LOG("USB error: no configurations available!?");
+    return;
+  }
+
+  if (udd.bNumConfigurations > 1) {
+    LOG("USB warning: this device has %d configurations; using the first",
+        udd.bNumConfigurations);
+  }
+
+  // Configure device to use configuration 0
+  result = activate_configuration(max, dev, 0);
+  if (result) {
+    LOG("couldn't activate configuration: %d", result);
+    return;
+  }
+
+  // Get the configuration descriptor; all interface and endpoint
+  // descriptors come with it.
+  uint16_t received_len;
+  result = get_config_descriptor(max, dev, 0, max->xferbuf,
+                                 sizeof(max->xferbuf), &received_len);
+  if (result) {
+    LOG("Couldn't get config descriptor: %d", result);
+    return;
+  }
+
+  // Parse each block of the configuration descriptor.
+  uint8_t *next_to_parse = max->xferbuf;
+  USB_CONFIGURATION_DESCRIPTOR *ucd =
+      (USB_CONFIGURATION_DESCRIPTOR *)next_to_parse;
+  next_to_parse += sizeof(USB_CONFIGURATION_DESCRIPTOR);
+
+  // Check for sanity.
+  if (ucd->bLength != sizeof(USB_CONFIGURATION_DESCRIPTOR) ||
+      ucd->bDescriptorType != USB_DESCRIPTOR_CONFIGURATION) {
+    LOG("USB fatal: config descriptor had unexpected len %d, type 0x%x",
+        ucd->bLength, ucd->bDescriptorType);
+    return;
+  }
+
+  // The descriptor tells us how long it's supposed to be in the early part of
+  // the header; make sure our transfer buffer is long enough to get the whole
+  // thing.
+  if (ucd->wTotalLength > sizeof(max->xferbuf)) {
+    LOG("USB fatal: USB xferbuf is only %d bytes, needs to be at least %d",
+        sizeof(max->xferbuf), ucd->wTotalLength);
+    return;
+  }
+  const uint8_t *descriptor_end = &max->xferbuf[ucd->wTotalLength];
+
+  // Loop through all interfaces and endpoints in this configuration. Note that,
+  // at least for the time being, we will ignore interface descriptors and just
+  // compile a list of endpoints (and their associated interface numbers).
+  while (next_to_parse < descriptor_end) {
+    USB_DESCRIPTOR_HEADER *udh = (USB_DESCRIPTOR_HEADER *)next_to_parse;
+    next_to_parse += udh->bLength;
+
+    VLOG("got a descriptor of type 0x%x", udh->bDescriptorType);
+
+    switch (udh->bDescriptorType) {
+      case USB_DESCRIPTOR_INTERFACE:
+        // At least for the time being, we don't bother parsing interface
+        // descriptors.
+        break;
+
+      case USB_DESCRIPTOR_ENDPOINT:
+        parse_endpoint(dev, (USB_ENDPOINT_DESCRIPTOR *)udh);
+        break;
+
+      default:
+        LOG("not parsing usb config descriptor type 0x%x",
+            udh->bDescriptorType);
+        break;
+    }
+  }
 }
 
 // Bus probe step 6: Get metadata from just-configured devices, which we can
@@ -680,7 +819,7 @@ void step6_get_metadata(void *data) {
 }
 
 bool max3421e_init(max3421e_t *max) {
-  memset(max, 0, sizeof(max3421e_t));
+  reset_state(max);
   hal_init_spi();
 
   // Set full duplex SPI mode

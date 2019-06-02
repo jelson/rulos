@@ -39,8 +39,8 @@
 #define ADDR_OFFSET 10
 
 typedef struct {
-  uint8_t endpoint_id;
-  uint8_t max_packet_len;
+  uint8_t endpoint_addr;
+  uint16_t max_packet_len;
 
   // The USB standard dictates that every incoming and outgoing
   // packet, per-device, has a bit associated with it, called a "data
@@ -55,12 +55,15 @@ typedef struct {
 } usb_endpoint_t;
 
 typedef struct {
-  // USB address assigned by us to the device
-  uint8_t addr;
-
   // Vendor and product ID
   uint16_t vid;
   uint16_t pid;
+
+  // USB address assigned by us to the device
+  uint8_t addr;
+
+  // Number of endpoints
+  uint8_t num_endpoints;
 
   // Device endpoints we know about
   usb_endpoint_t endpoints[MAX_USB_ENDPOINTS];
