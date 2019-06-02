@@ -19,6 +19,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "usbstructs.h"
 
 // Maximum number of USB devices we can talk to simultaneously.
 #ifndef MAX_USB_DEVICES
@@ -39,7 +40,8 @@
 #define ADDR_OFFSET 10
 
 typedef struct {
-  uint8_t endpoint_addr;
+  USB_ENDPOINT_ADDR endpoint_addr;
+  uint8_t interface_id;
   uint16_t max_packet_len;
 
   // The USB standard dictates that every incoming and outgoing
@@ -55,6 +57,9 @@ typedef struct {
 } usb_endpoint_t;
 
 typedef struct {
+  // Is the device ready? Clients shouldn't access the device until this is set.
+  uint8_t ready;
+
   // Vendor and product ID
   uint16_t vid;
   uint16_t pid;

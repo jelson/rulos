@@ -19,9 +19,14 @@
 #pragma once
 
 #include "max3421e-impl.h"
+#include "usbstructs.h"
+
+#include <stdint.h>
 
 #include "core/rulos.h"
 
 // Public interface to the max3421e library
-struct max3421e_t;
 bool max3421e_init(max3421e_t *max);
+uint8_t max3421e_read_data(usb_device_t *dev, usb_endpoint_t *endpoint,
+			   uint8_t *result_buf, uint16_t max_result_len,
+			   uint16_t *result_len_received);

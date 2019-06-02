@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#pragma once
+
 // These are generic USB structures. If we ever have a second way to
 // talk to USB other than the max3421 in RULOS, this should be
 // factored out to a usb peripheral directory, perhaps along with some
@@ -160,6 +162,11 @@ typedef struct {
   uint8_t iInterface;
 } __attribute__((packed)) USB_INTERFACE_DESCRIPTOR;
 
+typedef struct {
+  uint8_t addr : 7;
+  uint8_t direction : 1;
+} __attribute__((packed)) USB_ENDPOINT_ADDR;
+
 /* Endpoint descriptor structure */
 typedef struct {
   // Length of this descriptor.
@@ -169,7 +176,7 @@ typedef struct {
   uint8_t bDescriptorType;
 
   // Endpoint address. Bit 7 indicates direction (0=OUT, 1=IN).
-  uint8_t bEndpointAddress;
+  USB_ENDPOINT_ADDR bEndpointAddress;
 
   // Endpoint transfer type.
   uint8_t bmAttributes;
@@ -236,6 +243,10 @@ typedef struct {
 #define bmREQ_SET           USB_SETUP_HOST_TO_DEVICE|USB_SETUP_TYPE_STANDARD|USB_SETUP_RECIPIENT_DEVICE     //set request type for all but 'set feature' and 'set interface'
 #define bmREQ_CL_GET_INTF   USB_SETUP_DEVICE_TO_HOST|USB_SETUP_TYPE_CLASS|USB_SETUP_RECIPIENT_INTERFACE     //get interface request type
 
+/* HID requests */
+#define bmREQ_HID_OUT                           USB_SETUP_HOST_TO_DEVICE|USB_SETUP_TYPE_CLASS|USB_SETUP_RECIPIENT_INTERFACE
+#define bmREQ_HID_IN                            USB_SETUP_DEVICE_TO_HOST|USB_SETUP_TYPE_CLASS|USB_SETUP_RECIPIENT_INTERFACE
+#define bmREQ_HID_REPORT                        USB_SETUP_DEVICE_TO_HOST|USB_SETUP_TYPE_STANDARD|USB_SETUP_RECIPIENT_INTERFACE
 
 /* USB descriptors  */
 
@@ -269,4 +280,74 @@ typedef struct {
 #define USB_FEATURE_ENDPOINT_STALL              0       // Endpoint recipient
 #define USB_FEATURE_DEVICE_REMOTE_WAKEUP        1       // Device recipient
 #define USB_FEATURE_TEST_MODE                   2       // Device recipient
+
+
+/* HID constants. Not part of chapter 9 */
+/* Class-Specific Requests */
+#define HID_REQUEST_GET_REPORT                  0x01
+#define HID_REQUEST_GET_IDLE                    0x02
+#define HID_REQUEST_GET_PROTOCOL                0x03
+#define HID_REQUEST_SET_REPORT                  0x09
+#define HID_REQUEST_SET_IDLE                    0x0A
+#define HID_REQUEST_SET_PROTOCOL                0x0B
+
+/* Class Descriptor Types */
+#define HID_DESCRIPTOR_HID                      0x21
+#define HID_DESCRIPTOR_REPORT                   0x22
+#define HID_DESRIPTOR_PHY                       0x23
+
+/* Protocol Selection */
+#define USB_HID_BOOT_PROTOCOL                   0x00
+#define HID_RPT_PROTOCOL                        0x01
+
+/* HID Interface Class Code */
+#define HID_INTF                                0x03
+
+/* HID Interface Class SubClass Codes */
+#define HID_BOOT_INTF_SUBCLASS                  0x01
+
+/* HID Interface Class Protocol Codes */
+#define USB_HID_PROTOCOL_NONE                       0x00
+#define USB_HID_PROTOCOL_KEYBOARD                   0x01
+#define USB_HID_PROTOCOL_MOUSE                      0x02
+
+#define HID_ITEM_TYPE_MAIN                      0
+#define HID_ITEM_TYPE_GLOBAL                    1
+#define HID_ITEM_TYPE_LOCAL                     2
+#define HID_ITEM_TYPE_RESERVED                  3
+
+#define HID_LONG_ITEM_PREFIX                    0xfe    // Long item prefix value
+
+#define bmHID_MAIN_ITEM_TAG                     0xfc    // Main item tag mask
+
+#define bmHID_MAIN_ITEM_INPUT                   0x80    // Main item Input tag value
+#define bmHID_MAIN_ITEM_OUTPUT                  0x90    // Main item Output tag value
+#define bmHID_MAIN_ITEM_FEATURE                 0xb0    // Main item Feature tag value
+#define bmHID_MAIN_ITEM_COLLECTION              0xa0    // Main item Collection tag value
+#define bmHID_MAIN_ITEM_END_COLLECTION          0xce    // Main item End Collection tag value
+
+#define HID_MAIN_ITEM_COLLECTION_PHYSICAL       0
+#define HID_MAIN_ITEM_COLLECTION_APPLICATION    1
+#define HID_MAIN_ITEM_COLLECTION_LOGICAL        2
+#define HID_MAIN_ITEM_COLLECTION_REPORT         3
+#define HID_MAIN_ITEM_COLLECTION_NAMED_ARRAY    4
+#define HID_MAIN_ITEM_COLLECTION_USAGE_SWITCH   5
+#define HID_MAIN_ITEM_COLLECTION_USAGE_MODIFIER 6
+
+struct HidItemPrefix {
+        uint8_t bSize : 2;
+        uint8_t bType : 2;
+        uint8_t bTag : 4;
+};
+
+struct MainItemIOFeature {
+        uint8_t bmIsConstantOrData : 1;
+        uint8_t bmIsArrayOrVariable : 1;
+        uint8_t bmIsRelativeOrAbsolute : 1;
+        uint8_t bmIsWrapOrNoWrap : 1;
+        uint8_t bmIsNonLonearOrLinear : 1;
+        uint8_t bmIsNoPreferedOrPrefered : 1;
+        uint8_t bmIsNullOrNoNull : 1;
+        uint8_t bmIsVolatileOrNonVolatile : 1;
+};
 // clang-format on

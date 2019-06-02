@@ -27,7 +27,7 @@
 #include "periph/spi/hal_spi.h"
 
 // Set transfer bounds
-#define NAK_LIMIT 200
+#define NAK_LIMIT 3
 #define TIMEOUT_LIMIT 3
 #define USB_BUS_PROBE_PERIOD_MS 500
 #define USB_SETTLE_DELAY_MS 200
@@ -97,15 +97,18 @@ usb_word_t host_word_to_usb(const uint16_t value) {
 // etc.
 static uint8_t execute_transaction(usb_device_t *dev, usb_endpoint_t *endpoint,
                                    const uint8_t transaction_type) {
-  // Set the peer address in the max3421's address register.
+  // Set the peer address in the max3421's address register and the
+  // endpoint's data toggle.
   write_reg(rPERADDR, dev->addr);
+  write_reg(rHCTL, endpoint->last_rx_toggle ? bmRCVTOG1 : bmRCVTOG0);
+  write_reg(rHCTL, endpoint->last_tx_toggle ? bmSNDTOG1 : bmSNDTOG0);
 
   uint16_t naks = 0;
   uint16_t timeouts = 0;
   while (true) {
     // Write to the transfer register to tell the max3421 to initiate the
     // transaction
-    write_reg(rHXFR, transaction_type | endpoint->endpoint_addr);
+    write_reg(rHXFR, transaction_type | endpoint->endpoint_addr.addr);
 
     // Wait for a frame to arrive
     int wait_cycles = 0;
@@ -115,11 +118,15 @@ static uint8_t execute_transaction(usb_device_t *dev, usb_endpoint_t *endpoint,
     write_reg(rHIRQ, bmHXFRDNIRQ);
 
     // Get the result of the transaction
-    uint8_t result;
+    uint8_t status, result;
     do {
       wait_cycles++;
-      result = read_reg(rHRSL) & 0x0F;
+      status = read_reg(rHRSL);
+      result = status & 0xF;
     } while (result == hrBUSY);
+
+    endpoint->last_rx_toggle = (status & bmRCVTOGRD) ? 1 : 0;
+    endpoint->last_tx_toggle = (status & bmSNDTOGRD) ? 1 : 0;
 
     VLOG("transaction executed after %d cycles, result=%d", wait_cycles,
          result);
@@ -148,9 +155,9 @@ static uint8_t execute_transaction(usb_device_t *dev, usb_endpoint_t *endpoint,
   }
 }
 
-static uint8_t read_data(usb_device_t *dev, usb_endpoint_t *endpoint,
-                         uint8_t *result_buf, uint16_t max_result_len,
-                         uint16_t *result_len_received) {
+uint8_t max3421e_read_data(usb_device_t *dev, usb_endpoint_t *endpoint,
+                           uint8_t *result_buf, uint16_t max_result_len,
+                           uint16_t *result_len_received) {
   assert(endpoint->max_packet_len > 0);
   assert(max_result_len > 0);
 
@@ -202,7 +209,7 @@ static uint8_t control_common(usb_device_t *dev, usb_endpoint_t *endpoint,
 
   // Set the data toggle to 1, which (I think!?) is always the data toggle value
   // for control requests.
-  write_reg(rHCTL, bmRCVTOG1);
+  endpoint->last_rx_toggle = 1;
 
   // Send the setup packet. Return if we get an error.
   VLOG("sending setup packet");
@@ -225,8 +232,8 @@ static uint8_t control_read(usb_device_t *dev, USB_SETUP_PACKET *setup,
     return result;
   }
 
-  result = read_data(dev, control_endpoint, resultbuf, max_result_len,
-                     result_len_received);
+  result = max3421e_read_data(dev, control_endpoint, resultbuf, max_result_len,
+                              result_len_received);
 
   if (result) {
     return result;
@@ -372,6 +379,17 @@ static uint8_t get_config_descriptor(max3421e_t *max, usb_device_t *dev,
   }
 
   return 0;
+}
+
+uint8_t set_hid_idle(usb_device_t *dev, usb_endpoint_t *endpoint,
+                     const uint8_t idle_rate) {
+  USB_SETUP_PACKET setup = {};
+  setup.ReqType_u.bmRequestType = bmREQ_HID_OUT;
+  setup.bRequest = HID_REQUEST_SET_IDLE;
+  setup.wValue.low = 0;
+  setup.wValue.high = idle_rate;
+  setup.wIndex = host_word_to_usb(endpoint->interface_id);
+  return control_write(dev, &setup, NULL, 0);
 }
 
 // Get the primary language from the USB string descriptor set. On success,
@@ -689,18 +707,24 @@ void step5_configure_address(void *data) {
   schedule_us(USB_POST_ADDRESS_WAIT_MS * 1000, step6_get_metadata, max);
 }
 
-static void parse_endpoint(usb_device_t *dev, USB_ENDPOINT_DESCRIPTOR *ued) {
+static void parse_endpoint(usb_device_t *dev, const uint8_t interface_id,
+                           USB_ENDPOINT_DESCRIPTOR *ued) {
   if (dev->num_endpoints >= MAX_USB_ENDPOINTS) {
     LOG("USB error: more endpoints in this device than we can store");
     return;
   }
 
   usb_endpoint_t *endpoint = &dev->endpoints[dev->num_endpoints++];
+  endpoint->interface_id = interface_id;
   endpoint->endpoint_addr = ued->bEndpointAddress;
   endpoint->max_packet_len = ued->wMaxPacketSize;
 
-  LOG("device %d: endpoint #%d at addr 0x%x", dev->addr, dev->num_endpoints - 1,
-      endpoint->endpoint_addr);
+  LOG("device %d: interface %d has endpoint #%d at addr 0x%x (%s), max packet "
+      "len %d",
+      dev->addr, interface_id, dev->num_endpoints - 1,
+      endpoint->endpoint_addr.addr,
+      endpoint->endpoint_addr.direction ? "IN" : "OUT",
+      endpoint->max_packet_len);
 }
 
 static void get_metadata_one_device(max3421e_t *max, usb_device_t *dev) {
@@ -728,13 +752,6 @@ static void get_metadata_one_device(max3421e_t *max, usb_device_t *dev) {
   if (udd.bNumConfigurations > 1) {
     LOG("USB warning: this device has %d configurations; using the first",
         udd.bNumConfigurations);
-  }
-
-  // Configure device to use configuration 0
-  result = activate_configuration(max, dev, 0);
-  if (result) {
-    LOG("couldn't activate configuration: %d", result);
-    return;
   }
 
   // Get the configuration descriptor; all interface and endpoint
@@ -775,27 +792,42 @@ static void get_metadata_one_device(max3421e_t *max, usb_device_t *dev) {
   // at least for the time being, we will ignore interface descriptors and just
   // compile a list of endpoints (and their associated interface numbers).
   while (next_to_parse < descriptor_end) {
+    uint8_t curr_interface_id = 0;
     USB_DESCRIPTOR_HEADER *udh = (USB_DESCRIPTOR_HEADER *)next_to_parse;
     next_to_parse += udh->bLength;
 
     VLOG("got a descriptor of type 0x%x", udh->bDescriptorType);
 
     switch (udh->bDescriptorType) {
-      case USB_DESCRIPTOR_INTERFACE:
-        // At least for the time being, we don't bother parsing interface
-        // descriptors.
+      case USB_DESCRIPTOR_INTERFACE: {
+        USB_INTERFACE_DESCRIPTOR *uid = (USB_INTERFACE_DESCRIPTOR *)udh;
+        curr_interface_id = uid->bInterfaceNumber;
         break;
+      }
 
-      case USB_DESCRIPTOR_ENDPOINT:
-        parse_endpoint(dev, (USB_ENDPOINT_DESCRIPTOR *)udh);
+      case USB_DESCRIPTOR_ENDPOINT: {
+        parse_endpoint(dev, curr_interface_id, (USB_ENDPOINT_DESCRIPTOR *)udh);
         break;
+      }
 
-      default:
+      default: {
         LOG("not parsing usb config descriptor type 0x%x",
             udh->bDescriptorType);
         break;
+      }
     }
   }
+
+  // Configure device to use the first configuration
+  LOG("activating USB configuration %d", ucd->bConfigurationValue);
+  result = activate_configuration(max, dev, ucd->bConfigurationValue);
+  if (result) {
+    LOG("couldn't activate configuration: %d", result);
+    return;
+  }
+
+  // Indicate to potential clients that the device is ready
+  dev->ready = true;
 }
 
 // Bus probe step 6: Get metadata from just-configured devices, which we can
