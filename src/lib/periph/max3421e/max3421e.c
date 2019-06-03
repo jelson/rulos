@@ -173,7 +173,7 @@ uint8_t max3421e_read_data(usb_device_t *dev, usb_endpoint_t *endpoint,
     VLOG("....reading %d bytes", bytes_read);
 
     if (bytes_read > max_result_len) {
-      LOG("after reading %d bytes, got more bytes (%d) than we expected (%d)!",
+      LOG("USB: read %d bytes, then got more bytes (%d) than we expected (%d)!",
           total_bytes_read, bytes_read, max_result_len);
       bytes_read = max_result_len;
     }
@@ -278,7 +278,7 @@ static uint8_t control_write(usb_device_t *dev, USB_SETUP_PACKET *setup,
 // result is returned and dev->addr is not changed.
 static uint8_t configure_device_address(max3421e_t *max, usb_device_t *dev,
                                         const uint8_t addr) {
-  LOG("Reconfiguring new device with address %d", addr);
+  VLOG("Reconfiguring new device with address %d", addr);
 
   USB_SETUP_PACKET setup = {};
   setup.ReqType_u.bmRequestType = bmREQ_SET;
@@ -296,8 +296,8 @@ static uint8_t configure_device_address(max3421e_t *max, usb_device_t *dev,
 
 static uint8_t activate_configuration(max3421e_t *max, usb_device_t *dev,
                                       const uint8_t config_number) {
-  LOG("Device at address %d, activating configuration %d", dev->addr,
-      config_number);
+  VLOG("Device at address %d, activating configuration %d", dev->addr,
+       config_number);
 
   USB_SETUP_PACKET setup = {};
   setup.ReqType_u.bmRequestType = bmREQ_SET;
@@ -328,7 +328,7 @@ static uint8_t get_device_descriptor(max3421e_t *max, usb_device_t *dev,
   }
 
   if (udd->bMaxPacketSize0 == 0) {
-    LOG("invalid max packet len %d!", udd->bMaxPacketSize0);
+    LOG("USB: invalid max packet len %d!", udd->bMaxPacketSize0);
     return hrINVALID;
   }
 
@@ -347,7 +347,7 @@ static uint8_t get_device_descriptor(max3421e_t *max, usb_device_t *dev,
   }
 
   if (udd->bDescriptorType != USB_DESCRIPTOR_DEVICE) {
-    LOG("Got unexpected device descriptor type 0x%x", udd->bDescriptorType);
+    LOG("USB: Got unexpected dev descriptor type 0x%x", udd->bDescriptorType);
     return hrSHORTPACKET;
   }
 
@@ -418,7 +418,7 @@ static uint8_t get_primary_language(max3421e_t *max, usb_device_t *dev,
 
   // Make sure we got at least a header
   if (received_len < sizeof(USB_LANG_DESCRIPTOR)) {
-    LOG("got short lang descriptor of only %d bytes!", received_len);
+    LOG("USB: got short lang descriptor of only %d bytes!", received_len);
     return hrSHORTPACKET;
   }
 
@@ -427,12 +427,12 @@ static uint8_t get_primary_language(max3421e_t *max, usb_device_t *dev,
       (received_len - sizeof(USB_LANG_DESCRIPTOR)) / sizeof(usb_word_t);
 
   if (num_languages == 0) {
-    LOG("no languages returned!");
+    LOG("USB: no languages returned!");
     return hrSHORTPACKET;
   }
 
-  LOG("got %d languages; lang 0 is 0x%02x%02x", num_languages,
-      uld->LANGID[0].high, uld->LANGID[0].low);
+  VLOG("got %d languages; lang 0 is 0x%02x%02x", num_languages,
+       uld->LANGID[0].high, uld->LANGID[0].low);
   *primary_language = uld->LANGID[0];
   return 0;
 }
@@ -474,9 +474,9 @@ static void print_one_device_string(max3421e_t *max, usb_device_t *dev,
   uint8_t result =
       get_string_descriptor(max, dev, index, language, buf, sizeof(buf));
   if (result) {
-    LOG("error getting string: %d", result);
+    LOG("USB: error getting string: %d", result);
   } else {
-    LOG("%s: %s", prefix, buf);
+    LOG("USB: %s: %s", prefix, buf);
   }
 }
 
@@ -486,7 +486,7 @@ static void print_device_info(max3421e_t *max, usb_device_t *dev,
   uint8_t result = get_primary_language(max, dev, &primary_language);
 
   if (result) {
-    LOG("error getting language list: %d", result);
+    LOG("USB: error getting language list: %d", result);
     return;
   }
 
@@ -510,7 +510,7 @@ static bool max_reset() {
 
   while (i++ < max_wait) {
     if (read_reg(rUSBIRQ) & bmOSCOKIRQ) {
-      LOG("reset took %d iterations", i);
+      VLOG("reset took %d iterations", i);
       return true;
     }
   }
@@ -568,7 +568,7 @@ void step1_probe_bus(void *data) {
 
   // If we're in an illegal state, report an error and try again later.
   if (bus_state == (bmJSTATUS | bmKSTATUS)) {
-    LOG("Warning: USB bus seems to be in an illegal state!");
+    LOG("USB Warning: bus seems to be in an illegal state!");
     goto probe_again_later;
   }
 
@@ -597,7 +597,7 @@ void step1_probe_bus(void *data) {
 
     case bmKSTATUS:
       if (max->connected) {
-        LOG("Got K status while already connected? USB is confused.");
+        LOG("USB: Got K status while already connected!?");
         goto probe_again_later;
       } else {
         // If we're not connected and we see a K status it means we have to flip
@@ -620,7 +620,7 @@ void initiate_periph_config(max3421e_t *max, uint8_t is_lowspeed) {
 
   if (is_lowspeed) {
     new_mode |= bmLOWSPEED;
-    LOG("Low-Speed Device Detected");
+    LOG("USB: Low-Speed Device Detected");
   } else {
     LOG("USB: Full-Speed Device Detected");
   }
@@ -719,8 +719,8 @@ static void parse_endpoint(usb_device_t *dev, const uint8_t interface_id,
   endpoint->endpoint_addr = ued->bEndpointAddress;
   endpoint->max_packet_len = ued->wMaxPacketSize;
 
-  LOG("device %d: interface %d has endpoint #%d at addr 0x%x (%s), max packet "
-      "len %d",
+  LOG("USB: device %d: interface %d has endpoint #%d at addr 0x%x (%s), "
+      "max packet len %d",
       dev->addr, interface_id, dev->num_endpoints - 1,
       endpoint->endpoint_addr.addr,
       endpoint->endpoint_addr.direction ? "IN" : "OUT",
@@ -737,7 +737,7 @@ static void get_metadata_one_device(max3421e_t *max, usb_device_t *dev) {
 
   dev->vid = udd.idVendor;
   dev->pid = udd.idProduct;
-  LOG("Got USB device descriptor! vid=0x%x, pid=0x%x", dev->vid, dev->pid);
+  LOG("USB: Got device descriptor! vid=0x%x, pid=0x%x", dev->vid, dev->pid);
 
 #if PRINT_DEVICE_INFO
   print_device_info(max, dev, &udd);
@@ -811,15 +811,14 @@ static void get_metadata_one_device(max3421e_t *max, usb_device_t *dev) {
       }
 
       default: {
-        LOG("not parsing usb config descriptor type 0x%x",
-            udh->bDescriptorType);
+        VLOG("not parsing usb config descriptor type 0x%x",
+             udh->bDescriptorType);
         break;
       }
     }
   }
 
   // Configure device to use the first configuration
-  LOG("activating USB configuration %d", ucd->bConfigurationValue);
   result = activate_configuration(max, dev, ucd->bConfigurationValue);
   if (result) {
     LOG("couldn't activate configuration: %d", result);
@@ -859,12 +858,12 @@ bool max3421e_init(max3421e_t *max) {
 
   // Attempt reset
   if (!max_reset()) {
-    LOG("MAX3421e reset failed");
+    LOG("USB: MAX3421e reset failed");
     return false;
   }
 
   max->chip_ver = read_reg(rREVISION);
-  LOG("MAX3421e online, revision %d", max->chip_ver);
+  LOG("USB: MAX3421e online, revision %d", max->chip_ver);
 
   // Activate host mode and turn on the pulldown resistors on D+ and D-
   write_reg(rMODE, bmDPPULLDN | bmDMPULLDN | bmHOST);
