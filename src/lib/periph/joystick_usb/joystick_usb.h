@@ -18,25 +18,15 @@
 
 #pragma once
 
-#include "core/network.h"
-#include "periph/hpam/hpam.h"
+#include "core/util.h"
 #include "periph/joystick/joystick.h"
-#include "periph/rocket/idle.h"
+#include "periph/max3421e/max3421e.h"
 
 typedef struct {
-  JoystickState_t *joystick;
-  BoardBuffer bbuf;
-  ThrusterPayload payload;
-  HPAM *hpam;
-  IdleAct *idle;
+  // "base class" state
+  JoystickState_t base;
 
-  // True if the joystick is temporarily not affecting thrusters, i.e. if it's
-  // under the control of something else.
-  r_bool joystick_muted;
-} ThrusterState_t;
+  max3421e_t *max;
+} Joystick_USB_t;
 
-void thrusters_init(ThrusterState_t *ts, uint8_t board,
-                    JoystickState_t *joystick, HPAM *hpam, IdleAct *idle);
-
-void mute_joystick(ThrusterState_t *ts);
-void unmute_joystick(ThrusterState_t *ts);
+void init_joystick_usb(Joystick_USB_t *js, max3421e_t *max);

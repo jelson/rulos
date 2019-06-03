@@ -61,6 +61,15 @@
 
 /****************************************************************************/
 
+#if defined(JOYSTICK_X_CHAN) && defined(JOYSTICK_Y_CHAN)
+#include "periph/joystick_adc/joystick_adc.h"
+#define USE_JOYSTICK_ADC 1
+#else
+#include "periph/joystick_usb/joystick_usb.h"
+#include "periph/max3421e/max3421e.h"
+#define USE_JOYSTICK_USB 1
+#endif
+
 typedef struct {
   DRTCAct dr;
   Network network;
@@ -82,12 +91,13 @@ typedef struct {
   RemoteBBufSend rbs;
   DisplayAzimuthElevationRoll daer;
   DThrusterGraph dtg;
-} Rocket0;
-
-#if !defined(JOYSTICK_X_CHAN) || !defined(JOYSTICK_Y_CHAN)
-#error "JOYSTICK_X_CHAN and JOYSTICK_Y_CHAN must be defined."
-#include <stophere>
+#if USE_JOYSTICK_ADC
+  Joystick_ADC_t joystick;
+#else
+  max3421e_t max;
+  Joystick_USB_t joystick;
 #endif
+} Rocket0;
 
 /*
  * south-side quads:
@@ -104,11 +114,21 @@ typedef struct {
 #define KEY_NPONG_LEFT KeystrokeCtor('m')
 #define KEY_NPONG_RIGHT KeystrokeCtor('n')
 
-#ifndef SIM
+#if defined(BOARD_LPEM2)
 IOPinDef pin_vol_q0 = PINDEF(GPIO_A6);
 IOPinDef pin_vol_q1 = PINDEF(GPIO_A7);
 IOPinDef pin_npong_q0 = PINDEF(GPIO_A4);
 IOPinDef pin_npong_q1 = PINDEF(GPIO_A5);
+#elif defined(BOARD_STMPEM_REVA)
+IOPinDef pin_vol_q0 = PINDEF(GPIO_A0);
+IOPinDef pin_vol_q1 = PINDEF(GPIO_A1);
+IOPinDef pin_npong_q0 = PINDEF(GPIO_A2);
+IOPinDef pin_npong_q1 = PINDEF(GPIO_A3);
+#elif defined(SIM)
+// nothing
+#else
+#error "No pins defined for quads"
+#include <stophere>
 #endif
 
 #define USE_LOCAL_KEYPAD 0
@@ -123,7 +143,13 @@ void init_rocket0(Rocket0 *r0) {
   memset(&r0->thrusterUpdate, 0, sizeof(r0->thrusterUpdate));
   init_hpam(&r0->hpam, 7, r0->thrusterUpdate);
   init_idle(&r0->idle);
-  thrusters_init(&r0->ts, 7, JOYSTICK_X_CHAN, JOYSTICK_Y_CHAN, &r0->hpam,
+#if USE_JOYSTICK_ADC
+  init_joystick_adc(&r0->joystick, JOYSTICK_X_CHAN, JOYSTICK_Y_CHAN);
+#else
+  max3421e_init(&r0->max);
+  init_joystick_usb(&r0->joystick, &r0->max);
+#endif
+  thrusters_init(&r0->ts, 7, (JoystickState_t *)&r0->joystick, &r0->hpam,
                  &r0->idle);
   init_screenblanker(&r0->screenblanker, &r0->hpam, &r0->idle);
 
@@ -133,9 +159,9 @@ void init_rocket0(Rocket0 *r0) {
   daer_init(&r0->daer, 8, ((Time)5) << 20);
 
   init_control_panel(&r0->cp, 3, 1, &r0->network, &r0->hpam, &r0->audio_client,
-                     &r0->idle, &r0->screenblanker, &r0->ts.joystick_state,
-                     &r0->ts, KEY_VOL_UP, KEY_VOL_DOWN,
-                     &r0->volume_control.injector.iii,
+                     &r0->idle, &r0->screenblanker,
+                     (JoystickState_t *)&r0->ts.joystick, &r0->ts, KEY_VOL_UP,
+                     KEY_VOL_DOWN, &r0->volume_control.injector.iii,
                      (FetchCalcDecorationValuesIfc *)&r0->daer.decoration_ifc);
   r0->cp.ccl.launch.main_rtc = &r0->dr;
   r0->cp.ccl.launch.lunar_distance = &r0->ld;
@@ -188,7 +214,7 @@ CpumonAct cpumon;
 int main() {
   hal_init();
 
-  hal_uart_init(&uart, 38400, true, /* uart_id= */ 0);
+  hal_uart_init(&uart, 115200, true, /* uart_id= */ 0);
   LOG("Log output running");
 
 #if NUM_LOCAL_BOARDS > 0

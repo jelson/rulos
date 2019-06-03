@@ -20,42 +20,49 @@
 #include "periph/joystick/joystick.h"
 #include "periph/rocket/rocket.h"
 
+//#define LOG_JOYSTICK
+
 static void thrusters_update(ThrusterState_t *ts) {
   // get state from joystick
-  joystick_poll(&ts->joystick_state);
+  joystick_poll(ts->joystick);
 
 #ifdef LOG_JOYSTICK
-  LOG("thrusters_update: got xpos %d, ypos %d", ts->joystick_state.x_pos,
-      ts->joystick_state.y_pos);
+  static int i = 0;
+  if (i++ == 5) {
+    LOG("thrusters_update: x=%d, y=%d, trigger=%s", ts->joystick->x_pos,
+        ts->joystick->y_pos,
+        ts->joystick->state & JOYSTICK_STATE_TRIGGER ? "down" : "up");
+    i = 0;
+  }
 #endif
 
-  if (ts->joystick_state.state & JOYSTICK_STATE_DISCONNECTED) {
+  if (ts->joystick->state & JOYSTICK_STATE_DISCONNECTED) {
     ascii_to_bitmap_str(&ts->bbuf.buffer[1], 3, " NO");
     ascii_to_bitmap_str(&ts->bbuf.buffer[5], 3, "JOy");
   } else {
-    if (ts->joystick_state.state & JOYSTICK_STATE_TRIGGER) {
+    if (ts->joystick->state & JOYSTICK_STATE_TRIGGER) {
       ascii_to_bitmap_str(&ts->bbuf.buffer[1], 3, "PSH");
       ascii_to_bitmap_str(&ts->bbuf.buffer[5], 3, "PSH");
     } else {
       char buf[4];
 
-      int_to_string2(buf, 3, 2, ts->joystick_state.x_pos);
+      int_to_string2(buf, 3, 2, ts->joystick->x_pos);
       ascii_to_bitmap_str(&ts->bbuf.buffer[1], 3, buf);
-      int_to_string2(buf, 3, 2, ts->joystick_state.y_pos);
+      int_to_string2(buf, 3, 2, ts->joystick->y_pos);
       ascii_to_bitmap_str(&ts->bbuf.buffer[5], 3, buf);
     }
 
     // display X and Y thresholds
-    if (ts->joystick_state.state & JOYSTICK_STATE_LEFT)
+    if (ts->joystick->state & JOYSTICK_STATE_LEFT)
       ts->bbuf.buffer[1] |= SSB_DECIMAL;
-    else if (ts->joystick_state.state & JOYSTICK_STATE_RIGHT)
+    else if (ts->joystick->state & JOYSTICK_STATE_RIGHT)
       ts->bbuf.buffer[3] |= SSB_DECIMAL;
     else
       ts->bbuf.buffer[2] |= SSB_DECIMAL;
 
-    if (ts->joystick_state.state & JOYSTICK_STATE_DOWN)
+    if (ts->joystick->state & JOYSTICK_STATE_DOWN)
       ts->bbuf.buffer[5] |= SSB_DECIMAL;
-    else if (ts->joystick_state.state & JOYSTICK_STATE_UP)
+    else if (ts->joystick->state & JOYSTICK_STATE_UP)
       ts->bbuf.buffer[7] |= SSB_DECIMAL;
     else
       ts->bbuf.buffer[6] |= SSB_DECIMAL;
@@ -69,20 +76,20 @@ static void thrusters_update(ThrusterState_t *ts) {
   // DOWN&RIGHT = thruster C.
   if (!ts->joystick_muted) {
     hpam_set_port(ts->hpam, HPAM_THRUSTER_REAR,
-                  ts->joystick_state.state & JOYSTICK_STATE_UP);
+                  ts->joystick->state & JOYSTICK_STATE_UP);
     hpam_set_port(ts->hpam, HPAM_THRUSTER_FRONTRIGHT,
-                  ts->joystick_state.state & JOYSTICK_STATE_DOWN &&
-                      ts->joystick_state.state & JOYSTICK_STATE_LEFT);
+                  ts->joystick->state & JOYSTICK_STATE_DOWN &&
+                      ts->joystick->state & JOYSTICK_STATE_LEFT);
     hpam_set_port(ts->hpam, HPAM_THRUSTER_FRONTLEFT,
-                  ts->joystick_state.state & JOYSTICK_STATE_DOWN &&
-                      ts->joystick_state.state & JOYSTICK_STATE_RIGHT);
+                  ts->joystick->state & JOYSTICK_STATE_DOWN &&
+                      ts->joystick->state & JOYSTICK_STATE_RIGHT);
   }
 
-  if ((ts->joystick_state.state &
-       (JOYSTICK_STATE_UP | JOYSTICK_STATE_LEFT | JOYSTICK_STATE_RIGHT |
-        JOYSTICK_STATE_TRIGGER)) != 0) {
+  if ((ts->joystick->state & (JOYSTICK_STATE_UP | JOYSTICK_STATE_LEFT |
+                              JOYSTICK_STATE_RIGHT | JOYSTICK_STATE_TRIGGER)) !=
+      0) {
     // LOG("idle touch due to nonzero joystick: %d",
-    // ts->joystick_state.state);
+    // ts->joystick->state);
     if (ts->idle != NULL) {
       idle_touch(ts->idle);
     }
@@ -94,21 +101,17 @@ static void thrusters_update(ThrusterState_t *ts) {
   schedule_us(10000, (ActivationFuncPtr)thrusters_update, ts);
 }
 
-void thrusters_init(ThrusterState_t *ts, uint8_t board, uint8_t x_adc_channel,
-                    uint8_t y_adc_channel, HPAM *hpam, IdleAct *idle) {
-  // initialize the joystick
-  ts->joystick_state.x_adc_channel = x_adc_channel;
-  ts->joystick_state.y_adc_channel = y_adc_channel;
-  joystick_init(&ts->joystick_state);
-
+void thrusters_init(ThrusterState_t *ts, uint8_t board,
+                    JoystickState_t *joystick, HPAM *hpam, IdleAct *idle) {
   board_buffer_init(&ts->bbuf DBG_BBUF_LABEL("thrusters"));
   // mask off HPAM digits, so HPAM 'display' shows through
   board_buffer_set_alpha(&ts->bbuf, 0x77);
   board_buffer_push(&ts->bbuf, board);
 
+  ts->joystick = joystick;
+  ts->joystick_muted = FALSE;
   ts->hpam = hpam;
   ts->idle = idle;
-  ts->joystick_muted = FALSE;
 
   schedule_us(1, (ActivationFuncPtr)thrusters_update, ts);
 }

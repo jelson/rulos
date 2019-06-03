@@ -16,27 +16,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "periph/joystick_usb/joystick_usb.h"
+#include "periph/max3421e/periph_thrustmaster.h"
 
-#include "core/network.h"
-#include "periph/hpam/hpam.h"
-#include "periph/joystick/joystick.h"
-#include "periph/rocket/idle.h"
+static bool joystick_usb_read(JoystickState_t *js_base) {
+  Joystick_USB_t *js = (Joystick_USB_t *)js_base;
 
-typedef struct {
-  JoystickState_t *joystick;
-  BoardBuffer bbuf;
-  ThrusterPayload payload;
-  HPAM *hpam;
-  IdleAct *idle;
+  return thrustmaster_read(js->max, js_base);
+}
 
-  // True if the joystick is temporarily not affecting thrusters, i.e. if it's
-  // under the control of something else.
-  r_bool joystick_muted;
-} ThrusterState_t;
+void init_joystick_usb(Joystick_USB_t *js, max3421e_t *max) {
+  js->base.state = 0;
+  js->base.joystick_reader_func = joystick_usb_read;
 
-void thrusters_init(ThrusterState_t *ts, uint8_t board,
-                    JoystickState_t *joystick, HPAM *hpam, IdleAct *idle);
-
-void mute_joystick(ThrusterState_t *ts);
-void unmute_joystick(ThrusterState_t *ts);
+  js->max = max;
+}

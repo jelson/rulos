@@ -869,6 +869,6 @@ bool max3421e_init(max3421e_t *max) {
   // Activate host mode and turn on the pulldown resistors on D+ and D-
   write_reg(rMODE, bmDPPULLDN | bmDMPULLDN | bmHOST);
 
-  schedule_now(step1_probe_bus, max);
+  schedule_us(1, step1_probe_bus, max);
   return true;
 }

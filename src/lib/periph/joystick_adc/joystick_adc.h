@@ -16,12 +16,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "core/board_defs.h"
-#include "core/hal.h"
-#include "core/hardware.h"
+#pragma once
 
-void hal_init_joystick_button() {
-  gpio_make_input_enable_pullup(JOYSTICK_TRIGGER);
-}
+#include "core/util.h"
+#include "periph/joystick/joystick.h"
 
-r_bool hal_read_joystick_button() { return gpio_is_clr(JOYSTICK_TRIGGER); }
+typedef struct {
+  // "base class" state
+  JoystickState_t base;
+
+  // ADC channel numbers.  Should be initialized by caller before
+  // joystick_init is called.
+  uint8_t x_adc_channel;
+  uint8_t y_adc_channel;
+} Joystick_ADC_t;
+
+void init_joystick_adc(Joystick_ADC_t *js, uint8_t x_chan, uint8_t y_chan);
