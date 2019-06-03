@@ -23,7 +23,7 @@
 #include "periph/max3421e/periph_thrustmaster.h"
 
 static int8_t scale_to_99(int8_t scale_to_128) {
-  return (((int16_t)scale_to_128) * 99) / 128;
+  return max(-99, min(99, (((int16_t)scale_to_128) * 100) / 128));
 }
 
 bool thrustmaster_read(max3421e_t *max, JoystickState_t *joystate) {
