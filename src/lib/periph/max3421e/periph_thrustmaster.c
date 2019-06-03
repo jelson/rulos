@@ -22,8 +22,8 @@
 #include "periph/max3421e/max3421e.h"
 #include "periph/max3421e/periph_thrustmaster.h"
 
-static int8_t scale_to_100(int8_t scale_to_128) {
-  return (((int16_t)scale_to_128) * 100) / 128;
+static int8_t scale_to_99(int8_t scale_to_128) {
+  return (((int16_t)scale_to_128) * 99) / 128;
 }
 
 bool thrustmaster_read(max3421e_t *max, JoystickState_t *joystate) {
@@ -72,8 +72,8 @@ bool thrustmaster_read(max3421e_t *max, JoystickState_t *joystate) {
     return false;
   }
 
-  joystate->x_pos = scale_to_100(buf[0]);
-  joystate->y_pos = -scale_to_100(buf[1]);
+  joystate->x_pos = scale_to_99(buf[0]);
+  joystate->y_pos = -scale_to_99(buf[1]);
   if (buf[4] & 0xf0) {
     joystate->state |= JOYSTICK_STATE_TRIGGER;
   } else {
