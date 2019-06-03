@@ -28,5 +28,7 @@
 // Public interface to the max3421e library
 bool max3421e_init(max3421e_t *max);
 uint8_t max3421e_read_data(usb_device_t *dev, usb_endpoint_t *endpoint,
-			   uint8_t *result_buf, uint16_t max_result_len,
-			   uint16_t *result_len_received);
+                           uint8_t *result_buf, uint16_t max_result_len,
+                           uint16_t *result_len_received);
+uint8_t max3421e_set_hid_idle(usb_device_t *dev, usb_endpoint_t *endpoint,
+                              const uint8_t idle_rate);

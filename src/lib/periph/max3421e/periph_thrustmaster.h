@@ -16,42 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdint.h>
-
-#include "core/rulos.h"
 #include "periph/joystick/joystick.h"
-#include "periph/max3421e/periph_thrustmaster.h"
+#include "periph/max3421e/max3421e.h"
 
-#ifdef LOG_TO_SERIAL
-HalUart uart;
-#endif
-
-max3421e_t max;
-JoystickState_t joystate;
-
-void poll_joystick(void *data) {
-  schedule_us(100000, poll_joystick, NULL);
-
-  if (thrustmaster_read(&max, &joystate)) {
-    LOG("x=%d, y=%d, button=%s", joystate.x_pos, joystate.y_pos,
-        joystate.state & JOYSTICK_STATE_TRIGGER ? "DOWN" : "UP");
-  } else {
-    LOG("No joy!");
-  }
-}
-
-int main() {
-  hal_init();
-
-#ifdef LOG_TO_SERIAL
-  hal_uart_init(&uart, 115200, true, /* uart_id= */ 0);
-  LOG("Log output running");
-#endif
-
-  init_clock(10000, TIMER1);
-
-  max3421e_init(&max);
-  schedule_us(1, poll_joystick, NULL);
-
-  cpumon_main_loop();
-}
+// Given a pointer to a max3421e, returns true if there's a thrustmaster
+// attached. If so, updates x, y, and button states. If no joystick is attached,
+// returns false.
+bool thrustmaster_read(max3421e_t *max, JoystickState_t *joystate);

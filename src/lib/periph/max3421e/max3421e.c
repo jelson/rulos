@@ -381,8 +381,8 @@ static uint8_t get_config_descriptor(max3421e_t *max, usb_device_t *dev,
   return 0;
 }
 
-uint8_t set_hid_idle(usb_device_t *dev, usb_endpoint_t *endpoint,
-                     const uint8_t idle_rate) {
+uint8_t max3421e_set_hid_idle(usb_device_t *dev, usb_endpoint_t *endpoint,
+                              const uint8_t idle_rate) {
   USB_SETUP_PACKET setup = {};
   setup.ReqType_u.bmRequestType = bmREQ_HID_OUT;
   setup.bRequest = HID_REQUEST_SET_IDLE;

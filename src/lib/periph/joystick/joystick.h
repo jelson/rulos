@@ -30,18 +30,21 @@
 #define JOYSTICK_STATE_RIGHT _BV(3)
 #define JOYSTICK_STATE_TRIGGER _BV(4)
 #define JOYSTICK_STATE_DISCONNECTED _BV(5)
-typedef struct {
-  // ADC channel numbers.  Should be initialized by caller before
-  // joystick_init is called.
-  uint8_t x_adc_channel;
-  uint8_t y_adc_channel;
 
+typedef struct {
   // X and Y positions (from -100 to 100) of joystick, and a state
   // bitvector, valid after joystick_poll is called.
   int8_t x_pos;
   int8_t y_pos;
   uint8_t state;
 } JoystickState_t;
+
+typedef struct {
+  // ADC channel numbers.  Should be initialized by caller before
+  // joystick_init is called.
+  uint8_t x_adc_channel;
+  uint8_t y_adc_channel;
+} JoystickState_ADC_t;
 
 void joystick_init(JoystickState_t *js);
 void joystick_poll(JoystickState_t *js);
