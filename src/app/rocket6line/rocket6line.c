@@ -18,15 +18,16 @@
 
 #include "core/hardware.h"
 #include "core/rulos.h"
-#include "periph/bss_canary/bss_canary.h"
 #include "periph/7seg_panel/display_controller.h"
+#include "periph/bss_canary/bss_canary.h"
 
 #include "stm32f3xx_hal_gpio.h"
 #include "stm32f3xx_hal_rcc.h"
 #include "stm32f3xx_hal_rcc_ex.h"
 #include "stm32f3xx_hal_spi.h"
 
-#define UPDATE_RATE_US 10000
+#define REFRESH_RATE_US 2000
+#define UPDATE_RATE_US 1000000
 
 #ifdef LOG_TO_SERIAL
 HalUart uart;
@@ -52,9 +53,13 @@ HalUart uart;
 
 #define LEDDRIVER_SPI_AF GPIO_AF5_SPI1
 
+#define NUM_ROWS 6
+#define NUM_COLUMNS 8
+
 typedef struct {
   SPI_HandleTypeDef hspi;
-  int row;
+  int curr_row;
+  uint8_t row_data[NUM_ROWS][NUM_COLUMNS];
 } MatrixState_t;
 
 MatrixState_t matrix_state;
@@ -148,28 +153,20 @@ static void build_remap_table() {
 
 static void convert_bitmap(uint8_t *out, SSBitmap *bm, const uint8_t len) {
   for (int i = 0; i < len; i++) {
-    out[i] = segment_remap_table[bm[len-i-1]];
+    out[i] = segment_remap_table[bm[len - i - 1]];
   }
 }
 
-static void update_value(void *data) {
-  schedule_us(UPDATE_RATE_US, (ActivationFuncPtr)update_value, data);
+// This is the high-update-rate path that drives the persistence-of-vision of
+// the matrix display. It's important this run quickly!
+static void refresh_display(MatrixState_t *ms) {
+  ms->curr_row++;
+  if (ms->curr_row == NUM_ROWS) {
+    ms->curr_row = 0;
+  }
 
-  MatrixState_t *ms = (MatrixState_t *)data;
-
-  SSBitmap bm[8];
-  char buf[10];
-  static int i = 0;
-  i++;
-  sprintf(buf, "bAng %03d", i % 1000);
-  LOG("%s", buf);
-  assert(strlen(buf) == 8);
-  ascii_to_bitmap_str(bm, 8, buf);
-  uint8_t outbuf[8];
-  convert_bitmap(outbuf, bm, 8);
-
-  // Shift in the new board configuration
-  HAL_SPI_Transmit(&ms->hspi, outbuf, sizeof(outbuf), 1000);
+  // Shift in the LED configuration for the row becoming active
+  HAL_SPI_Transmit(&ms->hspi, ms->row_data[ms->curr_row], NUM_COLUMNS, 1000);
 
   // Disable current display
   gpio_clr(DECODER_ENABLE);
@@ -179,12 +176,68 @@ static void update_value(void *data) {
   gpio_clr(LEDDRIVER_LE);
 
   // Configure the current row display in the decoder
-  gpio_set_or_clr(DECODER_A0, ms->row & (1 << 0));
-  gpio_set_or_clr(DECODER_A1, ms->row & (1 << 1));
-  gpio_set_or_clr(DECODER_A2, ms->row & (1 << 2));
+  gpio_set_or_clr(DECODER_A0, ms->curr_row & (1 << 0));
+  gpio_set_or_clr(DECODER_A1, ms->curr_row & (1 << 1));
+  gpio_set_or_clr(DECODER_A2, ms->curr_row & (1 << 2));
 
   // Re-enable the display!
   gpio_set(DECODER_ENABLE);
+}
+
+static void refresh_display_trampoline(void *data) {
+  schedule_us(REFRESH_RATE_US, (ActivationFuncPtr)refresh_display_trampoline,
+              data);
+  MatrixState_t *ms = (MatrixState_t *)data;
+  refresh_display(ms);
+}
+
+static void update_display_values(void *data) {
+  schedule_us(UPDATE_RATE_US, (ActivationFuncPtr)update_display_values, data);
+
+  MatrixState_t *ms = (MatrixState_t *)data;
+
+  SSBitmap bm[NUM_COLUMNS];
+  char buf[NUM_COLUMNS + 2];
+  static int test_state = 3;
+  test_state++;
+  if (test_state == 4) {
+    test_state = 0;
+  }
+  switch (test_state) {
+    case 0:
+      strcpy(buf, "rrrrrrrr");
+      ascii_to_bitmap_str(bm, strlen(buf), buf);
+      for (int i = 0; i < NUM_ROWS; i++) {
+        convert_bitmap(ms->row_data[i], bm, NUM_COLUMNS);
+      }
+      break;
+
+    case 1:
+      for (int i = 0; i < NUM_ROWS; i++) {
+        sprintf(buf, "%d", i);
+        ascii_to_bitmap_str(bm, 1, buf);
+        for (int j = 0; j < NUM_COLUMNS; j++) {
+          convert_bitmap(&ms->row_data[i][j], bm, 1);
+        }
+      }
+      break;
+
+    case 2:
+      strcpy(buf, "CCCCCCCC");
+      ascii_to_bitmap_str(bm, strlen(buf), buf);
+      for (int i = 0; i < NUM_ROWS; i++) {
+        convert_bitmap(ms->row_data[i], bm, NUM_COLUMNS);
+      }
+      break;
+
+    case 3:
+      strcpy(buf, "12345678");
+      ascii_to_bitmap_str(bm, strlen(buf), buf);
+      for (int i = 0; i < NUM_ROWS; i++) {
+        convert_bitmap(ms->row_data[i], bm, NUM_COLUMNS);
+      }
+      break;
+  }
 }
 
 int main() {
@@ -195,14 +248,15 @@ int main() {
   LOG("Log output running");
 #endif
 
-  init_clock(10000, TIMER1);
+  init_clock(2000, TIMER1);
   bss_canary_init();
 
   memset(&matrix_state, 0, sizeof(matrix_state));
   init_pins(&matrix_state);
   build_remap_table();
 
-  schedule_now((ActivationFuncPtr)update_value, &matrix_state);
+  schedule_us(1, (ActivationFuncPtr)refresh_display_trampoline, &matrix_state);
+  schedule_us(1, (ActivationFuncPtr)update_display_values, &matrix_state);
 
   cpumon_main_loop();
 }
