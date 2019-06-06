@@ -19,7 +19,9 @@
 #include "core/hardware.h"
 #include "core/rulos.h"
 #include "core/stats.h"
+#include "core/twi.h"
 #include "periph/7seg_panel/display_controller.h"
+#include "periph/7seg_panel/remote_bbuf.h"
 #include "periph/bss_canary/bss_canary.h"
 
 #include "stm32f3xx_hal_gpio.h"
@@ -31,9 +33,16 @@
 #define REFRESH_RATE_US 2000
 #define UPDATE_RATE_US 1000000
 
+// For legacy backcompat we assume the first line of the matrix is index 3.
+#define FIRST_LINE_IDX 3
+
 #ifdef LOG_TO_SERIAL
 HalUart uart;
 #endif
+
+#define TEST_MODE 0
+
+///////////////////////////////////////////////////////////////////////
 
 // Decoder pin definitions
 #define DECODER_ENABLE GPIO_A3
@@ -65,6 +74,8 @@ typedef struct {
   int curr_row;
   uint8_t row_data[NUM_ROWS][NUM_COLUMNS];
   MinMaxMean_t refresh_time_stats;
+  Network net;
+  RemoteBBufRecv rbr;
 } MatrixState_t;
 
 MatrixState_t matrix_state;
@@ -222,8 +233,9 @@ void TIM2_IRQHandler() {
   }
 }
 
-static void update_display_values(void *data) {
-  schedule_us(UPDATE_RATE_US, (ActivationFuncPtr)update_display_values, data);
+#if TEST_MODE
+static void test_mode_update(void *data) {
+  schedule_us(UPDATE_RATE_US, (ActivationFuncPtr)test_mode_update, data);
 
   MatrixState_t *ms = (MatrixState_t *)data;
 
@@ -232,9 +244,9 @@ static void update_display_values(void *data) {
 
   SSBitmap bm[NUM_COLUMNS];
   char buf[NUM_COLUMNS + 2];
-  static int test_state = 3;
+  static int test_state = 4;
   test_state++;
-  if (test_state == 4) {
+  if (test_state == 5) {
     test_state = 0;
   }
   switch (test_state) {
@@ -271,9 +283,51 @@ static void update_display_values(void *data) {
         convert_bitmap(ms->row_data[i], bm, NUM_COLUMNS);
       }
       break;
+
+    case 4:
+      for (int i = 0; i < NUM_ROWS; i++) {
+        for (int j = 0; j < NUM_COLUMNS; j++) {
+          ms->row_data[i][j] = 0xff;
+        }
+      }
+      break;
   }
 }
+#endif  // TEST_MODE
 
+static void matrix_bbuf_recv(MessageRecvBuffer *msg) {
+  if (msg->payload_len != sizeof(BBufMessage)) {
+    LOG("rbr_recv: Error: expected BBufMessage of size %zu, got %d bytes",
+        sizeof(BBufMessage), msg->payload_len);
+    goto done;
+  }
+
+  BBufMessage *bbm = (BBufMessage *)msg->data;
+  MatrixState_t *ms = (MatrixState_t *)msg->app_receiver->user_data;
+
+  if (bbm->index < FIRST_LINE_IDX || bbm->index >= FIRST_LINE_IDX + NUM_ROWS) {
+    LOG("got unexpected row index %d", bbm->index);
+    goto done;
+  }
+
+  convert_bitmap(ms->row_data[bbm->index - FIRST_LINE_IDX], bbm->buf,
+                 NUM_DIGITS);
+
+done:
+  net_free_received_message_buffer(msg);
+}
+
+static void init_matrix_bbuf_recv(MatrixState_t *ms, RemoteBBufRecv *rbr,
+                                  Network *network) {
+  rbr->app_receiver.recv_complete_func = matrix_bbuf_recv,
+  rbr->app_receiver.port = REMOTE_BBUF_PORT;
+  rbr->app_receiver.num_receive_buffers = REMOTE_BBUF_RING_SIZE;
+  rbr->app_receiver.payload_capacity = sizeof(BBufMessage);
+  rbr->app_receiver.message_recv_buffers = rbr->recv_ring_alloc;
+  rbr->app_receiver.user_data = ms;
+
+  net_bind_receiver(network, &rbr->app_receiver);
+}
 int main() {
   hal_init();
 
@@ -289,7 +343,13 @@ int main() {
   build_remap_table();
   minmax_init(&matrix_state.refresh_time_stats);
   init_pins(&matrix_state);
+
+#if TEST_MODE
   schedule_us(1, (ActivationFuncPtr)update_display_values, &matrix_state);
+#else
+  init_twi_network(&matrix_state.net, 100, DONGLE_BASE_ADDR + DONGLE_BOARD_ID);
+  init_matrix_bbuf_recv(&matrix_state, &matrix_state.rbr, &matrix_state.net);
+#endif
 
   cpumon_main_loop();
 }
