@@ -18,6 +18,7 @@
 
 #include "core/hardware.h"
 #include "core/rulos.h"
+#include "core/stats.h"
 #include "periph/7seg_panel/display_controller.h"
 #include "periph/bss_canary/bss_canary.h"
 
@@ -60,6 +61,7 @@ typedef struct {
   SPI_HandleTypeDef hspi;
   int curr_row;
   uint8_t row_data[NUM_ROWS][NUM_COLUMNS];
+  MinMaxMean_t refresh_time_stats;
 } MatrixState_t;
 
 MatrixState_t matrix_state;
@@ -185,16 +187,22 @@ static void refresh_display(MatrixState_t *ms) {
 }
 
 static void refresh_display_trampoline(void *data) {
+  Time start = precise_clock_time_us();
   schedule_us(REFRESH_RATE_US, (ActivationFuncPtr)refresh_display_trampoline,
               data);
   MatrixState_t *ms = (MatrixState_t *)data;
   refresh_display(ms);
+  Time elapsed = precise_clock_time_us() - start;
+  minmax_add_sample(&ms->refresh_time_stats, elapsed);
 }
 
 static void update_display_values(void *data) {
   schedule_us(UPDATE_RATE_US, (ActivationFuncPtr)update_display_values, data);
 
   MatrixState_t *ms = (MatrixState_t *)data;
+
+  minmax_log(&ms->refresh_time_stats, "refresh time");
+  minmax_init(&ms->refresh_time_stats);
 
   SSBitmap bm[NUM_COLUMNS];
   char buf[NUM_COLUMNS + 2];
@@ -254,6 +262,7 @@ int main() {
   memset(&matrix_state, 0, sizeof(matrix_state));
   init_pins(&matrix_state);
   build_remap_table();
+  minmax_init(&matrix_state.refresh_time_stats);
 
   schedule_us(1, (ActivationFuncPtr)refresh_display_trampoline, &matrix_state);
   schedule_us(1, (ActivationFuncPtr)update_display_values, &matrix_state);
