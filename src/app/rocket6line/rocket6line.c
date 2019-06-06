@@ -26,6 +26,7 @@
 #include "stm32f3xx_hal_rcc.h"
 #include "stm32f3xx_hal_rcc_ex.h"
 #include "stm32f3xx_hal_spi.h"
+#include "stm32f3xx_ll_tim.h"
 
 #define REFRESH_RATE_US 2000
 #define UPDATE_RATE_US 1000000
@@ -54,6 +55,8 @@ HalUart uart;
 
 #define LEDDRIVER_SPI_AF GPIO_AF5_SPI1
 
+#define DEBUG_PIN GPIO_A15
+
 #define NUM_ROWS 6
 #define NUM_COLUMNS 8
 
@@ -67,6 +70,9 @@ typedef struct {
 MatrixState_t matrix_state;
 
 static void init_pins(MatrixState_t *ms) {
+  // debug
+  gpio_make_output(DEBUG_PIN);
+
   // Set up decoder
   gpio_make_output(DECODER_ENABLE);
   gpio_make_output(DECODER_A0);
@@ -110,6 +116,23 @@ static void init_pins(MatrixState_t *ms) {
   ms->hspi.Init.CRCPolynomial = 10;
   HAL_SPI_Init(&ms->hspi);
   __HAL_SPI_ENABLE(&ms->hspi);
+
+  // Initialize the refresh timer
+  __HAL_RCC_TIM2_CLK_ENABLE();
+  HAL_NVIC_SetPriority(TIM2_IRQn, 3, 0);
+  HAL_NVIC_EnableIRQ(TIM2_IRQn);
+  LL_TIM_InitTypeDef timer_init;
+  timer_init.Prescaler = 0;
+  timer_init.CounterMode = LL_TIM_COUNTERMODE_UP;
+  timer_init.Autoreload = 6500;
+  timer_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
+  timer_init.RepetitionCounter = 0;
+  LL_TIM_Init(TIM2, &timer_init);
+  LL_TIM_SetTriggerOutput(TIM2, LL_TIM_TRGO_UPDATE);
+  LL_TIM_DisableMasterSlaveMode(TIM2);
+  LL_TIM_EnableIT_UPDATE(TIM2);
+  LL_TIM_EnableCounter(TIM2);
+  LL_TIM_GenerateEvent_UPDATE(TIM2);
 }
 
 static uint8_t segment_remap_table[256];
@@ -186,14 +209,17 @@ static void refresh_display(MatrixState_t *ms) {
   gpio_set(DECODER_ENABLE);
 }
 
-static void refresh_display_trampoline(void *data) {
-  Time start = precise_clock_time_us();
-  schedule_us(REFRESH_RATE_US, (ActivationFuncPtr)refresh_display_trampoline,
-              data);
-  MatrixState_t *ms = (MatrixState_t *)data;
-  refresh_display(ms);
-  Time elapsed = precise_clock_time_us() - start;
-  minmax_add_sample(&ms->refresh_time_stats, elapsed);
+void TIM2_IRQHandler() {
+  if (LL_TIM_IsActiveFlag_UPDATE(TIM2)) {
+    LL_TIM_ClearFlag_UPDATE(TIM2);
+
+    gpio_set(DEBUG_PIN);
+    Time start = precise_clock_time_us();
+    refresh_display(&matrix_state);
+    Time elapsed = precise_clock_time_us() - start;
+    minmax_add_sample(&matrix_state.refresh_time_stats, elapsed);
+    gpio_clr(DEBUG_PIN);
+  }
 }
 
 static void update_display_values(void *data) {
@@ -260,11 +286,9 @@ int main() {
   bss_canary_init();
 
   memset(&matrix_state, 0, sizeof(matrix_state));
-  init_pins(&matrix_state);
   build_remap_table();
   minmax_init(&matrix_state.refresh_time_stats);
-
-  schedule_us(1, (ActivationFuncPtr)refresh_display_trampoline, &matrix_state);
+  init_pins(&matrix_state);
   schedule_us(1, (ActivationFuncPtr)update_display_values, &matrix_state);
 
   cpumon_main_loop();
