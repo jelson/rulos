@@ -163,13 +163,13 @@ void init_remote_bbuf_recv(RemoteBBufRecv *rbr, Network *network) {
 }
 
 void rbr_recv(MessageRecvBuffer *msg) {
+  BBufMessage *bbm = (BBufMessage *)msg->data;
+
   if (msg->payload_len != sizeof(BBufMessage)) {
     LOG("rbr_recv: Error: expected BBufMessage of size %zu, got %d bytes",
         sizeof(BBufMessage), msg->payload_len);
-    return;
+    goto done;
   }
-
-  BBufMessage *bbm = (BBufMessage *)msg->data;
 
 #if BBDEBUG
   LOG("rbs: updating board %d with data %x%x%x%x%x%x%x%x", bbm->index,
@@ -179,5 +179,6 @@ void rbr_recv(MessageRecvBuffer *msg) {
 
   board_buffer_paint(bbm->buf, bbm->index, 0xff);
 
+ done:
   net_free_received_message_buffer(msg);
 }
