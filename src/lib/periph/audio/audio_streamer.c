@@ -90,6 +90,7 @@ r_bool as_play(AudioStreamer* as, const char* pathname,
 
   if (!as->playing) {
     i2s_start(as->i2s);
+    as->playing = true;
   }
   return true;
 }
