@@ -22,7 +22,7 @@
 #include "core/network_ports.h"
 #include "periph/audio/audio_request_message.h"
 #include "periph/audio/audio_streamer.h"
-#include "periph/rocket/sound.h"
+#include "periph/audio/sound.h"
 
 typedef struct {
   SoundCmd skip_cmd;

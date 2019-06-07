@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "periph/rocket/sound.h"
+#include "periph/audio/sound.h"
 
 void sound_start(SoundToken token, r_bool loop) {
   LOG("Now would be a good time to start sound %d.", token);

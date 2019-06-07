@@ -19,7 +19,7 @@
 #include "periph/rocket/pong.h"
 #include "core/rulos.h"
 #include "periph/rasters/rasters.h"
-#include "periph/rocket/sound.h"
+#include "periph/audio/sound.h"
 
 #define PS(v) ((v) << PONG_SCALE2)
 #define BALLDIA 3

@@ -20,7 +20,7 @@
 
 #include "core/rulos.h"
 #include "periph/ring_buffer/rocket_ring_buffer.h"
-#include "periph/rocket/sound.h"
+#include "periph/audio/sound.h"
 //#include "graveyard/spiflash.h"
 
 #define NUM_COMPOSITE_STREAMS 1

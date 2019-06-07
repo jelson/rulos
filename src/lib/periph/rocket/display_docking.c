@@ -21,7 +21,7 @@
 #include "periph/hpam/hpam.h"
 #include "periph/rasters/rasters.h"
 #include "periph/rocket/rocket.h"
-#include "periph/rocket/sound.h"
+#include "periph/audio/sound.h"
 
 UIEventDisposition ddock_event_handler(UIEventHandler *raw_handler,
                                        UIEvent evt);
