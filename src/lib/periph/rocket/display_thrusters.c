@@ -125,7 +125,7 @@ void thrusters_init(ThrusterState_t *ts, uint8_t board,
   ts->hpam = hpam;
   ts->idle = idle;
 
-    ts->last_joystick_connected = false;
+    ts->last_joystick_connected = true;
     ts->audioClient = audioClient;
 
   schedule_us(1, (ActivationFuncPtr)thrusters_update, ts);
