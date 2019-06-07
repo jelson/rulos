@@ -3,7 +3,9 @@
 # Auto-formats all code that ends in .c or .h that's been changed in subversion.
 # I should have called it "g4 fix".
 
-filelist=`git diff --relative --name-only | grep '.*\.h$\|.*\.c$' | grep -v vendor_libraries`
+filelist1=`git diff --relative --name-only | grep '.*\.h$\|.*\.c$' | grep -v vendor_libraries`
+filelist2=`git diff --cached --relative --name-only | grep '.*\.h$\|.*\.c$' | grep -v vendor_libraries`
+filelist="$filelist1 $filelist2"
 
 if [ -z "$filelist" ]; then
     echo No changed files

@@ -18,5 +18,26 @@
 
 #pragma once
 
-void audioled_init();
-void audioled_set(r_bool red, r_bool yellow);
+#include "core/rulos.h"
+
+#define SOUND(symbol, source_file_name, filter, label) symbol,
+
+typedef enum {
+#include "sound.def"
+
+  sound_num_ids
+} SoundEffectId;
+
+// The client code is written as if there are multiple channels (streams)
+// that can be mixed together. The audio driver code doesn't yet support that,
+// but these defines are sent in by the clients anyway.
+// Instead, the streams preempt one another.
+#define AUDIO_STREAM_BACKGROUND 0
+#define AUDIO_STREAM_MUSIC 1
+#define AUDIO_STREAM_BURST_EFFECTS 2
+#define AUDIO_NUM_STREAMS 3
+
+#define VOL_MAX (0)
+#define VOL_MIN (7)
+// VOL_MIN==7: it's the largest integer value, but the quietest sound
+// (because volume is minus logarithm; output = value >> volume).

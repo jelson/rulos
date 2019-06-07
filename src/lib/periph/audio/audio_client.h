@@ -18,12 +18,8 @@
 
 #pragma once
 
-#include "core/network.h"
-#include "core/network_ports.h"
 #include "core/rulos.h"
 #include "periph/audio/audio_request_message.h"
-#include "periph/audio/audio_streamer.h"
-#include "periph/rocket/ambient_noise.h"
 
 typedef struct s_audio_client {
   Network *network;
@@ -34,13 +30,20 @@ typedef struct s_audio_client {
   uint8_t mcm_send_msg_alloc[sizeof(WireMessage) + sizeof(MusicControlMessage)];
   SendSlot mcm_send_slot;
   uint8_t cached_music_volume;
-  AmbientNoise ambient_noise;
 } AudioClient;
 
 void init_audio_client(AudioClient *ac, Network *network);
+
+/*
+ * Stop whatever is playing on stream_idx and skip to cur_effect_id. When that's
+ * done playing, play loop_effect_id forever.
+ */
 r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx,
-                       SoundToken cur_token, SoundToken loop_token);
-// r_bool ac_queue_loop_clip(AudioClient *ac, uint8_t stream_idx, SoundToken
-// loop_token);
-r_bool ac_change_volume(AudioClient *ac, uint8_t stream_id, uint8_t mlvolume);
+                       SoundEffectId cur_effect_id,
+                       SoundEffectId loop_effect_id);
+
+/* Configure volume of effect playing on stream_idx. */
+r_bool ac_change_volume(AudioClient *ac, uint8_t stream_idx, uint8_t mlvolume);
+
+/* Change what music is playing on AUDIO_STREAM_MUSIC. */
 r_bool ac_send_music_control(AudioClient *ac, int8_t advance);
