@@ -1,5 +1,5 @@
 sdcard:
-	./compile_audio.py -sdcard ../include/sound.def . /dev/mmcblk0
+	./compile_audio.py -fatfs ../../lib/periph/audio/sound.def ../../../Media/audio tmpdir
 
 all: audio_sim lintest
 
