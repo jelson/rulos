@@ -150,7 +150,7 @@ void init_rocket0(Rocket0 *r0) {
   init_joystick_usb(&r0->joystick, &r0->max);
 #endif
   thrusters_init(&r0->ts, 7, (JoystickState_t *)&r0->joystick, &r0->hpam,
-                 &r0->idle);
+                 &r0->idle, &r0->audio_client);
   init_screenblanker(&r0->screenblanker, &r0->hpam, &r0->idle);
 
   volume_control_init(&r0->volume_control, &r0->audio_client,

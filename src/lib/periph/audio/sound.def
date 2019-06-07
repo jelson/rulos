@@ -12,3 +12,5 @@ SOUND(sound_dock_clang,                           sound_dock_clang.au,          
 SOUND(sound_dock_thud,                            demovideo_docking_thud_attenuated.wav,                             filter_none,    label_sfx)
 SOUND(sound_quindar_key_down,                     sound_quindar_key_down.au,                              filter_none,    label_sfx)
 SOUND(sound_quindar_key_up,                       sound_quindar_key_up.au,                                filter_none,    label_sfx)
+SOUND(sound_usb_connect,                          sound_usb_connect.ogg,                              filter_none,    label_sfx)
+SOUND(sound_usb_disconnect,                       sound_usb_disconnect.ogg,                              filter_none,    label_sfx)

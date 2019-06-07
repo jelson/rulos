@@ -39,6 +39,12 @@ static void thrusters_update(ThrusterState_t *ts) {
   if (ts->joystick->state & JOYSTICK_STATE_DISCONNECTED) {
     ascii_to_bitmap_str(&ts->bbuf.buffer[1], 3, " NO");
     ascii_to_bitmap_str(&ts->bbuf.buffer[5], 3, "JOy");
+
+    if (ts->last_joystick_connected) {
+        ac_skip_to_clip(ts->audioClient, AUDIO_STREAM_BURST_EFFECTS,
+                        sound_usb_disconnect, sound_silence);
+    }
+    ts->last_joystick_connected = false;
   } else {
     if (ts->joystick->state & JOYSTICK_STATE_TRIGGER) {
       ascii_to_bitmap_str(&ts->bbuf.buffer[1], 3, "PSH");
@@ -66,6 +72,12 @@ static void thrusters_update(ThrusterState_t *ts) {
       ts->bbuf.buffer[7] |= SSB_DECIMAL;
     else
       ts->bbuf.buffer[6] |= SSB_DECIMAL;
+
+    if (!ts->last_joystick_connected) {
+        ac_skip_to_clip(ts->audioClient, AUDIO_STREAM_BURST_EFFECTS,
+                        sound_usb_connect, sound_silence);
+    }
+    ts->last_joystick_connected = true;
   }
 
   // fire thrusters, baby!!
@@ -102,7 +114,7 @@ static void thrusters_update(ThrusterState_t *ts) {
 }
 
 void thrusters_init(ThrusterState_t *ts, uint8_t board,
-                    JoystickState_t *joystick, HPAM *hpam, IdleAct *idle) {
+                    JoystickState_t *joystick, HPAM *hpam, IdleAct *idle, AudioClient* audioClient) {
   board_buffer_init(&ts->bbuf DBG_BBUF_LABEL("thrusters"));
   // mask off HPAM digits, so HPAM 'display' shows through
   board_buffer_set_alpha(&ts->bbuf, 0x77);
@@ -112,6 +124,9 @@ void thrusters_init(ThrusterState_t *ts, uint8_t board,
   ts->joystick_muted = FALSE;
   ts->hpam = hpam;
   ts->idle = idle;
+
+    ts->last_joystick_connected = false;
+    ts->audioClient = audioClient;
 
   schedule_us(1, (ActivationFuncPtr)thrusters_update, ts);
 }
