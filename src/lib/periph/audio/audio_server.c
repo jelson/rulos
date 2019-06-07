@@ -159,8 +159,9 @@ void aserv_start_play(AudioServer *aserv) {
     stream->skip_effect_id = sound_silence;
     as_stop_streaming(&aserv->audio_streamer);
   } else {
-    char effect_filename[16];
-    itoda(effect_filename, stream->skip_effect_id);
+    char effect_filename[25];
+    strcpy(effect_filename, "sfx/");
+    itoda(effect_filename + strlen(effect_filename), stream->skip_effect_id);
     strcat(effect_filename, ".raw");
     as_set_volume(&aserv->audio_streamer, stream->mlvolume);
     r_bool rc = as_play(&aserv->audio_streamer, effect_filename,
