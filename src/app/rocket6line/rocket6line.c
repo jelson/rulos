@@ -277,7 +277,7 @@ static void test_mode_update(void *data) {
       break;
 
     case 3:
-      strcpy(buf, "12345678");
+      strcpy(buf, "01234567");
       ascii_to_bitmap_str(bm, strlen(buf), buf);
       for (int i = 0; i < NUM_ROWS; i++) {
         convert_bitmap(ms->row_data[i], bm, NUM_COLUMNS);
@@ -293,7 +293,8 @@ static void test_mode_update(void *data) {
       break;
   }
 }
-#endif  // TEST_MODE
+
+#else  // TEST_MODE
 
 static void matrix_bbuf_recv(MessageRecvBuffer *msg) {
   if (msg->payload_len != sizeof(BBufMessage)) {
@@ -328,6 +329,9 @@ static void init_matrix_bbuf_recv(MatrixState_t *ms, RemoteBBufRecv *rbr,
 
   net_bind_receiver(network, &rbr->app_receiver);
 }
+
+#endif  // TEST_MODE
+
 int main() {
   hal_init();
 
@@ -345,7 +349,7 @@ int main() {
   init_pins(&matrix_state);
 
 #if TEST_MODE
-  schedule_us(1, (ActivationFuncPtr)update_display_values, &matrix_state);
+  schedule_us(1, (ActivationFuncPtr)test_mode_update, &matrix_state);
 #else
   init_twi_network(&matrix_state.net, 100, DONGLE_BASE_ADDR + DONGLE_BOARD_ID);
   init_matrix_bbuf_recv(&matrix_state, &matrix_state.rbr, &matrix_state.net);
