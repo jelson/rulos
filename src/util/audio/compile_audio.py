@@ -102,7 +102,7 @@ class AudioIndexer:
 
 	def filter(self, token):
                 audio_dir = os.path.join(self.audio_root, "fx")
-		cmd = "sox %s --bits 8 --rate %s --channels 2 -t au --bits 16 -e signed-integer - %s" % (
+		cmd = "sox %s --rate %s --channels 2 -t raw --bits 16 -e signed-integer - %s" % (
 			os.path.join(audio_dir, token.source_file_name),
 			AUDIO_RATE,
 			AUDIO_FILTERS[token.filter_name])
