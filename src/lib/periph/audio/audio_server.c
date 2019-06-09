@@ -170,7 +170,7 @@ void aserv_start_play(AudioServer *aserv) {
       // Retry rapidly, so we can get ahold of sdc as soon as it's
       // idle. (Yeah, I could have a callback from SD to alert the
       // next waiter, but what a big project. This'll do.)
-      schedule_us(1, (ActivationFuncPtr)aserv_start_play, aserv);
+      schedule_us(10000, (ActivationFuncPtr)aserv_start_play, aserv);
     }
   }
 }
