@@ -148,16 +148,18 @@ uint32_t htoi2s_24(uint32_t v) {
 }
 
 // Convert 16-bit little-endian samples into big-endian.
-void hal_i2s_condition_buffer(uint16_t* samples, uint16_t num_samples) {
+void hal_i2s_condition_buffer(int16_t* samples, uint16_t num_samples) {
   while (num_samples > 0) {
-    uint16_t old_value = *samples;
-    *samples = ((old_value >> 8) & 0xff) | ((old_value & 0xff) << 8);
+    int8_t* ptr = (int8_t*)samples;
+    int8_t tmp = ptr[0];
+    ptr[0] = ptr[1];
+    ptr[1] = tmp;
     samples++;
     num_samples--;
   }
 }
 
-void hal_i2s_start(uint16_t* samples, uint16_t num_samples_per_halfbuffer) {
+void hal_i2s_start(int16_t* samples, uint16_t num_samples_per_halfbuffer) {
   LL_DMA_ClearFlag_HT5(DMA1);
   LL_DMA_ClearFlag_TC5(DMA1);
 

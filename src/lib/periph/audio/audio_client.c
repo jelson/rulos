@@ -38,12 +38,11 @@ void init_audio_client(AudioClient *ac, Network *network) {
   ac->mcm_send_slot.sending = FALSE;
 
   ac->cached_music_volume = 2;  // should be immediately overwritten
-
-  ambient_noise_init(&ac->ambient_noise, ac);
 }
 
 r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx,
-                       SoundToken cur_token, SoundToken loop_token) {
+                       SoundEffectId cur_effect_id,
+                       SoundEffectId loop_effect_id) {
   if (ac->arm_send_slot.sending) {
     return FALSE;
   }
@@ -53,37 +52,16 @@ r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx,
   ac->arm_send_slot.payload_len = sizeof(AudioRequestMessage);
   AudioRequestMessage *arm =
       (AudioRequestMessage *)&ac->arm_send_slot.wire_msg->data;
-  arm->stream_id = stream_idx;
+  arm->stream_idx = stream_idx;
   arm->skip = TRUE;
-  arm->skip_cmd.token = cur_token;
-  arm->loop_cmd.token = loop_token;
+  arm->skip_effect_id = cur_effect_id;
+  arm->loop_effect_id = loop_effect_id;
   net_send_message(ac->network, &ac->arm_send_slot);
 
   return TRUE;
 }
 
-#if 0  // unused
-r_bool ac_queue_loop_clip(AudioClient *ac, uint8_t stream_idx, SoundToken loop_token)
-{
-	if (ac->sendSlot.sending)
-	{
-		return FALSE;
-	}
-
-	ac->sendSlot.dest_addr = AUDIO_ADDR;
-	ac->sendSlot.msg->dest_port = AUDIO_PORT;
-	ac->sendSlot.msg->payload_len = sizeof(AudioRequestMessage);
-	AudioRequestMessage *arm = (AudioRequestMessage *) &ac->sendSlot.msg->data;
-	arm->skip = FALSE;
-	arm->skip_cmd.token = (SoundToken) -1;
-	arm->loop_cmd.token = loop_token;
-	net_send_message(ac->network, &ac->sendSlot);
-
-	return TRUE;
-}
-#endif
-
-r_bool ac_change_volume(AudioClient *ac, uint8_t stream_id, uint8_t mlvolume) {
+r_bool ac_change_volume(AudioClient *ac, uint8_t stream_idx, uint8_t mlvolume) {
   if (ac->avm_send_slot.sending) {
     return FALSE;
   }
@@ -93,7 +71,7 @@ r_bool ac_change_volume(AudioClient *ac, uint8_t stream_id, uint8_t mlvolume) {
   ac->avm_send_slot.payload_len = sizeof(AudioVolumeMessage);
   AudioVolumeMessage *avm =
       (AudioVolumeMessage *)&ac->avm_send_slot.wire_msg->data;
-  avm->stream_id = stream_id;
+  avm->stream_idx = stream_idx;
   avm->mlvolume = mlvolume;
   net_send_message(ac->network, &ac->avm_send_slot);
 

@@ -27,7 +27,7 @@
 //
 // * There are exactly two buffers (one playing, one filling), though the caller
 //   can vary the size of those buffers.
-#define I2S_BUFSIZE_BYTES(samples_per_buf) (samples_per_buf * sizeof(uint16_t))
+#define I2S_BUFSIZE_BYTES(samples_per_buf) (samples_per_buf * sizeof(int16_t))
 
 #define I2S_STATE_SIZE(samples_per_buf) \
   (sizeof(i2s_t) + (I2S_BUFSIZE_BYTES(samples_per_buf) * 2))
@@ -41,7 +41,7 @@ typedef enum {
 
 // Upcall from library to caller indicating we want another sample
 // buffer filled. Format is 16-bit, signed, little-endian.
-typedef void (*i2s_fill_buffer_cb_t)(void* user_data, uint16_t* buf);
+typedef void (*i2s_fill_buffer_cb_t)(void* user_data, int16_t* buf);
 
 // Upcall from library to caller indicating audio play has completed.
 typedef void (*i2s_audio_done_cb_t)(void* user_data);
@@ -90,4 +90,4 @@ void i2s_start(i2s_t* i2s);
 // data. If sample_filled is < samples_per_buf, this is assumed to be
 // the last buffer and audio output will stop once this has been
 // played. Length of 0 is legal.
-void i2s_buf_filled(i2s_t* i2s, uint16_t* buf, uint16_t samples_filled);
+void i2s_buf_filled(i2s_t* i2s, int16_t* buf, uint16_t samples_filled);

@@ -9,12 +9,13 @@ AO_HALFBUFLEN = 128
 SDBLOCKSIZE = 512
 index_size_blocks = 1
 MAGIC = "RULOSMAGICSD"
-AUDIO_RATE=12000
+AUDIO_RATE=50000
 AUDIO_FILTERS={
 	'filter_none': '',
 #	'filter_music': 'gain -6 bass -20',
 #	'filter_music': 'bass -20',
-	'filter_music': 'highpass 340',
+#	'filter_music': 'highpass 340',
+	'filter_music': '',
 	}
 
 class AudioClip:
@@ -86,7 +87,8 @@ class IndexRecord:
 		return record
 
 class AudioIndexer:
-	def __init__(self, tokens):
+	def __init__(self, tokens, audio_root):
+                self.audio_root = audio_root
 		self.clips = []
 		for token in tokens:
 			sys.stderr.write("reading %s\n" % token.symbol)
@@ -94,13 +96,14 @@ class AudioIndexer:
 			fp = os.popen(self.filter(token), "r")
 			# discard .au header
 			fp.read(24)
-			everything = fp.read(9999999)
+			everything = fp.read(99999999)
 			fp.close()
 			self.clips.append(AudioClip(token, everything))
 
 	def filter(self, token):
-		cmd = "sox %s --bits 8 --rate %s --channels 1 -t au --bits 8 -e signed-integer - %s" % (
-			token.source_file_name,
+                audio_dir = os.path.join(self.audio_root, "fx")
+		cmd = "sox %s --rate %s --channels 2 -t raw --bits 16 -e signed-integer - %s" % (
+			os.path.join(audio_dir, token.source_file_name),
 			AUDIO_RATE,
 			AUDIO_FILTERS[token.filter_name])
 		return cmd
@@ -111,6 +114,16 @@ class AudioIndexer:
 		if (magic != MAGIC):
 			raise Exception("Card magic invalid. Not writing to avoid stomping real data.")
 		fd.close()
+
+	def emitFatfs(self, cardpath):
+            os.mkdir(cardpath)
+            sfxpath = os.path.join(cardpath, "sfx")
+            os.mkdir(sfxpath)
+            for clip in self.clips:
+                outpath = os.path.join(sfxpath, clip.token.fat_filename())
+                fp = open(outpath, "wb")
+                fp.write(clip.aubytes)
+                fp.close()
 
 	def emitSDCard(self, cardpath):
 		self.checkCard(cardpath)
@@ -134,26 +147,31 @@ class AudioIndexer:
 		cardfd.close()
 
 class Token:
-	def __init__(self, symbol, source_file_name, filter_name, label):
-		self.symbol = symbol
-		self.source_file_name = source_file_name
-		self.filter_name = filter_name
-		self.label = label
+	def __init__(self, idx, symbol, source_file_name, filter_name, label):
+            self.idx = idx
+            self.symbol = symbol
+            self.source_file_name = source_file_name
+            self.filter_name = filter_name
+            self.label = label
+
+        def fat_filename(self):
+            return "%05d.raw" % self.idx
 
 	def __repr__(self):
 		return self.symbol
 
 class ParseAudioFilenames:
-	def __init__(self, includeFile, audio_path):
+	def __init__(self, includeFile):
 		self._tokens = []
-		self.process(includeFile, audio_path)
+		self.process(includeFile)
 
 	def tokens(self):
 		return self._tokens
 
-	def process(self, includeFile, audio_path, reading = False):
+	def process(self, includeFile, reading = False):
 		sys.stderr.write("processing %s\n" % includeFile)
 		fp = open(includeFile)
+                idx = 0
 		while (True):
 			l = fp.readline()
 			if (l==""): break
@@ -165,7 +183,8 @@ class ParseAudioFilenames:
 			args = mo.groups(1)[0]
 			words = map(lambda s: s.strip(), args.split(','))
 			print words
-			self._tokens.append(Token(*words))
+			self._tokens.append(Token(*([idx] + words)))
+                        idx += 1
 		sys.stderr.write("decoded names: %s\n" % self._tokens)
 		fp.close()
 
@@ -179,13 +198,15 @@ def main():
 	except:
 		cardpath = None
 
-	outfile = AudioIndexer(ParseAudioFilenames(enum_include, audio_path).tokens())
+	outfile = AudioIndexer(ParseAudioFilenames(enum_include).tokens(), audio_path)
 	if (mode=="-index"):
 		outfile.emitIndex()
 	elif (mode=="-spif"):
 		outfile.emitSpiflashBin()
 	elif (mode=="-sdcard"):
 		outfile.emitSDCard(cardpath)
+	elif (mode=="-fatfs"):
+		outfile.emitFatfs(cardpath)
 	else:
 		assert(False)
 

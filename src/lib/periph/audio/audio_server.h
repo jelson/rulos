@@ -22,17 +22,17 @@
 #include "core/network_ports.h"
 #include "periph/audio/audio_request_message.h"
 #include "periph/audio/audio_streamer.h"
-#include "periph/rocket/sound.h"
+#include "periph/audio/sound.h"
 
+// Each stream plays the "skip_effect_id" until it's done, then plays the
+// "loop_effect_id" forever.
 typedef struct {
-  SoundCmd skip_cmd;
-  SoundCmd loop_cmd;
+  SoundEffectId skip_effect_id;
+  SoundEffectId loop_effect_id;
   uint8_t mlvolume;
 } AudioEffectsStream;
 
 typedef struct s_audio_server {
-  AudioStreamer audio_streamer;
-
   uint8_t
       arm_recv_ring_alloc[RECEIVE_RING_SIZE(1, sizeof(AudioRequestMessage))];
   AppReceiver arm_app_receiver;
@@ -42,24 +42,12 @@ typedef struct s_audio_server {
       mcm_recv_ring_alloc[RECEIVE_RING_SIZE(1, sizeof(MusicControlMessage))];
   AppReceiver mcm_app_receiver;
 
-  r_bool index_ready;
-  AuIndexRec magic;
-  AuIndexRec index[sound_num_tokens];
-  // AuIndexRec index[2];
+  AudioStreamer audio_streamer;
 
   AudioEffectsStream audio_stream[AUDIO_NUM_STREAMS];
   int8_t active_stream;
 
   r_bool music_random_seeded;
-  uint8_t num_music_tokens;   // derived from index
-  uint8_t music_first_token;  // offset into index where music starts.
-  uint8_t music_offset;       // offset past first_token of last thing we played
-
-  SDCard *borrowed_sdc;
 } AudioServer;
 
 void init_audio_server(AudioServer *as, Network *network, uint8_t timer_id);
-
-// visibility for debugging
-void aserv_fetch_start(AudioServer *as);
-void aserv_dbg_play(AudioServer *aserv, SoundToken skip, SoundToken loop);

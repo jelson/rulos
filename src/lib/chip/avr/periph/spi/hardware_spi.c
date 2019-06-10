@@ -24,6 +24,7 @@
 #include "core/hal.h"
 #include "core/hardware.h"
 #include "core/rulos.h"
+#include "periph/spi/hal_spi.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // SPI: ATMega...32P page 82, 169

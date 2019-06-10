@@ -34,7 +34,6 @@
  * 20. scroll board 0: "launch complete. Orbit attained."
  */
 
-#include "periph/audio/audio_server.h"
 #include "periph/display_rtc/display_rtc.h"
 #include "periph/hpam/hpam.h"
 #include "periph/input_controller/focus.h"

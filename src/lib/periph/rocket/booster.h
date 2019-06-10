@@ -20,6 +20,7 @@
 
 #include "periph/audio/audio_client.h"
 #include "periph/hpam/hpam.h"
+#include "periph/rocket/ambient_noise.h"
 #include "periph/rocket/rocket.h"
 #include "periph/rocket/screenblanker.h"
 
@@ -31,6 +32,7 @@ typedef struct {
   AudioClient *audioClient;
   ScreenBlanker *screenblanker;
   BoosterContext bcontext;
+  AmbientNoise ambient_noise;
 } Booster;
 
 void booster_init(Booster *booster, HPAM *hpam, AudioClient *audioClient,

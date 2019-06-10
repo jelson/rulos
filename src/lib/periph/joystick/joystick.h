@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "core/util.h"
+#include "core/rulos.h"
 
 #ifndef _BV
 #define _BV(x) (1 << (x))
@@ -30,16 +30,21 @@
 #define JOYSTICK_STATE_RIGHT _BV(3)
 #define JOYSTICK_STATE_TRIGGER _BV(4)
 #define JOYSTICK_STATE_DISCONNECTED _BV(5)
-typedef struct {
-  // ADC channel numbers.  Should be initialized by caller before
-  // joystick_init is called.
-  uint8_t x_adc_channel;
-  uint8_t y_adc_channel;
 
-  // X and Y positions (from -100 to 100) of joystick, and a state
-  // bitvector, valid after joystick_poll is called.
+struct JoystickState_t_s;
+
+typedef bool (*JoystickReadFunc_t)(struct JoystickState_t_s *js);
+
+typedef struct JoystickState_t_s {
+  JoystickReadFunc_t joystick_reader_func;
+
+  // X position from -100 (left) to +100 (right)
   int8_t x_pos;
+
+  // Y position from -100 (down) to +100 (up)
   int8_t y_pos;
+
+  // bitvector with status and thresholded position bits
   uint8_t state;
 } JoystickState_t;
 

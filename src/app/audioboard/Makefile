@@ -15,12 +15,11 @@
 
 ROCKET_ROOT := ../..
 
-PLATFORMS := avr #sim
-PERIPHERALS := uart audio twi spi sdcard ring_buffer
-#MCU := atmega8
-MCU := atmega328p
+PLATFORMS := arm
+ARM_CHIP := stm32f303xb
+PERIPHERALS := uart audio twi i2s fatfs
 BOARD := ROCKETAUDIO
-AVR_CFLAGS += -DCRYSTAL=20000000
+ALL_PLATFORM_CFLAGS := -DLOG_TO_SERIAL=UART0 -DRULOS_I2C_ALT_MAPPING
 
 TARGET := audioboard
 

@@ -16,8 +16,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "periph/rocket/sound.h"
+#pragma once
 
-void sound_start(SoundToken token, r_bool loop) {
-  LOG("Now would be a good time to start sound %d.", token);
-}
+#include "core/util.h"
+#include "periph/joystick/joystick.h"
+
+typedef struct {
+  // "base class" state
+  JoystickState_t base;
+
+  // ADC channel numbers.  Should be initialized by caller before
+  // joystick_init is called.
+  uint8_t x_adc_channel;
+  uint8_t y_adc_channel;
+} Joystick_ADC_t;
+
+void init_joystick_adc(Joystick_ADC_t *js, uint8_t x_chan, uint8_t y_chan);

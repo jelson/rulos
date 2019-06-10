@@ -20,7 +20,6 @@
 
 #include "core/clock.h"
 #include "periph/7seg_panel/board_buffer.h"
-#include "periph/audio/audio_server.h"
 #include "periph/input_controller/focus.h"
 #include "periph/joystick/joystick.h"
 #include "periph/rocket/booster.h"

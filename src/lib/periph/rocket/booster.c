@@ -26,6 +26,7 @@ void booster_init(Booster *booster, HPAM *hpam, AudioClient *audioClient,
   booster->screenblanker = screenblanker;
   booster->bcontext = bcontext_liftoff;
   hpam_set_port(booster->hpam, HPAM_BOOSTER, FALSE);
+  ambient_noise_init(&booster->ambient_noise, audioClient);
 }
 
 void booster_set_context(Booster *booster, BoosterContext bcontext) {
@@ -56,7 +57,7 @@ void booster_set(Booster *booster, r_bool status) {
       // the right background noises, so they'll appear when the
       // former runs out.
       schedule_us(100000, (ActivationFuncPtr)ambient_noise_boost_complete,
-                  &booster->audioClient->ambient_noise);
+                  &booster->ambient_noise);
     } else if (booster->bcontext == bcontext_docking) {
       ac_skip_to_clip(booster->audioClient, AUDIO_STREAM_BURST_EFFECTS,
                       sound_booster_flameout, sound_silence);

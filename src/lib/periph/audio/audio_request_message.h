@@ -19,24 +19,30 @@
 #pragma once
 
 #include "core/rulos.h"
-#include "periph/rocket/sound.h"
+#include "periph/audio/sound.h"
 
 typedef struct {
-  SoundToken token;
-} SoundCmd;
+  // The sound stream on which to play different effect(s).
+  uint8_t stream_idx;
 
-typedef struct {
-  uint8_t stream_id;
+  // If skip is true, immediately begin playing skip_effect_id, then loop
+  // loop_effect_id If skip is false, allow existing effect to complete, then
+  // loop loop_effect_id
   r_bool skip;
-  SoundCmd skip_cmd;
-  SoundCmd loop_cmd;
+  SoundEffectId skip_effect_id;
+  SoundEffectId loop_effect_id;
 } AudioRequestMessage;
 
 typedef struct {
-  uint8_t stream_id;
+  // The sound stream whose volume should change.
+  uint8_t stream_idx;
+
+  // The new volume [0..7]. Zero is ... loud.
+  // TODO: someday a gorgeous fine-grained log volume scale.
   uint8_t mlvolume;
 } AudioVolumeMessage;
 
 typedef struct {
-  int8_t advance;  // +1: skip forward  -1: skip backward
+  // +1: skip forward  -1: skip backward
+  int8_t advance;
 } MusicControlMessage;

@@ -1,5 +1,8 @@
 sdcard:
-	./compile_audio.py -sdcard ../include/sound.def . /dev/mmcblk0
+	./compile_audio.py -fatfs ../../lib/periph/audio/sound.def ../../../Media/audio sdcard
+
+playsample: sdcard
+	play --channels 2 --bits 16 -r 50000 -e signed-integer tmpdir/sfx/00004.raw 
 
 all: audio_sim lintest
 

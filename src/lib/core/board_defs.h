@@ -157,9 +157,6 @@
 
 #elif defined(BOARD_STMPEM_REVA)
 
-#define JOYSTICK_TRIGGER GPIO_A4
-#define JOYSTICK_X_CHAN 1
-#define JOYSTICK_Y_CHAN 0
 #define AVAILABLE_ADCS 0xff
 
 #elif defined(BOARD_FLASHCARD)

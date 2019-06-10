@@ -1,63 +1,63 @@
+/*
+ * Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson
+ * (jelson@gmail.com).
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #pragma once
 
-#include "core/event.h"
 #include "core/rulos.h"
-#include "periph/audio/audio_out.h"
-#include "periph/sdcard/sdcard.h"
+#include "periph/fatfs/ff.h"
+#include "periph/i2s/i2s.h"
 
-#define BLEND 0
-// too short a period to matter. I think the audio samples just aren't centered.
+#define SAMPLE_BUF_COUNT 4096
 
 typedef struct s_AudioStreamer {
-  SDCard sdc;
-  r_bool sdc_initialized;
-  AudioOut audio_out;
-  r_bool ulawbuf_full;
-  uint8_t ulawbuf[AO_BUFLEN];
-  uint8_t timer_id;
-  uint32_t block_address;
-  // 0 == playing silence
-  uint32_t end_address;
-  uint16_t sector_offset;  // [0..SDBUFSIZE), in AO_BUFLEN increments
-  uint8_t mlvolume;        // 0=> original volume .. 8=> silent
-  Event ulawbuf_empty_evt;
-  Event play_request_evt;
-  ActivationFuncPtr done_func;
+  // Storage used by I2S to DMA to DAC
+  uint8_t i2s_storage[I2S_STATE_SIZE(SAMPLE_BUF_COUNT)];
 
-#if BLEND
-  bool blend;
-  uint8_t last_blend_value;
-#endif  // BLEND
+  // I2S driver to pump audio to DAC.
+  i2s_t *i2s;
 
-  void *done_data;
+  // Filesystem
+  FATFS fatfs;
+
+  // Currently-playing file.
+  FIL fp;
+
+  // Whether fp is valid, so we know whether we need to close fp.
+  bool fp_valid;
+
+  // i2s is playing, and owes us a callback.
+  bool playing;
+
+  uint8_t mlvolume;
+
+  ActivationFuncPtr client_done_cb;
+  void *client_done_data;
 } AudioStreamer;
 
-void init_audio_streamer(AudioStreamer *as, uint8_t timer_id);
+void init_audio_streamer(AudioStreamer *as);
 
-// NB we can't really afford two 512-byte SDCard buffers, so
-// we need to start the next SDCard transfer early enough that it
-// arrives before its bytes are needed.
-// Thus we set AO_HALFBUFLEN to provide enough preroll.
-// 128 samples => 16ms.
-// If that's not enough, 256*2 = 512 ugh, almost might as well
-// double-buffer SDCard.
-// An alternative: use 4 or 8 smaller AudioOut buffers, so that we can let
-// them almost drain out during the time we're waiting on the sd card.
+// Play sample at filename
+r_bool as_play(AudioStreamer *as, const char *pathname,
+               ActivationFuncPtr client_done_cb, void *client_done_data);
 
-r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset,
-               uint32_t end_address, ActivationFuncPtr done_func,
-               void *done_data);
-// block_address: multiple of SDCard blocksize (512)
-// block_offset: multiple of AudioOut AO_HALFBUFLEN (128). Used if we
-//   want to have sound durations of shorter than SD block length.
-//   (Still a 16ms granularity.) Note that the padding goes at the
-//   beginning of the audio.
-// end_address: multiple of SDCard blocksize, the address of the
-//   byte *after* the last byte of the last block of this audio file.
-//  done_act: called once we've queued the last buffer for this sound.
-
+// Adjust the volume multiplier. (mlvolume is neg log: 0 is shift off zero bits
+// == max loud)
 void as_set_volume(AudioStreamer *as, uint8_t mlvolume);
 
+// Stop the ongoing streaming.
 void as_stop_streaming(AudioStreamer *as);
-
-SDCard *as_borrow_sdc(AudioStreamer *as);
