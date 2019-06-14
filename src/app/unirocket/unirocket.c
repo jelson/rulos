@@ -141,7 +141,7 @@ void init_rocket0(Rocket0 *r0) {
   lunar_distance_init(&r0->ld, 1, 2 /*, SPEED_POT_CHANNEL*/);
   init_audio_client(&r0->audio_client, &r0->network);
   memset(&r0->thrusterUpdate, 0, sizeof(r0->thrusterUpdate));
-  init_hpam(&r0->hpam, 7, r0->thrusterUpdate);
+  init_hpam(&r0->hpam, 9, r0->thrusterUpdate);
   init_idle(&r0->idle);
 #if USE_JOYSTICK_ADC
   init_joystick_adc(&r0->joystick, JOYSTICK_X_CHAN, JOYSTICK_Y_CHAN);
@@ -149,14 +149,14 @@ void init_rocket0(Rocket0 *r0) {
   max3421e_init(&r0->max);
   init_joystick_usb(&r0->joystick, &r0->max);
 #endif
-  thrusters_init(&r0->ts, 7, (JoystickState_t *)&r0->joystick, &r0->hpam,
+  thrusters_init(&r0->ts, 9, (JoystickState_t *)&r0->joystick, &r0->hpam,
                  &r0->idle, &r0->audio_client);
   init_screenblanker(&r0->screenblanker, &r0->hpam, &r0->idle);
 
   volume_control_init(&r0->volume_control, &r0->audio_client,
                       /*board*/ 0, KEY_VOL_UP, KEY_VOL_DOWN);
 
-  daer_init(&r0->daer, 8, ((Time)5) << 20);
+  daer_init(&r0->daer, 10, ((Time)5) << 20);
 
   init_control_panel(&r0->cp, 3, 1, &r0->network, &r0->hpam, &r0->audio_client,
                      &r0->idle, &r0->screenblanker,
@@ -171,7 +171,7 @@ void init_rocket0(Rocket0 *r0) {
   input_poller_init(&r0->ip, (InputInjectorIfc *)&r0->cp.direct_injector);
 #endif
 
-  dtg_init_local(&r0->dtg, 9);
+  dtg_init_local(&r0->dtg, 11);
 
   // Remote receiver
   init_remote_keyboard_recv(&r0->rkr, &r0->network,

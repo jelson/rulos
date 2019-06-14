@@ -22,7 +22,7 @@
 
 void init_cc_local_calc(CCLocalCalc *cclc,
                         FetchCalcDecorationValuesIfc *decoration_ifc) {
-  calculator_init(&cclc->calc, 10 /*and 11*/, NULL, decoration_ifc);
+  calculator_init(&cclc->calc, 12 /*and 13*/, NULL, decoration_ifc);
   cclc->uie_handler = (UIEventHandler *)&cclc->calc.focus;
   cclc->name = "Computer";
 }
@@ -203,12 +203,11 @@ void cp_paint(ControlPanel *cp) {
     return;
   }
 
-  int coff;
   // weird. Calling raster_{clear|draw}_buffers blows out the register file
   // and bloats the program by 56 bytes or so. I wonder if we're missing a
   // -Ospace sort of argument.
   //	raster_clear_buffers(&cp->s4.rrect);
-  for (coff = 0; coff < CONTROL_PANEL_HEIGHT; coff++) {
+  for (int coff = 0; coff < CONTROL_PANEL_HEIGHT; coff++) {
     int ci = (cp->selected_child + coff) % cp->child_count;
     ControlChild *cc = cp->children[ci];
     memset(cp->s4.bbuf[coff].buffer, 0, cp->s4.rrect.xlen);

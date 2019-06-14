@@ -18,8 +18,9 @@
 
 #include "periph/rocket/pong.h"
 #include "core/rulos.h"
-#include "periph/rasters/rasters.h"
 #include "periph/audio/sound.h"
+#include "periph/rasters/rasters.h"
+#include "periph/rocket/screen4.h"
 
 #define PS(v) ((v) << PONG_SCALE2)
 #define BALLDIA 3
@@ -28,7 +29,8 @@
 #define BALLMINX PS(2)
 #define BALLMAXX PS(29 - BALLDIA)
 #define BALLMINY PS(0)
-#define BALLMAXY PS(24 - BALLDIA)
+#define BALLMAXY PS((SCREEN4SIZE * 6) - BALLDIA)
+#define PADDLEMAXY ((SCREEN4SIZE * 6) - PADDLEHEIGHT - 2)
 
 void pong_serve(Pong *pong, uint8_t from_player);
 void pong_update(Pong *pong);
@@ -39,21 +41,6 @@ UIEventDisposition pong_event_handler(UIEventHandler *raw_handler, UIEvent evt);
 
 void pong_init(Pong *pong, Screen4 *s4, AudioClient *audioClient) {
   pong->s4 = s4;
-#if 0
-	pong->board0 = b0;
-	int i;
-	for (i=0; i<PONG_HEIGHT; i++)
-	{
-		board_buffer_init(&pong->bbuf[i] DBG_BBUF_LABEL("pong"));
-		board_buffer_push(&pong->bbuf[i], b0+i);
-		pong->btable[i] = &pong->bbuf[i];
-	}
-	pong->rrect.bbuf = pong->btable;
-	pong->rrect.ylen = PONG_HEIGHT;
-	pong->rrect.x = 0;
-	pong->rrect.xlen = 8;
-
-#endif
   pong->handler.func = (UIEventHandlerFunc)pong_event_handler;
   pong->handler.pong = pong;
 
@@ -193,8 +180,7 @@ void pong_paint_paddle(Pong *pong, int x, int y) {
   RectRegion *rrect = &pong->s4->rrect;
   raster_paint_pixel(rrect, x + 1, y);
   raster_paint_pixel(rrect, x + 1, y + PADDLEHEIGHT);
-  int yo;
-  for (yo = 1; yo < PADDLEHEIGHT; yo++) {
+  for (int yo = 1; yo < PADDLEHEIGHT; yo++) {
     raster_paint_pixel(rrect, x + 0, y + yo);
     raster_paint_pixel(rrect, x + 2, y + yo);
   }
@@ -212,7 +198,7 @@ UIEventDisposition pong_event_handler(UIEventHandler *raw_handler,
       break;
     case '4':
     case 'n':
-      pong->paddley[0] = min(pong->paddley[0] + 2, 22 - PADDLEHEIGHT);
+      pong->paddley[0] = min(pong->paddley[0] + 2, PADDLEMAXY);
       break;
     case '3':
     case 'e':
@@ -220,7 +206,7 @@ UIEventDisposition pong_event_handler(UIEventHandler *raw_handler,
       break;
     case '6':
     case 'f':
-      pong->paddley[1] = min(pong->paddley[1] + 2, 22 - PADDLEHEIGHT);
+      pong->paddley[1] = min(pong->paddley[1] + 2, PADDLEMAXY);
       break;
     case uie_focus:
       if (!pong->focused) {

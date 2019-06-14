@@ -55,16 +55,15 @@ void slowboot_update(SlowBoot *slowboot) {
 
   Time elapsedTime = clock_time_us() - slowboot->startTime;
 
-  int8_t step = elapsedTime / SB_ANIM_INTERVAL;
+  uint8_t step = elapsedTime / SB_ANIM_INTERVAL;
 
-  // LOG("");
   if (step < 4) {
     goto exit;
   }
   step -= 4;
-  if (step < 28) {
+  if (step < 32) {
     for (bi = 0; bi < SLOW_MAX_BUFFERS; bi++) {
-      int dist = (step + ((bi * 131) % SLOW_MAX_BUFFERS)) / 4 - 2;
+      int dist = (step + ((bi * 181) % SLOW_MAX_BUFFERS)) / 5 - 2;
       // LOG("step %2d bi %2d dist %2d", step, bi, dist);
       if (dist < 0 || dist > 4) {
         continue;
@@ -82,7 +81,7 @@ void slowboot_update(SlowBoot *slowboot) {
     }
     goto exit;
   }
-  step -= 28;
+  step -= 32;
   if (step < 2) {
     for (bi = 0; bi < SLOW_MAX_BUFFERS; bi++) {
       memset(slowboot->buffer[bi].buffer, 0, NUM_DIGITS);
