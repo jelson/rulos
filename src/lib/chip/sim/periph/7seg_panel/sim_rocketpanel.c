@@ -114,15 +114,20 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
 
   if (onoff) {
     attron(A_BOLD);
+    attroff(A_DIM);
     wcolor_set(curses_get_window(), g_sim_theTree[board].colors[digit], NULL);
     mvwprintw(curses_get_window(), y_origin, x_origin, segment_defs[segment].s);
   } else {
+#if SHOW_OFF_SEGMENTS
     attroff(A_BOLD);
+    attron(A_DIM);
     wcolor_set(curses_get_window(), PAIR_WHITE, NULL);
     mvwprintw(curses_get_window(), y_origin, x_origin, segment_defs[segment].s);
-    //    for (int i = strlen(segment_defs[segment].s); i; i--) {
-    //      mvwprintw(curses_get_window(), y_origin, x_origin + i - 1, " ");
-    //    }
+#else
+    for (int i = strlen(segment_defs[segment].s); i; i--) {
+      mvwprintw(curses_get_window(), y_origin, x_origin + i - 1, " ");
+    }
+#endif
   }
 
   wrefresh(curses_get_window());
