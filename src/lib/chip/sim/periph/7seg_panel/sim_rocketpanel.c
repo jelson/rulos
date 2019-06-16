@@ -76,10 +76,8 @@ void hal_upside_down_led(SSBitmap *b) {}
   { NULL }
 #include "periph/7seg_panel/display_tree.ch"
 
-int hello;
 BoardLayout g_sim_theTree_def[] = {ROCKET_TREE},
             *g_sim_theTree = g_sim_theTree_def;
-int goodbay;
 
 static void sim_program_labels() {
   BoardLayout *bl;
@@ -128,7 +126,6 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
   }
 
   wrefresh(curses_get_window());
-  usleep(78);
 }
 
 void hal_7seg_bus_enter_sleep() {
