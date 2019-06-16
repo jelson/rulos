@@ -44,9 +44,9 @@ clean: $(CLEAN_TARGET_LIST)
 .DEFAULT_GOAL = all-platforms
 
 # Find path to python
-UNAME := $(shell uname)
+UNAME := $(shell uname -o)
 
-ifeq ($(UNAME), Linux)
+ifeq ($(UNAME), $(filter $(UNAME), GNU/Linux Linux Cygwin))
 PYTHON := python
 else
 PYTHON := c:\\python27\\python.exe

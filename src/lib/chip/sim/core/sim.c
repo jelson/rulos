@@ -214,16 +214,20 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
 
   int rc;
   int on = 1;
+#ifdef O_ASYNC
   int flags = fcntl(twi_state->udp_socket, F_GETFL);
   rc = fcntl(twi_state->udp_socket, F_SETFL, flags | O_ASYNC);
   assert(rc == 0);
+#endif
   rc = ioctl(twi_state->udp_socket, FIOASYNC, &on);
   assert(rc == 0);
   rc = ioctl(twi_state->udp_socket, FIONBIO, &on);
   assert(rc == 0);
+#ifdef SIOCSPGRP
   int flag = -getpid();
   rc = ioctl(twi_state->udp_socket, SIOCSPGRP, &flag);
   assert(rc == 0);
+#endif
 
   struct sockaddr_in sai;
   sai.sin_family = AF_INET;

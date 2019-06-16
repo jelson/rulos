@@ -6,3 +6,6 @@
 */*.lss
 */log
 */obj.*
+
+# Don't hate me...
+*/*.exe
