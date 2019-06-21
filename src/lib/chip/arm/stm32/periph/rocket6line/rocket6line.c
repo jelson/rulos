@@ -46,11 +46,23 @@ static Rocket6Line_t r6l_g;
 
 ///////////////////////////////////////////////////////////////////////
 
+#if defined(ROCKET6LINE_REV_A)
 // Decoder pin definitions
 #define DECODER_ENABLE GPIO_A3
 #define DECODER_A0 GPIO_A0
 #define DECODER_A1 GPIO_A1
 #define DECODER_A2 GPIO_A2
+#elif defined(ROCKET6LINE_REV_B)
+#define ROW0_ENABLE GPIO_A0
+#define ROW1_ENABLE GPIO_A1
+#define ROW2_ENABLE GPIO_A2
+#define ROW3_ENABLE GPIO_A3
+#define ROW4_ENABLE GPIO_A4
+#define ROW5_ENABLE GPIO_A5
+#else
+#error "Which kind of 6line hardware do you have?"
+#include <stophere>
+#endif
 
 // LED driver pin definitions
 #define LEDDRIVER_LE GPIO_A7
@@ -72,12 +84,21 @@ static void init_pins(Rocket6Line_t *r6l) {
   // debug
   gpio_make_output(DEBUG_PIN);
 
+#if defined(ROCKET6LINE_REV_A)
   // Set up decoder
   gpio_make_output(DECODER_ENABLE);
   gpio_make_output(DECODER_A0);
   gpio_make_output(DECODER_A1);
   gpio_make_output(DECODER_A2);
   gpio_clr(DECODER_ENABLE);
+#elif defined(ROCKET6LINE_REV_B)
+  gpio_make_output(ROW0_ENABLE);
+  gpio_make_output(ROW1_ENABLE);
+  gpio_make_output(ROW2_ENABLE);
+  gpio_make_output(ROW3_ENABLE);
+  gpio_make_output(ROW4_ENABLE);
+  gpio_make_output(ROW5_ENABLE);
+#endif
 
   // Set up output-enable and latch-enable pins of LED driver
   gpio_make_output(LEDDRIVER_LE);
@@ -175,6 +196,54 @@ static void build_remap_table() {
   } while (i != 0);
 }
 
+#if defined(ROCKET6LINE_REV_A)
+static inline void disable_all_rows() { gpio_clr(DECODER_ENABLE); }
+
+static inline void enable_row(const uint8_t row_num) {
+  // Configure the current row display in the decoder
+  gpio_set_or_clr(DECODER_A0, row_num & (1 << 0));
+  gpio_set_or_clr(DECODER_A1, row_num & (1 << 1));
+  gpio_set_or_clr(DECODER_A2, row_num & (1 << 2));
+
+  // Re-enable the encoder
+  gpio_set(DECODER_ENABLE);
+}
+
+#elif defined(ROCKET6LINE_REV_B)
+
+static inline void disable_all_rows() {
+  gpio_set(ROW0_ENABLE);
+  gpio_set(ROW1_ENABLE);
+  gpio_set(ROW2_ENABLE);
+  gpio_set(ROW3_ENABLE);
+  gpio_set(ROW4_ENABLE);
+  gpio_set(ROW5_ENABLE);
+}
+
+static inline void enable_row(const uint8_t row_num) {
+  switch (row_num) {
+    case 0:
+      gpio_clr(ROW0_ENABLE);
+      break;
+    case 1:
+      gpio_clr(ROW1_ENABLE);
+      break;
+    case 2:
+      gpio_clr(ROW2_ENABLE);
+      break;
+    case 3:
+      gpio_clr(ROW3_ENABLE);
+      break;
+    case 4:
+      gpio_clr(ROW4_ENABLE);
+      break;
+    case 5:
+      gpio_clr(ROW5_ENABLE);
+      break;
+  }
+}
+#endif
+
 // This is the high-update-rate path that drives the persistence-of-vision of
 // the matrix display. It's important this run quickly!
 static void refresh_display(Rocket6Line_t *r6l) {
@@ -188,19 +257,13 @@ static void refresh_display(Rocket6Line_t *r6l) {
                    ROCKET6LINE_NUM_COLUMNS, 1000);
 
   // Disable current display
-  gpio_clr(DECODER_ENABLE);
+  disable_all_rows();
 
   // Latch in the already-shifted data
   gpio_set(LEDDRIVER_LE);
   gpio_clr(LEDDRIVER_LE);
 
-  // Configure the current row display in the decoder
-  gpio_set_or_clr(DECODER_A0, r6l->curr_row & (1 << 0));
-  gpio_set_or_clr(DECODER_A1, r6l->curr_row & (1 << 1));
-  gpio_set_or_clr(DECODER_A2, r6l->curr_row & (1 << 2));
-
-  // Re-enable the display!
-  gpio_set(DECODER_ENABLE);
+  enable_row(r6l->curr_row);
 }
 
 // Timer callback that fires at the update rate (~10khz).
