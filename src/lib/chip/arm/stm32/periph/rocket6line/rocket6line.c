@@ -316,7 +316,7 @@ void rocket6line_write_digit(const uint8_t row_num, const uint8_t col_num,
   assert(r6l_g.initted && row_num >= 0 && row_num < ROCKET6LINE_NUM_ROWS &&
          col_num >= 0 && col_num < ROCKET6LINE_NUM_COLUMNS);
 
-  r6l_g.row_data[row_num][ROCKET6LINE_NUM_COLUMNS - col_num] =
+  r6l_g.row_data[row_num][ROCKET6LINE_NUM_COLUMNS - col_num - 1] =
       segment_remap_table[bm];
 }
 
