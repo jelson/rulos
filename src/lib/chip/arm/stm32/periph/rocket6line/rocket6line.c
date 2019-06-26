@@ -26,9 +26,11 @@
 #include "stm32f3xx_hal_rcc.h"
 #include "stm32f3xx_hal_rcc_ex.h"
 #include "stm32f3xx_hal_spi.h"
+#include "stm32f3xx_ll_spi.h"
 #include "stm32f3xx_ll_tim.h"
 
 #define PRINT_STATS 0
+#define USE_HAL 0
 
 typedef struct {
   SPI_HandleTypeDef hspi;
@@ -136,6 +138,7 @@ static void init_pins(Rocket6Line_t *r6l) {
   r6l->hspi.Init.CRCPolynomial = 10;
   HAL_SPI_Init(&r6l->hspi);
   __HAL_SPI_ENABLE(&r6l->hspi);
+  SPI_1LINE_TX(&r6l->hspi);
 
   // Initialize the refresh timer
   __HAL_RCC_TIM2_CLK_ENABLE();
@@ -144,7 +147,7 @@ static void init_pins(Rocket6Line_t *r6l) {
   LL_TIM_InitTypeDef timer_init;
   timer_init.Prescaler = 0;
   timer_init.CounterMode = LL_TIM_COUNTERMODE_UP;
-  timer_init.Autoreload = 6500;
+  timer_init.Autoreload = 3200;
   timer_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
   timer_init.RepetitionCounter = 0;
   LL_TIM_Init(TIM2, &timer_init);
@@ -252,14 +255,35 @@ static void refresh_display(Rocket6Line_t *r6l) {
     r6l->curr_row = 0;
   }
 
+  // gpio_clr(DEBUG_PIN);
+
   // Shift in the LED configuration for the row becoming active
+#if USE_HAL
   HAL_SPI_Transmit(&r6l->hspi, r6l->row_data[r6l->curr_row],
                    ROCKET6LINE_NUM_COLUMNS, 1000);
+#else
+  // Transmit the bytes two-at-a-time to reduce overhead.
+  for (int i = 0; i < ROCKET6LINE_NUM_COLUMNS; i += 2) {
+    // Wait until there's space in the FIFO.
+    do {
+    } while (!LL_SPI_IsActiveFlag_TXE(SPI1));
 
-  // Disable current display
+    // Send 2 bytes to the peripheral.
+    LL_SPI_TransmitData16(SPI1,
+                          *((uint16_t *)&r6l->row_data[r6l->curr_row][i]));
+  }
+#endif
+  // gpio_set(DEBUG_PIN);
+
+  // Disable current display line.
   disable_all_rows();
 
-  // Latch in the already-shifted data
+  // Wait for the bits to be shifted in completely, i.e. the SPI
+  // peripheral has drained its queue.
+  do {
+  } while (LL_SPI_IsActiveFlag_BSY(SPI1));
+
+  // Latch in the shifted data.
   gpio_set(LEDDRIVER_LE);
   gpio_clr(LEDDRIVER_LE);
 
