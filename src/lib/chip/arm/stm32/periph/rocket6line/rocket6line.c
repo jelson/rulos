@@ -26,9 +26,11 @@
 #include "stm32f3xx_hal_rcc.h"
 #include "stm32f3xx_hal_rcc_ex.h"
 #include "stm32f3xx_hal_spi.h"
+#include "stm32f3xx_ll_spi.h"
 #include "stm32f3xx_ll_tim.h"
 
 #define PRINT_STATS 0
+#define USE_HAL 0
 
 typedef struct {
   SPI_HandleTypeDef hspi;
@@ -46,11 +48,23 @@ static Rocket6Line_t r6l_g;
 
 ///////////////////////////////////////////////////////////////////////
 
+#if defined(ROCKET6LINE_REV_A)
 // Decoder pin definitions
 #define DECODER_ENABLE GPIO_A3
 #define DECODER_A0 GPIO_A0
 #define DECODER_A1 GPIO_A1
 #define DECODER_A2 GPIO_A2
+#elif defined(ROCKET6LINE_REV_B)
+#define ROW0_ENABLE GPIO_A0
+#define ROW1_ENABLE GPIO_A1
+#define ROW2_ENABLE GPIO_A2
+#define ROW3_ENABLE GPIO_A3
+#define ROW4_ENABLE GPIO_A4
+#define ROW5_ENABLE GPIO_A5
+#else
+#error "Which kind of 6line hardware do you have?"
+#include <stophere>
+#endif
 
 // LED driver pin definitions
 #define LEDDRIVER_LE GPIO_A7
@@ -72,12 +86,21 @@ static void init_pins(Rocket6Line_t *r6l) {
   // debug
   gpio_make_output(DEBUG_PIN);
 
+#if defined(ROCKET6LINE_REV_A)
   // Set up decoder
   gpio_make_output(DECODER_ENABLE);
   gpio_make_output(DECODER_A0);
   gpio_make_output(DECODER_A1);
   gpio_make_output(DECODER_A2);
   gpio_clr(DECODER_ENABLE);
+#elif defined(ROCKET6LINE_REV_B)
+  gpio_make_output(ROW0_ENABLE);
+  gpio_make_output(ROW1_ENABLE);
+  gpio_make_output(ROW2_ENABLE);
+  gpio_make_output(ROW3_ENABLE);
+  gpio_make_output(ROW4_ENABLE);
+  gpio_make_output(ROW5_ENABLE);
+#endif
 
   // Set up output-enable and latch-enable pins of LED driver
   gpio_make_output(LEDDRIVER_LE);
@@ -115,6 +138,7 @@ static void init_pins(Rocket6Line_t *r6l) {
   r6l->hspi.Init.CRCPolynomial = 10;
   HAL_SPI_Init(&r6l->hspi);
   __HAL_SPI_ENABLE(&r6l->hspi);
+  SPI_1LINE_TX(&r6l->hspi);
 
   // Initialize the refresh timer
   __HAL_RCC_TIM2_CLK_ENABLE();
@@ -123,7 +147,7 @@ static void init_pins(Rocket6Line_t *r6l) {
   LL_TIM_InitTypeDef timer_init;
   timer_init.Prescaler = 0;
   timer_init.CounterMode = LL_TIM_COUNTERMODE_UP;
-  timer_init.Autoreload = 6500;
+  timer_init.Autoreload = 3200;
   timer_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
   timer_init.RepetitionCounter = 0;
   LL_TIM_Init(TIM2, &timer_init);
@@ -175,6 +199,54 @@ static void build_remap_table() {
   } while (i != 0);
 }
 
+#if defined(ROCKET6LINE_REV_A)
+static inline void disable_all_rows() { gpio_clr(DECODER_ENABLE); }
+
+static inline void enable_row(const uint8_t row_num) {
+  // Configure the current row display in the decoder
+  gpio_set_or_clr(DECODER_A0, row_num & (1 << 0));
+  gpio_set_or_clr(DECODER_A1, row_num & (1 << 1));
+  gpio_set_or_clr(DECODER_A2, row_num & (1 << 2));
+
+  // Re-enable the encoder
+  gpio_set(DECODER_ENABLE);
+}
+
+#elif defined(ROCKET6LINE_REV_B)
+
+static inline void disable_all_rows() {
+  gpio_set(ROW0_ENABLE);
+  gpio_set(ROW1_ENABLE);
+  gpio_set(ROW2_ENABLE);
+  gpio_set(ROW3_ENABLE);
+  gpio_set(ROW4_ENABLE);
+  gpio_set(ROW5_ENABLE);
+}
+
+static inline void enable_row(const uint8_t row_num) {
+  switch (row_num) {
+    case 0:
+      gpio_clr(ROW0_ENABLE);
+      break;
+    case 1:
+      gpio_clr(ROW1_ENABLE);
+      break;
+    case 2:
+      gpio_clr(ROW2_ENABLE);
+      break;
+    case 3:
+      gpio_clr(ROW3_ENABLE);
+      break;
+    case 4:
+      gpio_clr(ROW4_ENABLE);
+      break;
+    case 5:
+      gpio_clr(ROW5_ENABLE);
+      break;
+  }
+}
+#endif
+
 // This is the high-update-rate path that drives the persistence-of-vision of
 // the matrix display. It's important this run quickly!
 static void refresh_display(Rocket6Line_t *r6l) {
@@ -183,24 +255,39 @@ static void refresh_display(Rocket6Line_t *r6l) {
     r6l->curr_row = 0;
   }
 
+  // gpio_clr(DEBUG_PIN);
+
   // Shift in the LED configuration for the row becoming active
+#if USE_HAL
   HAL_SPI_Transmit(&r6l->hspi, r6l->row_data[r6l->curr_row],
                    ROCKET6LINE_NUM_COLUMNS, 1000);
+#else
+  // Transmit the bytes two-at-a-time to reduce overhead.
+  for (int i = 0; i < ROCKET6LINE_NUM_COLUMNS; i += 2) {
+    // Wait until there's space in the FIFO.
+    do {
+    } while (!LL_SPI_IsActiveFlag_TXE(SPI1));
 
-  // Disable current display
-  gpio_clr(DECODER_ENABLE);
+    // Send 2 bytes to the peripheral.
+    LL_SPI_TransmitData16(SPI1,
+                          *((uint16_t *)&r6l->row_data[r6l->curr_row][i]));
+  }
+#endif
+  // gpio_set(DEBUG_PIN);
 
-  // Latch in the already-shifted data
+  // Disable current display line.
+  disable_all_rows();
+
+  // Wait for the bits to be shifted in completely, i.e. the SPI
+  // peripheral has drained its queue.
+  do {
+  } while (LL_SPI_IsActiveFlag_BSY(SPI1));
+
+  // Latch in the shifted data.
   gpio_set(LEDDRIVER_LE);
   gpio_clr(LEDDRIVER_LE);
 
-  // Configure the current row display in the decoder
-  gpio_set_or_clr(DECODER_A0, r6l->curr_row & (1 << 0));
-  gpio_set_or_clr(DECODER_A1, r6l->curr_row & (1 << 1));
-  gpio_set_or_clr(DECODER_A2, r6l->curr_row & (1 << 2));
-
-  // Re-enable the display!
-  gpio_set(DECODER_ENABLE);
+  enable_row(r6l->curr_row);
 }
 
 // Timer callback that fires at the update rate (~10khz).
@@ -253,7 +340,7 @@ void rocket6line_write_digit(const uint8_t row_num, const uint8_t col_num,
   assert(r6l_g.initted && row_num >= 0 && row_num < ROCKET6LINE_NUM_ROWS &&
          col_num >= 0 && col_num < ROCKET6LINE_NUM_COLUMNS);
 
-  r6l_g.row_data[row_num][ROCKET6LINE_NUM_COLUMNS - col_num] =
+  r6l_g.row_data[row_num][ROCKET6LINE_NUM_COLUMNS - col_num - 1] =
       segment_remap_table[bm];
 }
 
