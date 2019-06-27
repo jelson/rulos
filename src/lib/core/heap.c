@@ -22,82 +22,73 @@
 #include "core/heap.h"
 #include "core/logging.h"
 
-void heap_init(Heap *heap) { heap->heap_count = 0; }
-
-void heap_swap(HeapEntry *he, int off0, int off1) {
-  HeapEntry tmp = he[off0];
-  he[off0] = he[off1];
-  he[off1] = tmp;
+void SchedulerHeap::Init() {
+  heap_count_ = 0;
 }
 
-void heap_bubble(HeapEntry *he, int ptr) {
+void SchedulerHeap::swap(int off0, int off1) {
+  SchedulerHeapEntry tmp = heap_[off0];
+  heap_[off0] = heap_[off1];
+  heap_[off1] = tmp;
+}
+
+void SchedulerHeap::bubble(int ptr) {
   while (ptr > 0) {
-    int parent = ptr >> 1;
-    if (later_than(he[ptr].key, he[parent].key)) {
+    int parent = ptr / 2;
+    if (heap_[parent].time.later_than(heap_[ptr].time)) {
       return;
     }  // already correct
 
-    heap_swap(he, parent, ptr);
+    swap(parent, ptr);
     ptr = parent;
   }
 }
 
-uint8_t heap_insert(Heap *heap, Time key, ActivationFuncPtr func, void *data) {
-  uint8_t hc = heap->heap_count;
-  assert(hc < SCHEDULER_CAPACITY);  // heap overflow
-  heap->heap[hc].key = key;
-  heap->heap[hc].activation.func = func;
-  heap->heap[hc].activation.data = data;
-  heap_bubble(heap->heap, hc);
-  heap->heap_count = hc + 1;
+uint8_t SchedulerHeap::Insert(Time time, Task *task) {
+  assert(heap_count_ < SCHEDULER_CAPACITY);  // heap overflow
+  heap_[heap_count_].time = time;
+  heap_[heap_count_].task = task;
+  bubble(heap_count_);
+  heap_count_++;
 
-  return heap->heap_count;
+  return heap_count_;
 
 #if PRINT_ALL_SCHEDULES
-  LOG("heap_count %d this act func %08x period %d", heap->heap_count,
-      (unsigned)(act->func), key - _last_scheduler_run_us);
+  LOG("heap_count %d this task %08" PRIxPTR " period %d", heap_count_,
+      task, time - _last_scheduler_run_us);
 #endif
 }
 
-int heap_peek(Heap *heap, /*out*/ Time *key, /*out*/ ActivationRecord *act) {
-  int retval = -1;
-
-  if (heap->heap_count == 0) {
-    goto done;
+int SchedulerHeap::Peek(Time *time /*out*/, Task **task /* out */) {
+  if (heap_count_ == 0) {
+    return -1;
   }
-  *key = heap->heap[0].key;
-  *act = heap->heap[0].activation;
-  retval = 0;
-
-done:
-  return retval;
+  *time = heap_[0].time;
+  *task = heap_[0].task;
+  return 0;
 }
 
-void heap_pop(Heap *heap) {
-  assert(heap->heap_count > 0);  // heap underflow
-  heap->heap[0] = heap->heap[heap->heap_count - 1];
-  heap->heap_count -= 1;
-  const int hc = heap->heap_count;
+void SchedulerHeap::Pop() {
+  assert(heap_count_ > 0);  // heap underflow
+  heap_[0] = heap_[heap_count_ - 1];
+  heap_count_--;
 
-  HeapEntry *he = heap->heap;
   /* down-heap */
   int ptr = 0;
-  while (1) {
+  while (true) {
     int c0 = ptr * 2;
     int c1 = c0 + 1;
     int candidate = ptr;
-    if (c0 < hc && later_than(he[candidate].key, he[c0].key)) {
+    if (c0 < heap_count_ && heap_[c0].time.later_than(heap_[candidate].time)) {
       candidate = c0;
     }
-    if (c1 < hc && later_than(he[candidate].key, he[c1].key)) {
+    if (c1 < heap_count_ && heap_[c1].time.later_than(heap_[candidate].time)) {
       candidate = c1;
     }
     if (candidate == ptr) {
-      goto done;  // down-heaped as far as it goes.
+      return;  // down-heaped as far as it goes.
     }
-    heap_swap(he, ptr, candidate);
+    swap(ptr, candidate);
     ptr = candidate;
   }
-done:
-  return;
 }

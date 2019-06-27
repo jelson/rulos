@@ -15,7 +15,7 @@
 
 ROCKET_ROOT := ../..
 
-PLATFORMS := arm #avr
+PLATFORMS := sim #arm avr
 MCU := atmega328
 TARGET := nulltest
 BOARD := GENERIC

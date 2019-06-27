@@ -39,6 +39,9 @@
 #include "core/network_ports.h"
 #include "core/queue.h"
 #include "core/random.h"
+#include "core/time.h"
+#include "core/task.h"
+#include "core/scheduler.h"
 #include "core/util.h"
 
 #include "core/logging.h"

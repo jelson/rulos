@@ -18,47 +18,37 @@
 
 #pragma once
 
-#include "core/hal.h"
-#include "core/heap.h"
 #include "core/time.h"
 
-void init_clock(Time interval_us, uint8_t timer_id);
+// Jiffy clock driven by an underlying hardware timer.
+//
+// One might imagine having clocks be regular objects where you could
+// instantiate however many you want. However, we want to stick with the model
+// of there being a global clock that can be queried for its time, which is
+// a pretty typical operating system interface.
+class Clock {
+ public:
+  Clock();
+  
+  static void Start(const Interval& jiffy_interval, uint8_t timer_id);
 
-extern Time g_last_scheduler_run_us;
-extern volatile Time
-    g_interrupt_driven_jiffy_clock_us;  // must have lock to read!
+  // Pretty cheap but only precise to one jiffy. This should be used by most
+  // functions.
+  static Time GetTime();
 
-// very cheap but only precise to one jiffy.  this should be used my
-// most functions.
-static inline Time clock_time_us() { return g_interrupt_driven_jiffy_clock_us; }
+  // More expensive but more precise, down to 1/1000th of a jiffy.
+  static Time GetPreciseTime();
 
-static inline Time get_interrupt_driven_jiffy_clock() {
-  Time retval;
-  rulos_irq_state_t old_interrupts = hal_start_atomic();
-  retval = g_interrupt_driven_jiffy_clock_us;
-  hal_end_atomic(old_interrupts);
-  return retval;
-}
+ private:
+  // Handler called by the hardware timer.
+  static void handler(void *data);
 
-// expensive but more accurate
-Time precise_clock_time_us();
+  // Jiffy clock updated by hardware timer callbacks.
+  Time interrupt_driven_jiffy_clock_;
 
-void schedule_us(Time offset_us, ActivationFuncPtr func, void *data);
-// schedule in the future. (asserts us>0)
-void schedule_now(ActivationFuncPtr func, void *data);
-// Be very careful with schedule_now -- it can result in an infinite
-// loop if you schedule yourself for now repeatedly (because the clock
-// never advances past now until the queue empties).
-void schedule_absolute(Time at_time, ActivationFuncPtr func, void *data);
+  // Interval between hardware timer interrupts. May not be exactly what was
+  // requested when the clock was initialized, subject to rounding that might
+  // happen by the hardware (e.g. due to limited prescaler selection).
+  Interval jiffy_interval_;
+};
 
-// LOG stats about the scheduler: the number of tasks scheduled, and their
-// minimum and maximum periods.
-void clock_log_stats();
-
-#define Exp2Time(v) (((Time)1) << (v))
-//#define schedule_ms(ms,act) { schedule_us(ms*1000, act); }
-
-void scheduler_run_once();
-
-void spin_counter_increment();
-uint32_t read_spin_counter();

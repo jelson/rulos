@@ -41,32 +41,6 @@ void cpumon_init(CpumonAct *act) {
 
 volatile uint8_t run_scheduler_now = FALSE;
 
-void cpumon_main_loop() {
-  g_run_main_loop = TRUE;
-
-#ifdef TIMING_DEBUG_PIN
-  gpio_make_output(TIMING_DEBUG_PIN);
-#endif
-
-  while (g_run_main_loop) {
-    run_scheduler_now = FALSE;
-
-    scheduler_run_once();
-
-    do {
-#ifdef TIMING_DEBUG_PIN
-      gpio_clr(TIMING_DEBUG_PIN);
-#endif
-      hal_idle();
-#ifdef TIMING_DEBUG_PIN
-      gpio_set(TIMING_DEBUG_PIN);
-#endif
-    } while (!run_scheduler_now);
-
-    spin_counter_increment();
-  }
-}
-
 void cpumon_act(void *data) {
   CpumonAct *act = (CpumonAct *)data;
   uint32_t spins = read_spin_counter();

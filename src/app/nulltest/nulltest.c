@@ -16,11 +16,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "core/hardware.h"
 #include "core/rulos.h"
 #include "periph/bss_canary/bss_canary.h"
 
 #define FREQ_USEC 50000
+
+#ifndef SIM
+#include "core/hardware.h"
 
 #if defined(RULOS_ARM_LPC)
 #define TEST_PIN GPIO0_08
@@ -31,29 +33,37 @@
 #else
 #error "No test pin defined"
 #endif
+#endif
 
 #ifdef LOG_TO_SERIAL
 HalUart uart;
 #endif
-void test_func(void *data) {
-  gpio_set(TEST_PIN);
-  gpio_clr(TEST_PIN);
-  gpio_set(TEST_PIN);
-  gpio_clr(TEST_PIN);
-  gpio_set(TEST_PIN);
-  gpio_clr(TEST_PIN);
-#ifdef LOG_TO_SERIAL
-  hal_uart_sync_send(
-      &uart,
-      "hello there this is an extremely long message, one that actually "
-      "exceeds the send buffer size of 128 bytes. why would you want to send a "
-      "message this long? who knows. i don't judge. i just transmit.\n\n");
-  static int i = 0;
-  LOG("serial output %d emitted", i++);
+
+class : Task {
+ public:
+  void Run() {
+#ifndef SIM
+    gpio_set(TEST_PIN);
+    gpio_clr(TEST_PIN);
+    gpio_set(TEST_PIN);
+    gpio_clr(TEST_PIN);
+    gpio_set(TEST_PIN);
+    gpio_clr(TEST_PIN);
 #endif
 
-  schedule_us(FREQ_USEC, (ActivationFuncPtr)test_func, NULL);
-}
+#ifdef LOG_TO_SERIAL
+    hal_uart_sync_send(
+		       &uart,
+		       "hello there this is an extremely long message, one that actually "
+		       "exceeds the send buffer size of 128 bytes. why would you want to send a "
+		       "message this long? who knows. i don't judge. i just transmit.\n\n");
+    static int i = 0;
+    LOG("serial output %d emitted", i++);
+#endif
+
+    Reschedule(FREQ_USEC);
+  }
+} test;
 
 int main() {
   hal_init();
@@ -63,12 +73,11 @@ int main() {
   LOG("Log output running");
 #endif
 
-  init_clock(10000, TIMER1);
+  Clock::Start(Interval::msec(10), TIMER1);
   gpio_make_output(TEST_PIN);
 
   bss_canary_init();
 
-  schedule_now((ActivationFuncPtr)test_func, NULL);
-
-  cpumon_main_loop();
+  Scheduler::ScheduleNow(&test);
+  Scheduler::RunForever();
 }

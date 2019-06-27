@@ -18,40 +18,7 @@
 
 #pragma once
 
-#include <stdint.h>
-
-#include "core/task.h"
-#include "core/time.h"
-
-class SchedulerHeapEntry {
- public:
-  Time time;
-  Task *task;
-};
-
-#ifndef SCHEDULER_CAPACITY
-#define SCHEDULER_CAPACITY 32
-#endif
-
-class SchedulerHeap {
- public:
-  // Initialize the heap.
-  void Init();
-
-  // Insert an entry into the heap. Returns the new heap size.
-  uint8_t Insert(Time time, Task *task);
-
-  // Return the top entry in the heap, but don't remove it. Returns 0
-  // on success, non-zero if the heap is empty.
-  int Peek(Time *time /* out */, Task **task /* out */);
-
-  // Pop the top entry off the heap.
-  void Pop();
-
- private:
-  SchedulerHeapEntry heap_[SCHEDULER_CAPACITY];
-  uint8_t heap_count_;
-
-  void swap(int off0, int off1);
-  void bubble(int ptr);
+class Task {
+ protected:
+  virtual void Run() = 0;
 };

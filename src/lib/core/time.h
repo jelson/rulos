@@ -20,30 +20,62 @@
 
 #include <stdint.h>
 
-#include "core/util.h"
+class Time;
+
+class Interval {
+ public:
+ Interval() : usec_(0) { }
+  
+  static Interval seconds(const uint32_t seconds) {
+    return Interval(seconds * 1000000);
+  }
+
+  static Interval msec(const uint32_t msec) {
+    return Interval(msec * 1000);
+  }
+  
+  static Interval usec(const uint32_t usec) {
+    return Interval(usec);
+  }
+
+  const uint32_t to_usec() const {
+    return usec_;
+  }
+
+  const Interval operator=(const Interval& interval) {
+    return Interval(interval.usec_);
+  }
+
+
+ private:
+ Interval(const uint32_t usec) : usec_(usec) { }
+  
+  const uint32_t usec_;
+};
 
 // Definition of time for RulOS, in units of usec.
-typedef int32_t Time;
+class Time {
+ public:
+  Time() {
+    usec = 0;
+  }
+    
+  bool later_than(const Time& other) {
+    // the subtraction will roll over too
+    return other.usec - usec > 0;
 
-// Returns true if b is later than a using rollover math, assuming 32-bit
-// signed time values.
-static inline r_bool later_than(Time a, Time b) {
-  // the subtraction will roll over too
-  return a - b > 0;
+    // this took forever to puzzle out and was originally a complicated set of
+    // conditionals
+  }
 
-  // this took forever to puzzle out and was originally a
-  // complicated set of conditionals
-}
+  bool later_than_or_eq(const Time& other) {
+    return other.usec - usec >= 0;
+  }
 
-// Returns true if b is later than or equal to a using rollover math,
-// assuming 32-bit signed time values.
-static inline r_bool later_than_or_eq(Time a, Time b) {
-  // the subtraction will roll over too
-  return a - b >= 0;
-}
+  void operator+=(const Interval& interval) {
+    usec += interval.to_usec();
+  }
 
-static inline Time time_sec(uint16_t seconds) {
-  return ((Time)1000000) * seconds;
-}
+  volatile int32_t usec;
+};
 
-static inline Time time_msec(uint32_t msec) { return ((Time)1000) * msec; }
