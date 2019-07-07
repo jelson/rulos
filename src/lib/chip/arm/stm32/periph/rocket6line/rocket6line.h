@@ -18,29 +18,20 @@
 
 #pragma once
 
-#include "periph/audio/audio_client.h"
-#include "periph/rocket/rocket.h"
-#include "periph/rocket/screen4.h"
+#include <stdint.h>
+#include "periph/7seg_panel/display_controller.h"
 
-#define PONG_SCALE2 6
-#define PONG_SCALE (1 << PONG_SCALE2)
-#define PONG_FREQ2 5
-#define PONG_FREQ (1 << PONG_FREQ2)
+#define ROCKET6LINE_NUM_ROWS 6
+#define ROCKET6LINE_NUM_COLUMNS 8
 
-typedef struct s_pong_handler {
-  UIEventHandlerFunc func;
-  struct s_pong *pong;
-} PongHandler;
+// Note that there's a single, global rocket6line object, so there's
+// no instance argument to these calls.
 
-typedef struct s_pong {
-  Screen4 *s4;
-  PongHandler handler;
-  int x, y, dx, dy;  // scaled by PONG_SCALE
-  int paddley[2];
-  int score[2];
-  Time lastScore;
-  r_bool focused;
-  AudioClient *audioClient;
-} Pong;
+// Initialize. Must be called before other functions.
+void rocket6line_init();
 
-void pong_init(Pong *pong, Screen4 *s4, AudioClient *audioClient);
+// Write a single digit to the display
+void rocket6line_write_digit(uint8_t row_num, uint8_t col_num, SSBitmap bm);
+
+// Write an entire row to the display.
+void rocket6line_write_line(uint8_t row_num, const SSBitmap *bm, uint8_t len);

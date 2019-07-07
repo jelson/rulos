@@ -98,6 +98,8 @@ class AudioIndexer:
 			fp.read(24)
 			everything = fp.read(99999999)
 			fp.close()
+                        if len(everything) == 0:
+                                raise Exception("filter gave empty output")
 			self.clips.append(AudioClip(token, everything))
 
 	def filter(self, token):

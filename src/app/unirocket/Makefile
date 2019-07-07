@@ -26,14 +26,18 @@ ALL_PLATFORM_CFLAGS := -DLOG_TO_SERIAL=UART0 -DSCHEDULER_CAPACITY=64
 SIM_CFLAGS := -DBOARDCONFIG_UNIROCKET_LOCALSIM
 SIM_PERIPHERALS += keypad joystick_adc
 
-## Uncomment this block for LPEM2
+## For an AVR-based LPEM II, uncomment this block and comment out the LPEM III
+## block below; LPEM II and LPEM III are (unfortunately) mutually exclusive
+## because the build system has no way to define platform-specific BOARD
+## configs.
 #PLATFORMS += avr
 #PERIPHERALS += joystick_adc
 #MCU := atmega1284
 #BOARD := LPEM2
 #AVR_CFLAGS += -DBOARDCONFIG_UNIROCKET
 
-## Uncomment this block for ARM-based LPEM III
+# For an ARM-based LPEM III, uncomment this block and comment out the LPEM II
+# block above.
 PLATFORMS += arm
 ARM_PERIPHERALS += max3421e spi joystick_usb
 ARM_CHIP := stm32f303x8

@@ -20,51 +20,40 @@
 
 void slowboot_update(SlowBoot *slowboot);
 
+#define SB_ANIM_INTERVAL 100000
+#define NO_SLOW_BOOT 0
+
 void init_slow_boot(SlowBoot *slowboot, ScreenBlanker *screenblanker,
                     AudioClient *audioClient) {
+#if NO_SLOW_BOOT
+  return;
+#endif
+
   slowboot->screenblanker = screenblanker;
   slowboot->audioClient = audioClient;
-
-#if BORROW_SCREENBLANKER_BUFS
-  screenblanker_setmode(slowboot->screenblanker, sb_borrowed);
-  slowboot->buffer = screenblanker->buffer;
-
-#else   // BORROW_SCREENBLANKER_BUFS
-        // Ahem. Memory's a little tight, see, so we're turning the
-        // screenblanker on and borrowing *its* board buffers, which
-        // otherwise would cost us 7*13 = 91 bytes of .bss. Cough cough.
-
+  slowboot->startTime = clock_time_us();
   screenblanker_setmode(slowboot->screenblanker, sb_black);
 
-  int bi;
-  for (bi = 0; bi < SLOW_MAX_BUFFERS; bi++) {
+  for (int bi = 0; bi < SLOW_MAX_BUFFERS; bi++) {
     board_buffer_init(&slowboot->buffer[bi] DBG_BBUF_LABEL("slowboot"));
     board_buffer_push(&slowboot->buffer[bi], bi);
   }
-#endif  // BORROW_SCREENBLANKER_BUFS
-
-  slowboot->startTime = clock_time_us();
 
   schedule_us(1, (ActivationFuncPtr)slowboot_update, slowboot);
 }
 
-#define SB_ANIM_INTERVAL 100000
-
 void slowboot_update(SlowBoot *slowboot) {
-  int bi;
-
   Time elapsedTime = clock_time_us() - slowboot->startTime;
 
-  int8_t step = elapsedTime / SB_ANIM_INTERVAL;
+  uint8_t step = elapsedTime / SB_ANIM_INTERVAL;
 
-  // LOG("");
   if (step < 4) {
     goto exit;
   }
   step -= 4;
-  if (step < 28) {
-    for (bi = 0; bi < SLOW_MAX_BUFFERS; bi++) {
-      int dist = (step + ((bi * 131) % SLOW_MAX_BUFFERS)) / 4 - 2;
+  if (step < 32) {
+    for (int bi = 0; bi < SLOW_MAX_BUFFERS; bi++) {
+      int dist = (step + ((bi * 181) % SLOW_MAX_BUFFERS)) / 5 - 2;
       // LOG("step %2d bi %2d dist %2d", step, bi, dist);
       if (dist < 0 || dist > 4) {
         continue;
@@ -82,9 +71,9 @@ void slowboot_update(SlowBoot *slowboot) {
     }
     goto exit;
   }
-  step -= 28;
+  step -= 32;
   if (step < 2) {
-    for (bi = 0; bi < SLOW_MAX_BUFFERS; bi++) {
+    for (int bi = 0; bi < SLOW_MAX_BUFFERS; bi++) {
       memset(slowboot->buffer[bi].buffer, 0, NUM_DIGITS);
     }
     goto exit;
@@ -96,7 +85,7 @@ void slowboot_update(SlowBoot *slowboot) {
   }
   step /= 4;
   if (step < 5) {
-    for (bi = 0; bi < SLOW_MAX_BUFFERS; bi++) {
+    for (int bi = 0; bi < SLOW_MAX_BUFFERS; bi++) {
       memset(slowboot->buffer[bi].buffer, 0, NUM_DIGITS);
     }
 #if SLOW_MAX_BUFFERS > 6
@@ -113,7 +102,7 @@ void slowboot_update(SlowBoot *slowboot) {
         ascii_to_bitmap_str(slowboot->buffer[3].buffer, NUM_DIGITS, "Ravenna ");
     }
 #endif
-    for (bi = 0; bi < SLOW_MAX_BUFFERS; bi++) {
+    for (int bi = 0; bi < SLOW_MAX_BUFFERS; bi++) {
       board_buffer_draw(&slowboot->buffer[bi]);
     }
     goto exit;
@@ -125,7 +114,7 @@ void slowboot_update(SlowBoot *slowboot) {
 
   // all done. Tear down display, and never schedule me again.
 #if !BORROW_SCREENBLANKER_BUFS
-  for (bi = 0; bi < SLOW_MAX_BUFFERS; bi++) {
+  for (int bi = 0; bi < SLOW_MAX_BUFFERS; bi++) {
     board_buffer_pop(&slowboot->buffer[bi]);
   }
 #endif  // BORROW_SCREENBLANKER_BUFS
