@@ -196,6 +196,43 @@ ARM_FLASHK := 512
 ARM_RAMK := 64
 endif
 
+##### STM32G0
+
+## STM32G030
+
+ifeq ($(ARM_CHIP),stm32g030x6)
+ARM_CHIP_FAMILY := STM32G030xx
+ARM_FLASHK := 32
+ARM_RAMK := 8
+endif
+
+ifeq ($(ARM_CHIP),stm32g030x8)
+ARM_CHIP_FAMILY := STM32G030xx
+ARM_FLASHK := 64
+ARM_RAMK := 8
+endif
+
+## STM32G031
+
+ifeq ($(ARM_CHIP),stm32g031x4)
+ARM_CHIP_FAMILY := STM32G031xx
+ARM_FLASHK := 16
+ARM_RAMK := 8
+endif
+
+ifeq ($(ARM_CHIP),stm32g031x6)
+ARM_CHIP_FAMILY := STM32G031xx
+ARM_FLASHK := 32
+ARM_RAMK := 8
+endif
+
+ifeq ($(ARM_CHIP),stm32g031x8)
+ARM_CHIP_FAMILY := STM32G031xx
+ARM_FLASHK := 64
+ARM_RAMK := 8
+endif
+
+
 ###### Set CPU family based on chip prefix
 
 # STM32F0: ARM Cortex M0
@@ -226,6 +263,16 @@ ARM_DRIVER_ROOT := $(ARM_SUBLIB_ROOT)/vendor_libraries/stm32f3/Drivers
 ARM_CMSIS_ROOT := $(ARM_DRIVER_ROOT)/CMSIS/Device/ST/STM32F3xx
 ARM_HAL_ROOT := $(ARM_DRIVER_ROOT)/STM32F3xx_HAL_Driver
 ARM_SOURCES += $(ARM_CMSIS_ROOT)/Source/Templates/system_stm32f3xx.c
+endif
+
+# STM32G0: ARM Cortex M0+
+ifneq ($(findstring chip-is-stm32g0,chip-is-$(ARM_CHIP)),)
+ARM_MX := M0PLUS
+ARM_CHIP_MAJOR_FAMILY := stm32g0
+ARM_DRIVER_ROOT := $(ARM_SUBLIB_ROOT)/vendor_libraries/stm32g0/Drivers
+ARM_CMSIS_ROOT := $(ARM_DRIVER_ROOT)/CMSIS/Device/ST/STM32G0xx
+ARM_HAL_ROOT := $(ARM_DRIVER_ROOT)/STM32G0xx_HAL_Driver
+ARM_SOURCES += $(ARM_CMSIS_ROOT)/Source/Templates/system_stm32g0xx.c
 endif
 
 ######################################################################
