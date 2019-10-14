@@ -25,7 +25,7 @@
 #if defined(RULOS_ARM_LPC)
 #define TEST_PIN GPIO0_08
 #elif defined(RULOS_ARM_STM32)
-#define TEST_PIN GPIO_A4
+#define TEST_PIN GPIO_A6
 #elif defined(RULOS_AVR)
 #define TEST_PIN GPIO_B3
 #else
@@ -35,6 +35,7 @@
 #ifdef LOG_TO_SERIAL
 HalUart uart;
 #endif
+
 void test_func(void *data) {
   gpio_set(TEST_PIN);
   gpio_clr(TEST_PIN);
@@ -42,6 +43,13 @@ void test_func(void *data) {
   gpio_clr(TEST_PIN);
   gpio_set(TEST_PIN);
   gpio_clr(TEST_PIN);
+  gpio_set(TEST_PIN);
+  gpio_clr(TEST_PIN);
+  gpio_set(TEST_PIN);
+  gpio_clr(TEST_PIN);
+  gpio_set(TEST_PIN);
+  gpio_clr(TEST_PIN);
+
 #ifdef LOG_TO_SERIAL
   hal_uart_sync_send(
       &uart,

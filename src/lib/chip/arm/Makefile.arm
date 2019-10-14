@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-ARM_COMPILER_BINDIR := /usr/local/bin/gcc-arm-none-eabi-8-2018-q4-major/bin
+ARM_COMPILER_BINDIR := /usr/local/bin/gcc-arm-none-eabi-8-2019-q3-update/bin
 
 # These are just "advisory" - so the linker can warn you if you don't
 # have at least STACK_SIZE bytes available on the stack.
