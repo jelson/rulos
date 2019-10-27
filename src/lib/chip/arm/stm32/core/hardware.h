@@ -165,6 +165,11 @@ static inline void gpio_make_input_disable_pullup(GPIO_TypeDef *port,
 }
 #endif
 
+static inline void gpio_make_adc_input(GPIO_TypeDef *port,
+				       const uint32_t pin) {
+  stm32_gpio_configure(port, pin, LL_GPIO_MODE_ANALOG, LL_GPIO_PULL_NO);
+}
+
 /*
  * Assert an output pin HIGH.
  */
