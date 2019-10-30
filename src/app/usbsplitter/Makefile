@@ -20,6 +20,7 @@ TARGET := usbsplitter
 BOARD := GENERIC
 
 ARM_CHIP := stm32g031x8
+#ARM_CHIP := stm32f303x8
 PERIPHERALS := #uart
 
 TARGET_OBJECTS := \

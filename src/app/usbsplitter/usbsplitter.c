@@ -22,13 +22,13 @@
 #define OUTPUT1 GPIO_A6
 #define OUTPUT2 GPIO_A4
 
-#define TICK_LENGTH_US 100
+#define TICK_LENGTH_US 10
 #define TICKS_ON_PER_OUTPUT 3
 #define TICKS_ALL_OFF 1
 
 #define TICKS_PER_CYCLE (2*TICKS_ON_PER_OUTPUT + TICKS_ALL_OFF)
 
-static uint8_t curr_tick = 0;
+static uint32_t curr_tick = 0;
 
 void switch_outputs(void *data) {
   curr_tick++;
