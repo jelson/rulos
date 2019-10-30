@@ -57,8 +57,17 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void* data,
   // resolution down to 100 microseconds). Dividing the period first
   // prevents overflow of a 32-bit int for reasonable (< 1 second)
   // jiffy periods.
+  //
+  // For jiffy periods less than 10ms, we multiply by the period
+  // before dividing by 100, giving us extra precision without
+  // overflow.
   const uint32_t clock_rate_div_10k = arm_hal_get_clock_rate() / 10000;
-  uint32_t ticks_per_interrupt = clock_rate_div_10k * (us / 100);
+  uint32_t ticks_per_interrupt;
+  if (us < 10000) {
+    ticks_per_interrupt = (clock_rate_div_10k * us) / 100;
+  } else {
+    ticks_per_interrupt = clock_rate_div_10k * (us / 100);
+  }
 
   // Ensure we're not trying to make the clock too long. For a 48mhz
   // crystal the maximum allowable jiffy clock is about 349ms.
