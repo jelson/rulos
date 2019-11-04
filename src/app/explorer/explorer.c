@@ -20,15 +20,26 @@
 #include "core/rulos.h"
 #include "periph/bss_canary/bss_canary.h"
 
+#define EXPLORER_MOTOR
+//#define EXPLORER_SERVO
+
 ADC_HandleTypeDef hadc1;
 
 void init_pwm() {
   GPIO_InitTypeDef gpioStructure;
+#if defined(EXPLORER_MOTOR)
+  gpioStructure.Pin = GPIO_PIN_4;
+  gpioStructure.Mode = GPIO_MODE_AF_PP;
+  gpioStructure.Alternate = GPIO_AF4_TIM14;
+#elif defined(EXPLORER_SERVO)
   gpioStructure.Pin = GPIO_PIN_6;
   gpioStructure.Mode = GPIO_MODE_AF_OD;
+  gpioStructure.Alternate = GPIO_AF1_TIM3;
+#else
+  #error "error"
+#endif
   gpioStructure.Pull = GPIO_NOPULL;
   gpioStructure.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  gpioStructure.Alternate = GPIO_AF1_TIM3;
   HAL_GPIO_Init(GPIOA, &gpioStructure);  
 }
 
@@ -88,9 +99,16 @@ void init_adc() {
 
 void pwm_adjust(uint32_t pulse_interval, uint32_t pulse_width) {
   __HAL_RCC_TIM3_CLK_ENABLE();
+  __HAL_RCC_TIM14_CLK_ENABLE();
  
   TIM_HandleTypeDef timerHandle;
+#if defined(EXPLORER_MOTOR)
+  timerHandle.Instance = TIM14;
+#elif defined(EXPLORER_SERVO)
   timerHandle.Instance = TIM3;
+#else
+  #error "error"
+#endif
   timerHandle.Init.Prescaler = 40;
   timerHandle.Init.CounterMode = TIM_COUNTERMODE_UP;
   timerHandle.Init.Period = pulse_interval;
@@ -130,7 +148,13 @@ void sample(void *arg) {
   volatile uint32_t val = HAL_ADC_GetValue(&hadc1);
   HAL_ADC_Stop(&hadc1);
 
+#if defined(EXPLORER_SERVO)
   TIM3->CCR1 = 1600 + (1600 * val / (1<<12));
+#elif defined (EXPLORER_MOTOR)
+  TIM14->CCR1 = val;
+#else
+#error "error"
+#endif
 }
 
 int main() {
@@ -142,8 +166,14 @@ int main() {
 
   init_pwm();
   init_adc();
-  pwm_adjust(32000, 0);
 
+#if defined(EXPLORER_SERVO)
+  pwm_adjust(32000, 0);
+#elif defined (EXPLORER_MOTOR)
+  pwm_adjust(4096, 0);
+#else
+#error "error"
+#endif
   schedule_now(sample, NULL);
   cpumon_main_loop();
 }
