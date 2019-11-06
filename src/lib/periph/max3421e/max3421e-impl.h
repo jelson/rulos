@@ -19,6 +19,7 @@
 #pragma once
 
 #include <stdint.h>
+
 #include "usbstructs.h"
 
 // Maximum number of USB devices we can talk to simultaneously.

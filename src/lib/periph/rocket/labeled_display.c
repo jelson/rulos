@@ -17,6 +17,7 @@
  */
 
 #include "periph/rocket/labeled_display.h"
+
 #include "core/util.h"
 #include "periph/rocket/rocket.h"
 

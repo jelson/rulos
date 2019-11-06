@@ -26,7 +26,7 @@
 #define TICKS_ON_PER_OUTPUT 3
 #define TICKS_ALL_OFF 1
 
-#define TICKS_PER_CYCLE (2*TICKS_ON_PER_OUTPUT + TICKS_ALL_OFF)
+#define TICKS_PER_CYCLE (2 * TICKS_ON_PER_OUTPUT + TICKS_ALL_OFF)
 
 static uint32_t curr_tick = 0;
 
@@ -42,7 +42,7 @@ void switch_outputs(void *data) {
   } else if (curr_tick == TICKS_ON_PER_OUTPUT) {
     gpio_clr(OUTPUT1);
     gpio_set(OUTPUT2);
-  } else if (curr_tick == 2*TICKS_ON_PER_OUTPUT) {
+  } else if (curr_tick == 2 * TICKS_ON_PER_OUTPUT) {
     gpio_clr(OUTPUT1);
     gpio_clr(OUTPUT2);
   }

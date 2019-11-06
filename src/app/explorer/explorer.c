@@ -36,11 +36,11 @@ void init_pwm() {
   gpioStructure.Mode = GPIO_MODE_AF_OD;
   gpioStructure.Alternate = GPIO_AF1_TIM3;
 #else
-  #error "error"
+#error "error"
 #endif
   gpioStructure.Pull = GPIO_NOPULL;
   gpioStructure.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  HAL_GPIO_Init(GPIOA, &gpioStructure);  
+  HAL_GPIO_Init(GPIOA, &gpioStructure);
 }
 
 void init_adc() {
@@ -55,7 +55,7 @@ void init_adc() {
   }
 
   gpio_make_adc_input(GPIO_A5);
-  
+
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
@@ -74,10 +74,10 @@ void init_adc() {
   hadc1.Init.SamplingTimeCommon1 = ADC_SAMPLETIME_39CYCLES_5;
   hadc1.Init.SamplingTimeCommon2 = ADC_SAMPLETIME_160CYCLES_5;
   hadc1.Init.OversamplingMode = ENABLE;
-  hadc1.Init.Oversampling.Ratio         = ADC_OVERSAMPLING_RATIO_256;
+  hadc1.Init.Oversampling.Ratio = ADC_OVERSAMPLING_RATIO_256;
   hadc1.Init.Oversampling.RightBitShift = ADC_RIGHTBITSHIFT_8;
   hadc1.Init.Oversampling.TriggeredMode = ADC_TRIGGEREDMODE_SINGLE_TRIGGER;
-   
+
   hadc1.Init.TriggerFrequencyMode = ADC_TRIGGER_FREQ_HIGH;
   if (HAL_ADC_Init(&hadc1) != HAL_OK) {
     __builtin_trap();
@@ -100,14 +100,14 @@ void init_adc() {
 void pwm_adjust(uint32_t pulse_interval, uint32_t pulse_width) {
   __HAL_RCC_TIM3_CLK_ENABLE();
   __HAL_RCC_TIM14_CLK_ENABLE();
- 
+
   TIM_HandleTypeDef timerHandle;
 #if defined(EXPLORER_MOTOR)
   timerHandle.Instance = TIM14;
 #elif defined(EXPLORER_SERVO)
   timerHandle.Instance = TIM3;
 #else
-  #error "error"
+#error "error"
 #endif
   timerHandle.Init.Prescaler = 40;
   timerHandle.Init.CounterMode = TIM_COUNTERMODE_UP;
@@ -119,7 +119,9 @@ void pwm_adjust(uint32_t pulse_interval, uint32_t pulse_width) {
     __builtin_trap();
   }
 
-  TIM_OC_InitTypeDef outputChannelInit = {0,};
+  TIM_OC_InitTypeDef outputChannelInit = {
+      0,
+  };
   outputChannelInit.OCMode = TIM_OCMODE_PWM1;
   outputChannelInit.Pulse = pulse_width;
   outputChannelInit.OCPolarity = TIM_OCPOLARITY_HIGH;
@@ -128,7 +130,7 @@ void pwm_adjust(uint32_t pulse_interval, uint32_t pulse_width) {
   outputChannelInit.OCIdleState = TIM_OCIDLESTATE_RESET;
   outputChannelInit.OCNIdleState = TIM_OCNIDLESTATE_RESET;
   if (HAL_TIM_PWM_ConfigChannel(&timerHandle, &outputChannelInit,
-				TIM_CHANNEL_1) != HAL_OK) {
+                                TIM_CHANNEL_1) != HAL_OK) {
     __builtin_trap();
   }
 
@@ -136,7 +138,6 @@ void pwm_adjust(uint32_t pulse_interval, uint32_t pulse_width) {
     __builtin_trap();
   }
 }
-
 
 void sample(void *arg) {
   schedule_us(50000, sample, NULL);
@@ -149,8 +150,8 @@ void sample(void *arg) {
   HAL_ADC_Stop(&hadc1);
 
 #if defined(EXPLORER_SERVO)
-  TIM3->CCR1 = 1600 + (1600 * val / (1<<12));
-#elif defined (EXPLORER_MOTOR)
+  TIM3->CCR1 = 1600 + (1600 * val / (1 << 12));
+#elif defined(EXPLORER_MOTOR)
   TIM14->CCR1 = val;
 #else
 #error "error"
@@ -169,7 +170,7 @@ int main() {
 
 #if defined(EXPLORER_SERVO)
   pwm_adjust(32000, 0);
-#elif defined (EXPLORER_MOTOR)
+#elif defined(EXPLORER_MOTOR)
   pwm_adjust(4096, 0);
 #else
 #error "error"

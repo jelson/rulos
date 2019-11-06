@@ -17,6 +17,7 @@
  */
 
 #include "periph/rocket/idle_display.h"
+
 #include "periph/rocket/display_scroll_msg.h"
 #include "periph/rocket/rocket.h"
 

@@ -16,11 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "periph/uart/uart.h"
+
 #include <stdlib.h>
 
 #include "core/clock.h"
 #include "core/rulos.h"
-#include "periph/uart/uart.h"
 
 // Upcall from HAL when new data arrives.  Happens at interrupt time.
 void _uart_receive(HalUart *handler, char c) {

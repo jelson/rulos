@@ -16,9 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <string.h>
-
 #include "chip/avr/periph/pov/pov.h"
+
+#include <string.h>
 
 void pov_update(PovHandler *pov);
 

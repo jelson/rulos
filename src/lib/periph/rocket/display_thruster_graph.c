@@ -17,6 +17,7 @@
  */
 
 #include "periph/rocket/display_thruster_graph.h"
+
 #include "periph/hpam/hpam.h"
 #include "periph/rocket/rocket.h"
 

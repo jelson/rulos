@@ -32,6 +32,7 @@
 #include "core/event.h"
 #include "core/hal.h"
 #include "core/heap.h"
+#include "core/logging.h"
 #include "core/media.h"
 #include "core/message.h"
 #include "core/net_compute_checksum.h"
@@ -40,5 +41,3 @@
 #include "core/queue.h"
 #include "core/random.h"
 #include "core/util.h"
-
-#include "core/logging.h"

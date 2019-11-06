@@ -16,9 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "periph/rocket/calculator.h"
+
 #include <stdio.h>
 
-#include "periph/rocket/calculator.h"
 #include "periph/rocket/rocket.h"
 
 //#define LOG_CALC 1

@@ -29,7 +29,6 @@
 #define GPIO_CHIPSELECT GPIO_A4
 
 #include "periph/spi/hal_spi.h"
-
 #include "stm32f3xx_hal_gpio.h"
 #include "stm32f3xx_hal_rcc.h"
 #include "stm32f3xx_hal_rcc_ex.h"

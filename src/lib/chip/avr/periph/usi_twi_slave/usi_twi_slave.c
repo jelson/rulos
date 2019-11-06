@@ -16,11 +16,12 @@
 |            -calcprogrammer1@gmail.com                 |
 \*-----------------------------------------------------*/
 
+#include "chip/avr/periph/usi_twi_slave/usi_twi_slave.h"
+
 #include <avr/interrupt.h>
 #include <avr/io.h>
 
 #include "chip/avr/core/usi_pins.h"
-#include "chip/avr/periph/usi_twi_slave/usi_twi_slave.h"
 #include "core/hardware.h"
 #include "core/rulos.h"
 

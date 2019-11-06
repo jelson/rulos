@@ -16,10 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "periph/uart/serial_console.h"
+
 #include <stdlib.h>
 
 #include "core/clock.h"
-#include "periph/uart/serial_console.h"
 
 void serial_console_update(SerialConsole *sca) {
   char rcv_chr;

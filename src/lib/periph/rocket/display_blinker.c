@@ -17,6 +17,7 @@
  */
 
 #include "periph/rocket/display_blinker.h"
+
 #include "core/util.h"
 #include "periph/rocket/rocket.h"
 
