@@ -201,7 +201,7 @@ typedef struct {
 SimTwiState g_sim_twi_state = {{NULL}, FALSE};
 
 static void sim_twi_send(MediaStateIfc *media, Addr dest_addr,
-                         const unsigned char *data, uint8_t len,
+                         const void *data, uint8_t len,
                          MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
 static void sim_twi_poll(void *data);
 
@@ -294,7 +294,7 @@ typedef struct {
 } sendCallbackAct_t;
 
 static void sim_twi_send(MediaStateIfc *media, Addr dest_addr,
-                         const unsigned char *data, uint8_t len,
+                         const void *data, uint8_t len,
                          MediaSendDoneFunc sendDoneCB, void *sendDoneCBData) {
   SimTwiState *twi_state = (SimTwiState *)media;
 

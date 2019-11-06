@@ -117,6 +117,7 @@ static inline bool occupied(Map *map, Point a) {
          get_cell(map, a.x, a.y + 1) == UP;
 }
 
+#if 0
 static inline bool get_game_over(Snake *snake) {
   bool rc = snake->direction == EMPTY;
   if (rc) {
@@ -124,6 +125,7 @@ static inline bool get_game_over(Snake *snake) {
   }
   return rc;
 }
+#endif
 
 static inline void explode(Snake *snake) { snake->mode = EXPLODING; }
 

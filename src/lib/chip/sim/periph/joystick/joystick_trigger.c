@@ -36,8 +36,8 @@ r_bool sim_joystick_keystroke_handler(char c) {
   switch (c) {
     case '%':  // button-on
       g_joystick_trigger_state = !g_joystick_trigger_state;
-      return true;
+      return TRUE;
     default:
-      return false;
+      return FALSE;
   }
 }

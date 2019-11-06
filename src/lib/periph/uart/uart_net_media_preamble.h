@@ -2,8 +2,8 @@
 
 #include "core/media.h"
 
-#define UM_PREAMBLE0 0xdc
-#define UM_PREAMBLE1 0x95
+#define UM_PREAMBLE0 (-100)
+#define UM_PREAMBLE1 (-85)
 
 typedef struct {
   char p0;
