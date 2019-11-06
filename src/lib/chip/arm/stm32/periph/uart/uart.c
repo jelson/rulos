@@ -271,7 +271,7 @@ void hal_uart_init(HalUart *hal_uart, uint32_t baud, r_bool stop2,
 // send single messages larger than the default txbuf size, consider
 // increasing it using ARM_CFLAGS += -DUART_TXBUF_SIZE=nnnn in your
 // Makefile.
-static void arm_uart_sync_send_bytes_by_id(uint8_t uart_id, const uint8_t *s,
+static void arm_uart_sync_send_bytes_by_id(uint8_t uart_id, const void *s,
                                            uint32_t len) {
   uart_t *uart = &g_uarts[uart_id];
 
@@ -299,14 +299,14 @@ static void arm_uart_sync_send_bytes_by_id(uint8_t uart_id, const uint8_t *s,
 }
 
 void arm_uart_sync_send_by_id(uint8_t uart_id, const char *s) {
-  arm_uart_sync_send_bytes_by_id(uart_id, (uint8_t *)s, strlen(s));
+  arm_uart_sync_send_bytes_by_id(uart_id, s, strlen(s));
 }
 
 void hal_uart_sync_send(HalUart *handler, const char *s) {
   arm_uart_sync_send_by_id(handler->uart_id, s);
 }
 
-void hal_uart_sync_send_bytes(HalUart *handler, const uint8_t *s, uint8_t len) {
+void hal_uart_sync_send_bytes(HalUart *handler, const void *s, uint8_t len) {
   arm_uart_sync_send_bytes_by_id(handler->uart_id, s, len);
 }
 

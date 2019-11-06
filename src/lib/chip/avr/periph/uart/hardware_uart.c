@@ -219,7 +219,7 @@ void hal_uart_start_send(HalUart* handler) {
   }
 }
 
-void hal_uart_sync_send_bytes(HalUart* handler, const uint8_t* s,
+void hal_uart_sync_send_bytes(HalUart* handler, const void* s,
                               const uint8_t len) {
   switch (handler->uart_id) {
 #if HAVE_UARTID0

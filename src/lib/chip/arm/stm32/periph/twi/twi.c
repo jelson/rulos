@@ -299,7 +299,7 @@ void rI2C1_DMA_TX_IRQHandler(void) {
 }
 
 static void twi_send(MediaStateIfc *media, Addr dest_addr,
-                     const unsigned char *data, uint8_t len,
+                     const void *data, uint8_t len,
                      MediaSendDoneFunc send_done_cb, void *send_done_cb_data) {
 #ifdef TIMING_DEBUG_PIN
   gpio_set(TIMING_DEBUG_PIN);

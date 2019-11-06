@@ -93,7 +93,7 @@ void hal_uart_start_send(HalUart *uart) {
   LOG("Sent to uart %d: %s", uart->uart_id, buf);
 }
 
-void hal_uart_sync_send_bytes(HalUart *uart, const char *s, uint8_t len) {
+void hal_uart_sync_send_bytes(HalUart *uart, const void *s, uint8_t len) {
   char buf[len + 1];
   memcpy(buf, s, len);
   buf[len] = '\0';
