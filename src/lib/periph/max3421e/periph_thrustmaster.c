@@ -16,11 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "periph/max3421e/periph_thrustmaster.h"
+
 #include <stdint.h>
 
 #include "periph/joystick/joystick.h"
 #include "periph/max3421e/max3421e.h"
-#include "periph/max3421e/periph_thrustmaster.h"
 
 static int8_t scale_to_99(int8_t scale_to_128) {
   return max(-99, min(99, (((int16_t)scale_to_128) * 100) / 128));

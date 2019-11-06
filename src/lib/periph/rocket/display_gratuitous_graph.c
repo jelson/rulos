@@ -17,6 +17,7 @@
  */
 
 #include "periph/rocket/display_gratuitous_graph.h"
+
 #include "periph/rocket/rocket.h"
 
 void dgg_update(DGratuitousGraph *act);

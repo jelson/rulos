@@ -16,9 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdbool.h>
-
 #include "periph/audio/audio_server.h"
+
+#include <stdbool.h>
 
 void aserv_recv_arm(MessageRecvBuffer *msg);
 void aserv_recv_avm(MessageRecvBuffer *msg);

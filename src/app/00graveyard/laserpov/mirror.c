@@ -16,10 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "mirror.h"
+
 #include <stdio.h>
 
 #include "core/hardware.h"
-#include "mirror.h"
 
 void mirror_handler();
 static MirrorHandler *theMirror = NULL;

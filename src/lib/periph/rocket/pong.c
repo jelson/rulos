@@ -17,6 +17,7 @@
  */
 
 #include "periph/rocket/pong.h"
+
 #include "core/rulos.h"
 #include "periph/audio/sound.h"
 #include "periph/rasters/rasters.h"

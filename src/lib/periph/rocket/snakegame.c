@@ -17,9 +17,10 @@
  */
 
 #include "periph/rocket/snakegame.h"
+
 #include "core/rulos.h"
-#include "periph/rasters/rasters.h"
 #include "periph/audio/sound.h"
+#include "periph/rasters/rasters.h"
 
 #define SNAKE_FREQ 32  // Animation frequency, Hz.
 #define MOVE_RATE 3    // Ticks per moves animation

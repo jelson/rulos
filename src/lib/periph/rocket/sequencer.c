@@ -17,9 +17,10 @@
  */
 
 #include "periph/rocket/sequencer.h"
+
+#include "periph/audio/sound.h"
 #include "periph/rocket/rocket.h"
 #include "periph/rocket/screenblanker.h"
-#include "periph/audio/sound.h"
 
 #define STUB(s) \
   {}

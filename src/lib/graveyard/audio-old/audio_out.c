@@ -17,6 +17,7 @@
  */
 
 #include "periph/audio/audio_out.h"
+
 #include "core/hal.h"
 
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);

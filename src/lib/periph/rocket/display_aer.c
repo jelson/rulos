@@ -17,6 +17,7 @@
  */
 
 #include "periph/rocket/display_aer.h"
+
 #include "periph/rocket/rocket.h"
 
 void daer_update(DisplayAzimuthElevationRoll *act);

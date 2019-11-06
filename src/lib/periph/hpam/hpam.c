@@ -16,10 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "periph/hpam/hpam.h"
+
 #include <stdio.h>
 
 #include "core/rulos.h"
-#include "periph/hpam/hpam.h"
 
 void hpam_update(HPAM *hpam);
 

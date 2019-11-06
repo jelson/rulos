@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "core/keystrokes.h"
+
 #include <ctype.h>
 #include <curses.h>
 #include <fcntl.h>
@@ -32,7 +34,6 @@
 #include <unistd.h>
 
 #include "core/curses.h"
-#include "core/keystrokes.h"
 #include "core/logging.h"
 #include "core/sim.h"
 

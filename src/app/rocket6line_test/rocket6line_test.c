@@ -17,6 +17,7 @@
  */
 
 #include "periph/rocket6line/rocket6line.h"
+
 #include "core/rulos.h"
 #include "periph/7seg_panel/display_controller.h"
 #include "periph/bss_canary/bss_canary.h"

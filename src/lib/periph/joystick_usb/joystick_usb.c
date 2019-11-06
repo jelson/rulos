@@ -17,6 +17,7 @@
  */
 
 #include "periph/joystick_usb/joystick_usb.h"
+
 #include "periph/max3421e/periph_thrustmaster.h"
 
 static bool joystick_usb_read(JoystickState_t *js_base) {

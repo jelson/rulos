@@ -16,10 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "periph/rocket/display_scroll_msg.h"
+
 #include <stdio.h>
 #include <string.h>
 
-#include "periph/rocket/display_scroll_msg.h"
 #include "periph/rocket/rocket.h"
 
 void dscrlmsg_update(DScrollMsgAct *act);

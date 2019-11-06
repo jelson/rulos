@@ -17,11 +17,11 @@
  */
 
 #include "periph/rocket6line/rocket6line.h"
+
 #include "core/hardware.h"
 #include "core/rulos.h"
 #include "core/stats.h"
 #include "periph/7seg_panel/display_controller.h"
-
 #include "stm32f3xx_hal_gpio.h"
 #include "stm32f3xx_hal_rcc.h"
 #include "stm32f3xx_hal_rcc_ex.h"

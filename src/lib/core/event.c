@@ -16,11 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "core/event.h"
+
 #include <stdbool.h>
 #include <stdlib.h>
 
 #include "core/clock.h"
-#include "core/event.h"
 
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 //#define SYNCDEBUG()	syncdebug(0, 'E', __LINE__)

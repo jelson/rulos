@@ -16,11 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "periph/7seg_panel/remote_bbuf.h"
+
 #include <string.h>
 
 #include "core/clock.h"
 #include "core/rulos.h"
-#include "periph/7seg_panel/remote_bbuf.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // Send side
@@ -179,6 +180,6 @@ void rbr_recv(MessageRecvBuffer *msg) {
 
   board_buffer_paint(bbm->buf, bbm->index, 0xff);
 
- done:
+done:
   net_free_received_message_buffer(msg);
 }

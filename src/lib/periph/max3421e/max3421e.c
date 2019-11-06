@@ -22,9 +22,8 @@
 
 #include "core/hardware.h"
 #include "core/rulos.h"
-#include "usbstructs.h"
-
 #include "periph/spi/hal_spi.h"
+#include "usbstructs.h"
 
 // Set transfer bounds
 #define NAK_LIMIT 3

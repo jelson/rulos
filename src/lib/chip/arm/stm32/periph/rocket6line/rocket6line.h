@@ -19,6 +19,7 @@
 #pragma once
 
 #include <stdint.h>
+
 #include "periph/7seg_panel/display_controller.h"
 
 #define ROCKET6LINE_NUM_ROWS 6

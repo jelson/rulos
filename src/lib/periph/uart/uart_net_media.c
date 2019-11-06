@@ -16,11 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "periph/uart/uart_net_media.h"
+
 #include <stdlib.h>
 
 #include "core/clock.h"
 #include "core/rulos.h"
-#include "periph/uart/uart_net_media.h"
 
 void audioled_set(r_bool red, r_bool yellow);
 

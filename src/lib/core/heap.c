@@ -16,10 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "core/heap.h"
+
 #include <stdlib.h>
 
 #include "core/clock.h"
-#include "core/heap.h"
 #include "core/logging.h"
 
 void heap_init(Heap *heap) { heap->heap_count = 0; }

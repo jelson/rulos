@@ -17,6 +17,7 @@
  */
 
 #include "periph/bss_canary/bss_canary.h"
+
 #include "core/rulos.h"
 
 // The linker automatically creates symbols that indicate the end of BSS.

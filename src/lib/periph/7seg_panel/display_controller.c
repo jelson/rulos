@@ -16,10 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "periph/7seg_panel/display_controller.h"
+
 #include <string.h>
 
 #include "core/hal.h"
-#include "periph/7seg_panel/display_controller.h"
 
 // offset 32
 static const uint8_t sevseg_ascii[] PROGMEM = {

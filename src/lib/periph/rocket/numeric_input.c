@@ -17,6 +17,7 @@
  */
 
 #include "periph/rocket/numeric_input.h"
+
 #include "periph/rocket/rocket.h"
 
 uint8_t dfp_draw(DecimalFloatingPoint *dfp, SSBitmap *bm, uint8_t len,

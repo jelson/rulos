@@ -1,6 +1,6 @@
-#include <math.h>
-
 #include "navigation.h"
+
+#include <math.h>
 
 #ifdef SIM
 #include <stdio.h>

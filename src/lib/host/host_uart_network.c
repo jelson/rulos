@@ -1,3 +1,5 @@
+#include "host/host_uart_network.h"
+
 #include <asm/ioctls.h>
 #include <assert.h>
 #include <fcntl.h>
@@ -12,7 +14,6 @@
 #include "core/message.h"
 #include "core/net_compute_checksum.h"
 #include "core/network_ports.h"
-#include "host/host_uart_network.h"
 #include "periph/uart/uart_net_media_preamble.h"
 
 #define _POSIX_SOURCE 1  // POSIX compliant source

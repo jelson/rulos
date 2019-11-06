@@ -16,10 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "periph/7seg_panel/board_buffer.h"
+
 #include <stdio.h>
 
 #include "core/rulos.h"
-#include "periph/7seg_panel/board_buffer.h"
 #include "periph/7seg_panel/remote_bbuf.h"
 
 #define BBUF_UNMAPPED_INDEX (0xff)

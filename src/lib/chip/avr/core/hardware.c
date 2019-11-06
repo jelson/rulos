@@ -22,6 +22,8 @@
  * This file is not compiled by the simulator.
  */
 
+#include "core/hardware.h"
+
 #include <avr/boot.h>
 #include <avr/interrupt.h>
 #include <avr/io.h>
@@ -29,7 +31,6 @@
 #include <util/delay_basic.h>
 
 #include "core/hal.h"
-#include "core/hardware.h"
 #include "core/logging.h"
 
 uint8_t g_hal_initted = 0;

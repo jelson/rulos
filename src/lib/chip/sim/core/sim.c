@@ -20,6 +20,8 @@
  * These are the base simulator modules, for just the clock and TWI.
  */
 
+#include "chip/sim/core/sim.h"
+
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -37,7 +39,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "chip/sim/core/sim.h"
 #include "core/clock.h"
 #include "core/heap.h"
 #include "core/logging.h"
@@ -200,9 +201,9 @@ typedef struct {
 } SimTwiState;
 SimTwiState g_sim_twi_state = {{NULL}, FALSE};
 
-static void sim_twi_send(MediaStateIfc *media, Addr dest_addr,
-                         const void *data, uint8_t len,
-                         MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
+static void sim_twi_send(MediaStateIfc *media, Addr dest_addr, const void *data,
+                         uint8_t len, MediaSendDoneFunc sendDoneCB,
+                         void *sendDoneCBData);
 static void sim_twi_poll(void *data);
 
 MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
@@ -255,7 +256,7 @@ static void sim_twi_poll(void *data) {
   fd_set set;
   FD_ZERO(&set);
   FD_SET(twi_state->udp_socket, &set);
-  assert(0 == select(twi_state->udp_socket+1, &set, NULL, NULL, &tv));
+  assert(0 == select(twi_state->udp_socket + 1, &set, NULL, NULL, &tv));
   if (!FD_ISSET(twi_state->udp_socket, &set)) {
     return;
   }
@@ -293,9 +294,9 @@ typedef struct {
   void *sendDoneCBData;
 } sendCallbackAct_t;
 
-static void sim_twi_send(MediaStateIfc *media, Addr dest_addr,
-                         const void *data, uint8_t len,
-                         MediaSendDoneFunc sendDoneCB, void *sendDoneCBData) {
+static void sim_twi_send(MediaStateIfc *media, Addr dest_addr, const void *data,
+                         uint8_t len, MediaSendDoneFunc sendDoneCB,
+                         void *sendDoneCBData) {
   SimTwiState *twi_state = (SimTwiState *)media;
 
 #if 0
