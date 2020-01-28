@@ -273,20 +273,22 @@ static void refresh_display(Rocket6Line_t *r6l) {
                           *((uint16_t *)&r6l->row_data[r6l->curr_row][i]));
   }
 #endif
-  // gpio_set(DEBUG_PIN);
-
-  // Disable current display line.
-  disable_all_rows();
 
   // Wait for the bits to be shifted in completely, i.e. the SPI
   // peripheral has drained its queue.
   do {
   } while (LL_SPI_IsActiveFlag_BSY(SPI1));
 
+  // gpio_set(DEBUG_PIN);
+
+  // Disable old display line.
+  disable_all_rows();
+
   // Latch in the shifted data.
   gpio_set(LEDDRIVER_LE);
   gpio_clr(LEDDRIVER_LE);
 
+  // Enable new display line.
   enable_row(r6l->curr_row);
 }
 
