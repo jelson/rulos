@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <math.h>
 #include "core/hardware.h"
 #include "core/rulos.h"
 #include "periph/bss_canary/bss_canary.h"
@@ -157,6 +158,7 @@ void pwm_adjust(uint32_t r, uint32_t g, uint32_t b, uint32_t w) {
 
 #define num_brightnesses 43
 static uint32_t bright_to_period[num_brightnesses];
+/*
 void setup_table() {
     // 2^0, 2^1/3, 2^2/3 in 4-digit fixed-point
     uint32_t third_fix = 10000;
@@ -168,6 +170,22 @@ void setup_table() {
             bright_to_period[i] = 0;
         } else {
             bright_to_period[i] = (1<<full) * third_powers[frac] / third_fix;
+        }
+    }
+}
+*/
+
+int __errno;
+void setup_table() {
+    float max_period = 16000;    // TODO sync with init
+    for (uint32_t i=0; i<num_brightnesses; i++) {
+        if (i==0) {
+            bright_to_period[i] = 0;
+        } else {
+            // exponentially interpolate between 0 and max_period
+            float exp = i / ((float) num_brightnesses-1);
+            float period = powf(max_period, exp);
+            bright_to_period[i] = (int) period;
         }
     }
 }
