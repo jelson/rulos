@@ -76,6 +76,48 @@ void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id) {
   aserv->music_random_seeded = FALSE;
 }
 
+static void count_music(AudioServer *aserv)
+{
+    DIR* dp;
+    FILINFO* fno;
+
+    FRESULT rc = f_opendir(&dp, "/music");
+    assert(rc==FR_OK);
+
+    while (true) {
+        rc = f_readdir(&dp, &fno);
+        if (rc != FR_OK) {
+            break;
+        }
+        aserv->music_file_count += 1;
+    }
+
+    f_closedir(&dp);
+}
+
+static void find_music_by_number(AudioServer *aserv, int idx)
+{
+    DIR* dp;
+    FILINFO* fno;
+
+    FRESULT rc = f_opendir(&dp, "/music");
+    assert(rc==FR_OK);
+
+    int count = 0;
+    while (true) {
+        rc = f_readdir(&dp, &fno);
+        if (rc != FR_OK) {
+            break;
+        }
+        if (count == idx) {
+            return the thing;
+        }
+        count += 1;
+    }
+
+    f_closedir(&dp);
+}
+
 void aserv_skip_stream(AudioServer *aserv, uint8_t stream_idx) {
   if (aserv->audio_stream[stream_idx].skip_effect_id != sound_silence &&
       stream_idx >= aserv->active_stream) {

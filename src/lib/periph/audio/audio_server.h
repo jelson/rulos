@@ -47,6 +47,8 @@ typedef struct s_audio_server {
   AudioEffectsStream audio_stream[AUDIO_NUM_STREAMS];
   int8_t active_stream;
 
+  int8_t music_file_count;
+
   r_bool music_random_seeded;
 } AudioServer;
 
