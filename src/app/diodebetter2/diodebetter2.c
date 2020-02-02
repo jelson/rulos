@@ -156,7 +156,7 @@ void pwm_adjust(uint32_t r, uint32_t g, uint32_t b, uint32_t w) {
   TIM2->CCR4 = b;
 }
 
-#define num_brightnesses 2000
+#define num_brightnesses 400
 static uint32_t bright_to_period[num_brightnesses];
 /*
 void setup_table() {
