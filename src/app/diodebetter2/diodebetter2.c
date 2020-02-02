@@ -178,6 +178,7 @@ typedef struct {
 
 void set_period(uint32_t period) {
   pwm_adjust(period, period, period, period); 
+  LOG("period now %d", period);
 }
 
 // Ramp brightness up over 5s, then back down.
