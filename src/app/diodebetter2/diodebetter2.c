@@ -155,8 +155,41 @@ void pwm_adjust(uint32_t r, uint32_t g, uint32_t b, uint32_t w) {
   TIM2->CCR4 = b;
 }
 
-void sample(void *arg) {
-  schedule_us(50000, sample, NULL);
+#define num_brightnesses 43
+static uint32_t bright_to_period[num_brightnesses];
+void setup_table() {
+    // 2^0, 2^1/3, 2^2/3 in 4-digit fixed-point
+    uint32_t third_fix = 10000;
+    uint32_t third_powers[] = {10000, 12599, 15874};
+    for (uint32_t i=0; i<num_brightnesses; i++) {
+        uint32_t full = i/3;
+        uint32_t frac = i - full*3;
+        if (i==0) {
+            bright_to_period[i] = 0;
+        } else {
+            bright_to_period[i] = (1<<full) * third_powers[frac] / third_fix;
+        }
+    }
+}
+
+typedef struct {
+  uint32_t phase;
+} throb_state;
+
+void set_period(uint32_t period) {
+  pwm_adjust(period, period, period, period); 
+}
+
+// Ramp brightness up over 5s, then back down.
+void throb_act(void *arg) {
+  throb_state* throb = (throb_state*) arg;
+  throb->phase = (throb->phase + 1) % (num_brightnesses * 2);
+  if (throb->phase < num_brightnesses) {
+    set_period(bright_to_period[throb->phase]);
+  } else {
+    set_period(bright_to_period[2*num_brightnesses - throb->phase]);
+  }
+  schedule_us(50000, throb_act, throb);
 }
 
 int main() {
@@ -169,6 +202,7 @@ int main() {
   init_pwm();
   pwm_adjust(1, 10, 100, 1000); 
 
-  schedule_now(sample, NULL);
+  throb_state throb;
+  schedule_now(throb_act, &throb);
   cpumon_main_loop();
 }
