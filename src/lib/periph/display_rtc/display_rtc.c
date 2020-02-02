@@ -17,6 +17,7 @@
  */
 
 #include "periph/display_rtc/display_rtc.h"
+
 #include "core/rulos.h"
 #include "periph/input_controller/input_controller.h"
 

@@ -17,6 +17,7 @@
  */
 
 #include "periph/rocket/display_compass.h"
+
 #include "periph/input_controller/focus.h"
 #include "periph/rocket/rocket.h"
 

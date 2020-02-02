@@ -1,16 +1,17 @@
 /*
- * Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com).
- * 
+ * Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson
+ * (jelson@gmail.com).
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -37,8 +38,10 @@
 #define B_RASTER1 DBOARD("", PR PR PR PR PR PR PR PR, 9, 15, 3, 4)
 #define B_RASTER2 DBOARD("", PR PR PR PR PR PR PR PR, 9, 18, 3, 5)
 #define B_RASTER3 DBOARD("", PR PR PR PR PR PR PR PR, 9, 21, 3, 6)
+#define B_RASTER4 DBOARD("", PR PR PR PR PR PR PR PR, 9, 24, 3, 7)
+#define B_RASTER5 DBOARD("", PR PR PR PR PR PR PR PR, 9, 27, 3, 8)
 #define B_THRUSTER_ACT \
-  DBOARD("Thruster Actuation", PB PR PR PR PB PY PY PY, 3, 25, 7, 7)
+  DBOARD("Thruster Actuation", PB PR PR PR PB PY PY PY, 61, 18, 7, 7)
 #define B_AZE DBOARD("Azimuth, Elevation", PG PG PG PR PR PY PY PY, 58, 0, 8, 0)
 #define B_LIQ_HYD_PRES \
   DBOARD("Liquid Hydrogen Prs", PG PG PG PG PG PG PG PG, 58, 4, 9, 1)
@@ -56,8 +59,8 @@
 
 #define T_UNIROCKET                                                            \
   B_MISSION_CLOCK, B_LUNAR_DISTANCE, B_SPEED, B_RASTER0, B_RASTER1, B_RASTER2, \
-      B_RASTER3, B_THRUSTER_ACT, B_AZE, B_LIQ_HYD_PRES, B_FLIGHTCOMPUTER0,     \
-      B_FLIGHTCOMPUTER1, B_END
+      B_RASTER3, B_RASTER4, B_RASTER5, B_THRUSTER_ACT, B_AZE, B_LIQ_HYD_PRES,  \
+      B_FLIGHTCOMPUTER0, B_FLIGHTCOMPUTER1, B_END
 
 #define B_WALLCLOCK DBOARD("Clock", PG PG PG PG PG PG PB PB, 15, 0, 0, 0)
 #define T_WALLCLOCK B_WALLCLOCK, B_END

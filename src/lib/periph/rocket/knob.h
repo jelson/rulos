@@ -19,6 +19,7 @@
 #pragma once
 
 #include <inttypes.h>
+
 #include "periph/7seg_panel/cursor.h"
 #include "periph/7seg_panel/region.h"
 #include "periph/input_controller/focus.h"

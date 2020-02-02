@@ -34,8 +34,8 @@ extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "spi.h"
 #include "hal_spi.h"
+#include "spi.h"
 
 void _spi_spif_handler(HALSPIHandler *h, uint8_t data);
 

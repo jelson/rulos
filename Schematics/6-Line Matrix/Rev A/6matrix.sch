@@ -11191,10 +11191,10 @@ Based on the following sources:
 <net name="RX" class="0">
 <segment>
 <pinref part="SERIAL" gate="-2" pin="S"/>
-<wire x1="96.52" y1="129.54" x2="99.06" y2="129.54" width="0.1524" layer="91"/>
+<wire x1="101.6" y1="129.54" x2="99.06" y2="129.54" width="0.1524" layer="91"/>
 <label x="101.6" y="129.54" size="1.778" layer="95"/>
 <pinref part="U1" gate="G$1" pin="PA10"/>
-<wire x1="96.52" y1="129.54" x2="116.84" y2="129.54" width="0.1524" layer="91"/>
+<wire x1="101.6" y1="129.54" x2="116.84" y2="129.54" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="TX" class="0">

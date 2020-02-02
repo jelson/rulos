@@ -16,9 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdbool.h>
-
 #include "periph/audio/audio_server.h"
+
+#include <stdbool.h>
 
 #define FETCH_RETRY_TIME 1000000
 

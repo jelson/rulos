@@ -29,6 +29,9 @@
 #elif defined(RULOS_ARM_stm32f3)
 #include "stm32f3xx.h"
 #include "stm32f3xx_ll_gpio.h"
+#elif defined(RULOS_ARM_stm32g0)
+#include "stm32g0xx.h"
+#include "stm32g0xx_ll_gpio.h"
 #else
 #error "Add support for your STM32 family!"
 #include <stophere>
@@ -150,17 +153,21 @@ static inline void gpio_make_input_enable_pulldown(GPIO_TypeDef *port,
 /*
  * Configure a pin as input and disable its pullup and pulldown resistors.
  */
-#if defined(RULOS_ARM_stm32f0) || defined(RULOS_ARM_stm32f3)
-static inline void gpio_make_input_disable_pullup(GPIO_TypeDef *port,
-                                                  const uint32_t pin) {
-  stm32_gpio_configure(port, pin, LL_GPIO_MODE_INPUT, LL_GPIO_PULL_NO);
-}
-#else
+#if defined(RULOS_ARM_stm32f1)
 static inline void gpio_make_input_disable_pullup(GPIO_TypeDef *port,
                                                   const uint32_t pin) {
   stm32_gpio_configure(port, pin, LL_GPIO_MODE_FLOATING, LL_GPIO_PULL_UP);
 }
+#else
+static inline void gpio_make_input_disable_pullup(GPIO_TypeDef *port,
+                                                  const uint32_t pin) {
+  stm32_gpio_configure(port, pin, LL_GPIO_MODE_INPUT, LL_GPIO_PULL_NO);
+}
 #endif
+
+static inline void gpio_make_adc_input(GPIO_TypeDef *port, const uint32_t pin) {
+  stm32_gpio_configure(port, pin, LL_GPIO_MODE_ANALOG, LL_GPIO_PULL_NO);
+}
 
 /*
  * Assert an output pin HIGH.

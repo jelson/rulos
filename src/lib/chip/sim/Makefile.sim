@@ -42,12 +42,13 @@ CURR_OBJDIR := $(SIM_OBJDIR)
 -include $(foreach dir, $(sort $(dir $(SIM_SOURCES))), $(wildcard $(dir)/Makefile.extra))
 
 SIM_CFLAGS += $(ALL_PLATFORM_CFLAGS)
-SIM_CFLAGS += -Wall -Werror -g -O3 -DSIM -I$(SIM_OBJDIR) $(SIM_INCLUDES)
+SIM_CFLAGS += -Wall -Werror -g -DSIM -I$(SIM_OBJDIR) $(SIM_INCLUDES)
+#SIM_CFLAGS += -O3
 #SIM_CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 SIM_CFLAGS += -MD -MP # -MT $(SIM_OBJDIR)/$(*F).o -MF $(SIM_OBJDIR)/$(@F).d
 
 SIM_LDFLAGS = -L$(SIM_OBJDIR) -l$(SIM_LIBNAME) -lm `pkg-config --libs gtk+-2.0`
-SIM_GCC := g++
+SIM_GCC := clang
 #SIM_GCC := /usr/local/bin/include-what-you-use -Xiwyu --mapping_file=./mapping
 
 ############

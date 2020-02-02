@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "periph/rocket/rocket.h"
+
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -54,7 +56,6 @@
 #include "periph/rocket/pong.h"
 #include "periph/rocket/potsticker.h"
 #include "periph/rocket/remote_uie.h"
-#include "periph/rocket/rocket.h"
 #include "periph/rocket/screenblanker.h"
 #include "periph/rocket/sequencer.h"
 #include "periph/rocket/slow_boot.h"

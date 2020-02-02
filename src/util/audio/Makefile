@@ -1,4 +1,4 @@
-sdcard:
+sdcard: compile_audio.py ../../lib/periph/audio/sound.def ../../../Media/audio/fx/* ../../../Media/audio/disco/*
 	./compile_audio.py -fatfs ../../lib/periph/audio/sound.def ../../../Media/audio sdcard
 
 playsample: sdcard

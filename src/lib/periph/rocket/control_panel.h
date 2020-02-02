@@ -28,11 +28,12 @@
 #include "periph/rocket/pong.h"
 #include "periph/rocket/remote_uie.h"
 #include "periph/rocket/rocket.h"
+#include "periph/rocket/screen4.h"
 #include "periph/rocket/screenblanker.h"
 #include "periph/rocket/sequencer.h"
 #include "periph/rocket/snakegame.h"
 
-#define CONTROL_PANEL_HEIGHT 4
+#define CONTROL_PANEL_HEIGHT SCREEN4SIZE
 #define CONTROL_PANEL_NUM_CHILDREN 6
 #define CP_NO_CHILD (0xff)
 

@@ -1,8 +1,8 @@
+#include "gpsinput.h"
+
 #include <assert.h>
 #include <stdbool.h>
 #include <string.h>
-
-#include "gpsinput.h"
 
 r_bool _gpsinput_send_next(HalUart *handler, char *c /* OUT */);
 void _gpsinput_receive(HalUart *handler, char c);

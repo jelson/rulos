@@ -17,6 +17,7 @@
  */
 
 #include "periph/rasters/rasters.h"
+
 #include "core/rulos.h"
 
 void raster_big_digit_update(RasterBigDigit *digit);
@@ -52,9 +53,8 @@ void raster_draw_sym(RectRegion *rrect, char sym, int8_t dx, int8_t dy) {
     return;
   }
 
-  int idx;
   int y = 0;
-  for (idx = 0; idx < ri->len; idx++) {
+  for (int idx = 0; idx < ri->len; idx++) {
     uint16_t bitfield = get_bitfield(ri->offset_bits + idx * 11, 11);
     uint8_t ybit = (bitfield >> 10) & 1;
     uint8_t x0 = (bitfield >> 5) & 0x1f;
@@ -64,8 +64,7 @@ void raster_draw_sym(RectRegion *rrect, char sym, int8_t dx, int8_t dy) {
     }
     // LOG("raster_draw_sym(%c idx %2d/%2d) y%d x0 %2d x1 %2d", sym, idx,
     // ri->len, y, x0, x1);
-    int x;
-    for (x = x0; x < x1; x++) {
+    for (int x = x0; x < x1; x++) {
       // LOG("paintpixel(%d,%d)", dx+x, dy+y);
       raster_paint_pixel(rrect, dx + x, dy + y);
     }
@@ -115,7 +114,7 @@ void raster_big_digit_init(RasterBigDigit *digit, Screen4 *s4) {
 }
 
 void raster_big_digit_update(RasterBigDigit *digit) {
-  schedule_us(100000, (ActivationFuncPtr)raster_big_digit_update, digit);
+  schedule_us(50000, (ActivationFuncPtr)raster_big_digit_update, digit);
 
   if (!digit->focused) {
     // this thing is EXPENSIVE! don't draw it to offscreen buffers!
@@ -126,14 +125,13 @@ void raster_big_digit_update(RasterBigDigit *digit) {
   RectRegion *rrect = &digit->s4->rrect;
   raster_clear_buffers(rrect);
 
-  const int spacing = 30;
+  const int spacing = 28;
   const int roll = 10;
   Time t = -(clock_time_us() - digit->startTime) / 1000;
   while (t < 0) {
     t += 1000000;
   }
   int tens = ((t / 10000) % 10);
-  int next_tens = (tens + 1) % 10;
   int ones = ((t / 1000) % 10);
   int ones_offset =
       min((t * (spacing + roll) / 1000) % (spacing + roll), spacing);
@@ -141,25 +139,26 @@ void raster_big_digit_update(RasterBigDigit *digit) {
   if (ones == 9) {
     tens_offset = ones_offset;
   }
-  int next_ones = (ones + 1) % 10;
-  raster_draw_sym(rrect, '0' + tens, 0, tens_offset);
-  raster_draw_sym(rrect, '0' + next_tens, 0, -spacing + tens_offset);
-  raster_draw_sym(rrect, '0' + ones, 16, ones_offset);
-  raster_draw_sym(rrect, '0' + next_ones, 16, -spacing + ones_offset);
+  for (int i = -1; i <= 1; i++) {
+    int curr_digit = (tens + i + 10) % 10;
+    raster_draw_sym(rrect, '0' + curr_digit, 0, tens_offset - (spacing * i));
+  }
+  for (int i = -1; i <= 1; i++) {
+    int curr_digit = (ones + i + 10) % 10;
+    raster_draw_sym(rrect, '0' + curr_digit, 16, ones_offset - (spacing * i));
+  }
 
   raster_draw_buffers(rrect);
 }
 
 void raster_clear_buffers(RectRegion *rrect) {
-  int row;
-  for (row = 0; row < rrect->ylen; row++) {
+  for (int row = 0; row < rrect->ylen; row++) {
     memset(rrect->bbuf[row]->buffer + rrect->x, 0, rrect->xlen);
   }
 }
 
 void raster_draw_buffers(RectRegion *rrect) {
-  int row;
-  for (row = 0; row < rrect->ylen; row++) {
+  for (int row = 0; row < rrect->ylen; row++) {
     board_buffer_draw(rrect->bbuf[row]);
   }
 }

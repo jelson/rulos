@@ -16,11 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "periph/7seg_panel/cursor.h"
+
 #include <stdlib.h>
 
 #include "core/clock.h"
 #include "core/rulos.h"
-#include "periph/7seg_panel/cursor.h"
 
 #define BLINK2 (18)  // blink every 256ms
 

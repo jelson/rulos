@@ -17,6 +17,7 @@
  */
 
 #include "periph/input_controller/input_controller.h"
+
 #include "core/rulos.h"
 
 void input_poller_update(InputPollerAct *ip);

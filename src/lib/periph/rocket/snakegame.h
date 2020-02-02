@@ -23,7 +23,7 @@
 #include "periph/rocket/screen4.h"
 
 #define CANVAS_W 16
-#define CANVAS_H 12
+#define CANVAS_H (SCREEN4SIZE * 3)
 
 typedef struct s_snake_handler {
   UIEventHandlerFunc func;

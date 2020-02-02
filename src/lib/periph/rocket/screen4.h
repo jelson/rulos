@@ -21,7 +21,11 @@
 #include "periph/7seg_panel/board_buffer.h"
 #include "periph/rocket/rocket.h"
 
+#if defined(BOARDCONFIG_UNIROCKET) || defined(BOARDCONFIG_UNIROCKET_LOCALSIM)
+#define SCREEN4SIZE 6
+#else
 #define SCREEN4SIZE 4 /* shocking, I know */
+#endif
 
 typedef struct {
   uint8_t board0;

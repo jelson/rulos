@@ -16,9 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdbool.h>
-
 #include "periph/audio/audio_server.h"
+
+#include <stdbool.h>
 
 void aserv_recv_arm(MessageRecvBuffer *msg);
 void aserv_recv_avm(MessageRecvBuffer *msg);
@@ -212,7 +212,7 @@ void aserv_start_play(AudioServer *aserv) {
       // Retry rapidly, so we can get ahold of sdc as soon as it's
       // idle. (Yeah, I could have a callback from SD to alert the
       // next waiter, but what a big project. This'll do.)
-      schedule_us(1, (ActivationFuncPtr)aserv_start_play, aserv);
+      schedule_us(10000, (ActivationFuncPtr)aserv_start_play, aserv);
     }
   }
 }

@@ -17,6 +17,7 @@
  */
 
 #include "periph/6matrix/6matrix.h"
+
 #include "core/rulos.h"
 
 typedef struct {

@@ -16,9 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdbool.h>
-
 #include "periph/eeprom/eeprom.h"
+
+#include <stdbool.h>
 
 #if SIM
 #define eeprom_write_word(x, y) \

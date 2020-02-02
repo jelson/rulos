@@ -17,9 +17,10 @@
  */
 
 #include "periph/rocket/sequencer.h"
+
+#include "periph/audio/sound.h"
 #include "periph/rocket/rocket.h"
 #include "periph/rocket/screenblanker.h"
-#include "periph/audio/sound.h"
 
 #define STUB(s) \
   {}
@@ -246,8 +247,8 @@ void launch_configure_state(Launch *launch, LaunchState newState) {
     unmute_joystick(launch->thrusterState);
     booster_set_context(launch->booster, bcontext_liftoff);
     booster_set(launch->booster, FALSE);
-    ascii_to_bitmap_str(launch->s4->bbuf[1].buffer, 8, " boost");
-    ascii_to_bitmap_str(launch->s4->bbuf[2].buffer, 8, "complete");
+    ascii_to_bitmap_str(launch->s4->bbuf[1].buffer, 8, " bOOst");
+    ascii_to_bitmap_str(launch->s4->bbuf[2].buffer, 8, "COmpLEtE");
   }
 
   if (need_s4_hide) {

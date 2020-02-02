@@ -118,6 +118,7 @@
 <hole x="111.76" y="2.54" drill="3.5"/>
 <hole x="2.54" y="132.08" drill="3.5"/>
 <hole x="111.76" y="132.08" drill="3.5"/>
+<text x="3.81" y="45.72" size="1.778" layer="25" font="vector" rot="R90">RULAV 48-Element MFD Rev A    May 2019</text>
 </plain>
 <libraries>
 <library name="display-kingbright" urn="urn:adsk.eagle:library:213">

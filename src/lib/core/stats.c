@@ -16,11 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "core/stats.h"
+
 #include <inttypes.h>
 #include <string.h>
 
 #include "core/rulos.h"
-#include "core/stats.h"
 
 void minmax_init(MinMaxMean_t *mmm) { memset(mmm, 0, sizeof(MinMaxMean_t)); }
 

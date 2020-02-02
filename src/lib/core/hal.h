@@ -85,7 +85,7 @@ void hal_uart_init(HalUart *handler, uint32_t baud, r_bool stop2,
                    uint8_t uart_id);
 void hal_uart_start_send(HalUart *handler);
 void hal_uart_sync_send(HalUart *handler, const char *s);
-void hal_uart_sync_send_bytes(HalUart *handler, const uint8_t *s, uint8_t len);
+void hal_uart_sync_send_bytes(HalUart *handler, const void *s, uint8_t len);
 
 ////////////////// Logging //////////////////////////////////////
 

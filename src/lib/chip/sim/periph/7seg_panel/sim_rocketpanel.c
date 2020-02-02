@@ -59,6 +59,7 @@ seg  x  y char
 
 #define DIGIT_WIDTH 5
 #define DIGIT_HEIGHT 4
+#define SHOW_OFF_SEGMENTS 0
 
 struct segment_def_s {
   int xoff;
@@ -76,10 +77,12 @@ void hal_upside_down_led(SSBitmap *b) {}
   { NULL }
 #include "periph/7seg_panel/display_tree.ch"
 
-int hello;
 BoardLayout g_sim_theTree_def[] = {ROCKET_TREE},
             *g_sim_theTree = g_sim_theTree_def;
-int goodbay;
+
+// Current status of each displayed segment. -1 means uninitialized. 0
+// means off. 1 means on.
+static int curr_segment_status[NUM_LOCAL_BOARDS][NUM_DIGITS][8];
 
 static void sim_program_labels() {
   BoardLayout *bl;
@@ -108,6 +111,12 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
       g_sim_theTree[board].label == NULL)
     return;
 
+  if (curr_segment_status[board][digit][segment] == onoff) {
+    return;
+  }
+
+  curr_segment_status[board][digit][segment] = onoff;
+
   int x_origin = g_sim_theTree[board].x + (digit)*DIGIT_WIDTH;
   int y_origin = g_sim_theTree[board].y + 1;
 
@@ -116,19 +125,23 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
 
   if (onoff) {
     attron(A_BOLD);
+    attroff(A_DIM);
     wcolor_set(curses_get_window(), g_sim_theTree[board].colors[digit], NULL);
     mvwprintw(curses_get_window(), y_origin, x_origin, segment_defs[segment].s);
   } else {
+#if SHOW_OFF_SEGMENTS
     attroff(A_BOLD);
+    attron(A_DIM);
     wcolor_set(curses_get_window(), PAIR_WHITE, NULL);
     mvwprintw(curses_get_window(), y_origin, x_origin, segment_defs[segment].s);
-    //    for (int i = strlen(segment_defs[segment].s); i; i--) {
-    //      mvwprintw(curses_get_window(), y_origin, x_origin + i - 1, " ");
-    //    }
+#else
+    for (int i = strlen(segment_defs[segment].s); i; i--) {
+      mvwprintw(curses_get_window(), y_origin, x_origin + i - 1, " ");
+    }
+#endif
   }
 
   wrefresh(curses_get_window());
-  usleep(78);
 }
 
 void hal_7seg_bus_enter_sleep() {
@@ -138,6 +151,14 @@ void hal_7seg_bus_enter_sleep() {
 void hal_init_rocketpanel() {
   /* init curses */
   init_curses();
+
+  for (int board = 0; board < NUM_LOCAL_BOARDS; board++) {
+    for (int digit = 0; digit < NUM_DIGITS; digit++) {
+      for (int segment = 0; segment < 8; segment++) {
+        curr_segment_status[board][digit][segment] = -1;
+      }
+    }
+  }
 
   /* init screen */
   sim_program_labels();

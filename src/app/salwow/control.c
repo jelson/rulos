@@ -1,8 +1,9 @@
+#include "control.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "control.h"
 #include "core/clock.h"
 #include "core/logging.h"
 #include "leds.h"

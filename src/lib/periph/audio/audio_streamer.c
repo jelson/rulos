@@ -40,6 +40,8 @@ void init_audio_streamer(AudioStreamer* as) {
   as->mlvolume = 0;  // loud
 }
 
+// Upcall from the I2S driver telling us it's time to give it the next audio
+// buffer.
 static void fill_buffer_cb(void* user_data, int16_t* buffer_to_fill) {
   AudioStreamer* as = (AudioStreamer*)user_data;
   if (!as->fp_valid) {
@@ -65,6 +67,8 @@ static void as_maybe_close_fp(AudioStreamer* as) {
   }
 }
 
+// Upcall from the I2S driver telling us it has finished playing the last buffer
+// we gave it.
 static void audio_done_cb(void* user_data) {
   AudioStreamer* as = (AudioStreamer*)user_data;
   as_maybe_close_fp(as);

@@ -1,6 +1,7 @@
+#include "host/host_audio_capture.h"
+
 #include <arpa/inet.h>  // htonl
 
-#include "host/host_audio_capture.h"
 #include "host/linear2ulaw.h"
 
 void host_audio_init(HostAudio *ha) {

@@ -17,9 +17,9 @@
  */
 
 #include "periph/i2s/i2s.h"
-#include "periph/i2s/hal_i2s.h"
 
 #include "core/rulos.h"
+#include "periph/i2s/hal_i2s.h"
 
 #define I2S_STATS 1
 

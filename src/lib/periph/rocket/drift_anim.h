@@ -19,6 +19,7 @@
 #pragma once
 
 #include <inttypes.h>
+
 #include "core/util.h"
 
 typedef struct {

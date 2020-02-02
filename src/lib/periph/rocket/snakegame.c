@@ -17,9 +17,10 @@
  */
 
 #include "periph/rocket/snakegame.h"
+
 #include "core/rulos.h"
-#include "periph/rasters/rasters.h"
 #include "periph/audio/sound.h"
+#include "periph/rasters/rasters.h"
 
 #define SNAKE_FREQ 32  // Animation frequency, Hz.
 #define MOVE_RATE 3    // Ticks per moves animation
@@ -117,6 +118,7 @@ static inline bool occupied(Map *map, Point a) {
          get_cell(map, a.x, a.y + 1) == UP;
 }
 
+#if 0
 static inline bool get_game_over(Snake *snake) {
   bool rc = snake->direction == EMPTY;
   if (rc) {
@@ -124,6 +126,7 @@ static inline bool get_game_over(Snake *snake) {
   }
   return rc;
 }
+#endif
 
 static inline void explode(Snake *snake) { snake->mode = EXPLODING; }
 

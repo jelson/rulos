@@ -22,7 +22,7 @@
 #include "core/util.h"
 
 void arm_assert(uint32_t line);
-void arm_log(const char* fmt, ...) __attribute((format (printf, 1, 2)));
+void arm_log(const char* fmt, ...) __attribute((format(printf, 1, 2)));
 void arm_uart_sync_send_by_id(uint8_t uart_it, const char* message);
 void arm_log_flush();
 

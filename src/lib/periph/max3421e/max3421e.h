@@ -18,12 +18,11 @@
 
 #pragma once
 
-#include "max3421e-impl.h"
-#include "usbstructs.h"
-
 #include <stdint.h>
 
 #include "core/rulos.h"
+#include "max3421e-impl.h"
+#include "usbstructs.h"
 
 // Public interface to the max3421e library
 bool max3421e_init(max3421e_t *max);

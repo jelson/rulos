@@ -22,7 +22,6 @@
 #include "periph/rocket/rocket.h"
 #include "periph/rocket/screen4.h"
 
-#define PONG_HEIGHT 4
 #define PONG_SCALE2 6
 #define PONG_SCALE (1 << PONG_SCALE2)
 #define PONG_FREQ2 5
@@ -34,9 +33,6 @@ typedef struct s_pong_handler {
 } PongHandler;
 
 typedef struct s_pong {
-  //	BoardBuffer bbuf[PONG_HEIGHT];
-  //	BoardBuffer *btable[PONG_HEIGHT];
-  //	RectRegion rrect;
   Screen4 *s4;
   PongHandler handler;
   int x, y, dx, dy;  // scaled by PONG_SCALE

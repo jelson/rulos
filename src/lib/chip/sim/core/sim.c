@@ -20,6 +20,8 @@
  * These are the base simulator modules, for just the clock and TWI.
  */
 
+#include "chip/sim/core/sim.h"
+
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -37,7 +39,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "chip/sim/core/sim.h"
 #include "core/clock.h"
 #include "core/heap.h"
 #include "core/logging.h"
@@ -96,11 +97,11 @@ static void sim_generic_fire_handlers(SimActivation_t *handlerList,
   hal_end_atomic(old_interrupts);
 }
 
-void sim_clock_handler(int signo) {
+static void sim_clock_handler(int signo) {
   sim_generic_fire_handlers(simClockHandlers, numSimClockHandlers);
 }
 
-void sim_sigio_handler(int signo) {
+static void sim_sigio_handler(int signo) {
   sim_generic_fire_handlers(simSIGIOHandlers, numSimSIGIOHandlers);
 }
 
@@ -200,9 +201,9 @@ typedef struct {
 } SimTwiState;
 SimTwiState g_sim_twi_state = {{NULL}, FALSE};
 
-static void sim_twi_send(MediaStateIfc *media, Addr dest_addr,
-                         const unsigned char *data, uint8_t len,
-                         MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
+static void sim_twi_send(MediaStateIfc *media, Addr dest_addr, const void *data,
+                         uint8_t len, MediaSendDoneFunc sendDoneCB,
+                         void *sendDoneCBData);
 static void sim_twi_poll(void *data);
 
 MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
@@ -214,16 +215,20 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
 
   int rc;
   int on = 1;
+#ifdef O_ASYNC
   int flags = fcntl(twi_state->udp_socket, F_GETFL);
   rc = fcntl(twi_state->udp_socket, F_SETFL, flags | O_ASYNC);
   assert(rc == 0);
+#endif
   rc = ioctl(twi_state->udp_socket, FIOASYNC, &on);
   assert(rc == 0);
   rc = ioctl(twi_state->udp_socket, FIONBIO, &on);
   assert(rc == 0);
+#ifdef SIOCSPGRP
   int flag = -getpid();
   rc = ioctl(twi_state->udp_socket, SIOCSPGRP, &flag);
   assert(rc == 0);
+#endif
 
   struct sockaddr_in sai;
   sai.sin_family = AF_INET;
@@ -242,8 +247,21 @@ static void sim_twi_poll(void *data) {
     return;
   }
 
-  char buf[4096];
+  // On some OSs (cough cough, cygwin) it seems that non-blocking UDP socket
+  // reads simply don't work. After much tinkering I could not get recv() to
+  // return EAGAIN. So instead we poll with select().
+  static struct timeval tv;
+  tv.tv_sec = 0;
+  tv.tv_usec = 0;
+  fd_set set;
+  FD_ZERO(&set);
+  FD_SET(twi_state->udp_socket, &set);
+  assert(0 == select(twi_state->udp_socket + 1, &set, NULL, NULL, &tv));
+  if (!FD_ISSET(twi_state->udp_socket, &set)) {
+    return;
+  }
 
+  char buf[4096];
   int rc = recv(twi_state->udp_socket, buf, sizeof(buf), MSG_DONTWAIT);
 
   if (rc < 0) {
@@ -276,9 +294,9 @@ typedef struct {
   void *sendDoneCBData;
 } sendCallbackAct_t;
 
-static void sim_twi_send(MediaStateIfc *media, Addr dest_addr,
-                         const unsigned char *data, uint8_t len,
-                         MediaSendDoneFunc sendDoneCB, void *sendDoneCBData) {
+static void sim_twi_send(MediaStateIfc *media, Addr dest_addr, const void *data,
+                         uint8_t len, MediaSendDoneFunc sendDoneCB,
+                         void *sendDoneCBData) {
   SimTwiState *twi_state = (SimTwiState *)media;
 
 #if 0
