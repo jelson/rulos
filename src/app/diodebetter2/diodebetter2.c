@@ -189,7 +189,7 @@ void throb_act(void *arg) {
   } else {
     set_period(bright_to_period[2*num_brightnesses - throb->phase]);
   }
-  schedule_us(50000, throb_act, throb);
+  schedule_us(116000, throb_act, throb);
 }
 
 int main() {
