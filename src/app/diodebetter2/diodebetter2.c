@@ -155,7 +155,7 @@ void pwm_adjust(uint32_t r, uint32_t g, uint32_t b, uint32_t w) {
   TIM2->CCR4 = b;
 }
 
-#define num_brightnesses 42
+#define num_brightnesses 43
 static uint32_t bright_to_period[num_brightnesses];
 void setup_table() {
     // 2^0, 2^1/3, 2^2/3 in 4-digit fixed-point
@@ -184,11 +184,11 @@ void set_period(uint32_t period) {
 // Ramp brightness up over 5s, then back down.
 void throb_act(void *arg) {
   throb_state* throb = (throb_state*) arg;
-  throb->phase = (throb->phase + 1) % (num_brightnesses * 2);
+  throb->phase = (throb->phase + 1) % (num_brightnesses * 2 - 1);
   if (throb->phase < num_brightnesses) {
     set_period(bright_to_period[throb->phase]);
   } else {
-    set_period(bright_to_period[2*num_brightnesses - throb->phase]);
+    set_period(bright_to_period[2*num_brightnesses - 1 - throb->phase]);
   }
   schedule_us(116000, throb_act, throb);
 }
