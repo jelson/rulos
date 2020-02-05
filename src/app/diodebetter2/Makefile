@@ -20,7 +20,7 @@ TARGET := diodebetter2
 BOARD := GENERIC
 
 ARM_CHIP := stm32f303x8
-PERIPHERALS := #uart
+PERIPHERALS := uart
 
 TARGET_OBJECTS := \
 	diodebetter2.o
