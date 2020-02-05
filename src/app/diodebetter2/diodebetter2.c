@@ -199,6 +199,8 @@ void set_period(uint32_t period) {
   LOG("period now %d", period);
 }
 
+HalUart uart;
+
 // Ramp brightness up over 5s, then back down.
 void throb_act(void *arg) {
   throb_state* throb = (throb_state*) arg;
@@ -208,11 +210,14 @@ void throb_act(void *arg) {
   } else {
     set_period(bright_to_period[2*num_brightnesses - 1 - throb->phase]);
   }
-  schedule_us(116000, throb_act, throb);
+  schedule_us(11600, throb_act, throb);
 }
 
 int main() {
   hal_init();
+
+  hal_uart_init(&uart, 115200, true, /* uart_id= */ 0);
+  LOG("Log output running");
 
   init_clock(10000, TIMER1);
 
