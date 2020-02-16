@@ -29,6 +29,8 @@ void aserv_fetch_complete(AudioServer *as);
 void aserv_start_play(AudioServer *as);
 void aserv_advance(AudioServer *as);
 
+static void count_music(AudioServer *aserv);
+
 void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id) {
   // Listen on network socket for AudioRequestMessage to play sound effects.
   aserv->arm_app_receiver.recv_complete_func = aserv_recv_arm;
@@ -74,12 +76,14 @@ void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id) {
 
   // Remember to seed the RNG when music is requested later.
   aserv->music_random_seeded = FALSE;
+
+  count_music(aserv);
 }
 
 static void count_music(AudioServer *aserv)
 {
-    DIR* dp;
-    FILINFO* fno;
+    DIR dp;
+    FILINFO fno;
 
     FRESULT rc = f_opendir(&dp, "/music");
     assert(rc==FR_OK);
@@ -95,10 +99,12 @@ static void count_music(AudioServer *aserv)
     f_closedir(&dp);
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"    // TODO remove
 static void find_music_by_number(AudioServer *aserv, int idx)
 {
-    DIR* dp;
-    FILINFO* fno;
+    DIR dp;
+    FILINFO fno;
 
     FRESULT rc = f_opendir(&dp, "/music");
     assert(rc==FR_OK);
@@ -110,13 +116,14 @@ static void find_music_by_number(AudioServer *aserv, int idx)
             break;
         }
         if (count == idx) {
-            return the thing;
+            return; // TODO return something useful
         }
         count += 1;
     }
 
     f_closedir(&dp);
 }
+#pragma GCC diagnostic pop
 
 void aserv_skip_stream(AudioServer *aserv, uint8_t stream_idx) {
   if (aserv->audio_stream[stream_idx].skip_effect_id != sound_silence &&
@@ -161,7 +168,7 @@ void aserv_recv_avm(MessageRecvBuffer *msg) {
 }
 
 void aserv_recv_mcm(MessageRecvBuffer *msg) {
-#if 0  // until music works again
+#if 0
   AudioServer *aserv = (AudioServer *)msg->app_receiver->user_data;
   assert(msg->payload_len == sizeof(MusicControlMessage));
   MusicControlMessage *mcm = (MusicControlMessage *)&msg->data;

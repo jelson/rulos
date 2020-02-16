@@ -16,6 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// Test program used while developing code for audioboard2. Now integrated
+// into src/app/audioboard.
+
 #include "core/rulos.h"
 #include "periph/fatfs/ff.h"
 #include "periph/i2s/i2s.h"

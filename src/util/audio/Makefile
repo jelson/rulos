@@ -1,14 +1,20 @@
+all: sdcard.img
+
 sdcard: compile_audio.py ../../lib/periph/audio/sound.def ../../../Media/audio/fx/* ../../../Media/audio/disco/*
 	./compile_audio.py -fatfs ../../lib/periph/audio/sound.def ../../../Media/audio sdcard
+
+sdcard.img: sdcard
+	sudo ./make-sdcard-img.py
 
 playsample: sdcard
 	play --channels 2 --bits 16 -r 50000 -e signed-integer tmpdir/sfx/00004.raw 
 
-all: audio_sim lintest
-
-audio_sim: audio_sim.c
-	gcc -g audio_sim.c -o audio_sim
-
-lintest: lintest.c
-	gcc -g lintest.c -o lintest -lm
-
+# Not sure what this stuff did:
+#all: audio_sim lintest
+#
+#audio_sim: audio_sim.c
+#	gcc -g audio_sim.c -o audio_sim
+#
+#lintest: lintest.c
+#	gcc -g lintest.c -o lintest -lm
+#

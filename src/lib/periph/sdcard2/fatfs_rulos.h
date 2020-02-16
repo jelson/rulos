@@ -40,11 +40,11 @@
 #include <stdint.h>
 
 #include "core/hardware.h"
-#include "diskio.h"
-#include "ff.h"
-#include "periph/fatfs/ff.h"
-
 #include "stm32f3xx_ll_spi.h"
+
+#include "periph/fatfs/diskio.h"
+#include "periph/fatfs/ff.h"
+#include "periph/sdcard2/fatfs_rulos.h"
 
 #define _USE_WRITE 1 /* 1: Enable disk_write function */
 #define _USE_IOCTL 1 /* 1: Enable disk_ioctl fucntion */

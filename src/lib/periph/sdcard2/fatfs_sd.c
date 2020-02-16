@@ -2,8 +2,8 @@
 /* SPI controls (Platform dependent)                                     */
 /*-----------------------------------------------------------------------*/
 
-#include "diskio.h"
-#include "fatfs_rulos.h"
+#include "periph/fatfs/diskio.h"
+#include "periph/sdcard2/fatfs_rulos.h"
 
 /* MMC/SD command */
 #define CMD0	(0)			/* GO_IDLE_STATE */

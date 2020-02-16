@@ -28,8 +28,10 @@ typedef struct s_AudioStreamer {
   // Storage used by I2S to DMA to DAC
   uint8_t i2s_storage[I2S_STATE_SIZE(SAMPLE_BUF_COUNT)];
 
+#ifndef SIM
   // I2S driver to pump audio to DAC.
   i2s_t *i2s;
+#endif // SIM
 
   // Filesystem
   FATFS fatfs;

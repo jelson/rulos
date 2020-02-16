@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "periph/fatfs/fatfs_rulos.h"
+#include "periph/sdcard2/fatfs_rulos.h"
 
 #include "core/hardware.h"
 #include "core/rulos.h"

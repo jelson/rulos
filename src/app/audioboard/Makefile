@@ -15,11 +15,15 @@
 
 ROCKET_ROOT := ../..
 
-PLATFORMS := arm
+PLATFORMS := arm sim
 ARM_CHIP := stm32f303xb
 PERIPHERALS := uart audio twi i2s fatfs
 BOARD := ROCKETAUDIO
 ALL_PLATFORM_CFLAGS := -DLOG_TO_SERIAL=UART0 -DRULOS_I2C_ALT_MAPPING
+
+SIM_PERIPHERALS := pseudosdcard
+
+ARM_PERIPHERALS := sdcard2
 
 TARGET := audioboard
 

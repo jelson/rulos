@@ -30,17 +30,17 @@
 typedef struct {
   AudioServer aserv;
   Network network;
-  int foo;
+  int startup_delay_sec;
 } MainContext;
 MainContext mc;
 
 void init_audio_server_delayed_start(void *state) {
   MainContext *mc = (MainContext *)state;
 
-  mc->foo--;
-  if (mc->foo == 0) {
+  if (mc->startup_delay_sec == 0) {
     init_audio_server(&mc->aserv, &mc->network, TIMER2);
   } else {
+    mc->startup_delay_sec--;
     schedule_us(1000000, init_audio_server_delayed_start, mc);
   }
 }
@@ -57,7 +57,7 @@ int main() {
 
   init_twi_network(&mc.network, 100, AUDIO_ADDR);
 
-  mc.foo = 2;
+  mc.startup_delay_sec = 0; //TODO does this affect real hardware? Gulp. jonh sorry. Used to be 2.
   schedule_us(1000000, init_audio_server_delayed_start, &mc);
 
   cpumon_main_loop();

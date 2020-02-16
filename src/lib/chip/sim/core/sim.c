@@ -256,13 +256,17 @@ static void sim_twi_poll(void *data) {
   fd_set set;
   FD_ZERO(&set);
   FD_SET(twi_state->udp_socket, &set);
-  assert(0 == select(twi_state->udp_socket + 1, &set, NULL, NULL, &tv));
+  int rc = select(twi_state->udp_socket + 1, &set, NULL, NULL, &tv);
+  if (rc == 0) {
+    return;
+  }
+  assert(1 == rc);  // Expect exactly one element set; no error (-1)
   if (!FD_ISSET(twi_state->udp_socket, &set)) {
     return;
   }
 
   char buf[4096];
-  int rc = recv(twi_state->udp_socket, buf, sizeof(buf), MSG_DONTWAIT);
+  rc = recv(twi_state->udp_socket, buf, sizeof(buf), MSG_DONTWAIT);
 
   if (rc < 0) {
     assert(errno == EAGAIN);
