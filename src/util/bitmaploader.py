@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com).
 # 
@@ -30,19 +30,19 @@ class Index:
 		return "{'%s', %d, %d}" % (self.sym, self.len, self.offset_bits)
 
 def get_bitfield(bytes, offset, len):
-	print "GB offset %d len %d" % (offset, len)
+	print("GB offset %d len %d" % (offset, len))
 	ov = 0
 	bitsAvaiableThisByte = 8-(offset%8)
 	bitsUsedThisByte = min(bitsAvaiableThisByte, len)
-	v = bytes[offset / 8] >> (bitsAvaiableThisByte - bitsUsedThisByte)
+	v = bytes[int(offset / 8)] >> (bitsAvaiableThisByte - bitsUsedThisByte)
 	v &= ((1<<bitsUsedThisByte)-1)
-	print "GB select value %03x from byte %d, right-shift %d" % (
-		v, offset / 8, (bitsAvaiableThisByte - bitsUsedThisByte))
+	print("GB select value %03x from byte %d, right-shift %d" % (
+		v, offset / 8, (bitsAvaiableThisByte - bitsUsedThisByte)))
 	ov |= (v << (len-bitsUsedThisByte))
 
 	rest_len = len - bitsUsedThisByte
 	rest_offset = offset + bitsUsedThisByte
-	print "GB rest_len %s rest_offset %s" % (rest_len, rest_offset)
+	print("GB rest_len %s rest_offset %s" % (rest_len, rest_offset))
 	if (rest_len > 0):
 		assert(rest_offset > offset)
 		assert((rest_offset % 8)==0)
@@ -57,7 +57,7 @@ class DataBlock:
 
 	def emit(self, fp):
 		fp.write("const RasterIndex rasterIndex[] = {\n")
-		idxs = self.index.items()
+		idxs = list(self.index.items())
 		idxs.sort()
 		for (k,idx) in idxs:
 			fp.write("  %s,\n" % idx)
@@ -69,44 +69,44 @@ class DataBlock:
 		fp.write("};\n");
 
 	def start_sym(self, sym):
-		print "SS sim %s offset_bits %d\n" % (sym, self.offset_bits)
+		print("SS sim %s offset_bits %d\n" % (sym, self.offset_bits))
 		self.index[sym] = Index(sym, self.offset_bits)
 
 	def add_field(self, sym, elevenBitField):
 		self.index[sym].len += 1
 		bitsToGo = 11
-		print "AF ---- start %03x; data offset %d" % (elevenBitField, self.offset_bits)
+		print("AF ---- start %03x; data offset %d" % (elevenBitField, self.offset_bits))
 		while (bitsToGo > 0):
 			openBits = 8 - self.offset_bits % 8
 			if (openBits == 8):
-				print "AF inserted a 0 byte"
+				print("AF inserted a 0 byte")
 				self.data.append(0)
 				openBits = 8
 			
-			print "AF bitsToGo %d openBits %d" % (bitsToGo, openBits)
+			print("AF bitsToGo %d openBits %d" % (bitsToGo, openBits))
 			# how many bits we'll append on this loop iteration
 			valueWidth = min(openBits, bitsToGo)
 
 			value = elevenBitField
 			if (bitsToGo > openBits):
 				value >>= (bitsToGo-openBits)
-				print "AF unmasked value %03x" % value
+				print("AF unmasked value %03x" % value)
 			value &= ((1<<valueWidth)-1)
-			print "AF inserting val %01x width %d" % (value, valueWidth)
+			print("AF inserting val %01x width %d" % (value, valueWidth))
 
 			if (openBits > bitsToGo):
 				value <<= (openBits-bitsToGo)
-				print "AF shifts value left %d" % (openBits-bitsToGo)
+				print("AF shifts value left %d" % (openBits-bitsToGo))
 			self.data[-1] |= value
-			print "AF data[%d]  %02x" % ((len(self.data)-1),self.data[-1])
+			print("AF data[%d]  %02x" % ((len(self.data)-1),self.data[-1]))
 			bitsToGo -= valueWidth
 			self.offset_bits += valueWidth
 
 		gotValue = get_bitfield(self.data, self.index[sym].offset_bits
 			+ (self.index[sym].len-1)*11, 11)
 		if (gotValue != elevenBitField):
-			print "put: %03x" % elevenBitField
-			print "got: %03x" % gotValue
+			print("put: %03x" % elevenBitField)
+			print("got: %03x" % gotValue)
 			assert(False)
 
 class Stripe:
@@ -154,14 +154,14 @@ class BitmapFromFile:
 			assert(False)
 			return
 		else:
-			print m,"accept"
+			print(m,"accept")
 			lasty = 0
 			if (self.lastStripe!=None):
 				lasty = self.lastStripe.y
 			stripe = Stripe(y, self.startBlack[0], x)
 			self.lastStripe = stripe
 			ebf = stripe.makeElevenBitField(lasty)
-			print "BFF lasty %s y %s stripe %s %s" % (lasty, y, stripe, ebf>>10)
+			print("BFF lasty %s y %s stripe %s %s" % (lasty, y, stripe, ebf>>10))
 			self.datablock.add_field(self.symname, ebf)
 			self.startBlack = None
 
@@ -176,7 +176,7 @@ def main():
 	flist.sort()
 	datablock = DataBlock()
 	for fn in flist:
-		print "emitting for %s" % fn
+		print("emitting for %s" % fn)
 		bmp = BitmapFromFile(fn, datablock)
 	datablock.emit(fp)
 	fp.close()

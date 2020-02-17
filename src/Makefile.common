@@ -47,7 +47,7 @@ clean: $(CLEAN_TARGET_LIST)
 UNAME := $(shell uname -o)
 
 ifeq ($(UNAME), $(filter $(UNAME), GNU/Linux Linux Cygwin))
-PYTHON := python
+PYTHON := python3
 else
 PYTHON := c:\\python27\\python.exe
 endif

@@ -113,7 +113,7 @@ def main():
         bitmap_map[char] = bitmap
 
     sys.stdout.write("// Automatically generated.  Do not edit.\n")
-    for i in xrange(32, 127):
+    for i in range(32, 127):
         char = chr(i)
 
         if char in bitmap_map:
