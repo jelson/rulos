@@ -37,10 +37,9 @@ def main():
     os.mkdir(mount_point)
     space_kb = sdcard_space_kb() + 100; # extra capacity for FS overhead, inodes
     make_empty_image(img_filename, space_kb)
-    subprocess.call(["mkfs.fat", img_filename])
+    subprocess.call(["mkfs.vfat", img_filename])
     subprocess.call(["mount", "-o", "loop", img_filename, mount_point])
-    dummy_target = os.path.join(mount_point, "dummy")
-    shutil.copytree(source_dir, dummy_target)
+    subprocess.call(["cp", "-r", source_dir+"/.", mount_point])
     cleanup()
 
 main()

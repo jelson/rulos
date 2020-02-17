@@ -63,6 +63,7 @@ static void i2s_request_buffer_fill(i2s_t* i2s, uint8_t buf_num) {
 // WARNING: May be called at interrupt time.
 static void i2s_buf_is_playing(i2s_t* i2s, uint8_t play_idx,
                                uint8_t other_idx) {
+  LOG("XXX i2s_buf_is_playing(%d) enters %d,%d", play_idx, i2s->buf_state[0], i2s->buf_state[1]);
   assert(i2s->buf_state[play_idx] == FULL);
 
   i2s->buf_state[play_idx] = PLAYING;
@@ -72,6 +73,7 @@ static void i2s_buf_is_playing(i2s_t* i2s, uint8_t play_idx,
   if (i2s->samples_in_buf[play_idx] == i2s->samples_per_buf) {
     i2s_request_buffer_fill(i2s, other_idx);
   }
+  LOG("XXX i2s_buf_is_playing exit %d,%d", i2s->buf_state[0], i2s->buf_state[1]);
 }
 
 // Downcall when a buf fill has been completed by the upper layer.
@@ -191,6 +193,7 @@ static void i2s_buf_played_cb_internal(i2s_t* i2s, uint8_t just_played_idx,
 // WARNING: Called at interrupt time!
 static void i2s_buf_played_cb(void* user_data, uint8_t just_played_idx) {
   i2s_t* i2s = (i2s_t*)user_data;
+  LOG("XXX i2s_buf_played_cb(%d) enters %d,%d", just_played_idx, i2s->buf_state[0], i2s->buf_state[1]);
 
 #if I2S_STATS
   uint32_t now = precise_clock_time_us();
@@ -207,6 +210,7 @@ static void i2s_buf_played_cb(void* user_data, uint8_t just_played_idx) {
   } else {
     assert(FALSE);
   }
+  LOG("XXX i2s_buf_played_cb exit %d,%d", i2s->buf_state[0], i2s->buf_state[1]);
 }
 
 //// API implementation

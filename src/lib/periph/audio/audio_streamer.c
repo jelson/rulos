@@ -25,17 +25,9 @@ void init_audio_streamer(AudioStreamer* as) {
   // Front half of fat initialization? :v)
   memset(as, 0, sizeof(*as));
 
-#ifndef SIM
   // Set up the i2s driver.
   as->i2s = i2s_init(SAMPLE_BUF_COUNT, 50000, as, fill_buffer_cb, audio_done_cb,
                      as->i2s_storage, sizeof(as->i2s_storage));
-#endif
-
-  // mount the FAT filesystem from the SD card.
-  if (f_mount(&as->fatfs, "", 0) != FR_OK) {
-    LOG("can't mount");
-    __builtin_trap();
-  }
 
   as->fp_valid = false;
   as->playing = false;
@@ -47,11 +39,7 @@ void init_audio_streamer(AudioStreamer* as) {
 static void fill_buffer_cb(void* user_data, int16_t* buffer_to_fill) {
   AudioStreamer* as = (AudioStreamer*)user_data;
   if (!as->fp_valid) {
-#ifdef SIM
-    LOG("SIM i2s_buf_filled");
-#else
     i2s_buf_filled(as->i2s, buffer_to_fill, 0);
-#endif //SIM
     return;
   }
   UINT bytes_read;
@@ -59,19 +47,11 @@ static void fill_buffer_cb(void* user_data, int16_t* buffer_to_fill) {
       f_read(&as->fp, buffer_to_fill, SAMPLE_BUF_COUNT * 2, &bytes_read);
   if (retval != FR_OK) {
     LOG("read error reading fp: %d", retval);
-#ifdef SIM
-    LOG("SIM i2s_buf_filled");
-#else
     i2s_buf_filled(as->i2s, buffer_to_fill, 0);
-#endif //SIM
     return;
   }
   // TODO apply volume adjustment here!
-#ifdef SIM
-    LOG("SIM i2s_buf_filled");
-#else
   i2s_buf_filled(as->i2s, buffer_to_fill, bytes_read / 2);
-#endif //SIM
 }
 
 static void as_maybe_close_fp(AudioStreamer* as) {
@@ -104,14 +84,11 @@ r_bool as_play(AudioStreamer* as, const char* pathname,
     LOG("can't open %s", pathname);
     return false;
   }
+  // LOG("XXX opened %s", pathname);
   as->fp_valid = true;
 
   if (!as->playing) {
-#ifdef SIM
-    LOG("SIM i2s_start");
-#else
     i2s_start(as->i2s);
-#endif //SIM
     as->playing = true;
   }
   return true;

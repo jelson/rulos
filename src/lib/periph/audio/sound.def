@@ -1,4 +1,5 @@
 SOUND(sound_silence,                              sound_silence.au,                                       filter_none,    label_sfx)
+SOUND(sound_music,                              sound_silence.au,                                       filter_none,    label_music)
 SOUND(sound_pong_score,                           sound_pong_score.au,                                    filter_none,    label_sfx)
 SOUND(sound_pong_paddle_bounce,                   sound_pong_paddle_bounce.au,                            filter_none,    label_sfx)
 SOUND(sound_pong_wall_bounce,                     sound_pong_wall_bounce.au,                              filter_none,    label_sfx)
