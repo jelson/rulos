@@ -20,11 +20,12 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <signal.h> // XXX yuck
+#include <errno.h>
 
 #include "periph/i2s/hal_i2s.h"
 
 static void set_async(int fd);
-static void sim_dsp_poll(void *data);
+static void sim_audio_output_poll(void *data);
 static void poke_fd();
 static void notify_application_trampoline(void* v_done_index);
 
@@ -43,6 +44,14 @@ static struct {
 
 void hal_i2s_condition_buffer(int16_t* samples, uint16_t num_samples) {
     LOG("SIM hal_i2s_condition_buffer");
+}
+
+// Fake a sigio periodically in case we ... lose one!??
+// Trying to understand a situation where write gives EAGAIN but SIGIO doesn't follow.
+static void fake_sigio(void* context)
+{
+  sim_audio_output_poll(NULL);
+  schedule_us(1000000, fake_sigio, NULL);
 }
 
 void hal_i2s_init(uint16_t sample_rate, hal_i2s_play_done_cb_t play_done_cb,
@@ -86,7 +95,8 @@ void hal_i2s_init(uint16_t sample_rate, hal_i2s_play_done_cb_t play_done_cb,
   assert(sim_i2s.audiofd >= 0);
   set_async(sim_i2s.audiofd);
 
-  sim_register_sigio_handler(sim_dsp_poll, NULL);
+  sim_register_sigio_handler(sim_audio_output_poll, NULL);
+  schedule_us(1000000, fake_sigio, NULL);
 }
 
 void hal_i2s_start(int16_t* samples, uint16_t num_samples_per_halfbuffer) {
@@ -99,7 +109,8 @@ void hal_i2s_start(int16_t* samples, uint16_t num_samples_per_halfbuffer) {
   poke_fd();
 }
 
-static void sim_dsp_poll(void *data) {
+static void sim_audio_output_poll(void *data) {
+  LOG("SIM wakes on SIGIO");
   poke_fd();
 }
 
@@ -118,6 +129,7 @@ static void poke_fd() {
     sim_i2s.next_buffer_index, sim_i2s.next_write_offset_bytes,
     rc);
   if (rc == byte_count) {
+    LOG("XXX audio_fd full write");
     // half-buffer is done!
     // Flop the buffers
     uint8_t buffer_done_index = sim_i2s.next_buffer_index;
@@ -126,11 +138,23 @@ static void poke_fd() {
     // Notify the application, but only after this call stack finishes
     // (so the periph/i2s state machine can finish updating its own state).
     schedule_now(notify_application_trampoline, (void*)(long int) buffer_done_index);
-  } else if (0 <= rc) {
-    sim_i2s.next_write_offset_bytes -= rc;
-    // Wait for a SIGIO to write more bytes.
+  } else if (rc < 0) {
+    // error return
+    if (errno == EAGAIN) {
+      // buffer's full! No state change; expect SIGIO to wake us up.
+      LOG("XXX audio_fd EAGAIN");
+    } else {
+      assert(false);  // write failed
+    }
+  } else if (rc > byte_count) {
+    assert(false);   // outside of write()'s spec.
   } else {
-    assert(false);  // write failed
+    assert(0 <= rc);
+    assert(rc < byte_count);
+    LOG("XXX audio_fd short write");
+    sim_i2s.next_write_offset_bytes -= rc;
+    assert(0 <= sim_i2s.next_write_offset_bytes);
+    // Wait for a SIGIO to write more bytes.
   }
 }
 

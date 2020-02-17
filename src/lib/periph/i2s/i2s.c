@@ -27,6 +27,8 @@
   ((int16_t*)(&(i2s)->bufdata[buf_num * \
                               I2S_BUFSIZE_BYTES((i2s)->samples_per_buf)]))
 
+static char* decode_buf_state[] = { "EMPTY", "FILLING", "FULL", "PLAYING" };
+
 // Called at schedule time.
 static void i2s_request_buffer_fill_trampoline(void* data) {
   i2s_t* i2s = (i2s_t*)data;
@@ -53,6 +55,8 @@ static void i2s_request_buffer_fill(i2s_t* i2s, uint8_t buf_num) {
 #endif  // I2S_STATS
   assert(i2s->buf_state[buf_num] == EMPTY);
   i2s->buf_state[buf_num] = FILLING;
+  LOG("XXX i2s_request_buffer_fill(%d) in %s,%s", buf_num,
+    decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
   schedule_now(i2s_request_buffer_fill_trampoline, i2s);
 }
 
@@ -63,7 +67,8 @@ static void i2s_request_buffer_fill(i2s_t* i2s, uint8_t buf_num) {
 // WARNING: May be called at interrupt time.
 static void i2s_buf_is_playing(i2s_t* i2s, uint8_t play_idx,
                                uint8_t other_idx) {
-  LOG("XXX i2s_buf_is_playing(%d) enters %d,%d", play_idx, i2s->buf_state[0], i2s->buf_state[1]);
+  LOG("XXX i2s_buf_is_playing(%d) enters %s,%s", play_idx,
+    decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
   assert(i2s->buf_state[play_idx] == FULL);
 
   i2s->buf_state[play_idx] = PLAYING;
@@ -73,13 +78,16 @@ static void i2s_buf_is_playing(i2s_t* i2s, uint8_t play_idx,
   if (i2s->samples_in_buf[play_idx] == i2s->samples_per_buf) {
     i2s_request_buffer_fill(i2s, other_idx);
   }
-  LOG("XXX i2s_buf_is_playing exit %d,%d", i2s->buf_state[0], i2s->buf_state[1]);
+  LOG("XXX i2s_buf_is_playing exit %s,%s",
+    decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
 }
 
 // Downcall when a buf fill has been completed by the upper layer.
 static void i2s_buf_filled_internal(i2s_t* i2s, uint16_t samples_filled,
                                     uint8_t just_filled_idx,
                                     uint8_t other_idx) {
+  LOG("XXX i2s_buf_filled(%d) enters %s,%s", just_filled_idx,
+    decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
   assert(i2s->buf_state[just_filled_idx] == FILLING);
   i2s->samples_in_buf[just_filled_idx] = samples_filled;
   hal_i2s_condition_buffer(BUF_ADDR(i2s, just_filled_idx), samples_filled);
@@ -101,10 +109,16 @@ static void i2s_buf_filled_internal(i2s_t* i2s, uint16_t samples_filled,
       // so if we're trying to start from the middle move the data to the
       // beginning.
       if (just_filled_idx == 1) {
+        assert(i2s->buf_state[just_filled_idx] == FULL);
+        assert(i2s->buf_state[other_idx] == EMPTY);
         memcpy(BUF_ADDR(i2s, 0), BUF_ADDR(i2s, 1),
                sizeof(int16_t) * i2s->samples_per_buf);
         just_filled_idx = 0;
         other_idx = 1;
+        i2s->buf_state[just_filled_idx] = FULL;
+        i2s->buf_state[other_idx] = EMPTY;
+        assert(i2s->buf_state[just_filled_idx] == FULL);
+        assert(i2s->buf_state[other_idx] == EMPTY);
       }
 
       assert(just_filled_idx == 0);
@@ -121,6 +135,8 @@ static void i2s_buf_filled_internal(i2s_t* i2s, uint16_t samples_filled,
     default:
       assert(FALSE);
   }
+  LOG("XXX i2s_buf_filled(%d) exits %s,%s", just_filled_idx,
+    decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
 }
 
 // Downcall that indicates the buffer fill requested earlier has completed.
@@ -193,7 +209,8 @@ static void i2s_buf_played_cb_internal(i2s_t* i2s, uint8_t just_played_idx,
 // WARNING: Called at interrupt time!
 static void i2s_buf_played_cb(void* user_data, uint8_t just_played_idx) {
   i2s_t* i2s = (i2s_t*)user_data;
-  LOG("XXX i2s_buf_played_cb(%d) enters %d,%d", just_played_idx, i2s->buf_state[0], i2s->buf_state[1]);
+  LOG("XXX i2s_buf_played_cb(%d) enters %s,%s", just_played_idx,
+    decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
 
 #if I2S_STATS
   uint32_t now = precise_clock_time_us();
@@ -210,7 +227,8 @@ static void i2s_buf_played_cb(void* user_data, uint8_t just_played_idx) {
   } else {
     assert(FALSE);
   }
-  LOG("XXX i2s_buf_played_cb exit %d,%d", i2s->buf_state[0], i2s->buf_state[1]);
+  LOG("XXX i2s_buf_played_cb exit %s,%s",
+    decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
 }
 
 //// API implementation
