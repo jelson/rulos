@@ -67,8 +67,8 @@ void _volume_update(VolumeControl *vc) {
     str[3] = 'u';
     str[4] = 'm';
     str[5] = 'e';
-    str[6] = '0' + (vc->cur_vol%10);
-    str[7] = '0' + (vc->cur_vol/10);
+    str[6] = '0' + (vc->cur_vol/10);
+    str[7] = '0' + (vc->cur_vol%10);
     ascii_to_bitmap_str(vc->bbuf.buffer, 8, str);
     board_buffer_draw(&vc->bbuf);
   }

@@ -23,7 +23,19 @@ static void fill_buffer_cb(void* user_data, int16_t* buffer_to_fill);
 static void audio_done_cb(void* user_data);
 static void adjust_volume(int16_t* buffer, int len_samples, int volume_level);
 
+void test_volume() {
+  int16_t buf[2];
+  for (int volume_level=VOL_MIN; volume_level<=VOL_MAX; volume_level++) {
+    buf[0] = 1000;
+    buf[1] = 10000;
+    adjust_volume(buf, 2, volume_level);
+    LOG("volume %d buf %d %d", volume_level, buf[0], buf[1]);
+  }
+}
+
 void init_audio_streamer(AudioStreamer* as) {
+  //test_volume();
+
   // Front half of fat initialization? :v)
   memset(as, 0, sizeof(*as));
 
@@ -57,9 +69,17 @@ static void fill_buffer_cb(void* user_data, int16_t* buffer_to_fill) {
 }
 
 static void adjust_volume(int16_t* buffer, int len_samples, int volume_level) {
-  int shift = VOL_MAX - volume_level;
+  int neg_vol = VOL_MAX - volume_level;
+  int shift_ = neg_vol >> 1;
+  int mult = 1;
+  if (neg_vol & 1) {
+    shift_ += 4;
+    mult = 11;
+  }
   for (int i=0; i<len_samples; i++) {
-    buffer[i] = buffer[i] >> shift;
+    int sample = buffer[i];
+    sample = sample * mult >> shift_;
+    buffer[i] = sample;
   }
 }
 
