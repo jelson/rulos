@@ -17,9 +17,11 @@
  */
 
 #include "periph/audio/audio_streamer.h"
+#include "periph/audio/sound.h"
 
 static void fill_buffer_cb(void* user_data, int16_t* buffer_to_fill);
 static void audio_done_cb(void* user_data);
+static void adjust_volume(int16_t* buffer, int len_samples, int volume_level);
 
 void init_audio_streamer(AudioStreamer* as) {
   // Front half of fat initialization? :v)
@@ -31,7 +33,7 @@ void init_audio_streamer(AudioStreamer* as) {
 
   as->fp_valid = false;
   as->playing = false;
-  as->mlvolume = 0;  // loud
+  as->volume = 27;  // fairly loud; range VOL_MIN--VOL_MAX
 }
 
 // Upcall from the I2S driver telling us it's time to give it the next audio
@@ -50,8 +52,15 @@ static void fill_buffer_cb(void* user_data, int16_t* buffer_to_fill) {
     i2s_buf_filled(as->i2s, buffer_to_fill, 0);
     return;
   }
-  // TODO apply volume adjustment here!
+  adjust_volume(buffer_to_fill, SAMPLE_BUF_COUNT, as->volume);
   i2s_buf_filled(as->i2s, buffer_to_fill, bytes_read / 2);
+}
+
+static void adjust_volume(int16_t* buffer, int len_samples, int volume_level) {
+  int shift = VOL_MAX - volume_level;
+  for (int i=0; i<len_samples; i++) {
+    buffer[i] = buffer[i] >> shift;
+  }
 }
 
 static void as_maybe_close_fp(AudioStreamer* as) {
@@ -94,8 +103,8 @@ r_bool as_play(AudioStreamer* as, const char* pathname,
   return true;
 }
 
-void as_set_volume(AudioStreamer* as, uint8_t mlvolume) {
-  as->mlvolume = mlvolume;
+void as_set_volume(AudioStreamer* as, uint8_t volume) {
+  as->volume = volume;
 }
 
 void as_stop_streaming(AudioStreamer* as) { as_maybe_close_fp(as); }

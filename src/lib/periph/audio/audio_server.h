@@ -29,7 +29,7 @@
 typedef struct {
   SoundEffectId skip_effect_id;
   SoundEffectId loop_effect_id;
-  uint8_t mlvolume;
+  uint8_t volume;
 } AudioEffectsStream;
 
 typedef struct s_audio_server {

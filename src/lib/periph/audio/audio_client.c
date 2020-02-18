@@ -61,7 +61,7 @@ r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx,
   return TRUE;
 }
 
-r_bool ac_change_volume(AudioClient *ac, uint8_t stream_idx, uint8_t mlvolume) {
+r_bool ac_change_volume(AudioClient *ac, uint8_t stream_idx, uint8_t volume) {
   if (ac->avm_send_slot.sending) {
     return FALSE;
   }
@@ -72,7 +72,7 @@ r_bool ac_change_volume(AudioClient *ac, uint8_t stream_idx, uint8_t mlvolume) {
   AudioVolumeMessage *avm =
       (AudioVolumeMessage *)&ac->avm_send_slot.wire_msg->data;
   avm->stream_idx = stream_idx;
-  avm->mlvolume = mlvolume;
+  avm->volume = volume;
   net_send_message(ac->network, &ac->avm_send_slot);
 
   return TRUE;

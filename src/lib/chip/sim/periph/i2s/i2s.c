@@ -40,6 +40,8 @@ static struct {
   uint16_t next_write_offset_bytes; // how many bytes of next_buffer_index have already been emitted
 
   int audiofd;
+
+  bool outstanding_fill_requests[2];
 } sim_i2s;
 
 void hal_i2s_condition_buffer(int16_t* samples, uint16_t num_samples) {
@@ -61,6 +63,8 @@ void hal_i2s_init(uint16_t sample_rate, hal_i2s_play_done_cb_t play_done_cb,
   sim_i2s.user_data = user_data;
 
   sim_i2s.samples = NULL;
+  sim_i2s.outstanding_fill_requests[0] = false;
+  sim_i2s.outstanding_fill_requests[1] = false;
 
   int pipefd[2];
   int rc = pipe2(pipefd, /*flags*/ 0);
@@ -83,7 +87,7 @@ void hal_i2s_init(uint16_t sample_rate, hal_i2s_play_done_cb_t play_done_cb,
       }
     }
     dup2(pipefd[0], 0); // read end of pipe becomes stdin
-    char* argv[] = {"aplay", "--file-type", "raw", "--rate", "50000", "--channels", "2", "-", NULL};
+    char* argv[] = {"aplay", "-f", "S16_LE", "--file-type", "raw", "--rate", "50000", "--channels", "2", "-", NULL};
     execv("/usr/bin/aplay", argv);
     assert(false);
     exit(-1);
@@ -114,6 +118,16 @@ static void sim_audio_output_poll(void *data) {
   poke_fd();
 }
 
+static void request_refill(int buffer_idx) {
+  if (sim_i2s.outstanding_fill_requests[buffer_idx]) {
+    LOG("XXX coalescing overlapping fill request for %d", buffer_idx);
+    return;
+  }
+  LOG("XXX poke_now upcall fill buf %d", buffer_idx);
+  sim_i2s.outstanding_fill_requests[buffer_idx] = true;
+  schedule_now(notify_application_trampoline, (void*)(long int) buffer_idx);
+}
+
 // Something has changed (start or a SIGIO). Try to push out another halfbuffer.
 static void poke_fd() {
   if (sim_i2s.samples == NULL) {
@@ -137,7 +151,7 @@ static void poke_fd() {
     sim_i2s.next_write_offset_bytes = 0;
     // Notify the application, but only after this call stack finishes
     // (so the periph/i2s state machine can finish updating its own state).
-    schedule_now(notify_application_trampoline, (void*)(long int) buffer_done_index);
+    request_refill(buffer_done_index);
   } else if (rc < 0) {
     // error return
     if (errno == EAGAIN) {
@@ -160,6 +174,7 @@ static void poke_fd() {
 
 static void notify_application_trampoline(void* v_done_index) {
   int done_index = (int) v_done_index;
+  sim_i2s.outstanding_fill_requests[done_index] = false;
   sim_i2s.play_done_cb(sim_i2s.user_data, done_index);
 }
 
@@ -172,7 +187,11 @@ void hal_i2s_stop() {
 static void set_async(int fd) {
   int flags, rc;
   flags = fcntl(fd, F_GETFL);
+  // Send SIGIO
   rc = fcntl(fd, F_SETFL, flags | O_ASYNC | O_NONBLOCK);
+  assert(rc == 0);
+  // Send signals to this process.
+  rc = fcntl(fd, F_SETOWN, getpid());
   assert(rc == 0);
 }
 
