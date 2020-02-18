@@ -27,7 +27,9 @@
   ((int16_t*)(&(i2s)->bufdata[buf_num * \
                               I2S_BUFSIZE_BYTES((i2s)->samples_per_buf)]))
 
+#if SIM
 static char* decode_buf_state[] = { "EMPTY", "FILLING", "FULL", "PLAYING" };
+#endif
 
 // Called at schedule time.
 static void i2s_request_buffer_fill_trampoline(void* data) {
@@ -55,8 +57,10 @@ static void i2s_request_buffer_fill(i2s_t* i2s, uint8_t buf_num) {
 #endif  // I2S_STATS
   assert(i2s->buf_state[buf_num] == EMPTY);
   i2s->buf_state[buf_num] = FILLING;
+#if SIM
   LOG("XXX i2s_request_buffer_fill(%d) in %s,%s", buf_num,
     decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
+#endif
   schedule_now(i2s_request_buffer_fill_trampoline, i2s);
 }
 
@@ -90,8 +94,10 @@ static void i2s_buf_is_playing(i2s_t* i2s, uint8_t play_idx,
 static void i2s_buf_filled_internal(i2s_t* i2s, uint16_t samples_filled,
                                     uint8_t just_filled_idx,
                                     uint8_t other_idx) {
+#if SIM
   LOG("XXX i2s_buf_filled(%d) enters %s,%s", just_filled_idx,
     decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
+#endif
   assert(i2s->buf_state[just_filled_idx] == FILLING);
   i2s->samples_in_buf[just_filled_idx] = samples_filled;
   hal_i2s_condition_buffer(BUF_ADDR(i2s, just_filled_idx), samples_filled);
@@ -139,8 +145,10 @@ static void i2s_buf_filled_internal(i2s_t* i2s, uint16_t samples_filled,
     default:
       assert(FALSE);
   }
+#if SIM
   LOG("XXX i2s_buf_filled(%d) exits %s,%s", just_filled_idx,
     decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
+#endif
 }
 
 // Downcall that indicates the buffer fill requested earlier has completed.
