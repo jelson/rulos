@@ -35,7 +35,8 @@
 
 //#define FAT_FILE "silence.bin"
 //#define FAT_FILE "kool50.raw"
-#define FAT_FILE "chill50.raw"
+//#define FAT_FILE "chill50.raw"
+#define FAT_FILE "music/funky.raw"
 
 typedef struct {
   int num_buffers_filled;
