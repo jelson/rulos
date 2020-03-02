@@ -17,11 +17,25 @@
  */
 
 #include "periph/audio/audio_streamer.h"
+#include "periph/audio/sound.h"
 
 static void fill_buffer_cb(void* user_data, int16_t* buffer_to_fill);
 static void audio_done_cb(void* user_data);
+static void adjust_volume(int16_t* buffer, int len_samples, int volume_level);
+
+void test_volume() {
+  int16_t buf[2];
+  for (int volume_level=VOL_MIN; volume_level<=VOL_MAX; volume_level++) {
+    buf[0] = 1000;
+    buf[1] = 10000;
+    adjust_volume(buf, 2, volume_level);
+    LOG("volume %d buf %d %d", volume_level, buf[0], buf[1]);
+  }
+}
 
 void init_audio_streamer(AudioStreamer* as) {
+  //test_volume();
+
   // Front half of fat initialization? :v)
   memset(as, 0, sizeof(*as));
 
@@ -31,7 +45,7 @@ void init_audio_streamer(AudioStreamer* as) {
 
   as->fp_valid = false;
   as->playing = false;
-  as->mlvolume = 0;  // loud
+  as->volume = 27;  // fairly loud; range VOL_MIN--VOL_MAX
 }
 
 // Upcall from the I2S driver telling us it's time to give it the next audio
@@ -50,8 +64,23 @@ static void fill_buffer_cb(void* user_data, int16_t* buffer_to_fill) {
     i2s_buf_filled(as->i2s, buffer_to_fill, 0);
     return;
   }
-  // TODO apply volume adjustment here!
+  adjust_volume(buffer_to_fill, SAMPLE_BUF_COUNT, as->volume);
   i2s_buf_filled(as->i2s, buffer_to_fill, bytes_read / 2);
+}
+
+static void adjust_volume(int16_t* buffer, int len_samples, int volume_level) {
+  int neg_vol = VOL_MAX - volume_level;
+  int shift_ = neg_vol >> 1;
+  int mult = 1;
+  if (neg_vol & 1) {
+    shift_ += 4;
+    mult = 11;
+  }
+  for (int i=0; i<len_samples; i++) {
+    int sample = buffer[i];
+    sample = sample * mult >> shift_;
+    buffer[i] = sample;
+  }
 }
 
 static void as_maybe_close_fp(AudioStreamer* as) {
@@ -94,8 +123,8 @@ r_bool as_play(AudioStreamer* as, const char* pathname,
   return true;
 }
 
-void as_set_volume(AudioStreamer* as, uint8_t mlvolume) {
-  as->mlvolume = mlvolume;
+void as_set_volume(AudioStreamer* as, uint8_t volume) {
+  as->volume = volume;
 }
 
 void as_stop_streaming(AudioStreamer* as) { as_maybe_close_fp(as); }

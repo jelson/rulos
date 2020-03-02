@@ -75,11 +75,11 @@ void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id) {
   for (uint8_t stream_idx = 0; stream_idx < AUDIO_NUM_STREAMS; stream_idx++) {
     aserv->audio_stream[stream_idx].skip_effect_id = sound_silence;
     aserv->audio_stream[stream_idx].loop_effect_id = sound_silence;
-    aserv->audio_stream[stream_idx].mlvolume = 0;
+    aserv->audio_stream[stream_idx].volume = 0;
   }
 
   // Make background silent until instructed otherwise.
-  aserv->audio_stream[AUDIO_STREAM_BACKGROUND].mlvolume = 8;
+  aserv->audio_stream[AUDIO_STREAM_BACKGROUND].volume = 8;
 
   // Remember to seed the RNG when music is requested later.
   aserv->music_random_seeded = FALSE;
@@ -164,9 +164,9 @@ void aserv_recv_avm(MessageRecvBuffer *msg) {
   AudioVolumeMessage *avm = (AudioVolumeMessage *)&msg->data;
 
   assert(avm->stream_idx < AUDIO_NUM_STREAMS);
-  aserv->audio_stream[avm->stream_idx].mlvolume = avm->mlvolume;
+  aserv->audio_stream[avm->stream_idx].volume = avm->volume;
   if (aserv->active_stream == avm->stream_idx) {
-    as_set_volume(&aserv->audio_streamer, avm->mlvolume);
+    as_set_volume(&aserv->audio_streamer, avm->volume);
   }
 
   net_free_received_message_buffer(msg);
@@ -233,7 +233,7 @@ void aserv_start_play(AudioServer *aserv) {
     char effect_filename[MAX_PATH];
     find_music_filename(aserv, effect_filename, MAX_PATH);
 
-    as_set_volume(&aserv->audio_streamer, stream->mlvolume);
+    as_set_volume(&aserv->audio_streamer, stream->volume);
     r_bool rc = as_play(&aserv->audio_streamer, effect_filename,
                         (ActivationFuncPtr)aserv_advance, aserv);
     if (!rc) {

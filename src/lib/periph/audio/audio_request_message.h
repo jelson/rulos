@@ -37,9 +37,9 @@ typedef struct {
   // The sound stream whose volume should change.
   uint8_t stream_idx;
 
-  // The new volume [0..7]. Zero is ... loud.
-  // TODO: someday a gorgeous fine-grained log volume scale.
-  uint8_t mlvolume;
+  // The new volume [ VOL_MIN, VOL_MAX ]
+  // TODO: someday a gorgeous finer-grained log volume scale.
+  uint8_t volume;
 } AudioVolumeMessage;
 
 typedef struct {

@@ -40,7 +40,7 @@ typedef struct s_AudioStreamer {
   // i2s is playing, and owes us a callback.
   bool playing;
 
-  uint8_t mlvolume;
+  uint8_t volume;   // [ VOL_MIN, VOL_MAX ]
 
   ActivationFuncPtr client_done_cb;
   void *client_done_data;
@@ -52,9 +52,8 @@ void init_audio_streamer(AudioStreamer *as);
 r_bool as_play(AudioStreamer *as, const char *pathname,
                ActivationFuncPtr client_done_cb, void *client_done_data);
 
-// Adjust the volume multiplier. (mlvolume is neg log: 0 is shift off zero bits
-// == max loud)
-void as_set_volume(AudioStreamer *as, uint8_t mlvolume);
+// Adjust the (logarithmic) volume multiplier.
+void as_set_volume(AudioStreamer *as, uint8_t volume);
 
 // Stop the ongoing streaming.
 void as_stop_streaming(AudioStreamer *as);

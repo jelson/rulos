@@ -35,7 +35,7 @@ def main():
     except FileNotFoundError:
         pass
     os.mkdir(mount_point)
-    space_kb = sdcard_space_kb() + 100; # extra capacity for FS overhead, inodes
+    space_kb = sdcard_space_kb() + 1000; # extra capacity for FS overhead, inodes
     make_empty_image(img_filename, space_kb)
     subprocess.call(["mkfs.vfat", img_filename])
     subprocess.call(["mount", "-o", "loop", img_filename, mount_point])

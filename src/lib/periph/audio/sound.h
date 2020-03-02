@@ -37,7 +37,5 @@ typedef enum {
 #define AUDIO_STREAM_BURST_EFFECTS 2
 #define AUDIO_NUM_STREAMS 3
 
-#define VOL_MAX (0)
-#define VOL_MIN (7)
-// VOL_MIN==7: it's the largest integer value, but the quietest sound
-// (because volume is minus logarithm; output = value >> volume).
+#define VOL_MAX (30)
+#define VOL_MIN (0)

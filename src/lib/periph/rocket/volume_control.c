@@ -14,7 +14,7 @@ void volume_control_init(VolumeControl *vc, AudioClient *ac, uint8_t boardnum,
   vc->ac = ac;
 
   // cache correct volume so next music play starts at the right place
-  vc->cur_vol = 3;
+  vc->cur_vol = 27;
 
   vc->vol_up = vol_up;
   vc->vol_down = vol_down;
@@ -33,9 +33,9 @@ void volume_control_init(VolumeControl *vc, AudioClient *ac, uint8_t boardnum,
 
 void _volume_input(InputInjectorIfc *ii, Keystroke key) {
   VolumeControl *vc = ((VolumeControlInjector *)ii)->vc;
-  if (KeystrokeCmp(key, vc->vol_down) && (vc->cur_vol < VOL_MIN)) {
+  if (KeystrokeCmp(key, vc->vol_down) && (vc->cur_vol < VOL_MAX)) {
     vc->cur_vol += 1;
-  } else if (KeystrokeCmp(key, vc->vol_up) && (vc->cur_vol > VOL_MAX)) {
+  } else if (KeystrokeCmp(key, vc->vol_up) && (vc->cur_vol > VOL_MIN)) {
     vc->cur_vol -= 1;
   } else {
     return;
@@ -67,8 +67,8 @@ void _volume_update(VolumeControl *vc) {
     str[3] = 'u';
     str[4] = 'm';
     str[5] = 'e';
-    str[6] = ' ';
-    str[7] = '0' + (VOL_MIN - vc->cur_vol);
+    str[6] = '0' + (vc->cur_vol/10);
+    str[7] = '0' + (vc->cur_vol%10);
     ascii_to_bitmap_str(vc->bbuf.buffer, 8, str);
     board_buffer_draw(&vc->bbuf);
   }
