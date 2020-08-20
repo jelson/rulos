@@ -25,6 +25,10 @@
 #include "core/rulos.h"
 #include "core/util.h"
 
+#include "stm32g0xx_ll_rcc.h"
+#include "stm32g0xx_ll_pwr.h"
+#include "stm32g0xx_ll_exti.h"
+
 #define BUT1 GPIO_A2
 #define BUT2 GPIO_A4
 #define LED1 GPIO_A0
@@ -32,7 +36,7 @@
 #define PWRLED GPIO_B3
 
 #define JIFFY_TIME_US 10000
-#define KEY_REFRACTORY_TIME_US 100000
+#define KEY_REFRACTORY_TIME_US 10000
 #define TIMEOUT_WHILE_ON_US (1000000 * 120) // 120 sec
 #define PWRLED_BLINK_TIME_US 250000
 
@@ -47,6 +51,30 @@ typedef struct {
   int pwrled_count;
   Time pwrled_next_transition;
 } DuktigState_t;
+
+volatile int num_int = 0;
+
+void EXTI2_3_IRQHandler(void) {
+  if (LL_EXTI_IsActiveFallingFlag_0_31(LL_EXTI_LINE_2)) {
+    LL_EXTI_ClearFallingFlag_0_31(LL_EXTI_LINE_2);
+    num_int++;
+  }
+}
+
+void EXTI4_15_IRQHandler(void) {
+  if (LL_EXTI_IsActiveFallingFlag_0_31(LL_EXTI_LINE_4)) {
+    LL_EXTI_ClearFallingFlag_0_31(LL_EXTI_LINE_4);
+    num_int++;
+  }
+}
+
+void power_down() {
+  HAL_SuspendTick();
+  HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_STOPENTRY_WFI);
+  //HAL_PWR_EnterSTANDBYMode();
+  HAL_ResumeTick();
+}
+
 
 static void duktig_update(DuktigState_t *duktig) {
   schedule_us(JIFFY_TIME_US, (ActivationFuncPtr)duktig_update, duktig);
@@ -100,10 +128,21 @@ static void duktig_update(DuktigState_t *duktig) {
       duktig->pwrled_next_transition = clock_time_us() + PWRLED_BLINK_TIME_US;
     }
   }
+
+  // if we're off, go to sleep
+  if (!duktig->light1_on && !duktig->light2_on && duktig->pwrled_count == 0) {
+    power_down();
+  }
 }
 
 int main() {
   hal_init();
+  __HAL_RCC_PWR_CLK_ENABLE();
+
+  // note: must be under 2mhz for this mode to work. See makefile for defines
+  // that work in conjunction with stm32-hardware.c to set clock options to
+  // 2mhz using HSI directly, disabling PLL.
+  LL_PWR_EnableLowPowerRunMode();
 
   // init state
   DuktigState_t duktig;
@@ -119,6 +158,35 @@ int main() {
   debounce_button_init(&duktig.but1, KEY_REFRACTORY_TIME_US);
   gpio_make_input_enable_pullup(BUT2);
   debounce_button_init(&duktig.but2, KEY_REFRACTORY_TIME_US);
+
+#if 0
+  // needed for standby mode (which we're not using at the moment), but seems to
+  // break stop mode
+  HAL_PWR_EnableWakeUpPin(PWR_WAKEUP_PIN1_LOW);
+  HAL_PWR_EnableWakeUpPin(PWR_WAKEUP_PIN4_LOW);
+#endif
+
+  // Set up interrupts to fire when buttons are pushed. These will wake us up
+  // from STOP mode.
+  LL_EXTI_SetEXTISource(LL_EXTI_CONFIG_PORTA, LL_EXTI_CONFIG_LINE2);
+  LL_EXTI_InitTypeDef EXTI_InitStruct = {0};
+  EXTI_InitStruct.Line_0_31 = LL_EXTI_LINE_2;
+  EXTI_InitStruct.LineCommand = ENABLE;
+  EXTI_InitStruct.Mode = LL_EXTI_MODE_IT;
+  EXTI_InitStruct.Trigger = LL_EXTI_TRIGGER_FALLING;
+  LL_EXTI_Init(&EXTI_InitStruct);
+
+  LL_EXTI_SetEXTISource(LL_EXTI_CONFIG_PORTA, LL_EXTI_CONFIG_LINE4);
+  EXTI_InitStruct.Line_0_31 = LL_EXTI_LINE_4;
+  EXTI_InitStruct.LineCommand = ENABLE;
+  EXTI_InitStruct.Mode = LL_EXTI_MODE_IT;
+  EXTI_InitStruct.Trigger = LL_EXTI_TRIGGER_FALLING;
+  LL_EXTI_Init(&EXTI_InitStruct);
+
+  NVIC_SetPriority(EXTI2_3_IRQn, 3);
+  NVIC_EnableIRQ(EXTI2_3_IRQn);
+  NVIC_SetPriority(EXTI4_15_IRQn, 3);
+  NVIC_EnableIRQ(EXTI4_15_IRQn);
 
   // set up periodic sampling task
   init_clock(JIFFY_TIME_US, TIMER1);
