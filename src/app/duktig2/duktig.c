@@ -40,6 +40,52 @@
 #define TIMEOUT_WHILE_ON_US (1000000 * 120) // 120 sec
 #define PWRLED_BLINK_TIME_US 250000
 
+// Low-power mode fun of the stm32g0!
+//
+// The non-microcontroller ICs on the board account for roughly 1.5uA or so.
+//
+// In STOP1 mode the datasheet claims ~3.5uA. In this mode the chip responds to
+// interrupts, so we set up the EXTI controller to generate interrupts on the
+// falling edges of the button GPIOs and create interrupt handlers that don't do
+// anything but clear the interrupt flags. Total power use: 4.7-4.9uA.
+//
+// In STANDBY mode the datasheet claims ~300nA. However, normal GPIO stops
+// working. The chip can only be waken up (externally) by special Wakeup pins
+// (WKUP) that can be configured to be sensitive to either being high or
+// low. Normal GPIO pullup/pulldown configuration doesn't work any more either,
+// but there's a special register that allows pullup and pulldowns to be
+// configured during standby mode. Total power use: 2.9-3.0uA.
+//
+// In SHUTDOWN mode we have the datasheet claims, amazingly, ~30nA. There are
+// some differences between what works in STANDBY vs SHUTDOWN but those don't
+// seem to be relevant for this application. Total power use: 1.7-1.8uA.
+// However, while the chip is booting there's a transient where the GPIO pins
+// are not driven and there are visible artifacts -- the LEDs momentarily
+// light. To use this mode we'd need external pulldowns on the LED driver
+// control pins.
+//
+// There's another dimension to consider, which is cost. If we use STOP1, the
+// buttons can be attached to any pin and we can use the 8-pin STM32G030J6M6,
+// which costs 71 cents in Qty 150 (Aug 2020). But the 8-pin version only
+// exposes a single WKUP pin, so STANDBY/SHUTDOWN can not be used. We'd instead
+// need to use the 20-pin STM32G030F6P6, which costs 82 cents in Qty 150. Also,
+// for a board this simple, it's less humiliating to use an 8-pin micro rather
+// than a 20-pin.
+//
+// Cost matrix at Qty 100, Aug 2020:
+//
+//             8-pin       20-pin
+// STM32G030   $0.71        $0.82
+// STM32G031   $1.07        $1.36
+//
+// Power matrix, uA:
+//
+//              STOP1     STANDBY     SHUTDOWN
+// STM32G030     4.9        3.0          n/a
+// STM32G031     4.9        3.0          1.8
+
+#define USE_SHUTDOWN 0
+
 typedef struct {
   r_bool light1_on;
   r_bool light2_on;
@@ -53,6 +99,8 @@ typedef struct {
 } DuktigState_t;
 
 volatile int num_int = 0;
+
+#if USE_SHUTDOWN == 0
 
 void EXTI2_3_IRQHandler(void) {
   if (LL_EXTI_IsActiveFallingFlag_0_31(LL_EXTI_LINE_2)) {
@@ -68,13 +116,33 @@ void EXTI4_15_IRQHandler(void) {
   }
 }
 
+#endif  // SHUTDOWN
+
 void power_down() {
+#if USE_SHUTDOWN
+  // needed for standby mode, which is lower power than STOP mode
+  HAL_PWREx_EnablePullUpPullDownConfig();
+
+  // Set the pullups on the buttons
+  HAL_PWREx_EnableGPIOPullUp(PWR_GPIO_A, PWR_GPIO_BIT_2 | PWR_GPIO_BIT_4);
+
+  // Set the pulldowns on the LED driver control lines
+  HAL_PWREx_EnableGPIOPullDown(PWR_GPIO_A, PWR_GPIO_BIT_0 | PWR_GPIO_BIT_6);
+
+  // Configure standby to wake up if a button goes low
+  HAL_PWR_EnableWakeUpPin(PWR_WAKEUP_PIN2_LOW);
+  HAL_PWR_EnableWakeUpPin(PWR_WAKEUP_PIN4_LOW);
+  __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WUF2);
+  __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WUF4);
+
+  //HAL_PWR_EnterSTANDBYMode();
+  HAL_PWREx_EnterSHUTDOWNMode();
+#else  // SHUTDOWN
   HAL_SuspendTick();
   HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_STOPENTRY_WFI);
-  //HAL_PWR_EnterSTANDBYMode();
   HAL_ResumeTick();
+#endif  // SHUTDOWN
 }
-
 
 static void duktig_update(DuktigState_t *duktig) {
   schedule_us(JIFFY_TIME_US, (ActivationFuncPtr)duktig_update, duktig);
@@ -108,7 +176,7 @@ static void duktig_update(DuktigState_t *duktig) {
 
   // if a button was pushed, blink the power indicator 3 times
   if (but1_pushed || but2_pushed) {
-    duktig->pwrled_count = 3;
+    duktig->pwrled_count = 2;
     duktig->pwrled_next_transition = clock_time_us();
   }
 
@@ -137,6 +205,15 @@ static void duktig_update(DuktigState_t *duktig) {
 
 int main() {
   hal_init();
+
+  // set up output pins as drivers
+  gpio_clr(LED1);
+  gpio_clr(LED2);
+  gpio_clr(PWRLED);
+  gpio_make_output(LED1);
+  gpio_make_output(LED2);
+  gpio_make_output(PWRLED);
+
   __HAL_RCC_PWR_CLK_ENABLE();
 
   // note: must be under 2mhz for this mode to work. See makefile for defines
@@ -148,24 +225,13 @@ int main() {
   DuktigState_t duktig;
   memset(&duktig, 0, sizeof(duktig));
 
-  // set up output pins as drivers
-  gpio_make_output(LED1);
-  gpio_make_output(LED2);
-  gpio_make_output(PWRLED);
-
   // set up buttons
   gpio_make_input_enable_pullup(BUT1);
   debounce_button_init(&duktig.but1, KEY_REFRACTORY_TIME_US);
   gpio_make_input_enable_pullup(BUT2);
   debounce_button_init(&duktig.but2, KEY_REFRACTORY_TIME_US);
 
-#if 0
-  // needed for standby mode (which we're not using at the moment), but seems to
-  // break stop mode
-  HAL_PWR_EnableWakeUpPin(PWR_WAKEUP_PIN1_LOW);
-  HAL_PWR_EnableWakeUpPin(PWR_WAKEUP_PIN4_LOW);
-#endif
-
+#if USE_SHUTDOWN == 0
   // Set up interrupts to fire when buttons are pushed. These will wake us up
   // from STOP mode.
   LL_EXTI_SetEXTISource(LL_EXTI_CONFIG_PORTA, LL_EXTI_CONFIG_LINE2);
@@ -187,6 +253,7 @@ int main() {
   NVIC_EnableIRQ(EXTI2_3_IRQn);
   NVIC_SetPriority(EXTI4_15_IRQn, 3);
   NVIC_EnableIRQ(EXTI4_15_IRQn);
+#endif
 
   // set up periodic sampling task
   init_clock(JIFFY_TIME_US, TIMER1);
