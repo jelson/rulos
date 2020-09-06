@@ -84,7 +84,7 @@
 // STM32G030     4.9        3.0          n/a
 // STM32G031     4.9        3.0          1.8
 
-#define USE_SHUTDOWN 0
+#define USE_SHUTDOWN 1
 
 typedef struct {
   r_bool light1_on;
@@ -135,8 +135,8 @@ void power_down() {
   __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WUF2);
   __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WUF4);
 
-  //HAL_PWR_EnterSTANDBYMode();
-  HAL_PWREx_EnterSHUTDOWNMode();
+  HAL_PWR_EnterSTANDBYMode();
+  //HAL_PWREx_EnterSHUTDOWNMode();
 #else  // SHUTDOWN
   HAL_SuspendTick();
   HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_STOPENTRY_WFI);
