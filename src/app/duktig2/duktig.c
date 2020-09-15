@@ -83,6 +83,15 @@
 //              STOP1     STANDBY     SHUTDOWN
 // STM32G030     4.9        3.0          n/a
 // STM32G031     4.9        3.0          1.8
+//
+// For reference, the original board, which used a complex arrangement of
+// discrete transistors and diodes to cut off power to the board completely
+// until a button was pressed, idles at about 2.3uA. Nearly all of that is
+// coming from the 5v voltage regulator, an MCP1702. Interesting question: how
+// much lower could I get this new board if I only power the CPU continuously,
+// and use a power transistor to cut off power to everything else, such as the
+// LED drivers?
+//
 
 #define USE_SHUTDOWN 1
 
