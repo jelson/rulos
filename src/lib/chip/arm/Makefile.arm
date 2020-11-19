@@ -1,15 +1,15 @@
 # Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com).
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
@@ -150,7 +150,7 @@ ARM_CFLAGS += $(ARM_COMMON_FLAGS) $(ALL_PLATFORM_CFLAGS)
 ARM_CFLAGS += -I$(ARM_OBJDIR) $(ARM_INCLUDES)
 #ARM_CFLAGS += -fpack-struct -fshort-enums
 ARM_CFLAGS += -fdata-sections -ffunction-sections # Put all funcs/data in their own sections
-ARM_CFLAGS += -MD -MP # -MT $(ARM_OBJDIR)/$(*F).o -MF $(ARM_OBJDIR)/$(@F).d 
+ARM_CFLAGS += -MD -MP # -MT $(ARM_OBJDIR)/$(*F).o -MF $(ARM_OBJDIR)/$(@F).d
 ARM_CFLAGS += -std=gnu99 -g
 ARM_CFLAGS += -O2
 ARM_CFLAGS += $(ARM_CPUTYPE_FLAGS)
@@ -161,7 +161,7 @@ ARM_CFLAGS += $(EXTRA_ARM_CFLAGS)
 
 ## Linker flags
 ARM_LDFLAGS += $(ARM_COMMON_FLAGS)
-ARM_LDFLAGS += -Wl,-Map=$(ARM_ARCHTARG).map,--cref -L$(ARM_OBJDIR) -l$(ARM_LIBNAME) 
+ARM_LDFLAGS += -Wl,-Map=$(ARM_ARCHTARG).map,--cref -L$(ARM_OBJDIR) -l$(ARM_LIBNAME)
 ARM_LDFLAGS += -Wl,--gc-sections # Garbage-collect ununused functions
 ARM_LDFLAGS += -static
 ARM_LDFLAGS += -nostartfiles
@@ -236,4 +236,3 @@ arm-clean:
 ## Add automatically generated dependencies
 DIR_LIST := $(sort $(dir $(ARM_LIB_OBJECTS) $(ARM_TARGET_OBJECTS)))
 -include $(shell mkdir -p $(DIR_LIST)) $(foreach dir, $(DIR_LIST), $(wildcard $(dir)/*.d))
-
