@@ -13,18 +13,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-ROCKET_ROOT := ../..
+ROCKET_ROOT := ../../..
 
-PLATFORMS := avr
-PERIPHERALS := 7seg_panel 7seg_panel_hardware joystick adc hpam
+PLATFORMS := avr sim
+PERIPHERALS := rocket 7seg_panel 7seg_panel_hardware twi display_rtc input_controller hpam audio adc rasters joystick keypad quadknob remote_keyboard
 MCU := atmega328p
 BOARD := PCB11
-TARGET := hpamtest
-ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_DEFAULT
+
+# Configuration for 7seg_panel
+ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_ROCKET1
+
+TARGET := rocket1
 
 TARGET_OBJECTS := \
-	hpamtest.o
-
+	rocket1.o
 
 include $(ROCKET_ROOT)/Makefile.common
 

@@ -13,19 +13,26 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-ROCKET_ROOT := ../..
+ROCKET_ROOT := ../../..
 
-PLATFORMS := avr sim
-PERIPHERALS := twi 7seg_panel 7seg_panel_hardware uart
-ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_ROCKET0 -DDONGLE_BOARD_ID=3 -DLOG_TO_SERIAL=UART0
+PLATFORMS := sim # avr
+PERIPHERALS := 7seg_panel
+ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_NETROCKET
 
-MCU := atmega328
-BOARD := DONGLE_REVB
+#MCU := atmega8
+#BOARD := GENERIC
 
-TARGET := rocketdongle
+#MCU := atmega328p
+#BOARD := PCB11
+
+MCU := atmega1284p
+BOARD := LPEM2
+
+
+TARGET := remotesendertest
 
 TARGET_OBJECTS := \
-	rocketdongle.o
+	remotesendertest.o
 
 
 include $(ROCKET_ROOT)/Makefile.common

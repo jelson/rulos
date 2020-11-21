@@ -13,22 +13,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-ROCKET_ROOT := ../..
+ROCKET_ROOT := ../../..
 
-PLATFORMS := arm sim
-ARM_CHIP := stm32f303xb
-PERIPHERALS := uart audio twi i2s fatfs
-BOARD := ROCKETAUDIO
-ALL_PLATFORM_CFLAGS := -DLOG_TO_SERIAL=UART0 -DRULOS_I2C_ALT_MAPPING
-
-SIM_PERIPHERALS := pseudosdcard
-
-ARM_PERIPHERALS := sdcard2
-
-TARGET := audioboard
+PLATFORMS := avr
+PERIPHERALS := 7seg_panel 7seg_panel_hardware joystick adc hpam
+MCU := atmega328p
+BOARD := PCB11
+TARGET := hpamtest
+ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_DEFAULT
 
 TARGET_OBJECTS := \
-	audioboard.o
+	hpamtest.o
+
 
 include $(ROCKET_ROOT)/Makefile.common
 

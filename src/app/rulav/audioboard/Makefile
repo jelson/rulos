@@ -13,27 +13,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-ROCKET_ROOT := ../..
+ROCKET_ROOT := ../../..
 
-PLATFORMS := sim # avr
-PERIPHERALS := 7seg_panel
-ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_NETROCKET
+PLATFORMS := arm sim
+ARM_CHIP := stm32f303xb
+PERIPHERALS := uart audio twi i2s fatfs
+BOARD := ROCKETAUDIO
+ALL_PLATFORM_CFLAGS := -DLOG_TO_SERIAL=UART0 -DRULOS_I2C_ALT_MAPPING
 
-#MCU := atmega8
-#BOARD := GENERIC
+SIM_PERIPHERALS := pseudosdcard
 
-#MCU := atmega328p
-#BOARD := PCB11
+ARM_PERIPHERALS := sdcard2
 
-MCU := atmega1284p
-BOARD := LPEM2
-
-
-TARGET := remotesendertest
+TARGET := audioboard
 
 TARGET_OBJECTS := \
-	remotesendertest.o
-
+	audioboard.o
 
 include $(ROCKET_ROOT)/Makefile.common
 
