@@ -172,23 +172,49 @@ static void SystemClock_Config(void) {
 
   /** Initializes the CPU, AHB and APB busses clocks */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+#ifdef RULOS_HSI_SYSCLOCK
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSIDiv = RULOS_HSI_SYSCLOCK;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_OFF;
+#else
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSIDiv = RCC_HSI_DIV1;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+#ifdef RULOS_PLLM
+  RCC_OscInitStruct.PLL.PLLM = RULOS_PLLM;
+#else
   RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV1;
-  RCC_OscInitStruct.PLL.PLLN = 8;
+#endif
+
+  RCC_OscInitStruct.PLL.PLLN = 8; // multiplier
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
+
+#if defined(RCC_PLLQ_SUPPORT)
   RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
+#endif
+
+#ifdef RULOS_PLLR
+  RCC_OscInitStruct.PLL.PLLR = RULOS_PLLR;
+#else
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
+#endif
+
+#endif  // RULOS_HSI_SYSCLOCK
+
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
     __builtin_trap();
   }
   /** Initializes the CPU, AHB and APB busses clocks */
   RCC_ClkInitStruct.ClockType =
       RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1;
+#ifdef RULOS_HSI_SYSCLOCK
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+#else
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+#endif
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
 

@@ -1,6 +1,0 @@
-#!/bin/sh
-
-for i in *; do
-    svn propset -F 00standard-ignores svn:ignore $i
-done
-
