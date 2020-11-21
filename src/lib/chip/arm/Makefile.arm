@@ -63,6 +63,7 @@ ARM_LIB_ROOT := $(ROCKET_ROOT)/lib/chip/arm
 ARM_SOURCES += $(wildcard $(ARM_LIB_ROOT)/common/core/*.c)
 ARM_SOURCES += $(foreach periph, $(ARM_PERIPHERALS), $(wildcard $(ARM_LIB_ROOT)/common/periph/$(periph)/*.c))
 ARM_INCLUDES += -I$(ARM_LIB_ROOT)/common
+ARM_INCLUDES += -I$(ARM_LIB_ROOT)/common/CMSIS/Include
 
 # Add the chip-specific support libraries
 include $(ARM_LIB_ROOT)/$(ARM_SUBTYPE)/Makefile.arm-subtype

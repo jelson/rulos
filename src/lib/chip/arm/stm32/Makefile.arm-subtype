@@ -277,9 +277,6 @@ endif
 
 ######################################################################
 
-# Cortex-level includes
-ARM_INCLUDES += -I$(ARM_DRIVER_ROOT)/CMSIS/Include
-
 # Definitions for the particular STM32 chip
 ARM_INCLUDES += -I$(ARM_CMSIS_ROOT)/Include
 
