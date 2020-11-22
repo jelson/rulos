@@ -16,14 +16,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <math.h>
 #include "core/hardware.h"
 #include "core/rulos.h"
 #include "periph/bss_canary/bss_canary.h"
 #include "stm32f3xx_ll_rcc.h"
+#include <math.h>
 
 static void configure_pin_and_channel(TIM_HandleTypeDef *timerHandle,
-				      uint32_t pin, uint32_t channel) {
+                                      uint32_t pin, uint32_t channel) {
   GPIO_InitTypeDef gpioStructure;
   gpioStructure.Mode = GPIO_MODE_AF_PP;
   gpioStructure.Alternate = GPIO_AF1_TIM2;
@@ -45,8 +45,8 @@ static void configure_pin_and_channel(TIM_HandleTypeDef *timerHandle,
   outputChannelInit.OCFastMode = TIM_OCFAST_DISABLE;
   outputChannelInit.OCIdleState = TIM_OCIDLESTATE_RESET;
   outputChannelInit.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-  if (HAL_TIM_PWM_ConfigChannel(timerHandle, &outputChannelInit,
-				channel) != HAL_OK) {
+  if (HAL_TIM_PWM_ConfigChannel(timerHandle, &outputChannelInit, channel) !=
+      HAL_OK) {
     __builtin_trap();
   }
   if (HAL_TIM_PWM_Start(timerHandle, channel) != HAL_OK) {
@@ -177,17 +177,17 @@ void setup_table() {
 
 int __errno;
 void setup_table() {
-    float max_period = 16000;    // TODO sync with init
-    for (uint32_t i=0; i<num_brightnesses; i++) {
-        if (i==0) {
-            bright_to_period[i] = 0;
-        } else {
-            // exponentially interpolate between 0 and max_period
-            float exp = i / ((float) num_brightnesses-1);
-            float period = powf(max_period, exp);
-            bright_to_period[i] = (int) period;
-        }
+  float max_period = 16000; // TODO sync with init
+  for (uint32_t i = 0; i < num_brightnesses; i++) {
+    if (i == 0) {
+      bright_to_period[i] = 0;
+    } else {
+      // exponentially interpolate between 0 and max_period
+      float exp = i / ((float)num_brightnesses - 1);
+      float period = powf(max_period, exp);
+      bright_to_period[i] = (int)period;
     }
+  }
 }
 
 typedef struct {
@@ -195,7 +195,7 @@ typedef struct {
 } throb_state;
 
 void set_period(uint32_t period) {
-  pwm_adjust(period, period, period, period); 
+  pwm_adjust(period, period, period, period);
   LOG("period now %d", period);
 }
 
@@ -203,12 +203,12 @@ HalUart uart;
 
 // Ramp brightness up over 5s, then back down.
 void throb_act(void *arg) {
-  throb_state* throb = (throb_state*) arg;
+  throb_state *throb = (throb_state *)arg;
   throb->phase = (throb->phase + 1) % (num_brightnesses * 2 - 1);
   if (throb->phase < num_brightnesses) {
     set_period(bright_to_period[throb->phase]);
   } else {
-    set_period(bright_to_period[2*num_brightnesses - 1 - throb->phase]);
+    set_period(bright_to_period[2 * num_brightnesses - 1 - throb->phase]);
   }
   schedule_us(11600, throb_act, throb);
 }
@@ -225,7 +225,7 @@ int main() {
 
   init_pwm();
   setup_table();
-  pwm_adjust(1, 10, 100, 1000); 
+  pwm_adjust(1, 10, 100, 1000);
 
   throb_state throb;
   schedule_now(throb_act, &throb);
