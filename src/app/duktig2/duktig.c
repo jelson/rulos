@@ -25,9 +25,11 @@
 #include "core/rulos.h"
 #include "core/util.h"
 
-#include "stm32g0xx_ll_rcc.h"
-#include "stm32g0xx_ll_pwr.h"
+#include "stm32g0xx_hal_rcc.h"
 #include "stm32g0xx_ll_exti.h"
+#include "stm32g0xx_ll_pwr.h"
+#include "stm32g0xx_ll_rcc.h"
+#include "stm32g0xx_ll_tim.h"
 
 #define BUT1 GPIO_A2
 #define BUT2 GPIO_A4
@@ -95,9 +97,13 @@
 
 #define USE_SHUTDOWN 1
 
+#define LIGHT_OFF  0
+#define LIGHT_LOW  1
+#define LIGHT_HIGH 2
+
 typedef struct {
-  r_bool light1_on;
-  r_bool light2_on;
+  uint32_t light1_state;
+  uint32_t light2_state;
   DebouncedButton_t but1;
   DebouncedButton_t but2;
   Time shutdown_time;
@@ -107,21 +113,19 @@ typedef struct {
   Time pwrled_next_transition;
 } DuktigState_t;
 
-volatile int num_int = 0;
+DuktigState_t duktig;
 
 #if USE_SHUTDOWN == 0
 
 void EXTI2_3_IRQHandler(void) {
   if (LL_EXTI_IsActiveFallingFlag_0_31(LL_EXTI_LINE_2)) {
     LL_EXTI_ClearFallingFlag_0_31(LL_EXTI_LINE_2);
-    num_int++;
   }
 }
 
 void EXTI4_15_IRQHandler(void) {
   if (LL_EXTI_IsActiveFallingFlag_0_31(LL_EXTI_LINE_4)) {
     LL_EXTI_ClearFallingFlag_0_31(LL_EXTI_LINE_4);
-    num_int++;
   }
 }
 
@@ -145,12 +149,21 @@ void power_down() {
   __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WUF4);
 
   HAL_PWR_EnterSTANDBYMode();
+  // SHUTDOWN: not available on the stm32g0x0
   //HAL_PWREx_EnterSHUTDOWNMode();
-#else  // SHUTDOWN
+#else  // USE_SHUTDOWN
   HAL_SuspendTick();
   HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_STOPENTRY_WFI);
   HAL_ResumeTick();
-#endif  // SHUTDOWN
+#endif  // USE_SHUTDOWN
+}
+
+static uint32_t next_light_state(uint32_t curr_light_state) {
+  if (curr_light_state == LIGHT_HIGH) {
+    return LIGHT_OFF;
+  } else {
+    return curr_light_state + 1;
+  }
 }
 
 static void duktig_update(DuktigState_t *duktig) {
@@ -162,29 +175,29 @@ static void duktig_update(DuktigState_t *duktig) {
 
   // If we've reached the light-on timeout, turn off the lights
   if (later_than(clock_time_us(), duktig->shutdown_time)) {
-    duktig->light1_on = false;
-    duktig->light2_on = false;
+    duktig->light1_state = LIGHT_OFF;
+    duktig->light2_state = LIGHT_OFF;
   }
 
   if (but1_pushed) {
-    duktig->light1_on = !duktig->light1_on;
+    duktig->light1_state = next_light_state(duktig->light1_state);
   }
 
   if (but2_pushed) {
-    duktig->light2_on = !duktig->light2_on;
+    duktig->light2_state = next_light_state(duktig->light2_state);
   }
 
-  gpio_set_or_clr(LED2, duktig->light2_on);
-  gpio_set_or_clr(LED1, duktig->light1_on);
+  const bool but_pushed = but1_pushed || but2_pushed;
+  const bool light_on = duktig->light1_state != LIGHT_OFF ||
+    duktig->light2_state != LIGHT_OFF;
 
   // If a light was just turned on, set the timeout to turn it back off
-  if ((but1_pushed || but2_pushed) &&
-      (duktig->light1_on || duktig->light2_on)) {
+  if (but_pushed && light_on) {
     duktig->shutdown_time = clock_time_us() + TIMEOUT_WHILE_ON_US;
   }
 
-  // if a button was pushed, blink the power indicator 3 times
-  if (but1_pushed || but2_pushed) {
+  // If a button was pushed, blink the power indicator 3 times
+  if (but_pushed) {
     duktig->pwrled_count = 2;
     duktig->pwrled_next_transition = clock_time_us();
   }
@@ -207,8 +220,53 @@ static void duktig_update(DuktigState_t *duktig) {
   }
 
   // if we're off, go to sleep
-  if (!duktig->light1_on && !duktig->light2_on && duktig->pwrled_count == 0) {
+  if (!light_on && duktig->pwrled_count == 0) {
     power_down();
+  }
+}
+
+int refresh_count = 0;
+
+void TIM3_IRQHandler() {
+  if (LL_TIM_IsActiveFlag_UPDATE(TIM3)) {
+    LL_TIM_ClearFlag_UPDATE(TIM3);
+  }
+
+  refresh_count++;
+  if (refresh_count == 10) {
+    refresh_count = 0;
+  }
+
+  switch (duktig.light1_state) {
+  case LIGHT_OFF:
+    gpio_clr(LED1);
+    break;
+  case LIGHT_HIGH:
+    gpio_set(LED1);
+    break;
+  case LIGHT_LOW:
+    if (refresh_count == 0) {
+      gpio_set(LED1);
+    } else {
+      gpio_clr(LED1);
+    }
+    break;
+  }
+
+  switch (duktig.light2_state) {
+  case LIGHT_OFF:
+    gpio_clr(LED2);
+    break;
+  case LIGHT_HIGH:
+    gpio_set(LED2);
+    break;
+  case LIGHT_LOW:
+    if (refresh_count == 0) {
+      gpio_set(LED2);
+    } else {
+      gpio_clr(LED2);
+    }
+    break;
   }
 }
 
@@ -231,7 +289,6 @@ int main() {
   LL_PWR_EnableLowPowerRunMode();
 
   // init state
-  DuktigState_t duktig;
   memset(&duktig, 0, sizeof(duktig));
 
   // set up buttons
@@ -263,6 +320,25 @@ int main() {
   NVIC_SetPriority(EXTI4_15_IRQn, 3);
   NVIC_EnableIRQ(EXTI4_15_IRQn);
 #endif
+
+  // Initialize the refresh timer
+  __HAL_RCC_TIM3_CLK_ENABLE();
+  HAL_NVIC_SetPriority(TIM3_IRQn, 3, 0);
+  HAL_NVIC_EnableIRQ(TIM3_IRQn);
+  LL_TIM_InitTypeDef timer_init;
+  timer_init.Prescaler = 0;
+  timer_init.CounterMode = LL_TIM_COUNTERMODE_UP;
+  // 500 counts = 4khz. Chip configured to run at 2mhz, but clocks
+  // run at 2x core speed (I think)
+  timer_init.Autoreload = 500;
+  timer_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
+  timer_init.RepetitionCounter = 0;
+  LL_TIM_Init(TIM3, &timer_init);
+  LL_TIM_SetTriggerOutput(TIM3, LL_TIM_TRGO_UPDATE);
+  LL_TIM_DisableMasterSlaveMode(TIM3);
+  LL_TIM_EnableIT_UPDATE(TIM3);
+  LL_TIM_EnableCounter(TIM3);
+  LL_TIM_GenerateEvent_UPDATE(TIM3);
 
   // set up periodic sampling task
   init_clock(JIFFY_TIME_US, TIMER1);
