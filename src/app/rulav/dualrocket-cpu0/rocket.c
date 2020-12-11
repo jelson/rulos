@@ -36,6 +36,7 @@
 #include "periph/display_rtc/display_rtc.h"
 #include "periph/input_controller/focus.h"
 #include "periph/input_controller/input_controller.h"
+#include "periph/joystick_adc/joystick_adc.h"
 #include "periph/rasters/rasters.h"
 #include "periph/remote_keyboard/remote_keyboard.h"
 #include "periph/rocket/autotype.h"
@@ -79,6 +80,7 @@ typedef struct {
   ControlPanel cp;
   InputPollerAct ip;
   RemoteKeyboardRecv rkr;
+  Joystick_ADC_t joystick;
   ThrusterSendNetwork tsn;
   ThrusterState_t ts;
   IdleAct idle;
@@ -116,8 +118,9 @@ void init_rocket0(Rocket0 *r0) {
   memset(&r0->thrusterUpdate, 0, sizeof(r0->thrusterUpdate));
   init_hpam(&r0->hpam, 7, r0->thrusterUpdate);
   init_idle(&r0->idle);
-  thrusters_init(&r0->ts, 7, JOYSTICK_X_CHAN, JOYSTICK_Y_CHAN, &r0->hpam,
-                 &r0->idle);
+  init_joystick_adc(&r0->joystick, JOYSTICK_X_CHAN, JOYSTICK_Y_CHAN);
+  thrusters_init(&r0->ts, 7, (JoystickState_t *)&r0->joystick, &r0->hpam,
+                 &r0->idle, &r0->audio_client);
   // r0->thrusterUpdate[2].func = idle_thruster_listener_func;
   // r0->thrusterUpdate[2].data = &r0->idle;
 
@@ -129,7 +132,8 @@ void init_rocket0(Rocket0 *r0) {
                       /*board*/ 0, KEY_VOL_UP, KEY_VOL_DOWN);
 
   init_control_panel(&r0->cp, 3, 1, &r0->network, &r0->hpam, &r0->audio_client,
-                     &r0->idle, &r0->screenblanker, &r0->ts.joystick_state,
+                     &r0->idle, &r0->screenblanker,
+                     (JoystickState_t *) &r0->joystick,
                      &r0->ts, KEY_VOL_UP, KEY_VOL_DOWN,
                      &r0->volume_control.injector.iii,
                      NULL /* local calc decoration ifc */);
