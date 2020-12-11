@@ -115,15 +115,15 @@ typedef struct {
 #define KEY_NPONG_RIGHT KeystrokeCtor('n')
 
 #if defined(BOARD_LPEM2)
-IOPinDef pin_vol_q0 = PINDEF(GPIO_A6);
-IOPinDef pin_vol_q1 = PINDEF(GPIO_A7);
-IOPinDef pin_npong_q0 = PINDEF(GPIO_A4);
-IOPinDef pin_npong_q1 = PINDEF(GPIO_A5);
+gpio_pin_t pin_vol_q0 = GPIO_A6;
+gpio_pin_t pin_vol_q1 = GPIO_A7;
+gpio_pin_t pin_npong_q0 = GPIO_A4;
+gpio_pin_t pin_npong_q1 = GPIO_A5;
 #elif defined(BOARD_STMPEM_REVA)
-IOPinDef pin_vol_q0 = PINDEF(GPIO_A0);
-IOPinDef pin_vol_q1 = PINDEF(GPIO_A1);
-IOPinDef pin_npong_q0 = PINDEF(GPIO_A2);
-IOPinDef pin_npong_q1 = PINDEF(GPIO_A3);
+gpio_pin_t pin_vol_q0 = GPIO_A0;
+gpio_pin_t pin_vol_q1 = GPIO_A1;
+gpio_pin_t pin_npong_q0 = GPIO_A2;
+gpio_pin_t pin_npong_q1 = GPIO_A3;
 #elif defined(SIM)
 // nothing
 #else
@@ -194,13 +194,13 @@ void init_rocket0(Rocket0 *r0) {
 
   init_quadknob(&r0->volknob, (InputInjectorIfc *)&r0->cp.direct_injector,
 #ifndef SIM
-                &pin_vol_q0, &pin_vol_q1,
+                pin_vol_q0, pin_vol_q1,
 #endif
                 KEY_VOL_UP, KEY_VOL_DOWN);
 
   init_quadknob(&r0->pongknob, (InputInjectorIfc *)&r0->cp.direct_injector,
 #ifndef SIM
-                &pin_npong_q0, &pin_npong_q1,
+                pin_npong_q0, pin_npong_q1,
 #endif
                 KEY_NPONG_LEFT, KEY_NPONG_RIGHT);
 

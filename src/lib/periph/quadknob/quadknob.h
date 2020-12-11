@@ -31,8 +31,8 @@ typedef struct s_quadknob {
   InputInjectorIfc *ifi;
 
 #ifndef SIM
-  IOPinDef *pin0;
-  IOPinDef *pin1;
+  gpio_pin_t pin0;
+  gpio_pin_t pin1;
 #endif
   Keystroke fwd;
   Keystroke back;
@@ -40,6 +40,6 @@ typedef struct s_quadknob {
 
 void init_quadknob(QuadKnob *qk, InputInjectorIfc *ifi,
 #ifndef SIM
-                   IOPinDef *pin0, IOPinDef *pin1,
+                   gpio_pin_t pin0, gpio_pin_t pin1,
 #endif
                    Keystroke fwd, Keystroke back);

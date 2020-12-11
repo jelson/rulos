@@ -45,8 +45,8 @@ void qk_update(QuadKnob *qk) {
   c0 = 0;
   c1 = 0;
 #else
-  c0 = gpio_is_set(PINUSE(*(qk->pin0)));
-  c1 = gpio_is_set(PINUSE(*(qk->pin1)));
+  c0 = gpio_is_set(qk->pin0);
+  c1 = gpio_is_set(qk->pin1);
 #endif
   uint8_t newState = (c1 << 1) | c0;
   uint8_t transition = (qk->oldState << 2) | newState;
@@ -64,7 +64,7 @@ void qk_update(QuadKnob *qk) {
 
 void init_quadknob(QuadKnob *qk, InputInjectorIfc *ifi,
 #ifndef SIM
-                   IOPinDef *pin0, IOPinDef *pin1,
+                   const gpio_pin_t pin0, const gpio_pin_t pin1,
 #endif  // SIM
                    Keystroke fwd, Keystroke back) {
   qk->ifi = ifi;
@@ -74,8 +74,8 @@ void init_quadknob(QuadKnob *qk, InputInjectorIfc *ifi,
 #ifndef SIM
   qk->pin0 = pin0;
   qk->pin1 = pin1;
-  gpio_make_input_enable_pullup(PINUSE(*pin0));
-  gpio_make_input_enable_pullup(PINUSE(*pin1));
+  gpio_make_input_enable_pullup(pin0);
+  gpio_make_input_enable_pullup(pin1);
 #endif  // SIM
 
   schedule_us(1, (ActivationFuncPtr)qk_update, qk);
