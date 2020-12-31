@@ -20,7 +20,7 @@ BOARD := GENERIC
 
 PLATFORMS := arm
 ARM_CHIP := stm32g031x8
-PERIPHERALS := #uart
+PERIPHERALS := #twi
 
 TARGET_OBJECTS := \
 	balloonlight.o
