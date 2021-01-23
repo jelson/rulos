@@ -24,9 +24,12 @@ def die(msg):
     sys.stderr.write(msg+"\n")
     sys.exit(1)
 
+def cwd_to_project_root(paths):
+    return [os.path.relpath(s, PROJECT_ROOT) for s in paths]
+
 def cglob(*kargs):
     globpath = tuple(list(kargs) + ["*.c"])
-    return glob.glob(os.path.join(*globpath))
+    return cwd_to_project_root(glob.glob(os.path.join(*globpath)))
 
 def template_free_cglob(*kargs):
     return [f for f in cglob(*kargs) if not f.endswith("_template.c")]
@@ -42,7 +45,7 @@ class Platform:
                 die(f"Periph {periph_name} has no source paths (looked in {periph_common_dir}, {periph_platform_dir})")
             src_dirs.append(periph_common_dir)
             src_dirs.append(periph_platform_dir)
-        print("SRC_DIRS ", src_dirs)
+        #print("SRC_DIRS ", src_dirs)
         src_files = sum([cglob(d) for d in src_dirs], [])
 
         src_files.extend(self.platform_lib_source_files())
@@ -96,8 +99,11 @@ class ArmPlatform(Platform):
         env.Replace(AR = self.ARM_COMPILER_PREFIX+"ar")
         env.Replace(RANLIB = self.ARM_COMPILER_PREFIX+"ranlib")
     
-        platform_lib_srcs = [
-            os.path.join(lib_obj_dir, os.path.relpath(s, PROJECT_ROOT)) for s in self.common_libs(target)]
+#        def variantize(build_root, source_root, paths):
+#            return [
+#            os.path.join(build_root, os.path.relpath(source_root, s)) for s in paths]
+
+        platform_lib_srcs = [os.path.join(lib_obj_dir, s) for s in self.common_libs(target)]
         env.Append(CFLAGS = self.cflags())
         env.Append(CFLAGS = target.cflags())
         env.Append(LINKFLAGS = self.cflags())
@@ -116,17 +122,14 @@ class ArmPlatform(Platform):
         # We're pretending the sources appear in app_obj_dir, so they look adjacent to the build output.
         app_env.VariantDir(app_obj_dir, PROJECT_ROOT, duplicate=0)
         target_sources = [
-            os.path.join(app_obj_dir, os.path.relpath(".", PROJECT_ROOT), s) for s in target.sources]
-        platform_app_sources = [
-            os.path.join(app_obj_dir, os.path.relpath(s, PROJECT_ROOT)) for s in self.platform_specific_app_sources()]
-        print("platform_app_sources", platform_app_sources)
+            os.path.join(app_obj_dir, s) for s in target.sources + self.platform_specific_app_sources()]
+        #print("platform_app_sources", target_sources)
 
         linkscript = self.make_linkscript(app_env, app_obj_dir)
         program_name = os.path.join(app_obj_dir, target.name+".elf")
         app_env.Depends(program_name, linkscript)
 
-        app_binary = app_env.Program(program_name,
-            source=target_sources + platform_app_sources + rocket_lib)
+        app_binary = app_env.Program(program_name, source=target_sources + rocket_lib)
         Default(app_binary)
 
     def platform_cflags(self, arch):
@@ -233,13 +236,13 @@ class ArmStmPlatform(ArmPlatform):
         return (self.arm_platform_lib_source_files()
             + cglob(STM32_ROOT, "core")
             + template_free_cglob(self.major_family.hal_root, "Src")
-            + [self.major_family.sources])
+            + cwd_to_project_root([self.major_family.sources]))
 
     def platform_specific_app_sources(self):
-        return [
+        return cwd_to_project_root([
             os.path.join(self.major_family.cmsis_root, "Source", "Templates", "gcc",
                 f"startup_{self.chip.family.lower()}.s"),
-            ]
+            ])
 
     def make_linkscript(self, env, app_obj_dir):
         linkscript_name = f"{self.chip.name}-linker-script.ld"
@@ -270,7 +273,7 @@ class SimPlatform(Platform):
 class RulosBuildTarget:
     def __init__(self, name, sources, platforms, peripherals = [], board = "GENERIC"):
         self.name = name
-        self.sources = sources
+        self.sources = [os.path.relpath(s, PROJECT_ROOT) for s in sources]
         self.platforms = platforms
         assert(type(self.platforms)==type([]))
         for p in self.platforms:
