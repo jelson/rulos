@@ -117,7 +117,9 @@ class ArmPlatform(Platform):
         app_env.VariantDir(app_obj_dir, PROJECT_ROOT, duplicate=0)
         target_sources = [
             os.path.join(app_obj_dir, os.path.relpath(".", PROJECT_ROOT), s) for s in target.sources]
-        platform_app_sources = self.platform_specific_app_sources()
+        platform_app_sources = [
+            os.path.join(app_obj_dir, os.path.relpath(s, PROJECT_ROOT)) for s in self.platform_specific_app_sources()]
+        print("platform_app_sources", platform_app_sources)
 
         linkscript = self.make_linkscript(app_env, app_obj_dir)
         program_name = os.path.join(app_obj_dir, target.name+".elf")
