@@ -1,15 +1,15 @@
 # Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com).
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
@@ -232,6 +232,30 @@ ARM_FLASHK := 64
 ARM_RAMK := 8
 endif
 
+##### STM32G4
+
+## STM32G431
+
+ifeq ($(ARM_CHIP),stm32g431x6)
+ARM_CHIP_FAMILY := STM32G431xx
+ARM_FLASHK := 32
+# Datasheet says 32k, but it's 16 + 6 + 10
+ARM_RAMK := 16
+endif
+
+ifeq ($(ARM_CHIP),stm32g431x8)
+ARM_CHIP_FAMILY := STM32G431xx
+ARM_FLASHK := 64
+# Datasheet says 32k, but it's 16 + 6 + 10
+ARM_RAMK := 16
+endif
+
+ifeq ($(ARM_CHIP),stm32g431xb)
+ARM_CHIP_FAMILY := STM32G431xx
+ARM_FLASHK := 128
+# Datasheet says 32k, but it's 16 + 6 + 10
+ARM_RAMK := 16
+endif
 
 ###### Set CPU family based on chip prefix
 
@@ -273,6 +297,16 @@ ARM_DRIVER_ROOT := $(ARM_SUBLIB_ROOT)/vendor_libraries/stm32g0/Drivers
 ARM_CMSIS_ROOT := $(ARM_DRIVER_ROOT)/CMSIS/Device/ST/STM32G0xx
 ARM_HAL_ROOT := $(ARM_DRIVER_ROOT)/STM32G0xx_HAL_Driver
 ARM_SOURCES += $(ARM_CMSIS_ROOT)/Source/Templates/system_stm32g0xx.c
+endif
+
+# STM32G4: ARM Cortex M4
+ifneq ($(findstring chip-is-stm32g4,chip-is-$(ARM_CHIP)),)
+ARM_MX := M4F
+ARM_CHIP_MAJOR_FAMILY := stm32g4
+ARM_DRIVER_ROOT := $(ARM_SUBLIB_ROOT)/vendor_libraries/stm32g4/Drivers
+ARM_CMSIS_ROOT := $(ARM_DRIVER_ROOT)/CMSIS/Device/ST/STM32G4xx
+ARM_HAL_ROOT := $(ARM_DRIVER_ROOT)/STM32G4xx_HAL_Driver
+ARM_SOURCES += $(ARM_CMSIS_ROOT)/Source/Templates/system_stm32g4xx.c
 endif
 
 ######################################################################

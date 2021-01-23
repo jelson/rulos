@@ -21,11 +21,13 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32g4xx_ll_fmac.h"
 #include "stm32g4xx_ll_bus.h"
+#if 0 // jelson
 #ifdef USE_FULL_ASSERT
 #include "stm32_assert.h"
 #else
 #define assert_param(expr) ((void)0)
 #endif /* USE_FULL_ASSERT */
+#endif // jelson
 
 /** @addtogroup STM32G4xx_LL_Driver
   * @{

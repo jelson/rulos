@@ -18,10 +18,11 @@ ROCKET_ROOT := ../..
 TARGET := nulltest
 BOARD := GENERIC
 
-PLATFORMS := avr
-MCU := atmega328
+#PLATFORMS := avr
+#MCU := atmega328
 
-#PLATFORMS := arm
+PLATFORMS := arm
+ARM_CHIP := stm32g431x8
 #ARM_CHIP := stm32g030x6
 #ARM_CHIP := stm32g031x8
 #ARM_CHIP := stm32f303xb
