@@ -2,6 +2,9 @@
 *.swp
 .picasa.ini
 Thumbs.db
+.sconsign.dblite
+__pycache__
+/build
 
 # /papers/sensys/figs/
 /papers/sensys/figs/projector-controller.eps
