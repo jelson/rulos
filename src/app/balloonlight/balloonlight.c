@@ -25,7 +25,7 @@
 #define LIGHT_EN GPIO_B7
 #define ACCEL_ADDR 0b0010010
 
-bool lit = false;
+bool led_is_on = false;
 I2C_HandleTypeDef i2c_handle;
 uint8_t chip_id = 0;
 
@@ -108,19 +108,35 @@ static void start_accel() {
   reg_read(0x0, &chip_id, 1);
 }
 
-int16_t accel[3];
+int16_t last_accel[3];
+int16_t ewma_accel[3];
 
 static void test_func(void *data) {
-  schedule_us(1000000, (ActivationFuncPtr)test_func, NULL);
-
+  // This goes in the test_func callback instead of in main() because we want to
+  // give the accelerometer sufficient turn-on time.
   if (data != NULL) {
       start_accel();
   }
 
-  lit = !lit;
-  //gpio_set_or_clr(LIGHT_EN, lit);
+  schedule_us(10000, (ActivationFuncPtr)test_func, NULL);
 
-  read_accel_values(accel);
+  read_accel_values(last_accel);
+
+  for (int i = 0; i < 3; i++) {
+    ewma_accel[i] = (last_accel[i] / 4) + (3 * (ewma_accel[i] / 4));
+  }
+
+  if (led_is_on) {
+    if (ewma_accel[2] > 100) {
+      led_is_on = false;
+    }
+  } else {
+    if (ewma_accel[2] < -100) {
+      led_is_on = true;
+    }
+  }
+  
+  gpio_set_or_clr(LIGHT_EN, led_is_on);
 }
 
 int main() {
@@ -129,6 +145,11 @@ int main() {
   init_clock(10000, TIMER1);
   gpio_make_output(LIGHT_EN);
 
+  memset(ewma_accel, 0, sizeof(ewma_accel));
+  led_is_on = false;
+
+  // The datasheet of the QMA7981 says the power-on time is 50 msec. We'll give
+  // it 75 just to be safe.
   schedule_us(75000, (ActivationFuncPtr)test_func, (void *) 1);
 
   cpumon_main_loop();
