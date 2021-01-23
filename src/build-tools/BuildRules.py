@@ -15,6 +15,7 @@
 
 import glob
 import os
+import SpecialRules
 from SCons.Script import *
 
 PROJECT_ROOT = os.path.relpath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -115,6 +116,13 @@ class ArmPlatform(Platform):
         lib_env.VariantDir(lib_obj_dir, PROJECT_ROOT, duplicate=0)
         rocket_lib = lib_env.StaticLibrary(os.path.join(lib_obj_dir, "rocket"),
             source=platform_lib_srcs)
+        lib_env.Replace(PROJECT_ROOT = PROJECT_ROOT)    # export PROJECT_ROOT to converter actions
+        for converter in SpecialRules.CONVERTERS:
+            converter_output = lib_env.Command(
+                source = os.path.join(lib_obj_dir, converter.script_input),
+                target = os.path.join(lib_obj_dir, converter.intermediate_file),
+                action = converter.action)
+            lib_env.Depends(converter.dependent_source, converter_output)
 
         app_env = env.Clone()
         app_obj_dir = os.path.join(PROJECT_ROOT, "build", target.name, self.name())
