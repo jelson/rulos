@@ -35,27 +35,29 @@ def template_free_cglob(*kargs):
     return [f for f in cglob(*kargs) if not f.endswith("_template.c")]
 
 class Platform:
+    def __init__(self, extra_peripherals, extra_cflags):
+        self.extra_peripherals = extra_peripherals
+        self.extra_cflags = extra_cflags
+
     def common_libs(self, target):
         src_dirs = []
         src_dirs.append(os.path.join(SRC_ROOT, "lib", "core"))
-        for periph_name in target.peripherals:
+        for periph_name in target.peripherals + self.extra_peripherals:
             periph_common_dir = os.path.join(SRC_ROOT, "lib", "periph", periph_name)
             periph_platform_dir = os.path.join(SRC_ROOT, "lib", "chip", self.periph_dir(), periph_name)
             if (not os.path.exists(periph_common_dir) and not os.path.exists(periph_platform_dir)):
                 die(f"Periph {periph_name} has no source paths (looked in {periph_common_dir}, {periph_platform_dir})")
             src_dirs.append(periph_common_dir)
             src_dirs.append(periph_platform_dir)
-        #print("SRC_DIRS ", src_dirs)
         src_files = sum([cglob(d) for d in src_dirs], [])
 
         src_files.extend(self.platform_lib_source_files())
-        #print("SRC_FILES ", src_files)
         return src_files
 
     def common_cflags(self):
         return ["-Wall", "-Werror"
             #, "-flto"
-            ]
+            ] + self.extra_cflags
 
     def common_include_dirs(self):
         return [os.path.join(SRC_ROOT, "lib")]
@@ -71,6 +73,10 @@ class Platform:
 
 # TODO move knowledge to the platform-specific directories
 class ArmPlatform(Platform):
+    def __init__(self, chip_name, extra_peripherals, extra_cflags):
+        super().__init__(extra_peripherals, extra_cflags)
+        self.chip_name = chip_name
+
     ARM_COMPILER_PREFIX = "/usr/local/bin/gcc-arm-none-eabi-9-2019-q4-major/bin/arm-none-eabi-"
 
     class Architecture:
@@ -88,9 +94,6 @@ class ArmPlatform(Platform):
         Architecture("m4f", "armv7e-m", "cortex-m4", ["-mfloat-abi=hard", "-mfpu=fpv4-sp-d16"]),
         ]])
 
-    def __init__(self, chip_name):
-        self.chip_name = chip_name
-
     def build(self, target):
         env = Environment()
         lib_obj_dir = os.path.join(PROJECT_ROOT, "build", "lib", self.name())
@@ -99,10 +102,6 @@ class ArmPlatform(Platform):
         env.Replace(AR = self.ARM_COMPILER_PREFIX+"ar")
         env.Replace(RANLIB = self.ARM_COMPILER_PREFIX+"ranlib")
     
-#        def variantize(build_root, source_root, paths):
-#            return [
-#            os.path.join(build_root, os.path.relpath(source_root, s)) for s in paths]
-
         platform_lib_srcs = [os.path.join(lib_obj_dir, s) for s in self.common_libs(target)]
         env.Append(CFLAGS = self.cflags())
         env.Append(CFLAGS = target.cflags())
@@ -123,7 +122,6 @@ class ArmPlatform(Platform):
         app_env.VariantDir(app_obj_dir, PROJECT_ROOT, duplicate=0)
         target_sources = [
             os.path.join(app_obj_dir, s) for s in target.sources + self.platform_specific_app_sources()]
-        #print("platform_app_sources", target_sources)
 
         linkscript = self.make_linkscript(app_env, app_obj_dir)
         program_name = os.path.join(app_obj_dir, target.name+".elf")
@@ -171,6 +169,13 @@ class ArmPlatform(Platform):
 
 STM32_ROOT = os.path.join(ArmPlatform.ARM_ROOT, "stm32")
 class ArmStmPlatform(ArmPlatform):
+    def __init__(self, chip_name, extra_peripherals = [], extra_cflags = []):
+        super().__init__(chip_name, extra_peripherals, extra_cflags)
+        if (chip_name not in self.CHIPS):
+            die(f"Unrecognized chip {chip_name}")
+        self.chip = self.CHIPS[self.chip_name]
+        self.major_family = self.MAJOR_FAMILIES[self.chip.major_family_name]
+
     class Chip:
         def __init__(self, name, family, flashk, ramk):
             self.name = name
@@ -180,8 +185,37 @@ class ArmStmPlatform(ArmPlatform):
             self.major_family_name = family[:7]
 
     CHIPS = dict([(chip.name, chip) for chip in [
-        Chip("stm32g030x6", "STM32G030xx", flashk=32, ramk=8),
-        Chip("stm32g030x8", "STM32G030xx", flashk=64, ramk=8),
+        Chip("stm32f030x4", "STM32F030x6", flashk=  16, ramk= 4),
+        Chip("stm32f030x6", "STM32F030x6", flashk=  32, ramk= 4),
+        Chip("stm32f030x8", "STM32F030x8", flashk=  64, ramk= 8),
+        Chip("stm32f030xc", "STM32F030xC", flashk= 256, ramk=32),
+        Chip("stm32f031x4", "STM32F031x6", flashk=  16, ramk= 4),
+        Chip("stm32f031x6", "STM32F031x6", flashk=  32, ramk= 4),
+        #Chip("stm32f070x6", "STM32F070x6", flashk=  32, ramk= 6),
+        #Chip("stm32f070xb", "STM32F070xB", flashk= 256, ramk=32),
+        Chip("stm32f103x4", "STM32F103x6", flashk=  16, ramk= 6),
+        Chip("stm32f103x6", "STM32F103x6", flashk=  32, ramk=10),
+        Chip("stm32f103x8", "STM32F103xB", flashk=  64, ramk=20),
+        Chip("stm32f103xb", "STM32F103xB", flashk= 128, ramk=20),
+        Chip("stm32f103xc", "STM32F103xE", flashk= 256, ramk=64),
+        Chip("stm32f103xd", "STM32F103xE", flashk= 384, ramk=64),
+        Chip("stm32f103xe", "STM32F103xE", flashk= 512, ramk=64),
+        Chip("stm32f103xf", "STM32F103xG", flashk= 768, ramk=96),
+        Chip("stm32f103xg", "STM32F103xG", flashk=1024, ramk=96),
+        Chip("stm32f303x6", "STM32F303x8", flashk=  32, ramk=12),
+        Chip("stm32f303x8", "STM32F303x8", flashk=  64, ramk=12),
+        Chip("stm32f303xb", "STM32F303xC", flashk= 128, ramk=32),
+        Chip("stm32f303xc", "STM32F303xC", flashk= 256, ramk=40),
+        Chip("stm32f303xd", "STM32F303xD", flashk= 384, ramk=64),
+        Chip("stm32f303xd", "STM32F303xD", flashk= 512, ramk=64),
+        Chip("stm32g030x6", "STM32G030xx", flashk=  32, ramk= 8),
+        Chip("stm32g030x8", "STM32G030xx", flashk=  64, ramk= 8),
+        Chip("stm32g031x4", "STM32G031xx", flashk=  16, ramk= 8),
+        Chip("stm32g031x6", "STM32G031xx", flashk=  32, ramk= 8),
+        Chip("stm32g031x8", "STM32G031xx", flashk=  64, ramk= 8),
+        Chip("stm32g431x6", "STM32G431xx", flashk=  32, ramk=16),
+        Chip("stm32g431x8", "STM32G431xx", flashk=  64, ramk=16),
+        Chip("stm32g431xb", "STM32G431xx", flashk= 128, ramk=16),
     ]])
 
     class MajorFamily:
@@ -194,22 +228,18 @@ class ArmStmPlatform(ArmPlatform):
             self.sources = os.path.join(self.cmsis_root, "Source", "Templates", "system_"+name.lower()+"xx.c")
 
     MAJOR_FAMILIES = dict([(fam.name, fam) for fam in [
+        MajorFamily("STM32F0", "m0"),
+        MajorFamily("STM32F1", "m3"),
+        MajorFamily("STM32F3", "m4f"),
         MajorFamily("STM32G0", "m0plus"),
         MajorFamily("STM32G4", "m4f"),
     ]])
-
-    def __init__(self, chip_name):
-        super(ArmStmPlatform, self).__init__(chip_name)
-        if (chip_name not in self.CHIPS):
-            die(f"Unrecognized chip {chip}")
-        self.chip = self.CHIPS[self.chip_name]
-        self.major_family = self.MAJOR_FAMILIES[self.chip.major_family_name]
 
     def part_name(self):
         return self.chip_name
 
     def periph_dir(self):
-        return os.path.join("arm", "stm32")
+        return os.path.join("arm", "stm32", "periph")
 
     def cflags(self):
         return self.platform_cflags(self.major_family.arch) + [
@@ -263,15 +293,15 @@ class AvrPlatform(Platform):
     def periph_dir(self):
         return "avr"
 
-class SimPlatform(Platform):
+class SimulatorPlatform(Platform):
     def __init__(self):
         pass
 
     def name(self):
-        return "sim"
+        return "simulator"
 
 class RulosBuildTarget:
-    def __init__(self, name, sources, platforms, peripherals = [], board = "GENERIC"):
+    def __init__(self, name, sources, platforms, peripherals = [], extra_cflags = [], board = "GENERIC"):
         self.name = name
         self.sources = [os.path.relpath(s, PROJECT_ROOT) for s in sources]
         self.platforms = platforms
@@ -279,6 +309,7 @@ class RulosBuildTarget:
         for p in self.platforms:
             assert(isinstance(p, Platform))
         self.peripherals = peripherals
+        self.extra_cflags = extra_cflags
         self.board = board
 
     def build(self):
@@ -286,4 +317,4 @@ class RulosBuildTarget:
             platform.build(self)
 
     def cflags(self):
-        return [f"-DBOARD_{self.board}"]
+        return [f"-DBOARD_{self.board}"] + self.extra_cflags

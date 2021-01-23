@@ -1,0 +1,39 @@
+#!/usr/bin/python3
+# Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com).
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+import sys
+sys.path.insert(0, "../../../build-tools")
+from BuildRules import *
+
+RulosBuildTarget(
+  name = "unirocket",
+  sources = ["unirocket.c"],
+  extra_cflags = ["-DLOG_TO_SERIAL=UART0", "-DSCHEDULER_CAPACITY=64"],
+  platforms = [
+    ## SIM CFLAGS can be one of:
+    ## -DBOARDCONFIG_UNIROCKET_LOCALSIM, to view boards in local sim
+    ## -DBOARDCONFIG_UNIROCKET, to debug remote bbuf protocol/dongles
+#    SimulatorPlatform(
+#        cflags=["-DBOARDCONFIG_UNIROCKET_LOCALSIM"],
+#        perpiherals = ["keypad", "joystick_adc"],
+#    ),
+    ArmStmPlatform("stm32f303x8",
+        extra_cflags=["-DBOARDCONFIG_UNIROCKET"],
+        extra_peripherals = ["max3421e", "spi", "joystick_usb"],
+    ),
+  ],
+  peripherals = "rocket 7seg_panel twi display_rtc hpam audio adc rasters joystick uart input_controller remote_keyboard quadknob".split(),
+  board = "STMPEM_REVA").build()
