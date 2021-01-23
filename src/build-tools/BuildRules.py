@@ -24,8 +24,14 @@ def die(msg):
     sys.stderr.write(msg+"\n")
     sys.exit(1)
 
-class Platform:
+def cglob(*kargs):
+    globpath = tuple(list(kargs) + ["*.c"])
+    return glob.glob(os.path.join(*globpath))
 
+def template_free_cglob(*kargs):
+    return [f for f in cglob(*kargs) if not f.endswith("_template.c")]
+
+class Platform:
     def common_libs(self, target):
         src_dirs = []
         src_dirs.append(os.path.join(SRC_ROOT, "lib", "core"))
@@ -36,20 +42,24 @@ class Platform:
                 die(f"Periph {periph_name} has no source paths (looked in {periph_common_dir}, {periph_platform_dir})")
             src_dirs.append(periph_common_dir)
             src_dirs.append(periph_platform_dir)
-        src_dirs.extend(self.platform_sources())
         print("SRC_DIRS ", src_dirs)
-        src_files = sum([glob.glob(os.path.join(d, "*.c")) for d in src_dirs], [])
-        print("SRC_FILES ", src_files)
+        src_files = sum([cglob(d) for d in src_dirs], [])
+
+        src_files.extend(self.platform_lib_source_files())
+        #print("SRC_FILES ", src_files)
         return src_files
 
     def common_cflags(self):
-        return ["-Wall", "-Werror", "-flto" ]
+        return ["-Wall", "-Werror"
+            #, "-flto"
+            ]
 
     def common_include_dirs(self):
         return [os.path.join(SRC_ROOT, "lib")]
     
     def common_ld_flags(self, target):
         return [
+            "-Wl,--fatal-warnings", # linker should fail on warning
             "-nostartfiles",
             "-Wl,--gc-sections",    # garbage-collect unused functions
             f"-Wl,-Map={target.name}.{self.name()}.{target.board}.map,--cref",
@@ -81,9 +91,10 @@ class ArmPlatform(Platform):
     def build(self, target):
         env = Environment()
         lib_obj_dir = os.path.join(PROJECT_ROOT, "build", "lib", self.name())
-        for cmd in ["gcc", "ld", "ar", "ranlib"]:
-            env[cmd.upper()] = self.ARM_COMPILER_PREFIX+cmd
         env.Replace(CC = self.ARM_COMPILER_PREFIX+"gcc")
+        env.Replace(AS = self.ARM_COMPILER_PREFIX+"as")
+        env.Replace(AR = self.ARM_COMPILER_PREFIX+"ar")
+        env.Replace(RANLIB = self.ARM_COMPILER_PREFIX+"ranlib")
     
         platform_lib_srcs = [
             os.path.join(lib_obj_dir, os.path.relpath(s, PROJECT_ROOT)) for s in self.common_libs(target)]
@@ -103,10 +114,17 @@ class ArmPlatform(Platform):
         app_env = env.Clone()
         app_obj_dir = os.path.join(PROJECT_ROOT, "build", target.name, self.name())
         # We're pretending the sources appear in app_obj_dir, so they look adjacent to the build output.
-        app_env.VariantDir(app_obj_dir, ".", duplicate=0)
-        target_sources_relative_to_variant_dir = [os.path.join(app_obj_dir, s) for s in target.sources]
-        app_binary = app_env.Program(os.path.join(app_obj_dir, target.name),
-            source=target_sources_relative_to_variant_dir + rocket_lib)
+        app_env.VariantDir(app_obj_dir, PROJECT_ROOT, duplicate=0)
+        target_sources = [
+            os.path.join(app_obj_dir, os.path.relpath(".", PROJECT_ROOT), s) for s in target.sources]
+        platform_app_sources = self.platform_specific_app_sources()
+
+        linkscript = self.make_linkscript(app_env, app_obj_dir)
+        program_name = os.path.join(app_obj_dir, target.name+".elf")
+        app_env.Depends(program_name, linkscript)
+
+        app_binary = app_env.Program(program_name,
+            source=target_sources + platform_app_sources + rocket_lib)
         Default(app_binary)
 
     def platform_cflags(self, arch):
@@ -140,11 +158,11 @@ class ArmPlatform(Platform):
             os.path.join(self.ARM_ROOT, "common", "CMSIS", "Include"),
             ]
 
-    def platform_sources(self):
-        return [os.path.join(self.ARM_ROOT, "common", "core")]
+    def arm_platform_lib_source_files(self):
+        return cglob(self.ARM_ROOT, "common", "core")
 
     def name(self):
-        return f"arm-{self.part_name()}-{self.chip_name}"
+        return f"arm-{self.part_name()}"
 
 STM32_ROOT = os.path.join(ArmPlatform.ARM_ROOT, "stm32")
 class ArmStmPlatform(ArmPlatform):
@@ -208,6 +226,27 @@ class ArmStmPlatform(ArmPlatform):
             os.path.join(self.major_family.cmsis_root, "Include"),
             os.path.join(self.major_family.hal_root, "Inc"),
             ]
+
+    def platform_lib_source_files(self):
+        return (self.arm_platform_lib_source_files()
+            + cglob(STM32_ROOT, "core")
+            + template_free_cglob(self.major_family.hal_root, "Src")
+            + [self.major_family.sources])
+
+    def platform_specific_app_sources(self):
+        return [
+            os.path.join(self.major_family.cmsis_root, "Source", "Templates", "gcc",
+                f"startup_{self.chip.family.lower()}.s"),
+            ]
+
+    def make_linkscript(self, env, app_obj_dir):
+        linkscript_name = f"{self.chip.name}-linker-script.ld"
+        linkscript = env.Command(
+            source = os.path.join(app_obj_dir, STM32_ROOT, "linker", "stm32-generic.ld"),
+            target = os.path.join(app_obj_dir, linkscript_name),
+            action = f'sed "s/%RULOS_FLASHK%/{self.chip.flashk}/; s/%RULOS_RAMK%/{self.chip.ramk}/" $SOURCE > $TARGET')
+        env.Append(LINKFLAGS = ["-T", linkscript])
+        return linkscript
 
 class AvrPlatform(Platform):
     def __init__(self, mcu):

@@ -22,7 +22,7 @@ BOARD := GENERIC
 #MCU := atmega328
 
 PLATFORMS := arm
-ARM_CHIP := stm32g431x8
+ARM_CHIP := stm32g030x8
 #ARM_CHIP := stm32g030x6
 #ARM_CHIP := stm32g031x8
 #ARM_CHIP := stm32f303xb
