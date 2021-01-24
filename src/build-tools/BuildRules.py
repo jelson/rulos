@@ -70,7 +70,7 @@ class Platform:
     
     def map_ld_flag(self, build_obj_dir, target):
         map_path = os.path.join(build_obj_dir,
-            f"{target.name}.{self.name()}.{target.board}.map")
+            f"{target.name}.map")
         return f"-Wl,-Map={map_path},--cref"
 
     def common_ld_flags(self, target):
