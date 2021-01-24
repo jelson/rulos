@@ -26,5 +26,5 @@ RulosBuildTarget(
     SimulatorPlatform(),
     AvrPlatform("atmega328", extra_cflags=["-DBOARD_SOUTHBRIDGE"], extra_peripherals=["twi"]),
   ],
-  peripherals = "bss_canary quadknob input_controller keypad remote_keyboard uart"
+  peripherals = "quadknob input_controller keypad remote_keyboard uart"
   ).build()
