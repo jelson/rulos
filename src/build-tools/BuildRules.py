@@ -223,8 +223,7 @@ class ArmPlatform(Platform):
 
     def post_configure(self, env, app_binary):
         # Returns list of extra Default targets
-        lss = env.MakeLSS(app_binary)
-        Default([lss])
+        Default(env.MakeLSS(app_binary))
 
 STM32_ROOT = os.path.join(ArmPlatform.ARM_ROOT, "stm32")
 class ArmStmPlatform(ArmPlatform):
@@ -386,7 +385,14 @@ class AvrPlatform(Platform):
         return []
 
     def post_configure(self, env, app_binary):
-        pass
+        HEX_FLASH_FLAGS = "-R .eeprom -R .fuse -R .lock -R .signature"
+        env.Append(BUILDERS = {"MakeHex": Builder(
+            src_suffix = ".elf",
+            suffix = ".hex",
+            action = f"avr-objcopy -O ihex {HEX_FLASH_FLAGS}  $SOURCE $TARGET")})
+        Default(env.MakeHex(app_binary))
+
+        Default(env.MakeLSS(app_binary))
 
 class SimulatorPlatform(Platform):
     def __init__(self, extra_peripherals = [], extra_cflags = []):
