@@ -78,7 +78,6 @@ class Platform:
         return [
             "-Wl,--fatal-warnings", # linker should fail on warning
             "-Wl,--gc-sections",    # garbage-collect unused functions
-            "-static",
         ]
 
     def build(self, target):
@@ -181,6 +180,7 @@ class ArmPlatform(Platform):
     def arm_ld_flags(self, target):
         return self.common_ld_flags(target) + [
             "-nostartfiles",
+            "-static",
             ]
 
     ARM_ROOT = os.path.join(SRC_ROOT, "lib", "chip", "arm")
@@ -351,7 +351,7 @@ class SimulatorPlatform(Platform):
         return "simulator"
 
     def configure_env(self, env):
-        pass
+        env.Append(LIBS = ["m", "ncurses"] + self.pkgconfig("--libs", "gtk+-2.0"))
 
     def periph_dir(self):
         return os.path.join("sim", "periph")
@@ -366,9 +366,7 @@ class SimulatorPlatform(Platform):
         return self.common_cflags() + self.pkgconfig("--cflags", "gtk+-2.0") + [ "-DSIM" ]
 
     def ld_flags(self, target):
-        return  (self.common_ld_flags(target)
-                + self.pkgconfig("--libs", "gtk+-2.0")
-                + [ "-lm", "-lncurses" ])
+        return  self.common_ld_flags(target)
 
     def include_dirs(self):
         return self.common_include_dirs() + [
