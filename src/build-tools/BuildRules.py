@@ -41,9 +41,31 @@ def cglob(*kargs):
 def template_free_cglob(*kargs):
     return [f for f in cglob(*kargs) if not f.endswith("_template.c")]
 
+def parse_peripherals(peripherals):
+    if type(peripherals)==type(""):
+        return peripherals.split()
+    assert(type(peripherals)==type([]))
+    return peripherals
+
+def configure_compiler(env, compiler_prefix):
+    env.Replace(CC = compiler_prefix+"gcc")
+    env.Replace(AS = compiler_prefix+"as")
+    env.Replace(AR = compiler_prefix+"ar")
+    env.Replace(RANLIB = compiler_prefix+"ranlib")
+
+    lss_builder = Builder(
+        src_suffix = ".elf",
+        suffix = ".lss",
+        action = compiler_prefix+"objdump -h -S --syms $SOURCE > $TARGET"
+        )
+    env.Append(BUILDERS = {"MakeLSS": lss_builder})
+
+def pkgconfig(mode, package):
+    return subprocess.check_output(["pkg-config", mode, package]).decode("utf-8").split()
+        
 class Platform:
     def __init__(self, extra_peripherals, extra_cflags):
-        self.extra_peripherals = extra_peripherals
+        self.extra_peripherals = parse_peripherals(extra_peripherals)
         self.extra_cflags = extra_cflags
 
     def common_libs(self, target):
@@ -133,8 +155,8 @@ class Platform:
         print("rocket_lib", rocket_lib)
         app_binary = env.Program(env["RulosProgramName"], source=target_sources + rocket_lib)
 
-        extra_default = self.post_configure(env, app_binary)
-        Default([app_binary] + extra_default)
+        self.post_configure(env, app_binary)
+        Default([app_binary])
 
 # TODO move knowledge to the platform-specific directories
 class ArmPlatform(Platform):
@@ -196,25 +218,13 @@ class ArmPlatform(Platform):
     def name(self):
         return f"arm-{self.part_name()}"
 
-    ARM_COMPILER_PREFIX = "/usr/local/bin/gcc-arm-none-eabi-9-2019-q4-major/bin/arm-none-eabi-"
-
     def arm_configure_env(self, env):
-        env.Replace(CC = self.ARM_COMPILER_PREFIX+"gcc")
-        env.Replace(AS = self.ARM_COMPILER_PREFIX+"as")
-        env.Replace(AR = self.ARM_COMPILER_PREFIX+"ar")
-        env.Replace(RANLIB = self.ARM_COMPILER_PREFIX+"ranlib")
-
-        lss_builder = Builder(
-            src_suffix = ".elf",
-            suffix = ".lss",
-            action = self.ARM_COMPILER_PREFIX+"objdump -h -S --syms $SOURCE > $TARGET"
-            )
-        env.Append(BUILDERS = {"MakeLSS": lss_builder})
+        configure_compiler(env, "/usr/local/bin/gcc-arm-none-eabi-9-2019-q4-major/bin/arm-none-eabi-")
 
     def post_configure(self, env, app_binary):
         # Returns list of extra Default targets
         lss = env.MakeLSS(app_binary)
-        return [lss]
+        Default([lss])
 
 STM32_ROOT = os.path.join(ArmPlatform.ARM_ROOT, "stm32")
 class ArmStmPlatform(ArmPlatform):
@@ -334,14 +344,49 @@ class ArmStmPlatform(ArmPlatform):
         env.Depends(env["RulosProgramName"], linkscript)
 
 class AvrPlatform(Platform):
-    def __init__(self, mcu):
+    def __init__(self, mcu, extra_peripherals = [], extra_cflags = []):
+        super().__init__(extra_peripherals, extra_cflags)
         self.mcu = mcu
 
     def name(self):
         return f"avr-{self.mcu}"
 
     def periph_dir(self):
-        return "avr"
+        return os.path.join("avr", "periph")
+
+    def configure_env(self, env):
+        configure_compiler(env, "avr-")
+
+    def platform_lib_source_files(self):
+        return cglob(SRC_ROOT, "lib", "chip", "avr", "core")
+
+    def cflags(self):
+        return self.common_cflags() + [
+            "-mmcu="+self.mcu,
+            "-DRULOS_AVR", 
+            "-funsigned-char",
+            "-funsigned-bitfields",
+            "-fpack-struct",
+            "-fshort-enums",
+            "-fdata-sections",
+            "-ffunction-sections", # Put all funcs/data in their own sections
+            "-gdwarf-2",
+            "-std=gnu99",
+            "-Os",
+            f"-DMCU{self.mcu}=1",
+            ]
+
+    def include_dirs(self):
+        return self.common_include_dirs() + [ os.path.join(SRC_ROOT, "lib", "chip", "avr") ]
+
+    def ld_flags(self, target):
+        return  self.common_ld_flags(target)
+
+    def platform_specific_app_sources(self):
+        return []
+
+    def post_configure(self, env, app_binary):
+        pass
 
 class SimulatorPlatform(Platform):
     def __init__(self, extra_peripherals = [], extra_cflags = []):
@@ -351,7 +396,7 @@ class SimulatorPlatform(Platform):
         return "simulator"
 
     def configure_env(self, env):
-        env.Append(LIBS = ["m", "ncurses"] + self.pkgconfig("--libs", "gtk+-2.0"))
+        env.Append(LIBS = ["m", "ncurses"] + pkgconfig("--libs", "gtk+-2.0"))
 
     def periph_dir(self):
         return os.path.join("sim", "periph")
@@ -359,25 +404,20 @@ class SimulatorPlatform(Platform):
     def platform_lib_source_files(self):
         return cglob(SRC_ROOT, "lib", "chip", "sim", "core")
 
-    def pkgconfig(self, mode, package):
-        return subprocess.check_output(["pkg-config", mode, package]).decode("utf-8").split()
-        
     def cflags(self):
-        return self.common_cflags() + self.pkgconfig("--cflags", "gtk+-2.0") + [ "-DSIM" ]
+        return self.common_cflags() + pkgconfig("--cflags", "gtk+-2.0") + [ "-DSIM" ]
 
     def ld_flags(self, target):
         return  self.common_ld_flags(target)
 
     def include_dirs(self):
-        return self.common_include_dirs() + [
-            os.path.join(SRC_ROOT, "lib", "chip", "sim")
-        ]
+        return self.common_include_dirs() + [ os.path.join(SRC_ROOT, "lib", "chip", "sim") ]
 
     def platform_specific_app_sources(self):
         return []
 
     def post_configure(self, env, app_binary):
-        return []
+        pass
 
 class RulosBuildTarget:
     def __init__(self, name, sources, platforms, peripherals = [], extra_cflags = []):
@@ -387,7 +427,7 @@ class RulosBuildTarget:
         assert(type(self.platforms)==type([]))
         for p in self.platforms:
             assert(isinstance(p, Platform))
-        self.peripherals = peripherals
+        self.peripherals = parse_peripherals(peripherals)
         self.extra_cflags = extra_cflags
 
     def build(self):
