@@ -17,10 +17,17 @@ from BaseRules import *
 import glob
 import os
 import SpecialRules
+from filelock import FileLock, Timeout
 from SCons.Script import *
 
-# Bad for concurrency
-#SConsignFile(os.path.join(BUILD_ROOT, f".sconsign.{SCons.__version__}.dblite"))
+sconsign = f".sconsign.{SCons.__version__}.dblite"
+lock = FileLock(os.path.join(BUILD_ROOT, sconsign+".lock"))
+try:
+    lock.acquire(timeout=0.1)
+except:
+    print("Scons already running against this sconsign file; concurrency will confuse it.")
+    sys.exit(-1)
+SConsignFile(os.path.join(BUILD_ROOT, sconsign))
 
 def die(msg):
     sys.stderr.write(msg+"\n")
@@ -61,12 +68,16 @@ class Platform:
     def common_include_dirs(self):
         return [os.path.join(SRC_ROOT, "lib")]
     
+    def map_ld_flag(self, build_obj_dir, target):
+        map_path = os.path.join(build_obj_dir,
+            f"{target.name}.{self.name()}.{target.board}.map")
+        return f"-Wl,-Map={map_path},--cref"
+
     def common_ld_flags(self, target):
         return [
             "-Wl,--fatal-warnings", # linker should fail on warning
             "-nostartfiles",
             "-Wl,--gc-sections",    # garbage-collect unused functions
-            f"-Wl,-Map={target.name}.{self.name()}.{target.board}.map,--cref",
             "-static",
         ]
 
@@ -107,6 +118,7 @@ class ArmPlatform(Platform):
         env.Append(LINKFLAGS = self.cflags())
         env.Append(LINKFLAGS = target.cflags())
         env.Append(LINKFLAGS = self.ld_flags(target))
+        env.Append(LINKFLAGS = self.map_ld_flag(build_obj_dir, target))
         env.Append(CPPPATH = self.include_dirs())
         env.Append(CPPPATH = os.path.join(build_obj_dir, "src"))
 

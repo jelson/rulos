@@ -19,7 +19,7 @@ CONVERTERS = [
     Converter(
         dependent_source = "src/lib/periph/rasters/rasters.c",
         intermediate_file = "src/lib/periph/rasters/rasters_auto.ch",
-        action = "$PROJECT_ROOT/src/util/bitmaploader.py $TARGET $SOURCES",
+        action = "$PROJECT_ROOT/src/util/bitmaploader.py $TARGET $SOURCES > /dev/null",
         script_input = cwd_to_project_root(
             glob.glob(os.path.join(PROJECT_ROOT, "src", "bitmaps", "*.png")))
     ),

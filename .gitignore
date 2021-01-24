@@ -2,7 +2,6 @@
 *.swp
 .picasa.ini
 Thumbs.db
-.sconsign.dblite
 __pycache__
 /build
 
