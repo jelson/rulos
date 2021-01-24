@@ -20,21 +20,18 @@ sys.path.insert(0, "../../../build-tools")
 from BuildRules import *
 
 RulosBuildTarget(
-  name = "unirocket",
-  sources = ["unirocket.c"],
-  extra_cflags = ["-DLOG_TO_SERIAL=UART0", "-DSCHEDULER_CAPACITY=64"],
+  name = "audioboard",
+  sources = ["audioboard.c"],
+  extra_cflags = ["-DLOG_TO_SERIAL=UART0", "-DRULOS_I2C_ALT_MAPPING"],
   platforms = [
-    ## SIM CFLAGS can be one of:
-    ## -DBOARDCONFIG_UNIROCKET_LOCALSIM, to view boards in local sim
-    ## -DBOARDCONFIG_UNIROCKET, to debug remote bbuf protocol/dongles
     SimulatorPlatform(
-        extra_cflags=["-DBOARDCONFIG_UNIROCKET_LOCALSIM"],
-        extra_peripherals = "keypad joystick_adc",
+        extra_cflags=[],
+        extra_peripherals = "pseudosdcard",
     ),
-    ArmStmPlatform("stm32f303x8",
+    ArmStmPlatform("stm32f303xb",
         extra_cflags=["-DBOARD_STMPEM_REVA", "-DBOARDCONFIG_UNIROCKET"],
-        extra_peripherals = "max3421e spi joystick_usb twi",
+        extra_peripherals = "sdcard2 twi",
     ),
   ],
-  peripherals = "rocket 7seg_panel display_rtc hpam audio adc rasters joystick uart input_controller remote_keyboard quadknob",
+  peripherals = "uart audio i2s fatfs".split(),
   ).build()

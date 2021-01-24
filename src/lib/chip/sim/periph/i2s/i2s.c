@@ -173,7 +173,7 @@ static void poke_fd() {
 }
 
 static void notify_application_trampoline(void* v_done_index) {
-  int done_index = (int) v_done_index;
+  int done_index = (size_t) v_done_index;
   sim_i2s.outstanding_fill_requests[done_index] = false;
   sim_i2s.play_done_cb(sim_i2s.user_data, done_index);
 }
