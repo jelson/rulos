@@ -150,9 +150,6 @@ class Platform:
 #        def elf_emitter(target, source, env):
 #            print(target[0])
 #        env["BUILDERS"]["Program"].add_emitter(suffix = ".elf", emitter = elf_emitter)
-        print("RulosProgramName", env["RulosProgramName"])
-        print("target_sources", target_sources)
-        print("rocket_lib", rocket_lib)
         app_binary = env.Program(env["RulosProgramName"], source=target_sources + rocket_lib)
 
         self.post_configure(env, app_binary)
