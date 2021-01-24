@@ -172,7 +172,7 @@ class BitmapFromFile:
 
 def main():
 	fp = open(sys.argv[1], "w")
-	flist = glob.glob("%s/*.png" % (sys.argv[2]))
+	flist = sys.argv[2:]
 	flist.sort()
 	datablock = DataBlock()
 	for fn in flist:

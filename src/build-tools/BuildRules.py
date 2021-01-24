@@ -13,20 +13,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from BaseRules import *
 import glob
 import os
 import SpecialRules
 from SCons.Script import *
 
-PROJECT_ROOT = os.path.relpath(os.path.join(os.path.dirname(__file__), "..", ".."))
-SRC_ROOT = os.path.join(PROJECT_ROOT, "src")
+SConsignFile(os.path.join(BUILD_ROOT, f".sconsign.{SCons.__version__}.dblite"))
 
 def die(msg):
     sys.stderr.write(msg+"\n")
     sys.exit(1)
-
-def cwd_to_project_root(paths):
-    return [os.path.relpath(s, PROJECT_ROOT) for s in paths]
 
 def cglob(*kargs):
     globpath = tuple(list(kargs) + ["*.c"])
@@ -109,7 +106,8 @@ class ArmPlatform(Platform):
         env.Append(LINKFLAGS = self.cflags())
         env.Append(LINKFLAGS = target.cflags())
         env.Append(LINKFLAGS = self.ld_flags(target))
-        env.Replace(CPPPATH = self.include_dirs())
+        env.Append(CPPPATH = self.include_dirs())
+        env.Append(CPPPATH = os.path.join(lib_obj_dir, "src"))
 
         lib_env = env.Clone()
         # We're pretending the sources appear in lib_obj_dir, so they look adjacent to the build output.
@@ -119,10 +117,12 @@ class ArmPlatform(Platform):
         lib_env.Replace(PROJECT_ROOT = PROJECT_ROOT)    # export PROJECT_ROOT to converter actions
         for converter in SpecialRules.CONVERTERS:
             converter_output = lib_env.Command(
-                source = os.path.join(lib_obj_dir, converter.script_input),
+                source = [os.path.join(lib_obj_dir, p) for p in converter.script_input],
                 target = os.path.join(lib_obj_dir, converter.intermediate_file),
                 action = converter.action)
-            lib_env.Depends(converter.dependent_source, converter_output)
+            lib_env.Depends(
+                os.path.join(lib_obj_dir, converter.dependent_source),
+                os.path.join(lib_obj_dir, converter.intermediate_file))
 
         app_env = env.Clone()
         app_obj_dir = os.path.join(PROJECT_ROOT, "build", target.name, self.name())
@@ -285,7 +285,8 @@ class ArmStmPlatform(ArmPlatform):
     def make_linkscript(self, env, app_obj_dir):
         linkscript_name = f"{self.chip.name}-linker-script.ld"
         linkscript = env.Command(
-            source = os.path.join(app_obj_dir, STM32_ROOT, "linker", "stm32-generic.ld"),
+            source = os.path.join(app_obj_dir,
+                cwd_to_project_root(os.path.join(STM32_ROOT, "linker", "stm32-generic.ld"))),
             target = os.path.join(app_obj_dir, linkscript_name),
             action = f'sed "s/%RULOS_FLASHK%/{self.chip.flashk}/; s/%RULOS_RAMK%/{self.chip.ramk}/" $SOURCE > $TARGET')
         env.Append(LINKFLAGS = ["-T", linkscript])

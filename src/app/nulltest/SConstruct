@@ -22,6 +22,6 @@ RulosBuildTarget(
   name = "nulltest",
   sources = ["nulltest.c"],
   #platforms = [ArmStmPlatform("stm32g431x8")],
-  platforms = [ArmStmPlatform("stm32g030x8")],
+  platforms = [ArmStmPlatform("stm32f303x8")],
   peripherals = ["bss_canary", "uart"],
   board = "GENERIC").build()

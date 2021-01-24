@@ -22,7 +22,7 @@
 
 void raster_big_digit_update(RasterBigDigit *digit);
 
-#include "rasters_auto.ch"
+#include "lib/periph/rasters/rasters_auto.ch"
 
 uint16_t get_bitfield(uint16_t offset, uint8_t len) {
   uint8_t bitsAvaiableThisByte = 8 - (offset % 8);

@@ -1,3 +1,7 @@
+from BaseRules import *
+import glob
+import os
+
 class Converter:
     def __init__(self, dependent_source, intermediate_file, action, script_input):
         self.dependent_source = dependent_source
@@ -7,8 +11,17 @@ class Converter:
 
 CONVERTERS = [
     Converter(
-        dependent_source = "lib/periph/7seg_panel/display_controller.c",
-        intermediate_file = "lib/periph/7seg_panel/sevseg_bitmaps.ch",
-        action = "$PROJECT_ROOT/util/sevseg_convert.py $SOURCE > $TARGET",
-        script_input = "lib/periph/7seg_panel/sevseg_artwork.txt"),
+        dependent_source = "src/lib/periph/7seg_panel/display_controller.c",
+        intermediate_file = "src/lib/periph/7seg_panel/sevseg_bitmaps.ch",
+        action = "$PROJECT_ROOT/src/util/sevseg_convert.py $SOURCE > $TARGET",
+        script_input = ["src/lib/periph/7seg_panel/sevseg_artwork.txt"]
+    ),
+    Converter(
+        dependent_source = "src/lib/periph/rasters/rasters.c",
+        intermediate_file = "src/lib/periph/rasters/rasters_auto.ch",
+        action = "$PROJECT_ROOT/src/util/bitmaploader.py $TARGET $SOURCES",
+        script_input = cwd_to_project_root(
+            glob.glob(os.path.join(PROJECT_ROOT, "src", "bitmaps", "*.png")))
+    ),
+
 ]
