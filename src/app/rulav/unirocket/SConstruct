@@ -1,3 +1,4 @@
+
 #!/usr/bin/python3
 # Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com).
 # 
@@ -35,5 +36,5 @@ RulosBuildTarget(
         extra_peripherals = ["max3421e", "spi", "joystick_usb", "twi"],
     ),
   ],
-  peripherals = "bss_canary rocket 7seg_panel display_rtc hpam audio adc rasters joystick uart input_controller remote_keyboard quadknob".split(),
+  peripherals = "rocket 7seg_panel display_rtc hpam audio adc rasters joystick uart input_controller remote_keyboard quadknob".split(),
   ).build()

@@ -20,7 +20,7 @@
 
 #include "core/rulos.h"
 #include "periph/7seg_panel/display_controller.h"
-#include "periph/bss_canary/bss_canary.h"
+#include "core/bss_canary.h"
 
 #define UPDATE_RATE_US 1000000
 

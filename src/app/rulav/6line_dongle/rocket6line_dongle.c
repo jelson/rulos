@@ -20,7 +20,7 @@
 #include "core/twi.h"
 #include "periph/7seg_panel/display_controller.h"
 #include "periph/7seg_panel/remote_bbuf.h"
-#include "periph/bss_canary/bss_canary.h"
+#include "core/bss_canary.h"
 #include "periph/rocket6line/rocket6line.h"
 
 // For legacy backcompat with the old 4-line matrix, we assume the first line of

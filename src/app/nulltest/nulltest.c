@@ -16,9 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "core/bss_canary.h"
 #include "core/hardware.h"
 #include "core/rulos.h"
-#include "periph/bss_canary/bss_canary.h"
 
 #define FREQ_USEC 50000
 

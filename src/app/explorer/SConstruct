@@ -19,9 +19,7 @@ sys.path.insert(0, "../../build-tools")
 from BuildRules import *
 
 RulosBuildTarget(
-  name = "nulltest",
-  sources = ["nulltest.c"],
-  #platforms = [ArmStmPlatform("stm32g431x8")],
-  platforms = [ArmStmPlatform("stm32f303x8")],
-  peripherals = ["uart"],
+    name = "explorer",
+    sources = ["explorer.c"],
+    platforms = [ArmStmPlatform("stm32g031x8")],
 ).build()

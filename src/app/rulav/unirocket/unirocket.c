@@ -30,7 +30,7 @@
 #include "periph/7seg_panel/7seg_panel.h"
 #include "periph/7seg_panel/display_controller.h"
 #include "periph/7seg_panel/remote_bbuf.h"
-#include "periph/bss_canary/bss_canary.h"
+#include "core/bss_canary.h"
 #include "periph/display_rtc/display_rtc.h"
 #include "periph/input_controller/input_controller.h"
 #include "periph/rasters/rasters.h"

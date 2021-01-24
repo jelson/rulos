@@ -94,6 +94,35 @@
 #define rI2C1_DMA_RX_IRQHandler DMA1_Channel7_IRQHandler
 #define rI2C1_DMA_RX_ClearTCFlag() LL_DMA_ClearFlag_TC7(DMA1)
 
+#elif defined(RULOS_ARM_stm32g0)
+#define RULOS_I2C_V2
+#include "stm32g0xx_ll_bus.h"
+#include "stm32g0xx_ll_dma.h"
+#include "stm32g0xx_ll_i2c.h"
+#include "stm32g0xx_ll_rcc.h"
+
+#define rI2C1_CLK_ENABLE() __HAL_RCC_I2C1_CLK_ENABLE()
+#define rI2C1_SDA_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
+#define rI2C1_SCL_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
+#define rI2C1_DMA_CLK_ENABLE() __HAL_RCC_DMA1_CLK_ENABLE()
+#define rI2C1_FORCE_RESET() __HAL_RCC_I2C1_FORCE_RESET()
+#define rI2C1_RELEASE_RESET() __HAL_RCC_I2C1_RELEASE_RESET()
+
+#define rI2C1_SCL_PIN GPIO_PIN_6
+#define rI2C1_SCL_GPIO_PORT GPIOB
+#define rI2C1_SDA_PIN GPIO_PIN_7
+#define rI2C1_SDA_GPIO_PORT GPIOB
+#define rI2C1_GPIO_ALTFUNC GPIO_AF4_I2C1
+#define rI2C1_DMA DMA1
+#define rI2C1_DMA_TX_CHAN LL_DMA_CHANNEL_6
+#define rI2C1_DMA_TX_IRQn DMA1_Channel6_IRQn
+#define rI2C1_DMA_TX_IRQHandler DMA1_Channel6_IRQHandler
+#define rI2C1_DMA_TX_ClearTCFlag() LL_DMA_ClearFlag_TC6(DMA1)
+#define rI2C1_DMA_RX_CHAN LL_DMA_CHANNEL_7
+#define rI2C1_DMA_RX_IRQn DMA1_Channel7_IRQn
+#define rI2C1_DMA_RX_IRQHandler DMA1_Channel7_IRQHandler
+#define rI2C1_DMA_RX_ClearTCFlag() LL_DMA_ClearFlag_TC7(DMA1)
+
 #else
 #error "Your chip's definitions for I2C registers could use some help."
 #include <stophere>

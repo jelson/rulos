@@ -25,7 +25,7 @@
 #include "core/hal.h"
 #include "core/network.h"
 #include "core/util.h"
-#include "periph/bss_canary/bss_canary.h"
+#include "core/bss_canary.h"
 #include "periph/input_controller/input_controller.h"
 #include "periph/quadknob/quadknob.h"
 #include "periph/remote_keyboard/remote_keyboard.h"
