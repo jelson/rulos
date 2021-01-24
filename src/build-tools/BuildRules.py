@@ -19,7 +19,8 @@ import os
 import SpecialRules
 from SCons.Script import *
 
-SConsignFile(os.path.join(BUILD_ROOT, f".sconsign.{SCons.__version__}.dblite"))
+# Bad for concurrency
+#SConsignFile(os.path.join(BUILD_ROOT, f".sconsign.{SCons.__version__}.dblite"))
 
 def die(msg):
     sys.stderr.write(msg+"\n")
@@ -95,48 +96,45 @@ class ArmPlatform(Platform):
     def build(self, target):
         env = Environment()
         build_obj_dir = os.path.join(PROJECT_ROOT, "build", target.name, self.name())
-        lib_obj_dir = build_obj_dir
         env.Replace(CC = self.ARM_COMPILER_PREFIX+"gcc")
         env.Replace(AS = self.ARM_COMPILER_PREFIX+"as")
         env.Replace(AR = self.ARM_COMPILER_PREFIX+"ar")
         env.Replace(RANLIB = self.ARM_COMPILER_PREFIX+"ranlib")
     
-        platform_lib_srcs = [os.path.join(lib_obj_dir, s) for s in self.common_libs(target)]
+        platform_lib_srcs = [os.path.join(build_obj_dir, s) for s in self.common_libs(target)]
         env.Append(CFLAGS = self.cflags())
         env.Append(CFLAGS = target.cflags())
         env.Append(LINKFLAGS = self.cflags())
         env.Append(LINKFLAGS = target.cflags())
         env.Append(LINKFLAGS = self.ld_flags(target))
         env.Append(CPPPATH = self.include_dirs())
-        env.Append(CPPPATH = os.path.join(lib_obj_dir, "src"))
+        env.Append(CPPPATH = os.path.join(build_obj_dir, "src"))
 
-        lib_env = env.Clone()
-        # We're pretending the sources appear in lib_obj_dir, so they look adjacent to the build output.
-        lib_env.VariantDir(lib_obj_dir, PROJECT_ROOT, duplicate=0)
-        rocket_lib = lib_env.StaticLibrary(os.path.join(lib_obj_dir, "rocket"),
+        # We're pretending the sources appear in build_obj_dir, so they look adjacent to the build output.
+        env.VariantDir(build_obj_dir, PROJECT_ROOT, duplicate=0)
+
+        # Build the lib
+        rocket_lib = env.StaticLibrary(os.path.join(build_obj_dir, "rocket"),
             source=platform_lib_srcs)
-        lib_env.Replace(PROJECT_ROOT = PROJECT_ROOT)    # export PROJECT_ROOT to converter actions
+        env.Replace(PROJECT_ROOT = PROJECT_ROOT)    # export PROJECT_ROOT to converter actions
         for converter in SpecialRules.CONVERTERS:
-            converter_output = lib_env.Command(
-                source = [os.path.join(lib_obj_dir, p) for p in converter.script_input],
-                target = os.path.join(lib_obj_dir, converter.intermediate_file),
+            converter_output = env.Command(
+                source = [os.path.join(build_obj_dir, p) for p in converter.script_input],
+                target = os.path.join(build_obj_dir, converter.intermediate_file),
                 action = converter.action)
-            lib_env.Depends(
-                os.path.join(lib_obj_dir, converter.dependent_source),
-                os.path.join(lib_obj_dir, converter.intermediate_file))
+            env.Depends(
+                os.path.join(build_obj_dir, converter.dependent_source),
+                os.path.join(build_obj_dir, converter.intermediate_file))
 
-        app_env = env.Clone()
-        app_obj_dir = build_obj_dir
-        # We're pretending the sources appear in app_obj_dir, so they look adjacent to the build output.
-        app_env.VariantDir(app_obj_dir, PROJECT_ROOT, duplicate=0)
+        # Build the app
         target_sources = [
-            os.path.join(app_obj_dir, s) for s in target.sources + self.platform_specific_app_sources()]
+            os.path.join(build_obj_dir, s) for s in target.sources + self.platform_specific_app_sources()]
 
-        linkscript = self.make_linkscript(app_env, app_obj_dir)
-        program_name = os.path.join(app_obj_dir, target.name+".elf")
-        app_env.Depends(program_name, linkscript)
+        linkscript = self.make_linkscript(env, build_obj_dir)
+        program_name = os.path.join(build_obj_dir, target.name+".elf")
+        env.Depends(program_name, linkscript)
 
-        app_binary = app_env.Program(program_name, source=target_sources + rocket_lib)
+        app_binary = env.Program(program_name, source=target_sources + rocket_lib)
         Default(app_binary)
 
     def platform_cflags(self, arch):
