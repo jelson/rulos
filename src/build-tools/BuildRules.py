@@ -84,12 +84,18 @@ class Platform:
         return src_files
 
     def common_cflags(self):
-        return ["-Wall", "-Werror", "-g",
+        return self.extra_cflags + [
+            "-Wall",
+            "-Werror",
+            "-g",
             #, "-flto"
-            ] + self.extra_cflags
+        ]
 
     def common_include_dirs(self):
-        return [os.path.join(SRC_ROOT, "lib")]
+        return [
+            os.path.join(SRC_ROOT, "lib"),
+            ".", # app source code directory
+        ]
 
     def map_ld_flag(self, build_obj_dir, target):
         map_path = os.path.join(build_obj_dir,
