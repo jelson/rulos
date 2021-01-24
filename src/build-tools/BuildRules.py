@@ -376,7 +376,7 @@ class AvrPlatform(Platform):
         return self.common_include_dirs() + [ os.path.join(SRC_ROOT, "lib", "chip", "avr") ]
 
     def ld_flags(self, target):
-        return  self.common_ld_flags(target)
+        return self.common_ld_flags(target)
 
     def platform_specific_app_sources(self):
         return []
