@@ -95,7 +95,7 @@ class ArmPlatform(Platform):
 
     def build(self, target):
         env = Environment()
-        build_obj_dir = os.path.join(PROJECT_ROOT, "build", target.name, self.name())
+        build_obj_dir = os.path.join(BUILD_ROOT, target.name, self.name())
         env.Replace(CC = self.ARM_COMPILER_PREFIX+"gcc")
         env.Replace(AS = self.ARM_COMPILER_PREFIX+"as")
         env.Replace(AR = self.ARM_COMPILER_PREFIX+"ar")
@@ -114,7 +114,7 @@ class ArmPlatform(Platform):
         env.VariantDir(build_obj_dir, PROJECT_ROOT, duplicate=0)
 
         # Build the lib
-        rocket_lib = env.StaticLibrary(os.path.join(build_obj_dir, "rocket"),
+        rocket_lib = env.StaticLibrary(os.path.join(build_obj_dir, "src", "lib", "rocket"),
             source=platform_lib_srcs)
         env.Replace(PROJECT_ROOT = PROJECT_ROOT)    # export PROJECT_ROOT to converter actions
         for converter in SpecialRules.CONVERTERS:
@@ -259,8 +259,6 @@ class ArmStmPlatform(ArmPlatform):
 
     def ld_flags(self, target):
         return self.arm_ld_flags(target)
-#    def 
-#-T obj.nulltest.arm-stm32g030x8.GENERIC/stm32g030x8-linker-script.ld
 
     def include_dirs(self):
         return self.platform_include_dirs() + [
@@ -286,7 +284,7 @@ class ArmStmPlatform(ArmPlatform):
         linkscript = env.Command(
             source = os.path.join(app_obj_dir,
                 cwd_to_project_root(os.path.join(STM32_ROOT, "linker", "stm32-generic.ld"))),
-            target = os.path.join(app_obj_dir, linkscript_name),
+            target = os.path.join(app_obj_dir, "src", "lib", linkscript_name),
             action = f'sed "s/%RULOS_FLASHK%/{self.chip.flashk}/; s/%RULOS_RAMK%/{self.chip.ramk}/" $SOURCE > $TARGET')
         env.Append(LINKFLAGS = ["-T", linkscript])
         return linkscript
