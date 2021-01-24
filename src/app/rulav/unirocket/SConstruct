@@ -26,14 +26,14 @@ RulosBuildTarget(
     ## SIM CFLAGS can be one of:
     ## -DBOARDCONFIG_UNIROCKET_LOCALSIM, to view boards in local sim
     ## -DBOARDCONFIG_UNIROCKET, to debug remote bbuf protocol/dongles
-#    SimulatorPlatform(
-#        cflags=["-DBOARDCONFIG_UNIROCKET_LOCALSIM"],
-#        perpiherals = ["keypad", "joystick_adc"],
-#    ),
+    SimulatorPlatform(
+        extra_cflags=["-DBOARDCONFIG_UNIROCKET_LOCALSIM"],
+        extra_peripherals = ["keypad", "joystick_adc"],
+    ),
     ArmStmPlatform("stm32f303x8",
-        extra_cflags=["-DBOARDCONFIG_UNIROCKET"],
-        extra_peripherals = ["max3421e", "spi", "joystick_usb"],
+        extra_cflags=["-DBOARD_STMPEM_REVA", "-DBOARDCONFIG_UNIROCKET"],
+        extra_peripherals = ["max3421e", "spi", "joystick_usb", "twi"],
     ),
   ],
-  peripherals = "bss_canary rocket 7seg_panel twi display_rtc hpam audio adc rasters joystick uart input_controller remote_keyboard quadknob".split(),
-  board = "STMPEM_REVA").build()
+  peripherals = "bss_canary rocket 7seg_panel display_rtc hpam audio adc rasters joystick uart input_controller remote_keyboard quadknob".split(),
+  ).build()

@@ -17,6 +17,7 @@ from BaseRules import *
 import glob
 import os
 import SpecialRules
+import subprocess
 from filelock import FileLock, Timeout
 from SCons.Script import *
 
@@ -61,7 +62,7 @@ class Platform:
         return src_files
 
     def common_cflags(self):
-        return ["-Wall", "-Werror"
+        return ["-Wall", "-Werror", "-g",
             #, "-flto"
             ] + self.extra_cflags
 
@@ -76,41 +77,23 @@ class Platform:
     def common_ld_flags(self, target):
         return [
             "-Wl,--fatal-warnings", # linker should fail on warning
-            "-nostartfiles",
             "-Wl,--gc-sections",    # garbage-collect unused functions
             "-static",
         ]
 
-# TODO move knowledge to the platform-specific directories
-class ArmPlatform(Platform):
-    def __init__(self, chip_name, extra_peripherals, extra_cflags):
-        super().__init__(extra_peripherals, extra_cflags)
-        self.chip_name = chip_name
-
-    ARM_COMPILER_PREFIX = "/usr/local/bin/gcc-arm-none-eabi-9-2019-q4-major/bin/arm-none-eabi-"
-
-    class Architecture:
-        def __init__(self, name, arch, mcpu, more_cflags=[]):
-            self.name = name
-            self.arch = arch
-            self.mcpu = mcpu
-            self.flags = ["-march="+self.arch, "-mcpu="+self.mcpu] + more_cflags
-
-    ARCHITECTURES = dict([(arch.name, arch) for arch in [
-        Architecture("m0", "armv6-m", "cortex-m0"),
-        Architecture("m0plus", "armv6-m", "cortex-m0plus"),
-        Architecture("m3", "armv7-m", "cortex-m3"),
-        Architecture("m4", "armv7e-m", "cortex-m4"),
-        Architecture("m4f", "armv7e-m", "cortex-m4", ["-mfloat-abi=hard", "-mfpu=fpv4-sp-d16"]),
-        ]])
-
     def build(self, target):
         env = Environment()
+
+        # Export names & paths to subclasses
         build_obj_dir = os.path.join(BUILD_ROOT, target.name, self.name())
-        env.Replace(CC = self.ARM_COMPILER_PREFIX+"gcc")
-        env.Replace(AS = self.ARM_COMPILER_PREFIX+"as")
-        env.Replace(AR = self.ARM_COMPILER_PREFIX+"ar")
-        env.Replace(RANLIB = self.ARM_COMPILER_PREFIX+"ranlib")
+        env.Replace(RulosBuildObjDir = build_obj_dir)
+
+        program_name = os.path.join(build_obj_dir, target.name+".elf")
+        env.Replace(RulosProgramName = program_name)
+
+        env.Replace(RulosProjectRoot = PROJECT_ROOT)    # export PROJECT_ROOT to converter actions
+
+        self.configure_env(env)
     
         platform_lib_srcs = [os.path.join(build_obj_dir, s) for s in self.common_libs(target)]
         env.Append(CFLAGS = self.cflags())
@@ -128,7 +111,6 @@ class ArmPlatform(Platform):
         # Build the lib
         rocket_lib = env.StaticLibrary(os.path.join(build_obj_dir, "src", "lib", "rocket"),
             source=platform_lib_srcs)
-        env.Replace(PROJECT_ROOT = PROJECT_ROOT)    # export PROJECT_ROOT to converter actions
         for converter in SpecialRules.CONVERTERS:
             converter_output = env.Command(
                 source = [os.path.join(build_obj_dir, p) for p in converter.script_input],
@@ -142,25 +124,39 @@ class ArmPlatform(Platform):
         target_sources = [
             os.path.join(build_obj_dir, s) for s in target.sources + self.platform_specific_app_sources()]
 
-        linkscript = self.make_linkscript(env, build_obj_dir)
-        program_name = os.path.join(build_obj_dir, target.name+".elf")
-        env.Depends(program_name, linkscript)
-
 # Our failed attempt to tell scons we actually *want* the .map file that's a side effect of
 # building the app_binary with self.map_ld_flag.
 #        def elf_emitter(target, source, env):
 #            print(target[0])
 #        env["BUILDERS"]["Program"].add_emitter(suffix = ".elf", emitter = elf_emitter)
-        app_binary = env.Program(program_name, source=target_sources + rocket_lib)
+        print("RulosProgramName", env["RulosProgramName"])
+        print("target_sources", target_sources)
+        print("rocket_lib", rocket_lib)
+        app_binary = env.Program(env["RulosProgramName"], source=target_sources + rocket_lib)
 
-        lss_builder = Builder(
-            src_suffix = ".elf",
-            suffix = ".lss",
-            action =f"{self.ARM_COMPILER_PREFIX}objdump -h -S --syms $SOURCE > $TARGET"
-            )
-        env.Append(BUILDERS = {"MakeLSS": lss_builder})
-        lss = env.MakeLSS(app_binary)
-        Default([app_binary, lss])
+        extra_default = self.post_configure(env, app_binary)
+        Default([app_binary] + extra_default)
+
+# TODO move knowledge to the platform-specific directories
+class ArmPlatform(Platform):
+    def __init__(self, chip_name, extra_peripherals, extra_cflags):
+        super().__init__(extra_peripherals, extra_cflags)
+        self.chip_name = chip_name
+
+    class Architecture:
+        def __init__(self, name, arch, mcpu, more_cflags=[]):
+            self.name = name
+            self.arch = arch
+            self.mcpu = mcpu
+            self.flags = ["-march="+self.arch, "-mcpu="+self.mcpu] + more_cflags
+
+    ARCHITECTURES = dict([(arch.name, arch) for arch in [
+        Architecture("m0", "armv6-m", "cortex-m0"),
+        Architecture("m0plus", "armv6-m", "cortex-m0plus"),
+        Architecture("m3", "armv7-m", "cortex-m3"),
+        Architecture("m4", "armv7e-m", "cortex-m4"),
+        Architecture("m4f", "armv7e-m", "cortex-m4", ["-mfloat-abi=hard", "-mfpu=fpv4-sp-d16"]),
+        ]])
 
     def platform_cflags(self, arch):
         return self.common_cflags() + arch.flags + [
@@ -177,14 +173,15 @@ class ArmPlatform(Platform):
             "-fdata-sections", # Put all funcs/data in their own sections
             "-ffunction-sections",
             "-std=gnu99",
-            "-g",
             "-O2",
 #            "-D__STACK_SIZE=$(STACK_SIZE)",
 #            "-D__HEAP_SIZE=$(HEAP_SIZE)",
             ]
 
     def arm_ld_flags(self, target):
-        return self.common_ld_flags(target)
+        return self.common_ld_flags(target) + [
+            "-nostartfiles",
+            ]
 
     ARM_ROOT = os.path.join(SRC_ROOT, "lib", "chip", "arm")
     def platform_include_dirs(self):
@@ -198,6 +195,26 @@ class ArmPlatform(Platform):
 
     def name(self):
         return f"arm-{self.part_name()}"
+
+    ARM_COMPILER_PREFIX = "/usr/local/bin/gcc-arm-none-eabi-9-2019-q4-major/bin/arm-none-eabi-"
+
+    def arm_configure_env(self, env):
+        env.Replace(CC = self.ARM_COMPILER_PREFIX+"gcc")
+        env.Replace(AS = self.ARM_COMPILER_PREFIX+"as")
+        env.Replace(AR = self.ARM_COMPILER_PREFIX+"ar")
+        env.Replace(RANLIB = self.ARM_COMPILER_PREFIX+"ranlib")
+
+        lss_builder = Builder(
+            src_suffix = ".elf",
+            suffix = ".lss",
+            action = self.ARM_COMPILER_PREFIX+"objdump -h -S --syms $SOURCE > $TARGET"
+            )
+        env.Append(BUILDERS = {"MakeLSS": lss_builder})
+
+    def post_configure(self, env, app_binary):
+        # Returns list of extra Default targets
+        lss = env.MakeLSS(app_binary)
+        return [lss]
 
 STM32_ROOT = os.path.join(ArmPlatform.ARM_ROOT, "stm32")
 class ArmStmPlatform(ArmPlatform):
@@ -304,15 +321,17 @@ class ArmStmPlatform(ArmPlatform):
                 f"startup_{self.chip.family.lower()}.s"),
             ])
 
-    def make_linkscript(self, env, app_obj_dir):
+    def configure_env(self, env):
+        self.arm_configure_env(env)
+
         linkscript_name = f"{self.chip.name}-linker-script.ld"
         linkscript = env.Command(
-            source = os.path.join(app_obj_dir,
+            source = os.path.join(env["RulosBuildObjDir"],
                 cwd_to_project_root(os.path.join(STM32_ROOT, "linker", "stm32-generic.ld"))),
-            target = os.path.join(app_obj_dir, "src", "lib", linkscript_name),
+            target = os.path.join(env["RulosBuildObjDir"], "src", "lib", linkscript_name),
             action = f'sed "s/%RULOS_FLASHK%/{self.chip.flashk}/; s/%RULOS_RAMK%/{self.chip.ramk}/" $SOURCE > $TARGET')
         env.Append(LINKFLAGS = ["-T", linkscript])
-        return linkscript
+        env.Depends(env["RulosProgramName"], linkscript)
 
 class AvrPlatform(Platform):
     def __init__(self, mcu):
@@ -325,14 +344,45 @@ class AvrPlatform(Platform):
         return "avr"
 
 class SimulatorPlatform(Platform):
-    def __init__(self):
-        pass
+    def __init__(self, extra_peripherals = [], extra_cflags = []):
+        super().__init__(extra_peripherals, extra_cflags)
 
     def name(self):
         return "simulator"
 
+    def configure_env(self, env):
+        pass
+
+    def periph_dir(self):
+        return os.path.join("sim", "periph")
+
+    def platform_lib_source_files(self):
+        return cglob(SRC_ROOT, "lib", "chip", "sim", "core")
+
+    def pkgconfig(self, mode, package):
+        return subprocess.check_output(["pkg-config", mode, package]).decode("utf-8").split()
+        
+    def cflags(self):
+        return self.common_cflags() + self.pkgconfig("--cflags", "gtk+-2.0") + [ "-DSIM" ]
+
+    def ld_flags(self, target):
+        return  (self.common_ld_flags(target)
+                + self.pkgconfig("--libs", "gtk+-2.0")
+                + [ "-lm", "-lncurses" ])
+
+    def include_dirs(self):
+        return self.common_include_dirs() + [
+            os.path.join(SRC_ROOT, "lib", "chip", "sim")
+        ]
+
+    def platform_specific_app_sources(self):
+        return []
+
+    def post_configure(self, env, app_binary):
+        return []
+
 class RulosBuildTarget:
-    def __init__(self, name, sources, platforms, peripherals = [], extra_cflags = [], board = "GENERIC"):
+    def __init__(self, name, sources, platforms, peripherals = [], extra_cflags = []):
         self.name = name
         self.sources = [os.path.relpath(s, PROJECT_ROOT) for s in sources]
         self.platforms = platforms
@@ -341,11 +391,10 @@ class RulosBuildTarget:
             assert(isinstance(p, Platform))
         self.peripherals = peripherals
         self.extra_cflags = extra_cflags
-        self.board = board
 
     def build(self):
         for platform in self.platforms:
             platform.build(self)
 
     def cflags(self):
-        return [f"-DBOARD_{self.board}"] + self.extra_cflags
+        return self.extra_cflags
