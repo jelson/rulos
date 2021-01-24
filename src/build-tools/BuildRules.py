@@ -94,7 +94,8 @@ class ArmPlatform(Platform):
 
     def build(self, target):
         env = Environment()
-        lib_obj_dir = os.path.join(PROJECT_ROOT, "build", "lib", self.name())
+        build_obj_dir = os.path.join(PROJECT_ROOT, "build", target.name, self.name())
+        lib_obj_dir = build_obj_dir
         env.Replace(CC = self.ARM_COMPILER_PREFIX+"gcc")
         env.Replace(AS = self.ARM_COMPILER_PREFIX+"as")
         env.Replace(AR = self.ARM_COMPILER_PREFIX+"ar")
@@ -125,7 +126,7 @@ class ArmPlatform(Platform):
                 os.path.join(lib_obj_dir, converter.intermediate_file))
 
         app_env = env.Clone()
-        app_obj_dir = os.path.join(PROJECT_ROOT, "build", target.name, self.name())
+        app_obj_dir = build_obj_dir
         # We're pretending the sources appear in app_obj_dir, so they look adjacent to the build output.
         app_env.VariantDir(app_obj_dir, PROJECT_ROOT, duplicate=0)
         target_sources = [
