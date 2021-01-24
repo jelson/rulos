@@ -18,7 +18,7 @@
 
 #include "core/hardware.h"
 #include "core/rulos.h"
-#include "periph/bss_canary/bss_canary.h"
+#include "core/bss_canary.h"
 #include "stm32f3xx_ll_rcc.h"
 #include <math.h>
 
