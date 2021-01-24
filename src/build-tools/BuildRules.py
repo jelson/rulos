@@ -67,7 +67,7 @@ class Platform:
 
     def common_include_dirs(self):
         return [os.path.join(SRC_ROOT, "lib")]
-    
+
     def map_ld_flag(self, build_obj_dir, target):
         map_path = os.path.join(build_obj_dir,
             f"{target.name}.map")
@@ -146,8 +146,21 @@ class ArmPlatform(Platform):
         program_name = os.path.join(build_obj_dir, target.name+".elf")
         env.Depends(program_name, linkscript)
 
+# Our failed attempt to tell scons we actually *want* the .map file that's a side effect of
+# building the app_binary with self.map_ld_flag.
+#        def elf_emitter(target, source, env):
+#            print(target[0])
+#        env["BUILDERS"]["Program"].add_emitter(suffix = ".elf", emitter = elf_emitter)
         app_binary = env.Program(program_name, source=target_sources + rocket_lib)
-        Default(app_binary)
+
+        lss_builder = Builder(
+            src_suffix = ".elf",
+            suffix = ".lss",
+            action =f"{self.ARM_COMPILER_PREFIX}objdump -h -S --syms $SOURCE > $TARGET"
+            )
+        env.Append(BUILDERS = {"MakeLSS": lss_builder})
+        lss = env.MakeLSS(app_binary)
+        Default([app_binary, lss])
 
     def platform_cflags(self, arch):
         return self.common_cflags() + arch.flags + [
