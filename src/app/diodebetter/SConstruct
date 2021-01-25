@@ -31,3 +31,10 @@ RulosBuildTarget(
     ],
     peripherals = "adc",
 ).build()
+
+RulosBuildTarget(
+    name = "diodebetter2",
+    sources = ["diodebetter2.c"],
+    platforms = [ ArmStmPlatform("stm32f303x8") ],
+    peripherals = "uart",
+).build()
