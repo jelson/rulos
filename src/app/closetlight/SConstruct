@@ -1,5 +1,7 @@
 #!/usr/bin/python3
-# Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com).
+#
+# Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson
+# (jelson@gmail.com).
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,10 +28,12 @@ RulosBuildTarget(
             "attiny45",
             extra_cflags = [
                 "-DTIMING_DEBUG_PIN=GPIO_B0",
-                "-DSCHEDULER_CAPACITY=2",
-                "-DSCHEDULER_NOW_QUEUE_CAPACITY=2",
             ],
         ),
+    ],
+    extra_cflags = [
+        "-DSCHEDULER_CAPACITY=2",
+        "-DSCHEDULER_NOW_QUEUE_CAPACITY=2",
     ],
     peripherals = "usi_serial",
 ).build()

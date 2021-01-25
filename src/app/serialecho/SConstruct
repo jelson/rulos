@@ -20,17 +20,16 @@ import sys
 sys.path.insert(0, "../../build-tools")
 from BuildRules import *
 
+Program(target="serialhost", source="serialhost.c")
 RulosBuildTarget(
-    name = "missa",
-    sources = ["missa.c"],
-    extra_cflags = [
-        "-DSCHEDULER_CAPACITY=3",
-        "-DSCHEDULER_NOW_QUEUE_CAPACITY=2",
-    ],
+    name = "serialecho",
+    sources = ["serialecho.c"],
     platforms = [
-        SimulatorPlatform(),
-        AvrPlatform("attiny85"),
-        ArmStmPlatform("stm32g031x8"),
-        #ArmNxpPlatform("lpc1114-102"),
+        AvrPlatform(
+            "atmega8",
+            # Set twi to 500mhz (assuming 8 mhz processor)
+            extra_cflags = ["-DCUSTOM_TWBR=32"],
+        ),
     ],
 ).build()
+
