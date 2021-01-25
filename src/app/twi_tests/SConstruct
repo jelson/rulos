@@ -21,6 +21,23 @@ sys.path.insert(0, "../../build-tools")
 from BuildRules import *
 
 RulosBuildTarget(
+    name = "twirecvtest",
+    sources = [ "twirecvtest.c" ],
+    platforms = [
+        SimulatorPlatform(),
+        AvrPlatform(
+            "atmega328p",
+            extra_peripherals = "twi 7seg_panel_hardware",
+        ),
+    ],
+    peripherals = "7seg_panel",
+    extra_cflags = [
+        "-DBOARD_DONGLE_REVB",
+        "-DBOARDCONFIG_DEFAULT",
+    ],
+).build()
+
+RulosBuildTarget(
     name = "twisendtest",
     sources = [ "twisendtest.c" ],
     platforms = [
