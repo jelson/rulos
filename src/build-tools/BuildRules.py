@@ -21,6 +21,8 @@ import subprocess
 from filelock import FileLock, Timeout
 from SCons.Script import *
 
+if not os.path.exists(BUILD_ROOT):
+    os.makedirs(BUILD_ROOT)
 sconsign = f".sconsign.{SCons.__version__}.dblite"
 lock = FileLock(os.path.join(BUILD_ROOT, sconsign+".lock"))
 try:
