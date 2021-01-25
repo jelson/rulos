@@ -61,13 +61,17 @@ static void missa_hal_set_led(uint8_t led_num, uint8_t onoff) {
 
 #include "core/hardware.h"
 
-#ifdef RULOS_ARM
+#if defined(RULOS_ARM_STM32)
+#define LED0_PIN GPIO_A6
+#define LED1_PIN GPIO_A7
+#elif defined(RULOS_ARM_NXP)
 #define LED0_PIN GPIO0_00
 #define LED1_PIN GPIO0_01
 #else
 #define LED0_PIN GPIO_B0
 #define LED1_PIN GPIO_B2
 #endif
+
 static void missa_hal_init() {
   gpio_make_output(LED0_PIN);
   gpio_make_output(LED1_PIN);

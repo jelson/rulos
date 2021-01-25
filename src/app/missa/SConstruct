@@ -1,5 +1,5 @@
-# Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson
-# (jelson@gmail.com).
+#!/usr/bin/python3
+# Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com).
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,16 +14,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-ROCKET_ROOT := ../..
+import sys
+sys.path.insert(0, "../../build-tools")
+from BuildRules import *
 
-PLATFORMS := arm
-ARM_CHIP := stm32f303x8
-TARGET := max3421test
-BOARD := GENERIC
-ALL_PLATFORM_CFLAGS := -DLOG_TO_SERIAL=UART0
-PERIPHERALS := uart max3421e spi
-
-TARGET_OBJECTS := \
-	max3421test.o
-
-include $(ROCKET_ROOT)/Makefile.common
+RulosBuildTarget(
+    name = "missa",
+    sources = ["missa.c"],
+    extra_cflags = [
+        "-DSCHEDULER_CAPACITY=3",
+        "-DSCHEDULER_NOW_QUEUE_CAPACITY=2",
+    ],
+    platforms = [
+        SimulatorPlatform(),
+        AvrPlatform("attiny85"),
+        ArmStmPlatform("stm32g031x8"),
+        #ArmNxpPlatform("lpc1114-102"),
+    ],
+).build()
