@@ -21,11 +21,25 @@ sys.path.insert(0, "../../build-tools")
 from BuildRules import *
 
 RulosBuildTarget(
-    name = "duktig",
-    sources = ["duktig.c"],
+    name = "duktig-v1",
+    sources = ["duktig-v1.c"],
     platforms = [
         AvrPlatform(
             "attiny84a",
         ),
+    ],
+).build()
+
+RulosBuildTarget(
+    name = "duktig-v2",
+    sources = ["duktig-v2.c"],
+    platforms = [
+        ArmStmPlatform(
+            "stm32g030x6",
+            #"stm32g031x8",
+            extra_cflags = [
+                "-DRULOS_HSI_SYSCLOCK=RCC_HSI_DIV8",
+            ],
+        )
     ],
 ).build()
