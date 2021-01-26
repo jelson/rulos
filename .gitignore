@@ -4,16 +4,3 @@
 Thumbs.db
 __pycache__
 /build
-
-# /papers/sensys/figs/
-/papers/sensys/figs/projector-controller.eps
-/papers/sensys/figs/projector.eps
-/papers/sensys/figs/raster.eps
-/papers/sensys/figs/synchronized-clock.eps
-/papers/sensys/figs/thread-graph.eps
-
-# /src/app/wallclock/PCClockService/
-/src/app/wallclock/PCClockService/Debug
-/src/app/wallclock/PCClockService/PCClockService.ncb
-/src/app/wallclock/PCClockService/PCClockService.suo
-/src/app/wallclock/PCClockService/PCClockService.vcproj.GYPSY.jelson.user
