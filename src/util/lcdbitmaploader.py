@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com).
 # 
@@ -61,7 +61,7 @@ class ImageCat:
 		fp.write("const uint8_t PROGMEM %s_data[] = {\n" % symname)
 		imagebytes = self.image.tobytes()
 		sys.stderr.write("num image bytes: %s %s\n" % (len(imagebytes), self.getcatsize()))
-		fp.write("".join(map(lambda s: " 0x%02x,\n" % ord(s), imagebytes)))
+		fp.write("".join(map(lambda s: " 0x%02x,\n" % s, imagebytes)))
 		fp.write("};\n")
 
 		fp.write("const uint16_t PROGMEM %s_index_to_x[] = {\n" % symname)
@@ -80,6 +80,7 @@ class ImageCat:
 		#self.image.save("catimage.png")
 		
 def main():
+	print("globbing %s" % (os.path.abspath(sys.argv[2])))
 	flist = glob.glob("%s/*.png" % (sys.argv[2]))
 	flist.sort()
 
@@ -95,4 +96,3 @@ def main():
 	cat.emit("lcd", sys.argv[1])
 
 main()
-

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com).
 # 
@@ -31,7 +31,7 @@ class ImageCat:
 		binary = PIL.ImageOps.invert(img.convert("RGB")).convert("1")
 		#binary.save("binary.%s.png" % os.path.basename(filename))
 		imagebytes = binary.tobytes()
-		imagedata = "".join(map(lambda b: "0x%02x, " % ord(b), imagebytes))
+		imagedata = "".join(map(lambda b: "0x%02x, " % b, imagebytes))
 		array = "{ %s }" % imagedata
 		self.arrays.append(array)
 
@@ -53,5 +53,3 @@ def main():
 	cat.emit("starbitmap", sys.argv[1])
 
 main()
-
-

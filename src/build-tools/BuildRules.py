@@ -134,24 +134,27 @@ class Platform:
         env.Append(CPPPATH = self.include_dirs())
         env.Append(CPPPATH = os.path.join(build_obj_dir, "src"))
 
-        # We're pretending the sources appear in build_obj_dir, so they look adjacent to the build output.
+        # We're pretending the sources appear in build_obj_dir, so they look
+        # adjacent to the build output.
         env.VariantDir(build_obj_dir, PROJECT_ROOT, duplicate=0)
 
         # Build the lib
         rocket_lib = env.StaticLibrary(os.path.join(build_obj_dir, "src", "lib", "rocket"),
             source=platform_lib_srcs)
-        for converter in SpecialRules.CONVERTERS:
+        for converter in SpecialRules.CONVERTERS + target.extra_converters:
             converter_output = env.Command(
                 source = [os.path.join(build_obj_dir, p) for p in converter.script_input],
                 target = os.path.join(build_obj_dir, converter.intermediate_file),
-                action = converter.action)
+                action = converter.action,
+            )
             env.Depends(
                 os.path.join(build_obj_dir, converter.dependent_source),
                 os.path.join(build_obj_dir, converter.intermediate_file))
 
         # Build the app
         target_sources = [
-            os.path.join(build_obj_dir, s) for s in target.sources + self.platform_specific_app_sources()]
+            os.path.join(build_obj_dir, s) for s in
+            target.sources + self.platform_specific_app_sources()]
 
 # Our failed attempt to tell scons we actually *want* the .map file that's a side effect of
 # building the app_binary with self.map_ld_flag.
@@ -182,7 +185,7 @@ class ArmPlatform(Platform):
         Architecture("m3", "armv7-m", "cortex-m3"),
         Architecture("m4", "armv7e-m", "cortex-m4"),
         Architecture("m4f", "armv7e-m", "cortex-m4", ["-mfloat-abi=hard", "-mfpu=fpv4-sp-d16"]),
-        ]])
+    ]])
 
     def platform_cflags(self, arch):
         return self.common_cflags() + arch.flags + [
@@ -208,14 +211,14 @@ class ArmPlatform(Platform):
         return self.common_ld_flags(target) + [
             "-nostartfiles",
             "-static",
-            ]
+        ]
 
     ARM_ROOT = os.path.join(SRC_ROOT, "lib", "chip", "arm")
     def platform_include_dirs(self):
         return self.common_include_dirs() + [
             os.path.join(self.ARM_ROOT, "common"),
             os.path.join(self.ARM_ROOT, "common", "CMSIS", "Include"),
-            ]
+        ]
 
     def arm_platform_lib_source_files(self):
         return cglob(self.ARM_ROOT, "common", "core")
@@ -321,7 +324,7 @@ class ArmStmPlatform(ArmPlatform):
             STM32_ROOT,
             os.path.join(self.major_family.cmsis_root, "Include"),
             os.path.join(self.major_family.hal_root, "Inc"),
-            ]
+        ]
 
     def platform_lib_source_files(self):
         return (self.arm_platform_lib_source_files()
@@ -367,6 +370,7 @@ class AvrPlatform(Platform):
     def cflags(self):
         return self.common_cflags() + [
             "-mmcu="+self.mcu,
+            f"-DMCU{self.mcu}=1",
             "-DRULOS_AVR", 
             "-funsigned-char",
             "-funsigned-bitfields",
@@ -377,8 +381,7 @@ class AvrPlatform(Platform):
             "-gdwarf-2",
             "-std=gnu99",
             "-Os",
-            f"-DMCU{self.mcu}=1",
-            ]
+        ]
 
     def include_dirs(self):
         return self.common_include_dirs() + [ os.path.join(SRC_ROOT, "lib", "chip", "avr") ]
@@ -396,7 +399,6 @@ class AvrPlatform(Platform):
             suffix = ".hex",
             action = f"avr-objcopy -O ihex {HEX_FLASH_FLAGS}  $SOURCE $TARGET")})
         Default(env.MakeHex(app_binary))
-
         Default(env.MakeLSS(app_binary))
 
 class SimulatorPlatform(Platform):
@@ -416,13 +418,17 @@ class SimulatorPlatform(Platform):
         return cglob(SRC_ROOT, "lib", "chip", "sim", "core")
 
     def cflags(self):
-        return self.common_cflags() + pkgconfig("--cflags", "gtk+-2.0") + [ "-DSIM" ]
+        return self.common_cflags() + pkgconfig("--cflags", "gtk+-2.0") + [
+            "-DSIM"
+        ]
 
     def ld_flags(self, target):
         return  self.common_ld_flags(target)
 
     def include_dirs(self):
-        return self.common_include_dirs() + [ os.path.join(SRC_ROOT, "lib", "chip", "sim") ]
+        return self.common_include_dirs() + [
+            os.path.join(SRC_ROOT, "lib", "chip", "sim")
+        ]
 
     def platform_specific_app_sources(self):
         return []
@@ -431,7 +437,8 @@ class SimulatorPlatform(Platform):
         pass
 
 class RulosBuildTarget:
-    def __init__(self, name, sources, platforms, peripherals = [], extra_cflags = []):
+    def __init__(self, name, sources, platforms, peripherals = [],
+                 extra_cflags = [], extra_converters = []):
         self.name = name
         self.sources = [os.path.relpath(s, PROJECT_ROOT) for s in sources]
         self.platforms = platforms
@@ -440,6 +447,7 @@ class RulosBuildTarget:
             assert(isinstance(p, Platform))
         self.peripherals = parse_peripherals(peripherals)
         self.extra_cflags = extra_cflags
+        self.extra_converters = extra_converters
 
     def build(self):
         for platform in self.platforms:
