@@ -59,7 +59,7 @@ def configure_compiler(env, compiler_prefix):
         src_suffix = ".elf",
         suffix = ".lss",
         action = compiler_prefix+"objdump -h -S --syms $SOURCE > $TARGET"
-        )
+    )
     env.Append(BUILDERS = {"MakeLSS": lss_builder})
 
 def pkgconfig(mode, package):
@@ -117,7 +117,7 @@ class Platform:
         build_obj_dir = os.path.join(BUILD_ROOT, target.name, self.name())
         env.Replace(RulosBuildObjDir = build_obj_dir)
 
-        program_name = os.path.join(build_obj_dir, target.name+".elf")
+        program_name = os.path.join(build_obj_dir, target.name+self.target_suffix())
         env.Replace(RulosProgramName = program_name)
 
         env.Replace(RulosProjectRoot = PROJECT_ROOT)    # export PROJECT_ROOT to converter actions
@@ -225,6 +225,9 @@ class ArmPlatform(Platform):
 
     def name(self):
         return f"arm-{self.part_name()}"
+
+    def target_suffix(self):
+        return ".elf"
 
     def arm_configure_env(self, env):
         configure_compiler(env, "/usr/local/bin/gcc-arm-none-eabi-9-2019-q4-major/bin/arm-none-eabi-")
@@ -358,6 +361,9 @@ class AvrPlatform(Platform):
     def name(self):
         return f"avr-{self.mcu}"
 
+    def target_suffix(self):
+        return ".elf"
+
     def periph_dir(self):
         return os.path.join("avr", "periph")
 
@@ -407,6 +413,9 @@ class SimulatorPlatform(Platform):
 
     def name(self):
         return "simulator"
+
+    def target_suffix(self):
+        return "sim"
 
     def configure_env(self, env):
         env.Append(LIBS = ["m", "ncurses"] + pkgconfig("--libs", "gtk+-2.0"))
