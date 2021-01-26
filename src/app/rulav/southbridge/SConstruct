@@ -21,12 +21,18 @@ sys.path.insert(0, "../../../build-tools")
 from BuildRules import *
 
 RulosBuildTarget(
-  name = "rocketsouthbridge",
-  sources = ["rocketsouthbridge.c"],
-  extra_cflags = ["-DLOG_TO_SERIAL=UART0" ],
-  platforms = [
-    SimulatorPlatform(),
-    AvrPlatform("atmega328", extra_cflags=["-DBOARD_SOUTHBRIDGE"], extra_peripherals=["twi"]),
-  ],
-  peripherals = "quadknob input_controller keypad remote_keyboard uart"
-  ).build()
+    name = "rocketsouthbridge",
+    sources = ["rocketsouthbridge.c"],
+    extra_cflags = ["-DLOG_TO_SERIAL=UART0" ],
+    platforms = [
+        SimulatorPlatform(),
+        AvrPlatform(
+            "atmega328",
+            extra_cflags = [
+                "-DBOARD_SOUTHBRIDGE",
+            ],
+            extra_peripherals=["twi"],
+        ),
+    ],
+    peripherals = "quadknob input_controller keypad remote_keyboard uart",
+).build()

@@ -23,14 +23,15 @@ from BuildRules import *
 RulosBuildTarget(
     name = "boardid",
     sources = ["boardid.c"],
-    extra_cflags = [
-        "-DBOARDCONFIG_DEFAULT",
-    ],
     platforms = [
-        SimulatorPlatform(),
+        SimulatorPlatform(
+            extra_cflags = [ "-DBOARDCONFIG_UNIROCKET_LOCALSIM" ]),
         AvrPlatform(
             "atmega328",
-            extra_cflags=["-DBOARD_DONGLE_REVB"],
+            extra_cflags=[
+                "-DBOARD_DONGLE_REVB",
+                "-DBOARDCONFIG_DEFAULT",
+            ],
             extra_peripherals="7seg_panel_hardware",
         ),
     ],
