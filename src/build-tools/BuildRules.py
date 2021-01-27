@@ -156,12 +156,15 @@ class Platform:
             os.path.join(build_obj_dir, s) for s in
             target.sources + self.platform_specific_app_sources()]
 
-# Our failed attempt to tell scons we actually *want* the .map file that's a side effect of
-# building the app_binary with self.map_ld_flag.
-#        def elf_emitter(target, source, env):
-#            print(target[0])
-#        env["BUILDERS"]["Program"].add_emitter(suffix = ".elf", emitter = elf_emitter)
-        app_binary = env.Program(env["RulosProgramName"], source=target_sources + rocket_lib)
+        # Our failed attempt to tell scons we actually *want* the .map file
+        # that's a side effect of building the app_binary with self.map_ld_flag.
+        def elf_emitter(target, source, env):
+            print("emitter is being called")
+        env["BUILDERS"]["Program"].add_emitter(
+            suffix = ".map",
+            emitter = elf_emitter)
+        app_binary = env.Program(env["RulosProgramName"],
+                                 source=target_sources + rocket_lib)
 
         self.post_configure(env, app_binary)
         Default([app_binary])
