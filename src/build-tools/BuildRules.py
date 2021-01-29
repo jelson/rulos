@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+ARM_COMPILER_PREFIX = "/usr/local/bin/gcc-arm-none-eabi-9-2019-q4-major/bin/arm-none-eabi-"
+
 from BaseRules import *
 import glob
 import os
@@ -232,7 +234,7 @@ class ArmPlatform(Platform):
         return ".elf"
 
     def arm_configure_env(self, env):
-        configure_compiler(env, "/usr/local/bin/gcc-arm-none-eabi-9-2019-q4-major/bin/arm-none-eabi-")
+        configure_compiler(env, ARM_COMPILER_PREFIX)
 
     def post_configure(self, env, app_binary):
         # Returns list of extra Default targets
