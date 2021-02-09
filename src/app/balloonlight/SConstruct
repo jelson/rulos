@@ -20,8 +20,24 @@ import sys
 sys.path.insert(0, "../../build-tools")
 from BuildRules import *
 
-RulosBuildTarget(
-    name = "balloonlight",
-    sources = ["balloonlight.c"],
-    platforms = [ArmStmPlatform("stm32g031x8")],
-).build()
+programs = [
+#    'balloonlight',
+    'upside-down-test',
+    'toggle-test',
+    'jostle-test',
+]
+
+for program in programs:
+    RulosBuildTarget(
+        name = program,
+        sources = [
+            "common.c",
+            f"{program}.c",
+        ],
+        platforms = [ArmStmPlatform(
+            "stm32g031x8",
+            extra_cflags = [
+                "-DRULOS_HSI_SYSCLOCK=RCC_HSI_DIV8",
+            ],
+        )],
+    ).build()
