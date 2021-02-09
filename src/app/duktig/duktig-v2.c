@@ -51,28 +51,30 @@
 // falling edges of the button GPIOs and create interrupt handlers that don't do
 // anything but clear the interrupt flags. Total power use: 4.7-4.9uA.
 //
-// In STANDBY mode the datasheet claims ~300nA. However, normal GPIO stops
-// working. The chip can only be waken up (externally) by special Wakeup pins
-// (WKUP) that can be configured to be sensitive to either being high or
-// low. Normal GPIO pullup/pulldown configuration doesn't work any more either,
-// but there's a special register that allows pullup and pulldowns to be
-// configured during standby mode. Total power use: 2.9-3.0uA.
+// In STANDBY mode the datasheet claims ~300nA for the STM32G031, about 1.5uA
+// for the STM32G030. However, normal GPIO stops working. The chip can only be
+// waken up (externally) by special Wakeup pins (WKUP) that can be configured to
+// be sensitive to either being high or low. Normal GPIO pullup/pulldown
+// configuration doesn't work any more either, but there's a special register
+// that allows pullup and pulldowns to be configured during standby mode. Total
+// power use: 2.9-3.0uA.
 //
 // In SHUTDOWN mode we have the datasheet claims, amazingly, ~30nA. There are
 // some differences between what works in STANDBY vs SHUTDOWN but those don't
 // seem to be relevant for this application. Total power use: 1.7-1.8uA.
-// However, while the chip is booting there's a transient where the GPIO pins
-// are not driven and there are visible artifacts -- the LEDs momentarily
-// light. To use this mode we'd need external pulldowns on the LED driver
-// control pins.
+// However, while the chip is booting from SHUTDOWN there's a transient where
+// the GPIO pins are not driven and there are visible artifacts -- the LEDs
+// momentarily light. To use this mode we'd need external pulldowns on the LED
+// driver control pins.
 //
 // There's another dimension to consider, which is cost. If we use STOP1, the
 // buttons can be attached to any pin and we can use the 8-pin STM32G030J6M6,
 // which costs 71 cents in Qty 150 (Aug 2020). But the 8-pin version only
 // exposes a single WKUP pin, so STANDBY/SHUTDOWN can not be used. We'd instead
-// need to use the 20-pin STM32G030F6P6, which costs 82 cents in Qty 150. Also,
-// for a board this simple, it's less humiliating to use an 8-pin micro rather
-// than a 20-pin.
+// need to use the 20-pin STM32G030F6P6, which costs 82 cents in Qty 150. (Or,
+// use some external diodes so pressing either button generates a pulse on the
+// single WKUP pin.) Also, for a board this simple, it's less humiliating to use
+// an 8-pin micro rather than a 20-pin.
 //
 // Cost matrix at Qty 100, Aug 2020:
 //
