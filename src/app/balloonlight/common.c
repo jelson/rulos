@@ -81,7 +81,7 @@ void read_accel_values(int16_t accel_out[3]) {
 
 void start_accel() {
   gpio_make_output(LIGHT_EN);
-  gpio_clr(LIGHT_EN);
+  gpio_set(LIGHT_EN);
   gpio_make_input_disable_pullup(ACCEL_INT);
 
   // I2C pins are on PA11 (I2C2 SCL) and PA12 (I2C2 SDA)
@@ -118,16 +118,18 @@ void start_accel() {
     __builtin_trap();
   }
 
-  // turn on accelerometer. Power control register is 0x11.
-  reg_write(0x11,
-            (1 << 7) | // put accel in active mode
-            0x40); // default values (from docs) for all other bits
-
-  // read all registers for debug purposes
-  reg_read(0x0, &orig_registers, NUM_REGISTERS);
+  // turn on accelerometer and slow down clock; power control register is 0x11.
+  reg_write(
+      0x11,
+      (1 << 7) // put accel in active mode
+      | (0b0111) // set MCLK to 5khz
+  );
 
   // read chip id
   reg_read(0x0, &chip_id, 1);
+
+  // configure ODR
+  reg_write(0x10, 0b011);
 
   // set threshold for motion interrupt to be ... something. determined
   // experimentally.
@@ -138,5 +140,8 @@ void start_accel() {
 
   // configure int1 to be ANY_MOT
   reg_write(0x1a, 0x62 | 1);
+
+  // read all registers for debug purposes
+  reg_read(0x0, &orig_registers, NUM_REGISTERS);
 }
 

@@ -52,9 +52,21 @@
 ////// configuration //////
 
 #define LIGHT_TIMEOUT_SEC 5
+#define SAMPLING_TIME_MSEC 10
 
-void turn_on_led_when_jostled() {
-  static uint32_t led_on_time_ms = 0;
+// Initialize with the timeout already set in the future. The program starts
+// running in response to an accelerometer interrupt, so the light should be
+// turned on immediately.
+uint32_t led_on_time_ms = LIGHT_TIMEOUT_SEC;
+
+void sample(void *data) {
+  // This goes here instead of in main() because we want to give the
+  // accelerometer sufficient turn-on time.
+  if (data != NULL) {
+    start_accel();
+  }
+
+  schedule_us(SAMPLING_TIME_MSEC * 1000, (ActivationFuncPtr)sample, NULL);
 
   if (gpio_is_set(ACCEL_INT)) {
     // motion
@@ -66,51 +78,29 @@ void turn_on_led_when_jostled() {
     }
   }
 
-  gpio_set_or_clr(LIGHT_EN, led_on_time_ms > 0);
-}
+  // if motion has stopped, turn off the LED and go to sleep
+  if (led_on_time_ms == 0) {
+    // Turn off the LED
+    gpio_clr(LIGHT_EN);
 
+    // Set the sleep-mode pulldown on the LED driver control line
+    HAL_PWREx_EnablePullUpPullDownConfig();
+    HAL_PWREx_EnableGPIOPullDown(PWR_GPIO_B, PWR_GPIO_BIT_7);
 
-void run_accel(void *data) {
-  // This goes here instead of in main() because we want to give the
-  // accelerometer sufficient turn-on time.
-  if (data != NULL) {
-    start_accel();
+    // Configure shutdown to wake up if the accel int line goes high
+    HAL_PWR_EnableWakeUpPin(PWR_WAKEUP_PIN6_HIGH);
+    __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WUF6);
+
+    // Go into super-low-power shutdown mode
+    HAL_PWREx_EnterSHUTDOWNMode();
+    // HAL_PWR_EnterSTANDBYMode();
   }
-
-#if 0
-  HAL_SuspendTick();
-  HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_STOPENTRY_WFI);
-  HAL_ResumeTick();
-#endif
-
-  // Set the pulldown on the LED driver control line
-  HAL_PWREx_EnablePullUpPullDownConfig();
-  HAL_PWREx_EnableGPIOPullDown(PWR_GPIO_B, PWR_GPIO_BIT_7);
-
-  // Go into super-low-power shutdown mode
-  HAL_PWREx_EnterSHUTDOWNMode();
-  // HAL_PWR_EnterSTANDBYMode();
-  return;
-
-  schedule_us(SAMPLING_TIME_MSEC * 1000, (ActivationFuncPtr)run_accel, NULL);
-
-  // for testing:
-  turn_on_led_when_upside_down();
-
-  // for testing:
-  // toggle_led();
-
-  // real:
-  // turn_on_led_when_jostled();
 }
 
 int main() {
   hal_init();
 
-  init_clock(100000, TIMER1);
-  gpio_make_output(LIGHT_EN);
-  gpio_clr(LIGHT_EN);
-  gpio_make_input_disable_pullup(ACCEL_INT);
+  init_clock(SAMPLING_TIME_MSEC * 1000, TIMER1);
 
   __HAL_RCC_PWR_CLK_ENABLE();
 
@@ -121,7 +111,7 @@ int main() {
 
   // The datasheet of the QMA7981 says the power-on time is 50 msec. We'll give
   // it 75 just to be safe.
-  schedule_us(75000, (ActivationFuncPtr)run_accel, (void *)1);
+  schedule_us(75000, (ActivationFuncPtr)sample, (void *)1);
 
   cpumon_main_loop();
 }

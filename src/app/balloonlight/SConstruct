@@ -21,7 +21,7 @@ sys.path.insert(0, "../../build-tools")
 from BuildRules import *
 
 programs = [
-#    'balloonlight',
+    'balloonlight',
     'upside-down-test',
     'toggle-test',
     'jostle-test',
