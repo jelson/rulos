@@ -118,6 +118,35 @@
 // CLK_ENABLE must match DMA unit above
 #define rUART1_DMA_CLK_ENABLE() __HAL_RCC_DMA1_CLK_ENABLE()
 
+#elif defined(RULOS_ARM_stm32g4)
+
+#include "stm32g4xx_ll_bus.h"
+#include "stm32g4xx_hal_dma.h"
+#include "stm32g4xx.h"
+#define rUART1_TX_PORT GPIOA
+#define rUART1_TX_PIN GPIO_PIN_9
+// CLK_ENABLE must match port above
+#define rUART1_TX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
+
+// RX, TX can also be put on B7, B6 or C5, C4
+#define rUART1_RX_PORT GPIOA
+#define rUART1_RX_PIN GPIO_PIN_10
+// CLK_ENABLE must match port above
+#define rUART1_RX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
+
+#define rUART1_GPIO_ALTFUNC GPIO_AF7_USART1
+
+#define rUART1_DMA_CLK_ENABLE() do {            \
+    __HAL_RCC_SYSCFG_CLK_ENABLE();              \
+    __HAL_RCC_PWR_CLK_ENABLE();                 \
+    __HAL_RCC_DMAMUX1_CLK_ENABLE();             \
+    __HAL_RCC_DMA1_CLK_ENABLE();                \
+  } while (0)
+
+#define rUART1_DMA_TX_IRQn DMA1_Channel1_IRQn
+#define rUART1_DMA_TX_CHAN DMA1_Channel1
+#define rUART1_DMA_TX_IRQHandler DMA1_Channel1_IRQHandler
+
 #else
 #error "Tell the UART code about your chip's UART."
 #include <stophere>
@@ -129,7 +158,9 @@ typedef struct {
 
   // Transmit and receive DMA buffers and DMA handles
   DMA_HandleTypeDef hal_dma_tx_handle;
+#if USE_DMA_FOR_RX
   DMA_HandleTypeDef hal_dma_rx_handle;
+#endif
   uint8_t txbuf[UART_TXBUF_SIZE];
   uint8_t rxbuf[UART_RXBUF_SIZE];
 } uart_t;
@@ -141,6 +172,9 @@ static uart_t g_uarts[NUM_UARTS] = {};
 
 // If the DMA RX and TX events share an interrupt, call both from the
 // handler.
+#ifndef rUART1_DMA_TX_IRQHandler
+#error <stophere>
+#endif
 void rUART1_DMA_TX_IRQHandler(void) {
   HAL_DMA_IRQHandler(g_uarts[0].hal_uart_handle.hdmatx);
 }
@@ -157,6 +191,18 @@ static void stm32_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2) {
 
   switch (uart_id) {
     case 0:
+
+#if defined(RULOS_ARM_stm32g4)
+      {
+        RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+        PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1;
+        PeriphClkInit.Usart2ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
+        if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
+          __builtin_trap();
+        }
+      }
+#endif
+
       // Enable peripherals and GPIO clocks
       rUART1_TX_GPIO_CLK_ENABLE();
       rUART1_RX_GPIO_CLK_ENABLE();
@@ -166,9 +212,6 @@ static void stm32_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2) {
 
       // Enable USART clock
       __HAL_RCC_USART1_CLK_ENABLE();
-
-      // Enable DMA clock
-      rUART1_DMA_CLK_ENABLE();
 
       // Configure GPIO peripherals
       {
@@ -195,12 +238,37 @@ static void stm32_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2) {
           stop2 ? UART_STOPBITS_2 : UART_STOPBITS_1;
       uart->hal_uart_handle.Init.HwFlowCtl = UART_HWCONTROL_NONE;
       uart->hal_uart_handle.Init.Mode = UART_MODE_TX_RX;
+#if defined(RULOS_ARM_stm32g4)
+      uart->hal_uart_handle.Init.OverSampling = UART_OVERSAMPLING_16;
+      uart->hal_uart_handle.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+      uart->hal_uart_handle.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+      uart->hal_uart_handle.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+#endif
       if (HAL_UART_Init(&uart->hal_uart_handle) != HAL_OK) {
         __builtin_trap();
       }
 
+#if defined(RULOS_ARM_stm32g4)
+      if (HAL_UARTEx_SetTxFifoThreshold(&uart->hal_uart_handle, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
+      {
+        __builtin_trap();
+      }
+      if (HAL_UARTEx_SetRxFifoThreshold(&uart->hal_uart_handle, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
+      {
+        __builtin_trap();
+      }
+      if (HAL_UARTEx_DisableFifoMode(&uart->hal_uart_handle) != HAL_OK)
+      {
+        __builtin_trap();
+      }
+#endif
+
       // Configure the DMA controller for TX
+      rUART1_DMA_CLK_ENABLE();
       uart->hal_dma_tx_handle.Instance = rUART1_DMA_TX_CHAN;
+#if defined(RULOS_ARM_stm32g4)
+      uart->hal_dma_tx_handle.Init.Request = DMA_REQUEST_USART1_TX;
+#endif
       uart->hal_dma_tx_handle.Init.Direction = DMA_MEMORY_TO_PERIPH;
       uart->hal_dma_tx_handle.Init.PeriphInc = DMA_PINC_DISABLE;
       uart->hal_dma_tx_handle.Init.MemInc = DMA_MINC_ENABLE;
@@ -215,7 +283,12 @@ static void stm32_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2) {
       // Associate the initialized DMA handle to the UART handle
       __HAL_LINKDMA(&uart->hal_uart_handle, hdmatx, uart->hal_dma_tx_handle);
 
-#if 0
+
+      // Set up interrupts
+      HAL_NVIC_SetPriority(rUART1_DMA_TX_IRQn, 0, 1);
+      HAL_NVIC_EnableIRQ(rUART1_DMA_TX_IRQn);
+
+#if USE_DMA_FOR_RX
       // NOTE: No longer using DMA for RX.
       // Configure the DMA handler for reception process */
       uart->hal_dma_rx_handle.Instance = rUART1_DMA_RX_CHAN;
@@ -231,14 +304,7 @@ static void stm32_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2) {
       }
 
       __HAL_LINKDMA(&uart->hal_uart_handle, hdmarx, uart->hal_dma_rx_handle);
-#endif
 
-      // Set up interrupts
-      HAL_NVIC_SetPriority(rUART1_DMA_TX_IRQn, 0, 1);
-      HAL_NVIC_EnableIRQ(rUART1_DMA_TX_IRQn);
-
-#if 0
-      // NOTE: No longer using DMA for RX.
       /* NVIC configuration for DMA transfer complete interrupt (USARTx_RX) */
       HAL_NVIC_SetPriority(rUART1_DMA_RX_IRQn, 0, 0);
       HAL_NVIC_EnableIRQ(rUART1_DMA_RX_IRQn);
