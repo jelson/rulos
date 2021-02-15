@@ -23,6 +23,7 @@ from BuildRules import *
 RulosBuildTarget(
     name = "timestamper",
     sources = ["timestamper.c"],
+    peripherals = "uart",
     platforms = [
         ArmStmPlatform(
             "stm32g431x8",

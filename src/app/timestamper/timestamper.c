@@ -52,6 +52,8 @@
  * this to prevent overflow.)
  */
 
+#include <string.h>
+
 #include "core/hardware.h"
 #include "core/rulos.h"
 
@@ -66,18 +68,25 @@
 #define TEST_INPUT_PIN GPIO_B4
 #define TEST_INPUT_PERIOD_USEC 1000000
 
+#define TIMESTAMP_PRINT_PERIOD_USEC 100000
 #define TIMESTAMP_BUFLEN 200
 
+
+// circular buffer of recorded timestamps that have not yet been transmitted over uart
 typedef struct {
   uint32_t seconds;
   uint32_t nanoseconds;
-} timestamp;
+} timestamp_t;
 
 int num_timestamps = 0;
-timestamp timestamp_buffer[TIMESTAMP_BUFLEN];
+timestamp_t timestamp_buffer[TIMESTAMP_BUFLEN];
 bool buffer_overflow = false;
 
+// total seconds elapsed since boot
 uint32_t seconds;
+
+// uart handle for transmitting timestamps
+HalUart uart;
 
 void store_timestamp(uint32_t seconds, uint32_t nanoseconds) {
   if (num_timestamps >= TIMESTAMP_BUFLEN) {
@@ -174,6 +183,37 @@ static void create_test_input(void *data) {
   gpio_clr(TEST_INPUT_PIN);
 }
 
+static void drain_output_buffer(void *data) {
+  schedule_us(TIMESTAMP_PRINT_PERIOD_USEC, drain_output_buffer, NULL);
+
+  while (true) {
+    timestamp_t output;
+    bool has_output = false;
+
+    // in critical section, check to see if there's a timestamp to emit
+    rulos_irq_state_t old_interrupts = hal_start_atomic();
+
+    if (num_timestamps > 0) {
+      output = timestamp_buffer[0];
+      num_timestamps--;
+      memmove(&timestamp_buffer[0], &timestamp_buffer[1], num_timestamps * sizeof(timestamp_t));
+      has_output = true;
+    }
+    hal_end_atomic(old_interrupts);
+    // end of critical section
+
+    // if we got a timestamp, emit it to the serial port
+    if (has_output)  {
+      char buf[50];
+      snprintf(buf, sizeof(buf), "%ld.%09ld\n", output.seconds, output.nanoseconds);
+      hal_uart_sync_send(&uart, buf);
+    } else {
+      return;
+    }
+  }
+}
+
+
 int main() {
   hal_init();
 
@@ -190,6 +230,10 @@ int main() {
   // initialize the main timer and its input capture pin
   init_timer();
 
-  schedule_now(create_test_input, NULL);
+  // initialize uart
+  hal_uart_init(&uart, 1000000, true, /* uart_id= */ 0);
+
+  schedule_us(1, create_test_input, NULL);
+  schedule_us(1, drain_output_buffer, NULL);
   cpumon_main_loop();
 }
