@@ -87,18 +87,25 @@ static inline void gpio_make_input_enable_pulldown(const gpio_pin_t gpio_pin) {
  * Configure a pin as input and disable its pullup and pulldown resistors.
  */
 #if defined(RULOS_ARM_stm32f1)
+
 static inline void gpio_make_input_disable_pullup(const gpio_pin_t gpio_pin) {
   stm32_gpio_configure(gpio_pin, LL_GPIO_MODE_FLOATING, LL_GPIO_PULL_UP);
 }
+static inline void gpio_make_adc_input(const gpio_pin_t gpio_pin) {
+  stm32_gpio_configure(gpio_pin, LL_GPIO_MODE_ANALOG, LL_GPIO_PULL_UP);
+}
+
 #else
+
 static inline void gpio_make_input_disable_pullup(const gpio_pin_t gpio_pin) {
   stm32_gpio_configure(gpio_pin, LL_GPIO_MODE_INPUT, LL_GPIO_PULL_NO);
 }
-#endif
-
 static inline void gpio_make_adc_input(const gpio_pin_t gpio_pin) {
   stm32_gpio_configure(gpio_pin, LL_GPIO_MODE_ANALOG, LL_GPIO_PULL_NO);
 }
+
+#endif
+
 
 /*
  * Assert an output pin HIGH.

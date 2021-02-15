@@ -20,19 +20,17 @@ import sys
 sys.path.insert(0, "../../build-tools")
 from BuildRules import *
 
-#for chip in ArmStmPlatform.CHIPS:
-for chip in ["stm32f303xb", "stm32g030x8", "stm32g031x8", "stm32g431x8"]:
+for chip in ArmStmPlatform.CHIPS:
     RulosBuildTarget(
         name = "nulltest",
         sources = ["nulltest.c"],
         platforms = [ArmStmPlatform(chip)],
-        #peripherals = ["uart"],
     ).build()
 
-for mcu in ["atmega328", "atmega328p", "atmega1284", "attiny84", "attiny85"]:
+for mcu in ["atmega8", "atmega328", "atmega328p", "atmega1284", "atmega1284p",
+            "attiny84", "attiny84a", "attiny45", "attiny85"]:
     RulosBuildTarget(
         name = "nulltest",
         sources = ["nulltest.c"],
         platforms = [AvrPlatform(mcu)],
-        peripherals = ["uart"],
     ).build()

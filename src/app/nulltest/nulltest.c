@@ -16,6 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/*
+ * Basic test program that frobs a GPIO; should compile for all platforms. No
+ * peripherals. Meant as a basic test of the build system for new platforms and
+ * chips.
+ */
+
 #include "core/bss_canary.h"
 #include "core/hardware.h"
 #include "core/rulos.h"
@@ -32,10 +38,6 @@
 #error "No test pin defined"
 #endif
 
-#ifdef LOG_TO_SERIAL
-HalUart uart;
-#endif
-
 void test_func(void *data) {
   gpio_set(TEST_PIN);
   gpio_clr(TEST_PIN);
@@ -50,33 +52,15 @@ void test_func(void *data) {
   gpio_set(TEST_PIN);
   gpio_clr(TEST_PIN);
 
-#ifdef LOG_TO_SERIAL
-  hal_uart_sync_send(
-      &uart,
-      "hello there this is an extremely long message, one that actually "
-      "exceeds the send buffer size of 128 bytes. why would you want to send a "
-      "message this long? who knows. i don't judge. i just transmit.\n\n");
-  static int i = 0;
-  LOG("serial output %d emitted", i++);
-#endif
-
   schedule_us(FREQ_USEC, (ActivationFuncPtr)test_func, NULL);
 }
 
 int main() {
   hal_init();
 
-#ifdef LOG_TO_SERIAL
-  hal_uart_init(&uart, 115200, true, /* uart_id= */ 0);
-  LOG("Log output running");
-#endif
-
   init_clock(10000, TIMER1);
   gpio_make_output(TEST_PIN);
-
   bss_canary_init();
-
   schedule_now((ActivationFuncPtr)test_func, NULL);
-
   cpumon_main_loop();
 }
