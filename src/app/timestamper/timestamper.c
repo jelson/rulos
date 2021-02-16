@@ -99,18 +99,22 @@ void store_timestamp(uint32_t seconds, uint32_t nanoseconds) {
   num_timestamps++;
 }
 
-// Timer callback that fires at the update rate (~10khz).
+// Timer interrupt that fires under two conditions:
+// 1) When the timer rolls over, once per second.
+// 2) When the timer captures input
 void TIM2_IRQHandler() {
   if (LL_TIM_IsActiveFlag_UPDATE(TIM2)) {
     LL_TIM_ClearFlag_UPDATE(TIM2);
 
+    // Timer has rolled over. Happens at 1hz, we just update the seconds
+    // counter.
     gpio_set(ONEHZ_DEBUG_PIN);
     seconds++;
     gpio_clr(ONEHZ_DEBUG_PIN);
   } else if (LL_TIM_IsActiveFlag_CC1(TIM2)) {
     LL_TIM_ClearFlag_CC1(TIM2);
 
-    // timestamp conversion from ticks to nanoseconds:
+    // Timer has captured an input signal. Conversion from ticks to nanoseconds:
     //
     // The clock frequency is 170 mhz, and we have the timer/counter configured
     // to roll over once per second, meaning a full second has 170,000,000
