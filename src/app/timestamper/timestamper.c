@@ -34,9 +34,11 @@
  * The input signal should be provided on PA0 (pin 5).
  *
  * Output is written to the UART at 1Mbps. Output is simply a list of
- * timestamps, one per line. Each is in decimal seconds, with 9 digits following
- * the decimal point representing nanoseconds. Timestamps are relative to the
- * time the program started.
+ * timestamps, one per line. Each is in decimal seconds, with 12 digits
+ * following the decimal point representing picoseconds. Though the current
+ * version only has 9ns resolution, future versions are expected to have 184ps
+ * resolution, and emitting picoseconds avoids quantization effects. Timestamps
+ * are relative to the time the program started.
  *
  * The implementation uses input-capture feature of TIM2, a 32-bit timer of the
  * STM32G431. Input capture waits for the rising edge of the input signal and
@@ -47,9 +49,9 @@
  * million clock ticks. On each rollover interrupt, the program increments a
  * counter of the total number of seconds that have elapsed. On each input
  * capture interrupt, the latched timer value is read and converted from the
- * timer scale of one tick per 170-millionths of a second to nanoseconds, by
- * multiplying it by 100 and then dividing it by 17. (64-bit math is used for
- * this to prevent overflow.)
+ * timer scale of one tick per 170-millionths of a second to picoseconds, by
+ * multiplying it by 100,000 and then dividing it by 17. (64-bit math is used
+ * for this to prevent overflow.)
  */
 
 #include <string.h>
@@ -63,7 +65,6 @@
 #include "stm32g4xx_ll_tim.h"
 
 #define CLOCK_FREQ_HZ 170000000
-#define ONEHZ_DEBUG_PIN GPIO_B5
 
 #define TEST_INPUT_PIN GPIO_B4
 #define TEST_INPUT_PERIOD_USEC 1000000
@@ -72,10 +73,10 @@
 #define TIMESTAMP_BUFLEN 200
 
 
-// circular buffer of recorded timestamps that have not yet been transmitted over uart
+// buffer of recorded timestamps that have not yet been transmitted over uart
 typedef struct {
   uint32_t seconds;
-  uint32_t nanoseconds;
+  uint32_t counter;
 } timestamp_t;
 
 int num_timestamps = 0;
@@ -88,14 +89,14 @@ uint32_t seconds;
 // uart handle for transmitting timestamps
 HalUart uart;
 
-void store_timestamp(uint32_t seconds, uint32_t nanoseconds) {
+void store_timestamp(uint32_t seconds, uint32_t counter) {
   if (num_timestamps >= TIMESTAMP_BUFLEN) {
     buffer_overflow = true;
     return;
   }
 
   timestamp_buffer[num_timestamps].seconds = seconds;
-  timestamp_buffer[num_timestamps].nanoseconds = nanoseconds;
+  timestamp_buffer[num_timestamps].counter = counter;
   num_timestamps++;
 }
 
@@ -108,27 +109,65 @@ void TIM2_IRQHandler() {
 
     // Timer has rolled over. Happens at 1hz, we just update the seconds
     // counter.
-    gpio_set(ONEHZ_DEBUG_PIN);
     seconds++;
-    gpio_clr(ONEHZ_DEBUG_PIN);
   } else if (LL_TIM_IsActiveFlag_CC1(TIM2)) {
     LL_TIM_ClearFlag_CC1(TIM2);
 
-    // Timer has captured an input signal. Conversion from ticks to nanoseconds:
-    //
-    // The clock frequency is 170 mhz, and we have the timer/counter configured
-    // to roll over once per second, meaning a full second has 170,000,000
-    // ticks. There are 1B nanoseconds in a second, so about 6 nanoseconds per
-    // tick. We can achieve this by multiplying by 100 and then dividing by
-    // 17. 170M * 100 is more than 32 bits, so we use 64-bit math for the
-    // conversion.
-    uint64_t nanoseconds = TIM2->CCR1;
-    nanoseconds *= 100;
-    nanoseconds /= 17;
-    store_timestamp(seconds, nanoseconds);
+    // Timer has captured an input signal. Store it for later conversion and
+    // printing over uart.
+    store_timestamp(seconds, TIM2->CCR1);
   } else {
     // unexpected interrupt
     __builtin_trap();
+  }
+}
+
+static void print_one_timestamp(timestamp_t *t) {
+  // Conversion from ticks to picoseconds:
+  //
+  // The clock frequency is 170 mhz, and we have the timer/counter configured to
+  // roll over once per second, meaning a full second has 170,000,000 ticks.
+  // There are 1T picoseconds in a second, so about 5,882 picoseconds per
+  // tick. We can achieve this by multiplying by 100,000 and then dividing by
+  // 17. 170M * 100,000 is more than 32 bits, so we use 64-bit math for the
+  // conversion.
+  uint64_t picoseconds = t->counter;
+  picoseconds *= 100000;
+  picoseconds /= 17;
+
+  // Now we have picoseconds in a 64-bit int. Alas, nanolibc can not print 64
+  // bit integers, so we'll break it into the high 6 digits (microseconds) and
+  // the low 6 digits (picoseconds minus microseconds).
+  uint32_t microseconds = picoseconds / 1000000;
+  uint32_t sub_microseconds = picoseconds % 1000000;
+
+  char buf[50];
+  snprintf(buf, sizeof(buf), "%ld.%06ld%06ld\n",
+           t->seconds,
+           microseconds,
+           sub_microseconds);
+  hal_uart_sync_send(&uart, buf);
+}
+
+static void drain_output_buffer(void *data) {
+  schedule_us(TIMESTAMP_PRINT_PERIOD_USEC, drain_output_buffer, NULL);
+
+  // In critical section, copy the entire timestamp buffer into a temporary area
+  // and immediately release the lock. This minimizes the time we might miss a
+  // timestamp.
+  timestamp_t tmpbuf[TIMESTAMP_BUFLEN];
+  int num_copied;
+
+  rulos_irq_state_t old_interrupts = hal_start_atomic();
+  memcpy(tmpbuf, timestamp_buffer, num_timestamps * sizeof(timestamp_t));
+  num_copied = num_timestamps;
+  num_timestamps = 0;
+  hal_end_atomic(old_interrupts);
+  // end of critical section
+
+  // print any timestamps we have have copied out of the buffer
+  for (int i = 0; i < num_copied; i++) {
+    print_one_timestamp(&tmpbuf[i]);
   }
 }
 
@@ -187,36 +226,6 @@ static void create_test_input(void *data) {
   gpio_clr(TEST_INPUT_PIN);
 }
 
-static void drain_output_buffer(void *data) {
-  schedule_us(TIMESTAMP_PRINT_PERIOD_USEC, drain_output_buffer, NULL);
-
-  while (true) {
-    timestamp_t output;
-    bool has_output = false;
-
-    // in critical section, check to see if there's a timestamp to emit
-    rulos_irq_state_t old_interrupts = hal_start_atomic();
-
-    if (num_timestamps > 0) {
-      output = timestamp_buffer[0];
-      num_timestamps--;
-      memmove(&timestamp_buffer[0], &timestamp_buffer[1], num_timestamps * sizeof(timestamp_t));
-      has_output = true;
-    }
-    hal_end_atomic(old_interrupts);
-    // end of critical section
-
-    // if we got a timestamp, emit it to the serial port
-    if (has_output)  {
-      char buf[50];
-      snprintf(buf, sizeof(buf), "%ld.%09ld\n", output.seconds, output.nanoseconds);
-      hal_uart_sync_send(&uart, buf);
-    } else {
-      return;
-    }
-  }
-}
-
 
 int main() {
   hal_init();
@@ -225,9 +234,6 @@ int main() {
   init_clock(10000, TIMER1);
 
   // set test pins to be outputs
-  gpio_make_output(ONEHZ_DEBUG_PIN);
-  gpio_clr(ONEHZ_DEBUG_PIN);
-
   gpio_make_output(TEST_INPUT_PIN);
   gpio_clr(TEST_INPUT_PIN);
 
