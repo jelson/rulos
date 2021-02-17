@@ -155,9 +155,13 @@ static void drain_output_buffer(void *data) {
   // In critical section, copy the entire timestamp buffer into a temporary area
   // and immediately release the lock. This minimizes the time we might miss a
   // timestamp.
+  //
+  // TODO: avoid copies by switching back and forth between two buffers, one of
+  // which is filling with new timestamps and one of which is draining to uart.
   timestamp_t tmpbuf[TIMESTAMP_BUFLEN];
   int num_copied;
 
+  // start of critical section
   rulos_irq_state_t old_interrupts = hal_start_atomic();
   memcpy(tmpbuf, timestamp_buffer, num_timestamps * sizeof(timestamp_t));
   num_copied = num_timestamps;
@@ -172,12 +176,11 @@ static void drain_output_buffer(void *data) {
 }
 
 void init_timer() {
-  // Initialize the timer
+  // Start the timer's clock
   __HAL_RCC_TIM2_CLK_ENABLE();
-  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM2);
 
-  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
-
+  // Configure the timer to roll over and generate an interrupt once per second,
+  // i.e. the autoreload value is equal to the clock frequency in hz (minus 1).
   HAL_NVIC_SetPriority(TIM2_IRQn, 3, 0);
   HAL_NVIC_EnableIRQ(TIM2_IRQn);
   LL_TIM_InitTypeDef timer_init;
@@ -192,7 +195,9 @@ void init_timer() {
   LL_TIM_EnableIT_UPDATE(TIM2);
   LL_TIM_GenerateEvent_UPDATE(TIM2);
 
-  // configure input capture GPIO pin
+  // Configure port A, pin 0 GPIO to "alternate function 1" mode, which on the
+  // G4 is TIM2, channel 1. On the 32-pin QFP package of the STM32G431, PA0 is
+  // on pin 5.
   LL_GPIO_InitTypeDef gpio_init = {0};
   gpio_init.Pin = LL_GPIO_PIN_0;
   gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
@@ -202,7 +207,7 @@ void init_timer() {
   gpio_init.Alternate = LL_GPIO_AF_1;
   LL_GPIO_Init(GPIOA, &gpio_init);
 
-  // turn on input capture for timer 2, channel 1 -- pin PA0 (pin 5)
+  // Configure input capture to be the rising edge of timer 2, channel 1
   LL_TIM_IC_SetActiveInput(TIM2, LL_TIM_CHANNEL_CH1,
                            LL_TIM_ACTIVEINPUT_DIRECTTI);
   LL_TIM_IC_SetPrescaler(TIM2, LL_TIM_CHANNEL_CH1, LL_TIM_ICPSC_DIV1);
@@ -210,9 +215,12 @@ void init_timer() {
   LL_TIM_IC_SetPolarity(TIM2, LL_TIM_CHANNEL_CH1, LL_TIM_IC_POLARITY_RISING);
   LL_TIM_EnableIT_CC1(TIM2);
 
+  /// Start the counter running and enable the input capture channel
   LL_TIM_EnableCounter(TIM2);
   LL_TIM_CC_EnableChannel(TIM2, LL_TIM_CHANNEL_CH1);
 
+  // reset the seconds part of our clock - should go after timer enablement
+  // because turning on interrupts seems to generate a spurious one
   seconds = 0;
 }
 
