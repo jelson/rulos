@@ -17,40 +17,21 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
-sys.path.insert(0, "../../build-tools")
+sys.path.insert(0, "../../../build-tools")
 from BuildRules import *
 
 RulosBuildTarget(
-    name = "twirecvtest",
-    sources = [ "twirecvtest.c" ],
+    name = "keypadtest",
+    sources = ["keypadtest.c"],
     platforms = [
-        SimulatorPlatform(),
         AvrPlatform(
-            "atmega328p",
-            extra_peripherals = "twi 7seg_panel_hardware",
+            "atmega1284p",
+            extra_cflags = [
+                "-DBOARD_LPEM",
+                "-DBOARDCONFIG_DEFAULT",
+            ],
         ),
     ],
-    peripherals = "7seg_panel",
-    extra_cflags = [
-        "-DBOARD_DONGLE_REVB",
-        "-DBOARDCONFIG_DEFAULT",
-    ],
+    peripherals = "uart 7seg_panel 7seg_panel_hardware keypad",
 ).build()
 
-RulosBuildTarget(
-    name = "twisendtest",
-    sources = [ "twisendtest.c" ],
-    platforms = [
-        SimulatorPlatform(),
-        AvrPlatform(
-            "atmega328p",
-            extra_peripherals = "twi 7seg_panel_hardware",
-        ),
-    ],
-    peripherals = "7seg_panel",
-    extra_cflags = [
-        "-DBOARD_PCB11",
-        "-DBOARDCONFIG_DEFAULT",
-        "-DSTATUS_TO_LOCAL_PANEL",
-    ],
-).build()

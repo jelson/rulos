@@ -17,15 +17,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
-sys.path.insert(0, "../../build-tools")
+sys.path.insert(0, "../../../build-tools")
 from BuildRules import *
 
 RulosBuildTarget(
-    name = "unittest",
-    sources = [ "unittest.c" ],
+    name = "timertest",
+    sources = ["timertest.c"],
     platforms = [
-        SimulatorPlatform(),
+        AvrPlatform("attiny85"),
         AvrPlatform("atmega328p"),
+        ArmStmPlatform("stm32g031x8"),
+        #ArmNxpPlatform("lpc1114-102"),
     ],
-    peripherals = "ring_buffer",
 ).build()

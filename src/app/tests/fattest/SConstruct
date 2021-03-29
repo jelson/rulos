@@ -17,20 +17,17 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
-sys.path.insert(0, "../../build-tools")
+sys.path.insert(0, "../../../build-tools")
 from BuildRules import *
 
-for chip in ArmStmPlatform.CHIPS:
-    RulosBuildTarget(
-        name = "nulltest",
-        sources = ["nulltest.c"],
-        platforms = [ArmStmPlatform(chip)],
-    ).build()
-
-for mcu in ["atmega8", "atmega328", "atmega328p", "atmega1284", "atmega1284p",
-            "attiny84", "attiny84a", "attiny45", "attiny85"]:
-    RulosBuildTarget(
-        name = "nulltest",
-        sources = ["nulltest.c"],
-        platforms = [AvrPlatform(mcu)],
-    ).build()
+RulosBuildTarget(
+  name = "fattest",
+  sources = ["fattest.c"],
+  extra_cflags = [
+    "-DLOG_TO_SERIAL=UART0",
+  ],
+  platforms = [
+    ArmStmPlatform("stm32f303xb")
+  ],
+  peripherals = "uart fatfs sdcard2"
+).build()

@@ -17,15 +17,27 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
-sys.path.insert(0, "../../build-tools")
+sys.path.insert(0, "../../../build-tools")
 from BuildRules import *
 
-RulosBuildTarget(
-    name = "max3421test",
-    sources = ["max3421test.c"],
-    platforms = [ ArmStmPlatform("stm32f303x8") ],
-    extra_cflags = [
-        "-DLOG_TO_SERIAL=UART0",
-    ],
-    peripherals = "uart max3421e spi",
-).build()
+for chip in ["stm32f303xb", "stm32g431x8"]:
+    RulosBuildTarget(
+        name = "uarttest",
+        sources = ["uarttest.c"],
+        platforms = [ArmStmPlatform(chip)],
+        peripherals = ["uart"],
+        extra_cflags = [
+            "-DLOG_TO_SERIAL=UART0",
+        ],
+    ).build()
+
+for mcu in ["atmega328", "atmega328p", "atmega1284", "attiny84", "attiny85"]:
+    RulosBuildTarget(
+        name = "uarttest",
+        sources = ["uarttest.c"],
+        platforms = [AvrPlatform(mcu)],
+        peripherals = ["uart"],
+        extra_cflags = [
+            "-DLOG_TO_SERIAL=UART0",
+        ],
+    ).build()

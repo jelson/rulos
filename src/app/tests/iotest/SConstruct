@@ -17,17 +17,19 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
-sys.path.insert(0, "../../build-tools")
+sys.path.insert(0, "../../../build-tools")
 from BuildRules import *
 
 RulosBuildTarget(
-  name = "fattest",
-  sources = ["fattest.c"],
-  extra_cflags = [
-    "-DLOG_TO_SERIAL=UART0",
-  ],
-  platforms = [
-    ArmStmPlatform("stm32f303xb")
-  ],
-  peripherals = "uart fatfs sdcard2"
+    name = "iotest",
+    sources = ["iotest.c"],
+    platforms = [
+        AvrPlatform(
+            "atmega1284p",
+            extra_cflags = [
+                "-DBOARD_LPEM",
+            ],
+        ),
+    ],
+    peripherals = "uart keypad",
 ).build()

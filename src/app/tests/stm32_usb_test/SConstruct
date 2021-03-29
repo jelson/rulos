@@ -17,27 +17,22 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
-sys.path.insert(0, "../../build-tools")
+sys.path.insert(0, "../../../build-tools")
 from BuildRules import *
 
-for chip in ["stm32f303xb", "stm32g431x8"]:
-    RulosBuildTarget(
-        name = "uarttest",
-        sources = ["uarttest.c"],
-        platforms = [ArmStmPlatform(chip)],
-        peripherals = ["uart"],
-        extra_cflags = [
-            "-DLOG_TO_SERIAL=UART0",
-        ],
-    ).build()
-
-for mcu in ["atmega328", "atmega328p", "atmega1284", "attiny84", "attiny85"]:
-    RulosBuildTarget(
-        name = "uarttest",
-        sources = ["uarttest.c"],
-        platforms = [AvrPlatform(mcu)],
-        peripherals = ["uart"],
-        extra_cflags = [
-            "-DLOG_TO_SERIAL=UART0",
-        ],
-    ).build()
+RulosBuildTarget(
+    name = "stm32_libusb_test",
+    sources = ["timestamper.c"],
+    peripherals = "uart libusb_stm32",
+    platforms = [
+        ArmStmPlatform(
+            "stm32g431x8",
+            extra_cflags = [
+                '-DHSE_VALUE=10000000',
+                '-DRULOS_USE_HSE',
+                '-DRULOS_PLLM=RCC_PLLM_DIV1',
+                '-DRULOS_PLLN=34',
+            ],
+        ),
+    ],
+).build()

@@ -17,16 +17,20 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
-sys.path.insert(0, "../../build-tools")
+sys.path.insert(0, "../../../build-tools")
 from BuildRules import *
 
-RulosBuildTarget(
-    name = "timertest",
-    sources = ["timertest.c"],
-    platforms = [
-        AvrPlatform("attiny85"),
-        AvrPlatform("atmega328p"),
-        ArmStmPlatform("stm32g031x8"),
-        #ArmNxpPlatform("lpc1114-102"),
-    ],
-).build()
+for chip in ArmStmPlatform.CHIPS:
+    RulosBuildTarget(
+        name = "nulltest",
+        sources = ["nulltest.c"],
+        platforms = [ArmStmPlatform(chip)],
+    ).build()
+
+for mcu in ["atmega8", "atmega328", "atmega328p", "atmega1284", "atmega1284p",
+            "attiny84", "attiny84a", "attiny45", "attiny85"]:
+    RulosBuildTarget(
+        name = "nulltest",
+        sources = ["nulltest.c"],
+        platforms = [AvrPlatform(mcu)],
+    ).build()

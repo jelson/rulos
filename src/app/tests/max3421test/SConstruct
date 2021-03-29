@@ -17,21 +17,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
-sys.path.insert(0, "../../build-tools")
+sys.path.insert(0, "../../../build-tools")
 from BuildRules import *
 
 RulosBuildTarget(
-    name = "keypadtest",
-    sources = ["keypadtest.c"],
-    platforms = [
-        AvrPlatform(
-            "atmega1284p",
-            extra_cflags = [
-                "-DBOARD_LPEM",
-                "-DBOARDCONFIG_DEFAULT",
-            ],
-        ),
+    name = "max3421test",
+    sources = ["max3421test.c"],
+    platforms = [ ArmStmPlatform("stm32f303x8") ],
+    extra_cflags = [
+        "-DLOG_TO_SERIAL=UART0",
     ],
-    peripherals = "uart 7seg_panel 7seg_panel_hardware keypad",
+    peripherals = "uart max3421e spi",
 ).build()
-
