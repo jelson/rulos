@@ -74,18 +74,34 @@ class Platform:
         self.extra_cflags = extra_cflags
 
     def common_libs(self, target):
-        src_dirs = []
-        src_dirs.append(os.path.join(SRC_ROOT, "lib", "core"))
-        for periph_name in target.peripherals + self.extra_peripherals:
-            periph_common_dir = os.path.join(SRC_ROOT, "lib", "periph", periph_name)
-            periph_platform_dir = os.path.join(SRC_ROOT, "lib", "chip", self.periph_dir(), periph_name)
-            if (not os.path.exists(periph_common_dir) and not os.path.exists(periph_platform_dir)):
-                die(f"Periph {periph_name} has no source paths (looked in {periph_common_dir}, {periph_platform_dir})")
-            src_dirs.append(periph_common_dir)
-            src_dirs.append(periph_platform_dir)
-        src_files = sum([cglob(d) for d in src_dirs], [])
+        src_files = []
 
+        # add all hardware-agnostic core source files
+        src_files.extend(cglob(os.path.join(SRC_ROOT, "lib", "core")))
+
+        # add core source files for this hardware platform
         src_files.extend(self.platform_lib_source_files())
+
+        # add source files for all peripherals requested by this app
+        for periph_name in target.peripherals + self.extra_peripherals:
+            # First check if the peripheral has special build rules
+            if periph_name in SpecialRules.PERIPHERALS:
+                src_files.extend(SpecialRules.PERIPHERALS[periph_name]['src'])
+            else:
+                # check both the hardware-agnostic and hardware-specific peripheral
+                # directories for a subdirectory matching the peripheral name
+                periph_dirs = [
+                    os.path.join(SRC_ROOT, "lib", "periph", periph_name),
+                    os.path.join(SRC_ROOT, "lib", "chip", self.periph_dir(), periph_name),
+                ]
+                dir_found = False
+                for periph_dir in periph_dirs:
+                    if os.path.exists(periph_dir):
+                        dir_found = True
+                        src_files.extend(cglob(periph_dir))
+                if not dir_found:
+                    die(f"Periph {periph_name} has no source paths (looked in {periph_dirs})")
+
         return src_files
 
     def common_cflags(self):

@@ -31,3 +31,12 @@ CONVERTERS = [
             glob.glob(os.path.join(PROJECT_ROOT, "src", "lcdbitmaps", "*.png")))
     ),
 ]
+
+PERIPHERALS = {
+    'test-periph': {
+        'src': [
+            'foo.c',
+            'bar.c',
+        ],
+    },
+}
