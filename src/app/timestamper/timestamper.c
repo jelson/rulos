@@ -77,6 +77,7 @@
 typedef struct {
   uint32_t seconds;
   uint32_t counter;
+  uint8_t channel;
 } timestamp_t;
 
 int num_timestamps = 0;
@@ -89,16 +90,20 @@ uint32_t seconds;
 // uart handle for transmitting timestamps
 HalUart uart;
 
-void store_timestamp(uint32_t seconds, uint32_t counter) {
+void store_timestamp(uint8_t channel, uint32_t seconds, uint32_t counter) {
   if (num_timestamps >= TIMESTAMP_BUFLEN) {
     buffer_overflow = true;
     return;
   }
 
+  timestamp_buffer[num_timestamps].channel = channel;
   timestamp_buffer[num_timestamps].seconds = seconds;
   timestamp_buffer[num_timestamps].counter = counter;
   num_timestamps++;
 }
+
+static int chan2_divider = 0;
+#define CHAN2_DIV_VALUE 10000000
 
 // Timer interrupt that fires under two conditions:
 // 1) When the timer rolls over, once per second.
@@ -111,11 +116,18 @@ void TIM2_IRQHandler() {
     // counter.
     seconds++;
   } else if (LL_TIM_IsActiveFlag_CC1(TIM2)) {
+    // Timer channel 1 has captured an input signal.
     LL_TIM_ClearFlag_CC1(TIM2);
+    store_timestamp(1, seconds, TIM2->CCR1);
+  } else if (LL_TIM_IsActiveFlag_CC2(TIM2)) {
+    // Timer channel 2 has captured an input signal.
+    LL_TIM_ClearFlag_CC2(TIM2);
 
-    // Timer has captured an input signal. Store it for later conversion and
-    // printing over uart.
-    store_timestamp(seconds, TIM2->CCR1);
+    chan2_divider++;
+    if (chan2_divider == CHAN2_DIV_VALUE) {
+      store_timestamp(1, seconds, TIM2->CCR2);
+      chan2_divider = 0;
+    }
   } else {
     // unexpected interrupt
     __builtin_trap();
@@ -142,7 +154,8 @@ static void print_one_timestamp(timestamp_t *t) {
   uint32_t sub_microseconds = picoseconds % 1000000;
 
   char buf[50];
-  snprintf(buf, sizeof(buf), "%ld.%06ld%06ld\n",
+  snprintf(buf, sizeof(buf), "%d %ld.%06ld%06ld\n",
+           t->channel,
            t->seconds,
            microseconds,
            sub_microseconds);
@@ -215,9 +228,18 @@ void init_timer() {
   LL_TIM_IC_SetPolarity(TIM2, LL_TIM_CHANNEL_CH1, LL_TIM_IC_POLARITY_RISING);
   LL_TIM_EnableIT_CC1(TIM2);
 
-  /// Start the counter running and enable the input capture channel
+  // Configure input capture to be the rising edge of timer 2, channel 2
+  LL_TIM_IC_SetActiveInput(TIM2, LL_TIM_CHANNEL_CH2,
+                           LL_TIM_ACTIVEINPUT_DIRECTTI);
+  LL_TIM_IC_SetPrescaler(TIM2, LL_TIM_CHANNEL_CH2, LL_TIM_ICPSC_DIV1);
+  LL_TIM_IC_SetFilter(TIM2, LL_TIM_CHANNEL_CH2, LL_TIM_IC_FILTER_FDIV1);
+  LL_TIM_IC_SetPolarity(TIM2, LL_TIM_CHANNEL_CH2, LL_TIM_IC_POLARITY_RISING);
+  LL_TIM_EnableIT_CC2(TIM2);
+
+  /// Start the counter running and enable the input capture channels
   LL_TIM_EnableCounter(TIM2);
   LL_TIM_CC_EnableChannel(TIM2, LL_TIM_CHANNEL_CH1);
+  LL_TIM_CC_EnableChannel(TIM2, LL_TIM_CHANNEL_CH2);
 
   // reset the seconds part of our clock - should go after timer enablement
   // because turning on interrupts seems to generate a spurious one
@@ -250,6 +272,7 @@ int main() {
 
   // initialize uart
   hal_uart_init(&uart, 1000000, true, /* uart_id= */ 0);
+  hal_uart_sync_send(&uart, "# Starting timestamper\n");
 
   schedule_us(1, create_test_input, NULL);
   schedule_us(1, drain_output_buffer, NULL);
