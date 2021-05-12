@@ -15,7 +15,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
+
 #include "util.h"
 
 #define QUEUE_DEFINE(TYPE) \
@@ -25,17 +28,28 @@ void TYPE##Queue_init(TYPE##Queue *bq, uint8_t buf_size) \
 	bq->size = 0; \
 } \
  \
-r_bool TYPE##Queue_append(TYPE##Queue *bq, TYPE elt) \
+uint8_t TYPE##Queue_free_space(TYPE##Queue *bq) \
 { \
-	if (bq->size >= bq->capacity) \
+        return bq->capacity - bq->size; \
+} \
+\
+bool TYPE##Queue_append_n(TYPE##Queue *bq, TYPE *elt, uint8_t n) \
+{ \
+	if (TYPE##Queue_free_space(bq) < n) \
 	{ \
 		return FALSE; \
 	} \
-	bq->elts[bq->size++] = elt; \
+        memcpy(&bq->elts[bq->size], elt, n * sizeof(TYPE)); \
+        bq->size += n; \
 	return TRUE; \
 } \
  \
-r_bool TYPE##Queue_peek(TYPE##Queue *bq, /*OUT*/ TYPE *elt) \
+bool TYPE##Queue_append(TYPE##Queue *bq, TYPE elt) \
+{ \
+        return TYPE##Queue_append_n(bq, &elt, 1); \
+} \
+ \
+bool TYPE##Queue_peek(TYPE##Queue *bq, /*OUT*/ TYPE *elt) \
 { \
 	if (bq->size == 0) \
 	{ \
@@ -45,7 +59,7 @@ r_bool TYPE##Queue_peek(TYPE##Queue *bq, /*OUT*/ TYPE *elt) \
 	return TRUE; \
 } \
  \
-r_bool TYPE##Queue_pop_n(TYPE##Queue *bq, /*OUT*/ TYPE *elt, uint8_t n) \
+bool TYPE##Queue_pop_n(TYPE##Queue *bq, /*OUT*/ TYPE *elt, uint8_t n) \
 { \
 	if (bq->size < n) \
 	{ \
@@ -61,7 +75,7 @@ r_bool TYPE##Queue_pop_n(TYPE##Queue *bq, /*OUT*/ TYPE *elt, uint8_t n) \
 	return TRUE; \
 } \
  \
-r_bool TYPE##Queue_pop(TYPE##Queue *bq, /*OUT*/ TYPE *elt) \
+bool TYPE##Queue_pop(TYPE##Queue *bq, /*OUT*/ TYPE *elt) \
 { \
 	return TYPE##Queue_pop_n(bq, elt, 1); \
 } \

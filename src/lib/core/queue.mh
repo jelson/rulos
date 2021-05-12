@@ -15,6 +15,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #define QUEUE_DECLARE(TYPE) \
 typedef struct { \
 	uint8_t capacity; \
@@ -23,10 +26,11 @@ typedef struct { \
 } TYPE##Queue; \
  \
 void TYPE##Queue_init(TYPE##Queue *bq, uint8_t buf_size); \
-r_bool TYPE##Queue_append(TYPE##Queue *bq, TYPE elt); \
-r_bool TYPE##Queue_peek(TYPE##Queue *bq, /*OUT*/ TYPE *elt); \
-r_bool TYPE##Queue_pop(TYPE##Queue *bq, /*OUT*/ TYPE *elt); \
-r_bool TYPE##Queue_pop_n(TYPE##Queue *bq, /*OUT*/ TYPE *elt, uint8_t n); \
+bool TYPE##Queue_append(TYPE##Queue *bq, TYPE elt); \
+bool TYPE##Queue_append_n(TYPE##Queue *bq, TYPE *elt, uint8_t n); \
+bool TYPE##Queue_peek(TYPE##Queue *bq, /*OUT*/ TYPE *elt); \
+bool TYPE##Queue_pop(TYPE##Queue *bq, /*OUT*/ TYPE *elt); \
+bool TYPE##Queue_pop_n(TYPE##Queue *bq, /*OUT*/ TYPE *elt, uint8_t n); \
 uint8_t TYPE##Queue_length(TYPE##Queue *bq); \
 void TYPE##Queue_clear(TYPE##Queue *bq); \
 

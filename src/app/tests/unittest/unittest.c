@@ -37,13 +37,27 @@ void test_shortqueue() {
 
   while (TRUE) {
     if (deadbeef_rand() & 1) {
-      r_bool rc = shortQueue_append(sq, in);
-      if (rc) {
-        in++;
-        LOG("in: %d", in);
+      if (deadbeef_rand() & 1) {
+        r_bool rc = shortQueue_append(sq, in);
+        if (rc) {
+          LOG("in: %d", in);
+          in++;
+        } else {
+          LOG("full");
+        }
       } else {
-        LOG("full");
+        short inbuf[2];
+        inbuf[0] = in;
+        inbuf[1] = in+1;
+        r_bool rc = shortQueue_append_n(sq, inbuf, 2);
+        if (rc) {
+          LOG("in: %d, %d", in, in+1);
+          in += 2;
+        } else {
+          LOG("n-full");
+        }
       }
+
     } else {
       short val;
       r_bool rc = shortQueue_pop(sq, &val);
@@ -52,7 +66,7 @@ void test_shortqueue() {
         LOG("        out: %d", out);
         out++;
       } else {
-        LOG("empty");
+        LOG("        empty");
       }
     }
   }
@@ -92,7 +106,7 @@ void test_ring_buffer() {
 
 int main() {
   hal_init();
-  // test_shortqueue();
+  test_shortqueue();
   test_ring_buffer();
   return 0;
 }
