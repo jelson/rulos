@@ -23,7 +23,7 @@ from BuildRules import *
 RulosBuildTarget(
   name = "audioboard",
   sources = ["audioboard.c"],
-  extra_cflags = ["-DLOG_TO_SERIAL=UART0", "-DRULOS_I2C_ALT_MAPPING"],
+  extra_cflags = ["-DLOG_TO_SERIAL", "-DRULOS_I2C_ALT_MAPPING"],
   platforms = [
     SimulatorPlatform(
         extra_cflags=[],

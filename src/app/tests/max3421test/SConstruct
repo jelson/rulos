@@ -25,7 +25,7 @@ RulosBuildTarget(
     sources = ["max3421test.c"],
     platforms = [ ArmStmPlatform("stm32f303x8") ],
     extra_cflags = [
-        "-DLOG_TO_SERIAL=UART0",
+        "-DLOG_TO_SERIAL",
     ],
     peripherals = "uart max3421e spi",
 ).build()

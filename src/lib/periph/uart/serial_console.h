@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "core/heap.h"
 #include "periph/uart/uart.h"
 
 typedef struct {

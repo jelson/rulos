@@ -29,7 +29,7 @@ RulosBuildTarget(
             extra_cflags = [
                 "-DBOARD_REVE",
                 "-DCRYSTAL=12000000",
-                "-DLOG_TO_SERIAL=UART0",
+                "-DLOG_TO_SERIAL",
             ],
             extra_peripherals = "uart twi",
         ),

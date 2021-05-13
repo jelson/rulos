@@ -23,6 +23,7 @@
 #include "core/clock.h"
 
 void serial_console_update(SerialConsole *sca) {
+#if 0
   char rcv_chr;
   if (CharQueue_pop(sca->uart.recvQueue.q, &rcv_chr)) {
     *(sca->line_ptr) = rcv_chr;
@@ -42,22 +43,25 @@ void serial_console_update(SerialConsole *sca) {
   }
 
   schedule_us(120, (ActivationFuncPtr)serial_console_update, sca);
+#endif
 }
 
 void serial_console_init(SerialConsole *sca, ActivationFuncPtr line_func,
                          void *line_data) {
+#if 0
   uart_init(&sca->uart, 38400, TRUE, 0);
   sca->line_act.func = line_func;
   sca->line_act.data = line_data;
 
   schedule_us(1000, (ActivationFuncPtr)serial_console_update, sca);
+#endif
 }
 
 void serial_console_sync_send(SerialConsole *act, const char *buf,
                               uint16_t buflen) {
-  while (uart_busy(&act->uart)) {
+  while (uart_is_busy(&act->uart)) {
   }
-  uart_send(&act->uart, buf, buflen, NULL, NULL);
-  while (uart_busy(&act->uart)) {
+  uart_write(&act->uart, buf, buflen);
+  while (uart_is_busy(&act->uart)) {
   }
 }

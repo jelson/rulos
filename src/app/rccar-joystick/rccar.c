@@ -18,7 +18,6 @@
 
 #include "core/logging.h"
 #include "core/rulos.h"
-#include "periph/uart/uart.h"
 
 typedef struct {
   bool state;
@@ -57,8 +56,12 @@ void joyfunc(Joy* joy) {
 
 int main() {
   hal_init();
+
   UartState_t uart;
-  uart_init(&uart, 38400, TRUE, 0);
+  uart_init(&uart, /*uart_id=*/0, 38400, TRUE);
+  log_bind_uart(&uart);
+  LOG("log running");
+
   init_clock(10000, TIMER1);
   gpio_make_output(GPIO_C5);
 

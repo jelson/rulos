@@ -39,7 +39,13 @@ uint16_t baud_to_ubrr(uint32_t baud) {
   return ((uint32_t)hardware_f_cpu) / 16 / baud - 1;
 }
 
-HalUart* g_uart_handler[2] = {NULL, NULL};
+typedef struct {
+  hal_uart_receive_cb rx_cb;
+  hal_uart_next_sendbuf_cb next_sendbuf_cb;
+  void *user_data;
+} avr_uart_state_t;
+
+avr_uart_state_t g_uart_state[2] = {};
 
 #if defined(MCU8_line)
 // Only one UART, named without an index
@@ -183,110 +189,39 @@ HalUart* g_uart_handler[2] = {NULL, NULL};
 
 #endif
 
-void hal_uart_init(HalUart* handler, uint32_t baud, r_bool stop2,
-                   uint8_t uart_id) {
-  handler->uart_id = uart_id;
+void hal_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2,
+                   hal_uart_receive_cb rx_cb, void *user_data,
+                   uint16_t *max_tx_len) {
+  *max_tx_len = 1;
   switch (uart_id) {
 #if HAVE_UARTID0
-    case 0:
-      hal_uart_init0(handler, baud, stop2, uart_id);
-      return;
+  case 0:
+    hal_uart_init0(baud, stop2, rx_cb, user_data);
+    return;
 #endif
 #if HAVE_UARTID1
-    case 1:
-      hal_uart_init1(handler, baud, stop2, uart_id);
-      return;
+  case 1:
+    hal_uart_init1(baud, stop2, rx_cb, user_data);
+    return;
 #endif
-    default:
-      assert(false);
+  default:
+    assert(false);
   }
 }
 
-void hal_uart_start_send(HalUart* handler) {
-  switch (handler->uart_id) {
-#if HAVE_UARTID0
-    case 0:
-      hal_uart_start_send0();
-      return;
-#endif
-#if HAVE_UARTID1
-    case 1:
-      hal_uart_start_send1();
-      return;
-#endif
-    default:
-      assert(false);
-  }
-}
-
-void hal_uart_sync_send_bytes(HalUart* handler, const void* s,
-                              const uint8_t len) {
-  switch (handler->uart_id) {
-#if HAVE_UARTID0
-    case 0:
-      hal_uart_sync_send_bytes0(s, len);
-      return;
-#endif
-#if HAVE_UARTID1
-    case 1:
-      hal_uart_sync_send_bytes1(s, len);
-      return;
-#endif
-    default:
-      assert(false);
-  }
-}
-
-static void sync_send_by_id(const uint8_t uart_id, const char* s) {
+void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb) {
   switch (uart_id) {
 #if HAVE_UARTID0
-    case 0:
-      hal_uart_sync_send0(s);
-      return;
+  case 0:
+    hal_uart_start_send0(cb);
+    return;
 #endif
 #if HAVE_UARTID1
-    case 1:
-      hal_uart_sync_send1(s);
-      return;
+  case 1:
+    hal_uart_start_send1(cb);
+    return;
 #endif
-    default:
-      assert(false);
+  default:
+    assert(false);
   }
 }
-
-void hal_uart_sync_send(HalUart* handler, const char* s) {
-  sync_send_by_id(handler->uart_id, s);
-}
-
-#ifdef LOG_TO_SERIAL
-
-// This silliness is because "gcc -DLOG_TO_SERIAL" defaults to
-// defining LOG_TO_SERIAL to be 1, which is a confusing default.
-// I want to force you to explicitly name either UART0 or UART1
-// as your desired logging destination.
-
-#define UART0 100
-#define UART1 200
-
-#if LOG_TO_SERIAL == UART0
-#define LOGGING_UART 0
-#elif LOG_TO_SERIAL == UART1
-#define LOGGING_UART 1
-#else
-#error LOG_TO_SERIAL must be set to UART0 or UART1
-#include <stophere>
-#endif
-
-#undef UART0
-#undef UART1
-
-void avr_log(const char* fmt_p /* PROGMEM */, ...) {
-  va_list ap;
-  char message[100];
-  va_start(ap, fmt_p);
-  vsnprintf_P(message, sizeof(message), fmt_p, ap);
-  va_end(ap);
-  sync_send_by_id(LOGGING_UART, message);
-}
-
-#endif  // LOG_TO_SERIAL

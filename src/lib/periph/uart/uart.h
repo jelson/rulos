@@ -18,41 +18,51 @@
 
 #pragma once
 
-#include "core/hal.h"
-#include "core/heap.h"
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "core/queue.h"
 
-typedef struct {
-  CharQueue *q;
-  Time reception_time_us;
-} UartQueue_t;
-
-#define UART_QUEUE_LEN 32
-
-typedef void (*UARTSendDoneFunc)(void *callback_data);
+#ifndef UART_TX_QUEUE_LEN
+#define UART_TX_QUEUE_LEN 128
+#endif
 
 typedef struct {
-  HalUart handler;
-  uint8_t initted;
-
-  // receive
-  char recvQueueStore[UART_QUEUE_LEN];
-  UartQueue_t recvQueue;
+  bool initted;
+  uint8_t uart_id;
+  uint16_t max_tx_len;
 
   // send
-  const char *out_buf;
-  uint8_t out_len;
-  uint8_t out_n;
-  UARTSendDoneFunc send_done_cb;
-  void *send_done_cb_data;
+  union {
+    char storage[sizeof(CharQueue) + UART_TX_QUEUE_LEN];
+    CharQueue q;
+  } tx_queue;
+  uint16_t pending_tx_len; // num of bytes being sent by the hal
+
+  // needed separately from pending_tx_len so that we don't double-launch a
+  // write train if a second write arrives before the upcall due to the first
+  bool writes_active;
+
 } UartState_t;
 
 ///////////////// application API
-void uart_init(UartState_t *uart, uint32_t baud, r_bool stop2, uint8_t uart_id);
-r_bool uart_read(UartState_t *uart, char *c);
-UartQueue_t *uart_recvq(UartState_t *uart);
-void uart_reset_recvq(UartQueue_t *uq);
 
-r_bool uart_send(UartState_t *uart, const char *c, uint8_t len,
-                 UARTSendDoneFunc, void *callback_data);
-r_bool uart_busy(UartState_t *u);
+// initialize an instance of a uart
+void uart_init(UartState_t *u, uint8_t uart_id, uint32_t baud, bool stop2);
+
+// register a char-received callback to be called at interrupt time each time a
+// character arrives
+typedef void(uart_rx_cb)(UartState_t *s, char c);
+void uart_start_rx(UartState_t *u, uart_rx_cb cb);
+
+// assumes null-terminated output
+void uart_print(UartState_t *u, const char *s);
+
+// sends binary data, with a length
+void uart_write(UartState_t *u, const char *c, uint8_t len);
+
+// returns true if data is still being transmitted
+bool uart_is_busy(UartState_t *u);
+
+// waits until the uart is completely flushed
+void uart_flush(UartState_t *u);

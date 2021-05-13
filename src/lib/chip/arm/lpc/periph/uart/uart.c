@@ -158,38 +158,3 @@ void hal_uart_sync_send_bytes(HalUart *uart, const char *s, uint8_t len) {
 void hal_uart_sync_send(HalUart *uart, const char *s) {
   uart_sync_send_by_id(uart->uart_id, s);
 }
-
-#ifdef LOG_TO_SERIAL
-
-// This silliness is because "gcc -DLOG_TO_SERIAL" defaults to
-// defining LOG_TO_SERIAL to be 1, which is a confusing default.
-// I want to force you to explicitly name either UART0 or UART1
-// as your desired logging destination.
-
-#define UART0 100
-#define UART1 200
-
-#if LOG_TO_SERIAL == UART0
-#define LOGGING_UART 0
-#elif LOG_TO_SERIAL == UART1
-#define LOGGING_UART 1
-#else
-#error LOG_TO_SERIAL must be set to UART0 or UART1
-#include <stophere>
-#endif
-
-#undef UART0
-#undef UART1
-
-void arm_log(const char *fmt, ...) {
-  va_list ap;
-  char message[100];
-  va_start(ap, fmt);
-  vsnprintf(message, sizeof(message), fmt, ap);
-  va_end(ap);
-  uart_sync_send_by_id(LOGGING_UART, message);
-}
-
-void arm_log_flush() { uart_flush(LOGGING_UART); }
-
-#endif  // LOG_TO_SERIAL

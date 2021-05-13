@@ -16,31 +16,25 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "core/rulos.h"
-#include "core/twi.h"
-#include "periph/7seg_panel/7seg_panel.h"
-#include "periph/7seg_panel/remote_bbuf.h"
+#include <stddef.h>
 
-int main() {
-  hal_init();
-  hal_init_rocketpanel();
+#include "core/hal.h"
+#include "core/logging.h"
+#include "periph/uart/uart.h"
 
-  UartState_t uart;
-  uart_init(&uart, /* uart_id= */ 0, 115200, true);
-  log_bind_uart(&uart);
-  LOG("Rocket dongle running");
+static UartState_t *logging_uart = NULL;
 
-  init_clock(10000, TIMER1);
+// Set up logging system to emit log messages to a particular uart.
+void log_bind_uart(UartState_t *u) { logging_uart = u; }
 
-  Network net;
-  init_twi_network(&net, 100, DONGLE_BASE_ADDR + DONGLE_BOARD_ID);
+void log_common_emit_to_bound_uart(const char *s, int len) {
+  if (logging_uart != NULL) {
+    uart_write(logging_uart, s, len);
+  }
+}
 
-  RemoteBBufRecv remoteBBufRecv;
-  init_remote_bbuf_recv(&remoteBBufRecv, &net);
-
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);
-  cpumon_main_loop();
-
-  return 0;
+void log_common_flush() {
+  if (logging_uart != NULL) {
+    uart_flush(logging_uart);
+  }
 }

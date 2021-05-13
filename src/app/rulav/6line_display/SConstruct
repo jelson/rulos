@@ -24,7 +24,7 @@ RulosBuildTarget(
     name = "rocket6line_dongle",
     sources = ["dongle.c"],
     extra_cflags = [
-        "-DLOG_TO_SERIAL=UART0",
+        "-DLOG_TO_SERIAL",
         "-DBOARDCONFIG_UNIROCKET",
         "-DROCKET6LINE_REV_B",
         "-DDONGLE_BOARD_ID=3",
@@ -37,7 +37,7 @@ RulosBuildTarget(
     name = "rocket6line_test",
     sources = ["test.c"],
     extra_cflags = [
-        "-DLOG_TO_SERIAL=UART0",
+        "-DLOG_TO_SERIAL",
         "-DBOARDCONFIG_UNIROCKET",
         "-DROCKET6LINE_REV_B",
     ],

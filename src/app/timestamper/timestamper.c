@@ -54,10 +54,13 @@
  * for this to prevent overflow.)
  */
 
+#include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 
 #include "core/hardware.h"
 #include "core/rulos.h"
+#include "periph/uart/uart.h"
 
 #include "stm32g4xx_ll_bus.h"
 #include "stm32g4xx_ll_gpio.h"
@@ -72,7 +75,6 @@
 #define TIMESTAMP_PRINT_PERIOD_USEC 100000
 #define TIMESTAMP_BUFLEN 200
 
-
 // buffer of recorded timestamps that have not yet been transmitted over uart
 typedef struct {
   uint32_t seconds;
@@ -80,15 +82,13 @@ typedef struct {
   uint8_t channel;
 } timestamp_t;
 
+UartState_t uart;
 int num_timestamps = 0;
 timestamp_t timestamp_buffer[TIMESTAMP_BUFLEN];
 bool buffer_overflow = false;
 
 // total seconds elapsed since boot
 uint32_t seconds;
-
-// uart handle for transmitting timestamps
-HalUart uart;
 
 void store_timestamp(uint8_t channel, uint32_t seconds, uint32_t counter) {
   if (num_timestamps >= TIMESTAMP_BUFLEN) {
@@ -154,12 +154,12 @@ static void print_one_timestamp(timestamp_t *t) {
   uint32_t sub_microseconds = picoseconds % 1000000;
 
   char buf[50];
-  snprintf(buf, sizeof(buf), "%d %ld.%06ld%06ld\n",
-           t->channel,
-           t->seconds,
-           microseconds,
-           sub_microseconds);
-  hal_uart_sync_send(&uart, buf);
+  int len = snprintf(buf, sizeof(buf), "%d %ld.%06ld%06ld\n",
+                     t->channel,
+                     t->seconds,
+                     microseconds,
+                     sub_microseconds);
+  uart_write(&uart, buf, len);
 }
 
 static void drain_output_buffer(void *data) {
@@ -271,8 +271,8 @@ int main() {
   init_timer();
 
   // initialize uart
-  hal_uart_init(&uart, 1000000, true, /* uart_id= */ 0);
-  hal_uart_sync_send(&uart, "# Starting timestamper\n");
+  uart_init(&uart, /*uart_id=*/0, 1000000, true);
+  uart_print(&uart, "# Starting timestamper\n");
 
   schedule_us(1, create_test_input, NULL);
   schedule_us(1, drain_output_buffer, NULL);

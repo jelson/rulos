@@ -23,7 +23,7 @@
 
 // global instead of on the stack so the size is counted
 FATFS fatfs;
-HalUart uart;
+UartState_t uart;
 char fatbuf[4096];
 FIL f;
 
@@ -140,7 +140,8 @@ int main() {
   hal_init();
   init_clock(10000, TIMER1);
 
-  hal_uart_init(&uart, 115200, true, /* uart_id= */ 0);
+  uart_init(&uart, /* uart_id= */ 0, 115200, true);
+  log_bind_uart(&uart);
   LOG("Log output running");
 
   // Give the SD card power 10ms to stabilize

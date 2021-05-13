@@ -33,7 +33,7 @@ uint8_t TYPE##Queue_free_space(TYPE##Queue *bq) \
         return bq->capacity - bq->size; \
 } \
 \
-bool TYPE##Queue_append_n(TYPE##Queue *bq, TYPE *elt, uint8_t n) \
+bool TYPE##Queue_append_n(TYPE##Queue *bq, const TYPE *elt, uint8_t n) \
 { \
 	if (TYPE##Queue_free_space(bq) < n) \
 	{ \
@@ -59,14 +59,21 @@ bool TYPE##Queue_peek(TYPE##Queue *bq, /*OUT*/ TYPE *elt) \
 	return TRUE; \
 } \
  \
+TYPE * TYPE##Queue_ptr(TYPE##Queue *bq) \
+{ \
+        return &bq->elts[0]; \
+} \
+ \
 bool TYPE##Queue_pop_n(TYPE##Queue *bq, /*OUT*/ TYPE *elt, uint8_t n) \
 { \
 	if (bq->size < n) \
 	{ \
 		return FALSE; \
 	} \
-	memcpy(elt, bq->elts, n * sizeof(TYPE)); \
- \
+        if (elt != NULL) { \
+           memcpy(elt, bq->elts, n * sizeof(TYPE)); \
+        } \
+\
 	/* Linear-time pop. Yay! (Yes, I could have written a circular \
 	   queue, but then I'd have to test it, and debug it, and you \
 	   can see the bind I'm in!) */ \

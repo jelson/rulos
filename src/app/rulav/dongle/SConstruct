@@ -27,7 +27,7 @@ for id in list(range(0,4))+list(range(7,12)):
         extra_cflags = [
             "-DBOARDCONFIG_ROCKET0",
             "-DDONGLE_BOARD_ID="+str(id),
-            "-DLOG_TO_SERIAL=UART0",
+            "-DLOG_TO_SERIAL",
         ],
         platforms = [
             SimulatorPlatform(),

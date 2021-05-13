@@ -22,10 +22,6 @@
 #include "periph/joystick/joystick.h"
 #include "periph/max3421e/periph_thrustmaster.h"
 
-#ifdef LOG_TO_SERIAL
-HalUart uart;
-#endif
-
 max3421e_t max;
 JoystickState_t joystate;
 
@@ -44,8 +40,9 @@ int main() {
   hal_init();
 
 #ifdef LOG_TO_SERIAL
-  hal_uart_init(&uart, 115200, true, /* uart_id= */ 0);
-  LOG("Log output running");
+  UartState_t uart;
+  uart_init(&uart, /* uart_id= */ 0, 115200, true);
+  log_bind_uart(&uart);
 #endif
 
   init_clock(10000, TIMER1);

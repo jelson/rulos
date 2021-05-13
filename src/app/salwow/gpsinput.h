@@ -1,9 +1,9 @@
 #pragma once
 
+#include "core/rulos.h"
 #include "periph/uart/uart.h"
 
 typedef struct {
-  HalUart uart_hw;
   float lon, lat;
   ActivationFuncPtr data_ready_cb_func;
   void* data_ready_cb_data;

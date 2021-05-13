@@ -170,13 +170,17 @@ void init_rocket0(Rocket0 *r0) {
 }
 
 static Rocket0 rocket0;  // allocate obj in .bss so it's easy to count
-HalUart uart;
 CpumonAct cpumon;
 
 int main() {
   hal_init();
 
-  hal_uart_init(&uart, 38400, true, /* uart_id= */ 0);
+#if LOG_TO_SERIAL
+  UartState_t uart;
+  uart_init(&uart, /* uart_id= */ 0, 115200, true);
+  log_bind_uart(&uart);
+#endif
+
   LOG("Log output running, %d local, %d remote", NUM_LOCAL_BOARDS,
       NUM_REMOTE_BOARDS);
 

@@ -19,9 +19,11 @@
 // definitions; we include it multiple times to provide access to both
 // UARTs.
 
-void hal_uart_init_name(HalUart *handler, uint32_t baud, r_bool stop2,
-                        uint8_t uart_id) {
+void hal_uart_init_name(uint32_t baud, r_bool stop2, hal_uart_receive_cb rx_cb, void *user_data) {
   uint16_t ubrr = baud_to_ubrr(baud);
+
+  g_uart_state[UARTID].user_data = user_data;
+  g_uart_state[UARTID].rx_cb = rx_cb;
 
   // disable interrupts
   cli();
@@ -34,7 +36,7 @@ void hal_uart_init_name(HalUart *handler, uint32_t baud, r_bool stop2,
            _BV(_RXEN)    // enable receiver
       ;
 
-  if (handler != NULL) {
+  if (rx_cb != NULL) {
     _UCSRB |= _BV(_RXCIE);  // enable receiver interrupt
   }
 
@@ -44,8 +46,6 @@ void hal_uart_init_name(HalUart *handler, uint32_t baud, r_bool stop2,
            | _BV(URSEL)
 #endif
       ;
-
-  g_uart_handler[uart_id] = handler;
 
   // enable interrupts, whether or not they'd been previously enabled
   sei();
@@ -60,9 +60,10 @@ static inline void enable_sendready_interrupt_name(uint8_t enable) {
 }
 
 // Runs in user context.
-void hal_uart_start_send_name(void) {
+void hal_uart_start_send_name(hal_uart_next_sendbuf_cb cb) {
   // Just enable the send-ready interrupt.  It will fire as soon as
   // the sender register is free.
+  g_uart_state[UARTID].next_sendbuf_cb = cb;
   uint8_t old_interrupts = hal_start_atomic();
   enable_sendready_interrupt_name(TRUE);
   hal_end_atomic(old_interrupts);
@@ -70,25 +71,32 @@ void hal_uart_start_send_name(void) {
 
 // Runs in interrupt context.
 static inline void _handle_recv_ready_name(char c) {
-  // audioled_set(0, 1);
-  if (g_uart_handler[UARTID] != NULL && g_uart_handler[UARTID]->recv != NULL) {
-    (g_uart_handler[UARTID]->recv)(g_uart_handler[UARTID], c);
+  if (g_uart_state[UARTID].rx_cb != NULL) {
+    g_uart_state[UARTID].rx_cb(
+        UARTID,
+        g_uart_state[UARTID].user_data,
+        c);
   }
-  // audioled_set(1, 0);
 }
 
 // Runs in interrupt context.
 static inline void _handle_send_ready_name() {
-  char c;
-
   // If there is still data remaining to send, send it.  Otherwise,
   // disable the send-ready interrupt.
-  if (g_uart_handler[UARTID] != NULL && g_uart_handler[UARTID]->send != NULL) {
-    if ((g_uart_handler[UARTID]->send)(g_uart_handler[UARTID], &c)) {
-      _UDR = c;
-    } else {
-      enable_sendready_interrupt_name(FALSE);
-    }
+  assert(g_uart_state[UARTID].next_sendbuf_cb != NULL);
+
+  const char *c;
+  uint16_t tx_len;
+  g_uart_state[UARTID].next_sendbuf_cb(
+      UARTID,
+      g_uart_state[UARTID].user_data,
+      &c,
+      &tx_len);
+  assert(tx_len <= 1);
+  if (tx_len == 0) {
+    enable_sendready_interrupt_name(FALSE);
+  } else {
+    _UDR = *c;
   }
 }
 

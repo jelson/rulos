@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <inttypes.h>
+#include <stdint.h>
 
 #include "core/hardware_types.h"
 #include "core/heap.h"
@@ -41,7 +41,7 @@ rulos_irq_state_t hal_start_atomic();
 void hal_end_atomic(rulos_irq_state_t old_interrupts);
 
 void hal_deep_sleep();
-void hal_idle();  // hw: spin. sim: sleep
+void hal_idle(); // hw: spin. sim: sleep
 
 #define HAL_MAGIC 0x74
 
@@ -54,7 +54,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
 
 void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
                          uint8_t onoff);
-void hal_7seg_bus_enter_sleep();  // Call to stop driving 7seg bus
+void hal_7seg_bus_enter_sleep(); // Call to stop driving 7seg bus
 char hal_read_keybuf();
 char hal_scan_keypad();
 // used for "hold a key at startup" check.
@@ -72,24 +72,32 @@ r_bool hal_read_joystick_button();
 
 /////////////// UART ///////////////////////////////////////////////
 
-struct s_HalUart;
-typedef void(hal_uart_receive_fp)(struct s_HalUart *u, char c);
-typedef r_bool(hal_uart_send_next_fp)(struct s_HalUart *u, char *c /*OUT*/);
-typedef struct s_HalUart {
-  hal_uart_receive_fp *recv;    // runs in interrupt context
-  hal_uart_send_next_fp *send;  // runs in interrupt context
-  uint8_t uart_id;
-} HalUart;
+// Callback for incoming serial data. If a callback is set using
+// hal_uart_set_receive_cb, incoming characters will be passed into that
+// callback at interrupt time.
+typedef void (*hal_uart_receive_cb)(uint8_t uart_id, void *user_data, char c);
 
-void hal_uart_init(HalUart *handler, uint32_t baud, r_bool stop2,
-                   uint8_t uart_id);
-void hal_uart_start_send(HalUart *handler);
-void hal_uart_sync_send(HalUart *handler, const char *s);
-void hal_uart_sync_send_bytes(HalUart *handler, const void *s, uint8_t len);
+// At the HAL layer, UARTs are identified by integers. hal_uart_init initializes
+// a UART. It returns
+void hal_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2,
+                   hal_uart_receive_cb rx_cb,
+                   void *user_data /* for both rx and tx upcalls */,
+                   uint16_t *max_tx_len /* OUT */);
 
-////////////////// Logging //////////////////////////////////////
-
-void hal_bind_logging_to_uart(HalUart *hal_uart);
+// Begin a train of transmissions to a uart. When each completes, the send_next
+// callback will be called at interrupt time to retrieve the next data to be
+// sent.
+//
+// The value returned as the max_tx_len out param of hal_uart_init the maximum
+// size of a buffer that can be returned on each callback. This is to deal with
+// the hardware differences between AVR-class devices, which can only transmit
+// one character per interrupt, and ARM-class devices that support DMA.
+//
+// If there is no more data to send, len should be set to 0.
+typedef void (*hal_uart_next_sendbuf_cb)(uint8_t uart_id, void *user_data,
+                                         const char **tx_buf /*OUT*/,
+                                         uint16_t *len /*OUT*/);
+void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb);
 
 /////////////// TWI ///////////////////////////////////////////////
 

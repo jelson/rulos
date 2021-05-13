@@ -33,8 +33,8 @@ r_bool _um_send_handler(struct s_HalUart *u, char *c /*OUT*/);
 
 MediaStateIfc *uart_media_init(UartMedia *um, MediaRecvSlot *mrs,
                                uint8_t uart_id) {
-  um->uart_handler.send = _um_send_handler;
-  um->uart_handler.recv = _um_recv_handler;
+  //  um->uart_handler.send = _um_send_handler;
+  //um->uart_handler.recv = _um_recv_handler;
   um->uart_media_ptr.media.send = _um_send;
   um->uart_media_ptr.uart_media = um;
   um->send_which = US_none;

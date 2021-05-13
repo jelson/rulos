@@ -24,10 +24,6 @@
 
 #define UPDATE_RATE_US 1000000
 
-#ifdef LOG_TO_SERIAL
-HalUart uart;
-#endif
-
 static void test_mode_update(void *data) {
   schedule_us(UPDATE_RATE_US, (ActivationFuncPtr)test_mode_update, NULL);
 
@@ -86,10 +82,13 @@ static void test_mode_update(void *data) {
 int main() {
   hal_init();
 
-#ifdef LOG_TO_SERIAL
-  hal_uart_init(&uart, 115200, true, /* uart_id= */ 0);
+#if LOG_TO_SERIAL
+  UartState_t uart;
+  uart_init(&uart, /* uart_id= */ 0, 115200, true);
+  log_bind_uart(&uart);
   LOG("Log output running");
 #endif
+
   rocket6line_init();
   init_clock(10000, TIMER1);
   bss_canary_init();

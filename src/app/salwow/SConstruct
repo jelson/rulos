@@ -36,7 +36,7 @@ RulosBuildTarget(
         AvrPlatform(
             "atmega1284p",
             extra_cflags = [
-                "-DLOG_TO_SERIAL=UART0",
+                "-DLOG_TO_SERIAL",
             ],
         ),
     ],

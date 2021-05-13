@@ -28,7 +28,10 @@
 #define SPIx_MOSI_AF GPIO_AF5_SPI1
 #define GPIO_CHIPSELECT GPIO_A4
 
+#include "core/hardware.h"
 #include "periph/spi/hal_spi.h"
+
+#include "stm32f3xx_hal.h"
 #include "stm32f3xx_hal_gpio.h"
 #include "stm32f3xx_hal_rcc.h"
 #include "stm32f3xx_hal_rcc_ex.h"

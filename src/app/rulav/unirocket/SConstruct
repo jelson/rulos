@@ -23,7 +23,7 @@ from BuildRules import *
 RulosBuildTarget(
   name = "unirocket",
   sources = ["unirocket.c"],
-  extra_cflags = ["-DLOG_TO_SERIAL=UART0", "-DSCHEDULER_CAPACITY=64"],
+  extra_cflags = ["-DLOG_TO_SERIAL", "-DSCHEDULER_CAPACITY=64"],
   platforms = [
     ## SIM CFLAGS can be one of:
     ## -DBOARDCONFIG_UNIROCKET_LOCALSIM, to view boards in local sim

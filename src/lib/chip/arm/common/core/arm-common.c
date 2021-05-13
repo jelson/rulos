@@ -18,6 +18,7 @@
 
 #include "core/arm-hal.h"
 #include "core/hal.h"
+#include "core/hardware.h"
 #include "core/logging.h"
 
 // This is the entry point defined by the startup file after
@@ -45,7 +46,7 @@ void hal_idle() { __WFI(); }
 // timer_id is ignored for now; we just use the LPC SysTick clock,
 // which is meant for use for a system clock because it doesn't have
 // any pin inputs or outputs.
-uint32_t hal_start_clock_us(uint32_t us, Handler handler, void* data,
+uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
                             uint8_t timer_id) {
   // The correct formula for ticks-per-clock-period is just the
   // frequency of the CPU in MHz times the desired period in
@@ -84,10 +85,4 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void* data,
   us_per_tick *= 100;
   us_per_tick /= clock_rate_div_10k;
   return us_per_tick;
-}
-
-void arm_assert(const uint32_t line) {
-  LOG("assertion failed: line %lu", line);
-  LOG_FLUSH();
-  __builtin_trap();
 }

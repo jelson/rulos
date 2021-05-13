@@ -119,33 +119,14 @@ static locatorAct_t locatorAct_g;
 
 /***** serial port helpers ******/
 
-// this is called at interrupt time
-static inline void uartSendDone(void *cb_data) {
-  locatorAct_t *locatorAct = (locatorAct_t *)cb_data;
-  locatorAct->uartSending = FALSE;
-}
-
 static inline void emit(locatorAct_t *locatorAct, char *s) {
-  uart_send(&locatorAct->uart, s, strlen(s), uartSendDone, locatorAct);
+  uart_print(&locatorAct->uart, s);
 }
 
-static inline uint8_t maybe_claim_serial(locatorAct_t *locatorAct) {
-  uint8_t retval = FALSE;
-  uint8_t old_interrupts = hal_start_atomic();
-  if (locatorAct->uartSending == FALSE) {
-    locatorAct->uartSending = TRUE;
-    retval = TRUE;
-  }
-  hal_end_atomic(old_interrupts);
-  return retval;
+static inline uint8_t serial_is_idle(locatorAct_t *locatorAct) {
+  return !uart_is_busy(&locatorAct->uart);
 }
 
-// warning -- don't use from within interrupt context!
-static inline void wait_for_serial(locatorAct_t *locatorAct) {
-  while (!maybe_claim_serial(locatorAct)) {
-    _delay_us(100);  // 32 microseconds per 8-bit character at 250kbit/sec
-  }
-}
 
 /**** time-related debugging ****/
 
@@ -164,7 +145,6 @@ void printTimeRecords(char *prefix) {
   uint8_t i;
 
   for (i = 0; i < numTimeRecords; i++) {
-    wait_for_serial(&locatorAct_g);
     snprintf(locatorAct_g.UARTsendBuf, sizeof(locatorAct_g.UARTsendBuf) - 1,
              "%s %d: %ld\r\n", prefix, i, timerecord[i]);
     emit(&locatorAct_g, locatorAct_g.UARTsendBuf);
@@ -276,7 +256,7 @@ void updateNoiseThresholds(usState_t *usState, locatorAct_t *locatorAct) {
   usState->threshMin = usState->noiseMin - (range / 2);
   usState->threshMax = usState->noiseMax + (range / 2);
 
-  if (maybe_claim_serial(
+  if (serial_is_idle(
           locatorAct)) {  // can't use wait_for_serial; in interrupt context!
     snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf) - 1,
              "^t;side=%d;l=%5d;h=%5d$\r\n", locatorAct->topOrBot,
@@ -326,7 +306,7 @@ void detectChirp(uint16_t adcval, usState_t *usState,
       chirp(US_CHIRP_LEN_US);
       _delay_ms(
           US_CHIRP_RING_TIME_MS);  // make sure we don't reply to our own ping
-      if (maybe_claim_serial(locatorAct)) {  // can't use wait_for_serial; in
+      if (serial_is_idle(locatorAct)) {  // can't use wait_for_serial; in
                                              // interrupt context!
         snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf) - 1,
                  "^m;Sent chirp reply %ld$\n\r", precise_clock_time_us());
@@ -418,7 +398,6 @@ void configLocator4(locatorAct_t *locatorAct) {
   stop_sampling();
 #endif
 #endif
-  wait_for_serial(locatorAct);
   emit(locatorAct, "^m;Initialization complete\n\r");
 
   schedule_us(1, (ActivationFuncPtr)sampleLocator, locatorAct);
@@ -505,7 +484,6 @@ void sampleLocator3(locatorAct_t *locatorAct, char *data, int len) {
   int16_t y = ((int16_t)data[2]) << 8 | data[3];
   int16_t z = ((int16_t)data[4]) << 8 | data[5];
 
-  wait_for_serial(locatorAct);
   snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf) - 1,
            "^g;x=%5d;y=%5d;z=%5d$\r\n", x, y, z);
   emit(locatorAct, locatorAct->UARTsendBuf);
@@ -527,7 +505,7 @@ void sampleLocator2(locatorAct_t *locatorAct, char *data, int len) {
 #endif
 
 #ifndef NO_ACCEL
-  if (maybe_claim_serial(locatorAct)) {
+  if (serial_is_idle(locatorAct)) {
     snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf) - 1,
              "^a;x=%5d;y=%5d;z=%5d$\r\n", x, y, z);
     emit(locatorAct, locatorAct->UARTsendBuf);
@@ -535,27 +513,24 @@ void sampleLocator2(locatorAct_t *locatorAct, char *data, int len) {
 #endif
 }
 
-void process_serial_command(locatorAct_t *locatorAct, char cmd) {
-  switch (cmd) {
+void process_serial_command(locatorAct_t *locatorAct, char *cmd) {
+  switch (cmd[0]) {
 #ifndef NO_ULTRASOUND
     case 'q':
       locatorAct->rangingMode = 'q';
       us_xmit_stop();
 
-      wait_for_serial(locatorAct);
       emit(locatorAct, "^m;entering quiet mode$\n\r");
       break;
 
     case 'c':
       us_xmit_start();
-      wait_for_serial(locatorAct);
       emit(locatorAct, "^m;transmitting continuous ultrasound$\n\r");
       break;
 
     case 's':
       locatorAct->rangingMode = 'q';  // keep interrupt-driven analog loop from
                                       // replying, if we were in reply mode
-      wait_for_serial(locatorAct);
       emit(locatorAct, "^m;chirping$\n\r");
       chirp(US_CHIRP_LEN_US);
       _delay_ms(US_CHIRP_RING_TIME_MS);
@@ -567,7 +542,6 @@ void process_serial_command(locatorAct_t *locatorAct, char cmd) {
 
     case 'r':
       locatorAct->rangingMode = 'r';
-      wait_for_serial(locatorAct);
       emit(locatorAct, "^m;entering reflector mode$\n\r");
       break;
 #endif
@@ -600,11 +574,6 @@ void sampleLocator(locatorAct_t *locatorAct) {
   return;
 #endif
 
-  // Check for serial commands
-  char cmd;
-  while (CharQueue_pop(locatorAct->uart.recvQueue.q, &cmd))
-    process_serial_command(locatorAct, cmd);
-
 #ifndef NO_ULTRASOUND
   // If we're in 's' mode waiting for a reply, don't sample the
   // peripherals.  Just check for a timeout and then end.  This must
@@ -627,7 +596,6 @@ void sampleLocator(locatorAct_t *locatorAct) {
 
   if (listenMode) {
     if (timeout) {
-      wait_for_serial(locatorAct);  // note, must happen outside atomic block
       emit(locatorAct, "^m;ranging timeout$\n\r");
     } else {
       return;  // don't sample peripherals if we're still listening.
@@ -637,7 +605,6 @@ void sampleLocator(locatorAct_t *locatorAct) {
   // If we were recently in 's' mode and sucessfully completed a
   // ranging trial, print the result
   if (locatorAct->chirpRTT) {
-    wait_for_serial(locatorAct);
     snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf) - 1,
              "^d;t=%ld$\r\n", locatorAct->chirpRTT);
     locatorAct->chirpRTT = 0;
@@ -665,7 +632,8 @@ int main() {
 
   memset(&locatorAct_g, 0, sizeof(locatorAct_g));
   locatorAct_g.twiState = hal_twi_init(100, 0, NULL);
-  uart_init(&locatorAct_g.uart, SERIAL_BAUD_RATE, TRUE, 0);
+  uart_init(&locatorAct_g.uart, /*uart_id*/0, SERIAL_BAUD_RATE, TRUE);
+  // TODO if ever unrotting: connect process_serial_command to uart input
 
   if (strlen(FIRMWARE_ID) > ID_OFFSET) {
     snprintf(locatorAct_g.UARTsendBuf, sizeof(locatorAct_g.UARTsendBuf) - 1,
@@ -673,11 +641,6 @@ int main() {
   } else {
     snprintf(locatorAct_g.UARTsendBuf, sizeof(locatorAct_g.UARTsendBuf) - 1,
              "^i;0$\r\n");
-  }
-  while (1)  // loop jonh
-  {
-    wait_for_serial(&locatorAct_g);
-    emit(&locatorAct_g, locatorAct_g.UARTsendBuf);
   }
 
 #ifdef TIME_DEBUG

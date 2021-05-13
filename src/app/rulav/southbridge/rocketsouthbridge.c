@@ -32,13 +32,13 @@
 
 /************************************************************************/
 
-HalUart uart;
-
 int main() {
   hal_init();
   bss_canary_init();
 
-  hal_uart_init(&uart, 38400, true, /* uart_id= */ 0);
+  UartState_t uart;
+  uart_init(&uart, /* uart_id= */ 0, 115200, true);
+  log_bind_uart(&uart);
   LOG("South bridge serial logging up");
 
   init_clock(10000, TIMER1);

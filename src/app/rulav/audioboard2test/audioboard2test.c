@@ -121,8 +121,9 @@ int main() {
   init_clock(10000, TIMER1);
 
 #ifdef LOG_TO_SERIAL
-  HalUart uart;
-  hal_uart_init(&uart, 115200, true, /* uart_id= */ 0);
+  UartState_t uart;
+  uart_init(&uart, /* uart_id= */ 0, 115200, true);
+  log_bind_uart(&uart);
   LOG("Log output running");
 #endif
 

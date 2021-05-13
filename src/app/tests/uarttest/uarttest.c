@@ -18,18 +18,19 @@
 
 #include "core/hardware.h"
 #include "core/rulos.h"
+#include "periph/uart/uart.h"
 
 #define FREQ_USEC 50000
 
 #if defined(RULOS_ARM_STM32)
-#define TEST_PIN GPIO_A6
+#define TEST_PIN GPIO_A0
 #elif defined(RULOS_AVR)
 #define TEST_PIN GPIO_B3
 #else
 #error "No test pin defined"
 #endif
 
-HalUart uart;
+UartState_t uart;
 
 void test_func(void *data) {
   schedule_us(FREQ_USEC, (ActivationFuncPtr)test_func, NULL);
@@ -45,27 +46,36 @@ void test_func(void *data) {
   // The second send verifies that messages too long to fit into the buffer are
   // still output in their entirely, correctly.
   gpio_set(TEST_PIN);
-  hal_uart_sync_send(&uart, "this is a relatively short message; it should "
-                            "return almost immediately.\n");
+  uart_print(&uart, "this is a relatively short message; it should "
+             "return almost immediately.\n");
   gpio_clr(TEST_PIN);
 
   static int i = 0;
+  gpio_set(TEST_PIN);
   LOG("this is message number %d to test the log macro", i++);
+  gpio_clr(TEST_PIN);
 
-  hal_uart_sync_send(
+  gpio_set(TEST_PIN);
+  uart_print(
       &uart,
       "hello there this is an extremely long message, one that actually\n"
       "exceeds the send buffer size of 128 bytes. why would you want to send\n"
       "a message this long? who knows. i don't judge. i just transmit!\n"
       "hopefully, the entire thing has been received!\n\n");
   gpio_clr(TEST_PIN);
+
+  gpio_set(TEST_PIN);
+  uart_flush(&uart);
+  gpio_clr(TEST_PIN);
 }
 
 int main() {
   hal_init();
 
-  hal_uart_init(&uart, 115200, true, /* uart_id= */ 0);
+  uart_init(&uart, /* uart_id= */ 0, 38400, true);
+  log_bind_uart(&uart);
   LOG("Log output running");
+  LOG("Even more log output running!");
 
   init_clock(10000, TIMER1);
   gpio_make_output(TEST_PIN);

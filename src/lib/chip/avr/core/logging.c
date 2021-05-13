@@ -16,31 +16,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "core/rulos.h"
-#include "core/twi.h"
-#include "periph/7seg_panel/7seg_panel.h"
-#include "periph/7seg_panel/remote_bbuf.h"
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 
-int main() {
-  hal_init();
-  hal_init_rocketpanel();
+#include "core/logging-common.h"
 
-  UartState_t uart;
-  uart_init(&uart, /* uart_id= */ 0, 115200, true);
-  log_bind_uart(&uart);
-  LOG("Rocket dongle running");
-
-  init_clock(10000, TIMER1);
-
-  Network net;
-  init_twi_network(&net, 100, DONGLE_BASE_ADDR + DONGLE_BOARD_ID);
-
-  RemoteBBufRecv remoteBBufRecv;
-  init_remote_bbuf_recv(&remoteBBufRecv, &net);
-
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);
-  cpumon_main_loop();
-
-  return 0;
+void avr_log(const char *fmt_p /* PROGMEM */, ...) {
+  va_list ap;
+  char message[100];
+  va_start(ap, fmt_p);
+  int len = vsnprintf_P(message, sizeof(message), fmt_p, ap);
+  va_end(ap);
+  log_common_emit_to_bound_uart(message, len);
 }

@@ -23,6 +23,8 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -32,6 +34,7 @@
 #include <unistd.h>
 
 #include "chip/sim/core/sim.h"
+#include "core/hal.h"
 #include "core/keystrokes.h"
 #include "core/rulos.h"
 #include "periph/ring_buffer/rocket_ring_buffer.h"
@@ -44,15 +47,19 @@ static void uart_simulator_input(int c);
 static void uart_simulator_stop();
 static void draw_uart_input_window();
 
-HalUart *g_sim_uart_handler = NULL;
-extern HalUart *g_sim_uart_handler;
 static WINDOW *uart_input_window = NULL;
-char recent_uart_buf[20];
+char recent_uart_buf[40];
 
-void hal_uart_init(HalUart *uart, uint32_t baud, r_bool stop2,
-                   uint8_t uart_id) {
-  g_sim_uart_handler = uart;
-  uart->uart_id = uart_id;
+static hal_uart_receive_cb uart_recv_cb = NULL;
+static void *uart_user_data = NULL;
+
+void hal_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2,
+                   hal_uart_receive_cb rx_cb,
+                   void *user_data /* for both rx and tx upcalls */,
+                   uint16_t *max_tx_len /* OUT */) {
+  *max_tx_len = 3;
+  uart_recv_cb = rx_cb;
+  uart_user_data = user_data;
   sim_maybe_init_and_register_keystroke_handler(sim_uart_keystroke_handler);
   memset(recent_uart_buf, 0, sizeof(recent_uart_buf));
 }
@@ -80,28 +87,26 @@ r_bool sim_uart_keystroke_handler(char c) {
 
 typedef void (*SimKeystrokeHandler)(char k);
 
-void hal_uart_start_send(HalUart *uart) {
-  char buf[256];
+void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb) {
+  char buf[4096];
   int i = 0;
 
-  while ((uart->send)(uart, &buf[i])) {
-    i++;
+  assert(uart_id == 0);
+  while (true) {
+    uint16_t this_send_len;
+    const char *this_buf;
+    cb(uart_id, uart_user_data, &this_buf, &this_send_len);
+    if (this_send_len > 0) {
+      memcpy(&buf[i], this_buf, this_send_len);
+      i += this_send_len;
+    } else {
+      break;
+    }
   }
 
   buf[i + 1] = '\0';
 
-  LOG("Sent to uart %d: %s", uart->uart_id, buf);
-}
-
-void hal_uart_sync_send_bytes(HalUart *uart, const void *s, uint8_t len) {
-  char buf[len + 1];
-  memcpy(buf, s, len);
-  buf[len] = '\0';
-  LOG("Sent to uart %d: %s", uart->uart_id, buf);
-}
-
-void hal_uart_sync_send(HalUart *uart, const char *s) {
-  LOG("Sent to uart %d: %s", uart->uart_id, s);
+  LOG("Sent to uart %d: %s", uart_id, buf);
 }
 
 /********** uart input simulator ***************/
@@ -127,11 +132,11 @@ static void uart_simulator_input(int c) {
   draw_uart_input_window();
 
   // upcall to the uart code
-  if (g_sim_uart_handler == NULL) {
+  if (uart_recv_cb == NULL) {
     LOG("dropping uart char - uart not initted");
     return;
   }
-  (g_sim_uart_handler->recv)(g_sim_uart_handler, c);
+  (uart_recv_cb)(0, uart_user_data, c);
 }
 
 static void uart_simulator_stop() { delwin(uart_input_window); }
@@ -162,7 +167,8 @@ void sim_uart_recv(void *data)
 	}
 }
 
-void hal_uart_init(HalUart* handler, uint32_t baud, r_bool stop2, uint8_t uart_id)
+void hal_uart_init(HalUart* handler, uint32_t baud, r_bool stop2,
+                   uint8_t uart_id)
 {
 	handler->uart_id = uart_id;
 	assert(uart_id<sizeof(sim_uart_fd)/sizeof(sim_uart_fd[0]));

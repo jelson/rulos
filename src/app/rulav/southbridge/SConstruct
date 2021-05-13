@@ -23,7 +23,7 @@ from BuildRules import *
 RulosBuildTarget(
     name = "rocketsouthbridge",
     sources = ["rocketsouthbridge.c"],
-    extra_cflags = ["-DLOG_TO_SERIAL=UART0" ],
+    extra_cflags = ["-DLOG_TO_SERIAL" ],
     platforms = [
         SimulatorPlatform(),
         AvrPlatform(

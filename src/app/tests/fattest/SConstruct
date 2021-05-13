@@ -24,7 +24,7 @@ RulosBuildTarget(
   name = "fattest",
   sources = ["fattest.c"],
   extra_cflags = [
-    "-DLOG_TO_SERIAL=UART0",
+    "-DLOG_TO_SERIAL",
   ],
   platforms = [
     ArmStmPlatform("stm32f303xb")

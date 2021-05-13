@@ -17,9 +17,9 @@
  */
 
 /*
- * hardware.c: These functions are only needed for physical display hardware.
- *
- * This file is not compiled by the simulator.
+ * Logging support for ARM devices. (This can not be shared by AVR devices
+ * because on AVR we use a special version of printf that can print from AVR
+ * progmem regions.)
  */
 
 #include "core/logging.h"
@@ -29,39 +29,20 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "core/hal.h"
-
-#ifdef LOG_TO_SERIAL
-
-// This silliness is because "gcc -DLOG_TO_SERIAL" defaults to
-// defining LOG_TO_SERIAL to be 1, which is a confusing default.
-// I want to force you to explicitly name either UART0 or UART1
-// as your desired logging destination.
-
-#define UART0 100
-#define UART1 200
-
-#if LOG_TO_SERIAL == UART0
-#define LOGGING_UART 0
-#elif LOG_TO_SERIAL == UART1
-#define LOGGING_UART 1
-#else
-#error LOG_TO_SERIAL must be set to UART0 or UART1
-#include <stophere>
-#endif
-
-#undef UART0
-#undef UART1
+#include "core/logging-common.h"
 
 void arm_log(const char *fmt, ...) {
   va_list ap;
   char message[100];
   va_start(ap, fmt);
-  vsnprintf(message, sizeof(message), fmt, ap);
+  int len = vsnprintf(message, sizeof(message), fmt, ap);
   va_end(ap);
 
-  // This is a hardware-specific function.
-  arm_uart_sync_send_by_id(LOGGING_UART, message);
+  log_common_emit_to_bound_uart(message, len);
 }
 
-#endif  // LOG_TO_SERIAL
+void arm_assert(const uint32_t line) {
+  LOG("assertion failed: line %lu", line);
+  LOG_FLUSH();
+  __builtin_trap();
+}

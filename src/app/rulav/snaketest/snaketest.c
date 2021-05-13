@@ -45,7 +45,6 @@
 #define VOLUME_POT_CHANNEL 1
 #define USE_LOCAL_KEYPAD 0
 
-HalUart uart;
 CpumonAct cpumon;
 Snake snake;
 
@@ -60,7 +59,9 @@ void cp_inject(struct s_direct_injector *di, char k) {
 int main() {
   hal_init();
 
-  hal_uart_init(&uart, 38400, true, /* uart_id= */ 0);
+  UartState_t uart;
+  uart_init(&uart, /* uart_id= */ 0, 115200, true);
+  log_bind_uart(&uart);
   LOG("Log output running");
 
 #if NUM_LOCAL_BOARDS > 0
