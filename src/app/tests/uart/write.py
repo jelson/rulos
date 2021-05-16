@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-f = open("/dev/ttyACM1", "w")
-
+import sys
 import time
+
+f = open(sys.argv[1], "w")
 
 for i in range(20):
     f.write(f"hello there number {i}\n")
