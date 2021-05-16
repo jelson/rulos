@@ -21,9 +21,9 @@
 #include "core/hal.h"
 #include "core/rulos.h"
 
-#define JIFFY_TIME_US 10000
-#define BUTTON_REFRAC_TIME_US 100000
-#define FOUNTAIN_ON_TIME_SEC 60
+#define JIFFY_TIME_US           10000
+#define BUTTON_REFRAC_TIME_US   100000
+#define FOUNTAIN_ON_TIME_SEC    60
 #define FOUNTAIN_FAST_TIME_MSEC 1000
 #define PWM
 
@@ -37,7 +37,8 @@ typedef struct {
 
 #ifdef SIM
 
-void hal_fountain_init() {}
+void hal_fountain_init() {
+}
 
 int button_counter = 0;
 int down = 0;
@@ -52,18 +53,24 @@ bool hal_button_pressed() {
   return down;
 }
 
-void hal_start_pump() { printf("pump now on\n"); }
+void hal_start_pump() {
+  printf("pump now on\n");
+}
 
-void hal_slowdown_pump() { printf("pump slowing down\n"); }
+void hal_slowdown_pump() {
+  printf("pump slowing down\n");
+}
 
-void hal_stop_pump() { printf("pump now off\n"); }
+void hal_stop_pump() {
+  printf("pump now off\n");
+}
 
 #else  // SIM
 
 #include "core/hardware.h"
 
 #define BUTTON GPIO_B2
-#define PUMP GPIO_B1
+#define PUMP   GPIO_B1
 
 void hal_fountain_init() {
   // Make the button pin an input with pullup disabled; we assume there's
@@ -76,7 +83,9 @@ void hal_fountain_init() {
   gpio_make_output(PUMP);
 }
 
-bool hal_button_pressed() { return gpio_is_set(BUTTON); }
+bool hal_button_pressed() {
+  return gpio_is_set(BUTTON);
+}
 
 #ifdef PWM
 void activate_pwm(int duty_cycle_percent) {

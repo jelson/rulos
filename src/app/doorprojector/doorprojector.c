@@ -20,32 +20,32 @@
 #include "core/rulos.h"
 #include "periph/input_controller/input_controller.h"
 
-#define LED0 GPIO_C1
-#define LED1 GPIO_C3
-#define LED2 GPIO_C5
-#define POT GPIO_C4
-#define SERVO GPIO_B1
-#define SET_BTN GPIO_B0
-#define LEFT_BTN GPIO_D2
+#define LED0      GPIO_C1
+#define LED1      GPIO_C3
+#define LED2      GPIO_C5
+#define POT       GPIO_C4
+#define SERVO     GPIO_B1
+#define SET_BTN   GPIO_B0
+#define LEFT_BTN  GPIO_D2
 #define RIGHT_BTN GPIO_D3
 
 #define READ_BUTTON(btn) (gpio_is_clr(btn))
 
-#define PAN_PERIOD (10000)         /* tick one PAN_RATE every 10ms */
-#define PAN_RATE (65535 / 100 / 4) /* move complete distance every 4s */
+#define PAN_PERIOD (10000)           /* tick one PAN_RATE every 10ms */
+#define PAN_RATE   (65535 / 100 / 4) /* move complete distance every 4s */
 
-#define BUTTON_SCAN_PERIOD 20000
+#define BUTTON_SCAN_PERIOD       20000
 #define BUTTON_REFRACTORY_PERIOD 40000
 
-#define SERVO_PERIOD 20000
+#define SERVO_PERIOD       20000
 #define SERVO_PULSE_MIN_US 350
 #define SERVO_PULSE_MAX_US 2000
-#define POT_ADC_CHANNEL 4
-#define OPT0_ADC_CHANNEL 2
-#define OPT1_ADC_CHANNEL 0
-#define QUADRATURE_PERIOD 1000
-#define ADC_PERIOD 500
-#define SYSTEM_CLOCK 500
+#define POT_ADC_CHANNEL    4
+#define OPT0_ADC_CHANNEL   2
+#define OPT1_ADC_CHANNEL   0
+#define QUADRATURE_PERIOD  1000
+#define ADC_PERIOD         500
+#define SYSTEM_CLOCK       500
 
 /****************************************************************************
  Dealing with jitter. I can think of four techniques to stabilize the pulse
@@ -121,8 +121,8 @@ void init_servo(ServoAct *servo) {
   servo_set_pwm(servo, 500, SERVO_PUSH);
 }
 
-#define SERVO_MAX (0xffff)
-#define SERVO_SLOP (0x0180)
+#define SERVO_MAX    (0xffff)
+#define SERVO_SLOP   (0x0180)
 #define SERVO_OFFSET (1000) /* give room to clamp values w/ over/underflow */
 
 void servo_set_pwm(ServoAct *servo, uint16_t desired_position,
@@ -223,9 +223,13 @@ static void quadrature_handler(Quadrature *quad) {
   quad->oldState = newState;
 }
 
-int16_t quad_get_position(Quadrature *quad) { return quad->position; }
+int16_t quad_get_position(Quadrature *quad) {
+  return quad->position;
+}
 
-void quad_set_position(Quadrature *quad, int16_t pos) { quad->position = pos; }
+void quad_set_position(Quadrature *quad, int16_t pos) {
+  quad->position = pos;
+}
 
 /****************************************************************************/
 
@@ -237,7 +241,7 @@ typedef struct s_config {
 } Config;
 
 #define EEPROM_CONFIG_BASE 4
-#define CONFIG_MAGIC 0xc3
+#define CONFIG_MAGIC       0xc3
 void config_read_eeprom(Config *config);
 
 bool init_config(Config *config) {

@@ -14,7 +14,8 @@ void gpsinput_init(GPSInput *gpsi, uint8_t uart_id,
                    ActivationFuncPtr data_ready_cb_func,
                    void *data_ready_cb_data) {
   uart_init(&gpsi->uart, uart_id, 4800, TRUE);
-  linereader_init(&gpsi->linereader, &gpsi->uart, _gpsinput_process_sentence, gpsi);
+  linereader_init(&gpsi->linereader, &gpsi->uart, _gpsinput_process_sentence,
+                  gpsi);
 
   gpsi->lat = 0.;
   gpsi->lon = 0.;
@@ -37,7 +38,7 @@ uint8_t split(char *s, uint8_t *index /*OUT*/, uint8_t index_size) {
 }
 
 void _gpsinput_process_sentence(void *user_data, char *sentence) {
-  GPSInput *gpsi = (GPSInput *) user_data;
+  GPSInput *gpsi = (GPSInput *)user_data;
 #ifndef SIM
 #define INVALID(m) \
   { return; }
@@ -61,12 +62,12 @@ void _gpsinput_process_sentence(void *user_data, char *sentence) {
   if (num_fields != 14) {
     INVALID("num_fields");
   }
-#define FI_TIME 0
-#define FI_LAT 1
+#define FI_TIME     0
+#define FI_LAT      1
 #define FI_LAT_SIGN 2
-#define FI_LON 3
+#define FI_LON      3
 #define FI_LON_SIGN 4
-#define FI_QUALITY 5
+#define FI_QUALITY  5
 
   if (memcmp(&sentence[field_index[FI_LAT_SIGN]], "N,", 2) != 0) {
     INVALID("N");

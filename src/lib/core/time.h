@@ -46,4 +46,6 @@ static inline Time time_sec(uint16_t seconds) {
   return ((Time)1000000) * seconds;
 }
 
-static inline Time time_msec(uint32_t msec) { return ((Time)1000) * msec; }
+static inline Time time_msec(uint32_t msec) {
+  return ((Time)1000) * msec;
+}

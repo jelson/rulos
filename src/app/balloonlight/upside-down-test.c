@@ -21,14 +21,12 @@
  * again when it's right-side up
  */
 
-#include "core/rulos.h"
-
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "stm32g0xx_ll_pwr.h"
-
 #include "common.h"
+#include "core/rulos.h"
+#include "stm32g0xx_ll_pwr.h"
 
 ////// configuration //////
 
@@ -65,7 +63,6 @@ void sample(void *data) {
 
   gpio_set_or_clr(LIGHT_EN, led_is_on);
 }
-
 
 int main() {
   hal_init();

@@ -25,10 +25,10 @@
 #include "core/message.h"
 #include "core/util.h"
 
-#define PORT_NONE 255
-#define SLOT_NONE 255
-#define MAX_LISTENERS 10
-#define SEND_QUEUE_SIZE 4
+#define PORT_NONE            255
+#define SLOT_NONE            255
+#define MAX_LISTENERS        10
+#define SEND_QUEUE_SIZE      4
 #define NET_MAX_PAYLOAD_SIZE 10
 
 // We allocate num_receive_buffers of these things.

@@ -25,7 +25,8 @@
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-  int cport;    // Wish I could take a handle to the GPIO typedef! We should do that.
+  int cport;  // Wish I could take a handle to the GPIO typedef! We should do
+              // that.
   uint16_t on_time_ms;
   uint16_t off_time_ms;
   int state;
@@ -33,7 +34,9 @@ typedef struct {
 
 void blink_update(BlinkAct *ba) {
   ba->state = (ba->state == 0);
-  uint32_t next_delay_us = ((uint32_t) (ba->state ? ba->on_time_ms : ba->off_time_ms)) * 1000 /* ms->us */;
+  uint32_t next_delay_us =
+      ((uint32_t)(ba->state ? ba->on_time_ms : ba->off_time_ms)) *
+      1000 /* ms->us */;
   if (ba->cport == 3) {
     gpio_set_or_clr(GPIO_C3, (ba->state == 0));
   } else if (ba->cport == 4) {
@@ -44,7 +47,8 @@ void blink_update(BlinkAct *ba) {
   schedule_us(next_delay_us, (ActivationFuncPtr)blink_update, ba);
 }
 
-void blink_init(BlinkAct *ba, int cport, uint16_t on_time_ms, uint16_t off_time_ms) {
+void blink_init(BlinkAct *ba, int cport, uint16_t on_time_ms,
+                uint16_t off_time_ms) {
   ba->cport = cport;
   ba->on_time_ms = on_time_ms;
   ba->off_time_ms = off_time_ms;

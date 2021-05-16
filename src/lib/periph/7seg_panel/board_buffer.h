@@ -30,7 +30,7 @@ typedef struct s_board_buffer {
   uint8_t mask;  // visible alpha
   struct s_board_buffer *next;
 #if BBDEBUG
-#define DBG_BBUF_LABEL(s) , s
+#define DBG_BBUF_LABEL(s)   , s
 #define DBG_BBUF_LABEL_DECL , const char *label
   const char *label;
 #else

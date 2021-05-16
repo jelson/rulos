@@ -44,7 +44,7 @@ void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network);
 void send_remote_bbuf(RemoteBBufSend *rbs, SSBitmap *bm, uint8_t index,
                       uint8_t mask);
 
-#define REMOTE_BBUF_RING_SIZE 4
+#define REMOTE_BBUF_RING_SIZE    4
 #define REMOTE_BBUF_RING_NEXT(x) ((x + 1) % RING_SIZE)
 // Thread context for rbs_update and rbs_refresh.
 #define RING_INVALID_INDEX (255)

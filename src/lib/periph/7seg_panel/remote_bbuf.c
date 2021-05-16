@@ -26,7 +26,7 @@
 //////////////////////////////////////////////////////////////////////////////
 // Send side
 
-#define REMOTE_BBUF_SEND_RATE 10000            // 100 board msgs per sec
+#define REMOTE_BBUF_SEND_RATE         10000    // 100 board msgs per sec
 #define REMOTE_BBUF_REFRESH_PERIOD_US 1000000  // 1s refresh rate
 
 static void rbs_update(RemoteBBufSend *rbs);

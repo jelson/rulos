@@ -30,7 +30,9 @@ extern volatile Time
 
 // very cheap but only precise to one jiffy.  this should be used my
 // most functions.
-static inline Time clock_time_us() { return g_interrupt_driven_jiffy_clock_us; }
+static inline Time clock_time_us() {
+  return g_interrupt_driven_jiffy_clock_us;
+}
 
 static inline Time get_interrupt_driven_jiffy_clock() {
   Time retval;

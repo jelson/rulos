@@ -36,14 +36,14 @@ void dd_bump(DDockAct *act, HPAMIndex thruster_index, uint32_t xscale,
 void ddock_hide(DDockAct *dd);
 void ddock_show(DDockAct *dd);
 
-#define DD_MAX_POS 20
-#define DD_MIN_RADIUS 3
-#define DD_MAX_RADIUS 14
-#define DD_SPEED_LIMIT 3
-#define DD_GROW_SPEED 1
-#define DD_GROW_SPEED_SCALE 2
+#define DD_MAX_POS            20
+#define DD_MIN_RADIUS         3
+#define DD_MAX_RADIUS         14
+#define DD_SPEED_LIMIT        3
+#define DD_GROW_SPEED         1
+#define DD_GROW_SPEED_SCALE   2
 #define DD_THRUSTER_DOWNSCALE 4
-#define DD_TOLERANCE 2
+#define DD_TOLERANCE          2
 
 void ddock_init(DDockAct *act, Screen4 *s4, uint8_t auxboard_base,
                 AudioClient *audioClient, Booster *booster,
@@ -299,7 +299,8 @@ void ddock_paint_axes(DDockAct *act) {
 uint32_t ddock_compute_dx(int yc, int r, int y) {
   int dy = (y - yc);
   int dx2 = r * r - dy * dy;
-  if (dx2 < 0) return I_NAN;
+  if (dx2 < 0)
+    return I_NAN;
   return isqrt(dx2);
 }
 

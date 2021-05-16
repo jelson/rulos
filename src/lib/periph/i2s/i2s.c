@@ -28,7 +28,7 @@
                               I2S_BUFSIZE_BYTES((i2s)->samples_per_buf)]))
 
 #if SIM
-static char* decode_buf_state[] = { "EMPTY", "FILLING", "FULL", "PLAYING" };
+static char* decode_buf_state[] = {"EMPTY", "FILLING", "FULL", "PLAYING"};
 #endif
 
 // Called at schedule time.
@@ -59,7 +59,7 @@ static void i2s_request_buffer_fill(i2s_t* i2s, uint8_t buf_num) {
   i2s->buf_state[buf_num] = FILLING;
 #if SIM
   LOG("XXX i2s_request_buffer_fill(%d) in %s,%s", buf_num,
-    decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
+      decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
 #endif
   schedule_now(i2s_request_buffer_fill_trampoline, i2s);
 }
@@ -73,7 +73,7 @@ static void i2s_buf_is_playing(i2s_t* i2s, uint8_t play_idx,
                                uint8_t other_idx) {
 #if SIM
   LOG("XXX i2s_buf_is_playing(%d) enters %s,%s", play_idx,
-    decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
+      decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
 #endif
   assert(i2s->buf_state[play_idx] == FULL);
 
@@ -85,8 +85,8 @@ static void i2s_buf_is_playing(i2s_t* i2s, uint8_t play_idx,
     i2s_request_buffer_fill(i2s, other_idx);
   }
 #if SIM
-  LOG("XXX i2s_buf_is_playing exit %s,%s",
-    decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
+  LOG("XXX i2s_buf_is_playing exit %s,%s", decode_buf_state[i2s->buf_state[0]],
+      decode_buf_state[i2s->buf_state[1]]);
 #endif
 }
 
@@ -96,7 +96,7 @@ static void i2s_buf_filled_internal(i2s_t* i2s, uint16_t samples_filled,
                                     uint8_t other_idx) {
 #if SIM
   LOG("XXX i2s_buf_filled(%d) enters %s,%s", just_filled_idx,
-    decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
+      decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
 #endif
   assert(i2s->buf_state[just_filled_idx] == FILLING);
   i2s->samples_in_buf[just_filled_idx] = samples_filled;
@@ -147,7 +147,7 @@ static void i2s_buf_filled_internal(i2s_t* i2s, uint16_t samples_filled,
   }
 #if SIM
   LOG("XXX i2s_buf_filled(%d) exits %s,%s", just_filled_idx,
-    decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
+      decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
 #endif
 }
 
@@ -223,7 +223,7 @@ static void i2s_buf_played_cb(void* user_data, uint8_t just_played_idx) {
   i2s_t* i2s = (i2s_t*)user_data;
 #if SIM
   LOG("XXX i2s_buf_played_cb(%d) enters %s,%s", just_played_idx,
-    decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
+      decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
 #endif
 
 #if I2S_STATS
@@ -242,8 +242,8 @@ static void i2s_buf_played_cb(void* user_data, uint8_t just_played_idx) {
     assert(FALSE);
   }
 #if SIM
-  LOG("XXX i2s_buf_played_cb exit %s,%s",
-    decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
+  LOG("XXX i2s_buf_played_cb exit %s,%s", decode_buf_state[i2s->buf_state[0]],
+      decode_buf_state[i2s->buf_state[1]]);
 #endif
 }
 

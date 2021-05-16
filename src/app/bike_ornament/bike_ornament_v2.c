@@ -16,14 +16,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#define TAIL_ON_TIME_MS 100
+#define TAIL_ON_TIME_MS  100
 #define TAIL_OFF_TIME_MS 300
-#define WHEEL_PERIOD_MS 10
-#define ANIM_TIME_SEC 5
+#define WHEEL_PERIOD_MS  10
+#define ANIM_TIME_SEC    5
 
 #define HEADLIGHT GPIO_B0
 #define TAILLIGHT GPIO_A1
-#define BUTTON GPIO_B2
+#define BUTTON    GPIO_B2
 
 #define L_WHEEL_ADDR 0b1110100
 #define R_WHEEL_ADDR 0b1110111
@@ -62,7 +62,9 @@ BikeState_t bike;
 void bike_sleep();
 void bike_wake(BikeState_t *bike);
 
-ISR(INT0_vect) { bike_wake(&bike); }
+ISR(INT0_vect) {
+  bike_wake(&bike);
+}
 
 static void init_led_drivers(uint8_t sevbit_addr) {
   char buf[17];

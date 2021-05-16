@@ -50,6 +50,6 @@ void debug_delay(int ms);
 #ifdef AVR
 #include <avr/pgmspace.h>
 #else
-#define PROGMEM /**/
+#define PROGMEM             /**/
 #define pgm_read_byte(addr) (*((uint8_t *)addr))
 #endif

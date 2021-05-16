@@ -702,8 +702,8 @@ void ledwalk_update(LEDWalk *lw)
 //////////////////////////////////////////////////////////////////////////////
 
 #define LMS_OUTPUT_ENABLE_INV GPIO_D6
-#define LMS_DATA GPIO_D5
-#define LMS_SHIFT_CLOCK GPIO_D4
+#define LMS_DATA              GPIO_D5
+#define LMS_SHIFT_CLOCK       GPIO_D4
 #define LMS_LATCH_ENABLE_COLS GPIO_D3
 #define LMS_LATCH_ENABLE_ROWS GPIO_D2
 

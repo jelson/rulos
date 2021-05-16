@@ -23,7 +23,9 @@
 #include "core/clock.h"
 #include "core/logging.h"
 
-void heap_init(Heap *heap) { heap->heap_count = 0; }
+void heap_init(Heap *heap) {
+  heap->heap_count = 0;
+}
 
 void heap_swap(HeapEntry *he, int off0, int off1) {
   HeapEntry tmp = he[off0];

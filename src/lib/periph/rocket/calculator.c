@@ -215,8 +215,8 @@ done:
   return uied_accepted;
 }
 
-#define DECORATION_TIMEOUT 7000000        /* 3 sec */
-#define DECORATION_UPDATE_INTERVAL 500000 /* 0.5 sec */
+#define DECORATION_TIMEOUT         7000000 /* 3 sec */
+#define DECORATION_UPDATE_INTERVAL 500000  /* 0.5 sec */
 
 void calculator_timeout_func(Calculator *calc) {
   schedule_us(DECORATION_UPDATE_INTERVAL,

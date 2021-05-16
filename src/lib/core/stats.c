@@ -23,7 +23,9 @@
 
 #include "core/rulos.h"
 
-void minmax_init(MinMaxMean_t *mmm) { memset(mmm, 0, sizeof(MinMaxMean_t)); }
+void minmax_init(MinMaxMean_t *mmm) {
+  memset(mmm, 0, sizeof(MinMaxMean_t));
+}
 
 void minmax_add_sample(MinMaxMean_t *mmm, const int32_t sample) {
   // There's a race in the routine that gets precise time that I'm not

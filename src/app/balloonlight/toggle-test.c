@@ -21,14 +21,12 @@
  * to measure light-on power vs light-off power
  */
 
-#include "core/rulos.h"
-
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "stm32g0xx_ll_pwr.h"
-
 #include "common.h"
+#include "core/rulos.h"
+#include "stm32g0xx_ll_pwr.h"
 
 static int led_counter = 0;
 
@@ -48,7 +46,6 @@ void toggle(void *data) {
 
   gpio_set_or_clr(LIGHT_EN, led_counter == 0);
 }
-
 
 int main() {
   hal_init();

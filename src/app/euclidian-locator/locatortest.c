@@ -21,7 +21,7 @@
 #include <util/delay.h>
 
 #define SAMPLING_PERIOD 30000
-#define SCHED_QUANTUM 5000
+#define SCHED_QUANTUM   5000
 //#define SERIAL_BAUD_RATE 250000
 // Don't know how to get 250kbaud in Linux.
 #define SERIAL_BAUD_RATE 38400
@@ -83,36 +83,36 @@ struct locatorAct {
 
 static locatorAct_t locatorAct_g;
 
-#define ACCEL_ADDR 0b0111000
+#define ACCEL_ADDR               0b0111000
 #define ACCEL_SAMPLING_RATE_BITS 0b001  // 50 hz
-#define ACCEL_RANGE_BITS 0b01           // +/- 4g
+#define ACCEL_RANGE_BITS         0b01   // +/- 4g
 
-#define GYRO_ADDR 0b1101000
-#define GYRO_FS_SEL 0x3    // 2000 deg/sec
+#define GYRO_ADDR     0b1101000
+#define GYRO_FS_SEL   0x3  // 2000 deg/sec
 #define GYRO_DLPF_CFG 0x3  // 42 hz
 
 #define FIRMWARE_ID "$Rev$"
-#define ID_OFFSET 6
+#define ID_OFFSET   6
 
 #if defined(BOARD_REVB)
 #define GPIO_10V_ENABLE GPIO_B0
-#define GPIO_US_XMIT GPIO_D6
-#define US_TOP_CHAN 0
+#define GPIO_US_XMIT    GPIO_D6
+#define US_TOP_CHAN     0
 #elif defined(BOARD_REVC) || defined(BOARD_REVE)
-#define GPIO_10V_ENABLE GPIO_B0
-#define GPIO_US_XMIT GPIO_D6
+#define GPIO_10V_ENABLE     GPIO_B0
+#define GPIO_US_XMIT        GPIO_D6
 #define GPIO_US_XMIT_ENABLE GPIO_D2
-#define GPIO_LED_1 GPIO_D4
-#define GPIO_LED_2 GPIO_D3
+#define GPIO_LED_1          GPIO_D4
+#define GPIO_LED_2          GPIO_D3
 
 #define US_TOP_CHAN 2
 #define US_BOT_CHAN 3
 #endif
 
 #define US_QUIET_TRAINING_LEN 2000
-#define US_MIN_NOISE_RANGE 25
-#define US_MIN_RUN_LENGTH 5
-#define US_CHIRP_LEN_US 1000
+#define US_MIN_NOISE_RANGE    25
+#define US_MIN_RUN_LENGTH     5
+#define US_CHIRP_LEN_US       1000
 #define US_CHIRP_RING_TIME_MS 40
 
 /****************************************************/
@@ -126,7 +126,6 @@ static inline void emit(locatorAct_t *locatorAct, char *s) {
 static inline uint8_t serial_is_idle(locatorAct_t *locatorAct) {
   return !uart_is_busy(&locatorAct->uart);
 }
-
 
 /**** time-related debugging ****/
 
@@ -211,7 +210,8 @@ void start_sampling(locatorAct_t *locatorAct, uint8_t topOrBot) {
 
   locatorAct->topOrBot = topOrBot;
 
-  if (topOrBot == US_TOP) adcChan = US_TOP_CHAN;
+  if (topOrBot == US_TOP)
+    adcChan = US_TOP_CHAN;
 #ifdef US_BOT_CHAN
 
   else if (topOrBot == US_BOT)
@@ -244,14 +244,17 @@ void start_sampling(locatorAct_t *locatorAct, uint8_t topOrBot) {
   reg_set(&ADCSRA, ADSC);
 }
 
-void stop_sampling() { ADCSRA = 0; }
+void stop_sampling() {
+  ADCSRA = 0;
+}
 
 void updateNoiseThresholds(usState_t *usState, locatorAct_t *locatorAct) {
   uint16_t range = usState->noiseMax - usState->noiseMin;
 
   // in case it happens to be very not-noisy when we train, enforce
   // a minimum noise band
-  if (range < US_MIN_NOISE_RANGE) range = US_MIN_NOISE_RANGE;
+  if (range < US_MIN_NOISE_RANGE)
+    range = US_MIN_NOISE_RANGE;
 
   usState->threshMin = usState->noiseMin - (range / 2);
   usState->threshMax = usState->noiseMax + (range / 2);
@@ -307,7 +310,7 @@ void detectChirp(uint16_t adcval, usState_t *usState,
       _delay_ms(
           US_CHIRP_RING_TIME_MS);  // make sure we don't reply to our own ping
       if (serial_is_idle(locatorAct)) {  // can't use wait_for_serial; in
-                                             // interrupt context!
+                                         // interrupt context!
         snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf) - 1,
                  "^m;Sent chirp reply %ld$\n\r", precise_clock_time_us());
         emit(locatorAct, locatorAct->UARTsendBuf);
@@ -372,7 +375,9 @@ static inline void us_xmit_start() {
 #endif
 }
 
-static inline void us_xmit_stop() { TCCR0A = 0; }
+static inline void us_xmit_stop() {
+  TCCR0A = 0;
+}
 
 static inline void chirp(uint16_t chirpLenUS) {
   us_xmit_start();
@@ -472,7 +477,8 @@ static inline int16_t convert_accel(char lsb, char msb) {
   int16_t mag =
       ((((int16_t)msb) & 0b01111111) << 2) | ((lsb & 0b11000000) >> 6);
 
-  if (msb & 0b10000000) mag = mag - 512;
+  if (msb & 0b10000000)
+    mag = mag - 512;
 
   return mag;
 }
@@ -632,7 +638,7 @@ int main() {
 
   memset(&locatorAct_g, 0, sizeof(locatorAct_g));
   locatorAct_g.twiState = hal_twi_init(100, 0, NULL);
-  uart_init(&locatorAct_g.uart, /*uart_id*/0, SERIAL_BAUD_RATE, TRUE);
+  uart_init(&locatorAct_g.uart, /*uart_id*/ 0, SERIAL_BAUD_RATE, TRUE);
   // TODO if ever unrotting: connect process_serial_command to uart input
 
   if (strlen(FIRMWARE_ID) > ID_OFFSET) {

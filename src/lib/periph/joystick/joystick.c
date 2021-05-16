@@ -19,7 +19,7 @@
 #include "periph/joystick/joystick.h"
 
 #define ACTUATION_THRESHOLD 50
-#define RELEASE_THRESHOLD 30
+#define RELEASE_THRESHOLD   30
 
 void joystick_poll(JoystickState_t *js) {
   assert(js->joystick_reader_func != NULL);

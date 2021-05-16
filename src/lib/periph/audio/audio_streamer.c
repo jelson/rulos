@@ -124,6 +124,10 @@ bool as_play(AudioStreamer *as, const char *pathname,
   return true;
 }
 
-void as_set_volume(AudioStreamer *as, uint8_t volume) { as->volume = volume; }
+void as_set_volume(AudioStreamer *as, uint8_t volume) {
+  as->volume = volume;
+}
 
-void as_stop_streaming(AudioStreamer *as) { as_maybe_close_fp(as); }
+void as_stop_streaming(AudioStreamer *as) {
+  as_maybe_close_fp(as);
+}

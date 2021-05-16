@@ -55,4 +55,6 @@ void s4_draw(Screen4 *s4) {
   }
 }
 
-bool s4_visible(Screen4 *s4) { return board_buffer_is_stacked(&s4->bbuf[0]); }
+bool s4_visible(Screen4 *s4) {
+  return board_buffer_is_stacked(&s4->bbuf[0]);
+}

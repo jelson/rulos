@@ -49,7 +49,9 @@ void display_controller_program_board(uint8_t board, SSBitmap *bitmap) {
   display_controller_enter_sleep();
 }
 
-void display_controller_enter_sleep() { hal_7seg_bus_enter_sleep(); }
+void display_controller_enter_sleep() {
+  hal_7seg_bus_enter_sleep();
+}
 
 SSBitmap ascii_to_bitmap(char a) {
   if (a < ' ' || a >= 127) {

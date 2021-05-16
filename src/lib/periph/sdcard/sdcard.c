@@ -81,8 +81,8 @@ void _sdc_issue_spic_cmd(SDCard *sdc, uint8_t *cmd, uint8_t cmdlen,
   spi_start(&sdc->spi, &sdc->spic);
 }
 
-#define SPI_CMD(x) ((x) | 0x40)
-#define SPI_CMD0_CRC (0x95)
+#define SPI_CMD(x)    ((x) | 0x40)
+#define SPI_CMD0_CRC  (0x95)
 #define SPI_DUMMY_CRC (0x01)
 uint8_t _spicmd0[6] = {SPI_CMD(0), 0, 0, 0, 0, SPI_CMD0_CRC};
 uint8_t _spicmd1[6] = {SPI_CMD(1), 0, 0, 0, 0, SPI_DUMMY_CRC};
@@ -195,7 +195,9 @@ void sdcard_readmore(SDCard *sdc) {
   sdc->done_rec.func(sdc->done_rec.data);
 }
 
-bool sdc_is_error(SDCard *sdc) { return sdc->error; }
+bool sdc_is_error(SDCard *sdc) {
+  return sdc->error;
+}
 
 void sdc_continue_transaction(SDCard *sdc, uint8_t *buffer, uint16_t buflen,
                               ActivationFuncPtr done_func, void *done_data) {

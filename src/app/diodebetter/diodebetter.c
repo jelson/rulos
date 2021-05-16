@@ -24,10 +24,10 @@
 #define LEDB GPIO_B1
 #define LEDW GPIO_B2
 
-#define FADER_KEY GPIO_A3
+#define FADER_KEY        GPIO_A3
 #define FADER_KEY_PULLUP (1 << PORTA3)
 
-#define KNOB_HUE 0
+#define KNOB_HUE        0
 #define KNOB_LIGHTNESS0 1
 #define KNOB_LIGHTNESS1 2
 
@@ -139,7 +139,7 @@ void control_phase(ControlTable* control_table) {
 
 // prescalar constants on attiny84.pdf page 84, table 11-9.
 #define TIMER_PRESCALER (0x5) /* clkIO/1024. */
-#define TIMER_COUNT (250)
+#define TIMER_COUNT     (250)
 
 void timer_init() {
   TCCR0A = 0;
@@ -172,7 +172,7 @@ typedef struct {
 // Fading from dimmer settings is ugly; shall we take a 45% brightness setting
 // and change it to 100% with a 55% discount?
 #define FADER_ONE_DECREMENT_TIME (1 << 7)
-#define APPLY_FADER(x) (((x) > fader_discount) ? ((x)-fader_discount) : 0)
+#define APPLY_FADER(x)           (((x) > fader_discount) ? ((x)-fader_discount) : 0)
 
 void hue_conversion(App* app) {
   Inputs* inputs = &app->inputs;

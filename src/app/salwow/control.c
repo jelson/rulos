@@ -9,7 +9,7 @@
 #include "leds.h"
 
 #define OBSERVATION_DURATION_SAMPLES 5
-#define US_PER_DEGREE ((uint32_t)(5000000 / 360))
+#define US_PER_DEGREE                ((uint32_t)(5000000 / 360))
 // That's one minute for a 360-degree turn.
 #define MOTOR_POWER 75
 

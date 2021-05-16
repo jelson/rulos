@@ -21,7 +21,7 @@
 void slowboot_update(SlowBoot *slowboot);
 
 #define SB_ANIM_INTERVAL 100000
-#define NO_SLOW_BOOT 0
+#define NO_SLOW_BOOT     0
 
 void init_slow_boot(SlowBoot *slowboot, ScreenBlanker *screenblanker,
                     AudioClient *audioClient) {

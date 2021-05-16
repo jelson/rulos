@@ -22,19 +22,17 @@
  * stm32 interrupt
  */
 
+#include "common.h"
 #include "core/hardware.h"
 #include "core/rulos.h"
-
 #include "stm32g0xx_hal_rcc.h"
 #include "stm32g0xx_ll_exti.h"
 #include "stm32g0xx_ll_i2c.h"
 #include "stm32g0xx_ll_pwr.h"
 
-#include "common.h"
-
 ////// configuration //////
 
-#define LIGHT_TIMEOUT_SEC 5
+#define LIGHT_TIMEOUT_SEC  5
 #define SAMPLING_TIME_MSEC 10
 
 uint32_t led_on_time_ms = 0;

@@ -5,29 +5,29 @@
 #define FINAL_STRIPBOARD 1
 #if FINAL_STRIPBOARD
 
-#define LMS_DATA_ROWS GPIO_D2
+#define LMS_DATA_ROWS         GPIO_D2
 #define LMS_LATCH_ENABLE_COLS GPIO_D3
-#define LMS_SHIFT_CLOCK_COLS GPIO_D4
-#define LMS_DATA_COLS GPIO_D5
+#define LMS_SHIFT_CLOCK_COLS  GPIO_D4
+#define LMS_DATA_COLS         GPIO_D5
 #define LMS_OUTPUT_ENABLE_INV GPIO_D6
 
-#define LMS_SHIFT_CLOCK_ROWS GPIO_C0
+#define LMS_SHIFT_CLOCK_ROWS  GPIO_C0
 #define LMS_LATCH_ENABLE_ROWS GPIO_D7
 
 #else  // original breadboard
 #define LMS_OUTPUT_ENABLE_INV GPIO_D6
-#define LMS_DATA_COLS GPIO_D5
-#define LMS_SHIFT_CLOCK_COLS GPIO_D4
+#define LMS_DATA_COLS         GPIO_D5
+#define LMS_SHIFT_CLOCK_COLS  GPIO_D4
 #define LMS_LATCH_ENABLE_COLS GPIO_D3
 #if 0
-#define LMS_DATA_ROWS GPIO_D5
-#define LMS_SHIFT_CLOCK_ROWS GPIO_D4
+#define LMS_DATA_ROWS         GPIO_D5
+#define LMS_SHIFT_CLOCK_ROWS  GPIO_D4
 #define LMS_LATCH_ENABLE_ROWS GPIO_D2
 #else
 // separate control lines for rows
-#define LMS_DATA_ROWS GPIO_C0         /* aux hdr 1 */
+#define LMS_DATA_ROWS         GPIO_C0 /* aux hdr 1 */
 #define LMS_LATCH_ENABLE_ROWS GPIO_D7 /* aux hdr 2 */
-#define LMS_SHIFT_CLOCK_ROWS GPIO_C1  /* aux hdr 3 */
+#define LMS_SHIFT_CLOCK_ROWS  GPIO_C1 /* aux hdr 3 */
 #endif
 #endif
 
@@ -183,10 +183,14 @@ void lms_enable(LEDMatrixSingle *lms, bool enable) {
   gpio_set_or_clr(LMS_OUTPUT_ENABLE_INV, !enable);
 }
 #else  //! SIM
-void led_matrix_single_init(LEDMatrixSingle *lms, uint8_t timer_id) {}
-void lms_configure_row(uint8_t rowdata) {}
-void lms_configure_col(uint16_t coldata) {}
-void lms_enable(LEDMatrixSingle *lms, bool enable) {}
+void led_matrix_single_init(LEDMatrixSingle *lms, uint8_t timer_id) {
+}
+void lms_configure_row(uint8_t rowdata) {
+}
+void lms_configure_col(uint16_t coldata) {
+}
+void lms_enable(LEDMatrixSingle *lms, bool enable) {
+}
 
 #endif  //! SIM
 

@@ -23,15 +23,15 @@
 #include "periph/rasters/rasters.h"
 #include "periph/rocket/screen4.h"
 
-#define PS(v) ((v) << PONG_SCALE2)
-#define BALLDIA 3
-#define PADDLEHEIGHT 8
+#define PS(v)            ((v) << PONG_SCALE2)
+#define BALLDIA          3
+#define PADDLEHEIGHT     8
 #define SCORE_PAUSE_TIME (((Time)1) << 20)
-#define BALLMINX PS(2)
-#define BALLMAXX PS(29 - BALLDIA)
-#define BALLMINY PS(0)
-#define BALLMAXY PS((SCREEN4SIZE * 6) - BALLDIA)
-#define PADDLEMAXY ((SCREEN4SIZE * 6) - PADDLEHEIGHT - 2)
+#define BALLMINX         PS(2)
+#define BALLMAXX         PS(29 - BALLDIA)
+#define BALLMINY         PS(0)
+#define BALLMAXY         PS((SCREEN4SIZE * 6) - BALLDIA)
+#define PADDLEMAXY       ((SCREEN4SIZE * 6) - PADDLEHEIGHT - 2)
 
 void pong_serve(Pong *pong, uint8_t from_player);
 void pong_update(Pong *pong);

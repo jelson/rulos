@@ -33,4 +33,6 @@ void event_signal(Event *evt);
 void event_reset(Event *evt);
 void event_wait(Event *evt, ActivationFuncPtr func, void *data);
 
-static inline bool event_is_signaled(Event *evt) { return evt->signaled; }
+static inline bool event_is_signaled(Event *evt) {
+  return evt->signaled;
+}

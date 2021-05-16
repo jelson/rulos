@@ -32,10 +32,10 @@ typedef enum {
 // that can be mixed together. The audio driver code doesn't yet support that,
 // but these defines are sent in by the clients anyway.
 // Instead, the streams preempt one another.
-#define AUDIO_STREAM_BACKGROUND 0
-#define AUDIO_STREAM_MUSIC 1
+#define AUDIO_STREAM_BACKGROUND    0
+#define AUDIO_STREAM_MUSIC         1
 #define AUDIO_STREAM_BURST_EFFECTS 2
-#define AUDIO_NUM_STREAMS 3
+#define AUDIO_NUM_STREAMS          3
 
 #define VOL_MAX (30)
 #define VOL_MIN (0)

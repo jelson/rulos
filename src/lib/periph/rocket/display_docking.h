@@ -28,10 +28,10 @@
 #include "periph/rocket/thruster_protocol.h"
 
 #define DOCK_HEIGHT SCREEN4SIZE
-#define MAX_Y (DOCK_HEIGHT * 6)
-#define MAX_X (NUM_DIGITS * 4)
-#define CTR_X (MAX_X / 2)
-#define CTR_Y (MAX_Y / 2)
+#define MAX_Y       (DOCK_HEIGHT * 6)
+#define MAX_X       (NUM_DIGITS * 4)
+#define CTR_X       (MAX_X / 2)
+#define CTR_Y       (MAX_Y / 2)
 
 struct s_ddockact;
 

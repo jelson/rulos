@@ -19,7 +19,7 @@
 #define FRZ_LED7 GPIO_D7
 
 #define FRZ_LED7 GPIO_C3
-#define FRZ_DBG GPIO_D4
+#define FRZ_DBG  GPIO_D4
 #else
 #define FRZ_LED0 GPIO_D6
 #define FRZ_LED1 GPIO_D7

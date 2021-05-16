@@ -17,13 +17,12 @@
  */
 
 #include "core/rulos.h"
-#include "periph/uart/uart.h"
 #include "periph/uart/linereader.h"
+#include "periph/uart/uart.h"
 
 #ifndef SIM
 #include "core/hardware.h"
 #endif
-
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -32,7 +31,7 @@
 // (The computer sends 2V; a transistor might work, too.)
 
 // Invocation arguments
-#define CUR_MILES 26.9
+#define CUR_MILES  26.9
 #define GOAL_MILES (96 + 274)
 
 // Configuration parameters
@@ -42,17 +41,17 @@
 #define MPH (69)
 
 // Math.
-#define CM_PER_MILE (2.54 * 12 * 5280)
+#define CM_PER_MILE  (2.54 * 12 * 5280)
 #define REV_PER_MILE (CM_PER_MILE / CM_PER_REVOLUTION)
 
-#define HR_PER_MILE (1.0 / MPH)
-#define HR_PER_REV (HR_PER_MILE / REV_PER_MILE)
-#define SEC_PER_REV (HR_PER_REV * 3600)
-#define REV_PERIOD (1000000 * SEC_PER_REV)
+#define HR_PER_MILE     (1.0 / MPH)
+#define HR_PER_REV      (HR_PER_MILE / REV_PER_MILE)
+#define SEC_PER_REV     (HR_PER_REV * 3600)
+#define REV_PERIOD      (1000000 * SEC_PER_REV)
 #define REV_HALF_PERIOD (REV_PERIOD / 2)
 
 #define RUN_MILES (GOAL_MILES - CUR_MILES)
-#define RUN_REVS RUN_MILES *REV_PER_MILE
+#define RUN_REVS  RUN_MILES *REV_PER_MILE
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -156,7 +155,7 @@ void print_func(Shell *shell) {
 }
 
 void shell_func(void *data, char *line) {
-  Shell *shell = (Shell*) data;
+  Shell *shell = (Shell *)data;
 
   if (strncmp(line, "per ", 4) == 0) {
     SYNCDEBUG();

@@ -1,0 +1,6 @@
+BasedOnStyle: Google
+IndentWidth: 2
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AlignConsecutiveMacros: true
+BreakBeforeBraces: Attach

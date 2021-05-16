@@ -26,10 +26,10 @@
 #include "usbstructs.h"
 
 // Set transfer bounds
-#define NAK_LIMIT 3
-#define TIMEOUT_LIMIT 3
-#define USB_BUS_PROBE_PERIOD_MS 500
-#define USB_SETTLE_DELAY_MS 200
+#define NAK_LIMIT                3
+#define TIMEOUT_LIMIT            3
+#define USB_BUS_PROBE_PERIOD_MS  500
+#define USB_SETTLE_DELAY_MS      200
 #define USB_RESET_WAIT_PERIOD_MS 50
 
 // USB 2.0 section 9.2.6.3 requires a 2msec delay after setting an address but
@@ -39,7 +39,7 @@
 
 // Debug options
 #define PRINT_DEVICE_INFO 1
-#define VERBOSE_LOGGING 0
+#define VERBOSE_LOGGING   0
 
 /////////////////////////////////////////////////////////////////////
 

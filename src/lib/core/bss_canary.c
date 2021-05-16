@@ -16,8 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "core/rulos.h"
 #include "core/bss_canary.h"
+
+#include "core/rulos.h"
 
 // The linker automatically creates symbols that indicate the end of BSS.
 // Unfortunately, they're named differently on different platforms.

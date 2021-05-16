@@ -16,21 +16,20 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "common.h"
+
 #include "core/hardware.h"
 #include "core/rulos.h"
-
+#include "stm32g0xx_hal_i2c.h"
+#include "stm32g0xx_hal_rcc.h"
 #include "stm32g0xx_ll_exti.h"
 #include "stm32g0xx_ll_i2c.h"
 #include "stm32g0xx_ll_pwr.h"
-#include "stm32g0xx_hal_i2c.h"
-#include "stm32g0xx_hal_rcc.h"
-
-#include "common.h"
 
 #define ACCEL_7BIT_ADDR 0b0010010
 
 #define ACCEL_WRITE_ADDR (ACCEL_7BIT_ADDR << 1)
-#define ACCEL_READ_ADDR ((ACCEL_7BIT_ADDR << 1) | 1)
+#define ACCEL_READ_ADDR  ((ACCEL_7BIT_ADDR << 1) | 1)
 
 I2C_HandleTypeDef i2c_handle;
 
@@ -101,11 +100,11 @@ void start_accel() {
   __HAL_RCC_I2C2_CLK_ENABLE();
   i2c_handle.Instance = I2C2;
   i2c_handle.Init.Timing =
-      __LL_I2C_CONVERT_TIMINGS(1,  // Prescaler
-                               13, // SCLDEL, data setup time
-                               13, // SDADEL, data hold time
-                               54, // SCLH, clock high period
-                               84  // SCLL, clock low period
+      __LL_I2C_CONVERT_TIMINGS(1,   // Prescaler
+                               13,  // SCLDEL, data setup time
+                               13,  // SDADEL, data hold time
+                               54,  // SCLH, clock high period
+                               84   // SCLL, clock low period
       );
   i2c_handle.Init.OwnAddress1 = 0;
   i2c_handle.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
@@ -119,10 +118,9 @@ void start_accel() {
   }
 
   // turn on accelerometer and slow down clock; power control register is 0x11.
-  reg_write(
-      0x11,
-      (1 << 7) // put accel in active mode
-      | (0b0111) // set MCLK to 5khz
+  reg_write(0x11,
+            (1 << 7)        // put accel in active mode
+                | (0b0111)  // set MCLK to 5khz
   );
 
   // read chip id
@@ -144,4 +142,3 @@ void start_accel() {
   // read all registers for debug purposes
   reg_read(0x0, &orig_registers, NUM_REGISTERS);
 }
-

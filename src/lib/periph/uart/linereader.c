@@ -16,13 +16,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "periph/uart/linereader.h"
+
 #include <string.h>
 
 #include "core/rulos.h"
-#include "periph/uart/linereader.h"
 #include "periph/uart/uart.h"
 
-static bool iseol(char c) { return (c == '\n' || c == '\r'); }
+static bool iseol(char c) {
+  return (c == '\n' || c == '\r');
+}
 
 static void _lines_complete(void *data) {
   LineReader_t *l = (LineReader_t *)data;
@@ -63,7 +66,7 @@ static void _lines_complete(void *data) {
     }
   }
 
-  //LOG("consumed %d", i);
+  // LOG("consumed %d", i);
   old_interrupts = hal_start_atomic();
   CharQueue_pop_n(&l->rx_queue.q, NULL, i);
   l->cb_pending = false;

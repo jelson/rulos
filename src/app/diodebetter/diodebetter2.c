@@ -16,11 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <math.h>
+
+#include "core/bss_canary.h"
 #include "core/hardware.h"
 #include "core/rulos.h"
-#include "core/bss_canary.h"
 #include "stm32f3xx_ll_rcc.h"
-#include <math.h>
 
 static void configure_pin_and_channel(TIM_HandleTypeDef *timerHandle,
                                       uint32_t pin, uint32_t channel) {
@@ -177,7 +178,7 @@ void setup_table() {
 
 int __errno;
 void setup_table() {
-  float max_period = 16000; // TODO sync with init
+  float max_period = 16000;  // TODO sync with init
   for (uint32_t i = 0; i < num_brightnesses; i++) {
     if (i == 0) {
       bright_to_period[i] = 0;

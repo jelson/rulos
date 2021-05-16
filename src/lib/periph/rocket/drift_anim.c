@@ -44,7 +44,9 @@ int32_t _da_eval(DriftAnim *da, Time t, bool clip) {
   return res;
 }
 
-int32_t da_read(DriftAnim *da) { return da_read_clip(da, 0, FALSE); }
+int32_t da_read(DriftAnim *da) {
+  return da_read_clip(da, 0, FALSE);
+}
 
 int32_t da_read_clip(DriftAnim *da, uint8_t scale, bool clip) {
   return _da_eval(da, clock_time_us(), clip) >> (da->expscale - scale);

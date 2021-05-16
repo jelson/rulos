@@ -44,13 +44,13 @@
  */
 
 #define SSB_DECIMAL 0x80
-#define SSB_SEG_a 0x40
-#define SSB_SEG_b 0x20
-#define SSB_SEG_c 0x10
-#define SSB_SEG_d 0x08
-#define SSB_SEG_e 0x04
-#define SSB_SEG_f 0x02
-#define SSB_SEG_g 0x01
+#define SSB_SEG_a   0x40
+#define SSB_SEG_b   0x20
+#define SSB_SEG_c   0x10
+#define SSB_SEG_d   0x08
+#define SSB_SEG_e   0x04
+#define SSB_SEG_f   0x02
+#define SSB_SEG_g   0x01
 
 #define SEVSEG_BLANK 0
 
@@ -92,11 +92,11 @@
 #define SEVSEG_Y 0b0111011
 #define SEVSEG_Z 0b1101001 /* UGLY */
 
-#define SEVSEG_SPACE 0
+#define SEVSEG_SPACE      0
 #define SEVSEG_UNDERSCORE 0b0001000
-#define SEVSEG_HYPHEN 0b0000001
-#define SEVSEG_PERIOD 0b0010000
-#define SEVSEG_COMMA 0b0011000
+#define SEVSEG_HYPHEN     0b0000001
+#define SEVSEG_PERIOD     0b0010000
+#define SEVSEG_COMMA      0b0011000
 
 typedef uint8_t SSBitmap;
 

@@ -54,14 +54,13 @@
  * for this to prevent overflow.)
  */
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "core/hardware.h"
 #include "core/rulos.h"
 #include "periph/uart/uart.h"
-
 #include "stm32g4xx_ll_bus.h"
 #include "stm32g4xx_ll_gpio.h"
 #include "stm32g4xx_ll_rcc.h"
@@ -69,11 +68,11 @@
 
 #define CLOCK_FREQ_HZ 170000000
 
-#define TEST_INPUT_PIN GPIO_B4
+#define TEST_INPUT_PIN         GPIO_B4
 #define TEST_INPUT_PERIOD_USEC 1000000
 
 #define TIMESTAMP_PRINT_PERIOD_USEC 100000
-#define TIMESTAMP_BUFLEN 200
+#define TIMESTAMP_BUFLEN            200
 
 // buffer of recorded timestamps that have not yet been transmitted over uart
 typedef struct {
@@ -154,11 +153,8 @@ static void print_one_timestamp(timestamp_t *t) {
   uint32_t sub_microseconds = picoseconds % 1000000;
 
   char buf[50];
-  int len = snprintf(buf, sizeof(buf), "%d %ld.%06ld%06ld\n",
-                     t->channel,
-                     t->seconds,
-                     microseconds,
-                     sub_microseconds);
+  int len = snprintf(buf, sizeof(buf), "%d %ld.%06ld%06ld\n", t->channel,
+                     t->seconds, microseconds, sub_microseconds);
   uart_write(&uart, buf, len);
 }
 
@@ -255,7 +251,6 @@ static void create_test_input(void *data) {
   }
   gpio_clr(TEST_INPUT_PIN);
 }
-
 
 int main() {
   hal_init();

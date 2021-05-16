@@ -29,7 +29,9 @@
  * the TWI master. Each time that happens, we return whatever key is next
  * in the keypad buffer if one is queued, or 0 otherwise.
  */
-static uint8_t get_next_char_to_transmit() { return hal_read_keybuf(); }
+static uint8_t get_next_char_to_transmit() {
+  return hal_read_keybuf();
+}
 
 int main() {
   hal_init();

@@ -47,7 +47,9 @@ void send_one(void *data) {
   LOG("done %d", ctr);
 }
 
-void send_done(void *data) { schedule_us(1, send_one, data); }
+void send_done(void *data) {
+  schedule_us(1, send_one, data);
+}
 
 int main() {
   mark_point_init();

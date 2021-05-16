@@ -24,11 +24,11 @@
 #define _BV(x) (1 << (x))
 #endif
 
-#define JOYSTICK_STATE_UP _BV(0)
-#define JOYSTICK_STATE_DOWN _BV(1)
-#define JOYSTICK_STATE_LEFT _BV(2)
-#define JOYSTICK_STATE_RIGHT _BV(3)
-#define JOYSTICK_STATE_TRIGGER _BV(4)
+#define JOYSTICK_STATE_UP           _BV(0)
+#define JOYSTICK_STATE_DOWN         _BV(1)
+#define JOYSTICK_STATE_LEFT         _BV(2)
+#define JOYSTICK_STATE_RIGHT        _BV(3)
+#define JOYSTICK_STATE_TRIGGER      _BV(4)
 #define JOYSTICK_STATE_DISCONNECTED _BV(5)
 
 struct JoystickState_t_s;

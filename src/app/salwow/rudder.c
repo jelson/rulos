@@ -11,8 +11,8 @@
 
 #define RUDDER_SERVO_MIN_US 1000
 #define RUDDER_SERVO_MAX_US 2000
-#define RUDDER_API_MIN (-99)
-#define RUDDER_API_MAX (+99)
+#define RUDDER_API_MIN      (-99)
+#define RUDDER_API_MAX      (+99)
 
 // position is -100 (left) to +100 (right).  0 is center.
 void rudder_set_angle(RudderState *rudder, int8_t position) {
@@ -25,7 +25,7 @@ void rudder_set_angle(RudderState *rudder, int8_t position) {
 }
 
 #define RUDDER_TEST_PERIOD_US 20000
-#define RUDDER_WAIT_PERIODS 100
+#define RUDDER_WAIT_PERIODS   100
 
 static void rudder_test(RudderState *rudder) {
   schedule_us(RUDDER_TEST_PERIOD_US, (ActivationFuncPtr)rudder_test, rudder);
@@ -108,6 +108,8 @@ void rudder_init(RudderState *rudder) {
 }
 
 #else  // SIM
-void rudder_init(RudderState *rudder) {}
-void rudder_set_angle(RudderState *rudder, int8_t position) {}
+void rudder_init(RudderState *rudder) {
+}
+void rudder_set_angle(RudderState *rudder, int8_t position) {
+}
 #endif

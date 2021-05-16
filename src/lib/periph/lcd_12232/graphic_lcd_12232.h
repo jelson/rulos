@@ -20,7 +20,7 @@
 
 #include "core/rulos.h"
 
-#define BITMAP_ROW_LEN 16 /* bytes; 128 pixels, six offscreen */
+#define BITMAP_ROW_LEN  16 /* bytes; 128 pixels, six offscreen */
 #define BITMAP_NUM_ROWS 32
 
 typedef struct {

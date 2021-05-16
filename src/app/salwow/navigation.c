@@ -14,15 +14,19 @@
 // segment; farther, and we turn more aggressively back to the line.)
 float alpha = 1.0 / ALPHA;
 
-#define MIN_PER_DEGREE (60.0)
-#define NM_PER_MIN_Y (1.0)
-#define METERS_PER_NM (1852.0)
+#define MIN_PER_DEGREE  (60.0)
+#define NM_PER_MIN_Y    (1.0)
+#define METERS_PER_NM   (1852.0)
 #define RAD_TO_DEG(rad) ((rad)*180.0 / PI)
 #define DEG_TO_RAD(rad) ((rad)*PI / 180.0)
 
-float s_dot(Vector *v0, Vector *v1) { return v0->x * v1->x + v0->y * v1->y; }
+float s_dot(Vector *v0, Vector *v1) {
+  return v0->x * v1->x + v0->y * v1->y;
+}
 
-float s_len(Vector *v) { return sqrt(s_dot(v, v)); }
+float s_len(Vector *v) {
+  return sqrt(s_dot(v, v));
+}
 
 void v_rot_quarter_ccw(Vector *out, Vector *in) {
   out->x = -in->y;
@@ -39,9 +43,9 @@ void v_copy(Vector *out, Vector *in) {
   out->y = in->y;
 }
 
-#define PI (3.141592653589)
+#define PI         (3.141592653589)
 #define SQRT2OVER2 (0.707106781187)
-#define EPSILON (0.01)
+#define EPSILON    (0.01)
 // angle conversion quandrant doesn't have to be precise
 
 float s_unit_to_angle(Vector *u_in)

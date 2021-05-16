@@ -23,8 +23,8 @@
 #include "periph/rasters/rasters.h"
 
 #define SNAKE_FREQ 32  // Animation frequency, Hz.
-#define MOVE_RATE 3    // Ticks per moves animation
-#define GROW_RATE 24   // Ticks per snake growth
+#define MOVE_RATE  3   // Ticks per moves animation
+#define GROW_RATE  24  // Ticks per snake growth
 
 // TODO: add snake-advance and snake-turn and snake explosion sounds?
 // TODO: S6? :v)
@@ -128,7 +128,9 @@ static inline bool get_game_over(Snake *snake) {
 }
 #endif
 
-static inline void explode(Snake *snake) { snake->mode = EXPLODING; }
+static inline void explode(Snake *snake) {
+  snake->mode = EXPLODING;
+}
 
 void snake_tick(Snake *snake) {
   switch (snake->mode) {
@@ -172,7 +174,9 @@ void snake_exploding_tick(Snake *snake) {
   LOG("Exploding; %d", snake->explosion_radius);
 }
 
-void snake_game_over_tick(Snake *snake) { snake->explosion_radius = 0; }
+void snake_game_over_tick(Snake *snake) {
+  snake->explosion_radius = 0;
+}
 
 void snake_advance_head(Snake *snake) {
   Point head = snake->head;

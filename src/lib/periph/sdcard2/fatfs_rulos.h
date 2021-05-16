@@ -40,11 +40,10 @@
 #include <stdint.h>
 
 #include "core/hardware.h"
-#include "stm32f3xx_ll_spi.h"
-
 #include "periph/fatfs/diskio.h"
 #include "periph/fatfs/ff.h"
 #include "periph/sdcard2/fatfs_rulos.h"
+#include "stm32f3xx_ll_spi.h"
 
 #define _USE_WRITE 1 /* 1: Enable disk_write function */
 #define _USE_IOCTL 1 /* 1: Enable disk_ioctl fucntion */
@@ -62,15 +61,15 @@
 #if FATFS_USE_DETECT_PIN > 0
 #ifndef FATFS_USE_DETECT_PIN_PIN
 #define FATFS_USE_DETECT_PIN_PORT GPIOB
-#define FATFS_USE_DETECT_PIN_PIN GPIO_PIN_6
+#define FATFS_USE_DETECT_PIN_PIN  GPIO_PIN_6
 #endif
 #endif
 
 #if FATFS_USE_WRITEPROTECT_PIN > 0
 #ifndef FATFS_USE_WRITEPROTECT_PIN_PIN
-#define FATFS_USE_WRITEPROTECT_PIN_RCC RCC_AHB1Periph_GPIOB
+#define FATFS_USE_WRITEPROTECT_PIN_RCC  RCC_AHB1Periph_GPIOB
 #define FATFS_USE_WRITEPROTECT_PIN_PORT GPIOB
-#define FATFS_USE_WRITEPROTECT_PIN_PIN GPIO_Pin_7
+#define FATFS_USE_WRITEPROTECT_PIN_PIN  GPIO_Pin_7
 #endif
 #endif
 
@@ -78,7 +77,7 @@
 
 #define SD_PIN_CHIPENABLE GPIO_B6
 
-#define FATFS_CS_LOW gpio_clr(SD_PIN_CHIPENABLE)
+#define FATFS_CS_LOW  gpio_clr(SD_PIN_CHIPENABLE)
 #define FATFS_CS_HIGH gpio_set(SD_PIN_CHIPENABLE)
 
 void TM_DELAY_Init();

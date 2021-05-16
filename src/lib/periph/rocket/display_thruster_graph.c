@@ -22,7 +22,7 @@
 #include "periph/rocket/rocket.h"
 
 #define THRUSTER_ALPHA 130 /* update weight, out of 256 */
-#define BOOSTER_ALPHA 16   /* update weight, out of 256 */
+#define BOOSTER_ALPHA  16  /* update weight, out of 256 */
 
 void dtg_update(DThrusterGraph *act);
 void dtg_update_expwa(DThrusterGraph *dtg, int alpha, int i, uint8_t input);

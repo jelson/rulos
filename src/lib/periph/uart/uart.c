@@ -125,7 +125,9 @@ void uart_write(UartState_t *u, const char *c, uint8_t len) {
   }
 }
 
-void uart_print(UartState_t *u, const char *s) { uart_write(u, s, strlen(s)); }
+void uart_print(UartState_t *u, const char *s) {
+  uart_write(u, s, strlen(s));
+}
 
 // returns true if there's anything in the buffer
 bool uart_is_busy(UartState_t *u) {

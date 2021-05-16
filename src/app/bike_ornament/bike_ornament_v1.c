@@ -27,10 +27,10 @@
 
 #define LED_DRIVER_SDI_L GPIO_A1
 #define LED_DRIVER_SDI_R GPIO_A0
-#define LED_DRIVER_CLK GPIO_A2
-#define LED_DRIVER_LE GPIO_A3
-#define HEADLIGHT GPIO_B2
-#define TAILLIGHT GPIO_B1
+#define LED_DRIVER_CLK   GPIO_A2
+#define LED_DRIVER_LE    GPIO_A3
+#define HEADLIGHT        GPIO_B2
+#define TAILLIGHT        GPIO_B1
 
 #define JIFFY_TIME_US 2500
 
@@ -45,9 +45,9 @@ typedef struct {
   Time tail_next_toggle_time;
 } BikeState_t;
 
-#define TAIL_ON_TIME_MS 100
+#define TAIL_ON_TIME_MS  100
 #define TAIL_OFF_TIME_MS 300
-#define WHEEL_PERIOD_MS 10
+#define WHEEL_PERIOD_MS  10
 
 static inline void clock() {
   gpio_set(LED_DRIVER_CLK);

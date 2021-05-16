@@ -25,7 +25,9 @@
 static UartState_t *logging_uart = NULL;
 
 // Set up logging system to emit log messages to a particular uart.
-void log_bind_uart(UartState_t *u) { logging_uart = u; }
+void log_bind_uart(UartState_t *u) {
+  logging_uart = u;
+}
 
 void log_common_emit_to_bound_uart(const char *s, int len) {
   if (logging_uart != NULL) {

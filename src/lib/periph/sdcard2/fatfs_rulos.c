@@ -33,7 +33,8 @@ void FATFS_DEBUG_SEND_USART(const char* msg) {
 // Absolute time of next timeout.
 static uint32_t timeout_time_us = 0;
 
-void TM_DELAY_Init() {}
+void TM_DELAY_Init() {
+}
 
 void TM_DELAY_SetTime2(uint32_t timeout_ms) {
   timeout_time_us = get_interrupt_driven_jiffy_clock() + (timeout_ms * 1000);
@@ -287,9 +288,13 @@ void TM_SPI_ReadMulti(SPI_TypeDef* SPIx, uint8_t* dataIn, uint8_t dummy,
 // Implementation of FATFS's down-facing API for RULOS, hardwired to the SD
 // card. Note the original SD card library.
 
-DSTATUS disk_initialize(BYTE pdrv) { return TM_FATFS_SD_disk_initialize(); }
+DSTATUS disk_initialize(BYTE pdrv) {
+  return TM_FATFS_SD_disk_initialize();
+}
 
-DSTATUS disk_status(BYTE pdrv) { return TM_FATFS_SD_disk_status(); }
+DSTATUS disk_status(BYTE pdrv) {
+  return TM_FATFS_SD_disk_status();
+}
 
 DRESULT disk_read(BYTE pdrv, BYTE* buff, DWORD sector, UINT count) {
   return TM_FATFS_SD_disk_read(buff, sector, count);

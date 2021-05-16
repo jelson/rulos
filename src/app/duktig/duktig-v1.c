@@ -27,16 +27,16 @@
 
 #define LED_DRIVER_SDI GPIO_A6
 #define LED_DRIVER_CLK GPIO_A4
-#define LED_DRIVER_LE GPIO_A3
-#define LED_DRIVER_OE GPIO_A5
-#define POWER_GATE GPIO_A2
-#define BUT1 GPIO_A0
-#define BUT2 GPIO_A1
+#define LED_DRIVER_LE  GPIO_A3
+#define LED_DRIVER_OE  GPIO_A5
+#define POWER_GATE     GPIO_A2
+#define BUT1           GPIO_A0
+#define BUT2           GPIO_A1
 
-#define JIFFY_TIME_US 10000
+#define JIFFY_TIME_US          10000
 #define KEY_REFRACTORY_TIME_US 100000
-#define TIMEOUT_WHILE_ON_US (1000000 * 120)  // 120 sec
-#define TIMEOUT_WHILE_OFF_US (1000000 * 1)   // 1 sec
+#define TIMEOUT_WHILE_ON_US    (1000000 * 120)  // 120 sec
+#define TIMEOUT_WHILE_OFF_US   (1000000 * 1)    // 1 sec
 
 typedef struct {
   bool light1_on;

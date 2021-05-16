@@ -32,14 +32,14 @@
 #define BOARDSEL0 GPIO_B2
 #define BOARDSEL1 GPIO_B3
 #define BOARDSEL2 GPIO_B4
-#define DIGSEL0 GPIO_C0
-#define DIGSEL1 GPIO_C1
-#define DIGSEL2 GPIO_C2
-#define SEGSEL0 GPIO_D5
-#define SEGSEL1 GPIO_D6
-#define SEGSEL2 GPIO_D7
-#define DATA GPIO_B0
-#define STROBE GPIO_B1
+#define DIGSEL0   GPIO_C0
+#define DIGSEL1   GPIO_C1
+#define DIGSEL2   GPIO_C2
+#define SEGSEL0   GPIO_D5
+#define SEGSEL1   GPIO_D6
+#define SEGSEL2   GPIO_D7
+#define DATA      GPIO_B0
+#define STROBE    GPIO_B1
 
 #define AVAILABLE_ADCS 0x38
 #define ASSERT_TO_BOARD
@@ -49,14 +49,14 @@
 #define BOARDSEL0 GPIO_B2
 #define BOARDSEL1 GPIO_B3
 #define BOARDSEL2 GPIO_B4
-#define DIGSEL0 GPIO_C0
-#define DIGSEL1 GPIO_C1
-#define DIGSEL2 GPIO_C2
-#define SEGSEL0 GPIO_D5
-#define SEGSEL1 GPIO_D6
-#define SEGSEL2 GPIO_D7
-#define DATA GPIO_D4
-#define STROBE GPIO_B1
+#define DIGSEL0   GPIO_C0
+#define DIGSEL1   GPIO_C1
+#define DIGSEL2   GPIO_C2
+#define SEGSEL0   GPIO_D5
+#define SEGSEL1   GPIO_D6
+#define SEGSEL2   GPIO_D7
+#define DATA      GPIO_D4
+#define STROBE    GPIO_B1
 
 #define KEYPAD_ROW0 GPIO_D4
 #define KEYPAD_ROW1 GPIO_B2
@@ -78,14 +78,14 @@
 #define BOARDSEL0 GPIO_B0
 #define BOARDSEL1 GPIO_B1
 #define BOARDSEL2 GPIO_B2
-#define DIGSEL0 GPIO_D5
-#define DIGSEL1 GPIO_D6
-#define DIGSEL2 GPIO_D7
-#define SEGSEL0 GPIO_B3
-#define SEGSEL1 GPIO_B4
-#define SEGSEL2 GPIO_B5
-#define DATA GPIO_B6
-#define STROBE GPIO_B7
+#define DIGSEL0   GPIO_D5
+#define DIGSEL1   GPIO_D6
+#define DIGSEL2   GPIO_D7
+#define SEGSEL0   GPIO_B3
+#define SEGSEL1   GPIO_B4
+#define SEGSEL2   GPIO_B5
+#define DATA      GPIO_B6
+#define STROBE    GPIO_B7
 
 #define KEYPAD_ROW0 DATA
 #define KEYPAD_ROW1 BOARDSEL0
@@ -97,8 +97,8 @@
 #define KEYPAD_COL3 GPIO_D3
 
 #define JOYSTICK_TRIGGER GPIO_D4
-#define JOYSTICK_X_CHAN 3
-#define JOYSTICK_Y_CHAN 2
+#define JOYSTICK_X_CHAN  3
+#define JOYSTICK_Y_CHAN  2
 
 #define AVAILABLE_ADCS 0x3f
 #define ASSERT_TO_BOARD
@@ -106,23 +106,23 @@
 #elif defined(BOARD_ROCKETAUDIO)
 
 #define AUDIO_REGISTER_LATCH GPIO_D6
-#define AUDIO_REGISTER_DATA GPIO_D5
+#define AUDIO_REGISTER_DATA  GPIO_D5
 #define AUDIO_REGISTER_SHIFT GPIO_D7
-#define AVAILABLE_ADCS 0
+#define AVAILABLE_ADCS       0
 
 #elif defined(BOARD_LPEM)
 
 #define BOARDSEL0 GPIO_C2
 #define BOARDSEL1 GPIO_C3
 #define BOARDSEL2 GPIO_C4
-#define DIGSEL0 GPIO_D2
-#define DIGSEL1 GPIO_D3
-#define DIGSEL2 GPIO_D5
-#define SEGSEL0 GPIO_C5
-#define SEGSEL1 GPIO_C6
-#define SEGSEL2 GPIO_C7
-#define DATA GPIO_D6
-#define STROBE GPIO_D7
+#define DIGSEL0   GPIO_D2
+#define DIGSEL1   GPIO_D3
+#define DIGSEL2   GPIO_D5
+#define SEGSEL0   GPIO_C5
+#define SEGSEL1   GPIO_C6
+#define SEGSEL2   GPIO_C7
+#define DATA      GPIO_D6
+#define STROBE    GPIO_D7
 
 #define JOYSTICK_X_CHAN 3
 #define JOYSTICK_Y_CHAN 2
@@ -144,16 +144,16 @@
 #elif defined(BOARD_LPEM2)
 
 #define JOYSTICK_TRIGGER GPIO_C7
-#define JOYSTICK_X_CHAN 1
-#define JOYSTICK_Y_CHAN 0
-#define AVAILABLE_ADCS 0xff
+#define JOYSTICK_X_CHAN  1
+#define JOYSTICK_Y_CHAN  0
+#define AVAILABLE_ADCS   0xff
 
 #elif defined(BOARD_LPCPEM_REVA)
 
 #define JOYSTICK_TRIGGER GPIO1_08
-#define JOYSTICK_X_CHAN 1
-#define JOYSTICK_Y_CHAN 0
-#define AVAILABLE_ADCS 0xff
+#define JOYSTICK_X_CHAN  1
+#define JOYSTICK_Y_CHAN  0
+#define AVAILABLE_ADCS   0xff
 
 #elif defined(BOARD_STMPEM_REVA)
 
@@ -183,28 +183,28 @@
 #define BOARDSEL0 GPIO_C3
 #define BOARDSEL1 GPIO_D1
 #define BOARDSEL2 GPIO_D3
-#define DIGSEL0 GPIO_B7
-#define DIGSEL1 GPIO_D6
-#define DIGSEL2 GPIO_B0
-#define SEGSEL0 GPIO_D0
-#define SEGSEL1 GPIO_D2
-#define SEGSEL2 GPIO_D4
-#define DATA GPIO_C1
-#define STROBE GPIO_C2
+#define DIGSEL0   GPIO_B7
+#define DIGSEL1   GPIO_D6
+#define DIGSEL2   GPIO_B0
+#define SEGSEL0   GPIO_D0
+#define SEGSEL1   GPIO_D2
+#define SEGSEL2   GPIO_D4
+#define DATA      GPIO_C1
+#define STROBE    GPIO_C2
 
 #elif defined(BOARD_DONGLE_REVB)
 
 #define BOARDSEL0 GPIO_C3
 #define BOARDSEL1 GPIO_B2
 #define BOARDSEL2 GPIO_D3
-#define DIGSEL0 GPIO_B7
-#define DIGSEL1 GPIO_D6
-#define DIGSEL2 GPIO_B0
-#define SEGSEL0 GPIO_B1
-#define SEGSEL1 GPIO_D2
-#define SEGSEL2 GPIO_D4
-#define DATA GPIO_C1
-#define STROBE GPIO_C2
+#define DIGSEL0   GPIO_B7
+#define DIGSEL1   GPIO_D6
+#define DIGSEL2   GPIO_B0
+#define SEGSEL0   GPIO_B1
+#define SEGSEL1   GPIO_D2
+#define SEGSEL2   GPIO_D4
+#define DATA      GPIO_C1
+#define STROBE    GPIO_C2
 
 #elif defined(BOARD_SOUTHBRIDGE)
 

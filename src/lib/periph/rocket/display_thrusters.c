@@ -133,6 +133,10 @@ void thrusters_init(ThrusterState_t *ts, uint8_t board,
   schedule_us(1, (ActivationFuncPtr)thrusters_update, ts);
 }
 
-void mute_joystick(ThrusterState_t *ts) { ts->joystick_muted = TRUE; };
+void mute_joystick(ThrusterState_t *ts) {
+  ts->joystick_muted = TRUE;
+};
 
-void unmute_joystick(ThrusterState_t *ts) { ts->joystick_muted = FALSE; };
+void unmute_joystick(ThrusterState_t *ts) {
+  ts->joystick_muted = FALSE;
+};

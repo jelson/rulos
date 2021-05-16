@@ -28,7 +28,7 @@
 // TODO half-second fudge factor may go away in real hardware; may be
 // due to playback error in simulator.
 #define L_LAUNCH_DURATION_MS 10001
-#define LAUNCH_CLOCK_PERIOD 10000
+#define LAUNCH_CLOCK_PERIOD  10000
 
 // How much countdown time is left before thruster-spinner starts
 #define THRUSTER_SPINNER_COUNTDOWN_TIME_LEFT_MS 6500

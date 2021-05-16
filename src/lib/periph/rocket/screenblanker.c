@@ -35,8 +35,8 @@
 #define PB DISCO_BLUE,
 
 #define DBOARD(name, colors, x, y, remote_addr, remote_idx) _packed(colors 0)
-#define B_NO_BOARD /**/
-#define B_END      /**/
+#define B_NO_BOARD                                          /**/
+#define B_END                                               /**/
 #include "periph/7seg_panel/display_tree.ch"
 static const uint32_t rocket_tree[] = {ROCKET_TREE};
 

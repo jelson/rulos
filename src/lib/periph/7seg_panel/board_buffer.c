@@ -53,7 +53,9 @@ void board_buffer_module_init() {
   g_remote_bbuf_send = NULL;
 }
 
-void install_remote_bbuf_send(RemoteBBufSend *rbs) { g_remote_bbuf_send = rbs; }
+void install_remote_bbuf_send(RemoteBBufSend *rbs) {
+  g_remote_bbuf_send = rbs;
+}
 
 void board_buffer_init(BoardBuffer *buf DBG_BBUF_LABEL_DECL) {
   int i;

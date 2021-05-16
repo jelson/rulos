@@ -1,8 +1,8 @@
 #pragma once
 
 #include "core/rulos.h"
-#include "periph/uart/uart.h"
 #include "periph/uart/linereader.h"
+#include "periph/uart/uart.h"
 
 typedef struct {
   float lon, lat;

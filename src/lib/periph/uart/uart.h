@@ -43,7 +43,7 @@ struct UartState_t_s {
     char storage[sizeof(CharQueue) + UART_TX_QUEUE_LEN];
     CharQueue q;
   } tx_queue;
-  uint16_t pending_tx_len; // num of bytes being sent by the hal
+  uint16_t pending_tx_len;  // num of bytes being sent by the hal
   // needed separately from pending_tx_len so that we don't double-launch a
   // write train if a second write arrives before the upcall due to the first
   bool writes_active;

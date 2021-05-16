@@ -30,16 +30,16 @@
 #include "stm32g0xx_ll_rcc.h"
 #include "stm32g0xx_ll_tim.h"
 
-#define BUT1 GPIO_A2
-#define BUT2 GPIO_A4
-#define LED1 GPIO_A0
-#define LED2 GPIO_A6
+#define BUT1   GPIO_A2
+#define BUT2   GPIO_A4
+#define LED1   GPIO_A0
+#define LED2   GPIO_A6
 #define PWRLED GPIO_B3
 
-#define JIFFY_TIME_US 10000
+#define JIFFY_TIME_US          10000
 #define KEY_REFRACTORY_TIME_US 10000
-#define TIMEOUT_WHILE_ON_US (1000000 * 120)  // 120 sec
-#define PWRLED_BLINK_TIME_US 250000
+#define TIMEOUT_WHILE_ON_US    (1000000 * 120)  // 120 sec
+#define PWRLED_BLINK_TIME_US   250000
 
 // Low-power mode fun of the stm32g0!
 //
@@ -98,8 +98,8 @@
 
 #define USE_SHUTDOWN 1
 
-#define LIGHT_OFF 0
-#define LIGHT_LOW 1
+#define LIGHT_OFF  0
+#define LIGHT_LOW  1
 #define LIGHT_HIGH 2
 
 typedef struct {

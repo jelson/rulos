@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#define LIGHT_PIN GPIO_B3
+#define LIGHT_PIN       GPIO_B3
 #define TIMEOUT_MINUTES 30
 
 /////////////////////////////

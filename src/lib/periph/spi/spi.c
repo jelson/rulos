@@ -50,7 +50,7 @@ void spi_init(SPI *spi) {
   hal_init_spi();
 }
 
-#define SPI_CMD_WAIT_LIMIT 500
+#define SPI_CMD_WAIT_LIMIT   500
 #define SPI_REPLY_WAIT_LIMIT 500
 
 void spi_start(SPI *spi, SPICmd *spic) {

@@ -21,7 +21,7 @@
 void lunar_distance_update(LunarDistance *ld);
 
 #define LD_CRUISE_SPEED (-237)
-#define LUNAR_DISTANCE 237674
+#define LUNAR_DISTANCE  237674
 
 void lunar_distance_init(LunarDistance *ld, uint8_t dist_b0,
                          uint8_t speed_b0 /*, int adc_channel*/) {

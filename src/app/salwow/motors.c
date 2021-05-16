@@ -73,7 +73,10 @@ void motors_test_mode(MotorState *motors) {
 }
 
 #else
-void motors_init(MotorState *motors) {}
-void motors_set_power(MotorState *motors, uint8_t power) {}
-void motors_test_mode(MotorState *motors) {}
+void motors_init(MotorState *motors) {
+}
+void motors_set_power(MotorState *motors, uint8_t power) {
+}
+void motors_test_mode(MotorState *motors) {
+}
 #endif  // SIM

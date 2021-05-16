@@ -45,7 +45,9 @@ void event_signal(Event *evt) {
   }
 }
 
-void event_reset(Event *evt) { evt->signaled = false; }
+void event_reset(Event *evt) {
+  evt->signaled = false;
+}
 
 void event_wait(Event *evt, ActivationFuncPtr func, void *data) {
   if (evt->signaled) {

@@ -204,9 +204,13 @@ Time precise_clock_time_us() {
   return t;
 }
 
-void spin_counter_increment() { g_spin_counter += 1; }
+void spin_counter_increment() {
+  g_spin_counter += 1;
+}
 
-uint32_t read_spin_counter() { return g_spin_counter; }
+uint32_t read_spin_counter() {
+  return g_spin_counter;
+}
 
 void scheduler_run_once() {
   // update output of clock_time_us()
