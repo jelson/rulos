@@ -274,37 +274,49 @@ class ArmStmPlatform(ArmPlatform):
             self.major_family_name = family[:7]
 
     CHIPS = dict([(chip.name, chip) for chip in [
-        Chip("stm32f030x4", "STM32F030x6", flashk=  16, ramk= 4),
-        Chip("stm32f030x6", "STM32F030x6", flashk=  32, ramk= 4),
-        Chip("stm32f030x8", "STM32F030x8", flashk=  64, ramk= 8),
-        Chip("stm32f030xc", "STM32F030xC", flashk= 256, ramk=32),
-        Chip("stm32f031x4", "STM32F031x6", flashk=  16, ramk= 4),
-        Chip("stm32f031x6", "STM32F031x6", flashk=  32, ramk= 4),
-        #Chip("stm32f070x6", "STM32F070x6", flashk=  32, ramk= 6),
-        #Chip("stm32f070xb", "STM32F070xB", flashk= 256, ramk=32),
-        Chip("stm32f103x4", "STM32F103x6", flashk=  16, ramk= 6),
-        Chip("stm32f103x6", "STM32F103x6", flashk=  32, ramk=10),
-        Chip("stm32f103x8", "STM32F103xB", flashk=  64, ramk=20),
-        Chip("stm32f103xb", "STM32F103xB", flashk= 128, ramk=20),
-        Chip("stm32f103xc", "STM32F103xE", flashk= 256, ramk=64),
-        Chip("stm32f103xd", "STM32F103xE", flashk= 384, ramk=64),
-        Chip("stm32f103xe", "STM32F103xE", flashk= 512, ramk=64),
-        Chip("stm32f103xf", "STM32F103xG", flashk= 768, ramk=96),
-        Chip("stm32f103xg", "STM32F103xG", flashk=1024, ramk=96),
-        Chip("stm32f303x6", "STM32F303x8", flashk=  32, ramk=12),
-        Chip("stm32f303x8", "STM32F303x8", flashk=  64, ramk=12),
-        Chip("stm32f303xb", "STM32F303xC", flashk= 128, ramk=32),
-        Chip("stm32f303xc", "STM32F303xC", flashk= 256, ramk=40),
-        Chip("stm32f303xd", "STM32F303xE", flashk= 384, ramk=64),
-        Chip("stm32f303xe", "STM32F303xE", flashk= 512, ramk=64),
-        Chip("stm32g030x6", "STM32G030xx", flashk=  32, ramk= 8),
-        Chip("stm32g030x8", "STM32G030xx", flashk=  64, ramk= 8),
-        Chip("stm32g031x4", "STM32G031xx", flashk=  16, ramk= 8),
-        Chip("stm32g031x6", "STM32G031xx", flashk=  32, ramk= 8),
-        Chip("stm32g031x8", "STM32G031xx", flashk=  64, ramk= 8),
-        Chip("stm32g431x6", "STM32G431xx", flashk=  32, ramk=16),
-        Chip("stm32g431x8", "STM32G431xx", flashk=  64, ramk=16),
-        Chip("stm32g431xb", "STM32G431xx", flashk= 128, ramk=16),
+        # stm32f0
+        Chip("stm32f030x4", "STM32F030x6", flashk=  16, ramk=  4),
+        Chip("stm32f030x6", "STM32F030x6", flashk=  32, ramk=  4),
+        Chip("stm32f030x8", "STM32F030x8", flashk=  64, ramk=  8),
+        Chip("stm32f030xc", "STM32F030xC", flashk= 256, ramk= 32),
+        Chip("stm32f031x4", "STM32F031x6", flashk=  16, ramk=  4),
+        Chip("stm32f031x6", "STM32F031x6", flashk=  32, ramk=  4),
+        #Chip("stm32f070x6", "STM32F070x6", flashk=  32, ramk=  6),
+        #Chip("stm32f070xb", "STM32F070xB", flashk= 256, ramk= 32),
+        Chip("stm32f103x4", "STM32F103x6", flashk=  16, ramk=  6),
+        Chip("stm32f103x6", "STM32F103x6", flashk=  32, ramk= 10),
+        Chip("stm32f103x8", "STM32F103xB", flashk=  64, ramk= 20),
+        Chip("stm32f103xb", "STM32F103xB", flashk= 128, ramk= 20),
+
+        # stm32f1
+        Chip("stm32f103xc", "STM32F103xE", flashk= 256, ramk= 64),
+        Chip("stm32f103xd", "STM32F103xE", flashk= 384, ramk= 64),
+        Chip("stm32f103xe", "STM32F103xE", flashk= 512, ramk= 64),
+        Chip("stm32f103xf", "STM32F103xG", flashk= 768, ramk= 96),
+        Chip("stm32f103xg", "STM32F103xG", flashk=1024, ramk= 96),
+
+        # stm32f3
+        Chip("stm32f303x6", "STM32F303x8", flashk=  32, ramk= 12),
+        Chip("stm32f303x8", "STM32F303x8", flashk=  64, ramk= 12),
+        Chip("stm32f303xb", "STM32F303xC", flashk= 128, ramk= 32),
+        Chip("stm32f303xc", "STM32F303xC", flashk= 256, ramk= 40),
+        Chip("stm32f303xd", "STM32F303xE", flashk= 384, ramk= 64),
+        Chip("stm32f303xe", "STM32F303xE", flashk= 512, ramk= 64),
+
+        # stm32g0
+        Chip("stm32g030x6", "STM32G030xx", flashk=  32, ramk=  8),
+        Chip("stm32g030x8", "STM32G030xx", flashk=  64, ramk=  8),
+        Chip("stm32g031x4", "STM32G031xx", flashk=  16, ramk=  8),
+        Chip("stm32g031x6", "STM32G031xx", flashk=  32, ramk=  8),
+        Chip("stm32g031x8", "STM32G031xx", flashk=  64, ramk=  8),
+        Chip("stm32g0b1xb", "STM32G0B1xx", flashk= 128, ramk=128),
+        Chip("stm32g0b1xc", "STM32G0B1xx", flashk= 256, ramk=128),
+        Chip("stm32g0b1xe", "STM32G0B1xx", flashk= 512, ramk=128),
+
+        # stm32g4
+        Chip("stm32g431x6", "STM32G431xx", flashk=  32, ramk= 16),
+        Chip("stm32g431x8", "STM32G431xx", flashk=  64, ramk= 16),
+        Chip("stm32g431xb", "STM32G431xx", flashk= 128, ramk= 16),
     ]])
 
     class MajorFamily:
