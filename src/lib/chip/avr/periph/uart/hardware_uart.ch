@@ -19,7 +19,7 @@
 // definitions; we include it multiple times to provide access to both
 // UARTs.
 
-void hal_uart_init_name(uint32_t baud, r_bool stop2, void *user_data) {
+void hal_uart_init_name(uint32_t baud, bool stop2, void *user_data) {
   uint16_t ubrr = baud_to_ubrr(baud);
 
   g_uart_state[UARTID].user_data = user_data;
