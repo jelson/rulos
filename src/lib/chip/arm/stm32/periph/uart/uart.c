@@ -196,9 +196,6 @@ static bool stm32_uart_is_busy(stm32uart_t *uart) {
   return HAL_UART_GetState(&uart->hal_uart_handle) != HAL_UART_STATE_READY;
 }
 
-int s_starts = 0;
-int s_stops = 0;
-
 static void maybe_launch_next_tx(stm32uart_t *uart) {
   assert(uart->next_sendbuf_cb != NULL);
   assert(!stm32_uart_is_busy(uart));
@@ -212,7 +209,6 @@ static void maybe_launch_next_tx(stm32uart_t *uart) {
   if (len == 0) {
     // tx train complete!
     uart->next_sendbuf_cb = NULL;
-    s_stops++;
   } else {
     // Start the transfer
     if (HAL_UART_Transmit_DMA(&uart->hal_uart_handle, (void *)buf, len) !=
@@ -382,7 +378,6 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2,
 }
 
 void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb) {
-  s_starts++;
   stm32uart_t *u = &g_stm32_uarts[uart_id];
   assert(u->next_sendbuf_cb == NULL);
   u->next_sendbuf_cb = cb;
