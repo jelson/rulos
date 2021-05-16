@@ -20,7 +20,7 @@
 #include "core/rulos.h"
 #include "periph/uart/uart.h"
 
-#define FREQ_USEC 50000
+#define FREQ_USEC 1000000
 
 #if defined(RULOS_ARM_STM32)
 #define TEST_PIN GPIO_A0
@@ -56,12 +56,15 @@ void test_func(void *data) {
   gpio_clr(TEST_PIN);
 
   gpio_set(TEST_PIN);
-  uart_print(
-      &uart,
-      "hello there this is an extremely long message, one that actually\n"
-      "exceeds the send buffer size of 128 bytes. why would you want to send\n"
-      "a message this long? who knows. i don't judge. i just transmit!\n"
-      "hopefully, the entire thing has been received!\n\n");
+
+  for (int i = 0; i < 20; i++) {
+    uart_print(
+        &uart,
+        "hello there this is an extremely long message, one that actually\n"
+        "exceeds the send buffer size of 128 bytes. why would you want to send\n"
+        "a message this long? who knows. i don't judge. i just transmit!\n"
+        "hopefully, the entire thing has been received!\n\n");
+  }
   gpio_clr(TEST_PIN);
 
   gpio_set(TEST_PIN);
@@ -76,6 +79,10 @@ int main() {
   log_bind_uart(&uart);
   LOG("Log output running");
   LOG("Even more log output running!");
+  LOG("#2 Even more log output running!");
+  LOG("#3 Even more log output running!");
+  LOG("#4 Even more log output running!");
+  LOG("#5 Even more log output running!");
 
   init_clock(10000, TIMER1);
   gpio_make_output(TEST_PIN);

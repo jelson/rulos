@@ -20,28 +20,29 @@ import sys
 sys.path.insert(0, "../../../build-tools")
 from BuildRules import *
 
-for chip in [
-    #    "stm32g031x8",
-        "stm32f303xb",
-        "stm32g431x8",
-    ]:
-    RulosBuildTarget(
-        name = "uarttest",
-        sources = ["uarttest.c"],
-        platforms = [ArmStmPlatform(chip)],
-        peripherals = ["uart"],
-        extra_cflags = [
-            "-DLOG_TO_SERIAL",
-        ],
-    ).build()
+for testprog in ["send", "charecho", "lineecho"]:
+    for chip in [
+        #    "stm32g031x8",
+            "stm32f303xb",
+            "stm32g431x8",
+        ]:
+        RulosBuildTarget(
+            name = testprog,
+            sources = [f"{testprog}.c"],
+            platforms = [ArmStmPlatform(chip)],
+            peripherals = ["uart"],
+            extra_cflags = [
+                "-DLOG_TO_SERIAL",
+            ],
+        ).build()
 
-for mcu in ["atmega328", "atmega328p", "atmega1284", "attiny84", "attiny85"]:
-    RulosBuildTarget(
-        name = "uarttest",
-        sources = ["uarttest.c"],
-        platforms = [AvrPlatform(mcu)],
-        peripherals = ["uart"],
-        extra_cflags = [
-            "-DLOG_TO_SERIAL",
-        ],
-    ).build()
+    for mcu in ["atmega328", "atmega328p", "atmega1284", "attiny84", "attiny85"]:
+        RulosBuildTarget(
+            name = testprog,
+            sources = [f"{testprog}.c"],
+            platforms = [AvrPlatform(mcu)],
+            peripherals = ["uart"],
+            extra_cflags = [
+                "-DLOG_TO_SERIAL",
+            ],
+        ).build()

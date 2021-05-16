@@ -69,10 +69,10 @@ avr_uart_state_t g_uart_state[2] = {};
 #define _USART_UDRE_vect USART_UDRE_vect
 #define hal_uart_init_name hal_uart_init0
 #define enable_sendready_interrupt_name enable_sendready_interrupt0
+#define hal_uart_start_rx_name hal_uart_start_rx0
 #define hal_uart_start_send_name hal_uart_start_send0
 #define _handle_recv_ready_name _handle_recv_ready0
 #define _handle_send_ready_name _handle_send_ready0
-#define hal_uart_start_send_name hal_uart_start_send0
 #define sync_send_byte_name sync_send_byte0
 #define hal_uart_sync_send_bytes_name hal_uart_sync_send_bytes0
 #define hal_uart_sync_send_name hal_uart_sync_send0
@@ -113,10 +113,10 @@ avr_uart_state_t g_uart_state[2] = {};
 #define _USBS USBS0
 #define hal_uart_init_name hal_uart_init0
 #define enable_sendready_interrupt_name enable_sendready_interrupt0
+#define hal_uart_start_rx_name hal_uart_start_rx0
 #define hal_uart_start_send_name hal_uart_start_send0
 #define _handle_recv_ready_name _handle_recv_ready0
 #define _handle_send_ready_name _handle_send_ready0
-#define hal_uart_start_send_name hal_uart_start_send0
 #define sync_send_byte_name sync_send_byte0
 #define hal_uart_sync_send_bytes_name hal_uart_sync_send_bytes0
 #define hal_uart_sync_send_name hal_uart_sync_send0
@@ -143,10 +143,10 @@ avr_uart_state_t g_uart_state[2] = {};
 #undef _USART_UDRE_vect
 #undef hal_uart_init_name
 #undef enable_sendready_interrupt_name
+#undef hal_uart_start_rx_name
 #undef hal_uart_start_send_name
 #undef _handle_recv_ready_name
 #undef _handle_send_ready_name
-#undef hal_uart_start_send_name
 #undef sync_send_byte_name
 #undef hal_uart_sync_send_name
 #undef hal_uart_sync_send_bytes_name
@@ -176,10 +176,10 @@ avr_uart_state_t g_uart_state[2] = {};
 #define _USART_UDRE_vect USART1_UDRE_vect
 #define hal_uart_init_name hal_uart_init1
 #define enable_sendready_interrupt_name enable_sendready_interrupt1
+#define hal_uart_start_rx_name hal_uart_start_rx1
 #define hal_uart_start_send_name hal_uart_start_send1
 #define _handle_recv_ready_name _handle_recv_ready1
 #define _handle_send_ready_name _handle_send_ready1
-#define hal_uart_start_send_name hal_uart_start_send1
 #define sync_send_byte_name sync_send_byte1
 #define hal_uart_sync_send_bytes_name hal_uart_sync_send_bytes1
 #define hal_uart_sync_send_name hal_uart_sync_send1
@@ -190,18 +190,34 @@ avr_uart_state_t g_uart_state[2] = {};
 #endif
 
 void hal_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2,
-                   hal_uart_receive_cb rx_cb, void *user_data,
-                   uint16_t *max_tx_len) {
+                   void *user_data, uint16_t *max_tx_len) {
   *max_tx_len = 1;
   switch (uart_id) {
 #if HAVE_UARTID0
   case 0:
-    hal_uart_init0(baud, stop2, rx_cb, user_data);
+    hal_uart_init0(baud, stop2, user_data);
     return;
 #endif
 #if HAVE_UARTID1
   case 1:
-    hal_uart_init1(baud, stop2, rx_cb, user_data);
+    hal_uart_init1(baud, stop2, user_data);
+    return;
+#endif
+  default:
+    assert(false);
+  }
+}
+
+void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb) {
+  switch (uart_id) {
+#if HAVE_UARTID0
+  case 0:
+    hal_uart_start_rx0(rx_cb);
+    return;
+#endif
+#if HAVE_UARTID1
+  case 1:
+    hal_uart_start_rx1(rx_cb);
     return;
 #endif
   default:

@@ -24,7 +24,6 @@
 #include "core/board_defs.h"
 #include "core/hardware.h"
 #include "core/rulos.h"
-#include "periph/uart/serial_console.h"
 
 typedef struct {
   SerialConsole *sc;

@@ -30,15 +30,14 @@
 #include "periph/led_matrix_single/led_matrix_single.h"
 #include "periph/rocket/rocket.h"
 #include "periph/sdcard/sdcard.h"
-#include "periph/uart/serial_console.h"
+#include "periph/uart/uart.h"
+#include "periph/uart/linereader.h"
 
 #if !SIM
 #include "core/hardware.h"
 #endif  // !SIM
 
 //////////////////////////////////////////////////////////////////////////////
-
-SerialConsole *g_console;
 
 #define SYNCDEBUG() syncdebug(0, 'T', __LINE__)
 void syncdebug(uint8_t spaces, char f, uint16_t line) {
@@ -62,7 +61,7 @@ void syncdebug(uint8_t spaces, char f, uint16_t line) {
 	}
 	strcat(buf, hexbuf);
 	strcat(buf, "\n");
-	serial_console_sync_send(g_console, buf, strlen(buf));
+        LOG("%s", buf);
 #endif
 }
 
@@ -509,8 +508,7 @@ void _flashcard_paint(Flashcard *fl, const char *s) {
     dx = 0;
   }
 
-  serial_console_sync_send(g_console, s, strlen(s));
-  serial_console_sync_send(g_console, "\n", 1);
+  LOG("%s", s);
   glcd_clear_framebuffer(&fl->glcd);
 
   for (p = s; *p != 0 && *p != '\n'; p++) {
@@ -761,7 +759,8 @@ void _ledpoke_handler(InputInjectorIfc *iii, char key)
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-  SerialConsole console;
+  UartState_t uart;
+  LineReader_t linereader;
   Flashcard *fl;
   uint8_t rowdata;
   uint16_t coldata;
@@ -770,14 +769,16 @@ typedef struct {
 void shell_func(Shell *shell);
 
 void shell_init(Shell *shell, Flashcard *fl) {
+  uart_init(&shell->uart, 0, 38400, true);
+  log_bind_uart(&shell->uart);
+  linereader_init(&shell->linereader, &shell->uart, shell_func, shell);
   shell->fl = fl;
-  serial_console_init(&shell->console, (ActivationFuncPtr)shell_func, shell);
-  g_console = &shell->console;
+
   SYNCDEBUG();
 }
 
-void shell_func(Shell *shell) {
-  char *line = shell->console.line;
+void shell_func(void *data, char *line) {
+  Shell *shell = (Shell*)data;
 
 #if !SIM
   if (strncmp(line, "key", 3) == 0) {
@@ -811,7 +812,7 @@ void shell_func(Shell *shell) {
 #else
   line++;
 #endif  // !SIM
-  serial_console_sync_send(&shell->console, "OK\n", 3);
+  LOG("OK");
 }
 
 //////////////////////////////////////////////////////////////////////////////

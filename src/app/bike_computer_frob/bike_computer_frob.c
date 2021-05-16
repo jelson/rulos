@@ -17,13 +17,13 @@
  */
 
 #include "core/rulos.h"
-#include "periph/uart/serial_console.h"
+#include "periph/uart/uart.h"
+#include "periph/uart/linereader.h"
 
-#ifdef SIM
-#include "core/sim.h"
-#else
+#ifndef SIM
 #include "core/hardware.h"
-#endif  // !SIM
+#endif
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -56,8 +56,6 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-SerialConsole *g_console;
-
 #define SYNCDEBUG() syncdebug(0, 'T', __LINE__)
 void syncdebug(uint8_t spaces, char f, uint16_t line) {
   char buf[32], hexbuf[6];
@@ -75,8 +73,7 @@ void syncdebug(uint8_t spaces, char f, uint16_t line) {
     itoda(hexbuf, line);
   }
   strcat(buf, hexbuf);
-  strcat(buf, "\n");
-  serial_console_sync_send(g_console, buf, strlen(buf));
+  LOG("%s", buf);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -121,17 +118,20 @@ void blink_init(BlinkAct *ba) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
 typedef struct {
-  SerialConsole console;
+  UartState_t uart;
+  LineReader_t linereader;
   BlinkAct ba;
 } Shell;
 
-void shell_func(Shell *shell);
+void shell_func(void *data, char *line);
 void print_func(Shell *shell);
 
 void shell_init(Shell *shell) {
-  serial_console_init(&shell->console, (ActivationFuncPtr)shell_func, shell);
-  g_console = &shell->console;
+  uart_init(&shell->uart, 0, 38400, true);
+  log_bind_uart(&shell->uart);
+  linereader_init(&shell->linereader, &shell->uart, shell_func, shell);
   print_func(shell);
   blink_init(&shell->ba);
   SYNCDEBUG();
@@ -143,29 +143,29 @@ void print32(uint32_t v) {
 }
 
 void print_func(Shell *shell) {
-  serial_console_sync_send(&shell->console, "period\n", 7);
+  LOG("period");
   print32(shell->ba.period);
-  serial_console_sync_send(&shell->console, "revs_remaining\n", 14);
+  LOG("revs_remaining");
   print32(shell->ba.revs_remaining);
-  serial_console_sync_send(&shell->console, "REV_PER_MILE\n", 13);
+  LOG("REV_PER_MILE");
   print32(REV_PER_MILE);
-  serial_console_sync_send(&shell->console, "REV_PERIOD\n", 11);
+  LOG("REV_PERIOD");
   print32(REV_PERIOD);
-  serial_console_sync_send(&shell->console, "REV_HALF_PERIOD\n", 16);
+  LOG("REV_HALF_PERIOD");
   print32(REV_HALF_PERIOD);
 }
 
-void shell_func(Shell *shell) {
-  char *line = shell->console.line;
+void shell_func(void *data, char *line) {
+  Shell *shell = (Shell*) data;
 
   if (strncmp(line, "per ", 4) == 0) {
     SYNCDEBUG();
     shell->ba.period = atoi_hex(&line[4]);
-  } else if (strcmp(line, "print\n") == 0) {
+  } else if (strcmp(line, "print") == 0) {
     print_func(shell);
   }
   line++;
-  serial_console_sync_send(&shell->console, "OK\n", 3);
+  LOG("ok");
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -176,13 +176,9 @@ int main() {
 
   Shell shell;
   shell_init(&shell);
-  // syncdebug (uart) ready here.
 
   CpumonAct cpumon;
   cpumon_init(&cpumon);  // includes slow calibration phase
   cpumon_main_loop();
-  while (1) {
-  }
-
   return 0;
 }

@@ -16,19 +16,38 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-#include "core/heap.h"
+#include "core/hardware.h"
+#include "core/rulos.h"
 #include "periph/uart/uart.h"
+#include "periph/uart/linereader.h"
 
-typedef struct {
-  UartState_t uart;
-  char line[40];
-  char *line_ptr;
-  ActivationRecord line_act;
-} SerialConsole;
+UartState_t uart;
+LineReader_t linereader;
+int i = 0;
 
-void serial_console_init(SerialConsole *sca, ActivationFuncPtr line_func,
-                         void *line_data);
-void serial_console_sync_send(SerialConsole *act, const char *buf,
-                              uint16_t buflen);
+static void line_received(void *user_data, char *line) {
+  //  if (i % 10 == 0) {
+#if 0
+  if (true) {
+    for (int j = 0; j < 10; j++) {
+      LOG("got line %d:%d", i, j);
+    }
+  }
+  i++;
+#else
+  LOG("got line %d: '%s'", i++, line);
+#endif
+}
+
+int main() {
+  hal_init();
+
+  uart_init(&uart, /* uart_id= */ 0, 38400, true);
+  log_bind_uart(&uart);
+  linereader_init(&linereader, &uart, line_received, NULL);
+  LOG("lineecho up and running");
+
+  init_clock(10000, TIMER1);
+
+  cpumon_main_loop();
+}

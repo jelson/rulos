@@ -34,7 +34,7 @@
 
 //////////////// UART ///////////////////////////////////////
 
-UartState_t uart[2];
+UartState_t log_uart;
 const char *_test_msg[2] = {"Aa", "Bb"};
 char **test_msg = (char **)_test_msg;
 
@@ -63,9 +63,8 @@ int main() {
   cpumon_init(&cpumon);  // includes slow calibration phase
 
   mark_point(4);
-  uart_init(&uart[0], 0, 38400, TRUE);
-  uart_init(&uart[1], 1, 38400, TRUE);
-  log_bind_uart(&uart[0]);
+  uart_init(&log_uart, 0, 38400, TRUE);
+  log_bind_uart(&log_uart);
   LOG("SALWOW up.");
 
 #if 0

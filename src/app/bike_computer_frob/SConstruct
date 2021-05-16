@@ -23,6 +23,7 @@ from BuildRules import *
 RulosBuildTarget(
     name = "bike_computer_frob",
     sources = ["bike_computer_frob.c"],
+    extra_cflags = ['-DLOG_TO_UART'],
     platforms = [
         SimulatorPlatform(),
         AvrPlatform("atmega1284"),

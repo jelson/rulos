@@ -72,17 +72,21 @@ r_bool hal_read_joystick_button();
 
 /////////////// UART ///////////////////////////////////////////////
 
+// At the HAL layer, UARTs are identified by integers. hal_uart_init initializes
+// a UART. max_tx_len is an out parameter that describes the maximum length of a
+// tx the UART can accept at a time.
+void hal_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2,
+                   void *user_data /* for both rx and tx upcalls */,
+                   uint16_t *max_tx_len /* OUT */);
+
 // Callback for incoming serial data. If a callback is set using
 // hal_uart_set_receive_cb, incoming characters will be passed into that
 // callback at interrupt time.
 typedef void (*hal_uart_receive_cb)(uint8_t uart_id, void *user_data, char c);
 
-// At the HAL layer, UARTs are identified by integers. hal_uart_init initializes
-// a UART. It returns
-void hal_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2,
-                   hal_uart_receive_cb rx_cb,
-                   void *user_data /* for both rx and tx upcalls */,
-                   uint16_t *max_tx_len /* OUT */);
+// Enable reception on this UART; when a char is received, the provided upcall
+// is called at interrupt time.
+void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb);
 
 // Begin a train of transmissions to a uart. When each completes, the send_next
 // callback will be called at interrupt time to retrieve the next data to be

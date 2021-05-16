@@ -19,11 +19,10 @@
 // definitions; we include it multiple times to provide access to both
 // UARTs.
 
-void hal_uart_init_name(uint32_t baud, r_bool stop2, hal_uart_receive_cb rx_cb, void *user_data) {
+void hal_uart_init_name(uint32_t baud, r_bool stop2, void *user_data) {
   uint16_t ubrr = baud_to_ubrr(baud);
 
   g_uart_state[UARTID].user_data = user_data;
-  g_uart_state[UARTID].rx_cb = rx_cb;
 
   // disable interrupts
   cli();
@@ -36,10 +35,6 @@ void hal_uart_init_name(uint32_t baud, r_bool stop2, hal_uart_receive_cb rx_cb, 
            _BV(_RXEN)    // enable receiver
       ;
 
-  if (rx_cb != NULL) {
-    _UCSRB |= _BV(_RXCIE);  // enable receiver interrupt
-  }
-
   // set frame format: async, 8 bit data, 1 stop bit, no parity
   _UCSRC = _BV(_UCSZ1) | _BV(_UCSZ0) | (stop2 ? _BV(_USBS) : 0)
 #ifdef MCU8_line
@@ -50,6 +45,27 @@ void hal_uart_init_name(uint32_t baud, r_bool stop2, hal_uart_receive_cb rx_cb, 
   // enable interrupts, whether or not they'd been previously enabled
   sei();
 }
+
+//// rx
+
+void hal_uart_start_rx_name(hal_uart_receive_cb rx_cb) {
+  g_uart_state[UARTID].rx_cb = rx_cb;
+
+  // enable receiver interrupt
+  _UCSRB |= _BV(_RXCIE);
+}
+
+// Runs in interrupt context.
+static inline void _handle_recv_ready_name(char c) {
+  if (g_uart_state[UARTID].rx_cb != NULL) {
+    g_uart_state[UARTID].rx_cb(
+        UARTID,
+        g_uart_state[UARTID].user_data,
+        c);
+  }
+}
+
+//// tx
 
 static inline void enable_sendready_interrupt_name(uint8_t enable) {
   if (enable) {
@@ -67,16 +83,6 @@ void hal_uart_start_send_name(hal_uart_next_sendbuf_cb cb) {
   uint8_t old_interrupts = hal_start_atomic();
   enable_sendready_interrupt_name(TRUE);
   hal_end_atomic(old_interrupts);
-}
-
-// Runs in interrupt context.
-static inline void _handle_recv_ready_name(char c) {
-  if (g_uart_state[UARTID].rx_cb != NULL) {
-    g_uart_state[UARTID].rx_cb(
-        UARTID,
-        g_uart_state[UARTID].user_data,
-        c);
-  }
 }
 
 // Runs in interrupt context.

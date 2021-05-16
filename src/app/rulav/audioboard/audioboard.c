@@ -21,7 +21,7 @@
 #include "core/rulos.h"
 #include "core/util.h"
 #include "periph/audio/audio_server.h"
-#include "periph/uart/serial_console.h"
+#include "periph/uart/uart.h"
 
 #if SIM
 #include "chip/sim/core/sim.h"

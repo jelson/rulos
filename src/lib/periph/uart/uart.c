@@ -35,16 +35,26 @@
 // pointer to the longest contiguous segment of the buffer, for DMA purposes.
 //
 
+//// reception
+
 // Upcall from HAL when new data arrives.  Happens at interrupt time.
 static void _uart_receive(uint8_t uart_id, void *user_data, char c) {
   UartState_t *u = (UartState_t *)user_data;
   assert(u != NULL);
   assert(u->uart_id == uart_id);
 
-  if (!u->initted) {
-    return;
+  if (u->initted && u->rx_cb != NULL) {
+    u->rx_cb(u, u->rx_user_data, c);
   }
 }
+
+void uart_start_rx(UartState_t *u, uart_rx_cb rx_cb, void *user_data) {
+  u->rx_cb = rx_cb;
+  u->rx_user_data = user_data;
+  hal_uart_start_rx(u->uart_id, _uart_receive);
+}
+
+//// sending
 
 // Upcall from hal when the next byte is needed for a send.  Happens
 // at interrupt time.
@@ -76,21 +86,29 @@ static void _get_next_data(uint8_t uart_id, void *user_data,
   }
 }
 
-//////////////////////////////////////////////////////////
-
 void uart_write(UartState_t *u, const char *c, uint8_t len) {
   assert(u->initted);
 
-  bool should_start_write = false;
-
   while (len > 0) {
-    rulos_irq_state_t old_interrupts = hal_start_atomic();
+    bool should_start_write = false;
 
     // In critical section: add as much new data to the send queue as will fit.
-    uint16_t size = min(len, CharQueue_free_space(&u->tx_queue.q));
-    assert(true == CharQueue_append_n(&u->tx_queue.q, c, size));
-    c += size;
-    len -= size;
+    rulos_irq_state_t old_interrupts = hal_start_atomic();
+    uint16_t write_size = min(len, CharQueue_free_space(&u->tx_queue.q));
+
+    if (write_size == 0) {
+      // If there's more data that did not fit in the queue, block until there's
+      // free space. This is a policy choice: if dropping data is better for
+      // some application than blocking, there could be two variants of
+      // uart_write with different behavior here.
+      hal_end_atomic(old_interrupts);
+      hal_idle();
+      continue;
+    }
+
+    assert(true == CharQueue_append_n(&u->tx_queue.q, c, write_size));
+    c += write_size;
+    len -= write_size;
 
     // If there isn't already a write pending, remember that we have to launch
     // one.
@@ -103,14 +121,6 @@ void uart_write(UartState_t *u, const char *c, uint8_t len) {
     // If the write-train was idle, start a new one
     if (should_start_write) {
       hal_uart_start_send(u->uart_id, _get_next_data);
-    }
-
-    // If there's more data that did not fit in the queue, block until there's
-    // free space. This is a policy choice: if dropping data is better for some
-    // application than blocking, there could be two variants of uart_write with
-    // different behavior here.
-    if (len > 0) {
-      hal_idle();
     }
   }
 }
@@ -132,6 +142,6 @@ void uart_flush(UartState_t *u) {
 void uart_init(UartState_t *u, uint8_t uart_id, uint32_t baud, bool stop2) {
   memset(u, 0, sizeof(*u));
   CharQueue_init(&u->tx_queue.q, sizeof(u->tx_queue));
-  hal_uart_init(uart_id, baud, stop2, _uart_receive, u, &u->max_tx_len);
+  hal_uart_init(uart_id, baud, stop2, u, &u->max_tx_len);
   u->initted = true;
 }

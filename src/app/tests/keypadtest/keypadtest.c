@@ -19,6 +19,7 @@
 #include "core/rulos.h"
 #include "periph/7seg_panel/7seg_panel.h"
 #include "periph/uart/uart.h"
+#include "periph/uart/linereader.h"
 
 /************************************************************************************/
 /************************************************************************************/
@@ -27,6 +28,7 @@ typedef struct {
   BoardBuffer bbuf_k;
   BoardBuffer bbuf_u;
   UartState_t uart;
+  LineReader_t linereader;
 } KeyTestActivation_t;
 
 void add_char_to_bbuf(BoardBuffer *bbuf, char c, UartState_t *uart) {
@@ -40,11 +42,17 @@ void add_char_to_bbuf(BoardBuffer *bbuf, char c, UartState_t *uart) {
   out[7] = c;
   out[8] = '\n';
   out[9] = '\0';
-  while (uart_busy(uart))
-    ;
-  uart_send(uart, out, strlen(out), NULL, NULL);
-  while (uart_busy(uart))
-    ;
+  LOG(out);
+}
+
+static void uart_line_received(void *data, char *line) {
+  KeyTestActivation_t *kta = (KeyTestActivation_t *)data;
+
+  LOG("got uart line: '%s'", line);
+  while (*line) {
+    add_char_to_bbuf(&kta->bbuf_u, *line, &kta->uart);
+    line++;
+  }
 }
 
 static void update(KeyTestActivation_t *kta) {
@@ -54,11 +62,6 @@ static void update(KeyTestActivation_t *kta) {
 
   while ((c = hal_read_keybuf()) != 0) {
     add_char_to_bbuf(&kta->bbuf_k, c, &kta->uart);
-  }
-
-  while (uart_read(&kta->uart, (char *)&c)) {
-    LOG("got uart char %c", c);
-    add_char_to_bbuf(&kta->bbuf_u, c, &kta->uart);
   }
 }
 
@@ -77,12 +80,7 @@ void tock(Metronome *m) {
 }
 
 void tick(Metronome *m) {
-  char *out = (char *)"tick\n";
-  while (uart_busy(m->uart))
-    ;
-  uart_send(m->uart, out, strlen(out), NULL, NULL);
-  while (uart_busy(m->uart))
-    ;
+  LOG("tick");
   schedule_us(500000, (ActivationFuncPtr)tock, m);
   schedule_us(1000000, (ActivationFuncPtr)tick, m);
 }
@@ -95,8 +93,10 @@ int main() {
   hal_init_rocketpanel();
 
   KeyTestActivation_t kta;
-  uart_init(&kta.uart, 38400, true, 0);
-  uart_send(&kta.uart, (char *)TEST_STR, strlen((char *)TEST_STR), NULL, NULL);
+  uart_init(&kta.uart, /*uart_id=*/0, 38400, true);
+  log_bind_uart(&kta.uart);
+  linereader_init(&kta.linereader, &kta.uart, uart_line_received, &kta)
+  LOG(TEST_STR);
 
   board_buffer_init(&kta.bbuf_k);
   board_buffer_push(&kta.bbuf_k, 0);

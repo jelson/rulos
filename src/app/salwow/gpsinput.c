@@ -4,10 +4,8 @@
 #include <stdbool.h>
 #include <string.h>
 
-r_bool _gpsinput_send_next(HalUart *handler, char *c /* OUT */);
-void _gpsinput_receive(HalUart *handler, char c);
 uint8_t split(char *s, uint8_t *index /*OUT*/, uint8_t index_size);
-void _gpsinput_process_sentence(GPSInput *gpsi);
+void _gpsinput_process_sentence(void *user_data, char *sentence);
 bool _parse_ddm(char *s, float *out);
 char *_index(char *s, char c);
 float _atofi(char *s);
@@ -15,41 +13,13 @@ float _atofi(char *s);
 void gpsinput_init(GPSInput *gpsi, uint8_t uart_id,
                    ActivationFuncPtr data_ready_cb_func,
                    void *data_ready_cb_data) {
-  gpsi->uart_hw.send = _gpsinput_send_next;
-  gpsi->uart_hw.recv = _gpsinput_receive;
-  hal_uart_init(&gpsi->uart_hw, 4800, TRUE, uart_id);
+  uart_init(&gpsi->uart, uart_id, 4800, TRUE);
+  linereader_init(&gpsi->linereader, &gpsi->uart, _gpsinput_process_sentence, gpsi);
 
   gpsi->lat = 0.;
   gpsi->lon = 0.;
   gpsi->data_ready_cb_func = data_ready_cb_func;
   gpsi->data_ready_cb_data = data_ready_cb_data;
-  gpsi->terminator = '\0';
-  gpsi->recvp = 0;
-}
-
-r_bool _gpsinput_send_next(HalUart *handler, char *c /* OUT */) {
-  return FALSE;
-}
-
-void _gpsinput_receive(HalUart *handler, char c) {
-  GPSInput *gpsi = (GPSInput *)handler;
-  if (c == '\n') {
-    // line done
-    assert(gpsi->recvp <= sizeof(gpsi->sentence));
-    // == okay, because it'll hit terminator
-    gpsi->sentence[gpsi->recvp] = '\0';
-
-    //{ uart_debug_log(gpsi->sentence); }
-
-    _gpsinput_process_sentence(gpsi);
-    gpsi->recvp = 0;
-  } else if (gpsi->recvp >= sizeof(gpsi->sentence)) {
-    // line overflow; drop
-  } else {
-    // more data
-    gpsi->sentence[gpsi->recvp] = c;
-    gpsi->recvp++;
-  }
 }
 
 uint8_t split(char *s, uint8_t *index /*OUT*/, uint8_t index_size) {
@@ -66,12 +36,13 @@ uint8_t split(char *s, uint8_t *index /*OUT*/, uint8_t index_size) {
   return ii;
 }
 
-void _gpsinput_process_sentence(GPSInput *gpsi) {
+void _gpsinput_process_sentence(void *user_data, char *sentence) {
+  GPSInput *gpsi = (GPSInput *) user_data;
 #ifndef SIM
 #define INVALID(m) \
   { return; }
 #else
-  // fprintf(stderr, "gpsinput sees %s\n", gpsi->sentence);
+  // fprintf(stderr, "gpsinput sees %s\n", sentence);
 #define INVALID(m)                                    \
   {                                                   \
     /*fprintf(stderr, "rejecting because %s\n", m);*/ \
@@ -79,12 +50,12 @@ void _gpsinput_process_sentence(GPSInput *gpsi) {
   }
 #endif
 
-  if (memcmp(gpsi->sentence, "$GPGGA,", 7) != 0) {
+  if (memcmp(sentence, "$GPGGA,", 7) != 0) {
     INVALID("unknown sentence");
   }
 
   uint8_t field_index[15];
-  uint8_t num_fields = split(gpsi->sentence, field_index,
+  uint8_t num_fields = split(sentence, field_index,
                              sizeof(field_index) / sizeof(field_index[0]));
   // $GPGGA,235453,4736.760,N,12219.740,W,1,05,2.2,104.1,M,-18.4,M,,*7A
   if (num_fields != 14) {
@@ -97,21 +68,21 @@ void _gpsinput_process_sentence(GPSInput *gpsi) {
 #define FI_LON_SIGN 4
 #define FI_QUALITY 5
 
-  if (memcmp(&gpsi->sentence[field_index[FI_LAT_SIGN]], "N,", 2) != 0) {
+  if (memcmp(&sentence[field_index[FI_LAT_SIGN]], "N,", 2) != 0) {
     INVALID("N");
   }
-  if (memcmp(&gpsi->sentence[field_index[FI_LON_SIGN]], "W,", 2) != 0) {
+  if (memcmp(&sentence[field_index[FI_LON_SIGN]], "W,", 2) != 0) {
     INVALID("W");
   }
-  if (memcmp(&gpsi->sentence[field_index[FI_QUALITY]], "1,", 2) != 0) {
+  if (memcmp(&sentence[field_index[FI_QUALITY]], "1,", 2) != 0) {
     INVALID("Quality");
   }
   bool rc;
-  rc = _parse_ddm(&gpsi->sentence[field_index[FI_LAT]], &gpsi->lat);
+  rc = _parse_ddm(&sentence[field_index[FI_LAT]], &gpsi->lat);
   if (!rc) {
     INVALID("lat ddm");
   }
-  rc = _parse_ddm(&gpsi->sentence[field_index[FI_LON]], &gpsi->lon);
+  rc = _parse_ddm(&sentence[field_index[FI_LON]], &gpsi->lon);
   if (!rc) {
     INVALID("lon ddm");
   }

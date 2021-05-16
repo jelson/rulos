@@ -27,7 +27,13 @@
 #define UART_TX_QUEUE_LEN 128
 #endif
 
-typedef struct {
+struct UartState_t_s;
+typedef struct UartState_t_s UartState_t;
+
+// Upcall for reception. Called at interrupt-time.
+typedef void (*uart_rx_cb)(UartState_t *s, void *user_data, char c);
+
+struct UartState_t_s {
   bool initted;
   uint8_t uart_id;
   uint16_t max_tx_len;
@@ -38,31 +44,32 @@ typedef struct {
     CharQueue q;
   } tx_queue;
   uint16_t pending_tx_len; // num of bytes being sent by the hal
-
   // needed separately from pending_tx_len so that we don't double-launch a
   // write train if a second write arrives before the upcall due to the first
   bool writes_active;
 
-} UartState_t;
+  // receive
+  uart_rx_cb rx_cb;
+  void *rx_user_data;
+};
 
 ///////////////// application API
 
 // initialize an instance of a uart
 void uart_init(UartState_t *u, uint8_t uart_id, uint32_t baud, bool stop2);
 
-// register a char-received callback to be called at interrupt time each time a
-// character arrives
-typedef void(uart_rx_cb)(UartState_t *s, char c);
-void uart_start_rx(UartState_t *u, uart_rx_cb cb);
+// Registers a char-received callback to be called at interrupt time each time a
+// character arrives.
+void uart_start_rx(UartState_t *u, uart_rx_cb rx_cb, void *user_data);
 
-// assumes null-terminated output
-void uart_print(UartState_t *u, const char *s);
-
-// sends binary data, with a length
+// Sends binary data to the UART, specified with a length.
 void uart_write(UartState_t *u, const char *c, uint8_t len);
 
-// returns true if data is still being transmitted
+// Sends a null-terminated string to the UART.
+void uart_print(UartState_t *u, const char *s);
+
+// Returns true if data is still being transmitted.
 bool uart_is_busy(UartState_t *u);
 
-// waits until the uart is completely flushed
+// Waits until the uart is completely flushed.
 void uart_flush(UartState_t *u);

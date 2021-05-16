@@ -54,14 +54,16 @@ static hal_uart_receive_cb uart_recv_cb = NULL;
 static void *uart_user_data = NULL;
 
 void hal_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2,
-                   hal_uart_receive_cb rx_cb,
                    void *user_data /* for both rx and tx upcalls */,
                    uint16_t *max_tx_len /* OUT */) {
   *max_tx_len = 3;
-  uart_recv_cb = rx_cb;
   uart_user_data = user_data;
   sim_maybe_init_and_register_keystroke_handler(sim_uart_keystroke_handler);
   memset(recent_uart_buf, 0, sizeof(recent_uart_buf));
+}
+
+void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb) {
+  uart_recv_cb = rx_cb;
 }
 
 static void uart_simulator_start() {
@@ -132,11 +134,9 @@ static void uart_simulator_input(int c) {
   draw_uart_input_window();
 
   // upcall to the uart code
-  if (uart_recv_cb == NULL) {
-    LOG("dropping uart char - uart not initted");
-    return;
+  if (uart_recv_cb != NULL) {
+    (uart_recv_cb)(0, uart_user_data, c);
   }
-  (uart_recv_cb)(0, uart_user_data, c);
 }
 
 static void uart_simulator_stop() { delwin(uart_input_window); }

@@ -84,6 +84,8 @@
 
 #elif defined(RULOS_ARM_stm32f3)
 
+#include "stm32f3xx_ll_usart.h"
+
 #define rUART1_TX_PORT GPIOA
 #define rUART1_TX_PIN GPIO_PIN_9
 // CLK_ENABLE must match port above
@@ -113,6 +115,7 @@
 #include "stm32g4xx.h"
 #include "stm32g4xx_hal_dma.h"
 #include "stm32g4xx_ll_bus.h"
+#include "stm32g4xx_ll_usart.h"
 #define rUART1_TX_PORT GPIOA
 #define rUART1_TX_PIN GPIO_PIN_9
 // CLK_ENABLE must match port above
@@ -174,13 +177,27 @@ void rUART1_DMA_TX_IRQHandler(void) {
   HAL_DMA_IRQHandler(g_stm32_uarts[0].hal_uart_handle.hdmatx);
 }
 
+static void rx_upcall(uint8_t uart_id, char c) {
+  stm32uart_t *u = &g_stm32_uarts[uart_id];
+  if (u->rx_cb != NULL) {
+    u->rx_cb(uart_id, u->user_data, c);
+  }
+}
+
 void USART1_IRQHandler(void) {
+  if (LL_USART_IsActiveFlag_RXNE(USART1) &&
+      LL_USART_IsEnabledIT_RXNE(USART1)) {
+    rx_upcall(0, LL_USART_ReceiveData8(USART1));
+  }
   HAL_UART_IRQHandler(&g_stm32_uarts[0].hal_uart_handle);
 }
 
 static bool stm32_uart_is_busy(stm32uart_t *uart) {
   return HAL_UART_GetState(&uart->hal_uart_handle) != HAL_UART_STATE_READY;
 }
+
+int s_starts = 0;
+int s_stops = 0;
 
 static void maybe_launch_next_tx(stm32uart_t *uart) {
   assert(uart->next_sendbuf_cb != NULL);
@@ -195,6 +212,7 @@ static void maybe_launch_next_tx(stm32uart_t *uart) {
   if (len == 0) {
     // tx train complete!
     uart->next_sendbuf_cb = NULL;
+    s_stops++;
   } else {
     // Start the transfer
     if (HAL_UART_Transmit_DMA(&uart->hal_uart_handle, (void *)buf, len) !=
@@ -213,13 +231,11 @@ static void tx_complete(UART_HandleTypeDef *hal_uart_handle) {
 }
 
 void hal_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2,
-                   hal_uart_receive_cb rx_cb,
                    void *user_data /* for both rx and tx upcalls */,
                    uint16_t *max_tx_len /* OUT */) {
   assert(uart_id < NUM_UARTS);
   stm32uart_t *uart = &g_stm32_uarts[uart_id];
   uart->uart_id = uart_id;
-  uart->rx_cb = rx_cb;
   uart->user_data = user_data;
   *max_tx_len = 65535;
 
@@ -285,7 +301,8 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2,
       __builtin_trap();
     }
 
-#if defined(RULOS_ARM_stm32g4)
+    //#if defined(RULOS_ARM_stm32g4)
+#if 0
     if (HAL_UARTEx_SetTxFifoThreshold(&uart->hal_uart_handle,
                                       UART_TXFIFO_THRESHOLD_1_8) != HAL_OK) {
       __builtin_trap();
@@ -352,7 +369,7 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2,
     HAL_NVIC_EnableIRQ(rUART1_DMA_RX_IRQn);
 #endif
 
-    /* NVIC for USART, to catch the TX complete */
+    /* NVIC for USART, to catch RX interrupts, and TX completions */
     HAL_NVIC_SetPriority(USART1_IRQn, 0, 1);
     HAL_NVIC_EnableIRQ(USART1_IRQn);
 
@@ -365,7 +382,26 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2,
 }
 
 void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb) {
+  s_starts++;
   stm32uart_t *u = &g_stm32_uarts[uart_id];
+  assert(u->next_sendbuf_cb == NULL);
   u->next_sendbuf_cb = cb;
   maybe_launch_next_tx(u);
 }
+
+void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb) {
+  /*
+   * Use the Low-Level libraries (not the HAL) to set up the RX interrupt. Yeah,
+   * it's a little weird to be using a mix of both HAL and LL. I wanted to use
+   * the HAL libraries for the TX DMA, since it's complex. For RX, the HAL
+   * libraries don't really do what we want - you have to give them a total
+   * length you want to read, and then it shuts everything down again. We want
+   * to just start receiving and never stop, with a simple interrupt every time
+   * we receive a character.
+   */
+  assert(uart_id < NUM_UARTS);
+  stm32uart_t *u = &g_stm32_uarts[uart_id];
+  u->rx_cb = rx_cb;
+  LL_USART_EnableIT_RXNE(USART1);
+}
+
