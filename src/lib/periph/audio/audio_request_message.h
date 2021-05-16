@@ -28,7 +28,7 @@ typedef struct {
   // If skip is true, immediately begin playing skip_effect_id, then loop
   // loop_effect_id If skip is false, allow existing effect to complete, then
   // loop loop_effect_id
-  r_bool skip;
+  bool skip;
   SoundEffectId skip_effect_id;
   SoundEffectId loop_effect_id;
 } AudioRequestMessage;

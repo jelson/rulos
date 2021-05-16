@@ -27,7 +27,7 @@ typedef struct {
 
 typedef struct {
   uint8_t stream_id;
-  r_bool skip;
+  bool skip;
   SoundCmd skip_cmd;
   SoundCmd loop_cmd;
 } AudioRequestMessage;

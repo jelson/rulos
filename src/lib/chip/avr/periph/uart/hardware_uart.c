@@ -33,7 +33,7 @@
 #include "core/rulos.h"
 #include "periph/uart/uart.h"
 
-void audioled_set(r_bool red, r_bool yellow);
+void audioled_set(bool red, bool yellow);
 
 uint16_t baud_to_ubrr(uint32_t baud) {
   return ((uint32_t)hardware_f_cpu) / 16 / baud - 1;
@@ -189,55 +189,55 @@ avr_uart_state_t g_uart_state[2] = {};
 
 #endif
 
-void hal_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2,
-                   void *user_data, uint16_t *max_tx_len) {
+void hal_uart_init(uint8_t uart_id, uint32_t baud, bool stop2, void *user_data,
+                   uint16_t *max_tx_len) {
   *max_tx_len = 1;
   switch (uart_id) {
 #if HAVE_UARTID0
-  case 0:
-    hal_uart_init0(baud, stop2, user_data);
-    return;
+    case 0:
+      hal_uart_init0(baud, stop2, user_data);
+      return;
 #endif
 #if HAVE_UARTID1
-  case 1:
-    hal_uart_init1(baud, stop2, user_data);
-    return;
+    case 1:
+      hal_uart_init1(baud, stop2, user_data);
+      return;
 #endif
-  default:
-    assert(false);
+    default:
+      assert(false);
   }
 }
 
 void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb) {
   switch (uart_id) {
 #if HAVE_UARTID0
-  case 0:
-    hal_uart_start_rx0(rx_cb);
-    return;
+    case 0:
+      hal_uart_start_rx0(rx_cb);
+      return;
 #endif
 #if HAVE_UARTID1
-  case 1:
-    hal_uart_start_rx1(rx_cb);
-    return;
+    case 1:
+      hal_uart_start_rx1(rx_cb);
+      return;
 #endif
-  default:
-    assert(false);
+    default:
+      assert(false);
   }
 }
 
 void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb) {
   switch (uart_id) {
 #if HAVE_UARTID0
-  case 0:
-    hal_uart_start_send0(cb);
-    return;
+    case 0:
+      hal_uart_start_send0(cb);
+      return;
 #endif
 #if HAVE_UARTID1
-  case 1:
-    hal_uart_start_send1(cb);
-    return;
+    case 1:
+      hal_uart_start_send1(cb);
+      return;
 #endif
-  default:
-    assert(false);
+    default:
+      assert(false);
   }
 }

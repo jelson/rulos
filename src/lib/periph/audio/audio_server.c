@@ -29,7 +29,8 @@ void aserv_fetch_complete(AudioServer *as);
 void aserv_start_play(AudioServer *as);
 void aserv_advance(AudioServer *as);
 
-static int count_music(AudioServer *aserv, int limit, char* opt_path, int opt_path_capacity);
+static int count_music(AudioServer *aserv, int limit, char *opt_path,
+                       int opt_path_capacity);
 
 void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id) {
   // Listen on network socket for AudioRequestMessage to play sound effects.
@@ -89,45 +90,45 @@ void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id) {
 
 // Concatenate onto dst, without overflowing capacity, and
 // enforcing that dst stays nul-terminated.
-void safecat(char* dst, int capacity, char* src) {
+void safecat(char *dst, int capacity, char *src) {
   strncat(dst, src, capacity - strlen(src));
-  dst[capacity-1] = '\0';
+  dst[capacity - 1] = '\0';
 }
 
 // Count all the music (with a huge limit), or count up to a particular
 // pathname.
 // if rc < limit && opt_path!=null, opt_path contains the limit'th path
 // in the directory.
-static int count_music(AudioServer *aserv, int limit, char* opt_path, int opt_path_capacity)
-{
-    DIR dp;
-    FILINFO fno;
-    int count = 0;
+static int count_music(AudioServer *aserv, int limit, char *opt_path,
+                       int opt_path_capacity) {
+  DIR dp;
+  FILINFO fno;
+  int count = 0;
 
 #define MUSIC_DIR "/music"
-    FRESULT rc = f_opendir(&dp, MUSIC_DIR);
-    assert(rc==FR_OK);
+  FRESULT rc = f_opendir(&dp, MUSIC_DIR);
+  assert(rc == FR_OK);
 
-    while (true) {
-        rc = f_readdir(&dp, &fno);
-        if (rc != FR_OK || fno.fname[0]=='\0') {
-            break;
-        }
-        if (count == limit) {
-          // Hey, this is the one they wanted!
-          if (opt_path != NULL) {
-            opt_path[0] = '\0';
-            safecat(opt_path, opt_path_capacity, MUSIC_DIR);
-            safecat(opt_path, opt_path_capacity, "/");
-            safecat(opt_path, opt_path_capacity, fno.fname);
-          }
-          break;
-        }
-        count += 1;
+  while (true) {
+    rc = f_readdir(&dp, &fno);
+    if (rc != FR_OK || fno.fname[0] == '\0') {
+      break;
     }
+    if (count == limit) {
+      // Hey, this is the one they wanted!
+      if (opt_path != NULL) {
+        opt_path[0] = '\0';
+        safecat(opt_path, opt_path_capacity, MUSIC_DIR);
+        safecat(opt_path, opt_path_capacity, "/");
+        safecat(opt_path, opt_path_capacity, fno.fname);
+      }
+      break;
+    }
+    count += 1;
+  }
 
-    f_closedir(&dp);
-    return count;
+  f_closedir(&dp);
+  return count;
 }
 
 void aserv_skip_stream(AudioServer *aserv, uint8_t stream_idx) {
@@ -177,32 +178,34 @@ void aserv_recv_mcm(MessageRecvBuffer *msg) {
   assert(msg->payload_len == sizeof(MusicControlMessage));
   MusicControlMessage *mcm = (MusicControlMessage *)&msg->data;
 
-    if (!aserv->music_random_seeded) {
-      // first use? jump to a random song. random seed is 1/10ths of sec since
-      // boot.
-      aserv->music_offset = (SoundEffectId)(
-          ((clock_time_us() / 100000) % (aserv->music_file_count)));
-      aserv->music_random_seeded = TRUE;
-    }
+  if (!aserv->music_random_seeded) {
+    // first use? jump to a random song. random seed is 1/10ths of sec since
+    // boot.
+    aserv->music_offset = (SoundEffectId)(
+        ((clock_time_us() / 100000) % (aserv->music_file_count)));
+    aserv->music_random_seeded = TRUE;
+  }
 
-    // now advance one or retreat one, based on request
-    aserv->music_offset =
-        (aserv->music_offset + mcm->advance + aserv->music_file_count) %
-        (aserv->music_file_count);
-    aserv->audio_stream[AUDIO_STREAM_MUSIC].skip_effect_id = sound_music;
+  // now advance one or retreat one, based on request
+  aserv->music_offset =
+      (aserv->music_offset + mcm->advance + aserv->music_file_count) %
+      (aserv->music_file_count);
+  aserv->audio_stream[AUDIO_STREAM_MUSIC].skip_effect_id = sound_music;
 
-    // and start it playin'
-    aserv_skip_stream(aserv, AUDIO_STREAM_MUSIC);
+  // and start it playin'
+  aserv_skip_stream(aserv, AUDIO_STREAM_MUSIC);
 
   net_free_received_message_buffer(msg);
 }
 
-static void find_music_filename(AudioServer *aserv, char* out_path, int out_capacity) {
+static void find_music_filename(AudioServer *aserv, char *out_path,
+                                int out_capacity) {
   if (aserv->active_stream == AUDIO_STREAM_MUSIC) {
     // filename is the n'th file in the directory
     int rc = count_music(aserv, aserv->music_offset, out_path, out_capacity);
-    assert (rc == aserv->music_offset); // someone lost count!
-    // LOG("music %d / %d is %s", aserv->music_offset, aserv->music_file_count, out_path);
+    assert(rc == aserv->music_offset);  // someone lost count!
+    // LOG("music %d / %d is %s", aserv->music_offset, aserv->music_file_count,
+    // out_path);
   } else {
     // filename derives from a token index in lib/periph/audio/sound.def
     char asciiId[10];
@@ -234,8 +237,8 @@ void aserv_start_play(AudioServer *aserv) {
     find_music_filename(aserv, effect_filename, MAX_PATH);
 
     as_set_volume(&aserv->audio_streamer, stream->volume);
-    r_bool rc = as_play(&aserv->audio_streamer, effect_filename,
-                        (ActivationFuncPtr)aserv_advance, aserv);
+    bool rc = as_play(&aserv->audio_streamer, effect_filename,
+                      (ActivationFuncPtr)aserv_advance, aserv);
     if (!rc) {
       // Retry rapidly, so we can get ahold of sdc as soon as it's
       // idle. (Yeah, I could have a callback from SD to alert the

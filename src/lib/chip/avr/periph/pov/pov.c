@@ -277,8 +277,8 @@ void pov_display(PovAct *povAct) {
     position -= NINETY_DEGREES;
   }
 
-  r_bool display_on = (position & (1 << (POV_LG_DISPLAY_WIDTH + 1))) > 0;
-  r_bool reverse = (position & (1 << (POV_LG_DISPLAY_WIDTH + 2))) == 0;
+  bool display_on = (position & (1 << (POV_LG_DISPLAY_WIDTH + 1))) > 0;
+  bool reverse = (position & (1 << (POV_LG_DISPLAY_WIDTH + 2))) == 0;
   uint16_t column = (position >> 1) & ((1 << POV_LG_DISPLAY_WIDTH) - 1);
 
   uint8_t bitmap = 0;
@@ -335,6 +335,6 @@ void pov_write(PovAct *povAct, char *msg) {
   pov_write_count(povAct, msg, (POV_DISPLAY_WIDTH - width) >> 1);
 }
 
-void pov_set_visible(PovAct *povAct, r_bool visible) {
+void pov_set_visible(PovAct *povAct, bool visible) {
   povAct->visible = visible;
 }

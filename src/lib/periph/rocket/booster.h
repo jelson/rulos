@@ -27,7 +27,7 @@
 typedef enum { bcontext_liftoff, bcontext_docking } BoosterContext;
 
 typedef struct {
-  r_bool status;
+  bool status;
   HPAM *hpam;
   AudioClient *audioClient;
   ScreenBlanker *screenblanker;
@@ -38,4 +38,4 @@ typedef struct {
 void booster_init(Booster *booster, HPAM *hpam, AudioClient *audioClient,
                   ScreenBlanker *screenblanker);
 void booster_set_context(Booster *booster, BoosterContext bcontext);
-void booster_set(Booster *booster, r_bool status);
+void booster_set(Booster *booster, bool status);

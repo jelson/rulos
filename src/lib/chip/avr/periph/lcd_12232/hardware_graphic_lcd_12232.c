@@ -71,7 +71,7 @@ void glcd_complete_init(GLCD *glcd);
 #define GLCD_READ 1
 #define GLCD_WRITE 0
 
-void glcd_set_bus_dir(r_bool dir) {
+void glcd_set_bus_dir(bool dir) {
   // TODO life would be faster if hardware had data bus aligned
   // with an 8-bit port!
   if (dir == GLCD_WRITE) {
@@ -350,7 +350,7 @@ uint8_t _glcd_find_glyph_index(char glyph) {
 
 #define SYNCDEBUG() syncdebug(0, 'G', __LINE__)
 
-uint8_t glcd_paint_char(GLCD *glcd, char glyph, int16_t dx0, r_bool invert) {
+uint8_t glcd_paint_char(GLCD *glcd, char glyph, int16_t dx0, bool invert) {
   uint8_t index = _glcd_find_glyph_index(glyph);
   if (index == 0xff) {
     return 0;

@@ -21,7 +21,7 @@
 #include "core/util.h"
 
 // Top-mode composable handler; returns false to fall through to next handler.
-typedef r_bool (*sim_keystroke_handler)(char k);
+typedef bool (*sim_keystroke_handler)(char k);
 
 // Special-mode handler that takes over all input until it exits.
 typedef void (*sim_special_input_handler_t)(int c);

@@ -94,7 +94,7 @@ static void sim_program_labels() {
   }
 }
 
-void sim_display_light_status(r_bool status) {
+void sim_display_light_status(bool status) {
   if (status) {
     wcolor_set(curses_get_window(), PAIR_BLACK_ON_WHITE, NULL);
     mvwprintw(curses_get_window(), 17, 50, " Lights on  ");

@@ -31,7 +31,7 @@ typedef struct s_board_layout {
 
 void sim_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
-void sim_display_light_status(r_bool status);
+void sim_display_light_status(bool status);
 
 void sim_register_clock_handler(Handler func, void *data);
 void sim_register_sigio_handler(Handler func, void *data);

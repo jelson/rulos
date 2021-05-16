@@ -32,4 +32,4 @@ void hal_init_joystick_button() {
   gpio_make_input_enable_pullup(JOYSTICK_TRIGGER);
 }
 
-r_bool hal_read_joystick_button() { return gpio_is_clr(JOYSTICK_TRIGGER); }
+bool hal_read_joystick_button() { return gpio_is_clr(JOYSTICK_TRIGGER); }

@@ -11,11 +11,11 @@ void leds_init() {
   gpio_make_output(GREEN_LED_PIN);
 }
 
-void leds_green(r_bool state) { gpio_set_or_clr(GREEN_LED_PIN, state); }
+void leds_green(bool state) { gpio_set_or_clr(GREEN_LED_PIN, state); }
 
 #else
 
 void leds_init() {}
-void leds_green(r_bool state) {}
+void leds_green(bool state) {}
 
 #endif

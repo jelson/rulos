@@ -27,7 +27,7 @@ void audioled_init() {
   gpio_make_output(AUDIO_LED_YELLOW);
 }
 
-void audioled_set(r_bool red, r_bool yellow) {
+void audioled_set(bool red, bool yellow) {
   gpio_set_or_clr(AUDIO_LED_RED, !red);
   gpio_set_or_clr(AUDIO_LED_YELLOW, !yellow);
 }

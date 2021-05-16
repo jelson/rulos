@@ -60,7 +60,7 @@ static uint8_t segmentRemapTables[4][8] = {
 typedef uint8_t SegmentRemapIndex;
 
 typedef struct {
-  r_bool reverseDigits;
+  bool reverseDigits;
   SegmentRemapIndex segmentRemapIndices[8];
 } BoardRemap;
 

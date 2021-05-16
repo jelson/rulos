@@ -41,7 +41,7 @@ rulos_irq_state_t hal_start_atomic();
 void hal_end_atomic(rulos_irq_state_t old_interrupts);
 
 void hal_deep_sleep();
-void hal_idle(); // hw: spin. sim: sleep
+void hal_idle();  // hw: spin. sim: sleep
 
 #define HAL_MAGIC 0x74
 
@@ -54,7 +54,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
 
 void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
                          uint8_t onoff);
-void hal_7seg_bus_enter_sleep(); // Call to stop driving 7seg bus
+void hal_7seg_bus_enter_sleep();  // Call to stop driving 7seg bus
 char hal_read_keybuf();
 char hal_scan_keypad();
 // used for "hold a key at startup" check.
@@ -68,14 +68,14 @@ void hal_init_adc_channel(uint8_t idx);
 uint16_t hal_read_adc(uint8_t idx);
 
 void hal_init_joystick_button();
-r_bool hal_read_joystick_button();
+bool hal_read_joystick_button();
 
 /////////////// UART ///////////////////////////////////////////////
 
 // At the HAL layer, UARTs are identified by integers. hal_uart_init initializes
 // a UART. max_tx_len is an out parameter that describes the maximum length of a
 // tx the UART can accept at a time.
-void hal_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2,
+void hal_uart_init(uint8_t uart_id, uint32_t baud, bool stop2,
                    void *user_data /* for both rx and tx upcalls */,
                    uint16_t *max_tx_len /* OUT */);
 

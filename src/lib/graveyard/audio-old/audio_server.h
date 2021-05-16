@@ -42,7 +42,7 @@ typedef struct s_audio_server {
       mcm_recv_ring_alloc[RECEIVE_RING_SIZE(1, sizeof(MusicControlMessage))];
   AppReceiver mcm_app_receiver;
 
-  r_bool index_ready;
+  bool index_ready;
   AuIndexRec magic;
   AuIndexRec index[sound_num_tokens];
   // AuIndexRec index[2];
@@ -50,7 +50,7 @@ typedef struct s_audio_server {
   AudioEffectsStream audio_stream[AUDIO_NUM_STREAMS];
   int8_t active_stream;
 
-  r_bool music_random_seeded;
+  bool music_random_seeded;
   uint8_t num_music_tokens;   // derived from index
   uint8_t music_first_token;  // offset into index where music starts.
   uint8_t music_offset;       // offset past first_token of last thing we played

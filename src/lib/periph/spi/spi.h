@@ -26,7 +26,7 @@ typedef struct {
   uint8_t cmd_expect_code;
   uint8_t *reply_buffer;
   uint16_t reply_buflen;
-  r_bool error;
+  bool error;
   ActivationRecord done_rec;
 } SPICmd;
 

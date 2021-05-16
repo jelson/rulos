@@ -21,18 +21,18 @@
 
 // Joystick button here; motion in periph/adc.
 
-r_bool sim_joystick_keystroke_handler(char c);
+bool sim_joystick_keystroke_handler(char c);
 
-r_bool g_joystick_trigger_state;
+bool g_joystick_trigger_state;
 
 void hal_init_joystick_button() {
   g_joystick_trigger_state = FALSE;
   sim_maybe_init_and_register_keystroke_handler(sim_joystick_keystroke_handler);
 }
 
-r_bool hal_read_joystick_button() { return g_joystick_trigger_state; }
+bool hal_read_joystick_button() { return g_joystick_trigger_state; }
 
-r_bool sim_joystick_keystroke_handler(char c) {
+bool sim_joystick_keystroke_handler(char c) {
   switch (c) {
     case '%':  // button-on
       g_joystick_trigger_state = !g_joystick_trigger_state;

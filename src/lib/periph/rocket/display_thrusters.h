@@ -36,7 +36,7 @@ typedef struct {
 
   // True if the joystick is temporarily not affecting thrusters, i.e. if it's
   // under the control of something else.
-  r_bool joystick_muted;
+  bool joystick_muted;
 } ThrusterState_t;
 
 void thrusters_init(ThrusterState_t *ts, uint8_t board,

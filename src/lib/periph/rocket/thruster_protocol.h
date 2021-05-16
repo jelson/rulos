@@ -38,7 +38,7 @@ typedef struct s_thruster_send_network {
       thruster_message_storage[sizeof(WireMessage) + sizeof(ThrusterPayload)];
   SendSlot sendSlot;
   ThrusterPayload last_state;
-  r_bool state_changed;
+  bool state_changed;
 } ThrusterSendNetwork;
 
 void init_thruster_send_network(ThrusterSendNetwork *tsn, Network *network);

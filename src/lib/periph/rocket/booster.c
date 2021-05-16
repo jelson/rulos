@@ -33,7 +33,7 @@ void booster_set_context(Booster *booster, BoosterContext bcontext) {
   booster->bcontext = bcontext;
 }
 
-void booster_set(Booster *booster, r_bool status) {
+void booster_set(Booster *booster, bool status) {
   if (status == booster->status) {
     return;
   }

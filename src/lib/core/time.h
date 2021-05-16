@@ -27,7 +27,7 @@ typedef int32_t Time;
 
 // Returns true if b is later than a using rollover math, assuming 32-bit
 // signed time values.
-static inline r_bool later_than(Time a, Time b) {
+static inline bool later_than(Time a, Time b) {
   // the subtraction will roll over too
   return a - b > 0;
 
@@ -37,7 +37,7 @@ static inline r_bool later_than(Time a, Time b) {
 
 // Returns true if b is later than or equal to a using rollover math,
 // assuming 32-bit signed time values.
-static inline r_bool later_than_or_eq(Time a, Time b) {
+static inline bool later_than_or_eq(Time a, Time b) {
   // the subtraction will roll over too
   return a - b >= 0;
 }

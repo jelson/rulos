@@ -102,7 +102,7 @@ void aserv_fetch_start(AudioServer *aserv) {
 
   uint8_t *start_addr = (uint8_t *)&aserv->magic;
   uint16_t count = sizeof(aserv->magic) + sizeof(aserv->index);
-  r_bool rc =
+  bool rc =
       sdc_start_transaction(aserv->borrowed_sdc, 0, start_addr, count,
                             (ActivationFuncPtr)aserv_fetch_complete, aserv);
 #if !SIM
@@ -283,9 +283,9 @@ void aserv_start_play(AudioServer *aserv) {
     SYNCPRINT(5, 't', stream->skip_cmd.token);
     SYNCPRINT(5, 'v', stream->mlvolume);
     as_set_volume(&aserv->audio_streamer, stream->mlvolume);
-    r_bool rc = as_play(&aserv->audio_streamer, airec->start_offset,
-                        airec->block_offset, airec->end_offset,
-                        (ActivationFuncPtr)aserv_advance, aserv);
+    bool rc = as_play(&aserv->audio_streamer, airec->start_offset,
+                      airec->block_offset, airec->end_offset,
+                      (ActivationFuncPtr)aserv_advance, aserv);
     if (!rc) {
       SYNCDEBUG();
       // Retry rapidly, so we can get ahold of sdc as soon as it's

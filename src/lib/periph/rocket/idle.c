@@ -19,7 +19,7 @@
 #include "periph/rocket/idle.h"
 
 void idle_update(IdleAct *idle);
-void idle_set_active(IdleAct *idle, r_bool nowactive);
+void idle_set_active(IdleAct *idle, bool nowactive);
 void idle_broadcast(IdleAct *idle);
 
 void init_idle(IdleAct *idle) {
@@ -54,7 +54,7 @@ void idle_update(IdleAct *idle) {
   }
 }
 
-void idle_set_active(IdleAct *idle, r_bool nowactive) {
+void idle_set_active(IdleAct *idle, bool nowactive) {
   if (nowactive != idle->nowactive) {
     idle->nowactive = nowactive;
     idle_broadcast(idle);

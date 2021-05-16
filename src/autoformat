@@ -12,7 +12,7 @@ if [ -z "$filelist" ]; then
     exit
 fi
 
-clang-format -i --style=google --verbose $filelist
+clang-format -i --verbose $filelist
 dos2unix $filelist
 chmod ugo-x $filelist
 

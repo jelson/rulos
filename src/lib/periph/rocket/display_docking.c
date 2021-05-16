@@ -140,8 +140,7 @@ void ddock_update(DDockAct *act) {
   // LOG("velocity %6d %6d", act->xd.velocity, act->yd.velocity);
 
   if (act->focused) {
-    r_bool button_pushed =
-        ((act->joystick->state & JOYSTICK_STATE_TRIGGER) != 0);
+    bool button_pushed = ((act->joystick->state & JOYSTICK_STATE_TRIGGER) != 0);
     booster_set_context(act->booster, bcontext_docking);
     booster_set(act->booster, button_pushed);
   }
@@ -149,8 +148,8 @@ void ddock_update(DDockAct *act) {
   if (da_read(&act->rd) == DD_MAX_RADIUS) {
     int x = da_read(&act->xd);
     int y = da_read(&act->yd);
-    r_bool success = ((-DD_TOLERANCE <= x && x <= DD_TOLERANCE) &&
-                      (-DD_TOLERANCE <= y && y <= DD_TOLERANCE));
+    bool success = ((-DD_TOLERANCE <= x && x <= DD_TOLERANCE) &&
+                    (-DD_TOLERANCE <= y && y <= DD_TOLERANCE));
     if (success && !act->docking_complete) {
       // TODO snap clanger solenoid
       ac_skip_to_clip(act->audioClient, AUDIO_STREAM_BURST_EFFECTS,

@@ -38,7 +38,7 @@ void blink_update(BlinkAct *ba) {
   schedule_us(100000, (ActivationFuncPtr)blink_update, ba);
 }
 
-void blink_init(BlinkAct *ba, r_bool run) {
+void blink_init(BlinkAct *ba, bool run) {
   gpio_make_output(GPIO_C5);
   if (run) {
     schedule_us(50000, (ActivationFuncPtr)blink_update, ba);
@@ -232,7 +232,7 @@ void deselect(void) {
   // rcvr_spi();
 }
 
-r_bool select(void) {
+bool select(void) {
   gpio_set_or_clr(SPI_SS, 0);
   if (!wait_ready()) {
     deselect();

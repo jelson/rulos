@@ -31,7 +31,7 @@ typedef struct s_disco {
   ScreenBlanker *screenblanker;
   DiscoHandler handler;
   AudioClient *audioClient;
-  r_bool focused;
+  bool focused;
 } Disco;
 
 void disco_init(Disco *disco, AudioClient *audioClient,

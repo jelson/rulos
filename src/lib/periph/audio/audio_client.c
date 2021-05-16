@@ -40,9 +40,9 @@ void init_audio_client(AudioClient *ac, Network *network) {
   ac->cached_music_volume = 2;  // should be immediately overwritten
 }
 
-r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx,
-                       SoundEffectId cur_effect_id,
-                       SoundEffectId loop_effect_id) {
+bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx,
+                     SoundEffectId cur_effect_id,
+                     SoundEffectId loop_effect_id) {
   if (ac->arm_send_slot.sending) {
     return FALSE;
   }
@@ -61,7 +61,7 @@ r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx,
   return TRUE;
 }
 
-r_bool ac_change_volume(AudioClient *ac, uint8_t stream_idx, uint8_t volume) {
+bool ac_change_volume(AudioClient *ac, uint8_t stream_idx, uint8_t volume) {
   if (ac->avm_send_slot.sending) {
     return FALSE;
   }
@@ -78,7 +78,7 @@ r_bool ac_change_volume(AudioClient *ac, uint8_t stream_idx, uint8_t volume) {
   return TRUE;
 }
 
-r_bool ac_send_music_control(AudioClient *ac, int8_t advance) {
+bool ac_send_music_control(AudioClient *ac, int8_t advance) {
   if (ac->mcm_send_slot.sending) {
     return FALSE;
   }

@@ -38,9 +38,9 @@ typedef struct s_audio_client {
 } AudioClient;
 
 void init_audio_client(AudioClient *ac, Network *network);
-r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx,
-                       SoundToken cur_token, SoundToken loop_token);
-// r_bool ac_queue_loop_clip(AudioClient *ac, uint8_t stream_idx, SoundToken
+bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx, SoundToken cur_token,
+                     SoundToken loop_token);
+// bool ac_queue_loop_clip(AudioClient *ac, uint8_t stream_idx, SoundToken
 // loop_token);
-r_bool ac_change_volume(AudioClient *ac, uint8_t stream_id, uint8_t mlvolume);
-r_bool ac_send_music_control(AudioClient *ac, int8_t advance);
+bool ac_change_volume(AudioClient *ac, uint8_t stream_id, uint8_t mlvolume);
+bool ac_send_music_control(AudioClient *ac, int8_t advance);

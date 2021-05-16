@@ -21,8 +21,8 @@
 #include "core/rulos.h"
 
 void hal_init_spi();
-void hal_spi_set_fast(r_bool fast);
-void hal_spi_select_slave(r_bool select);
+void hal_spi_set_fast(bool fast);
+void hal_spi_select_slave(bool select);
 void hal_spi_set_handler(HALSPIHandler *handler);
 
 void hal_spi_send(uint8_t data);

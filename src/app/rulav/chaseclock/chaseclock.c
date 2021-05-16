@@ -49,7 +49,7 @@ typedef struct {
   uint8_t hour;
   uint8_t min;
   uint8_t sec;
-  r_bool pm;
+  bool pm;
   Day day;
   uint8_t date;
   Month month;

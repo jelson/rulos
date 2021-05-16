@@ -57,7 +57,7 @@ void hal_init_spi() {
   hal_spi_set_fast(FALSE);
 }
 
-void hal_spi_set_fast(r_bool fast) {
+void hal_spi_set_fast(bool fast) {
 // defs atmega328p page 174
 #define FOSC4 0
 #define FOSC16 1
@@ -88,7 +88,7 @@ void hal_spi_set_fast(r_bool fast) {
   SPSR = (fast ? (SBIT(FAST, 2) << SPI2X) : (SBIT(SLOW, 2) << SPI2X));
 }
 
-void hal_spi_select_slave(r_bool select) { gpio_set_or_clr(SPI_SS, !select); }
+void hal_spi_select_slave(bool select) { gpio_set_or_clr(SPI_SS, !select); }
 
 void hal_spi_set_handler(HALSPIHandler *handler) { g_spi_handler = handler; }
 

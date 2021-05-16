@@ -53,14 +53,14 @@ typedef struct {
   Time wheels_next_move_time;
 
   // taillight
-  r_bool tail_on;
+  bool tail_on;
   Time tail_next_toggle_time;
 } BikeState_t;
 
 BikeState_t bike;
 
 void bike_sleep();
-void bike_wake(BikeState_t* bike);
+void bike_wake(BikeState_t *bike);
 
 ISR(INT0_vect) { bike_wake(&bike); }
 
@@ -106,12 +106,12 @@ static void shift_in_one_config(uint8_t sevbit_addr, uint8_t led_number) {
   usi_twi_master_send(sevbit_addr, buf, 4);
 }
 
-static void shift_in_config(BikeState_t* bike) {
+static void shift_in_config(BikeState_t *bike) {
   shift_in_one_config(L_WHEEL_ADDR, bike->light_on_l);
   shift_in_one_config(R_WHEEL_ADDR, bike->light_on_r);
 }
 
-static void bike_update(BikeState_t* bike) {
+static void bike_update(BikeState_t *bike) {
   schedule_us(JIFFY_TIME_US, (ActivationFuncPtr)bike_update, bike);
   Time now = clock_time_us();
 
@@ -149,7 +149,7 @@ static void bike_update(BikeState_t* bike) {
   }
 }
 
-void bike_wake(BikeState_t* bike) {
+void bike_wake(BikeState_t *bike) {
   // Stop generating INT0 interrupts.
   GIMSK &= ~(_BV(INT0));
 

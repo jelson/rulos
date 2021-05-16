@@ -39,8 +39,8 @@
 #define TIMEOUT_WHILE_OFF_US (1000000 * 1)   // 1 sec
 
 typedef struct {
-  r_bool light1_on;
-  r_bool light2_on;
+  bool light1_on;
+  bool light2_on;
   DebouncedButton_t but1;
   DebouncedButton_t but2;
   Time shutdown_time;
@@ -53,7 +53,7 @@ static void set_timeout(DuktigState_t *duktig, Time timeout) {
 // Set the power state of the toy.  Power on means turn on power to
 // both the power gate and the LED driver's output enable (which is
 // active low).
-static void set_power(r_bool onoff) {
+static void set_power(bool onoff) {
   if (onoff) {
     gpio_make_output(POWER_GATE);
     gpio_set(POWER_GATE);
@@ -107,8 +107,8 @@ static void shift_in_config(DuktigState_t *duktig) {
 static void duktig_update(DuktigState_t *duktig) {
   schedule_us(JIFFY_TIME_US, (ActivationFuncPtr)duktig_update, duktig);
 
-  r_bool but1_pushed = debounce_button(&(duktig->but1), gpio_is_set(BUT1));
-  r_bool but2_pushed = debounce_button(&(duktig->but2), gpio_is_set(BUT2));
+  bool but1_pushed = debounce_button(&(duktig->but1), gpio_is_set(BUT1));
+  bool but2_pushed = debounce_button(&(duktig->but2), gpio_is_set(BUT2));
 
   if (but1_pushed) {
     duktig->light1_on = !duktig->light1_on;

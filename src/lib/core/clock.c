@@ -218,7 +218,7 @@ void scheduler_run_once() {
     ActivationRecord act;
     int rc;
 
-    r_bool valid = FALSE;
+    bool valid = FALSE;
 
 #ifdef TIMING_DEBUG
     gpio_set(GPIO_D6);

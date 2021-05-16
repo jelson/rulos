@@ -40,7 +40,7 @@ static int8_t quad_state_machine[16] = {
 };
 
 void qk_update(QuadKnob *qk) {
-  r_bool c0, c1;
+  bool c0, c1;
 #if SIM
   c0 = 0;
   c1 = 0;

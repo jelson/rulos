@@ -41,7 +41,7 @@ typedef struct {
   Time wheels_next_move_time;
 
   // taillight
-  r_bool tail_on;
+  bool tail_on;
   Time tail_next_toggle_time;
 } BikeState_t;
 
@@ -57,7 +57,7 @@ static inline void clock() {
 // This function shifts 16 bits into the two 16-bit latches. They have
 // separate data lines, but share a clock line, so in each cycle we set both
 // data lines separately and then effectively clock them together.
-static void shift_in_config(BikeState_t* bike) {
+static void shift_in_config(BikeState_t *bike) {
   gpio_clr(LED_DRIVER_LE);
   gpio_clr(LED_DRIVER_CLK);
 
@@ -80,7 +80,7 @@ static void shift_in_config(BikeState_t* bike) {
   gpio_clr(LED_DRIVER_SDI_R);
 }
 
-static void bike_update(BikeState_t* bike) {
+static void bike_update(BikeState_t *bike) {
   schedule_us(JIFFY_TIME_US, (ActivationFuncPtr)bike_update, bike);
   Time now = clock_time_us();
 

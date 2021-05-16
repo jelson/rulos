@@ -20,14 +20,14 @@
 
 void remote_debug(char *msg);
 
-static inline r_bool is_quiescent(int16_t value) {
+static inline bool is_quiescent(int16_t value) {
   return (value > -G_QUIESCENT && value < G_QUIESCENT);
 }
 
 static inline TiltyInputState accel_to_state(Vect3D *accel) {
-  r_bool qx = is_quiescent(accel->x);
-  r_bool qy = is_quiescent(accel->y);
-  r_bool qz = is_quiescent(accel->z);
+  bool qx = is_quiescent(accel->x);
+  bool qy = is_quiescent(accel->y);
+  bool qz = is_quiescent(accel->z);
 
   if (qx && qy && accel->z > G_GRAVITY) {
     return ti_neutral;

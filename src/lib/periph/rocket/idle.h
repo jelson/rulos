@@ -31,7 +31,7 @@
 typedef struct s_idle_act {
   UIEventHandler *handlers[MAX_IDLE_HANDLERS];
   uint8_t num_handlers;
-  r_bool nowactive;
+  bool nowactive;
   Time last_touch;
 } IdleAct;
 

@@ -49,7 +49,7 @@ typedef struct s_ddockact {
   ThrusterPayload thrusterPayload;
   BoardBuffer auxboards[2];
   uint8_t auxboard_base;
-  r_bool docking_complete;
+  bool docking_complete;
   AudioClient *audioClient;
   Booster *booster;
   JoystickState_t *joystick;

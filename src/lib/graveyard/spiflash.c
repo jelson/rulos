@@ -43,7 +43,7 @@ void init_spiflash(SPIFlash *spif) {
   hal_end_atomic(old_interrupts);
 }
 
-r_bool spiflash_next_buffer_ready(SPIFlash *spif) {
+bool spiflash_next_buffer_ready(SPIFlash *spif) {
   rulos_irq_state_t old_interrupts = hal_start_atomic();
   SPIBuffer *spib = spif->spibuf[1 - spif->cur_buf_index];
   hal_end_atomic(old_interrupts);

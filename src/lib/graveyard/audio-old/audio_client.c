@@ -42,8 +42,8 @@ void init_audio_client(AudioClient *ac, Network *network) {
   ambient_noise_init(&ac->ambient_noise, ac);
 }
 
-r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx,
-                       SoundToken cur_token, SoundToken loop_token) {
+bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx, SoundToken cur_token,
+                     SoundToken loop_token) {
   if (ac->arm_send_slot.sending) {
     return FALSE;
   }
@@ -63,7 +63,7 @@ r_bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx,
 }
 
 #if 0  // unused
-r_bool ac_queue_loop_clip(AudioClient *ac, uint8_t stream_idx, SoundToken loop_token)
+bool ac_queue_loop_clip(AudioClient *ac, uint8_t stream_idx, SoundToken loop_token)
 {
 	if (ac->sendSlot.sending)
 	{
@@ -83,7 +83,7 @@ r_bool ac_queue_loop_clip(AudioClient *ac, uint8_t stream_idx, SoundToken loop_t
 }
 #endif
 
-r_bool ac_change_volume(AudioClient *ac, uint8_t stream_id, uint8_t mlvolume) {
+bool ac_change_volume(AudioClient *ac, uint8_t stream_id, uint8_t mlvolume) {
   if (ac->avm_send_slot.sending) {
     return FALSE;
   }
@@ -100,7 +100,7 @@ r_bool ac_change_volume(AudioClient *ac, uint8_t stream_id, uint8_t mlvolume) {
   return TRUE;
 }
 
-r_bool ac_send_music_control(AudioClient *ac, int8_t advance) {
+bool ac_send_music_control(AudioClient *ac, int8_t advance) {
   if (ac->mcm_send_slot.sending) {
     return FALSE;
   }

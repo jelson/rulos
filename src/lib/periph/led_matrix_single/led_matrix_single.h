@@ -10,7 +10,7 @@ typedef struct {
 typedef struct {
   LMSBitmap bitmap;
   uint8_t row;
-  r_bool pwm_enable;
+  bool pwm_enable;
 } LEDMatrixSingle;
 
 void led_matrix_single_init(LEDMatrixSingle *lms, uint8_t timer_id);
@@ -18,4 +18,4 @@ void lms_configure_row(uint8_t rowdata);
 void lms_configure_col(uint16_t coldata);
 void lms_configure(uint8_t rowdata, uint16_t coldata);
 void lms_draw(LEDMatrixSingle *lms, LMSBitmap *bitmap);
-void lms_enable(LEDMatrixSingle *lms, r_bool enable);
+void lms_enable(LEDMatrixSingle *lms, bool enable);

@@ -21,10 +21,10 @@
 #include <fcntl.h>
 #include <sched.h>
 #include <signal.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -42,7 +42,7 @@
 
 /********************** uart output simulator *********************/
 
-r_bool sim_uart_keystroke_handler(char k);
+bool sim_uart_keystroke_handler(char k);
 static void uart_simulator_input(int c);
 static void uart_simulator_stop();
 static void draw_uart_input_window();
@@ -53,7 +53,7 @@ char recent_uart_buf[40];
 static hal_uart_receive_cb uart_recv_cb = NULL;
 static void *uart_user_data = NULL;
 
-void hal_uart_init(uint8_t uart_id, uint32_t baud, r_bool stop2,
+void hal_uart_init(uint8_t uart_id, uint32_t baud, bool stop2,
                    void *user_data /* for both rx and tx upcalls */,
                    uint16_t *max_tx_len /* OUT */) {
   *max_tx_len = 3;
@@ -77,7 +77,7 @@ static void uart_simulator_start() {
   draw_uart_input_window();
 }
 
-r_bool sim_uart_keystroke_handler(char c) {
+bool sim_uart_keystroke_handler(char c) {
   switch (c) {
     case 'u':
       uart_simulator_start();
@@ -167,7 +167,7 @@ void sim_uart_recv(void *data)
 	}
 }
 
-void hal_uart_init(HalUart* handler, uint32_t baud, r_bool stop2,
+void hal_uart_init(HalUart* handler, uint32_t baud, bool stop2,
                    uint8_t uart_id)
 {
 	handler->uart_id = uart_id;

@@ -39,7 +39,7 @@ typedef struct s_pong {
   int paddley[2];
   int score[2];
   Time lastScore;
-  r_bool focused;
+  bool focused;
   AudioClient *audioClient;
 } Pong;
 

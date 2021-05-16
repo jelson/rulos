@@ -50,7 +50,7 @@ void _volume_input(InputInjectorIfc *ii, Keystroke key) {
 void _volume_update(VolumeControl *vc) {
 #if DISPLAY_VOLUME_ADJUSTMENTS
   Time elapsed = clock_time_us() - vc->lastTouch;
-  r_bool display_should_be_visible =
+  bool display_should_be_visible =
       (elapsed > 0 && elapsed < VOLUME_DISPLAY_PERSISTENCE);
   if (vc->visible && !display_should_be_visible) {
     board_buffer_pop(&vc->bbuf);
@@ -67,8 +67,8 @@ void _volume_update(VolumeControl *vc) {
     str[3] = 'u';
     str[4] = 'm';
     str[5] = 'e';
-    str[6] = '0' + (vc->cur_vol/10);
-    str[7] = '0' + (vc->cur_vol%10);
+    str[6] = '0' + (vc->cur_vol / 10);
+    str[7] = '0' + (vc->cur_vol % 10);
     ascii_to_bitmap_str(vc->bbuf.buffer, 8, str);
     board_buffer_draw(&vc->bbuf);
   }

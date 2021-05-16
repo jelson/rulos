@@ -33,7 +33,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 void audioled_init();
-void audioled_set(r_bool red, r_bool yellow);
+void audioled_set(bool red, bool yellow);
 //////////////////////////////////////////////////////////////////////////////
 
 #define AUDIO_LED_RED GPIO_D2
@@ -50,7 +50,7 @@ void audioled_init() {
 #endif  // SIM
 }
 
-void audioled_set(r_bool red, r_bool yellow) {
+void audioled_set(bool red, bool yellow) {
 #ifndef SIM
   gpio_set_or_clr(AUDIO_LED_RED, !red);
   gpio_set_or_clr(AUDIO_LED_YELLOW, !yellow);

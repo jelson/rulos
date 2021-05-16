@@ -49,7 +49,7 @@ typedef struct s_volume_control {
 
 #if DISPLAY_VOLUME_ADJUSTMENTS
   Time lastTouch;
-  r_bool visible;
+  bool visible;
   uint8_t boardnum;
   BoardBuffer bbuf;
 #endif  // DISPLAY_VOLUME_ADJUSTMENTS

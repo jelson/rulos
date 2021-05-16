@@ -156,9 +156,9 @@ void fill_value(uint8_t *dst, uint32_t src) {
 
 void sdcard_readmore(SDCard *sdc);
 
-r_bool sdc_start_transaction(SDCard *sdc, uint32_t offset, uint8_t *buffer,
-                             uint16_t buflen, ActivationFuncPtr done_func,
-                             void *done_data) {
+bool sdc_start_transaction(SDCard *sdc, uint32_t offset, uint8_t *buffer,
+                           uint16_t buflen, ActivationFuncPtr done_func,
+                           void *done_data) {
   if (sdc->transaction_open) {
     SYNCDEBUG();
     return FALSE;
@@ -195,7 +195,7 @@ void sdcard_readmore(SDCard *sdc) {
   sdc->done_rec.func(sdc->done_rec.data);
 }
 
-r_bool sdc_is_error(SDCard *sdc) { return sdc->error; }
+bool sdc_is_error(SDCard *sdc) { return sdc->error; }
 
 void sdc_continue_transaction(SDCard *sdc, uint8_t *buffer, uint16_t buflen,
                               ActivationFuncPtr done_func, void *done_data) {

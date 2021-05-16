@@ -195,7 +195,7 @@ void sensor_interrupt_register_handler(Handler handler, void *data) {
 
 typedef struct {
   MediaStateIfc media;
-  r_bool initted;
+  bool initted;
   MediaRecvSlot *mrs;
   int udp_socket;
 } SimTwiState;

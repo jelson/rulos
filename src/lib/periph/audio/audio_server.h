@@ -47,11 +47,11 @@ typedef struct s_audio_server {
   AudioEffectsStream audio_stream[AUDIO_NUM_STREAMS];
   int8_t active_stream;
 
-  FATFS fatfs;   // Filesystem state for (globally-shared) FAT fs.
+  FATFS fatfs;  // Filesystem state for (globally-shared) FAT fs.
 
-  int16_t music_file_count; // How many music files we found on the filesystem
-  int16_t music_offset;     // Which one we should play next.
-  r_bool music_random_seeded;   // On every boot, begin disco at a random song
+  int16_t music_file_count;  // How many music files we found on the filesystem
+  int16_t music_offset;      // Which one we should play next.
+  bool music_random_seeded;  // On every boot, begin disco at a random song
 } AudioServer;
 
 void init_audio_server(AudioServer *as, Network *network, uint8_t timer_id);

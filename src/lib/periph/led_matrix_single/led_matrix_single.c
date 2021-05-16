@@ -152,7 +152,7 @@ void lms_update(LEDMatrixSingle *lms) {
     // note that we draw a row's red and its green right after each
     // other, rather than a red frame and a row frame. That looks much
     // less flickery.
-    r_bool do_green = lms->row & 1;
+    bool do_green = lms->row & 1;
     uint8_t actual_row = lms->row >> 1;
 
     gpio_set(LMS_OUTPUT_ENABLE_INV);
@@ -179,14 +179,14 @@ void lms_update(LEDMatrixSingle *lms) {
 // (painting LCD), to avoid a stuck pixel.
 // (Could split LCD paint into multiple continuations,
 // or make LMS timer-driven, but no.
-void lms_enable(LEDMatrixSingle *lms, r_bool enable) {
+void lms_enable(LEDMatrixSingle *lms, bool enable) {
   gpio_set_or_clr(LMS_OUTPUT_ENABLE_INV, !enable);
 }
 #else  //! SIM
 void led_matrix_single_init(LEDMatrixSingle *lms, uint8_t timer_id) {}
 void lms_configure_row(uint8_t rowdata) {}
 void lms_configure_col(uint16_t coldata) {}
-void lms_enable(LEDMatrixSingle *lms, r_bool enable) {}
+void lms_enable(LEDMatrixSingle *lms, bool enable) {}
 
 #endif  //! SIM
 

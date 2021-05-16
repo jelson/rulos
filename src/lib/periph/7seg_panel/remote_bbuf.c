@@ -42,7 +42,7 @@ void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network) {
 #if NUM_REMOTE_BOARDS > 0
   memset(rbs->offscreen, 0, NUM_REMOTE_BOARDS * NUM_DIGITS * sizeof(SSBitmap));
 #endif
-  memset(rbs->changed, FALSE, NUM_REMOTE_BOARDS * sizeof(r_bool));
+  memset(rbs->changed, FALSE, NUM_REMOTE_BOARDS * sizeof(bool));
   rbs->last_index = 0;
 
   schedule_us(1, (ActivationFuncPtr)rbs_update, rbs);

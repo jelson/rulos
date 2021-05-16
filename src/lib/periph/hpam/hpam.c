@@ -107,7 +107,7 @@ void hpam_update(HPAM *hpam) {
   }
 }
 
-void hpam_set_port(HPAM *hpam, HPAMIndex idx, r_bool status) {
+void hpam_set_port(HPAM *hpam, HPAMIndex idx, bool status) {
   assert(0 <= idx && idx < HPAM_END);
 
   HPAMPort *port = &hpam->hpam_ports[idx];
@@ -156,7 +156,7 @@ void hpam_set_port(HPAM *hpam, HPAMIndex idx, r_bool status) {
 #endif  // SIM
 }
 
-r_bool hpam_get_port(HPAM *hpam, HPAMIndex idx) {
+bool hpam_get_port(HPAM *hpam, HPAMIndex idx) {
   assert(0 <= idx && idx < HPAM_END);
 
   HPAMPort *port = &hpam->hpam_ports[idx];

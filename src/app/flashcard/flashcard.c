@@ -30,8 +30,8 @@
 #include "periph/led_matrix_single/led_matrix_single.h"
 #include "periph/rocket/rocket.h"
 #include "periph/sdcard/sdcard.h"
-#include "periph/uart/uart.h"
 #include "periph/uart/linereader.h"
+#include "periph/uart/uart.h"
 
 #if !SIM
 #include "core/hardware.h"
@@ -173,8 +173,8 @@ void _lma_update(LMAnimation *lma) {
 typedef struct s_problem_set ProblemSet;
 typedef void(select_f)(ProblemSet *ps, uint8_t *operands,
                        uint8_t *problem_reference);
-typedef r_bool(check_f)(ProblemSet *ps, uint8_t problem_reference,
-                        uint8_t answer);
+typedef bool(check_f)(ProblemSet *ps, uint8_t problem_reference,
+                      uint8_t answer);
 
 struct s_problem_set {
   select_f *select;
@@ -186,7 +186,7 @@ struct s_problem_set {
 };
 
 void _problem_set_init(ProblemSet *ps, select_f *select, check_f *check,
-                       char operator_, uint8_t num_problems, r_bool storage) {
+                       char operator_, uint8_t num_problems, bool storage) {
   ps->select = select;
   ps->check = check;
   ps->operator_ = operator_;
@@ -208,7 +208,7 @@ uint8_t problem_select(ProblemSet *ps) {
   // SYNCDEBUG();
   for (idx = 0; idx < ps->num_problems; idx++) {
     // syncdebug(2, 'i', idx);
-    r_bool occupied = ((ps->bits[idx >> 3] & (1 << (7 - (idx & 7)))) != 0);
+    bool occupied = ((ps->bits[idx >> 3] & (1 << (7 - (idx & 7)))) != 0);
     // syncdebug(2, 'o', idx);
     // syncdebug(2, 'w', which_problem);
     if (!occupied) {
@@ -235,7 +235,7 @@ typedef struct {
   uint8_t bits[13];
 } TimesProblemSet;
 
-r_bool _times_check(ProblemSet *ps, uint8_t problem_reference, uint8_t answer);
+bool _times_check(ProblemSet *ps, uint8_t problem_reference, uint8_t answer);
 void _times_select(ProblemSet *ps, uint8_t *operands,
                    uint8_t *problem_reference);
 
@@ -256,12 +256,12 @@ void _times_select(ProblemSet *ps, uint8_t *operands,
   // SYNCDEBUG();
 }
 
-r_bool _times_check(ProblemSet *ps, uint8_t problem_reference, uint8_t answer) {
+bool _times_check(ProblemSet *ps, uint8_t problem_reference, uint8_t answer) {
   // SYNCDEBUG();
   uint8_t op0 = problem_reference / 10;
   uint8_t op1 = problem_reference - (op0 * 10);
 
-  r_bool result;
+  bool result;
   if (op0 * op1 != answer) {
     result = false;
   } else {
@@ -284,7 +284,7 @@ typedef struct {
   ProblemSet ps;
 } SumProblemSet;
 
-r_bool _sum_check(ProblemSet *ps, uint8_t problem_reference, uint8_t answer);
+bool _sum_check(ProblemSet *ps, uint8_t problem_reference, uint8_t answer);
 void _sum_select(ProblemSet *ps, uint8_t *operands, uint8_t *problem_reference);
 
 void sum_problem_set_init(SumProblemSet *sps) {
@@ -302,9 +302,9 @@ void _sum_select(ProblemSet *ps, uint8_t *operands,
   // SYNCDEBUG();
 }
 
-r_bool _sum_check(ProblemSet *ps, uint8_t problem_reference, uint8_t answer) {
+bool _sum_check(ProblemSet *ps, uint8_t problem_reference, uint8_t answer) {
   // SYNCDEBUG();
-  r_bool result;
+  bool result;
   if (answer != problem_reference) {
     result = false;
   } else {
@@ -318,7 +318,7 @@ r_bool _sum_check(ProblemSet *ps, uint8_t problem_reference, uint8_t answer) {
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-  r_bool game_over;
+  bool game_over;
   uint8_t num_incorrect;
   SumProblemSet sps;
   TimesProblemSet tps;
@@ -348,10 +348,10 @@ struct s_flashcard {
   uint8_t operand[2];
   uint8_t digit[2];
   uint8_t problem_reference;
-  r_bool displaying_result;
+  bool displaying_result;
   ProblemSet *curProblem;
   LMAnimation lma;
-  r_bool asking_reset;
+  bool asking_reset;
   uint8_t reset_answer;
 
   GameState game;
@@ -380,7 +380,7 @@ void flashcard_init(Flashcard *fl) {
 }
 
 void _flashcard_startup(Flashcard *fl) {
-  r_bool valid;
+  bool valid;
   if (fl->asking_reset) {
     SYNCDEBUG();
     // we got awoken by input loop.
@@ -541,8 +541,8 @@ void _fl_new_problem(Flashcard *fl) {
   fl->displaying_result = false;
 
   SYNCDEBUG();
-  r_bool sum_empty = (fl->game.sps.ps.num_problems_left == 0);
-  r_bool times_empty = (fl->game.tps.ps.num_problems_left == 0);
+  bool sum_empty = (fl->game.sps.ps.num_problems_left == 0);
+  bool times_empty = (fl->game.tps.ps.num_problems_left == 0);
   if (sum_empty && times_empty) {
     SYNCDEBUG();
     // Display victory and spinning star
@@ -589,8 +589,8 @@ void _flashcard_enter(Flashcard *fl) {
   syncdebug(2, 'd', digit_value(fl->digit[1]));
   syncdebug(3, 'd', digit_value(fl->digit[0]));
   syncdebug(3, 'l', _fl_num_problems_left(fl));
-  r_bool correct = (fl->curProblem->check)(
-      fl->curProblem, fl->problem_reference, entered_value);
+  bool correct = (fl->curProblem->check)(fl->curProblem, fl->problem_reference,
+                                         entered_value);
   if (correct) {
     _flashcard_paint(fl, "W");
     fl->lma.mode = lma_green_disc;
@@ -710,11 +710,11 @@ void ledwalk_update(LEDWalk *lw)
 typedef struct {
 	InputInjectorIfc iii;
 	InputPollerAct ipoll;
-	r_bool oe;
-	r_bool data;
-	r_bool clock;
-	r_bool lec;
-	r_bool ler;
+	bool oe;
+	bool data;
+	bool clock;
+	bool lec;
+	bool ler;
 } LEDPoke;
 
 void _ledpoke_handler(InputInjectorIfc *iii, char key);
@@ -778,7 +778,7 @@ void shell_init(Shell *shell, Flashcard *fl) {
 }
 
 void shell_func(void *data, char *line) {
-  Shell *shell = (Shell*)data;
+  Shell *shell = (Shell *)data;
 
 #if !SIM
   if (strncmp(line, "key", 3) == 0) {

@@ -25,7 +25,7 @@ extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 #define SYNCDEBUG() \
   { R_SYNCDEBUG(); }
 //#define SYNCDEBUG()	{}
-extern void audioled_set(r_bool red, r_bool yellow);
+extern void audioled_set(bool red, bool yellow);
 
 static void as_fill(AudioStreamer *as);
 
@@ -147,7 +147,7 @@ void as_3_loop(AudioStreamer *as) {
 
 void as_4_start_tx(AudioStreamer *as) {
   SYNCDEBUG();
-  r_bool rc =
+  bool rc =
       sdc_start_transaction(&as->sdc, as->block_address, as->ulawbuf, AO_BUFLEN,
                             (ActivationFuncPtr)as_5_more_frames, as);
 
@@ -195,9 +195,9 @@ void as_6_read_more(AudioStreamer *as) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-r_bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset,
-               uint32_t end_address, ActivationFuncPtr done_func,
-               void *done_data) {
+bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset,
+             uint32_t end_address, ActivationFuncPtr done_func,
+             void *done_data) {
   SYNCDEBUG();
   as->block_address = block_address;
   as->sector_offset = 0;

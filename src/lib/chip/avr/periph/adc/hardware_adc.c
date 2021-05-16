@@ -35,7 +35,7 @@
 // #define RAW_ADC
 
 typedef struct {
-  r_bool enable[NUM_ADCS];
+  bool enable[NUM_ADCS];
   volatile uint16_t value[NUM_ADCS];
   Time scan_period;
 } ADCState;
@@ -121,7 +121,7 @@ uint16_t hal_read_adc(uint8_t idx) {
 ///////// Hardware Interfacing //////////////////////////
 
 static void init_adc(ADCState *adc, Time scan_period) {
-  static r_bool initted = FALSE;
+  static bool initted = FALSE;
   if (initted) {
     // take the min of all requested periods
     if (scan_period < adc->scan_period) {

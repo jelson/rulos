@@ -38,7 +38,7 @@ void test_shortqueue() {
   while (TRUE) {
     if (deadbeef_rand() & 1) {
       if (deadbeef_rand() & 1) {
-        r_bool rc = shortQueue_append(sq, in);
+        bool rc = shortQueue_append(sq, in);
         if (rc) {
           LOG("in: %d", in);
           in++;
@@ -48,10 +48,10 @@ void test_shortqueue() {
       } else {
         short inbuf[2];
         inbuf[0] = in;
-        inbuf[1] = in+1;
-        r_bool rc = shortQueue_append_n(sq, inbuf, 2);
+        inbuf[1] = in + 1;
+        bool rc = shortQueue_append_n(sq, inbuf, 2);
         if (rc) {
-          LOG("in: %d, %d", in, in+1);
+          LOG("in: %d, %d", in, in + 1);
           in += 2;
         } else {
           LOG("n-full");
@@ -60,7 +60,7 @@ void test_shortqueue() {
 
     } else {
       short val;
-      r_bool rc = shortQueue_pop(sq, &val);
+      bool rc = shortQueue_pop(sq, &val);
       if (rc) {
         assert(val == out);
         LOG("        out: %d", out);

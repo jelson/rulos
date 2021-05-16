@@ -19,4 +19,4 @@
 #pragma once
 
 void audioled_init();
-void audioled_set(r_bool red, r_bool yellow);
+void audioled_set(bool red, bool yellow);

@@ -30,7 +30,6 @@
 
 #include "core/hardware.h"
 #include "periph/spi/hal_spi.h"
-
 #include "stm32f3xx_hal.h"
 #include "stm32f3xx_hal_gpio.h"
 #include "stm32f3xx_hal_rcc.h"
@@ -83,7 +82,7 @@ void hal_init_spi(void) {
   __HAL_SPI_ENABLE(&hspi);
 }
 
-void hal_spi_select_slave(r_bool select) {
+void hal_spi_select_slave(bool select) {
   gpio_set_or_clr(GPIO_CHIPSELECT, !select);
 }
 

@@ -28,7 +28,7 @@ extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 #define SYNCDEBUG() \
   {}
 
-void event_init(Event *evt, r_bool auto_reset) {
+void event_init(Event *evt, bool auto_reset) {
   evt->auto_reset = auto_reset;
   evt->signaled = false;
   evt->waiter_func = NULL;

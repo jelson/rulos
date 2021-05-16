@@ -23,18 +23,18 @@
 #include "core/clock.h"
 #include "core/rulos.h"
 
-void audioled_set(r_bool red, r_bool yellow);
+void audioled_set(bool red, bool yellow);
 
 void _um_send(MediaStateIfc *media, Addr dest_addr, const void *data,
               uint8_t len, MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
 
 void _um_recv_handler(struct s_HalUart *u, char c);
-r_bool _um_send_handler(struct s_HalUart *u, char *c /*OUT*/);
+bool _um_send_handler(struct s_HalUart *u, char *c /*OUT*/);
 
 MediaStateIfc *uart_media_init(UartMedia *um, MediaRecvSlot *mrs,
                                uint8_t uart_id) {
   //  um->uart_handler.send = _um_send_handler;
-  //um->uart_handler.recv = _um_recv_handler;
+  // um->uart_handler.recv = _um_recv_handler;
   um->uart_media_ptr.media.send = _um_send;
   um->uart_media_ptr.uart_media = um;
   um->send_which = US_none;
@@ -53,7 +53,7 @@ void _um_send_complete(UartMediaSendingPayload *usp) {
   }
 }
 
-r_bool _um_send_handler(struct s_HalUart *u, char *c /*OUT*/) {
+bool _um_send_handler(struct s_HalUart *u, char *c /*OUT*/) {
   UartMedia *um = (UartMedia *)u;
   if (um->send_which == US_packet) {
     (*c) = um->sending_payload.data[um->send_dataidx];

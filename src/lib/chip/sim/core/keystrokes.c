@@ -41,7 +41,7 @@ static void sim_curses_poll(void *data);
 
 static sim_special_input_handler_t sim_special_input_handler = NULL;
 static sim_input_handler_stop_t sim_input_handler_stop = NULL;
-static r_bool initted = false;
+static bool initted = false;
 
 #define MAX_HANDLERS 10
 static int keystroke_handler_count;

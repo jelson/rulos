@@ -51,7 +51,7 @@
 // -100 to 100: (cheating with Mathematica to help with the algebra)
 //   100scale = (80204 / adc) - 178
 
-static r_bool adc_to_100scale(uint16_t adc, int8_t *hscale_out) {
+static bool adc_to_100scale(uint16_t adc, int8_t *hscale_out) {
   // Values of < 100 correspond to resistances of over 300Kohm and
   // most likely are simply a disconnected joystick.
   if (adc < 100) {

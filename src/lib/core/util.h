@@ -18,7 +18,8 @@
 
 #pragma once
 
-#include <inttypes.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 #ifndef FALSE
 #define FALSE 0
@@ -27,10 +28,6 @@
 #ifndef TRUE
 #define TRUE 1
 #endif
-
-typedef uint8_t r_bool;
-// "r_bool" for ROCKET bool! ncurses and other libraries define
-// incompatible bools, so I want to avoid (rather than battle) collisions.
 
 void util_init();
 int32_t bound(int32_t v, int32_t l, int32_t h);

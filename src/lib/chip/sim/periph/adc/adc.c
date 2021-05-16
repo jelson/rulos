@@ -40,7 +40,7 @@
 
 #define NUM_ADC 6
 
-r_bool sim_adc_keystroke_handler(char k);
+bool sim_adc_keystroke_handler(char k);
 
 static WINDOW *adc_input_window = NULL;
 static int adc_input_channel = 0;
@@ -100,7 +100,7 @@ void hal_init_adc(Time scan_period) {
   sim_maybe_init_and_register_keystroke_handler(sim_adc_keystroke_handler);
 }
 
-r_bool sim_adc_keystroke_handler(char c) {
+bool sim_adc_keystroke_handler(char c) {
   switch (c) {
     case 'i':
       // Open modal ADC input dialog.

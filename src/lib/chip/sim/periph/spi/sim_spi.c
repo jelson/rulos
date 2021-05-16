@@ -44,7 +44,7 @@ typedef enum {
 } SimSpiState;
 
 typedef struct s_sim_spi {
-  r_bool initted;
+  bool initted;
   HALSPIHandler *spi_handler;
   FILE *fp;
   SimSpiState state;
@@ -65,9 +65,9 @@ void hal_init_spi() {
   sim_register_clock_handler(sim_spi_poll, NULL);
 }
 
-void hal_spi_set_fast(r_bool fast) {}
+void hal_spi_set_fast(bool fast) {}
 
-void hal_spi_select_slave(r_bool select) {
+void hal_spi_select_slave(bool select) {
   if (select) {
     g_spi.state = sss_ready;
   }

@@ -57,7 +57,7 @@ static HPAMIndex thruster_to_hpam(uint8_t thruster_num) {
   }
 }
 
-static void thruster_set(Launch *launch, uint8_t thruster_num, r_bool state) {
+static void thruster_set(Launch *launch, uint8_t thruster_num, bool state) {
 #if 0
   LOG("THR %d %s next %d", thruster_num, state ? "ON" : "OFF",
       launch->thrusterSpinnerPeriod);
@@ -126,7 +126,7 @@ void launch_configure_state(Launch *launch, LaunchState newState) {
     board_buffer_pop(&launch->dscrlmsg.bbuf);
   }
   launch->bigDigit.focused = FALSE;
-  r_bool need_s4_hide = TRUE;
+  bool need_s4_hide = TRUE;
 
   launch->state = newState;
 

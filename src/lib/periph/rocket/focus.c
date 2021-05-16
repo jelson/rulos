@@ -118,6 +118,6 @@ UIEventDisposition focus_input_handler(UIEventHandler *raw_handler,
   return result;
 }
 
-r_bool focus_is_active(FocusManager *act) {
+bool focus_is_active(FocusManager *act) {
   return (act->selectedChild != NO_CHILD) || (act->focusedChild != NO_CHILD);
 }

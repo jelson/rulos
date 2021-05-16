@@ -31,7 +31,7 @@ void drift_anim_init(DriftAnim *da, uint8_t expscale, int32_t initValue,
   da->base_time = clock_time_us();
 }
 
-int32_t _da_eval(DriftAnim *da, Time t, r_bool clip) {
+int32_t _da_eval(DriftAnim *da, Time t, bool clip) {
   int32_t dt = (t - da->base_time) / 1000;
   int32_t nv = da->base + ((da->velocity * dt) >> 10);
   int32_t res = bound(nv, da->min, da->max);
@@ -46,7 +46,7 @@ int32_t _da_eval(DriftAnim *da, Time t, r_bool clip) {
 
 int32_t da_read(DriftAnim *da) { return da_read_clip(da, 0, FALSE); }
 
-int32_t da_read_clip(DriftAnim *da, uint8_t scale, r_bool clip) {
+int32_t da_read_clip(DriftAnim *da, uint8_t scale, bool clip) {
   return _da_eval(da, clock_time_us(), clip) >> (da->expscale - scale);
 }
 

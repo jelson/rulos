@@ -25,6 +25,6 @@
 // checksum-protected eeprom record
 void eeprom_write(uint8_t *buf, int len);
 
-r_bool eeprom_read(uint8_t *buf, int len);
+bool eeprom_read(uint8_t *buf, int len);
 // returns whether checksum/magic worked. Writes buf either way,
 // so if you get false, better initialize buf yourself.

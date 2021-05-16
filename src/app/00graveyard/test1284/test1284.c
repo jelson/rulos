@@ -117,7 +117,7 @@ void blink_init(BlinkAct *ba) {
 
 typedef struct {
   SerialConsole console;
-  r_bool toggle;
+  bool toggle;
   GLCD *glcd;
 } Shell;
 

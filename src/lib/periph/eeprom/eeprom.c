@@ -63,7 +63,7 @@ void eeprom_write(uint8_t *buf, int len) {
   eeprom_write_word((void *)(EEPROM_BASE + 2 + len), checksum);
 }
 
-r_bool eeprom_read(uint8_t *buf, int len) {
+bool eeprom_read(uint8_t *buf, int len) {
   uint16_t magic = eeprom_read_word((void *)EEPROM_BASE);
   syncdebug(1, 'm', magic);
   if (magic != EEPROM_MAGIC) {

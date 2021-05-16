@@ -50,7 +50,7 @@ char *idx_to_name(HPAMIndex idx) {
 typedef struct {
   JoystickState_t js;
   int8_t dir;
-  r_bool btn;
+  bool btn;
   uint8_t idx;
   ThrusterUpdate *tu;
   HPAM hpam;
@@ -85,7 +85,7 @@ void ht_update(HTAct *ht) {
     }
     ht->dir = new_dir;
   }
-  r_bool new_btn = (ht->js.state & JOYSTICK_STATE_TRIGGER) != 0;
+  bool new_btn = (ht->js.state & JOYSTICK_STATE_TRIGGER) != 0;
   if (new_btn != ht->btn) {
     if (!ht->btn) {
       hpam_set_port(&ht->hpam, ht->idx, !hpam_get_port(&ht->hpam, ht->idx));

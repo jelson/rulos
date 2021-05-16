@@ -35,7 +35,7 @@
 
 typedef struct {
   // written by measurement func; read by display func
-  r_bool last_wave_positive;
+  bool last_wave_positive;
   Time lastPhase;
   Time curPhase;
   Time lastPeriod;
@@ -43,7 +43,7 @@ typedef struct {
   char debug_display_on;
   char debug_reverse;
 
-  r_bool visible;
+  bool visible;
 
   uint8_t message[POV_DISPLAY_WIDTH];
 } PovAct;
@@ -52,6 +52,6 @@ void pov_init(PovAct *povAct);
 void pov_measure(PovAct *povAct);
 void pov_display(PovAct *povAct);
 void pov_write(PovAct *povAct, char *msg);
-void pov_set_visible(PovAct *povAct, r_bool visible);
+void pov_set_visible(PovAct *povAct, bool visible);
 
 void pov_paint(uint8_t bitmap);

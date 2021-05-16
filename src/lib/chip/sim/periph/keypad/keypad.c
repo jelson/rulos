@@ -39,10 +39,10 @@
 
 /************ keypad simulator *********************/
 
-r_bool sim_keypad_keystroke_handler(char c);
+bool sim_keypad_keystroke_handler(char c);
 char translate_to_keybuf(char c);
 
-r_bool g_keypad_enabled = FALSE;
+bool g_keypad_enabled = FALSE;
 char keypad_buf[10];
 CharQueue *keypad_q = (CharQueue *)keypad_buf;
 
@@ -53,7 +53,7 @@ void hal_init_keypad() {
   sim_maybe_init_and_register_keystroke_handler(sim_keypad_keystroke_handler);
 }
 
-r_bool sim_keypad_keystroke_handler(char c) {
+bool sim_keypad_keystroke_handler(char c) {
   char k;
   if ((k = translate_to_keybuf(c)) != 0) {
     CharQueue_append(keypad_q, k);

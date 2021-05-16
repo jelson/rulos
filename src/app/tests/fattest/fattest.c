@@ -27,7 +27,7 @@ UartState_t uart;
 char fatbuf[4096];
 FIL f;
 
-static void read_4meg_file(r_bool validate) {
+static void read_4meg_file(bool validate) {
   if (f_open(&f, "4meg.bin", FA_OPEN_EXISTING | FA_READ) != FR_OK) {
     LOG("can't open 1meg");
     __builtin_trap();

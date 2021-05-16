@@ -209,7 +209,7 @@ static void maybe_net_send_next_message_down(Network *net);
 static void net_send_done_cb(void *user_data);
 
 // External visible API from above to launch a packet.
-r_bool net_send_message(Network *net, SendSlot *sendSlot) {
+bool net_send_message(Network *net, SendSlot *sendSlot) {
 #if 0
   LOG("netstack: queueing %d-byte payload to %d:%d (0x%x:0x%x)",
       sendSlot->msg->payload_len, sendSlot->dest_addr, sendSlot->msg->dest_port,
@@ -217,7 +217,7 @@ r_bool net_send_message(Network *net, SendSlot *sendSlot) {
 #endif
 
   assert(sendSlot->sending == FALSE);
-  r_bool fit = SendSlotPtrQueue_append(SendQueue(net), sendSlot);
+  bool fit = SendSlotPtrQueue_append(SendQueue(net), sendSlot);
   maybe_net_send_next_message_down(net);
   return fit;
 }
@@ -226,7 +226,7 @@ r_bool net_send_message(Network *net, SendSlot *sendSlot) {
 static void maybe_net_send_next_message_down(Network *net) {
   // Get the next sendSlot out of our queue.  Return if none.
   SendSlot *sendSlot;
-  r_bool rc = SendSlotPtrQueue_peek(SendQueue(net), &sendSlot);
+  bool rc = SendSlotPtrQueue_peek(SendQueue(net), &sendSlot);
 
   if (rc == FALSE) {
     return;
@@ -263,7 +263,7 @@ static void maybe_net_send_next_message_down(Network *net) {
 static void net_send_done_cb(void *user_data) {
   Network *net = (Network *)user_data;
   SendSlot *sendSlot;
-  r_bool rc = SendSlotPtrQueue_pop(SendQueue(net), &sendSlot);
+  bool rc = SendSlotPtrQueue_pop(SendQueue(net), &sendSlot);
 
   assert(rc);
   assert(sendSlot->sending == TRUE);

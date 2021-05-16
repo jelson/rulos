@@ -214,8 +214,8 @@ static int8_t quad_state_machine[16] = {
 static void quadrature_handler(Quadrature *quad) {
   schedule_us(QUADRATURE_PERIOD, (ActivationFuncPtr)quadrature_handler, quad);
 
-  r_bool c0 = hal_read_adc(OPT0_ADC_CHANNEL) > quad->threshhold;
-  r_bool c1 = hal_read_adc(OPT1_ADC_CHANNEL) > quad->threshhold;
+  bool c0 = hal_read_adc(OPT0_ADC_CHANNEL) > quad->threshhold;
+  bool c1 = hal_read_adc(OPT1_ADC_CHANNEL) > quad->threshhold;
   uint8_t newState = (c1 << 1) | c0;
   uint8_t transition = (quad->oldState << 2) | newState;
   int8_t delta = quad_state_machine[transition];
@@ -240,7 +240,7 @@ typedef struct s_config {
 #define CONFIG_MAGIC 0xc3
 void config_read_eeprom(Config *config);
 
-r_bool init_config(Config *config) {
+bool init_config(Config *config) {
   config_read_eeprom(config);
 
   if (config->magic != CONFIG_MAGIC || !READ_BUTTON(SET_BTN))
@@ -340,7 +340,7 @@ void init_control(ControlAct *ctl) {
   gpio_set(LED2);
 
   init_quadrature(&ctl->quad);
-  r_bool valid = init_config(&ctl->config);
+  bool valid = init_config(&ctl->config);
   if (valid) {
     ctl->quad.sign = ctl->config.quadSign;
     ctl->mode = cm_run;
@@ -377,7 +377,7 @@ static void control_servo_from_pan(ControlAct *ctl) {
 static uint8_t control_run_mode(ControlAct *ctl) {
   Time now = clock_time_us();
   Time since_movement = now - ctl->last_movement_time;
-  r_bool idle;
+  bool idle;
   if (since_movement < 0) {
     // deal with clock wraparound -- preserve idleness
     ctl->last_movement_time = now - IDLE_TIME - 1;
@@ -389,8 +389,8 @@ static uint8_t control_run_mode(ControlAct *ctl) {
   }
 
   uint16_t new_pos = config_clip(&ctl->config, &ctl->quad);
-  r_bool significant_movement = new_pos <= ctl->last_position - IGNORE_THRESH ||
-                                ctl->last_position + IGNORE_THRESH <= new_pos;
+  bool significant_movement = new_pos <= ctl->last_position - IGNORE_THRESH ||
+                              ctl->last_position + IGNORE_THRESH <= new_pos;
 
   if (!idle || significant_movement) {
     if (significant_movement) {
@@ -531,7 +531,7 @@ static UIEventDisposition control_handler(
 /****************************************************************************/
 
 typedef struct s_btn_act {
-  r_bool lastState;
+  bool lastState;
   Time lastStateTime;
   UIEventHandler *handler;
 } ButtonAct;
@@ -551,7 +551,7 @@ void init_button(ButtonAct *button, UIEventHandler *handler) {
 void button_update(ButtonAct *button) {
   schedule_us(BUTTON_SCAN_PERIOD, (ActivationFuncPtr)button_update, button);
 
-  r_bool buttondown = READ_BUTTON(SET_BTN);
+  bool buttondown = READ_BUTTON(SET_BTN);
 
   if (buttondown == button->lastState) {
     return;
@@ -571,7 +571,7 @@ void button_update(ButtonAct *button) {
 /****************************************************************************/
 
 typedef struct s_blink_act {
-  r_bool state;
+  bool state;
 } BlinkAct;
 
 void blink_update(BlinkAct *act) {

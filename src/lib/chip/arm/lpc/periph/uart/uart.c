@@ -76,7 +76,7 @@ static void init_pins() {
 #endif
 }
 
-void hal_uart_init(HalUart *hal_uart, uint32_t baud, r_bool stop2,
+void hal_uart_init(HalUart *hal_uart, uint32_t baud, bool stop2,
                    uint8_t uart_id) {
   assert(uart_id < NUM_UARTS);
 

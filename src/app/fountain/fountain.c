@@ -29,8 +29,8 @@
 
 typedef struct {
   DebouncedButton_t button;
-  r_bool fountain_on;
-  r_bool fountain_fast;
+  bool fountain_on;
+  bool fountain_fast;
   Time fountain_slowdown_time;
   Time fountain_stop_time;
 } FountainState_t;
@@ -42,7 +42,7 @@ void hal_fountain_init() {}
 int button_counter = 0;
 int down = 0;
 
-r_bool hal_button_pressed() {
+bool hal_button_pressed() {
   if (++button_counter == 400) {
     down = !down;
     button_counter = 0;
@@ -76,7 +76,7 @@ void hal_fountain_init() {
   gpio_make_output(PUMP);
 }
 
-r_bool hal_button_pressed() { return gpio_is_set(BUTTON); }
+bool hal_button_pressed() { return gpio_is_set(BUTTON); }
 
 #ifdef PWM
 void activate_pwm(int duty_cycle_percent) {
@@ -115,7 +115,7 @@ void hal_stop_pump() {
 
 #endif  // SIM
 
-void start_fountain(FountainState_t* f) {
+void start_fountain(FountainState_t *f) {
   f->fountain_on = TRUE;
   f->fountain_fast = TRUE;
   f->fountain_slowdown_time =
@@ -125,12 +125,12 @@ void start_fountain(FountainState_t* f) {
   hal_start_pump();
 }
 
-void stop_fountain(FountainState_t* f) {
+void stop_fountain(FountainState_t *f) {
   f->fountain_on = FALSE;
   hal_stop_pump();
 }
 
-static void fountain_update(FountainState_t* f) {
+static void fountain_update(FountainState_t *f) {
   schedule_us(JIFFY_TIME_US, (ActivationFuncPtr)fountain_update, f);
 
   // If we've finished fast-mode, slow down the pump.
@@ -147,7 +147,7 @@ static void fountain_update(FountainState_t* f) {
   }
 
   // Debounce the button and determine if we just experienced a button press.
-  r_bool button_pressed = debounce_button(&f->button, hal_button_pressed());
+  bool button_pressed = debounce_button(&f->button, hal_button_pressed());
 
   if (!button_pressed) {
     return;

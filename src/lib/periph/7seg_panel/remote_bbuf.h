@@ -34,7 +34,7 @@ typedef struct s_remote_bbuf_send {
   SendSlot sendSlot;
   struct s_remote_bbuf_send *send_this;
   SSBitmap offscreen[NUM_REMOTE_BOARDS][NUM_DIGITS];
-  r_bool changed[NUM_REMOTE_BOARDS];
+  bool changed[NUM_REMOTE_BOARDS];
   uint8_t last_index;
 } RemoteBBufSend;
 

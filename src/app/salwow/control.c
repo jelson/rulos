@@ -39,7 +39,7 @@ void _control_set_rudder(Control *ctl, RudderRequest req) {
   }
 }
 
-void control_set_motor_state(Control *ctl, r_bool onoff) {
+void control_set_motor_state(Control *ctl, bool onoff) {
   motors_set_power(&ctl->motors, onoff ? MOTOR_POWER : 0);
   leds_green(onoff);
 }

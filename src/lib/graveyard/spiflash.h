@@ -48,5 +48,5 @@ typedef struct s_spiflash {
 } SPIFlash;
 
 void init_spiflash(SPIFlash *spif);
-r_bool spiflash_next_buffer_ready(SPIFlash *spif);
+bool spiflash_next_buffer_ready(SPIFlash *spif);
 void spiflash_fill_buffer(SPIFlash *spif, SPIBuffer *spib);

@@ -368,7 +368,7 @@ void sampleLocator2(locatorAct_t *aa, char *data, int len) {
   accel->y = convert_accel(data[2], data[3]);
   accel->z = convert_accel(data[4], data[5]);
 
-  r_bool wave_positive = accel->x > 0;
+  bool wave_positive = accel->x > 0;
   char dbg_zcross = '_';
   if (!(aa->pov_act.last_wave_positive) && wave_positive) {
     // zero-crossing.

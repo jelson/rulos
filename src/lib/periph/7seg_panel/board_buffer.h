@@ -51,7 +51,7 @@ void board_buffer_push(BoardBuffer *buf, int board);
 void board_buffer_set_alpha(BoardBuffer *buf, uint8_t alpha);
 void board_buffer_draw(BoardBuffer *buf);
 uint8_t board_buffer_is_foreground(BoardBuffer *buf);
-r_bool board_buffer_is_stacked(BoardBuffer *buf);
+bool board_buffer_is_stacked(BoardBuffer *buf);
 
 // internal method used by remote_bbuf:
 void board_buffer_paint(SSBitmap *bm, uint8_t board_index, uint8_t mask);

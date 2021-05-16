@@ -21,13 +21,13 @@
 #include "core/clock.h"
 #include "core/util.h"
 
-void debounce_button_init(DebouncedButton_t* b, Time refrac_time_us) {
+void debounce_button_init(DebouncedButton_t *b, Time refrac_time_us) {
   b->is_pressed = FALSE;
   b->refrac_time_us = refrac_time_us;
   b->next_valid_push_time = clock_time_us();
 }
 
-r_bool debounce_button(DebouncedButton_t* b, r_bool raw_is_down) {
+bool debounce_button(DebouncedButton_t *b, bool raw_is_down) {
   Time now = clock_time_us();
 
   // If we're already past the allowed-key-time, advance it to the present.

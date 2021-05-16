@@ -38,8 +38,8 @@ typedef struct {
   SPICmd spic;
   BunchaClocks bunchaClocks;
   uint8_t read_cmdseq[6];
-  r_bool transaction_open;
-  r_bool error;
+  bool transaction_open;
+  bool error;
   ActivationRecord done_rec;
 } SDCard;
 
@@ -47,12 +47,12 @@ void sdc_init(SDCard *sdc);
 
 void sdc_reset_card(SDCard *sdc, ActivationFuncPtr done_func, void *done_data);
 
-r_bool sdc_start_transaction(SDCard *sdc, uint32_t offset, uint8_t *buffer,
-                             uint16_t buflen, ActivationFuncPtr done_func,
-                             void *done_data);
+bool sdc_start_transaction(SDCard *sdc, uint32_t offset, uint8_t *buffer,
+                           uint16_t buflen, ActivationFuncPtr done_func,
+                           void *done_data);
 // FALSE if sdc was busy.
 
-r_bool sdc_is_error(SDCard *sdc);
+bool sdc_is_error(SDCard *sdc);
 // only valid during a transaction.
 
 void sdc_continue_transaction(SDCard *sdc, uint8_t *buffer, uint16_t buflen,

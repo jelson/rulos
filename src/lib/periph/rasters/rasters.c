@@ -83,7 +83,7 @@ void raster_paint_pixel(RectRegion *rrect, int x, int y) {
   raster_paint_pixel_v(rrect, x, y, TRUE);
 }
 
-void raster_paint_pixel_v(RectRegion *rrect, int x, int y, r_bool on) {
+void raster_paint_pixel_v(RectRegion *rrect, int x, int y, bool on) {
   int maj_x = int_div_with_correct_truncation(x, 4);
   int min_x = x - (maj_x * 4);
   int maj_y = int_div_with_correct_truncation(y, 6);

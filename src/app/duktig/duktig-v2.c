@@ -24,7 +24,6 @@
 #include "core/hardware.h"
 #include "core/rulos.h"
 #include "core/util.h"
-
 #include "stm32g0xx_hal_rcc.h"
 #include "stm32g0xx_ll_exti.h"
 #include "stm32g0xx_ll_pwr.h"
@@ -39,7 +38,7 @@
 
 #define JIFFY_TIME_US 10000
 #define KEY_REFRACTORY_TIME_US 10000
-#define TIMEOUT_WHILE_ON_US (1000000 * 120) // 120 sec
+#define TIMEOUT_WHILE_ON_US (1000000 * 120)  // 120 sec
 #define PWRLED_BLINK_TIME_US 250000
 
 // Low-power mode fun of the stm32g0!
@@ -99,8 +98,8 @@
 
 #define USE_SHUTDOWN 1
 
-#define LIGHT_OFF  0
-#define LIGHT_LOW  1
+#define LIGHT_OFF 0
+#define LIGHT_LOW 1
 #define LIGHT_HIGH 2
 
 typedef struct {
@@ -110,7 +109,7 @@ typedef struct {
   DebouncedButton_t but2;
   Time shutdown_time;
 
-  r_bool pwrled_on;
+  bool pwrled_on;
   int pwrled_count;
   Time pwrled_next_transition;
 } DuktigState_t;
@@ -152,8 +151,8 @@ void power_down() {
 
   HAL_PWR_EnterSTANDBYMode();
   // SHUTDOWN: not available on the stm32g0x0
-  //HAL_PWREx_EnterSHUTDOWNMode();
-#else  // USE_SHUTDOWN
+  // HAL_PWREx_EnterSHUTDOWNMode();
+#else   // USE_SHUTDOWN
   HAL_SuspendTick();
   HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_STOPENTRY_WFI);
   HAL_ResumeTick();
@@ -172,8 +171,8 @@ static void duktig_update(DuktigState_t *duktig) {
   schedule_us(JIFFY_TIME_US, (ActivationFuncPtr)duktig_update, duktig);
 
   // sample the buttons
-  r_bool but1_pushed = debounce_button(&duktig->but1, gpio_is_clr(BUT1));
-  r_bool but2_pushed = debounce_button(&duktig->but2, gpio_is_clr(BUT2));
+  bool but1_pushed = debounce_button(&duktig->but1, gpio_is_clr(BUT1));
+  bool but2_pushed = debounce_button(&duktig->but2, gpio_is_clr(BUT2));
 
   // If we've reached the light-on timeout, turn off the lights
   if (later_than(clock_time_us(), duktig->shutdown_time)) {
@@ -190,8 +189,8 @@ static void duktig_update(DuktigState_t *duktig) {
   }
 
   const bool but_pushed = but1_pushed || but2_pushed;
-  const bool light_on = duktig->light1_state != LIGHT_OFF ||
-    duktig->light2_state != LIGHT_OFF;
+  const bool light_on =
+      duktig->light1_state != LIGHT_OFF || duktig->light2_state != LIGHT_OFF;
 
   // If a light was just turned on, set the timeout to turn it back off
   if (but_pushed && light_on) {
@@ -240,35 +239,35 @@ void TIM3_IRQHandler() {
   }
 
   switch (duktig.light1_state) {
-  case LIGHT_OFF:
-    gpio_clr(LED1);
-    break;
-  case LIGHT_HIGH:
-    gpio_set(LED1);
-    break;
-  case LIGHT_LOW:
-    if (refresh_count == 0) {
-      gpio_set(LED1);
-    } else {
+    case LIGHT_OFF:
       gpio_clr(LED1);
-    }
-    break;
+      break;
+    case LIGHT_HIGH:
+      gpio_set(LED1);
+      break;
+    case LIGHT_LOW:
+      if (refresh_count == 0) {
+        gpio_set(LED1);
+      } else {
+        gpio_clr(LED1);
+      }
+      break;
   }
 
   switch (duktig.light2_state) {
-  case LIGHT_OFF:
-    gpio_clr(LED2);
-    break;
-  case LIGHT_HIGH:
-    gpio_set(LED2);
-    break;
-  case LIGHT_LOW:
-    if (refresh_count == 0) {
-      gpio_set(LED2);
-    } else {
+    case LIGHT_OFF:
       gpio_clr(LED2);
-    }
-    break;
+      break;
+    case LIGHT_HIGH:
+      gpio_set(LED2);
+      break;
+    case LIGHT_LOW:
+      if (refresh_count == 0) {
+        gpio_set(LED2);
+      } else {
+        gpio_clr(LED2);
+      }
+      break;
   }
 }
 

@@ -188,6 +188,6 @@ uint8_t board_buffer_is_foreground(BoardBuffer *buf) {
           foreground[buf->board_index] == buf);
 }
 
-r_bool board_buffer_is_stacked(BoardBuffer *buf) {
+bool board_buffer_is_stacked(BoardBuffer *buf) {
   return buf->board_index != BBUF_UNMAPPED_INDEX;
 }
