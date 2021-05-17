@@ -5,7 +5,8 @@
 #include <string.h>
 
 uint8_t split(char *s, uint8_t *index /*OUT*/, uint8_t index_size);
-void _gpsinput_process_sentence(void *user_data, char *sentence);
+void _gpsinput_process_sentence(UartState_t *uart, void *user_data,
+                                char *sentence);
 bool _parse_ddm(char *s, float *out);
 char *_index(char *s, char c);
 float _atofi(char *s);
@@ -37,7 +38,8 @@ uint8_t split(char *s, uint8_t *index /*OUT*/, uint8_t index_size) {
   return ii;
 }
 
-void _gpsinput_process_sentence(void *user_data, char *sentence) {
+void _gpsinput_process_sentence(UartState_t *uart, void *user_data,
+                                char *sentence) {
   GPSInput *gpsi = (GPSInput *)user_data;
 #ifndef SIM
 #define INVALID(m) \

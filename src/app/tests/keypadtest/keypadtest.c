@@ -18,11 +18,11 @@
 
 #include "core/rulos.h"
 #include "periph/7seg_panel/7seg_panel.h"
-#include "periph/uart/uart.h"
 #include "periph/uart/linereader.h"
+#include "periph/uart/uart.h"
 
-/************************************************************************************/
-/************************************************************************************/
+/***********************************************************************/
+/***********************************************************************/
 
 typedef struct {
   BoardBuffer bbuf_k;
@@ -45,7 +45,7 @@ void add_char_to_bbuf(BoardBuffer *bbuf, char c, UartState_t *uart) {
   LOG(out);
 }
 
-static void uart_line_received(void *data, char *line) {
+static void uart_line_received(UartState_t *uart, void *data, char *line) {
   KeyTestActivation_t *kta = (KeyTestActivation_t *)data;
 
   LOG("got uart line: '%s'", line);
@@ -95,7 +95,7 @@ int main() {
   KeyTestActivation_t kta;
   uart_init(&kta.uart, /*uart_id=*/0, 38400, true);
   log_bind_uart(&kta.uart);
-  linereader_init(&kta.linereader, &kta.uart, uart_line_received, &kta)
+  linereader_init(&kta.linereader, &kta.uart, uart_line_received, &kta);
   LOG(TEST_STR);
 
   board_buffer_init(&kta.bbuf_k);

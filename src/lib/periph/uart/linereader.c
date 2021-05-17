@@ -59,7 +59,7 @@ static void _lines_complete(void *data) {
     if (i < len) {
       s[i] = '\0';
       i++;
-      l->cb(l->user_data, curr_string_start);
+      l->cb(l->uart, l->user_data, curr_string_start);
     } else {
       // No EOL found. stop.
       break;
@@ -87,6 +87,7 @@ void linereader_init(LineReader_t *l, UartState_t *uart, linereader_cb cb,
                      void *user_data) {
   assert(cb != NULL);
   memset(l, 0, sizeof(*l));
+  l->uart = uart;
   l->cb = cb;
   l->user_data = user_data;
   CharQueue_init(&l->rx_queue.q, sizeof(l->rx_queue));

@@ -766,7 +766,7 @@ typedef struct {
   uint16_t coldata;
 } Shell;
 
-void shell_func(Shell *shell);
+void shell_func(UartState_t *uart, void *data, char *line);
 
 void shell_init(Shell *shell, Flashcard *fl) {
   uart_init(&shell->uart, 0, 38400, true);
@@ -777,7 +777,7 @@ void shell_init(Shell *shell, Flashcard *fl) {
   SYNCDEBUG();
 }
 
-void shell_func(void *data, char *line) {
+void shell_func(UartState_t *uart, void *data, char *line) {
   Shell *shell = (Shell *)data;
 
 #if !SIM

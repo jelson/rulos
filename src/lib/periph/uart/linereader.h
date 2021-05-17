@@ -25,7 +25,7 @@
 // into complete lines (terminated by \r or \n), and produces user-context
 // upcalls of each complete line received.
 
-typedef void (*linereader_cb)(void *user_data, char *line);
+typedef void (*linereader_cb)(UartState_t *uart, void *user_data, char *line);
 
 #ifndef UART_RX_QUEUE_LEN
 #define UART_RX_QUEUE_LEN 128
@@ -36,6 +36,7 @@ typedef struct {
     char storage[sizeof(CharQueue) + UART_RX_QUEUE_LEN];
     CharQueue q;
   } rx_queue;
+  UartState_t *uart;
   linereader_cb cb;
   void *user_data;
   uint8_t upcall_pending_len;

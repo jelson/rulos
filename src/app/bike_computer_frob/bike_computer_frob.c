@@ -124,7 +124,7 @@ typedef struct {
   BlinkAct ba;
 } Shell;
 
-void shell_func(void *data, char *line);
+void shell_func(UartState_t *uart, void *data, char *line);
 void print_func(Shell *shell);
 
 void shell_init(Shell *shell) {
@@ -154,7 +154,7 @@ void print_func(Shell *shell) {
   print32(REV_HALF_PERIOD);
 }
 
-void shell_func(void *data, char *line) {
+void shell_func(UartState_t *uart, void *data, char *line) {
   Shell *shell = (Shell *)data;
 
   if (strncmp(line, "per ", 4) == 0) {

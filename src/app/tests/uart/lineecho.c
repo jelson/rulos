@@ -18,14 +18,14 @@
 
 #include "core/hardware.h"
 #include "core/rulos.h"
-#include "periph/uart/uart.h"
 #include "periph/uart/linereader.h"
+#include "periph/uart/uart.h"
 
-UartState_t uart;
-LineReader_t linereader;
+UartState_t uart, gps_uart;
+LineReader_t linereader, gps_linereader;
 int i = 0;
 
-static void line_received(void *user_data, char *line) {
+static void line_received(UartState_t *uart, void *user_data, char *line) {
   //  if (i % 10 == 0) {
 #if 0
   if (true) {
@@ -35,17 +35,25 @@ static void line_received(void *user_data, char *line) {
   }
   i++;
 #else
-  LOG("got line %d: '%s'", i++, line);
+  LOG("uart %d got line %d: '%s'", uart->uart_id, i++, line);
 #endif
 }
+
+#define USE_GPS 1
 
 int main() {
   hal_init();
 
   uart_init(&uart, /* uart_id= */ 0, 38400, true);
   log_bind_uart(&uart);
-  linereader_init(&linereader, &uart, line_received, NULL);
-  LOG("lineecho up and running!");
+  linereader_init(&linereader, &uart, line_received, &uart);
+  LOG("lineecho up and running");
+
+#ifdef USE_GPS
+  uart_init(&gps_uart, /* uart_id= */ 4, 9600, true);
+  linereader_init(&gps_linereader, &gps_uart, line_received, &gps_uart);
+  LOG("reading from gps too!");
+#endif
 
   init_clock(10000, TIMER1);
 
