@@ -30,6 +30,8 @@
 #include "core/hardware.h"
 #include "core/logging.h"
 
+static void dispatch_int(USART_TypeDef *instance, uint8_t uart_id);
+
 //////////////////////////////////////////////////////////////////////////////
 
 /// Configuration
@@ -126,8 +128,67 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .tx_dma_request = DMA_REQUEST_USART1_TX,
         .altfunc = GPIO_AF1_USART1,
     },
+    {
+        .instance = USART2,
+        .instance_irqn = USART2_LPUART2_IRQn,
+        .rx_port = GPIOA,
+        .rx_pin = GPIO_PIN_3,
+        .tx_port = GPIOA,
+        .tx_pin = GPIO_PIN_2,
+        .tx_dma_chan = DMA1_Channel2,
+        .tx_dma_irqn = DMA1_Channel2_3_IRQn,  // note, no irqhandler yet
+        .tx_dma_request = DMA_REQUEST_USART2_TX,
+        .altfunc = GPIO_AF1_USART2,
+    },
+    {
+        .instance = USART3,
+        .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
+        .rx_port = GPIOA,
+        .rx_pin = GPIO_PIN_10,
+        .tx_port = GPIOA,
+        .tx_pin = GPIO_PIN_9,
+        .tx_dma_chan = DMA1_Channel3,
+        .tx_dma_irqn = DMA1_Channel2_3_IRQn,  // note, no irqhandler yet
+        .tx_dma_request = DMA_REQUEST_USART3_TX,
+        .altfunc = GPIO_AF4_USART3,
+    },
+    {
+        .instance = USART4,
+        .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
+        .rx_port = GPIOA,
+        .rx_pin = GPIO_PIN_1,
+        .tx_port = GPIOA,
+        .tx_pin = GPIO_PIN_2,
+        .tx_dma_chan = DMA1_Channel4,
+        .tx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
+        .tx_dma_request = DMA_REQUEST_USART4_TX,
+        .altfunc = GPIO_AF4_USART4,
+    },
+    {
+        .instance = USART5,
+        .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
+        .rx_port = GPIOB,
+        .rx_pin = GPIO_PIN_1,
+        .tx_port = GPIOB,
+        .tx_pin = GPIO_PIN_0,
+        .tx_dma_chan = DMA1_Channel5,
+        .tx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
+        .tx_dma_request = DMA_REQUEST_USART5_TX,
+        .altfunc = GPIO_AF8_USART5,
+    },
 };
 #define rUART1_DMA_TX_IRQHandler DMA1_Channel1_IRQHandler
+
+void USART2_LPUART2_IRQHandler(void) {
+  dispatch_int(USART2, 1);
+}
+
+void USART3_4_5_6_LPUART1_IRQHandler(void) {
+  dispatch_int(USART3, 2);
+  dispatch_int(USART4, 3);
+  dispatch_int(USART5, 4);
+  dispatch_int(USART6, 5);
+}
 
 ///////////// stm32g4
 
@@ -160,6 +221,8 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 #endif
 
 typedef struct {
+  bool initted;
+
   // HAL API: the upcall to get more data and the user data for that callback
   uint8_t uart_id;
   hal_uart_receive_cb rx_cb;
@@ -178,7 +241,7 @@ typedef struct {
 
 // Eventually this should be conditional depending on what kind of
 // chip you have
-#define NUM_UARTS 1
+#define NUM_UARTS (sizeof(stm32_uart_config) / sizeof(stm32_uart_config[0]))
 static stm32_uart_t g_stm32_uarts[NUM_UARTS] = {};
 
 ///// DMA interrupt handlers
@@ -220,6 +283,9 @@ void rUART6_DMA_TX_IRQHandler(void) {
 
 static void dispatch_int(USART_TypeDef *instance, uint8_t uart_id) {
   stm32_uart_t *u = &g_stm32_uarts[uart_id];
+  if (!u->initted) {
+    return;
+  }
 
   // dispatch rx upcall, if needed -- not handled through the HAL
   if (LL_USART_IsActiveFlag_RXNE(instance) &&
@@ -236,36 +302,9 @@ static void dispatch_int(USART_TypeDef *instance, uint8_t uart_id) {
   HAL_UART_IRQHandler(&u->hal_uart_handle);
 }
 
-#ifdef USART1
 void USART1_IRQHandler(void) {
   dispatch_int(USART1, 0);
 }
-#endif
-#ifdef USART2
-void USART2_IRQHandler(void) {
-  dispatch_int(USART2, 1);
-}
-#endif
-#ifdef USART3
-void USART3_IRQHandler(void) {
-  dispatch_int(USART2, 2);
-}
-#endif
-#ifdef USART4
-void USART4_IRQHandler(void) {
-  dispatch_int(USART2, 3);
-}
-#endif
-#ifdef USART5
-void USART5_IRQHandler(void) {
-  dispatch_int(USART2, 4);
-}
-#endif
-#ifdef USART6
-void USART6_IRQHandler(void) {
-  dispatch_int(USART2, 5);
-}
-#endif
 
 /////// transmission
 
@@ -335,6 +374,7 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud, bool stop2,
   assert(uart_id < NUM_UARTS);
   stm32_uart_t *uart = &g_stm32_uarts[uart_id];
   const stm32_uart_config_t *config = &stm32_uart_config[uart_id];
+  uart->initted = true;
   uart->uart_id = uart_id;
   uart->user_data = user_data;
   *max_tx_len = 65535;
