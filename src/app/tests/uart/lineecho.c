@@ -45,7 +45,7 @@ int main() {
   uart_init(&uart, /* uart_id= */ 0, 38400, true);
   log_bind_uart(&uart);
   linereader_init(&linereader, &uart, line_received, NULL);
-  LOG("lineecho up and running");
+  LOG("lineecho up and running!");
 
   init_clock(10000, TIMER1);
 

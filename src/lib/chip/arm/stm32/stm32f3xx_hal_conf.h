@@ -85,10 +85,6 @@ extern "C" {
 #define HAL_USART_MODULE_ENABLED
 #define HAL_WWDG_MODULE_ENABLED
 
-    
-// rulos-local changes
-#define USE_HAL_UART_REGISTER_CALLBACKS 1
-// end rulos-local changes
 
 /* ########################## HSE/HSI Values adaptation ##################### */
 /**

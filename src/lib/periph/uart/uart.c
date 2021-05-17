@@ -143,6 +143,7 @@ void uart_flush(UartState_t *u) {
 
 void uart_init(UartState_t *u, uint8_t uart_id, uint32_t baud, bool stop2) {
   memset(u, 0, sizeof(*u));
+  u->uart_id = uart_id;
   CharQueue_init(&u->tx_queue.q, sizeof(u->tx_queue));
   hal_uart_init(uart_id, baud, stop2, u, &u->max_tx_len);
   u->initted = true;

@@ -22,8 +22,10 @@ from BuildRules import *
 
 for testprog in ["send", "charecho", "lineecho"]:
     for chip in [
+            "stm32f103x8",
+            "stm32f031x6",
         #    "stm32g031x8",
-            "stm32f303xb",
+            "stm32f303x8",
             "stm32g431x8",
         ]:
         RulosBuildTarget(

@@ -189,7 +189,7 @@ static void SystemClock_Config(void) {
   RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV1;
 #endif
 
-  RCC_OscInitStruct.PLL.PLLN = 8; // multiplier
+  RCC_OscInitStruct.PLL.PLLN = 8;  // multiplier
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
 
 #if defined(RCC_PLLQ_SUPPORT)
@@ -224,71 +224,67 @@ static void SystemClock_Config(void) {
 }
 #elif defined(RULOS_ARM_stm32g4)
 /**
-  * @brief  System Clock Configuration
-  *         The system Clock is configured as follow :
-  *            System Clock source            = PLL (HSI)
-  *            SYSCLK(Hz)                     = 170000000
-  *            HCLK(Hz)                       = 170000000
-  *            AHB Prescaler                  = 1
-  *            APB1 Prescaler                 = 1
-  *            APB2 Prescaler                 = 1
-  *            HSI Frequency(Hz)              = 16000000
-  *            PLL_M                          = 4
-  *            PLL_N                          = 85
-  *            PLL_P                          = 2
-  *            PLL_Q                          = 2
-  *            PLL_R                          = 2
-  *            Flash Latency(WS)              = 8
-  * @param  None
-  * @retval None
-  */
+ * @brief  System Clock Configuration
+ *         The system Clock is configured as follow :
+ *            System Clock source            = PLL (HSI)
+ *            SYSCLK(Hz)                     = 170000000
+ *            HCLK(Hz)                       = 170000000
+ *            AHB Prescaler                  = 1
+ *            APB1 Prescaler                 = 1
+ *            APB2 Prescaler                 = 1
+ *            HSI Frequency(Hz)              = 16000000
+ *            PLL_M                          = 4
+ *            PLL_N                          = 85
+ *            PLL_P                          = 2
+ *            PLL_Q                          = 2
+ *            PLL_R                          = 2
+ *            Flash Latency(WS)              = 8
+ * @param  None
+ * @retval None
+ */
 #ifndef RULOS_USE_HSE
-  #define RULOS_PLLM RCC_PLLM_DIV4
-  #define RULOS_PLLN 85
+#define RULOS_PLLM RCC_PLLM_DIV4
+#define RULOS_PLLN 85
 #endif
-static void SystemClock_Config(void)
-{
+static void SystemClock_Config(void) {
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
 
   /* Enable voltage range 1 boost mode for frequency above 150 Mhz */
   __HAL_RCC_PWR_CLK_ENABLE();
   HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1_BOOST);
-  __HAL_RCC_PWR_CLK_DISABLE();
 
   /* Activate PLL with HSI as source */
 #ifdef RULOS_USE_HSE
-  RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState            = RCC_HSE_ON;
-  RCC_OscInitStruct.PLL.PLLSource       = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
 #else
-  RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.HSIState            = RCC_HSI_ON;
-  RCC_OscInitStruct.PLL.PLLSource       = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
 #endif
-  RCC_OscInitStruct.PLL.PLLState        = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLM            = RULOS_PLLM;
-  RCC_OscInitStruct.PLL.PLLN            = RULOS_PLLN;
-  RCC_OscInitStruct.PLL.PLLP            = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ            = RCC_PLLQ_DIV2;
-  RCC_OscInitStruct.PLL.PLLR            = RCC_PLLR_DIV2;
-  if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLM = RULOS_PLLM;
+  RCC_OscInitStruct.PLL.PLLN = RULOS_PLLN;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
+  RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
     /* Initialization Error */
     __builtin_trap();
   }
 
   /* Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2
      clocks dividers */
-  RCC_ClkInitStruct.ClockType           = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | \
-                                           RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
-  RCC_ClkInitStruct.SYSCLKSource        = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider       = RCC_HCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider      = RCC_HCLK_DIV1;
-  RCC_ClkInitStruct.APB2CLKDivider      = RCC_HCLK_DIV1;
-  if(HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_8) != HAL_OK)
-  {
+  RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK |
+                                 RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_8) != HAL_OK) {
     /* Initialization Error */
     __builtin_trap();
   }
@@ -331,9 +327,26 @@ void hal_init() {
 #ifdef __HAL_RCC_GPIOG_CLK_ENABLE
   __HAL_RCC_GPIOG_CLK_ENABLE();
 #endif
+#ifdef __HAL_RCC_DMA1_CLK_ENABLE
+  __HAL_RCC_DMA1_CLK_ENABLE();
+#endif
+#ifdef __HAL_RCC_DMA2_CLK_ENABLE
+  __HAL_RCC_DMA2_CLK_ENABLE();
+#endif
+#ifdef __HAL_RCC_DMAMUX1_CLK_ENABLE
+  __HAL_RCC_DMAMUX1_CLK_ENABLE();
+#endif
+#ifdef __HAL_RCC_SYSCFG_CLK_ENABLE
+  __HAL_RCC_SYSCFG_CLK_ENABLE();
+#endif
+#ifdef __HAL_RCC_AFIO_CLK_ENABLE
+  __HAL_RCC_AFIO_CLK_ENABLE();
+#endif
 }
 
-uint32_t arm_hal_get_clock_rate() { return HAL_RCC_GetSysClockFreq(); }
+uint32_t arm_hal_get_clock_rate() {
+  return HAL_RCC_GetSysClockFreq();
+}
 
 static void* g_timer_data = NULL;
 static Handler g_timer_handler = NULL;

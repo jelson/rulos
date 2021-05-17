@@ -32,114 +32,104 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
+/// Configuration
+
+typedef struct {
+  USART_TypeDef *instance;
+  uint32_t instance_irqn;
+  GPIO_TypeDef *rx_port;
+  uint32_t rx_pin;
+  GPIO_TypeDef *tx_port;
+  uint32_t tx_pin;
+  DMA_Channel_TypeDef *tx_dma_chan;
+  uint32_t tx_dma_request;
+  uint32_t tx_dma_irqn;
+  uint32_t altfunc;
+} stm32_uart_config_t;
+
+///////////// stm32f0
+
 #if defined(RULOS_ARM_stm32f0)
 
-#define rUART1_TX_PORT GPIOA
-#define rUART1_TX_PIN GPIO_PIN_9
-// CLK_ENABLE must match port above
-#define rUART1_TX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
-
-// RX, TX can also be put on B7, B6 as remap pins
-#define rUART1_RX_PORT GPIOA
-#define rUART1_RX_PIN GPIO_PIN_10
-// CLK_ENABLE must match port above
-#define rUART1_RX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
-
-#define rUART1_GPIO_ALTFUNC GPIO_AF1_USART1
-
-#define rUART1_DMA_TX_CHAN DMA1_Channel2
-#define rUART1_DMA_TX_IRQn DMA1_Channel2_3_IRQn
+#include "stm32f0xx_ll_usart.h"
+static const stm32_uart_config_t stm32_uart_config[] = {
+    {
+        .instance = USART1,
+        .instance_irqn = USART1_IRQn,
+        .rx_port = GPIOA,
+        .rx_pin = GPIO_PIN_10,
+        .tx_port = GPIOA,
+        .tx_pin = GPIO_PIN_9,
+        .tx_dma_chan = DMA1_Channel2,
+        .tx_dma_irqn = DMA1_Channel2_3_IRQn,
+        .altfunc = GPIO_AF1_USART1,
+    },
+};
 #define rUART1_DMA_TX_IRQHandler DMA1_Channel2_3_IRQHandler
 
-//#define rUART1_DMA_RX_CHAN DMA1_Channel3
-//#define rUART1_DMA_RX_IRQn DMA1_Channel2_3_IRQn
-//#define rUART1_DMA_RX_IRQHandler DMA1_Channel2_3_IRQHandler
-
-// CLK_ENABLE must match DMA unit above
-#define rUART1_DMA_CLK_ENABLE() __HAL_RCC_DMA1_CLK_ENABLE()
+///////////// stm32f1
 
 #elif defined(RULOS_ARM_stm32f1)
 
-#define rUART1_TX_PORT GPIOA
-#define rUART1_TX_PIN GPIO_PIN_9
-// CLK_ENABLE must match port above
-#define rUART1_TX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
-
-// RX, TX can also be put on B7, B6 as remap pins
-#define rUART1_RX_PORT GPIOA
-#define rUART1_RX_PIN GPIO_PIN_10
-// CLK_ENABLE must match port above
-#define rUART1_RX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
-
-#define rUART1_DMA_TX_CHAN DMA1_Channel4
-#define rUART1_DMA_TX_IRQn DMA1_Channel4_IRQn
+#include "stm32f1xx_ll_usart.h"
+static const stm32_uart_config_t stm32_uart_config[] = {
+    {
+        .instance = USART1,
+        .instance_irqn = USART1_IRQn,
+        .rx_port = GPIOA,
+        .rx_pin = GPIO_PIN_10,
+        .tx_port = GPIOA,
+        .tx_pin = GPIO_PIN_9,
+        .tx_dma_chan = DMA1_Channel4,
+        .tx_dma_irqn = DMA1_Channel4_IRQn,
+    },
+};
 #define rUART1_DMA_TX_IRQHandler DMA1_Channel4_IRQHandler
 
-//#define rUART1_DMA_RX_CHAN DMA1_Channel5
-//#define rUART1_DMA_RX_IRQn DMA1_Channel5_IRQn
-//#define rUART1_DMA_RX_IRQHandler DMA1_Channel5_IRQHandler
-
-// CLK_ENABLE must match DMA unit above
-#define rUART1_DMA_CLK_ENABLE() __HAL_RCC_DMA1_CLK_ENABLE()
+///////////// stm32f3
 
 #elif defined(RULOS_ARM_stm32f3)
 
 #include "stm32f3xx_ll_usart.h"
-
-#define rUART1_TX_PORT GPIOA
-#define rUART1_TX_PIN GPIO_PIN_9
-// CLK_ENABLE must match port above
-#define rUART1_TX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
-
-// RX, TX can also be put on B7, B6 or C5, C4
-#define rUART1_RX_PORT GPIOA
-#define rUART1_RX_PIN GPIO_PIN_10
-// CLK_ENABLE must match port above
-#define rUART1_RX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
-
-#define rUART1_GPIO_ALTFUNC GPIO_AF7_USART1
-
-#define rUART1_DMA_TX_CHAN DMA1_Channel4
-#define rUART1_DMA_TX_IRQn DMA1_Channel4_IRQn
+static const stm32_uart_config_t stm32_uart_config[] = {
+    {
+        .instance = USART1,
+        .instance_irqn = USART1_IRQn,
+        .rx_port = GPIOA,
+        .rx_pin = GPIO_PIN_10,
+        .tx_port = GPIOA,
+        .tx_pin = GPIO_PIN_9,
+        .tx_dma_chan = DMA1_Channel4,
+        .tx_dma_irqn = DMA1_Channel4_IRQn,
+        .altfunc = GPIO_AF7_USART1,
+    },
+};
 #define rUART1_DMA_TX_IRQHandler DMA1_Channel4_IRQHandler
 
-//#define rUART1_DMA_RX_CHAN DMA1_Channel5
-//#define rUART1_DMA_RX_IRQn DMA1_Channel5_IRQn
-//#define rUART1_DMA_RX_IRQHandler DMA1_Channel5_IRQHandler
-
-// CLK_ENABLE must match DMA unit above
-#define rUART1_DMA_CLK_ENABLE() __HAL_RCC_DMA1_CLK_ENABLE()
+///////////// stm32g4
 
 #elif defined(RULOS_ARM_stm32g4)
 
 #include "stm32g4xx.h"
 #include "stm32g4xx_hal_dma.h"
-#include "stm32g4xx_ll_bus.h"
 #include "stm32g4xx_ll_usart.h"
-#define rUART1_TX_PORT GPIOA
-#define rUART1_TX_PIN GPIO_PIN_9
-// CLK_ENABLE must match port above
-#define rUART1_TX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
-
-// RX, TX can also be put on B7, B6 or C5, C4
-#define rUART1_RX_PORT GPIOA
-#define rUART1_RX_PIN GPIO_PIN_10
-// CLK_ENABLE must match port above
-#define rUART1_RX_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
-
-#define rUART1_GPIO_ALTFUNC GPIO_AF7_USART1
-
-#define rUART1_DMA_CLK_ENABLE()     \
-  do {                              \
-    __HAL_RCC_SYSCFG_CLK_ENABLE();  \
-    __HAL_RCC_PWR_CLK_ENABLE();     \
-    __HAL_RCC_DMAMUX1_CLK_ENABLE(); \
-    __HAL_RCC_DMA1_CLK_ENABLE();    \
-  } while (0)
-
-#define rUART1_DMA_TX_IRQn DMA1_Channel1_IRQn
-#define rUART1_DMA_TX_CHAN DMA1_Channel1
+static const stm32_uart_config_t stm32_uart_config[] = {
+    {
+        .instance = USART1,
+        .instance_irqn = USART1_IRQn,
+        .rx_port = GPIOA,
+        .rx_pin = GPIO_PIN_10,
+        .tx_port = GPIOA,
+        .tx_pin = GPIO_PIN_9,
+        .tx_dma_chan = DMA1_Channel1,
+        .tx_dma_irqn = DMA1_Channel1_IRQn,
+        .tx_dma_request = DMA_REQUEST_USART1_TX,
+        .altfunc = GPIO_AF7_USART1,
+    },
+};
 #define rUART1_DMA_TX_IRQHandler DMA1_Channel1_IRQHandler
+
+/////////////////////////////////////////
 
 #else
 #error "Tell the UART code about your chip's UART."
@@ -161,43 +151,104 @@ typedef struct {
 #if USE_DMA_FOR_RX
   DMA_HandleTypeDef hal_dma_rx_handle;
 #endif
-} stm32uart_t;
+} stm32_uart_t;
 
 // Eventually this should be conditional depending on what kind of
 // chip you have
 #define NUM_UARTS 1
-static stm32uart_t g_stm32_uarts[NUM_UARTS] = {};
+static stm32_uart_t g_stm32_uarts[NUM_UARTS] = {};
 
-// If the DMA RX and TX events share an interrupt, call both from the
-// handler.
-#ifndef rUART1_DMA_TX_IRQHandler
-#error <stophere>
-#endif
+///// DMA interrupt handlers
+
+static void dispatch_dma(uint8_t uart_id) {
+  HAL_DMA_IRQHandler(g_stm32_uarts[uart_id].hal_uart_handle.hdmatx);
+}
+
 void rUART1_DMA_TX_IRQHandler(void) {
-  HAL_DMA_IRQHandler(g_stm32_uarts[0].hal_uart_handle.hdmatx);
+  dispatch_dma(0);
 }
+#ifdef rUART2_DMA_TX_IRQHandler
+void rUART2_DMA_TX_IRQHandler(void) {
+  dispatch_dma(1);
+}
+#endif
+#ifdef rUART3_DMA_TX_IRQHandler
+void rUART3_DMA_TX_IRQHandler(void) {
+  dispatch_dma(2);
+}
+#endif
+#ifdef rUART4_DMA_TX_IRQHandler
+void rUART4_DMA_TX_IRQHandler(void) {
+  dispatch_dma(3);
+}
+#endif
+#ifdef rUART5_DMA_TX_IRQHandler
+void rUART5_DMA_TX_IRQHandler(void) {
+  dispatch_dma(4);
+}
+#endif
+#ifdef rUART6_DMA_TX_IRQHandler
+void rUART6_DMA_TX_IRQHandler(void) {
+  dispatch_dma(5);
+}
+#endif
 
-static void rx_upcall(uint8_t uart_id, char c) {
-  stm32uart_t *u = &g_stm32_uarts[uart_id];
-  if (u->rx_cb != NULL) {
-    u->rx_cb(uart_id, u->user_data, c);
+///// UART device interrupt handlers
+
+static void dispatch_int(USART_TypeDef *instance, uint8_t uart_id) {
+  stm32_uart_t *u = &g_stm32_uarts[uart_id];
+
+  // dispatch rx upcall, if needed -- not handled through the HAL
+  if (LL_USART_IsActiveFlag_RXNE(instance) &&
+      LL_USART_IsEnabledIT_RXNE(instance)) {
+    // note: we have to read the character whether or not we send it anywhere;
+    // reading the char is what clears the interrupt
+    char c = LL_USART_ReceiveData8(instance);
+    if (u->rx_cb != NULL) {
+      u->rx_cb(uart_id, u->user_data, c);
+    }
   }
+
+  // dispatch the rest of the interrupt handling through the HAL
+  HAL_UART_IRQHandler(&u->hal_uart_handle);
 }
 
+#ifdef USART1
 void USART1_IRQHandler(void) {
-  if (LL_USART_IsActiveFlag_RXNE(USART1) && LL_USART_IsEnabledIT_RXNE(USART1)) {
-    rx_upcall(0, LL_USART_ReceiveData8(USART1));
-  }
-  HAL_UART_IRQHandler(&g_stm32_uarts[0].hal_uart_handle);
+  dispatch_int(USART1, 0);
 }
-
-static bool stm32_uart_is_busy(stm32uart_t *uart) {
-  return HAL_UART_GetState(&uart->hal_uart_handle) != HAL_UART_STATE_READY;
+#endif
+#ifdef USART2
+void USART2_IRQHandler(void) {
+  dispatch_int(USART2, 1);
 }
+#endif
+#ifdef USART3
+void USART3_IRQHandler(void) {
+  dispatch_int(USART2, 2);
+}
+#endif
+#ifdef USART4
+void USART4_IRQHandler(void) {
+  dispatch_int(USART2, 3);
+}
+#endif
+#ifdef USART5
+void USART5_IRQHandler(void) {
+  dispatch_int(USART2, 4);
+}
+#endif
+#ifdef USART6
+void USART6_IRQHandler(void) {
+  dispatch_int(USART2, 5);
+}
+#endif
 
-static void maybe_launch_next_tx(stm32uart_t *uart) {
+/////// transmission
+
+static void maybe_launch_next_tx(stm32_uart_t *uart) {
   assert(uart->next_sendbuf_cb != NULL);
-  assert(!stm32_uart_is_busy(uart));
+  assert(HAL_UART_GetState(&uart->hal_uart_handle) == HAL_UART_STATE_READY);
 
   // Ask the layer above for the next buffer to send by calling the "send ready"
   // callback
@@ -217,7 +268,9 @@ static void maybe_launch_next_tx(stm32uart_t *uart) {
   }
 }
 
-static void tx_complete(UART_HandleTypeDef *hal_uart_handle) {
+// Callback called when TX is complete. This overrides a weak symbol in the HAL
+// implementation.
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *hal_uart_handle) {
   for (int i = 0; i < NUM_UARTS; i++) {
     if (&g_stm32_uarts[i].hal_uart_handle == hal_uart_handle) {
       maybe_launch_next_tx(&g_stm32_uarts[i]);
@@ -225,163 +278,14 @@ static void tx_complete(UART_HandleTypeDef *hal_uart_handle) {
   }
 }
 
-void hal_uart_init(uint8_t uart_id, uint32_t baud, bool stop2,
-                   void *user_data /* for both rx and tx upcalls */,
-                   uint16_t *max_tx_len /* OUT */) {
-  assert(uart_id < NUM_UARTS);
-  stm32uart_t *uart = &g_stm32_uarts[uart_id];
-  uart->uart_id = uart_id;
-  uart->user_data = user_data;
-  *max_tx_len = 65535;
-
-  // Note: RULOS HAL uarts are numbered starting from 0.
-  // STM32 UARTs are numbered starting from 1.
-
-  switch (uart_id) {
-    case 0:
-#if defined(RULOS_ARM_stm32g4)
-    {
-      RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
-      PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1;
-      PeriphClkInit.Usart2ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
-      if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
-        __builtin_trap();
-      }
-    }
-#endif
-
-      // Enable peripherals and GPIO clocks
-      rUART1_TX_GPIO_CLK_ENABLE();
-      rUART1_RX_GPIO_CLK_ENABLE();
-#ifdef __HAL_RCC_AFIO_CLK_ENABLE
-      __HAL_RCC_AFIO_CLK_ENABLE();
-#endif
-
-      // Enable USART clock
-      __HAL_RCC_USART1_CLK_ENABLE();
-
-      // Configure GPIO peripherals
-      {
-        GPIO_InitTypeDef GPIO_InitStruct;
-        GPIO_InitStruct.Pin = rUART1_TX_PIN;
-        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Pull = GPIO_PULLUP;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-#ifdef rUART1_GPIO_ALTFUNC
-        GPIO_InitStruct.Alternate = rUART1_GPIO_ALTFUNC;
-#endif
-        HAL_GPIO_Init(rUART1_TX_PORT, &GPIO_InitStruct);
-
-        GPIO_InitStruct.Pin = rUART1_RX_PIN;
-        HAL_GPIO_Init(rUART1_RX_PORT, &GPIO_InitStruct);
-      }
-
-      // Configure UART HAL
-      uart->hal_uart_handle.Instance = USART1;
-      uart->hal_uart_handle.Init.BaudRate = baud;
-      uart->hal_uart_handle.Init.WordLength = UART_WORDLENGTH_8B;
-      uart->hal_uart_handle.Init.Parity = UART_PARITY_NONE;
-      uart->hal_uart_handle.Init.StopBits =
-          stop2 ? UART_STOPBITS_2 : UART_STOPBITS_1;
-      uart->hal_uart_handle.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-      uart->hal_uart_handle.Init.Mode = UART_MODE_TX_RX;
-#if defined(RULOS_ARM_stm32g4)
-      uart->hal_uart_handle.Init.OverSampling = UART_OVERSAMPLING_16;
-      uart->hal_uart_handle.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-      uart->hal_uart_handle.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-      uart->hal_uart_handle.AdvancedInit.AdvFeatureInit =
-          UART_ADVFEATURE_NO_INIT;
-#endif
-      if (HAL_UART_Init(&uart->hal_uart_handle) != HAL_OK) {
-        __builtin_trap();
-      }
-
-      //#if defined(RULOS_ARM_stm32g4)
-#if 0
-    if (HAL_UARTEx_SetTxFifoThreshold(&uart->hal_uart_handle,
-                                      UART_TXFIFO_THRESHOLD_1_8) != HAL_OK) {
-      __builtin_trap();
-    }
-    if (HAL_UARTEx_SetRxFifoThreshold(&uart->hal_uart_handle,
-                                      UART_RXFIFO_THRESHOLD_1_8) != HAL_OK) {
-      __builtin_trap();
-    }
-    if (HAL_UARTEx_DisableFifoMode(&uart->hal_uart_handle) != HAL_OK) {
-      __builtin_trap();
-    }
-#endif
-
-      // Configure the DMA controller for TX
-      rUART1_DMA_CLK_ENABLE();
-      uart->hal_dma_tx_handle.Instance = rUART1_DMA_TX_CHAN;
-#if defined(RULOS_ARM_stm32g4)
-      uart->hal_dma_tx_handle.Init.Request = DMA_REQUEST_USART1_TX;
-#endif
-      uart->hal_dma_tx_handle.Init.Direction = DMA_MEMORY_TO_PERIPH;
-      uart->hal_dma_tx_handle.Init.PeriphInc = DMA_PINC_DISABLE;
-      uart->hal_dma_tx_handle.Init.MemInc = DMA_MINC_ENABLE;
-      uart->hal_dma_tx_handle.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-      uart->hal_dma_tx_handle.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-      uart->hal_dma_tx_handle.Init.Mode = DMA_NORMAL;
-      uart->hal_dma_tx_handle.Init.Priority = DMA_PRIORITY_LOW;
-      if (HAL_DMA_Init(&uart->hal_dma_tx_handle) != HAL_OK) {
-        __builtin_trap();
-      }
-
-      // Associate the initialized DMA handle to the UART handle
-      __HAL_LINKDMA(&uart->hal_uart_handle, hdmatx, uart->hal_dma_tx_handle);
-
-      // Register a tx-complete callback
-      if (HAL_UART_RegisterCallback(&uart->hal_uart_handle,
-                                    HAL_UART_TX_COMPLETE_CB_ID,
-                                    tx_complete) != HAL_OK) {
-        __builtin_trap();
-      }
-
-      // Set up interrupts
-      HAL_NVIC_SetPriority(rUART1_DMA_TX_IRQn, 0, 1);
-      HAL_NVIC_EnableIRQ(rUART1_DMA_TX_IRQn);
-
-#if USE_DMA_FOR_RX
-      // NOTE: No longer using DMA for RX.
-      // Configure the DMA handler for reception process */
-      uart->hal_dma_rx_handle.Instance = rUART1_DMA_RX_CHAN;
-      uart->hal_dma_rx_handle.Init.Direction = DMA_PERIPH_TO_MEMORY;
-      uart->hal_dma_rx_handle.Init.PeriphInc = DMA_PINC_DISABLE;
-      uart->hal_dma_rx_handle.Init.MemInc = DMA_MINC_ENABLE;
-      uart->hal_dma_rx_handle.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-      uart->hal_dma_rx_handle.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-      uart->hal_dma_rx_handle.Init.Mode = DMA_NORMAL;
-      uart->hal_dma_rx_handle.Init.Priority = DMA_PRIORITY_HIGH;
-      if (HAL_DMA_Init(&uart->hal_dma_rx_handle) != HAL_OK) {
-        __builtin_trap();
-      }
-
-      __HAL_LINKDMA(&uart->hal_uart_handle, hdmarx, uart->hal_dma_rx_handle);
-
-      /* NVIC configuration for DMA transfer complete interrupt (USARTx_RX) */
-      HAL_NVIC_SetPriority(rUART1_DMA_RX_IRQn, 0, 0);
-      HAL_NVIC_EnableIRQ(rUART1_DMA_RX_IRQn);
-#endif
-
-      /* NVIC for USART, to catch RX interrupts, and TX completions */
-      HAL_NVIC_SetPriority(USART1_IRQn, 0, 1);
-      HAL_NVIC_EnableIRQ(USART1_IRQn);
-
-      break;
-
-    default:
-      // Please add a second UART to this case statement!
-      __builtin_trap();
-  }
-}
-
 void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb) {
-  stm32uart_t *u = &g_stm32_uarts[uart_id];
+  stm32_uart_t *u = &g_stm32_uarts[uart_id];
   assert(u->next_sendbuf_cb == NULL);
   u->next_sendbuf_cb = cb;
   maybe_launch_next_tx(u);
 }
+
+///// reception
 
 void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb) {
   /*
@@ -394,7 +298,128 @@ void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb) {
    * we receive a character.
    */
   assert(uart_id < NUM_UARTS);
-  stm32uart_t *u = &g_stm32_uarts[uart_id];
+  stm32_uart_t *u = &g_stm32_uarts[uart_id];
+  const stm32_uart_config_t *config = &stm32_uart_config[uart_id];
   u->rx_cb = rx_cb;
-  LL_USART_EnableIT_RXNE(USART1);
+  LL_USART_EnableIT_RXNE(config->instance);
+}
+
+///// initialization
+
+void hal_uart_init(uint8_t uart_id, uint32_t baud, bool stop2,
+                   void *user_data /* for both rx and tx upcalls */,
+                   uint16_t *max_tx_len /* OUT */) {
+  assert(uart_id < NUM_UARTS);
+  stm32_uart_t *uart = &g_stm32_uarts[uart_id];
+  const stm32_uart_config_t *config = &stm32_uart_config[uart_id];
+  uart->uart_id = uart_id;
+  uart->user_data = user_data;
+  *max_tx_len = 65535;
+
+  // Note: RULOS HAL uarts are numbered starting from 0.
+  // STM32 UARTs are numbered starting from 1.
+
+  // Enable USART clock
+  switch (uart_id) {
+#ifdef __HAL_RCC_USART1_CLK_ENABLE
+    case 0:
+      __HAL_RCC_USART1_CLK_ENABLE();
+      break;
+#endif
+
+#ifdef __HAL_RCC_USART2_CLK_ENABLE
+    case 1:
+      __HAL_RCC_USART2_CLK_ENABLE();
+      break;
+#endif
+
+#ifdef __HAL_RCC_USART3_CLK_ENABLE
+    case 2:
+      __HAL_RCC_USART3_CLK_ENABLE();
+      break;
+#endif
+
+#ifdef __HAL_RCC_USART4_CLK_ENABLE
+    case 3:
+      __HAL_RCC_USART4_CLK_ENABLE();
+      break;
+#endif
+
+#ifdef __HAL_RCC_USART5_CLK_ENABLE
+    case 4:
+      __HAL_RCC_USART5_CLK_ENABLE();
+      break;
+#endif
+
+#ifdef __HAL_RCC_USART6_CLK_ENABLE
+    case 5:
+      __HAL_RCC_USART6_CLK_ENABLE();
+      break;
+#endif
+    default:
+      assert(false);
+      break;
+  }
+
+  // Configure GPIO peripherals
+  {
+    GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Pin = config->tx_pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+#if !defined(RULOS_ARM_stm32f1)
+    GPIO_InitStruct.Alternate = config->altfunc;
+#endif
+    HAL_GPIO_Init(config->tx_port, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = config->rx_pin;
+    HAL_GPIO_Init(config->rx_port, &GPIO_InitStruct);
+  }
+
+  // Configure UART HAL
+  uart->hal_uart_handle.Instance = config->instance;
+  uart->hal_uart_handle.Init.BaudRate = baud;
+  uart->hal_uart_handle.Init.WordLength = UART_WORDLENGTH_8B;
+  uart->hal_uart_handle.Init.Parity = UART_PARITY_NONE;
+  uart->hal_uart_handle.Init.StopBits =
+      stop2 ? UART_STOPBITS_2 : UART_STOPBITS_1;
+  uart->hal_uart_handle.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  uart->hal_uart_handle.Init.Mode = UART_MODE_TX_RX;
+#if defined(RULOS_ARM_stm32g4)
+  uart->hal_uart_handle.Init.OverSampling = UART_OVERSAMPLING_16;
+  uart->hal_uart_handle.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  uart->hal_uart_handle.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+  uart->hal_uart_handle.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+#endif
+  if (HAL_UART_Init(&uart->hal_uart_handle) != HAL_OK) {
+    __builtin_trap();
+  }
+
+  // Configure the DMA controller for TX
+  uart->hal_dma_tx_handle.Instance = config->tx_dma_chan;
+#if defined(RULOS_ARM_stm32g4)
+  uart->hal_dma_tx_handle.Init.Request = config->tx_dma_request;
+#endif
+  uart->hal_dma_tx_handle.Init.Direction = DMA_MEMORY_TO_PERIPH;
+  uart->hal_dma_tx_handle.Init.PeriphInc = DMA_PINC_DISABLE;
+  uart->hal_dma_tx_handle.Init.MemInc = DMA_MINC_ENABLE;
+  uart->hal_dma_tx_handle.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+  uart->hal_dma_tx_handle.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+  uart->hal_dma_tx_handle.Init.Mode = DMA_NORMAL;
+  uart->hal_dma_tx_handle.Init.Priority = DMA_PRIORITY_LOW;
+  if (HAL_DMA_Init(&uart->hal_dma_tx_handle) != HAL_OK) {
+    __builtin_trap();
+  }
+
+  // Associate the initialized DMA handle to the UART handle
+  __HAL_LINKDMA(&uart->hal_uart_handle, hdmatx, uart->hal_dma_tx_handle);
+
+  // Set up DMA interrupt
+  HAL_NVIC_SetPriority(config->tx_dma_irqn, 0, 1);
+  HAL_NVIC_EnableIRQ(config->tx_dma_irqn);
+
+  // Set up USART peripheral interrupt
+  HAL_NVIC_SetPriority(config->instance_irqn, 0, 1);
+  HAL_NVIC_EnableIRQ(config->instance_irqn);
 }
