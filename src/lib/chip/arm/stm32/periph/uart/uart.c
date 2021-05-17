@@ -106,6 +106,29 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 };
 #define rUART1_DMA_TX_IRQHandler DMA1_Channel4_IRQHandler
 
+///////////// stm32g0
+
+#elif defined(RULOS_ARM_stm32g0)
+
+#include "stm32g0xx.h"
+#include "stm32g0xx_hal_dma.h"
+#include "stm32g0xx_ll_usart.h"
+static const stm32_uart_config_t stm32_uart_config[] = {
+    {
+        .instance = USART1,
+        .instance_irqn = USART1_IRQn,
+        .rx_port = GPIOA,
+        .rx_pin = GPIO_PIN_10,
+        .tx_port = GPIOA,
+        .tx_pin = GPIO_PIN_9,
+        .tx_dma_chan = DMA1_Channel1,
+        .tx_dma_irqn = DMA1_Channel1_IRQn,
+        .tx_dma_request = DMA_REQUEST_USART1_TX,
+        .altfunc = GPIO_AF1_USART1,
+    },
+};
+#define rUART1_DMA_TX_IRQHandler DMA1_Channel1_IRQHandler
+
 ///////////// stm32g4
 
 #elif defined(RULOS_ARM_stm32g4)
@@ -386,7 +409,7 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud, bool stop2,
       stop2 ? UART_STOPBITS_2 : UART_STOPBITS_1;
   uart->hal_uart_handle.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   uart->hal_uart_handle.Init.Mode = UART_MODE_TX_RX;
-#if defined(RULOS_ARM_stm32g4)
+#if defined(RULOS_ARM_stm32g4) || defined(RULOS_ARM_stm32g0)
   uart->hal_uart_handle.Init.OverSampling = UART_OVERSAMPLING_16;
   uart->hal_uart_handle.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   uart->hal_uart_handle.Init.ClockPrescaler = UART_PRESCALER_DIV1;
@@ -398,7 +421,7 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud, bool stop2,
 
   // Configure the DMA controller for TX
   uart->hal_dma_tx_handle.Instance = config->tx_dma_chan;
-#if defined(RULOS_ARM_stm32g4)
+#if defined(RULOS_ARM_stm32g4) || defined(RULOS_ARM_stm32g0)
   uart->hal_dma_tx_handle.Init.Request = config->tx_dma_request;
 #endif
   uart->hal_dma_tx_handle.Init.Direction = DMA_MEMORY_TO_PERIPH;
