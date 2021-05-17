@@ -33,16 +33,17 @@
 
 void arm_log(const char *fmt, ...) {
   va_list ap;
-  char message[100];
+  char message[120];
   va_start(ap, fmt);
   int len = vsnprintf(message, sizeof(message), fmt, ap);
+  message[sizeof(message) - 1] = '\0';
   va_end(ap);
 
   log_common_emit_to_bound_uart(message, len);
 }
 
-void arm_assert(const uint32_t line) {
-  LOG("assertion failed: line %lu", line);
+void arm_assert(const char *file, const uint32_t line) {
+  LOG("assertion failed: file %s, line %lu", file, line);
   LOG_FLUSH();
   __builtin_trap();
 }

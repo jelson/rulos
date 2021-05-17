@@ -20,32 +20,32 @@
 
 #include "core/logging-common.h"
 
-void arm_assert(uint32_t line);
+void arm_assert(const char *file, uint32_t line);
 void arm_log(const char *fmt, ...) __attribute((format(printf, 1, 2)));
 
-#define assert(x)                                                              \
-  do {                                                                         \
-    if (!(x)) {                                                                \
-      arm_assert(__LINE__);                                                    \
-    }                                                                          \
+#define assert(x)                     \
+  do {                                \
+    if (!(x)) {                       \
+      arm_assert(__FILE__, __LINE__); \
+    }                                 \
   } while (0)
 
 #ifdef LOG_TO_SERIAL
 
-#define LOG(fmt, ...)                                                          \
-  do {                                                                         \
-    static const char fmt_p[] = fmt "\n";                                      \
-    arm_log(fmt_p, ##__VA_ARGS__);                                             \
+#define LOG(fmt, ...)                     \
+  do {                                    \
+    static const char fmt_p[] = fmt "\n"; \
+    arm_log(fmt_p, ##__VA_ARGS__);        \
   } while (0)
 
-#define LOG_FLUSH()                                                            \
-  do {                                                                         \
-    log_common_flush();                                                        \
+#define LOG_FLUSH()     \
+  do {                  \
+    log_common_flush(); \
   } while (0);
 
-#else // LOG_TO_SERIAL
+#else  // LOG_TO_SERIAL
 
 #define LOG(...)
 #define LOG_FLUSH(...)
 
-#endif // LOG_TO_SERIAL
+#endif  // LOG_TO_SERIAL
