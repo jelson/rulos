@@ -24,9 +24,9 @@ for testprog in ["send", "charecho", "lineecho"]:
     for chip in [
             "stm32f103x8",
             "stm32f031x6",
-        #    "stm32g031x8",
-            "stm32g0b1xe",
             "stm32f303x8",
+            "stm32g031x8",
+            "stm32g0b1xe",
             "stm32g431x8",
         ]:
         RulosBuildTarget(

@@ -115,6 +115,12 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 #include "stm32g0xx.h"
 #include "stm32g0xx_hal_dma.h"
 #include "stm32g0xx_ll_usart.h"
+
+#if STM32G0B1xx
+#define USART2_IRQn       USART2_LPUART2_IRQn
+#define USART2_IRQHandler USART2_LPUART2_IRQHandler
+#endif
+
 static const stm32_uart_config_t stm32_uart_config[] = {
     {
         .instance = USART1,
@@ -130,7 +136,7 @@ static const stm32_uart_config_t stm32_uart_config[] = {
     },
     {
         .instance = USART2,
-        .instance_irqn = USART2_LPUART2_IRQn,
+        .instance_irqn = USART2_IRQn,
         .rx_port = GPIOA,
         .rx_pin = GPIO_PIN_3,
         .tx_port = GPIOA,
@@ -140,6 +146,7 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .tx_dma_request = DMA_REQUEST_USART2_TX,
         .altfunc = GPIO_AF1_USART2,
     },
+#ifdef USART3
     {
         .instance = USART3,
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
@@ -152,6 +159,8 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .tx_dma_request = DMA_REQUEST_USART3_TX,
         .altfunc = GPIO_AF4_USART3,
     },
+#endif
+#ifdef USART4
     {
         .instance = USART4,
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
@@ -164,6 +173,8 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .tx_dma_request = DMA_REQUEST_USART4_TX,
         .altfunc = GPIO_AF4_USART4,
     },
+#endif
+#ifdef USART5
     {
         .instance = USART5,
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
@@ -176,19 +187,22 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .tx_dma_request = DMA_REQUEST_USART5_TX,
         .altfunc = GPIO_AF8_USART5,
     },
+#endif
 };
 #define rUART1_DMA_TX_IRQHandler DMA1_Channel1_IRQHandler
 
-void USART2_LPUART2_IRQHandler(void) {
+void USART2_IRQHandler(void) {
   dispatch_int(USART2, 1);
 }
 
+#ifdef USART3
 void USART3_4_5_6_LPUART1_IRQHandler(void) {
   dispatch_int(USART3, 2);
   dispatch_int(USART4, 3);
   dispatch_int(USART5, 4);
   dispatch_int(USART6, 5);
 }
+#endif
 
 ///////////// stm32g4
 
@@ -384,37 +398,37 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud, bool stop2,
 
   // Enable USART clock
   switch (uart_id) {
-#ifdef __HAL_RCC_USART1_CLK_ENABLE
+#ifdef USART1
     case 0:
       __HAL_RCC_USART1_CLK_ENABLE();
       break;
 #endif
 
-#ifdef __HAL_RCC_USART2_CLK_ENABLE
+#ifdef USART2
     case 1:
       __HAL_RCC_USART2_CLK_ENABLE();
       break;
 #endif
 
-#ifdef __HAL_RCC_USART3_CLK_ENABLE
+#ifdef USART3
     case 2:
       __HAL_RCC_USART3_CLK_ENABLE();
       break;
 #endif
 
-#ifdef __HAL_RCC_USART4_CLK_ENABLE
+#ifdef USART4
     case 3:
       __HAL_RCC_USART4_CLK_ENABLE();
       break;
 #endif
 
-#ifdef __HAL_RCC_USART5_CLK_ENABLE
+#ifdef USART5
     case 4:
       __HAL_RCC_USART5_CLK_ENABLE();
       break;
 #endif
 
-#ifdef __HAL_RCC_USART6_CLK_ENABLE
+#ifdef USART6
     case 5:
       __HAL_RCC_USART6_CLK_ENABLE();
       break;
