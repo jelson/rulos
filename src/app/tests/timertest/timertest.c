@@ -16,21 +16,21 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "core/rulos.h"
 #include "core/hardware.h"
+#include "core/rulos.h"
 
 #if defined(RULOS_ARM_STM32)
 #define TEST_PIN GPIO_B5
 #elif defined(RULOS_AVR)
 #define TEST_PIN GPIO_B5
-#elif defined (RULOS_ARM_NXP)
+#elif defined(RULOS_ARM_NXP)
 #define TEST_PIN GPIO0_00
 #else
 #include <stophere>
 #endif
 
 #define FREQ_USEC 50000
-#define TOTAL 20
+#define TOTAL     20
 #define TEST_HAL
 
 #if TEST_SCHEDULER

@@ -17,19 +17,20 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
-sys.path.insert(0, "../../../build-tools")
+sys.path.insert(0, "../../build-tools")
 from BuildRules import *
 
 RulosBuildTarget(
-  name = "audioboard2test",
-  sources = ["audioboard2test.c"],
-  extra_cflags = [
-      "-DLOG_TO_SERIAL",
-      "-DRULOS_I2C_ALT_MAPPING",
-      "-DBOARD_RULOS_AUDIO_REV_B",
-  ],
-  platforms = [
-      ArmStmPlatform("stm32f303xb"),
-  ],
-  peripherals = "uart fatfs sdcard2 i2s twi remote_keyboard"
-  ).build()
+    name = "datalogger",
+    sources = ["datalogger.c"],
+    platforms = [
+        ArmStmPlatform("stm32g0b1xe",
+            extra_cflags=[
+                "-DBOARD_DATALOGGER_REV_B",
+            ],
+        )],
+    peripherals = "uart sdcard2 fatfs",
+    extra_cflags = [
+        "-DLOG_TO_SERIAL",
+    ],
+).build()

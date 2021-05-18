@@ -29,11 +29,13 @@
 
 #define SYNCDEBUG() syncdebug(0, 'T', __LINE__)
 
-#define FOSC 8000000  // Clock Speed
-#define BAUD 38400
+#define FOSC   8000000  // Clock Speed
+#define BAUD   38400
 #define MYUBRR FOSC / 16 / BAUD - 1
 
-void serial_init() { uart_init(RULOS_UART0, MYUBRR, TRUE); }
+void serial_init() {
+  uart_init(RULOS_UART0, MYUBRR, TRUE);
+}
 
 void waitbusyuart() {
   while (uart_busy(RULOS_UART0)) {

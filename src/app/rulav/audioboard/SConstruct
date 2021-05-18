@@ -30,7 +30,10 @@ RulosBuildTarget(
         extra_peripherals = "pseudosdcard",
     ),
     ArmStmPlatform("stm32f303xb",
-        extra_cflags=["-DBOARD_STMPEM_REVA", "-DBOARDCONFIG_UNIROCKET"],
+        extra_cflags=[
+            "-DBOARD_RULOS_AUDIO_REV_B",
+            "-DBOARDCONFIG_UNIROCKET",
+        ],
         extra_peripherals = "sdcard2 twi",
     ),
   ],

@@ -2,6 +2,8 @@
 /* SPI controls (Platform dependent)                                     */
 /*-----------------------------------------------------------------------*/
 
+#include "core/rulos.h"
+
 #include "periph/fatfs/diskio.h"
 #include "periph/sdcard2/fatfs_rulos.h"
 
@@ -41,13 +43,13 @@ static BYTE TM_FATFS_SD_CardType;			/* Card type flags */
 static void init_spi (void) {
 	/* Init delay functions */
 	TM_DELAY_Init();
-	
+
 	/* Init SPI */
 	TM_SPI_Init();
-	
+
 	/* Set CS high */
 	FATFS_CS_HIGH;
-	
+
 	/* Wait for stable */
 	TM_DELAY_SetTime2(20);
 	while (TM_DELAY_Time2() > 0) {
@@ -92,7 +94,7 @@ static int wait_ready (	/* 1:Ready, 0:Timeout */
 
 	/* Set down counter */
 	TM_DELAY_SetTime2(wt);
-	
+
 	do {
 		d = TM_SPI_Send(FATFS_SPI, 0xFF);
 	} while (d != 0xFF && TM_DELAY_Time2());	/* Wait for card goes ready or timeout */
@@ -128,9 +130,7 @@ static void deselect_card (void)
 static int select_card (void)	/* 1:OK, 0:Timeout */
 {
 	TM_SPI_Send(FATFS_SPI, 0xFF);	/* Dummy clock (force DO enabled) */
-	for (volatile int i = 0; i < 10; i++) {}
 	FATFS_CS_LOW;
-	for (volatile int i = 0; i < 10; i++) {}
 	return 1;
 
 #if 0
@@ -140,10 +140,9 @@ static int select_card (void)	/* 1:OK, 0:Timeout */
 	}
 	FATFS_DEBUG_SEND_USART("select: no");
 	deselect_card();
-	
+
 	return 0;	/* Timeout */
 #endif
-
 }
 
 
@@ -158,22 +157,24 @@ static int rcvr_datablock (	/* 1:OK, 0:Error */
 )
 {
 	BYTE token;
-	
+
 	//Timer1 = 200;
-	
+
+	FATFS_DEBUG_SEND_USART("rcvr_datablock: inside");
 	TM_DELAY_SetTime2(200);
-	do {							// Wait for DataStart token in timeout of 200ms 
+	do {							// Wait for DataStart token in timeout of 200ms
 		token = TM_SPI_Send(FATFS_SPI, 0xFF);
-		// This loop will take a time. Insert rot_rdq() here for multitask envilonment. 
+		// This loop will take a time. Insert rot_rdq() here for multitask envilonment.
 	} while ((token == 0xFF) && TM_DELAY_Time2());
-	if (token != 0xFE) {
-		FATFS_DEBUG_SEND_USART("rcvr_datablock: token != 0xFE");
-		return 0;		// Function fails if invalid DataStart token or timeout 
+	if (token == 0xFF) {
+		FATFS_DEBUG_SEND_USART("rcvr_datablock: timed out");
+		return 0;		// Function fails if invalid DataStart token or timeout
 	}
 
-	rcvr_spi_multi(buff, btr);		// Store trailing data to the buffer 
-	TM_SPI_Send(FATFS_SPI, 0xFF); TM_SPI_Send(FATFS_SPI, 0xFF);			// Discard CRC 
-	return 1;						// Function succeeded 
+	rcvr_spi_multi(buff, btr);		// Store trailing data to the buffer
+	TM_SPI_Send(FATFS_SPI, 0xFF); TM_SPI_Send(FATFS_SPI, 0xFF);			// Discard CRC
+	FATFS_DEBUG_SEND_USART("rcvr_datablock: success");
+	return 1;						// Function succeeded
 }
 
 
@@ -189,24 +190,31 @@ static int xmit_datablock (	/* 1:OK, 0:Failed */
 )
 {
 	BYTE resp;
-	
+
 	FATFS_DEBUG_SEND_USART("xmit_datablock: inside");
 
+#if 0
 	if (!wait_ready(500)) {
 		FATFS_DEBUG_SEND_USART("xmit_datablock: not ready");
 		return 0;		/* Wait for card ready */
 	}
-	FATFS_DEBUG_SEND_USART("xmit_datablock: ready");
+#endif
+
 
 	TM_SPI_Send(FATFS_SPI, token);					/* Send token */
-	if (token != 0xFD) {				/* Send data if token is other than StopTran */
-		xmit_spi_multi(buff, 512);		/* Data */
-		TM_SPI_Send(FATFS_SPI, 0xFF); TM_SPI_Send(FATFS_SPI, 0xFF);	/* Dummy CRC */
+	xmit_spi_multi(buff, 512);		/* Data */
 
-		resp = TM_SPI_Send(FATFS_SPI, 0xFF);				/* Receive data resp */
-		if ((resp & 0x1F) != 0x05)		/* Function fails if the data packet was not accepted */
-			return 0;
+	/* Dummy CRC */
+	TM_SPI_Send(FATFS_SPI, 0xFF);
+	TM_SPI_Send(FATFS_SPI, 0xFF);
+
+	resp = TM_SPI_Send(FATFS_SPI, 0xFF);				/* Receive data resp */
+	if ((resp & 0x1F) != 0x05)	{	/* Function fails if the data packet was not accepted */
+		LOG("xmit_datablock: failed, got 0x%x", resp);
+		return 0;
 	}
+
+	//FATFS_DEBUG_SEND_USART("xmit_datablock: success");
 	return 1;
 }
 #endif
@@ -216,13 +224,15 @@ static int xmit_datablock (	/* 1:OK, 0:Failed */
 /* Send a command packet to the MMC                                      */
 /*-----------------------------------------------------------------------*/
 
-static BYTE send_cmd (		/* Return value: R1 resp (bit7==1:Failed to send) */
+static BYTE send_cmd(		/* Return value: R1 resp (bit7==1:Failed to send) */
 	BYTE cmd,		/* Command index */
 	DWORD arg		/* Argument */
 )
 {
 	BYTE n, res;
-	
+
+	//LOG("SD card: sending command %d", cmd);
+
 	if (cmd & 0x80) {	/* Send a CMD55 prior to ACMD<n> */
 		cmd &= 0x7F;
 		res = send_cmd(CMD55, 0);
@@ -231,8 +241,10 @@ static BYTE send_cmd (		/* Return value: R1 resp (bit7==1:Failed to send) */
 
 	/* Select the card and wait for ready except to stop multiple block read */
 	if (cmd != CMD12) {
-		deselect_card();
-		if (!select_card()) return 0xFF;
+		if (!select_card()) {
+			LOG("card-select failed in send_cmd!");
+			return 0xFF;
+		}
 	}
 
 	/* Send command packet */
@@ -251,19 +263,20 @@ static BYTE send_cmd (		/* Return value: R1 resp (bit7==1:Failed to send) */
 	if (cmd == CMD12) {
 		TM_SPI_Send(FATFS_SPI, 0xFF);					/* Diacard following one byte when CMD12 */
 	}
-	
-	n = 10;								/* Wait for response (10 bytes max) */
+
+	int retries = 100;
 
 	if (cmd == 0) {
 	  do {
 	    res = TM_SPI_Send(FATFS_SPI, 0xFF);
-	  } while (res != 0x1 && --n);
+	  } while (res != 0x1 && --retries);
 	} else {
 	  do {
 	    res = TM_SPI_Send(FATFS_SPI, 0xFF);
-	  } while ((res & 0x80) && --n);
+	  } while ((res & 0x80) && --retries);
 	}
-	return res;							/* Return received response */
+
+	return res;
 }
 
 #if 0
@@ -271,7 +284,7 @@ static BYTE send_cmd (		/* Return value: R1 resp (bit7==1:Failed to send) */
 void TM_FATFS_InitPins(void) {
 	/* CS pin */
 	TM_GPIO_Init(FATFS_CS_PORT, FATFS_CS_PIN, TM_GPIO_Mode_OUT, TM_GPIO_OType_PP, TM_GPIO_PuPd_UP, TM_GPIO_Speed_Low);
-	
+
 	/* Detect pin */
 #if FATFS_USE_DETECT_PIN > 0
 	TM_GPIO_Init(FATFS_USE_DETECT_PIN_PORT, FATFS_USE_DETECT_PIN_PIN, TM_GPIO_Mode_IN, TM_GPIO_OType_PP, TM_GPIO_PuPd_UP, TM_GPIO_Speed_Low);
@@ -297,17 +310,17 @@ uint8_t TM_FATFS_WriteEnabled(void) {
 	return !TM_GPIO_GetInputPinValue(FATFS_USE_WRITEPROTECT_PIN_PORT, FATFS_USE_WRITEPROTECT_PIN_PIN);
 #else
 	return 1;
-#endif	
+#endif
 }
 
 DSTATUS TM_FATFS_SD_disk_initialize (void) {
 	BYTE n, cmd, ty, ocr[4];
-	
+
 	// RULOS: commented out; this is done in init_spi
 	//TM_FATFS_InitPins();
 
 	init_spi();
-	
+
 	if (!TM_FATFS_Detect()) {
 		return STA_NODISK;
 	}
@@ -359,7 +372,7 @@ DSTATUS TM_FATFS_SD_disk_initialize (void) {
 	} else {
 		TM_FATFS_SD_Stat &= ~STA_PROTECT;
 	}
-	
+
 	TM_SPI_SetFast();
 	return TM_FATFS_SD_Stat;
 }
@@ -371,19 +384,19 @@ DSTATUS TM_FATFS_SD_disk_initialize (void) {
 /*-----------------------------------------------------------------------*/
 
 DSTATUS TM_FATFS_SD_disk_status (void) {
-	
+
 	/* Check card detect pin if enabled */
 	if (!TM_FATFS_Detect()) {
 		return STA_NOINIT;
 	}
-	
+
 	/* Check if write is enabled */
 	if (!TM_FATFS_WriteEnabled()) {
 		TM_FATFS_SD_Stat |= STA_PROTECT;
 	} else {
 		TM_FATFS_SD_Stat &= ~STA_PROTECT;
 	}
-	
+
 	return TM_FATFS_SD_Stat;	/* Return disk status */
 }
 
@@ -399,7 +412,8 @@ DRESULT TM_FATFS_SD_disk_read (
 	UINT count		/* Number of sectors to read (1..128) */
 )
 {
-	FATFS_DEBUG_SEND_USART("disk_read: inside");
+	//LOG("disk read: sector %ld, count %lu", sector, count);
+
 	if (!TM_FATFS_Detect() || (TM_FATFS_SD_Stat & STA_NOINIT)) {
 		return RES_NOTRDY;
 	}
@@ -409,18 +423,37 @@ DRESULT TM_FATFS_SD_disk_read (
 	}
 
 	if (count == 1) {	/* Single sector read */
-		if ((send_cmd(CMD17, sector) == 0)	/* READ_SINGLE_BLOCK */
-			&& rcvr_datablock(buff, 512))
-			count = 0;
+		/* READ_SINGLE_BLOCK */
+		int retval;
+		int retries = 20;
+		do {
+			retval = send_cmd(CMD17, sector);
+			retries--;
+		} while (retries > 0 && retval != 0);
+
+		if (retval != 0) {
+			LOG("warning: got non-zero response %d to CMD17", retval);
+		} else {
+			if (rcvr_datablock(buff, 512)) {
+				count = 0;
+			}
+		}
 	} else {				/* Multiple sector read */
-		if (send_cmd(CMD18, sector) == 0) {	/* READ_MULTIPLE_BLOCK */
+		/* READ_MULTIPLE_BLOCK */
+		//LOG("multi sector read");
+		int retval = send_cmd(CMD18, sector);
+		if (retval != 0) {
+			LOG("warning: got non-zero response %d to CMD18", retval);
+		} else {
 			do {
 				if (!rcvr_datablock(buff, 512)) {
 					break;
 				}
 				buff += 512;
 			} while (--count);
-			send_cmd(CMD12, 0);				/* STOP_TRANSMISSION */
+
+			/* STOP_TRANSMISSION */
+			send_cmd(CMD12, 0);
 		}
 	}
 	deselect_card();
@@ -461,23 +494,48 @@ DRESULT TM_FATFS_SD_disk_write (
 	}
 
 	if (count == 1) {	/* Single sector write */
-		if ((send_cmd(CMD24, sector) == 0)	/* WRITE_BLOCK */
-			&& xmit_datablock(buff, 0xFE))
-			count = 0;
+		//LOG("single sector write");
+		/* WRITE_BLOCK */
+		int retval = send_cmd(CMD24, sector);
+		if (retval != 0) {
+			LOG("warning: got non-zero response %d to CMD24", retval);
+		} else {
+			if (xmit_datablock(buff, 0xFE)) {
+				count = 0;
+			} else {
+				LOG("error writing datablock");
+			}
+		}
+		//LOG("single sector write done");
 	} else {				/* Multiple sector write */
+		//LOG("multi sector write");
 		if (TM_FATFS_SD_CardType & CT_SDC) send_cmd(ACMD23, count);	/* Predefine number of sectors */
-		if (send_cmd(CMD25, sector) == 0) {	/* WRITE_MULTIPLE_BLOCK */
+		/* WRITE_MULTIPLE_BLOCK */
+		int retval = send_cmd(CMD25, sector);
+		if (retval != 0) {
+			LOG("warning: got non-zero response %d to CMD25", retval);
+		} else {
 			do {
 				if (!xmit_datablock(buff, 0xFC)) {
 					break;
 				}
 				buff += 512;
+
+				while (TM_SPI_Send(FATFS_SPI, 0xFF) != 0xFF) {
+				}
+
 			} while (--count);
-			if (!xmit_datablock(0, 0xFD)) {	/* STOP_TRAN token */
-				count = 1;
-			}
+
+
+			/* STOP_TRAN token */
+			TM_SPI_Send(FATFS_SPI, 0xFD);
 		}
 	}
+
+	// wait for the write to complete
+	while (TM_SPI_Send(FATFS_SPI, 0xFF) != 0xFF) {
+	}
+
 	deselect_card();
 
 	return count ? RES_ERROR : RES_OK;	/* Return result */
@@ -570,4 +628,3 @@ DRESULT TM_FATFS_SD_disk_ioctl (
 	return res;
 }
 #endif
-

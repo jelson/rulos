@@ -21,13 +21,52 @@ sys.path.insert(0, "../../../build-tools")
 from BuildRules import *
 
 RulosBuildTarget(
-  name = "fattest",
-  sources = ["fattest.c"],
-  extra_cflags = [
-    "-DLOG_TO_SERIAL",
-  ],
-  platforms = [
-    ArmStmPlatform("stm32f303xb")
-  ],
-  peripherals = "uart fatfs sdcard2"
+    name = "lowlevel",
+    sources = ["lowlevel.c"],
+    extra_cflags = [
+        "-DLOG_TO_SERIAL",
+        "-DBOARD_DATALOGGER_REV_B",
+    ],
+    platforms = [
+        ArmStmPlatform("stm32g0b1xe")
+    ],
+    peripherals = "uart sdcard2"
+).build()
+
+
+RulosBuildTarget(
+    name = "fattest",
+    sources = ["fattest.c"],
+    extra_cflags = [
+        "-DLOG_TO_SERIAL",
+        "-DBOARD_RULOS_AUDIO_REV_B",
+    ],
+    platforms = [
+        ArmStmPlatform("stm32f303xb")
+    ],
+    peripherals = "uart fatfs sdcard2"
+).build()
+
+RulosBuildTarget(
+    name = "writeread",
+    sources = ["writeread.c"],
+    peripherals = "uart fatfs",
+    extra_cflags = [
+        "-DLOG_TO_SERIAL",
+        "-DFF_USE_MKFS=1",
+    ],
+    platforms = [
+        ArmStmPlatform(
+            "stm32g0b1xe",
+            extra_cflags = [
+                "-DBOARD_DATALOGGER_REV_B",
+            ],
+            extra_peripherals = "sdcard2",
+        ),
+        SimulatorPlatform(
+            extra_peripherals = "sdcardsim",
+            extra_cflags = [
+            ],
+        )
+    ],
 ).build()

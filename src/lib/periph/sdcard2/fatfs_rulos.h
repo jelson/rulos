@@ -43,12 +43,53 @@
 #include "periph/fatfs/diskio.h"
 #include "periph/fatfs/ff.h"
 #include "periph/sdcard2/fatfs_rulos.h"
+
+#if defined (RULOS_ARM_stm32f3)
+#include "stm32f3xx_ll_bus.h"
+#include "stm32f3xx_ll_dma.h"
 #include "stm32f3xx_ll_spi.h"
+#include "stm32f3xx_ll_spi.h"
+#elif defined (RULOS_ARM_stm32g0)
+#include "stm32g0xx_ll_bus.h"
+#include "stm32g0xx_ll_dma.h"
+#include "stm32g0xx_ll_spi.h"
+#include "stm32g0xx_ll_spi.h"
+#else
+#error "help"
+#include <stophere>
+#endif
+
+#if defined(BOARD_RULOS_AUDIO_REV_B)
+#define SD_LL_SPI_CLOCK     LL_APB2_GRP1_PERIPH_SPI1
+#define SD_SPI_PERIPH       SPI1
+#define SD_LL_PORT          GPIOB
+#define SD_LL_ALTFUNC       LL_GPIO_AF_5
+#define SD_LL_SCK_PIN       LL_GPIO_PIN_3
+#define SD_LL_MISO_PIN      LL_GPIO_PIN_4
+#define SD_LL_MOSI_PIN      LL_GPIO_PIN_5
+#define SD_PIN_CHIPENABLE   GPIO_B6
+
+#elif defined(BOARD_DATALOGGER_REV_B)
+
+#define SD_LL_SPI_CLOCK     LL_APB2_GRP1_PERIPH_SPI1
+#define SD_SPI_PERIPH       SPI1
+#define SD_LL_PORT          GPIOA
+#define SD_LL_ALTFUNC       LL_GPIO_AF_0
+#define SD_LL_SCK_PIN       LL_GPIO_PIN_5
+#define SD_LL_MISO_PIN      LL_GPIO_PIN_6
+#define SD_LL_MOSI_PIN      LL_GPIO_PIN_7
+#define SD_PIN_CHIPENABLE   GPIO_A4
+
+#else
+
+#error "SPI pin definitions needed to use fatfs"
+#include <stophere>
+#endif
 
 #define _USE_WRITE 1 /* 1: Enable disk_write function */
 #define _USE_IOCTL 1 /* 1: Enable disk_ioctl fucntion */
 
-#define FATFS_SPI SPI1
+#define FATFS_SPI SD_SPI_PERIPH
 
 #ifndef FATFS_USE_DETECT_PIN
 #define FATFS_USE_DETECT_PIN 0
@@ -74,8 +115,6 @@
 #endif
 
 /////////////////////////////////////////////////////////////////////////////
-
-#define SD_PIN_CHIPENABLE GPIO_B6
 
 #define FATFS_CS_LOW  gpio_clr(SD_PIN_CHIPENABLE)
 #define FATFS_CS_HIGH gpio_set(SD_PIN_CHIPENABLE)

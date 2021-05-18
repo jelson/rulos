@@ -23,6 +23,7 @@
 #include "periph/audio/audio_request_message.h"
 #include "periph/audio/audio_streamer.h"
 #include "periph/audio/sound.h"
+#include "periph/fatfs/ff.h"
 
 // Each stream plays the "skip_effect_id" until it's done, then plays the
 // "loop_effect_id" forever.

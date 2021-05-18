@@ -105,6 +105,32 @@ static void read_4meg_file(bool validate) {
   }
 }
 
+static void try_write(void *data) {
+  if (f_mount(&fatfs, "", 0) != FR_OK) {
+    LOG("can't mount");
+    __builtin_trap();
+  }
+
+  LOG("mount successful");
+
+  UINT bytes_written;
+  FRESULT retval;
+  const char test_filename[] = "testout.txt";
+
+  if (f_open(&f, test_filename, FA_CREATE_ALWAYS | FA_WRITE) != FR_OK) {
+    LOG("can't open %s", test_filename);
+    __builtin_trap();
+  }
+  strcpy(fatbuf, "This is a file written by RULOS. Enjoy!\n");
+  retval = f_write(&f, fatbuf, strlen(fatbuf), &bytes_written);
+  if (retval != FR_OK) {
+    LOG("write error writing to %s: %d", test_filename, retval);
+    __builtin_trap();
+  }
+  LOG("write data to %s: %s", test_filename, fatbuf);
+  f_close(&f);
+}
+
 static void try_read(void *data) {
   if (f_mount(&fatfs, "", 0) != FR_OK) {
     LOG("can't mount");
@@ -140,13 +166,14 @@ int main() {
   hal_init();
   init_clock(10000, TIMER1);
 
-  uart_init(&uart, /* uart_id= */ 0, 115200, true);
+  uart_init(&uart, /* uart_id= */ 0, 1000000, true);
   log_bind_uart(&uart);
   LOG("Log output running");
 
   // Give the SD card power 10ms to stabilize
-  schedule_us(10000, try_read, NULL);
+  schedule_us(10000, try_write, NULL);
   cpumon_main_loop();
+  try_read(NULL);
 
   return 0;
 }

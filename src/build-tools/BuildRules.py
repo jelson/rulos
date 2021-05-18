@@ -222,7 +222,8 @@ class ArmPlatform(Platform):
             "-fdata-sections", # Put all funcs/data in their own sections
             "-ffunction-sections",
             "-std=gnu99",
-            "-O2",
+            "-O0",
+#            "-O2",
 #            "-D__STACK_SIZE=$(STACK_SIZE)",
 #            "-D__HEAP_SIZE=$(HEAP_SIZE)",
             ]
