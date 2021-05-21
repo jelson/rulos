@@ -82,12 +82,11 @@ void flash_dumper_append(flash_dumper_t *fd, const void *buf, int len) {
   // make sure there's sufficient space
   if (len + fd->len > sizeof(fd->buf)) {
     LOG("ERROR: Flash buf overflow!");
-    return;
+  } else {
+    // append buffer
+    memcpy(&fd->buf[fd->len], buf, len);
+    fd->len += len;
   }
-
-  // append buffer
-  memcpy(&fd->buf[fd->len], buf, len);
-  fd->len += len;
 
   // if we've reached 2 complete FAT sectors, write
   while (fd->len >= WRITE_INCREMENT) {

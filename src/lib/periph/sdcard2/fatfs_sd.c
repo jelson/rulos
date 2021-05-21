@@ -522,9 +522,10 @@ DRESULT TM_FATFS_SD_disk_write (
 				}
 				buff += 512;
 
-				while (TM_SPI_Send(FATFS_SPI, 0xFF) != 0xFF) {
+				if (!wait_ready(20)) {
+					LOG("timed out waiting for block ack");
+					goto done;
 				}
-
 			} while (--count);
 
 
@@ -534,9 +535,11 @@ DRESULT TM_FATFS_SD_disk_write (
 	}
 
 	// wait for the write to complete
-	while (TM_SPI_Send(FATFS_SPI, 0xFF) != 0xFF) {
+	if (!wait_ready(20)) {
+		LOG("timed out waiting for block ack");
 	}
 
+done:
 	deselect_card();
 
 	return count ? RES_ERROR : RES_OK;	/* Return result */
