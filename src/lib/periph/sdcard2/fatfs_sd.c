@@ -474,6 +474,7 @@ DRESULT TM_FATFS_SD_disk_write (
 	UINT count			/* Number of sectors to write (1..128) */
 )
 {
+	//LOG("writing blocks %ld-%ld", sector, sector+count);
 	FATFS_DEBUG_SEND_USART("disk_write: inside");
 	if (!TM_FATFS_Detect()) {
 		return RES_ERROR;
