@@ -27,6 +27,7 @@ RulosBuildTarget(
         ArmStmPlatform("stm32g0b1xe",
             extra_cflags=[
                 "-DBOARD_DATALOGGER_REV_B",
+                "-DUART_RX_QUEUE_LEN=250",
             ],
         )],
     peripherals = "uart sdcard2 fatfs",
