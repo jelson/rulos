@@ -47,7 +47,6 @@ uint32_t TM_DELAY_Time2() {
   if (remaining > 0) {
     return remaining;
   } else {
-    LOG("timeout");
     // If the timeout has already expired, move the timeout time
     // forward to avoid rollover problems
     timeout_time_us = now;
