@@ -22,9 +22,9 @@ For more information about the project, see: www.jonh.net/rulos
 
 COMPILING:
 
-Go into one of the app/* subdirectories and run make there.
+Go into one of the app/* subdirectories and run scons there.
 
 Prerequisites:
 
-* Gnu make
+* scons
 * AVR Utils for Windows (http://winavr.sourceforge.net/)
