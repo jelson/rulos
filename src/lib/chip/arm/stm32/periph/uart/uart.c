@@ -30,7 +30,8 @@
 #include "core/hardware.h"
 #include "core/logging.h"
 
-static void dispatch_int(USART_TypeDef *instance, uint8_t uart_id);
+static void dispatch_int(uint8_t uart_id);
+static void dispatch_dma(uint8_t uart_id);
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -67,7 +68,14 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .altfunc = GPIO_AF1_USART1,
     },
 };
-#define rUART1_DMA_TX_IRQHandler DMA1_Channel2_3_IRQHandler
+
+void USART1_IRQHandler() {
+  dispatch_int(0);
+}
+
+void DMA1_Channel2_3_IRQHandler() {
+  dispatch_dma(0);
+}
 
 ///////////// stm32f1
 
@@ -86,11 +94,26 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .tx_dma_irqn = DMA1_Channel4_IRQn,
     },
 };
-#define rUART1_DMA_TX_IRQHandler DMA1_Channel4_IRQHandler
+
+void USART1_IRQHandler() {
+  dispatch_int(0);
+}
+
+void DMA1_Channel4_IRQHandler() {
+  dispatch_dma(0);
+}
 
 ///////////// stm32f3
 
 #elif defined(RULOS_ARM_stm32f3)
+
+void USART1_IRQHandler() {
+  dispatch_int(0);
+}
+
+void DMA1_Channel4_IRQHandler() {
+  dispatch_dma(0);
+}
 
 #include "stm32f3xx_ll_usart.h"
 static const stm32_uart_config_t stm32_uart_config[] = {
@@ -106,7 +129,6 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .altfunc = GPIO_AF7_USART1,
     },
 };
-#define rUART1_DMA_TX_IRQHandler DMA1_Channel4_IRQHandler
 
 ///////////// stm32g0
 
@@ -116,9 +138,45 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 #include "stm32g0xx_hal_dma.h"
 #include "stm32g0xx_ll_usart.h"
 
+void USART1_IRQHandler() {
+  dispatch_int(0);
+}
+
+void DMA1_Channel1_IRQHandler() {
+  dispatch_dma(0);
+}
+
+int xxint = 0;
+
 #if STM32G0B1xx
-#define USART2_IRQn       USART2_LPUART2_IRQn
-#define USART2_IRQHandler USART2_LPUART2_IRQHandler
+#define USART2_IRQn USART2_LPUART2_IRQn
+void USART2_LPUART2_IRQHandler() {
+  xxint++;
+  dispatch_int(1);
+}
+
+int xxdma = 0;
+
+void DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQHandler() {
+  xxdma++;
+  dispatch_dma(1);
+  dispatch_dma(2);
+  dispatch_dma(3);
+  dispatch_dma(4);
+  dispatch_dma(5);
+}
+
+void USART3_4_5_6_LPUART1_IRQHandler() {
+  dispatch_int(2);
+  dispatch_int(3);
+  dispatch_int(4);
+  dispatch_int(5);
+}
+
+#else
+void USART2_IRQHandler() {
+  dispatch_int(1);
+}
 #endif
 
 static const stm32_uart_config_t stm32_uart_config[] = {
@@ -141,8 +199,8 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .rx_pin = GPIO_PIN_3,
         .tx_port = GPIOA,
         .tx_pin = GPIO_PIN_2,
-        .tx_dma_chan = DMA1_Channel2,
-        .tx_dma_irqn = DMA1_Channel2_3_IRQn,  // note, no irqhandler yet
+        .tx_dma_chan = DMA1_Channel4,
+        .tx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
         .tx_dma_request = DMA_REQUEST_USART2_TX,
         .altfunc = GPIO_AF1_USART2,
     },
@@ -154,8 +212,8 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .rx_pin = GPIO_PIN_10,
         .tx_port = GPIOA,
         .tx_pin = GPIO_PIN_9,
-        .tx_dma_chan = DMA1_Channel3,
-        .tx_dma_irqn = DMA1_Channel2_3_IRQn,  // note, no irqhandler yet
+        .tx_dma_chan = DMA1_Channel5,
+        .tx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
         .tx_dma_request = DMA_REQUEST_USART3_TX,
         .altfunc = GPIO_AF4_USART3,
     },
@@ -168,7 +226,7 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .rx_pin = GPIO_PIN_1,
         .tx_port = GPIOA,
         .tx_pin = GPIO_PIN_2,
-        .tx_dma_chan = DMA1_Channel4,
+        .tx_dma_chan = DMA1_Channel6,
         .tx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
         .tx_dma_request = DMA_REQUEST_USART4_TX,
         .altfunc = GPIO_AF4_USART4,
@@ -182,27 +240,27 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .rx_pin = GPIO_PIN_1,
         .tx_port = GPIOB,
         .tx_pin = GPIO_PIN_0,
-        .tx_dma_chan = DMA1_Channel5,
+        .tx_dma_chan = DMA1_Channel7,
         .tx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
         .tx_dma_request = DMA_REQUEST_USART5_TX,
         .altfunc = GPIO_AF8_USART5,
     },
 #endif
-};
-#define rUART1_DMA_TX_IRQHandler DMA1_Channel1_IRQHandler
-
-void USART2_IRQHandler(void) {
-  dispatch_int(USART2, 1);
-}
-
-#ifdef USART3
-void USART3_4_5_6_LPUART1_IRQHandler(void) {
-  dispatch_int(USART3, 2);
-  dispatch_int(USART4, 3);
-  dispatch_int(USART5, 4);
-  dispatch_int(USART6, 5);
-}
+#ifdef USART6
+    {
+        .instance = USART6,
+        .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
+        .rx_port = GPIOA,
+        .rx_pin = GPIO_PIN_5,
+        .tx_port = GPIOA,
+        .tx_pin = GPIO_PIN_4,
+        .tx_dma_chan = DMA1_Channel1,
+        .tx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
+        .tx_dma_request = DMA_REQUEST_USART6_TX,
+        .altfunc = GPIO_AF3_USART6,
+    },
 #endif
+};
 
 ///////////// stm32g4
 
@@ -211,6 +269,15 @@ void USART3_4_5_6_LPUART1_IRQHandler(void) {
 #include "stm32g4xx.h"
 #include "stm32g4xx_hal_dma.h"
 #include "stm32g4xx_ll_usart.h"
+
+void USART1_IRQHandler() {
+  dispatch_int(0);
+}
+
+void DMA1_Channel1_IRQHandler() {
+  dispatch_dma(0);
+}
+
 static const stm32_uart_config_t stm32_uart_config[] = {
     {
         .instance = USART1,
@@ -225,7 +292,6 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .altfunc = GPIO_AF7_USART1,
     },
 };
-#define rUART1_DMA_TX_IRQHandler DMA1_Channel1_IRQHandler
 
 /////////////////////////////////////////
 
@@ -235,7 +301,11 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 #endif
 
 typedef struct {
+  // housekeeping
   bool initted;
+  uint32_t frame_errors;
+  uint32_t parity_errors;
+  uint32_t noise_errors;
 
   // HAL API: the upcall to get more data and the user data for that callback
   uint8_t uart_id;
@@ -258,66 +328,51 @@ typedef struct {
 #define NUM_UARTS (sizeof(stm32_uart_config) / sizeof(stm32_uart_config[0]))
 static stm32_uart_t g_stm32_uarts[NUM_UARTS] = {};
 
-///// DMA interrupt handlers
+///// interrupt handlers
 
 static void dispatch_dma(uint8_t uart_id) {
-  HAL_DMA_IRQHandler(g_stm32_uarts[uart_id].hal_uart_handle.hdmatx);
-}
-
-void rUART1_DMA_TX_IRQHandler(void) {
-  dispatch_dma(0);
-}
-#ifdef rUART2_DMA_TX_IRQHandler
-void rUART2_DMA_TX_IRQHandler(void) {
-  dispatch_dma(1);
-}
-#endif
-#ifdef rUART3_DMA_TX_IRQHandler
-void rUART3_DMA_TX_IRQHandler(void) {
-  dispatch_dma(2);
-}
-#endif
-#ifdef rUART4_DMA_TX_IRQHandler
-void rUART4_DMA_TX_IRQHandler(void) {
-  dispatch_dma(3);
-}
-#endif
-#ifdef rUART5_DMA_TX_IRQHandler
-void rUART5_DMA_TX_IRQHandler(void) {
-  dispatch_dma(4);
-}
-#endif
-#ifdef rUART6_DMA_TX_IRQHandler
-void rUART6_DMA_TX_IRQHandler(void) {
-  dispatch_dma(5);
-}
-#endif
-
-///// UART device interrupt handlers
-
-static void dispatch_int(USART_TypeDef *instance, uint8_t uart_id) {
-  stm32_uart_t *u = &g_stm32_uarts[uart_id];
+  const stm32_uart_t *u = &g_stm32_uarts[uart_id];
   if (!u->initted) {
     return;
   }
 
+  HAL_DMA_IRQHandler(u->hal_uart_handle.hdmatx);
+}
+
+static void dispatch_int(uint8_t uart_id) {
+  stm32_uart_t *u = &g_stm32_uarts[uart_id];
+  const stm32_uart_config_t *c = &stm32_uart_config[uart_id];
+  if (!u->initted) {
+    return;
+  }
+
+  // clear RX errors not handled through HAL
+  if (LL_USART_IsActiveFlag_FE(c->instance)) {
+    LL_USART_ClearFlag_FE(c->instance);
+    u->frame_errors++;
+  }
+  if (LL_USART_IsActiveFlag_PE(c->instance)) {
+    LL_USART_ClearFlag_PE(c->instance);
+    u->parity_errors++;
+  }
+  if (LL_USART_IsActiveFlag_NE(c->instance)) {
+    LL_USART_ClearFlag_NE(c->instance);
+    u->noise_errors++;
+  }
+
   // dispatch rx upcall, if needed -- not handled through the HAL
-  if (LL_USART_IsActiveFlag_RXNE(instance) &&
-      LL_USART_IsEnabledIT_RXNE(instance)) {
+  if (LL_USART_IsActiveFlag_RXNE(c->instance) &&
+      LL_USART_IsEnabledIT_RXNE(c->instance)) {
     // note: we have to read the character whether or not we send it anywhere;
     // reading the char is what clears the interrupt
-    char c = LL_USART_ReceiveData8(instance);
+    char inchar = LL_USART_ReceiveData8(c->instance);
     if (u->rx_cb != NULL) {
-      u->rx_cb(uart_id, u->user_data, c);
+      u->rx_cb(uart_id, u->user_data, inchar);
     }
   }
 
   // dispatch the rest of the interrupt handling through the HAL
   HAL_UART_IRQHandler(&u->hal_uart_handle);
-}
-
-void USART1_IRQHandler(void) {
-  dispatch_int(USART1, 0);
 }
 
 /////// transmission
