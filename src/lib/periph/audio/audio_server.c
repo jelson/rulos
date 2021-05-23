@@ -237,6 +237,7 @@ void aserv_start_play(AudioServer *aserv) {
     find_music_filename(aserv, effect_filename, MAX_PATH);
 
     as_set_volume(&aserv->audio_streamer, stream->volume);
+    LOG("audio_server stream %d volume %d", aserv->active_stream, stream->volume);
     bool rc = as_play(&aserv->audio_streamer, effect_filename,
                       (ActivationFuncPtr)aserv_advance, aserv);
     if (!rc) {

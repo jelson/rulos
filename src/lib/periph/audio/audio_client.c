@@ -18,10 +18,6 @@
 
 #include "periph/audio/audio_client.h"
 
-extern void syncdebug(uint8_t spaces, char f, uint16_t line);
-#define SYNCDEBUG() syncdebug(0, 'U', __LINE__)
-//#define SYNCDEBUG()	{}
-
 void init_audio_client(AudioClient *ac, Network *network) {
   ac->network = network;
 
@@ -36,8 +32,6 @@ void init_audio_client(AudioClient *ac, Network *network) {
   ac->mcm_send_slot.func = NULL;
   ac->mcm_send_slot.wire_msg = (WireMessage *)ac->mcm_send_msg_alloc;
   ac->mcm_send_slot.sending = FALSE;
-
-  ac->cached_music_volume = 2;  // should be immediately overwritten
 }
 
 bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx,
