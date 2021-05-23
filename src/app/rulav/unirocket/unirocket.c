@@ -86,7 +86,6 @@ typedef struct {
   ScreenBlanker screenblanker;
   SlowBoot slow_boot;
   QuadKnob volknob;
-  VolumeControl volume_control;
   QuadKnob pongknob;
   RemoteBBufSend rbs;
   DisplayAzimuthElevationRoll daer;
@@ -157,15 +156,11 @@ void init_rocket0(Rocket0 *r0) {
                  &r0->idle, &r0->audio_client);
   init_screenblanker(&r0->screenblanker, &r0->hpam, &r0->idle);
 
-  volume_control_init(&r0->volume_control, &r0->audio_client,
-                      /*board*/ 0, KEY_VOL_UP, KEY_VOL_DOWN);
-
   daer_init(&r0->daer, 10, ((Time)5) << 20);
 
   init_control_panel(&r0->cp, 3, 1, &r0->network, &r0->hpam, &r0->audio_client,
                      &r0->idle, &r0->screenblanker,
-                     joystick, &r0->ts, KEY_VOL_UP,
-                     KEY_VOL_DOWN, &r0->volume_control.injector.iii,
+                     joystick, &r0->ts, KEY_VOL_UP, KEY_VOL_DOWN,
                      (FetchCalcDecorationValuesIfc *)&r0->daer.decoration_ifc);
   r0->cp.ccl.launch.main_rtc = &r0->dr;
   r0->cp.ccl.launch.lunar_distance = &r0->ld;

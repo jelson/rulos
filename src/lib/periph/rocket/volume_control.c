@@ -7,6 +7,11 @@
 void _volume_input(InputInjectorIfc *ii, Keystroke key);
 void _volume_update(VolumeControl *vc);
 
+static void volume_transmit_message(VolumeControl *vc) {
+  ac_change_volume(vc->ac, AUDIO_STREAM_MUSIC, vc->cur_vol);
+  LOG("Transmit volume to %d", vc->cur_vol);
+}
+
 void volume_control_init(VolumeControl *vc, AudioClient *ac, uint8_t boardnum,
                          Keystroke vol_up, Keystroke vol_down) {
   vc->injector.iii.func = _volume_input;
@@ -19,7 +24,7 @@ void volume_control_init(VolumeControl *vc, AudioClient *ac, uint8_t boardnum,
   vc->vol_up = vol_up;
   vc->vol_down = vol_down;
 
-  ac_change_volume(vc->ac, AUDIO_STREAM_MUSIC, vc->cur_vol);
+  volume_transmit_message(vc);
 
 #if DISPLAY_VOLUME_ADJUSTMENTS
   vc->lastTouch = clock_time_us() - VOLUME_DISPLAY_PERSISTENCE * 2;
@@ -44,7 +49,7 @@ void _volume_input(InputInjectorIfc *ii, Keystroke key) {
 #if DISPLAY_VOLUME_ADJUSTMENTS
   vc->lastTouch = clock_time_us();
 #endif  // DISPLAY_VOLUME_ADJUSTMENTS
-  ac_change_volume(vc->ac, AUDIO_STREAM_MUSIC, vc->cur_vol);
+  volume_transmit_message(vc);
 }
 
 void _volume_update(VolumeControl *vc) {

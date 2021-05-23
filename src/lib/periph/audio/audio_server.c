@@ -192,6 +192,9 @@ void aserv_recv_mcm(MessageRecvBuffer *msg) {
     aserv->music_random_seeded = TRUE;
   }
 
+  // record the embedded volume setting
+  aserv->audio_stream[AUDIO_STREAM_MUSIC].volume = mcm->volume;
+
   // now advance one or retreat one, based on request
   aserv->music_offset =
       (aserv->music_offset + mcm->advance + aserv->music_file_count) %

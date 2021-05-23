@@ -32,6 +32,7 @@
 #include "periph/rocket/screenblanker.h"
 #include "periph/rocket/sequencer.h"
 #include "periph/rocket/snakegame.h"
+#include "periph/rocket/volume_control.h"
 
 #define CONTROL_PANEL_HEIGHT       SCREEN4SIZE
 #define CONTROL_PANEL_NUM_CHILDREN 6
@@ -113,9 +114,9 @@ typedef struct s_control_panel {
   CCSnake ccsnake;
   CCDisco ccdisco;
 
+  VolumeControl volume_control;
   Keystroke vol_up_key;
   Keystroke vol_down_key;
-  InputInjectorIfc *volume_input_ifc;
 
   IdleAct *idle;
 } ControlPanel;
@@ -126,5 +127,4 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
                         JoystickState_t *joystick,
                         ThrusterState_t *thrusterState, Keystroke vol_up_key,
                         Keystroke vol_down_key,
-                        InputInjectorIfc *volume_input_ifc /*optional*/,
                         FetchCalcDecorationValuesIfc *decoration_ifc);

@@ -46,4 +46,5 @@ typedef struct {
 typedef struct {
   // +1: skip forward  -1: skip backward
   int8_t advance;
+  uint8_t volume;
 } MusicControlMessage;

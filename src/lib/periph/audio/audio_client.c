@@ -61,12 +61,12 @@ bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx,
 }
 
 bool ac_change_volume(AudioClient *ac, uint8_t stream_idx, uint8_t volume) {
+  // Remember this volume for later.
+  ac->volume_for_stream[stream_idx] = volume;
+
   if (ac->avm_send_slot.sending) {
     return FALSE;
   }
-
-  // Remember this volume for later.
-  ac->volume_for_stream[stream_idx] = volume;
 
   ac->avm_send_slot.dest_addr = AUDIO_ADDR;
   ac->avm_send_slot.wire_msg->dest_port = SET_VOLUME_PORT;
@@ -91,6 +91,7 @@ bool ac_send_music_control(AudioClient *ac, int8_t advance) {
   MusicControlMessage *mcm =
       (MusicControlMessage *)&ac->mcm_send_slot.wire_msg->data;
   mcm->advance = advance;
+  mcm->volume = ac->volume_for_stream[AUDIO_STREAM_MUSIC];
   net_send_message(ac->network, &ac->mcm_send_slot);
 
   return TRUE;

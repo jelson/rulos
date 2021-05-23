@@ -95,7 +95,6 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
                         JoystickState_t *joystick,
                         ThrusterState_t *thrusterState, Keystroke vol_up_key,
                         Keystroke vol_down_key,
-                        InputInjectorIfc *volume_input_ifc,
                         FetchCalcDecorationValuesIfc *decoration_ifc) {
   cp->handler_func = (UIEventHandlerFunc)cp_uie_handler;
 
@@ -137,7 +136,8 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
 
   cp->vol_up_key = vol_up_key;
   cp->vol_down_key = vol_down_key;
-  cp->volume_input_ifc = volume_input_ifc;
+  volume_control_init(&cp->volume_control, audioClient,
+                      /*board*/ 0, vol_up_key, vol_down_key);
 
   cp->selected_child = 0;
   cp->active_child = CP_NO_CHILD;
@@ -155,11 +155,10 @@ void cp_inject(struct s_direct_injector *di, char k) {
 UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt) {
   UIEventDisposition result = uied_accepted;
 
-  if (cp->volume_input_ifc != NULL &&
-      (KeystrokeCmp(KeystrokeCtor(evt), cp->vol_up_key) ||
-       KeystrokeCmp(KeystrokeCtor(evt), cp->vol_down_key))) {
+  if (KeystrokeCmp(KeystrokeCtor(evt), cp->vol_up_key)
+      || KeystrokeCmp(KeystrokeCtor(evt), cp->vol_down_key)) {
     // steal these events for volume control
-    (cp->volume_input_ifc->func)(cp->volume_input_ifc, KeystrokeCtor(evt));
+    (cp->volume_control.injector.iii.func)(&cp->volume_control.injector.iii, KeystrokeCtor(evt));
     return result;
   }
 

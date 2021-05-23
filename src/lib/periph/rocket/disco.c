@@ -53,6 +53,10 @@ void disco_paint_once(Disco *disco) {
   }
 }
 
+static void change_music(Disco *disco, int increment) {
+  ac_send_music_control(disco->audioClient, increment);
+}
+
 UIEventDisposition disco_event_handler(UIEventHandler *raw_handler,
                                        UIEvent evt) {
   Disco *disco = ((DiscoHandler *)raw_handler)->disco;
@@ -60,7 +64,7 @@ UIEventDisposition disco_event_handler(UIEventHandler *raw_handler,
   UIEventDisposition result = uied_accepted;
   switch (evt) {
     case uie_focus:
-      ac_send_music_control(disco->audioClient, +1);
+      change_music(disco, +1);
       disco->focused = TRUE;
       break;
     case uie_escape:
@@ -76,11 +80,11 @@ UIEventDisposition disco_event_handler(UIEventHandler *raw_handler,
       break;
     case 'a':
     case 'e':
-      ac_send_music_control(disco->audioClient, +1);
+      change_music(disco, +1);
       break;
     case 'b':
     case 'f':
-      ac_send_music_control(disco->audioClient, -1);
+      change_music(disco, -1);
       break;
   }
   return result;
