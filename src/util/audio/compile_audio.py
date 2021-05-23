@@ -1,9 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import sys
 import re
 import os.path
 import glob
+import subprocess
 
 AO_HALFBUFLEN = 128
     # TODO fetch from source audio_out.h AO_HALFBUFLEN
@@ -94,11 +95,9 @@ class AudioIndexer:
         for token in tokens:
             sys.stderr.write("reading %s\n" % token.symbol)
             sys.stderr.write("cmd: %s\n" % self.filter(token))
-            fp = os.popen(self.filter(token), "r")
+            completed = subprocess.run(self.filter(token), shell=True, capture_output=True)
             # discard .au header
-            fp.read(24)
-            everything = fp.read(99999999)
-            fp.close()
+            everything = completed.stdout[24:]
             if len(everything) == 0:
                 raise Exception("filter gave empty output")
             self.clips.append(AudioClip(token, everything))
@@ -198,7 +197,7 @@ class ParseAudioFilenames:
                 continue
             args = mo.groups(1)[0]
             words = map(lambda s: s.strip(), args.split(','))
-            print words
+            print(words)
             (symbol, source_file_name, filter_name, label) = words
             self._tokens.append(Token(outdir, idx, os.path.join(fx_root, source_file_name),
                 symbol, source_file_name, filter_name, label))

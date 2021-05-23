@@ -20,13 +20,13 @@
 #include "core/logging.h"   // assert
 #include "periph/pseudosdcard/pseudosdcard.h"
 
-#define DISK_IMAGE_PATH "../../util/audio/sdcard.img"
+#define DISK_IMAGE_PATH "../../../src/util/audio/sdcard.img"
 #define SECTOR_SIZE (512)
 static FILE* disk_fp = NULL;
 
 DSTATUS disk_initialize(BYTE pdrv) {
   disk_fp = fopen(DISK_IMAGE_PATH, "rb");
-  if (disk_fp < 0) {
+  if (disk_fp == NULL) {
     return RES_ERROR;
   }
   return RES_OK;
