@@ -17,6 +17,7 @@
  */
 
 #include "core/hardware.h"
+#include "core/rtc.h"
 #include "core/rulos.h"
 #include "periph/fatfs/ff.h"
 #include "periph/uart/linereader.h"
@@ -29,11 +30,11 @@
 #define REFGPS_UART_NUM  4
 
 // pin definitions
-#define REC_LED_PIN      GPIO_B2
-#define DUT1_LED_PIN     GPIO_A12
-#define DUT2_LED_PIN     GPIO_A11
-#define DUT1_PWR_PIN     GPIO_B4
-#define DUT2_PWR_PIN     GPIO_B5
+#define REC_LED_PIN  GPIO_B2
+#define DUT1_LED_PIN GPIO_A12
+#define DUT2_LED_PIN GPIO_A11
+#define DUT1_PWR_PIN GPIO_B4
+#define DUT2_PWR_PIN GPIO_B5
 
 // minimum length of data to buffer before writing to FAT
 #define WRITE_INCREMENT 2048
@@ -51,16 +52,17 @@ typedef struct {
   LineReader_t linereader;
   flash_dumper_t *flash_dumper;
   int num_total_lines;
-  //gpio_pin_t led;
+  uint32_t last_active;
+  // gpio_pin_t led;
 } serial_reader_t;
 
+rtc_t rtc;
 UartState_t console;
 flash_dumper_t flash_dumper;
 serial_reader_t refgps, dut1, dut2;
 
 void flash_dumper_init(flash_dumper_t *fd) {
   const char *filename = "log.txt";
-  gpio_clr(REC_LED_PIN);
 
   memset(fd, 0, sizeof(*fd));
   if (f_mount(&fd->fatfs, "", 0) != FR_OK) {
@@ -75,70 +77,121 @@ void flash_dumper_init(flash_dumper_t *fd) {
     return;
   }
   LOG("opened file ok");
-  gpio_set(REC_LED_PIN);
+  fd->ok = true;
 }
 
 void flash_dumper_append(flash_dumper_t *fd, const void *buf, int len) {
+  // prepend all lines with the current time in milliseconds and a comma
+  char prefix[50];
+  uint32_t sec, usec;
+  rtc_get_uptime(&rtc, &sec, &usec);
+  int prefix_len = sprintf(prefix, "%ld,", sec * 1000 + usec / 1000);
+
+  // compute total length of the string: the prefix, the string we were passed,
+  // and one extra for the trailing \n
+  int len_with_extras = 0;
+  len_with_extras += prefix_len;
+  len_with_extras += len;
+  len_with_extras += 1;
+
   // make sure there's sufficient space
-  if (len + fd->len > sizeof(fd->buf)) {
+  if (fd->len + len_with_extras > sizeof(fd->buf)) {
     LOG("ERROR: Flash buf overflow!");
   } else {
-    // append buffer
+    // append prefix, message and \n to buffer
+    memcpy(&fd->buf[fd->len], prefix, prefix_len);
+    fd->len += prefix_len;
     memcpy(&fd->buf[fd->len], buf, len);
     fd->len += len;
+    fd->buf[fd->len] = '\n';
+    fd->len++;
   }
+
+  // write the entry to the console for debug
+  uart_write(&console, &fd->buf[fd->len - len_with_extras], len_with_extras);
 
   // if we've reached 2 complete FAT sectors, write
   while (fd->len >= WRITE_INCREMENT) {
-    // clear the LED so it stays out if there's a write error
-    gpio_clr(REC_LED_PIN);
-
     uint32_t written;
     int retval = f_write(&fd->fp, fd->buf, WRITE_INCREMENT, &written);
     if (retval != FR_OK) {
       LOG("couldn't write to sd card: got retval of %d", retval);
+      fd->ok = false;
       return;
     }
     if (written == 0) {
       LOG("error writing to SD card: nothing written");
+      fd->ok = false;
       return;
     }
     retval = f_sync(&fd->fp);
     if (retval != FR_OK) {
-      LOG("couldn't sync: retval %d", retval);
+      fd->ok = false;
       return;
     }
 
     // success!
-    gpio_set(REC_LED_PIN);
     LOG("flash: wrote %ld bytes", written);
     memmove(&fd->buf[0], &fd->buf[written], fd->len - written);
     fd->len -= written;
   }
 }
 
+void flash_dumper_print(flash_dumper_t *fd, char *s) {
+  flash_dumper_append(fd, s, strlen(s));
+}
+
 static void sr_line_received(UartState_t *uart, void *user_data, char *line) {
   serial_reader_t *sr = (serial_reader_t *)user_data;
+  sr->last_active = clock_time_us();
   char buf[128];
-  int len = snprintf(buf, sizeof(buf), "u,%d,%d,%s\n", uart->uart_id,
+  int len = snprintf(buf, sizeof(buf), "u,%d,%d,%s", uart->uart_id,
                      sr->num_total_lines++, line);
-  uart_write(&console, buf, len);
   flash_dumper_append(sr->flash_dumper, buf, len);
 }
 
 static void serial_reader_init(serial_reader_t *sr, uint8_t uart_id,
                                uint32_t baud, flash_dumper_t *flash_dumper) {
   memset(sr, 0, sizeof(*sr));
+  sr->last_active = clock_time_us();
   sr->flash_dumper = flash_dumper;
   uart_init(&sr->uart, uart_id, baud, true);
   linereader_init(&sr->linereader, &sr->uart, sr_line_received, sr);
 }
 
+#define ACTIVITY_TIMEOUT_US 2000000
+
+static bool serial_reader_is_active(serial_reader_t *sr) {
+  uint32_t now = clock_time_us();
+  uint32_t time_since_active = now - sr->last_active;
+
+  if (time_since_active > ACTIVITY_TIMEOUT_US) {
+    // if inactive, move the last-active time forward to prevent rollover
+    // problems (but still far enough in the past that the serial reader does
+    // not appear to be artificially active)
+    sr->last_active = now - ACTIVITY_TIMEOUT_US;
+    return false;
+  } else {
+    return true;
+  }
+}
+
 static void enable_sony(void *data) {
   serial_reader_t *sr = (serial_reader_t *)data;
-  uart_print(&sr->uart, "\r\n@GCD\r\n");
+  uart_print(&sr->uart, "@GCD\r\n");
+  schedule_us(500000, enable_sony, data);
+}
+
+static void indicate_alive(void *data) {
+  static bool onoff = false;
   LOG("run");
-  schedule_us(250000, enable_sony, data);
+  schedule_us(250000, indicate_alive, NULL);
+  if (!flash_dumper.ok || !serial_reader_is_active(&refgps)) {
+    gpio_clr(REC_LED_PIN);
+  } else {
+    gpio_set_or_clr(REC_LED_PIN, onoff);
+    onoff = !onoff;
+  }
 }
 
 int main() {
@@ -157,6 +210,9 @@ int main() {
   gpio_make_output(DUT1_PWR_PIN);
   gpio_make_output(DUT2_PWR_PIN);
 
+  // initialize rtc
+  rtc_init(&rtc);
+
   // turn on power to DUT1
   gpio_set(DUT1_PWR_PIN);
 
@@ -169,6 +225,9 @@ int main() {
   // enable sony on dut1
   serial_reader_init(&dut1, DUT1_UART_NUM, 115200, &flash_dumper);
   schedule_now(enable_sony, &dut1);
+
+  // enable periodic blink to indicate liveness
+  schedule_us(1, indicate_alive, NULL);
 
   cpumon_main_loop();
 }
