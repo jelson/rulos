@@ -25,7 +25,11 @@ for id in list(range(0,4))+list(range(7,12)):
         name = f"rocketdongle/address_{id}",
         sources = ["rocketdongle.c"],
         extra_cflags = [
-            "-DBOARDCONFIG_ROCKET0",
+            "-DBOARDCONFIG_ROCKETDONGLESOUTH"
+                # This part might not work, but we got id 10 working and
+                # went to bed.
+                if id > 7 else "-DBOARDCONFIG_ROCKETDONGLENORTH"
+            ,
             "-DDONGLE_BOARD_ID="+str(id),
             "-DLOG_TO_SERIAL",
         ],

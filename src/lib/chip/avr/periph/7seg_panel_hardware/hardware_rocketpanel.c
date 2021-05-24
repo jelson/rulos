@@ -197,6 +197,12 @@ void hal_init_rocketpanel() {
   displayConfiguration[4] = BRT_SOLDERED_DN_BOARD_DN;
 #elif defined(BOARDCONFIG_ROCKET1)
   displayConfiguration[2] = BRT_SOLDERED_DN_BOARD_DN;
+#elif defined(BOARDCONFIG_ROCKETDONGLENORTH)
+  displayConfiguration[0] = BRT_WALLCLOCK;
+  displayConfiguration[3] = BRT_SOLDERED_DN_BOARD_DN;
+  displayConfiguration[4] = BRT_SOLDERED_DN_BOARD_DN;
+#elif defined(BOARDCONFIG_ROCKETDONGLESOUTH)
+  displayConfiguration[2] = BRT_SOLDERED_DN_BOARD_DN;
 #elif defined(BOARDCONFIG_WALLCLOCK)
   displayConfiguration[0] = BRT_WALLCLOCK;
 #elif defined(BOARDCONFIG_CHASECLOCK)
