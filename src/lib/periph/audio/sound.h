@@ -39,4 +39,4 @@ typedef enum {
 
 #define VOL_MAX (30)
 #define VOL_MIN (0)
-#define VOL_DEFAULT (20)
+#define VOL_DEFAULT (29)
