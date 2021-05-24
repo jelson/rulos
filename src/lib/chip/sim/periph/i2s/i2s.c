@@ -128,7 +128,7 @@ void hal_i2s_start(int16_t* samples, uint16_t num_samples_per_halfbuffer) {
 }
 
 static void sim_audio_output_poll(void *data) {
-  LOG("SIM wakes on SIGIO");
+  //LOG("SIM wakes on SIGIO");
   poke_fd();
 }
 

@@ -212,6 +212,7 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
   twi_state->media.send = sim_twi_send;
   twi_state->mrs = mrs;
   twi_state->udp_socket = socket(PF_INET, SOCK_DGRAM, 0);
+  assert(twi_state->udp_socket >= 0);
 
   int rc;
   int on = 1;
@@ -234,7 +235,8 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
   sai.sin_family = AF_INET;
   sai.sin_addr.s_addr = htonl(INADDR_ANY);
   sai.sin_port = htons(SIM_TWI_PORT_BASE + local_addr);
-  bind(twi_state->udp_socket, (struct sockaddr *)&sai, sizeof(sai));
+  rc = bind(twi_state->udp_socket, (struct sockaddr *)&sai, sizeof(sai));
+  assert(rc == 0);
   twi_state->initted = TRUE;
   sim_register_clock_handler(sim_twi_poll, NULL);
   sim_register_sigio_handler(sim_twi_poll, NULL);
