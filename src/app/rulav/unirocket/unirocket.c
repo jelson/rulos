@@ -140,6 +140,8 @@ void init_rocket0(Rocket0 *r0) {
   drtc_init(&r0->dr, 0, clock_time_us() + 20000000);
   lunar_distance_init(&r0->ld, 1, 2 /*, SPEED_POT_CHANNEL*/);
   init_audio_client(&r0->audio_client, &r0->network);
+  ac_change_volume(&r0->audio_client, AUDIO_STREAM_BACKGROUND, VOL_MIN);
+  ac_change_volume(&r0->audio_client, AUDIO_STREAM_BURST_EFFECTS, 25);
   memset(&r0->thrusterUpdate, 0, sizeof(r0->thrusterUpdate));
   init_hpam(&r0->hpam, 9, r0->thrusterUpdate);
   init_idle(&r0->idle);

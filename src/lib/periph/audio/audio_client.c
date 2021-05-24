@@ -32,6 +32,10 @@ void init_audio_client(AudioClient *ac, Network *network) {
   ac->mcm_send_slot.func = NULL;
   ac->mcm_send_slot.wire_msg = (WireMessage *)ac->mcm_send_msg_alloc;
   ac->mcm_send_slot.sending = FALSE;
+
+  for (int stream_idx = 0; stream_idx < AUDIO_NUM_STREAMS; stream_idx+=1) {
+    ac->volume_for_stream[stream_idx] = VOL_DEFAULT;
+  }
 }
 
 bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx,
@@ -50,6 +54,7 @@ bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx,
   arm->skip = TRUE;
   arm->skip_effect_id = cur_effect_id;
   arm->loop_effect_id = loop_effect_id;
+  arm->volume = ac->volume_for_stream[stream_idx];
   net_send_message(ac->network, &ac->arm_send_slot);
 
   return TRUE;
@@ -59,6 +64,9 @@ bool ac_change_volume(AudioClient *ac, uint8_t stream_idx, uint8_t volume) {
   if (ac->avm_send_slot.sending) {
     return FALSE;
   }
+
+  // Remember this volume for later.
+  ac->volume_for_stream[stream_idx] = volume;
 
   ac->avm_send_slot.dest_addr = AUDIO_ADDR;
   ac->avm_send_slot.wire_msg->dest_port = SET_VOLUME_PORT;

@@ -24,7 +24,7 @@ struct s_audio_client;
 
 typedef struct {
   struct s_audio_client *audio_client;
-  uint8_t mlvolume;
+  uint8_t volume;
 } AmbientNoise;
 
 void ambient_noise_init(AmbientNoise *an, struct s_audio_client *audio_client);

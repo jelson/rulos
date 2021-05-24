@@ -20,13 +20,13 @@
 
 #include "periph/audio/audio_client.h"
 
-#define AMBIENT_NOISE_DECAY_PERIOD (120 * 1000000)
+#define AMBIENT_NOISE_DECAY_PERIOD (30 * 1000000)
 
 void ambient_noise_decay(AmbientNoise *an);
 
 void ambient_noise_init(AmbientNoise *an, AudioClient *audio_client) {
   an->audio_client = audio_client;
-  an->mlvolume = 8;
+  an->volume = VOL_MIN;
 
   ac_skip_to_clip(an->audio_client, AUDIO_STREAM_BACKGROUND,
                   sound_space_background, sound_space_background);
@@ -36,17 +36,17 @@ void ambient_noise_init(AmbientNoise *an, AudioClient *audio_client) {
 }
 
 void ambient_noise_boost_complete(AmbientNoise *an) {
-  an->mlvolume = 1;
+  an->volume = VOL_DEFAULT;
   ac_skip_to_clip(an->audio_client, AUDIO_STREAM_BACKGROUND,
                   sound_space_background, sound_space_background);
-  ac_change_volume(an->audio_client, AUDIO_STREAM_BACKGROUND, an->mlvolume);
+  ac_change_volume(an->audio_client, AUDIO_STREAM_BACKGROUND, an->volume);
 }
 
 void ambient_noise_decay(AmbientNoise *an) {
-  if (an->mlvolume < 8) {
-    an->mlvolume += 1;  // quieter by one notch
+  if (an->volume > VOL_MIN) {
+    an->volume -= 1;  // quieter by one notch
 
-    ac_change_volume(an->audio_client, AUDIO_STREAM_BACKGROUND, an->mlvolume);
+    ac_change_volume(an->audio_client, AUDIO_STREAM_BACKGROUND, an->volume);
   }
 
   schedule_us(AMBIENT_NOISE_DECAY_PERIOD,

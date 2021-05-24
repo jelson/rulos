@@ -150,6 +150,10 @@ void aserv_recv_arm(MessageRecvBuffer *msg) {
   AudioRequestMessage *arm = (AudioRequestMessage *)&msg->data;
   assert(arm->stream_idx < AUDIO_NUM_STREAMS);
 
+  LOG("audio_server receives index %d arm skip %d loop %d volume %d",
+    arm->stream_idx, arm->skip_effect_id, arm->loop_effect_id,
+    arm->volume);
+  aserv->audio_stream[arm->stream_idx].volume = arm->volume;
   aserv->audio_stream[arm->stream_idx].loop_effect_id = arm->loop_effect_id;
   if (arm->skip) {
     aserv->audio_stream[arm->stream_idx].skip_effect_id = arm->skip_effect_id;
@@ -167,6 +171,8 @@ void aserv_recv_avm(MessageRecvBuffer *msg) {
   assert(avm->stream_idx < AUDIO_NUM_STREAMS);
   aserv->audio_stream[avm->stream_idx].volume = avm->volume;
   if (aserv->active_stream == avm->stream_idx) {
+    LOG("aserv_recv_avm setting volume idx %d vol %d",
+      avm->stream_idx, avm->volume);
     as_set_volume(&aserv->audio_streamer, avm->volume);
   }
 

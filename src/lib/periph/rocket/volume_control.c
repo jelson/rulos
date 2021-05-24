@@ -14,7 +14,7 @@ void volume_control_init(VolumeControl *vc, AudioClient *ac, uint8_t boardnum,
   vc->ac = ac;
 
   // cache correct volume so next music play starts at the right place
-  vc->cur_vol = 27;
+  vc->cur_vol = VOL_DEFAULT;
 
   vc->vol_up = vol_up;
   vc->vol_down = vol_down;

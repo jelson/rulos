@@ -29,6 +29,8 @@ typedef struct s_audio_client {
   SendSlot avm_send_slot;
   uint8_t mcm_send_msg_alloc[sizeof(WireMessage) + sizeof(MusicControlMessage)];
   SendSlot mcm_send_slot;
+
+  uint8_t volume_for_stream[AUDIO_NUM_STREAMS];
 } AudioClient;
 
 void init_audio_client(AudioClient *ac, Network *network);
