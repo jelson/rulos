@@ -178,7 +178,10 @@ static bool serial_reader_is_active(serial_reader_t *sr) {
 
 static void enable_sony(void *data) {
   serial_reader_t *sr = (serial_reader_t *)data;
-  uart_print(&sr->uart, "@GCD\r\n");
+  if (!serial_reader_is_active(sr)) {
+    LOG("sending GCD to sony");
+    uart_print(&sr->uart, "@GCD\r\n");
+  }
   schedule_us(500000, enable_sony, data);
 }
 
@@ -192,6 +195,8 @@ static void indicate_alive(void *data) {
     gpio_set_or_clr(REC_LED_PIN, onoff);
     onoff = !onoff;
   }
+
+  gpio_set_or_clr(DUT1_LED_PIN, serial_reader_is_active(&dut1));
 }
 
 int main() {
