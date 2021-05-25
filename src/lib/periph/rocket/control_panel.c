@@ -77,8 +77,8 @@ void init_cc_snake(CCSnake *ccs, Screen4 *s4, AudioClient *audioClient) {
 //////////////////////////////////////////////////////////////////////////////
 
 void init_cc_disco(CCDisco *ccp, AudioClient *audioClient,
-                   ScreenBlanker *screenblanker, IdleAct *idle) {
-  disco_init(&ccp->disco, audioClient, screenblanker, idle);
+                   ScreenBlanker *screenblanker, IdleAct *idle, Network* network) {
+  disco_init(&ccp->disco, audioClient, screenblanker, idle, network);
   ccp->uie_handler = (UIEventHandler *)&ccp->disco.handler;
   ccp->name = "disco";
 }
@@ -130,7 +130,7 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
   init_cc_snake(&cp->ccsnake, &cp->s4, audioClient);
 
   cp->children[cp->child_count++] = (ControlChild *)&cp->ccdisco;
-  init_cc_disco(&cp->ccdisco, audioClient, screenblanker, idle);
+  init_cc_disco(&cp->ccdisco, audioClient, screenblanker, idle, network);
 
   assert(cp->child_count <= CONTROL_PANEL_NUM_CHILDREN);
 

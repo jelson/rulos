@@ -21,6 +21,7 @@
 #include "core/network.h"
 #include "core/network_ports.h"
 #include "periph/audio/audio_request_message.h"
+#include "periph/audio/music_metadata_message.h"
 #include "periph/audio/audio_streamer.h"
 #include "periph/audio/sound.h"
 #include "periph/fatfs/ff.h"
@@ -32,6 +33,15 @@ typedef struct {
   SoundEffectId loop_effect_id;
   uint8_t volume;
 } AudioEffectsStream;
+
+typedef struct s_music_metadata_sender {
+  Network *network;
+  uint8_t send_msg_alloc[sizeof(WireMessage) + sizeof(MusicMetadataMessage)];
+  SendSlot sendSlot;
+} MusicMetadataSender;
+
+void init_music_metadata_sender(MusicMetadataSender *mms, Network *network);
+MusicMetadataMessage* music_metadata_message_buffer(MusicMetadataSender *mms);
 
 typedef struct s_audio_server {
   uint8_t
@@ -53,6 +63,8 @@ typedef struct s_audio_server {
   int16_t music_file_count;  // How many music files we found on the filesystem
   int16_t music_offset;      // Which one we should play next.
   bool music_random_seeded;  // On every boot, begin disco at a random song
+
+  MusicMetadataSender music_metadata_sender;
 } AudioServer;
 
 void init_audio_server(AudioServer *as, Network *network, uint8_t timer_id);

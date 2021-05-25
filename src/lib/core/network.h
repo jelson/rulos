@@ -29,7 +29,7 @@
 #define SLOT_NONE            255
 #define MAX_LISTENERS        10
 #define SEND_QUEUE_SIZE      4
-#define NET_MAX_PAYLOAD_SIZE 10
+#define NET_MAX_PAYLOAD_SIZE 62 // Presently driven by sizeof(WireMessage) + sizeof(MusicMetadataMessage)
 
 // We allocate num_receive_buffers of these things.
 typedef struct {

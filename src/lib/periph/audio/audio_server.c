@@ -32,6 +32,32 @@ void aserv_advance(AudioServer *as);
 static int count_music(AudioServer *aserv, int limit, char *opt_path,
                        int opt_path_capacity);
 
+void init_music_metadata_sender(MusicMetadataSender *mms, Network *network)
+{
+  mms->network = network;
+
+  mms->sendSlot.func = NULL;
+  mms->sendSlot.wire_msg = (WireMessage *)mms->send_msg_alloc;
+  mms->sendSlot.dest_addr = ROCKET_ADDR;
+  mms->sendSlot.wire_msg->dest_port = MUSIC_METADATA_PORT;
+  mms->sendSlot.payload_len = sizeof(MusicMetadataMessage);
+  mms->sendSlot.sending = FALSE;
+}
+
+MusicMetadataMessage* music_metadata_message_buffer(MusicMetadataSender *mms)
+{
+  return (MusicMetadataMessage *)&mms->sendSlot.wire_msg->data;
+}
+
+void music_metadata_send(MusicMetadataSender* mms) {
+  if (mms->sendSlot.sending) {
+    LOG("MusicMetadata drops an outbound message due to full send queue.");
+    return;
+  }
+  net_send_message(mms->network, &mms->sendSlot);
+}
+
+
 void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id) {
   // Listen on network socket for AudioRequestMessage to play sound effects.
   aserv->arm_app_receiver.recv_complete_func = aserv_recv_arm;
@@ -86,12 +112,14 @@ void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id) {
   aserv->music_random_seeded = FALSE;
 
   aserv->music_file_count = count_music(aserv, 1000, NULL, 0);
+
+  init_music_metadata_sender(&aserv->music_metadata_sender, network);
 }
 
 // Concatenate onto dst, without overflowing capacity, and
 // enforcing that dst stays nul-terminated.
 void safecat(char *dst, int capacity, char *src) {
-  strncat(dst, src, capacity - strlen(src));
+  strncat(dst, src, capacity - strlen(dst));
   dst[capacity - 1] = '\0';
 }
 
@@ -241,13 +269,15 @@ void aserv_start_play(AudioServer *aserv) {
     stream->skip_effect_id = sound_silence;
     as_stop_streaming(&aserv->audio_streamer);
   } else {
-#define MAX_PATH 30
-    char effect_filename[MAX_PATH];
-    find_music_filename(aserv, effect_filename, MAX_PATH);
+    MusicMetadataMessage* mms = music_metadata_message_buffer(&aserv->music_metadata_sender);
+    mms->path[0] = '\0';
+    find_music_filename(aserv, mms->path, sizeof(mms->path));
+    music_metadata_send(&aserv->music_metadata_sender);
 
     as_set_volume(&aserv->audio_streamer, stream->volume);
     LOG("audio_server stream %d volume %d", aserv->active_stream, stream->volume);
-    bool rc = as_play(&aserv->audio_streamer, effect_filename,
+    // NB we sleazily re-use the message buffer to cart the path to as_play.
+    bool rc = as_play(&aserv->audio_streamer, mms->path,
                       (ActivationFuncPtr)aserv_advance, aserv);
     if (!rc) {
       // Retry rapidly, so we can get ahold of sdc as soon as it's

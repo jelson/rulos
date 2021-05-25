@@ -45,4 +45,4 @@
 #define STREAMING_AUDIO_PORT  (0x18)
 #define SET_VOLUME_PORT       (0x19)
 #define MUSIC_CONTROL_PORT    (0x20)
-#define MUSIC_DISPLAY_PORT    (0x21)
+#define MUSIC_METADATA_PORT   (0x21)
