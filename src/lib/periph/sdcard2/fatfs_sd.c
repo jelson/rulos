@@ -522,8 +522,8 @@ DRESULT TM_FATFS_SD_disk_write (
 				}
 				buff += 512;
 
-				if (!wait_ready(20)) {
-					LOG("timed out waiting for block ack");
+				if (!wait_ready(50)) {
+					LOG("timed out waiting for multiblock ack");
 					goto done;
 				}
 			} while (--count);
@@ -535,7 +535,7 @@ DRESULT TM_FATFS_SD_disk_write (
 	}
 
 	// wait for the write to complete
-	if (!wait_ready(20)) {
+	if (!wait_ready(50)) {
 		LOG("timed out waiting for block ack");
 	}
 
