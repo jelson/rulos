@@ -63,7 +63,7 @@ void uart_init(UartState_t *u, uint8_t uart_id, uint32_t baud, bool stop2);
 void uart_start_rx(UartState_t *u, uart_rx_cb rx_cb, void *user_data);
 
 // Sends binary data to the UART, specified with a length.
-void uart_write(UartState_t *u, const char *c, uint8_t len);
+void uart_write(UartState_t *u, const void *buf, uint8_t len);
 
 // Sends a null-terminated string to the UART.
 void uart_print(UartState_t *u, const char *s);
