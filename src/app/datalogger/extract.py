@@ -37,7 +37,9 @@ class Log:
         for linenum in range(startline, endline+1):
             line = self.lines[linenum]
             fields = line.split(",")
-            if not fields[1] == "u":
+            if len(fields) < 5:
+                continue
+            if not (fields[1] == "u" or fields[1] == "in"):
                 continue
             this_line_channel = int(fields[2])
             if this_line_channel != channelnum:

@@ -56,10 +56,16 @@ typedef struct {
   // gpio_pin_t led;
 } serial_reader_t;
 
+static bool serial_reader_is_active(serial_reader_t *sr);
+static void serial_reader_print(serial_reader_t *sr, const char *s);
+
 rtc_t rtc;
 UartState_t console;
 flash_dumper_t flash_dumper;
 serial_reader_t refgps, dut1, dut2;
+
+//////////////////////////////////////////////////////////////////////////////
+
 
 void flash_dumper_init(flash_dumper_t *fd) {
   const char *filename = "log.txt";
@@ -141,13 +147,67 @@ void flash_dumper_print(flash_dumper_t *fd, char *s) {
   flash_dumper_append(fd, s, strlen(s));
 }
 
+//// sony config
+
+static const char *sony_init_seq[][2] = {
+  {"VER", "[VER] Done"},
+  {"BSSL 34345967", "[BSSL] Done"},
+  {"GNS 0x3", "[GNS] Done"},
+  {"GSOP 1 1000 0", "[GSOP] Done"},
+  {"GSR", "[GSR] Done"},
+  {"GCD", "[GCD] Done"},
+  {NULL, NULL},
+};
+
+static int last_sony_step = -1;
+
+static void write_sony_config_string(serial_reader_t *sr) {
+  const char *next = sony_init_seq[last_sony_step][0];
+  if (next == NULL) {
+    LOG("sony config done");
+    last_sony_step = -1;
+    return;
+  }
+
+  char s[100];
+  LOG("sending sony config step %d", last_sony_step);
+  sprintf(s, "@%s\r\n", next);
+  serial_reader_print(sr, s);
+}
+
+static void sony_config_received(serial_reader_t *sr, const char *line) {
+  const char *expected = sony_init_seq[last_sony_step][1];
+  if (last_sony_step >= 0 && strlen(line) >= strlen(expected) && !strncmp(line, expected, strlen(expected))) {
+    last_sony_step++;
+    write_sony_config_string(sr);
+  }
+}
+
+static void enable_sony(void *data) {
+  serial_reader_t *sr = (serial_reader_t *)data;
+  if (!serial_reader_is_active(sr)) {
+    LOG("starting sony init");
+    last_sony_step = 0;
+    write_sony_config_string(sr);
+  }
+  schedule_us(5000000, enable_sony, data);
+}
+
+
+//// serial reader
+
 static void sr_line_received(UartState_t *uart, void *user_data, char *line) {
   serial_reader_t *sr = (serial_reader_t *)user_data;
   sr->last_active = clock_time_us();
   char buf[128];
-  int len = snprintf(buf, sizeof(buf), "u,%d,%d,%s", uart->uart_id,
+  int len = snprintf(buf, sizeof(buf), "in,%d,%d,%s", uart->uart_id,
                      sr->num_total_lines++, line);
   flash_dumper_append(sr->flash_dumper, buf, len);
+
+  // this is hacky
+  if (uart->uart_id == 1) {
+    sony_config_received(sr, line);
+  }
 }
 
 static void serial_reader_init(serial_reader_t *sr, uint8_t uart_id,
@@ -157,6 +217,15 @@ static void serial_reader_init(serial_reader_t *sr, uint8_t uart_id,
   sr->flash_dumper = flash_dumper;
   uart_init(&sr->uart, uart_id, baud, true);
   linereader_init(&sr->linereader, &sr->uart, sr_line_received, sr);
+}
+
+static void serial_reader_print(serial_reader_t *sr, const char *s) {
+    uart_print(&sr->uart, s);
+
+    // record the fact that we sent this string to the uart
+    char flashlog[100];
+    int len = snprintf(flashlog, sizeof(flashlog), "out,%d,%s", sr->uart.uart_id, s);
+    flash_dumper_append(sr->flash_dumper, flashlog, len);
 }
 
 #define ACTIVITY_TIMEOUT_US 2000000
@@ -174,15 +243,6 @@ static bool serial_reader_is_active(serial_reader_t *sr) {
   } else {
     return true;
   }
-}
-
-static void enable_sony(void *data) {
-  serial_reader_t *sr = (serial_reader_t *)data;
-  if (!serial_reader_is_active(sr)) {
-    LOG("sending GCD to sony");
-    uart_print(&sr->uart, "@GCD\r\n");
-  }
-  schedule_us(500000, enable_sony, data);
 }
 
 static void indicate_alive(void *data) {
