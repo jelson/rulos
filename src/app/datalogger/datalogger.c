@@ -23,6 +23,8 @@
 #include "periph/uart/linereader.h"
 #include "periph/uart/uart.h"
 
+#include "ina219.h"
+
 // uart definitions
 #define CONSOLE_UART_NUM 0
 #define DUT1_UART_NUM    1
@@ -35,6 +37,10 @@
 #define DUT2_LED_PIN GPIO_A11
 #define DUT1_PWR_PIN GPIO_B4
 #define DUT2_PWR_PIN GPIO_B5
+
+// addresses
+#define DUT1_POWERMEASURE_ADDR 0b1000001
+#define DUT2_POWERMEASURE_ADDR 0b1000000
 
 // minimum length of data to buffer before writing to FAT
 #define WRITE_INCREMENT 2048
@@ -103,6 +109,7 @@ void flash_dumper_append(flash_dumper_t *fd, const void *buf, int len) {
   // make sure there's sufficient space
   if (fd->len + len_with_extras > sizeof(fd->buf)) {
     LOG("ERROR: Flash buf overflow!");
+    fd->len = 0;
   } else {
     // append prefix, message and \n to buffer
     memcpy(&fd->buf[fd->len], prefix, prefix_len);
@@ -199,7 +206,7 @@ static void enable_sony(void *data) {
 static void sr_line_received(UartState_t *uart, void *user_data, char *line) {
   serial_reader_t *sr = (serial_reader_t *)user_data;
   sr->last_active = clock_time_us();
-  char buf[128];
+  char buf[300];
   int len = snprintf(buf, sizeof(buf), "in,%d,%d,%s", uart->uart_id,
                      sr->num_total_lines++, line);
   flash_dumper_append(sr->flash_dumper, buf, len);
@@ -223,7 +230,7 @@ static void serial_reader_print(serial_reader_t *sr, const char *s) {
     uart_print(&sr->uart, s);
 
     // record the fact that we sent this string to the uart
-    char flashlog[100];
+    char flashlog[300];
     int len = snprintf(flashlog, sizeof(flashlog), "out,%d,%s", sr->uart.uart_id, s);
     flash_dumper_append(sr->flash_dumper, flashlog, len);
 }
@@ -259,6 +266,25 @@ static void indicate_alive(void *data) {
   gpio_set_or_clr(DUT1_LED_PIN, serial_reader_is_active(&dut1));
 }
 
+// current measurement
+static void measure_current(void *data) {
+  static int32_t cum = 0;
+  static int n = 0;
+  schedule_us(100000, measure_current, NULL);
+
+  int32_t dut1_current = ina219_read_microamps(DUT1_POWERMEASURE_ADDR);
+  cum += dut1_current;
+  n++;
+
+  if (n == 10) {
+    char flashlog[100];
+    int len = snprintf(flashlog, sizeof(flashlog), "curr,1,%ld", cum/n);
+    cum = 0;
+    n = 0;
+    flash_dumper_append(&flash_dumper, flashlog, len);
+  }
+}
+
 int main() {
   hal_init();
   init_clock(10000, TIMER1);
@@ -290,6 +316,10 @@ int main() {
   // enable sony on dut1
   serial_reader_init(&dut1, DUT1_UART_NUM, 115200, &flash_dumper);
   schedule_now(enable_sony, &dut1);
+
+  // initialize current measurement
+  ina219_init(DUT1_POWERMEASURE_ADDR);
+  schedule_us(1, measure_current, NULL);
 
   // enable periodic blink to indicate liveness
   schedule_us(1, indicate_alive, NULL);

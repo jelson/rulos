@@ -22,7 +22,10 @@ from BuildRules import *
 
 RulosBuildTarget(
     name = "datalogger",
-    sources = ["datalogger.c"],
+    sources = [
+        "datalogger.c",
+        "ina219.c",
+    ],
     platforms = [
         ArmStmPlatform("stm32g0b1xe",
             extra_cflags=[
