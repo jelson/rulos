@@ -29,7 +29,7 @@
 #include "core/sim.h"
 #endif
 
-#define MILLION 1000000
+#define MILLION                     1000000
 #define WALLCLOCK_CALLBACK_INTERVAL 10000
 
 typedef struct {
@@ -43,7 +43,8 @@ typedef struct {
   int unhappy_state;
   int unhappy_timer;
 
-  UartQueue_t *recvQueue;
+  char uart_q[8];
+  uint8_t uart_qlen;
   Time last_reception_us;
   int mins_since_last_sync;
 
@@ -100,7 +101,9 @@ static void display_unhappy(WallClockActivation_t *wca, uint16_t interval_ms) {
     wca->unhappy_state++;
     wca->unhappy_timer = 0;
   }
-  if (msg[wca->unhappy_state] == NULL) wca->unhappy_state = 0;
+  if (msg[wca->unhappy_state] == NULL) {
+    wca->unhappy_state = 0;
+  }
 
   ascii_to_bitmap_str(wca->bbuf.buffer, 8, msg[wca->unhappy_state]);
 }
@@ -161,7 +164,8 @@ static void calibrate_clock(WallClockActivation_t *wca, uint8_t hour,
  */
 static void advance_clock(WallClockActivation_t *wca, uint16_t interval_ms) {
   // if we don't have a valid time, don't change the clock
-  if (wca->hour < 0) return;
+  if (wca->hour < 0)
+    return;
 
   wca->hundredth += ((interval_ms + 5) / 10);
 
@@ -201,50 +205,73 @@ static uint8_t ascii_digit(uint8_t c) {
 // Note that the UART timestamping code returns a timestamp only for
 // the first character in the queue.
 
-static void check_uart(WallClockActivation_t *wca) {
-  char msg[8];
+static void parse_uart_message(void *data) {
+  WallClockActivation_t *wca = (WallClockActivation_t *)data;
   uint8_t hour, minute, second;
-  Time reception_time_us;
 
-  uint8_t old_flags = hal_start_atomic();
-
-  if (CharQueue_length(wca->recvQueue->q) == 0) goto done;
-
-  // In case of framing error, clear the queue
-  if (CharQueue_peek(wca->recvQueue->q, &msg[0]) && msg[0] != 'T') {
-    LOG("first char mismatch");
-    uart_reset_recvq(wca->recvQueue);
-    goto done;
-  }
-
-  // If there are fewer than 8 characters, it could just be that the
-  // message is still in transit; do nothing.
-  if (CharQueue_length(wca->recvQueue->q) < 8) {
-    goto done;
-  }
-
-  // There are (at least) 8 characters - great!  Copy them in and
-  // reset the queue.
-  CharQueue_pop_n(wca->recvQueue->q, msg, 8);
-  reception_time_us = wca->recvQueue->reception_time_us;
-  uart_reset_recvq(wca->recvQueue);
+  // Make sure we got 8 characters - if not, this is a bug, the parser shouldn't
+  // be scheduled until we have 8
+  assert(wca->uart_qlen == 8);
 
   // Make sure both framing characters are correct
-  if (msg[0] != 'T' || msg[7] != 'E') goto done;
+  if (wca->uart_q[0] != 'T' || wca->uart_q[7] != 'E') {
+    goto done;
+  }
 
   // Decode the characters
-  hour = ascii_digit(msg[1]) * 10 + ascii_digit(msg[2]);
-  minute = ascii_digit(msg[3]) * 10 + ascii_digit(msg[4]);
-  second = ascii_digit(msg[5]) * 10 + ascii_digit(msg[6]);
+  hour = ascii_digit(wca->uart_q[1]) * 10 + ascii_digit(wca->uart_q[2]);
+  minute = ascii_digit(wca->uart_q[3]) * 10 + ascii_digit(wca->uart_q[4]);
+  second = ascii_digit(wca->uart_q[5]) * 10 + ascii_digit(wca->uart_q[6]);
 
   // Update the clock
-  calibrate_clock(wca, hour, minute, second, reception_time_us);
+  calibrate_clock(wca, hour, minute, second, wca->last_reception_us);
 
   // indicate we got a message
   wca->display_flag = 25;
 
 done:
-  hal_end_atomic(old_flags);
+  wca->uart_qlen = 0;
+}
+
+// Interrupt-time callback when the UART receives a character.
+//
+// I'll arbitrarily define a protocol: messages are 8 ASCII characters: T123055E
+// ("Time 12:30:55 End").
+//
+// If the receive buffer is empty, the character must be 'T' or it is
+// ignored. When this leading T is received, we acquire a timestamp that counts
+// as the message's reception time.
+//
+// If the buffer is non-empty, we just accumulate more characters into the
+// buffer until there are 8 of them, then schedule the non-interrupt-time
+// upcall.
+//
+static void uart_char_received(UartState_t *uart, void *data, char c) {
+  WallClockActivation_t *wca = (WallClockActivation_t *)data;
+
+  // acquire the timestamp first just in case we might need it
+  Time now = precise_clock_time_us();
+
+  if (wca->uart_qlen >= 8) {
+    LOG("uart buffer full - dropping");
+  } else if (wca->uart_qlen == 0) {
+    // first character received: enforce it must be a 'T', otherwise drop it,
+    // and remember timestamp
+    if (c == 'T') {
+      wca->uart_q[wca->uart_qlen] = c;
+      wca->uart_qlen++;
+      wca->last_reception_us = now;
+    } else {
+      LOG("framing error on uart; dropping '%c'", c);
+    }
+  } else {
+    wca->uart_q[wca->uart_qlen] = c;
+    wca->uart_qlen++;
+
+    if (wca->uart_qlen == 8) {
+      schedule_now(parse_uart_message, wca);
+    }
+  }
 }
 
 static void update(WallClockActivation_t *wca) {
@@ -256,9 +283,6 @@ static void update(WallClockActivation_t *wca) {
 
   // advance the clock by that amount
   advance_clock(wca, interval_ms);
-
-  // check and see if we've gotten any uart messages
-  check_uart(wca);
 
   // display either the time (if the clock has been set)
   // or an unhappy message (if it has not)
@@ -286,9 +310,10 @@ int main() {
   // start clock with 10 msec resolution
   init_clock(WALLCLOCK_CALLBACK_INTERVAL, TIMER1);
 
-  // start the uart running at 34k baud
+  // start the uart running at 38.4k baud
   UartState_t uart;
-  uart_init(&uart, 38400, TRUE, 0);
+  uart_init(&uart, /* uart_id= */ 0, 38400, TRUE);
+  log_bind_uart(&uart);
 
   // initialize our internal state
   WallClockActivation_t wca;
@@ -298,11 +323,13 @@ int main() {
   wca.unhappy_state = 0;
   wca.last_redraw_time = clock_time_us();
   wca.mins_since_last_sync = 0;
-  wca.recvQueue = uart_recvq(&uart);
 
   // init the board buffer
   board_buffer_init(&wca.bbuf DBG_BBUF_LABEL("clock"));
   board_buffer_push(&wca.bbuf, 0);
+
+  // set up uart receiver callback
+  uart_start_rx(&uart, uart_char_received, &wca);
 
   // have the callback get called immediately
   schedule_us(1, (ActivationFuncPtr)update, &wca);

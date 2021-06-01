@@ -1,32 +1,40 @@
-# Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com).
-# 
+#!/usr/bin/python3
+#
+# Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson
+# (jelson@gmail.com).
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-ROCKET_ROOT := ../..
+import sys
+sys.path.insert(0, "../../../build-tools")
+from BuildRules import *
 
-PLATFORMS := avr sim #arm
-PERIPHERALS = 7seg_panel 7seg_panel_hardware uart
-ALL_PLATFORM_CFLAGS := -DBOARDCONFIG_WALLCLOCK
-MCU := atmega8
-TARGET := wallclock
-BOARD := PCB11
-
-ARM_CHIP := lpc1114-102
-
-TARGET_OBJECTS := \
-	wallclock.o \
-
-
-include $(ROCKET_ROOT)/Makefile.common
-
+RulosBuildTarget(
+    name = "wallclock",
+    sources = ["wallclock.c"],
+    peripherals = "7seg_panel uart",
+    extra_cflags = [
+        "-DBOARDCONFIG_WALLCLOCK",
+    ],
+    platforms = [
+        SimulatorPlatform(),
+        AvrPlatform(
+            "atmega8",
+            extra_cflags=[
+                "-DBOARD_PCB11",
+            ],
+            extra_peripherals="7seg_panel_hardware",
+        ),
+    ],
+).build()
