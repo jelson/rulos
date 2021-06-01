@@ -86,3 +86,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
   us_per_tick /= clock_rate_div_10k;
   return us_per_tick;
 }
+
+bool hal_clock_interrupt_is_pending() {
+  return (SCB->ICSR & SCB_ICSR_PENDSTSET_Msk) != 0;
+}

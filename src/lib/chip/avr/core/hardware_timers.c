@@ -324,6 +324,10 @@ uint16_t hal_elapsed_milliintervals() {
   return (1000 * (uint32_t)TCNT1) / OCR1A;
 }
 
+bool hal_clock_interrupt_is_pending() {
+  return (TIFR & OCF1A) != 0;
+}
+
 // Speed up or slow down the clock by a certain
 // ratio, expressed in parts per million
 //

@@ -195,12 +195,28 @@ void schedule_absolute(Time at_time, ActivationFuncPtr func, void *data) {
 
 // this is the expensive one, with a lock
 Time precise_clock_time_us() {
+  // Getting precise time is tricky because we have to read the hardware
+  // timer. If it rolled over recently, an interrupt to increment the jiffy
+  // timer might be pending.
+  //
+  // We can check if there's an interrupt pending. But we have to get the
+  // hardware timer value twice: both before and after checking if there's an
+  // interrupt pending. If there is an interrupt pending, we use the post-check
+  // value: it is guaranteed to be post-rollover and we need to add an extra
+  // jiffy. If none is pending, we use the pre-check value; it's guaranteed to
+  // be pre-rollover.
   rulos_irq_state_t old_interrupts = hal_start_atomic();
-  uint16_t milliintervals = hal_elapsed_milliintervals();
+  uint16_t milliintervals_precheck = hal_elapsed_milliintervals();
+  bool int_pending = hal_clock_interrupt_is_pending();
+  uint16_t milliintervals_postcheck = hal_elapsed_milliintervals();
   Time t = g_interrupt_driven_jiffy_clock_us;
   hal_end_atomic(old_interrupts);
 
-  t += (g_rtc_interval_us * milliintervals) / 1000;
+  if (int_pending) {
+    t += (g_rtc_interval_us * (1000+milliintervals_postcheck)) / 1000;
+  } else {
+    t += (g_rtc_interval_us * milliintervals_precheck) / 1000;
+  }
   return t;
 }
 

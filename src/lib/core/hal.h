@@ -51,6 +51,7 @@ void hal_idle();  // hw: spin. sim: sleep
 
 uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
                             uint8_t timer_id);
+bool hal_clock_interrupt_is_pending();
 
 void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
                          uint8_t onoff);

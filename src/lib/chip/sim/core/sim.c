@@ -126,10 +126,17 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
   return us;
 }
 
-// this COULD be implemented with gettimeofday(), but I'm too lazy,
-// since the only reason this function exists is for the wall clock
-// app, so it only matters in hardware.
-uint16_t hal_elapsed_milliintervals() { return 0; }
+uint16_t hal_elapsed_milliintervals() {
+  // this COULD be implemented with gettimeofday(), but I'm too lazy. If any
+  // simulation apps actually need precise timing services, this function and
+  // the one below should be implemented.
+ return 0;
+}
+
+bool hal_clock_interrupt_is_pending() {
+  // See above
+  return false;
+}
 
 void hal_speedup_clock_ppm(int32_t ratio) {
   // do nothing for now
