@@ -325,7 +325,13 @@ uint16_t hal_elapsed_milliintervals() {
 }
 
 bool hal_clock_interrupt_is_pending() {
+#if defined(MCU8_line)
   return (TIFR & OCF1A) != 0;
+#elif defined(MCU328_line)
+  return (TIFR1 & OCF1A) != 0;
+#else
+  return false;
+#endif
 }
 
 // Speed up or slow down the clock by a certain
