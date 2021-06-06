@@ -19,11 +19,10 @@
 #include "core/hardware.h"
 #include "core/rtc.h"
 #include "core/rulos.h"
+#include "ina219.h"
 #include "periph/fatfs/ff.h"
 #include "periph/uart/linereader.h"
 #include "periph/uart/uart.h"
-
-#include "ina219.h"
 
 // uart definitions
 #define CONSOLE_UART_NUM 0
@@ -71,7 +70,6 @@ flash_dumper_t flash_dumper;
 serial_reader_t refgps, dut1, dut2;
 
 //////////////////////////////////////////////////////////////////////////////
-
 
 void flash_dumper_init(flash_dumper_t *fd) {
   const char *filename = "log.txt";
@@ -157,13 +155,13 @@ void flash_dumper_print(flash_dumper_t *fd, char *s) {
 //// sony config
 
 static const char *sony_init_seq[][2] = {
-  {"VER", "[VER] Done"},
-  {"BSSL 34345967", "[BSSL] Done"},
-  {"GNS 0x3", "[GNS] Done"},
-  {"GSOP 1 1000 0", "[GSOP] Done"},
-  {"GSR", "[GSR] Done"},
-  {"GCD", "[GCD] Done"},
-  {NULL, NULL},
+    {"VER", "[VER] Done"},
+    {"BSSL 34345967", "[BSSL] Done"},
+    {"GNS 0x3", "[GNS] Done"},
+    {"GSOP 1 1000 0", "[GSOP] Done"},
+    {"GSR", "[GSR] Done"},
+    {"GCD", "[GCD] Done"},
+    {NULL, NULL},
 };
 
 static int last_sony_step = -1;
@@ -184,7 +182,8 @@ static void write_sony_config_string(serial_reader_t *sr) {
 
 static void sony_config_received(serial_reader_t *sr, const char *line) {
   const char *expected = sony_init_seq[last_sony_step][1];
-  if (last_sony_step >= 0 && strlen(line) >= strlen(expected) && !strncmp(line, expected, strlen(expected))) {
+  if (last_sony_step >= 0 && strlen(line) >= strlen(expected) &&
+      !strncmp(line, expected, strlen(expected))) {
     last_sony_step++;
     write_sony_config_string(sr);
   }
@@ -199,7 +198,6 @@ static void enable_sony(void *data) {
   }
   schedule_us(5000000, enable_sony, data);
 }
-
 
 //// serial reader
 
@@ -227,12 +225,13 @@ static void serial_reader_init(serial_reader_t *sr, uint8_t uart_id,
 }
 
 static void serial_reader_print(serial_reader_t *sr, const char *s) {
-    uart_print(&sr->uart, s);
+  uart_print(&sr->uart, s);
 
-    // record the fact that we sent this string to the uart
-    char flashlog[300];
-    int len = snprintf(flashlog, sizeof(flashlog), "out,%d,%s", sr->uart.uart_id, s);
-    flash_dumper_append(sr->flash_dumper, flashlog, len);
+  // record the fact that we sent this string to the uart
+  char flashlog[300];
+  int len =
+      snprintf(flashlog, sizeof(flashlog), "out,%d,%s", sr->uart.uart_id, s);
+  flash_dumper_append(sr->flash_dumper, flashlog, len);
 }
 
 #define ACTIVITY_TIMEOUT_US 2000000
@@ -278,7 +277,7 @@ static void measure_current(void *data) {
 
   if (n == 10) {
     char flashlog[100];
-    int len = snprintf(flashlog, sizeof(flashlog), "curr,1,%ld", cum/n);
+    int len = snprintf(flashlog, sizeof(flashlog), "curr,1,%ld", cum / n);
     cum = 0;
     n = 0;
     flash_dumper_append(&flash_dumper, flashlog, len);

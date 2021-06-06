@@ -28,7 +28,7 @@
 #include "stm32g0xx_ll_pwr.h"
 
 #define WRITE_ADDR(addr) (addr << 1)
-#define READ_ADDR(addr) ((addr << 1) | 1)
+#define READ_ADDR(addr)  ((addr << 1) | 1)
 
 I2C_HandleTypeDef i2c_handle;
 
@@ -40,19 +40,19 @@ static void reg_write(uint8_t device_addr, uint8_t reg_addr, uint16_t value) {
   buf[1] = value >> 8;
   buf[2] = value & 0xff;
 
-  HAL_I2C_Master_Transmit(&i2c_handle, WRITE_ADDR(device_addr), buf, sizeof(buf),
-                          HAL_MAX_DELAY);
+  HAL_I2C_Master_Transmit(&i2c_handle, WRITE_ADDR(device_addr), buf,
+                          sizeof(buf), HAL_MAX_DELAY);
 }
 
 // read from one of the 16-bit registers, writing results to inbuf
-static void reg_read(uint8_t device_addr, uint8_t reg_addr, uint16_t *value /* OUT */) {
+static void reg_read(uint8_t device_addr, uint8_t reg_addr,
+                     uint16_t *value /* OUT */) {
   uint8_t outbuf[1];
 
   outbuf[0] = reg_addr;
 
-  HAL_I2C_Master_Transmit(&i2c_handle, WRITE_ADDR(device_addr),
-                          outbuf, sizeof(outbuf),
-                          HAL_MAX_DELAY);
+  HAL_I2C_Master_Transmit(&i2c_handle, WRITE_ADDR(device_addr), outbuf,
+                          sizeof(outbuf), HAL_MAX_DELAY);
 
   uint8_t inbuf[2];
   HAL_I2C_Master_Receive(&i2c_handle, READ_ADDR(device_addr), inbuf, 2,
@@ -117,7 +117,7 @@ void ina219_init(uint8_t device_addr) {
   reg_write(device_addr, 0x0, reset_reg);
   reg_read(device_addr, 0x0, &reset_reg);
   assert(reset_reg == 0x399f);
-  
+
   // configuration register: no PG scaling; 128 sample averaging
   uint16_t config_reg = 0b0001111111111111;
   reg_write(device_addr, 0x0, config_reg);
@@ -142,7 +142,6 @@ int32_t ina219_read_microamps(uint8_t device_addr) {
 #endif
 
   int16_t current_register;
-  reg_read(device_addr, 0x4, (uint16_t *) &current_register);
+  reg_read(device_addr, 0x4, (uint16_t *)&current_register);
   return current_register;
 }
-
