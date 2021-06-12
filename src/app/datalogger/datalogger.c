@@ -377,5 +377,6 @@ int main() {
   // enable periodic blink to indicate liveness
   schedule_us(1, indicate_alive, NULL);
 
+  flash_dumper_print(&flash_dumper, "startup");
   cpumon_main_loop();
 }
