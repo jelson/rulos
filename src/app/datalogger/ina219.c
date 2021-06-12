@@ -95,16 +95,6 @@ static void start_i2c() {
   }
 }
 
-int foo();
-
-int caller() {
-  return foo();
-}
-
-int foo(int bar) {
-  return 1;
-}
-
 void ina219_init(uint8_t device_addr) {
   static bool i2c_started = false;
   if (!i2c_started) {
@@ -118,8 +108,11 @@ void ina219_init(uint8_t device_addr) {
   reg_read(device_addr, 0x0, &reset_reg);
   assert(reset_reg == 0x399f);
 
-  // configuration register: no PG scaling; 128 sample averaging
-  uint16_t config_reg = 0b0001111111111111;
+  // configuration register:
+  // * no PG scaling
+  // * 128 sample averaging
+  // * bus voltage monitoring off, power measurement on
+  uint16_t config_reg = 0b0001111111111101;
   reg_write(device_addr, 0x0, config_reg);
 
   // read back the config register and make sure it was set as we requested
@@ -134,14 +127,24 @@ void ina219_init(uint8_t device_addr) {
   reg_write(device_addr, 0x5, cal);
 }
 
-int32_t ina219_read_microamps(uint8_t device_addr) {
+bool ina219_read_microamps(uint8_t device_addr, int32_t *val /* OUT */) {
+  uint16_t reg;
+
+  // Read the bus voltage register, which also has the "conversion
+  // ready" bit
+  reg_read(device_addr, 0x2, &reg);
+
+  if ((reg & (1 << 1)) == 0) {
+    // conversion not ready!
+    return false;
+  }
+
 #if 0
   int16_t voltage_register;
   reg_read(device_addr, 0x1, (uint16_t *) &voltage_register);
   LOG("voltage register: %d", voltage_register);
 #endif
 
-  int16_t current_register;
-  reg_read(device_addr, 0x4, (uint16_t *)&current_register);
-  return current_register;
+  reg_read(device_addr, 0x4, (uint16_t *)val);
+  return true;
 }
