@@ -227,7 +227,7 @@ static void i2s_buf_played_cb(void* user_data, uint8_t just_played_idx) {
 #endif
 
 #if I2S_STATS
-  uint32_t now = precise_clock_time_us();
+  Time now = precise_clock_time_us();
   if (i2s->last_play_done_time != 0) {
     minmax_add_sample(&i2s->buf_play_time_mmm, now - i2s->last_play_done_time);
   }

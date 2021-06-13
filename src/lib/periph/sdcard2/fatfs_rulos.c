@@ -31,17 +31,17 @@ void FATFS_DEBUG_SEND_USART(const char* msg) {
 // 10ms-granularity timeout timer
 
 // Absolute time of next timeout.
-static uint32_t timeout_time_us = 0;
+static Time timeout_time_us = 0;
 
 void TM_DELAY_Init() {
 }
 
 void TM_DELAY_SetTime2(uint32_t timeout_ms) {
-  timeout_time_us = get_interrupt_driven_jiffy_clock() + (timeout_ms * 1000);
+  timeout_time_us = clock_time_us() + (timeout_ms * 1000);
 }
 
 uint32_t TM_DELAY_Time2() {
-  Time now = get_interrupt_driven_jiffy_clock();
+  Time now = clock_time_us();
   Time remaining = (timeout_time_us - now) / 1000;
 
   if (remaining > 0) {

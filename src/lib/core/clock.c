@@ -38,14 +38,11 @@
 void schedule_us_internal(Time offset_us, ActivationFuncPtr func, void *data);
 
 // usec between timer interrupts
-Time g_rtc_interval_us;
+static Time g_rtc_interval_us;
 
 // Clock updated by timer interrupt.  Should not be accessed without a
 // lock since it is updated at interrupt time.
-volatile Time g_interrupt_driven_jiffy_clock_us;
-
-// last time the scheduler ran.  Can be accessed safely without a lock.
-Time g_last_scheduler_run_us;
+static volatile Time g_interrupt_driven_jiffy_clock_us;
 
 uint32_t g_spin_counter;
 
@@ -90,7 +87,7 @@ void clock_log_stats() {
 #endif
 }
 
-void clock_handler(void *data) {
+static void clock_handler(void *data) {
 #ifdef TIMING_DEBUG
 #error TIMING_DEBUG is on. Just wanted you to know.
   gpio_set(GPIO_D5);
@@ -193,6 +190,15 @@ void schedule_absolute(Time at_time, ActivationFuncPtr func, void *data) {
 #endif
 }
 
+// the cheap but less precise way to get time -- returns the jiffy clock
+Time clock_time_us() {
+  Time retval;
+  rulos_irq_state_t old_interrupts = hal_start_atomic();
+  retval = g_interrupt_driven_jiffy_clock_us;
+  hal_end_atomic(old_interrupts);
+  return retval;
+}
+
 // this is the expensive one, with a lock
 Time precise_clock_time_us() {
   // Getting precise time is tricky because we have to read the hardware
@@ -229,8 +235,7 @@ uint32_t read_spin_counter() {
 }
 
 void scheduler_run_once() {
-  // update output of clock_time_us()
-  g_last_scheduler_run_us = get_interrupt_driven_jiffy_clock();
+  Time now = clock_time_us();
 
   while (1)  // run until nothing to do for this time
   {
@@ -254,7 +259,7 @@ void scheduler_run_once() {
       valid = TRUE;
     } else {
       rc = heap_peek(&sched_state.heap, &due_time, &act);
-      if (!rc && !later_than(due_time, g_last_scheduler_run_us)) {
+      if (!rc && !later_than(due_time, now)) {
         valid = TRUE;
         heap_pop(&sched_state.heap);
       }

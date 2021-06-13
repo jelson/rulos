@@ -33,9 +33,9 @@ int main() {
   log_bind_uart(&console);
   LOG("RTC test starting");
 
-  uint32_t last_time = precise_clock_time_us();
+  Time last_time = precise_clock_time_us();
   for (int i = 0; i < 10000000; i++) {
-    uint32_t curr_time = precise_clock_time_us();
+    Time curr_time = precise_clock_time_us();
     if (curr_time < last_time) {
       LOG("test %d failed! time %ld came before time %ld", i, last_time, curr_time);
       goto done;

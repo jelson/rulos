@@ -59,7 +59,7 @@ typedef struct {
   LineReader_t linereader;
   flash_dumper_t *flash_dumper;
   int num_total_lines;
-  uint32_t last_active;
+  Time last_active;
   // gpio_pin_t led;
 } serial_reader_t;
 
@@ -255,7 +255,7 @@ static void serial_reader_print(serial_reader_t *sr, const char *s) {
 #define ACTIVITY_TIMEOUT_US 2000000
 
 static bool serial_reader_is_active(serial_reader_t *sr) {
-  uint32_t now = clock_time_us();
+  Time now = clock_time_us();
   uint32_t time_since_active = now - sr->last_active;
 
   if (time_since_active > ACTIVITY_TIMEOUT_US) {
