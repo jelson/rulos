@@ -18,8 +18,9 @@
 
 #include "core/clock.h"
 
-#include <inttypes.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "core/logging.h"
 
@@ -219,7 +220,7 @@ Time precise_clock_time_us() {
   hal_end_atomic(old_interrupts);
 
   if (int_pending) {
-    t += (g_rtc_interval_us * (1000+milliintervals_postcheck)) / 1000;
+    t += (g_rtc_interval_us * (1000 + milliintervals_postcheck)) / 1000;
   } else {
     t += (g_rtc_interval_us * milliintervals_precheck) / 1000;
   }
@@ -239,9 +240,7 @@ void scheduler_run_once() {
 
   while (1)  // run until nothing to do for this time
   {
-    Time due_time;
     ActivationRecord act;
-    int rc;
 
     bool valid = FALSE;
 
@@ -251,14 +250,13 @@ void scheduler_run_once() {
     rulos_irq_state_t old_interrupts = hal_start_atomic();
     if (sched_state.now_queue_size > 0) {
       act = sched_state.now_queue[0];
-      uint8_t nqi;
-      for (nqi = 1; nqi < sched_state.now_queue_size; nqi++) {
-        sched_state.now_queue[nqi - 1] = sched_state.now_queue[nqi];
-      }
       sched_state.now_queue_size -= 1;
+      memmove(&sched_state.now_queue[0], &sched_state.now_queue[1],
+              sched_state.now_queue_size);
       valid = TRUE;
     } else {
-      rc = heap_peek(&sched_state.heap, &due_time, &act);
+      Time due_time;
+      int rc = heap_peek(&sched_state.heap, &due_time, &act);
       if (!rc && !later_than(due_time, now)) {
         valid = TRUE;
         heap_pop(&sched_state.heap);
