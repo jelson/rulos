@@ -324,7 +324,7 @@ static void measure_current(void *data) {
     measure_one_current(&currmeas[i]);
   }
 
-  if (loops_since_print == 100) {
+  if (loops_since_print == (1000000 / POWERMEASURE_POLLTIME_USEC)) {
     loops_since_print = 0;
     for (int i = 0; i < NUM_POWERMEASURE_CHANNELS; i++) {
       print_one_current(&currmeas[i]);
