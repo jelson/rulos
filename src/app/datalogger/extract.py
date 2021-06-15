@@ -28,12 +28,16 @@ class Log:
                 continue
             timestamp = int(fields[0])
 
-            # new log started?
+            # If we detected a new log just started, add the log we were in the
+            # middle of parsing to the list of logs
             if not last_timestamp or (timestamp < last_timestamp and timestamp < 1000):
-                start_date = None
                 if last_timestamp:
                     self._log_found(last_start, linenum-1, last_timestamp, start_date)
                 last_start = linenum
+                start_date = None
+            else:
+                if timestamp < last_timestamp:
+                    sys.stderr.write(f"WARNING: timestamp {timestamp} came after {last_timestamp}\n")
             last_timestamp = timestamp
 
 
