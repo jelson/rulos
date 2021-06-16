@@ -27,7 +27,7 @@
 // uart definitions
 #define CONSOLE_UART_NUM 0
 #define DUT1_UART_NUM    1
-#define DUT2_UART_NUM    2
+#define DUT2_UART_NUM    3
 #define REFGPS_UART_NUM  4
 
 // pin definitions
@@ -217,6 +217,44 @@ static void enable_sony(void *data) {
   schedule_us(5000000, enable_sony, data);
 }
 
+//// ublox config
+
+static uint8_t ublox_config[] = {
+  // Ublox config: UBX-CFG-GNSS, to enable GPS, Galileo, GLONASS
+    0xB5, 0x62, 0x06, 0x3E, 0x34, 0x00, 0x00, 0x00, 0x3F, 0x06, 0x00, 0x08,
+    0x10, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x03, 0x03, 0x00, 0x01, 0x00,
+    0x01, 0x01, 0x02, 0x08, 0x0C, 0x00, 0x01, 0x00, 0x01, 0x01, 0x03, 0x02,
+    0x05, 0x00, 0x00, 0x00, 0x01, 0x01, 0x05, 0x03, 0x04, 0x00, 0x01, 0x00,
+    0x05, 0x01, 0x06, 0x08, 0x0C, 0x00, 0x01, 0x00, 0x01, 0x01, 0x37, 0x04};
+
+bool ublox_glonass_active = false;
+
+static void enable_ublox(void *data) {
+  serial_reader_t *sr = (serial_reader_t *)data;
+
+  gpio_set(DUT2_PWR_PIN);
+
+  if (!ublox_glonass_active) {
+    LOG("sending ublox gnss config");
+    uart_write(&sr->uart, ublox_config, sizeof(ublox_config));
+
+    char flashlog[300];
+    int len =
+      snprintf(flashlog, sizeof(flashlog), "out,%d,<ublox config string>",
+               sr->uart.uart_id);
+    flash_dumper_append(sr->flash_dumper, flashlog, len);
+  }
+  ublox_glonass_active = false;
+
+  schedule_us(5000000, enable_ublox, data);
+}
+
+static void ublox_config_received(serial_reader_t *sr, char *line) {
+  if (!strncmp(line, "$GLGSV", strlen("$GLGSV"))) {
+    ublox_glonass_active = true;
+  }
+}
+
 //// serial reader
 
 static void sr_line_received(UartState_t *uart, void *user_data, char *line) {
@@ -230,6 +268,9 @@ static void sr_line_received(UartState_t *uart, void *user_data, char *line) {
   // this is hacky
   if (uart->uart_id == 1) {
     sony_config_received(sr, line);
+  }
+  if (uart->uart_id == 2) {
+    ublox_config_received(sr, line);
   }
 }
 
@@ -351,8 +392,9 @@ int main() {
   // initialize rtc
   rtc_init(&rtc);
 
-  // turn off power to DUT1
+  // turn off power to DUT1 and DUT2
   gpio_clr(DUT1_PWR_PIN);
+  gpio_clr(DUT2_PWR_PIN);
 
   // initialize flash dumper
   flash_dumper_init(&flash_dumper);
@@ -363,6 +405,10 @@ int main() {
   // enable sony on dut1
   serial_reader_init(&dut1, DUT1_UART_NUM, 115200, &flash_dumper);
   schedule_us(1000000, enable_sony, &dut1);
+
+  // enable ublox on dut2
+  serial_reader_init(&dut2, DUT2_UART_NUM, 38400, &flash_dumper);
+  schedule_us(1000000, enable_ublox, &dut2);
 
   // initialize current measurement
   memset(currmeas, 0, sizeof(currmeas));
@@ -377,6 +423,7 @@ int main() {
   // enable periodic blink to indicate liveness
   schedule_us(1, indicate_alive, NULL);
 
+  flash_dumper_print(&flash_dumper, "restarting\n\n\n");
   flash_dumper_print(&flash_dumper, "startup");
   cpumon_main_loop();
 }
