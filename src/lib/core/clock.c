@@ -252,7 +252,7 @@ void scheduler_run_once() {
       act = sched_state.now_queue[0];
       sched_state.now_queue_size -= 1;
       memmove(&sched_state.now_queue[0], &sched_state.now_queue[1],
-              sched_state.now_queue_size);
+              sizeof(sched_state.now_queue[0])* sched_state.now_queue_size);
       valid = TRUE;
     } else {
       Time due_time;

@@ -32,6 +32,7 @@ static void _lines_complete(void *data) {
   rulos_irq_state_t old_interrupts = hal_start_atomic();
   char *s = CharQueue_ptr(&l->rx_queue.q);
   int len = CharQueue_length(&l->rx_queue.q);
+  l->cb_pending = false;
   hal_end_atomic(old_interrupts);
 
   char *curr_string_start = s;
@@ -69,7 +70,6 @@ static void _lines_complete(void *data) {
   // LOG("consumed %d", i);
   old_interrupts = hal_start_atomic();
   CharQueue_pop_n(&l->rx_queue.q, NULL, i);
-  l->cb_pending = false;
   hal_end_atomic(old_interrupts);
 }
 
