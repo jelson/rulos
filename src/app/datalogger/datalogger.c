@@ -266,10 +266,10 @@ static void sr_line_received(UartState_t *uart, void *user_data, char *line) {
   flash_dumper_append(sr->flash_dumper, buf, len);
 
   // this is hacky
-  if (uart->uart_id == 1) {
+  if (uart->uart_id == DUT1_UART_NUM) {
     sony_config_received(sr, line);
   }
-  if (uart->uart_id == 2) {
+  if (uart->uart_id == DUT2_UART_NUM) {
     ublox_config_received(sr, line);
   }
 }
@@ -418,10 +418,10 @@ int main() {
   currmeas[1].addr = DUT2_POWERMEASURE_ADDR;
   ina219_init(DUT1_POWERMEASURE_ADDR);
   // ina219_init(DUT2_POWERMEASURE_ADDR);
-  schedule_us(1, measure_current, NULL);
+  schedule_now(measure_current, NULL);
 
   // enable periodic blink to indicate liveness
-  schedule_us(1, indicate_alive, NULL);
+  schedule_now(indicate_alive, NULL);
 
   flash_dumper_print(&flash_dumper, "restarting\n\n\n");
   flash_dumper_print(&flash_dumper, "startup");
