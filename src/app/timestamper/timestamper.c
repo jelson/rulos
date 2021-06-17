@@ -114,11 +114,21 @@ void TIM2_IRQHandler() {
     // Timer has rolled over. Happens at 1hz, we just update the seconds
     // counter.
     seconds++;
-  } else if (LL_TIM_IsActiveFlag_CC1(TIM2)) {
+  }
+
+  // Channel 1
+  else if (LL_TIM_IsActiveFlag_CC1(TIM2)) {
     // Timer channel 1 has captured an input signal.
     LL_TIM_ClearFlag_CC1(TIM2);
     store_timestamp(1, seconds, TIM2->CCR1);
-  } else if (LL_TIM_IsActiveFlag_CC2(TIM2)) {
+  } else if (LL_TIM_IsActiveFlag_CC1OVR(TIM2)) {
+    // overflow on capture. should we remember?
+    LL_TIM_ClearFlag_CC1OVR(TIM2);
+
+  }
+
+    // Channel 2
+  else if (LL_TIM_IsActiveFlag_CC2(TIM2)) {
     // Timer channel 2 has captured an input signal.
     LL_TIM_ClearFlag_CC2(TIM2);
 
@@ -127,8 +137,16 @@ void TIM2_IRQHandler() {
       store_timestamp(1, seconds, TIM2->CCR2);
       chan2_divider = 0;
     }
+  } else if (LL_TIM_IsActiveFlag_CC2OVR(TIM2)) {
+    // overflow on capture. should we remember?
+    LL_TIM_ClearFlag_CC2OVR(TIM2);
+
   } else {
     // unexpected interrupt
+    volatile int tim2sr = TIM2->SR;
+    char buf[100];
+    sprintf(buf, "got unexpected interrupt, timer2 status register=0x%x", tim2sr);
+    uart_print(&uart, buf);
     __builtin_trap();
   }
 }
