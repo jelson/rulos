@@ -61,18 +61,19 @@ def analyze(d, title):
     d['error_ns'] = 1e9 * (d['phase_corrected_timestamp'] - d.index)
     d['fit'] = 1e9 * (d.index * slope_error)
     print(d)
-    plot = d.plot(y=['error_ns', 'fit'], style='.', ms=2, grid=True, figsize=(20, 10))
-    plot.set_title(f'{title}\n{error_str}')
-    plot.set_xlabel("Experiment Time (sec)")
-    plot.set_ylabel("Error (ns)")
-    plot.figure.savefig(f'{title}.time.plot.png')
+    ax = d.plot(y='error_ns', style='.', ms=5, zorder=2)
+    d.plot(y='fit', style='.', ms=1, ax=ax, zorder=1, grid=True, figsize=(20, 10))
+    ax.set_title(f'{title}\n{error_str}')
+    ax.set_xlabel("Experiment Time (sec)")
+    ax.set_ylabel("Error (ns)")
+    ax.figure.savefig(f'{title}.time.plot.png')
 
     d['wander_error_ns'] = 1e9 * d['phase_freq_corrected_timestamp']
-    plot = d.plot(y=['wander_error_ns'], grid=True, figsize=(20, 10))
-    plot.set_title(f'{title}\nResidual Error After Post-Hoc Calibration\n{error_str}')
-    plot.set_xlabel("Experiment Time (sec)")
-    plot.set_ylabel("Residual Error (ns)")
-    plot.figure.savefig(f'{title}.residuals.plot.png')
+    ax = d.plot(y=['wander_error_ns'], grid=True, figsize=(20, 10))
+    ax.set_title(f'{title}\nResidual Error After Post-Hoc Calibration\n{error_str}')
+    ax.set_xlabel("Experiment Time (sec)")
+    ax.set_ylabel("Residual Error (ns)")
+    ax.figure.savefig(f'{title}.residuals.plot.png')
 
 def append(pulses, pulse_number, timestamp):
     pulses.append({'pulse_number': pulse_number, 'timestamp': timestamp})
@@ -84,14 +85,20 @@ def parse(filename):
 
     lines = open(filename, "r", encoding="ascii").readlines()
 
+    first_time = None
     times = {}
     for line in lines:
         line = line.rstrip()
-        try:
-            curr_time = float(line)
-        except:
+
+        # skip comments
+        if '#' in line:
             continue
 
+        (channel, curr_time) = line.split()
+        curr_time = float(curr_time)
+        if not first_time:
+            first_time = curr_time
+        curr_time -= int(first_time)
         times[int(curr_time)] = curr_time
         
     # convert to dataframe
