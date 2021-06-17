@@ -22,18 +22,18 @@
 #include "util.h"
 
 #define QUEUE_DEFINE(TYPE) \
-void TYPE##Queue_init(TYPE##Queue *bq, uint8_t buf_size) \
+void TYPE##Queue_init(TYPE##Queue *bq, qlen_t buf_size) \
 { \
 	bq->capacity = (buf_size - sizeof(TYPE##Queue)) / sizeof(TYPE); \
 	bq->size = 0; \
 } \
  \
-uint8_t TYPE##Queue_free_space(TYPE##Queue *bq) \
+qlen_t TYPE##Queue_free_space(TYPE##Queue *bq) \
 { \
         return bq->capacity - bq->size; \
 } \
 \
-bool TYPE##Queue_append_n(TYPE##Queue *bq, const TYPE *elt, uint8_t n) \
+bool TYPE##Queue_append_n(TYPE##Queue *bq, const TYPE *elt, qlen_t n) \
 { \
 	if (TYPE##Queue_free_space(bq) < n) \
 	{ \
@@ -64,7 +64,7 @@ TYPE * TYPE##Queue_ptr(TYPE##Queue *bq) \
         return &bq->elts[0]; \
 } \
  \
-bool TYPE##Queue_pop_n(TYPE##Queue *bq, /*OUT*/ TYPE *elt, uint8_t n) \
+bool TYPE##Queue_pop_n(TYPE##Queue *bq, /*OUT*/ TYPE *elt, qlen_t n) \
 { \
 	if (bq->size < n) \
 	{ \
@@ -88,7 +88,7 @@ bool TYPE##Queue_pop(TYPE##Queue *bq, /*OUT*/ TYPE *elt) \
 } \
  \
  \
-uint8_t TYPE##Queue_length(TYPE##Queue *bq) \
+qlen_t TYPE##Queue_length(TYPE##Queue *bq) \
 { \
 	return bq->size; \
 } \
