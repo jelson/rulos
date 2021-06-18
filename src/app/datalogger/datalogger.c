@@ -214,6 +214,9 @@ static void enable_sony(void *data) {
     last_sony_step = 0;
     write_sony_config_string(sr);
   }
+  Time now = clock_time_us();
+  LOG("sony seems okay (now %ld, last %ld, %ld ago",
+      now, sr->last_active, now - sr->last_active);
   schedule_us(5000000, enable_sony, data);
 }
 
@@ -297,13 +300,13 @@ static void serial_reader_print(serial_reader_t *sr, const char *s) {
 
 static bool serial_reader_is_active(serial_reader_t *sr) {
   Time now = clock_time_us();
-  uint32_t time_since_active = now - sr->last_active;
+  Time time_since_active = now - sr->last_active;
 
-  if (time_since_active > ACTIVITY_TIMEOUT_US) {
+  if (time_since_active >= ACTIVITY_TIMEOUT_US) {
     // if inactive, move the last-active time forward to prevent rollover
     // problems (but still far enough in the past that the serial reader does
     // not appear to be artificially active)
-    sr->last_active = now - ACTIVITY_TIMEOUT_US;
+    sr->last_active = now - ACTIVITY_TIMEOUT_US - 1;
     return false;
   } else {
     return true;
@@ -322,6 +325,7 @@ static void indicate_alive(void *data) {
   }
 
   gpio_set_or_clr(DUT1_LED_PIN, serial_reader_is_active(&dut1));
+  gpio_set_or_clr(DUT2_LED_PIN, serial_reader_is_active(&dut2));
 }
 
 ////// power measurement
