@@ -38,7 +38,7 @@
 #define DUT2_PWR_PIN GPIO_B5
 
 // power measurement
-#define NUM_POWERMEASURE_CHANNELS  1
+#define NUM_POWERMEASURE_CHANNELS  2
 #define DUT1_POWERMEASURE_ADDR     0b1000001
 #define DUT2_POWERMEASURE_ADDR     0b1000000
 #define POWERMEASURE_POLLTIME_USEC 20000
@@ -64,8 +64,9 @@ typedef struct {
 } serial_reader_t;
 
 typedef struct {
-  int channel_num;
   int addr;
+  int channel_num;
+  int scale;
 
   // number of times we've polled the current measurement module and gotten back
   // either "ready" or "not ready"
@@ -347,7 +348,7 @@ static void print_one_current(currmeas_state_t *cms) {
   char flashlog[100];
   int len =
       snprintf(flashlog, sizeof(flashlog), "curr,%d,%ld", cms->channel_num,
-               cms->cum_current / cms->num_measurements);
+               cms->scale * cms->cum_current / cms->num_measurements);
   cms->cum_current = 0;
   cms->num_measurements = 0;
   flash_dumper_append(&flash_dumper, flashlog, len);
@@ -418,10 +419,19 @@ int main() {
   memset(currmeas, 0, sizeof(currmeas));
   currmeas[0].channel_num = 1;
   currmeas[0].addr = DUT1_POWERMEASURE_ADDR;
-  currmeas[1].channel_num = 2;
+  currmeas[0].scale = 1; // we read in microamps
+  currmeas[1].channel_num = 3;
   currmeas[1].addr = DUT2_POWERMEASURE_ADDR;
-  ina219_init(DUT1_POWERMEASURE_ADDR);
-  // ina219_init(DUT2_POWERMEASURE_ADDR);
+  currmeas[1].scale = 10; // we read in 10 microamps
+
+  // docs say calibration register should be trunc[0.04096 / (current_lsb *
+  // R_shunt)] R_shunt for the sony is 5.1 ohms, we'll set current_lsb to be 1
+  // microamp; that gives us 8031. manually calibrated using 34401A to get a
+  // better value.
+  ina219_init(DUT1_POWERMEASURE_ADDR, VOLT_PRESCALE_DIV1, 8577);
+  // the ublox has a builtin current shunt of 0.1 ohms. we must make current_lsb
+  // 0.01mA so we get 40960 as the prescale
+  ina219_init(DUT2_POWERMEASURE_ADDR, VOLT_PRESCALE_DIV1, 40960);
   schedule_now(measure_current, NULL);
 
   // enable periodic blink to indicate liveness

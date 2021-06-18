@@ -95,7 +95,7 @@ static void start_i2c() {
   }
 }
 
-void ina219_init(uint8_t device_addr) {
+void ina219_init(uint8_t device_addr, uint32_t prescale, uint16_t calibration) {
   static bool i2c_started = false;
   if (!i2c_started) {
     i2c_started = true;
@@ -109,10 +109,10 @@ void ina219_init(uint8_t device_addr) {
   assert(reset_reg == 0x399f);
 
   // configuration register:
-  // * no PG scaling
+  // * PG scaling as passed in from init
   // * 128 sample averaging
   // * bus voltage monitoring off, power measurement on
-  uint16_t config_reg = 0b0001111111111101;
+  uint16_t config_reg = 0b0001111111111101 | prescale;
   reg_write(device_addr, 0x0, config_reg);
 
   // read back the config register and make sure it was set as we requested
@@ -120,11 +120,7 @@ void ina219_init(uint8_t device_addr) {
   LOG("INA219@0x%x: configuration set to 0x%x", device_addr, reset_reg);
   assert(reset_reg == config_reg);
 
-  // docs say calibration register should be trunc[0.04096 / (current_lsb *
-  // R_shunt)] R_shunt is 5.1 ohms, we'll set current_lsb to be 1 microamp; that
-  // gives us 8031. manually calibrated using 34401A to get a better value.
-  int16_t cal = 8577;
-  reg_write(device_addr, 0x5, cal);
+  reg_write(device_addr, 0x5, calibration);
 }
 
 bool ina219_read_microamps(uint8_t device_addr, int32_t *val /* OUT */) {
