@@ -39,7 +39,7 @@ static void line_received(UartState_t *uart, void *user_data, char *line) {
 #endif
 }
 
-#define USE_GPS 1
+#define USE_GPS 0
 
 int main() {
   hal_init();
@@ -49,7 +49,7 @@ int main() {
   linereader_init(&linereader, &uart, line_received, &uart);
   LOG("lineecho up and running");
 
-#ifdef USE_GPS
+#if USE_GPS
   uart_init(&gps_uart, /* uart_id= */ 4, 9600, true);
   linereader_init(&gps_linereader, &gps_uart, line_received, &gps_uart);
   LOG("reading from gps too!");
