@@ -37,11 +37,13 @@ static void _lines_complete(void *data) {
 
   char *curr_string_start = s;
   int i = 0;
+  int consumed = 0;
   while (true) {
     // Scan past any EOLs at the start of the string. These might be blank
     // lines, or the \n after an \r if we have DOS (CRLF) line endings.
     while (i < len && iseol(s[i])) {
       i++;
+      consumed = i;
     }
 
     curr_string_start = &s[i];
@@ -60,6 +62,7 @@ static void _lines_complete(void *data) {
     if (i < len) {
       s[i] = '\0';
       i++;
+      consumed = i;
       l->cb(l->uart, l->user_data, curr_string_start);
     } else {
       // No EOL found. stop.
@@ -67,10 +70,11 @@ static void _lines_complete(void *data) {
     }
   }
 
-  // LOG("consumed %d", i);
   old_interrupts = hal_start_atomic();
-  CharQueue_pop_n(&l->rx_queue.q, NULL, i);
+  CharQueue_pop_n(&l->rx_queue.q, NULL, consumed);
+  //int remaining = CharQueue_length(&l->rx_queue.q);
   hal_end_atomic(old_interrupts);
+  //LOG("%d consumed, %d remaining", consumed, remaining);
 }
 
 // warning, called at interrupt time!
