@@ -177,6 +177,9 @@ void USART3_4_5_6_LPUART1_IRQHandler() {
 void USART2_IRQHandler() {
   dispatch_int(1);
 }
+void DMA1_Ch4_5_DMAMUX1_OVR_IRQHandler() {
+  dispatch_dma(1);
+}
 #endif
 
 static const stm32_uart_config_t stm32_uart_config[] = {
@@ -200,7 +203,11 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .tx_port = GPIOA,
         .tx_pin = GPIO_PIN_2,
         .tx_dma_chan = DMA1_Channel4,
+#if STM32G0B1xx
         .tx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
+#else
+        .tx_dma_irqn = DMA1_Ch4_5_DMAMUX1_OVR_IRQn,
+#endif
         .tx_dma_request = DMA_REQUEST_USART2_TX,
         .altfunc = GPIO_AF1_USART2,
     },
