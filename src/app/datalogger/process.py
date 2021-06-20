@@ -12,6 +12,10 @@ REF_CHAN = 4
 SONY_CHAN = 1
 UBLOX_CHAN = 3
 
+SONY_VOLTS = 0.8
+SONY_BONUS_MW = 6 # to account for the rf, txco not measured
+UBLOX_VOLTS = 3.3
+
 class Log:
     def _log_found(self, metadata):
         i = len(self.index)
@@ -141,15 +145,14 @@ class Log:
             return degrees
 
     def parse(self, lognum):
+        datasets = {}
+        for dut in [SONY_CHAN, UBLOX_CHAN, REF_CHAN]:
+            datasets[dut] = {
+                'current_ma': {},
+                'loc': {},
+            }
+
         md = self.get_log_metadata(lognum)
-
-        data = {
-            'current_ublox': {},
-            'current_sony': {},
-            'loc_ublox': {},
-            'loc_sony': {},
-        }
-
         for linenum in range(md['startline'], md['endline']+1):
             line = self.lines[linenum]
             fields = line.split(",")
@@ -157,17 +160,16 @@ class Log:
             if len(fields) < 4:
                 continue
 
-            timestamp = int(int(fields[0]) / 1000)
+            # get channel number and find corresponding dataset
             chan = int(fields[2])
+            dataset = datasets[chan]
+
+            # get time in seconds, rounded
+            timestamp = int(int(fields[0]) / 1000)
+
             if fields[1] == "curr":
                 curr = int(fields[3])
-                if chan == SONY_CHAN:
-                    data['current_sony'][timestamp] = curr
-                elif chan == UBLOX_CHAN:
-                    data['current_ublox'][timestamp] = curr
-                else:
-                    print(f'unknown current channel {chan}')
-                    sys.exit(1)
+                dataset['current_ma'][timestamp] = curr
 
             elif fields[1] == "in":
                 nmea = self.checked_nmea(fields[4:])
@@ -182,26 +184,53 @@ class Log:
                         lon = self.ddmm_to_degrees(nmea[4], nmea[5])
                         loc = Point(lon, lat)
 
-                    if chan == SONY_CHAN:
-                        data['loc_sony'][timestamp] = loc
-                    elif chan == UBLOX_CHAN:
-                        data['loc_ublox'][timestamp] = loc
+                    dataset['loc'][timestamp] = loc
 
-        gdf = geopandas.GeoDataFrame(pd.DataFrame(data))
-        for geocol in ['loc_sony', 'loc_ublox']:
-            gdf[geocol] = geopandas.GeoSeries(gdf[geocol])
-            gdf = gdf.set_geometry(geocol)
+        for dut in datasets:
+            # convert dictionaries to pandas dataframes
+            gdf = geopandas.GeoDataFrame(pd.DataFrame(datasets[dut]))
+
+            # set up location field as a geopandas geodataframe
+            gdf['loc'] = geopandas.GeoSeries(gdf['loc'])
+            gdf = gdf.set_geometry('loc')
             gdf = gdf.set_crs(epsg=4326)
-        return gdf
+
+            # convert current to power
+            if dut == SONY_CHAN:
+                gdf['power_mw'] = (gdf['current_ma'] * SONY_VOLTS) + SONY_BONUS_MW
+            else:
+                gdf['power_mw'] = gdf['current_ma'] * UBLOX_VOLTS
+
+            datasets[dut] = gdf
+
+        return datasets
 
     def map(self, lognum):
-        df = self.parse(lognum)
-        gdf = df.set_geometry('loc_ublox')
-        df_wm = gdf.to_crs(epsg=3857)
-        ax = df_wm.plot(color='red', markersize=1, figsize=(50, 50))
+        datasets = self.parse(lognum)
+        df = datasets[UBLOX_CHAN].to_crs(epsg=3857)
+        ax = df.plot(color='red', markersize=1, figsize=(50, 50))
         cx.add_basemap(ax, zoom=15)
         ax.figure.tight_layout()
         ax.figure.savefig("test.png")
+
+    def currents(self, lognum):
+        datasets = self.parse(lognum)
+
+        title = ""
+        ax = None
+        for dut in datasets:
+            df = datasets[dut]
+            df['power_mw_90secroll'] = df['current_ma'].rolling(90, center=True).mean()
+            print(df)
+
+            ax = df.plot(x='time_sec', y=['power_mw', 'power_mw_90secroll'],
+                         grid=True, figsize=(20, 10), ax=ax)
+            title += f"{f}: Mean Power {df['power_mw'].mean():.2f}mw\n"
+
+        ax.set_title(title)
+        ax.set_xlabel('Time (sec)')
+        ax.set_ylabel('Current (mA)')
+        ax.figure.savefig(sys.argv[1]+".plot.png")
 
 
 def usage():
