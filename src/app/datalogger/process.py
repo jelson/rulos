@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 import datetime
 import pandas as pd
@@ -11,6 +12,12 @@ import contextily as cx
 REF_CHAN = 4
 SONY_CHAN = 1
 UBLOX_CHAN = 3
+
+dutname = {
+    REF_CHAN: 'reference',
+    SONY_CHAN: 'Sony',
+    UBLOX_CHAN: 'uBlox',
+}
 
 SONY_VOLTS = 0.8
 SONY_BONUS_MW = 6 # to account for the rf, txco not measured
@@ -148,7 +155,7 @@ class Log:
         datasets = {}
         for dut in [SONY_CHAN, UBLOX_CHAN, REF_CHAN]:
             datasets[dut] = {
-                'current_ma': {},
+                'current_ua': {},
                 'loc': {},
             }
 
@@ -169,7 +176,7 @@ class Log:
 
             if fields[1] == "curr":
                 curr = int(fields[3])
-                dataset['current_ma'][timestamp] = curr
+                dataset['current_ua'][timestamp] = curr
 
             elif fields[1] == "in":
                 nmea = self.checked_nmea(fields[4:])
@@ -195,11 +202,14 @@ class Log:
             gdf = gdf.set_geometry('loc')
             gdf = gdf.set_crs(epsg=4326)
 
+            # remove insane current measurements
+            gdf['current_ua'] = gdf['current_ua'].apply(lambda x: x if x < 350000 else 0)
+
             # convert current to power
             if dut == SONY_CHAN:
-                gdf['power_mw'] = (gdf['current_ma'] * SONY_VOLTS) + SONY_BONUS_MW
+                gdf['power_uw'] = (gdf['current_ua'] * SONY_VOLTS) + (1000 * SONY_BONUS_MW)
             else:
-                gdf['power_mw'] = gdf['current_ma'] * UBLOX_VOLTS
+                gdf['power_uw'] = gdf['current_ua'] * UBLOX_VOLTS
 
             datasets[dut] = gdf
 
@@ -216,28 +226,32 @@ class Log:
     def currents(self, lognum):
         datasets = self.parse(lognum)
 
-        title = ""
         ax = None
-        for dut in datasets:
+        for dut in [SONY_CHAN, UBLOX_CHAN]:
             df = datasets[dut]
-            df['power_mw_90secroll'] = df['current_ma'].rolling(90, center=True).mean()
-            print(df)
+            df['power_mw'] = df['power_uw'] / 1000.0
+            df['power_mw_90secroll'] = df['power_mw'].rolling(90, center=True).mean()
 
-            ax = df.plot(x='time_sec', y=['power_mw', 'power_mw_90secroll'],
-                         grid=True, figsize=(20, 10), ax=ax)
-            title += f"{f}: Mean Power {df['power_mw'].mean():.2f}mw\n"
+            ax = df['power_mw'].plot(grid=True, figsize=(20, 10), ax=ax)
+            df['power_mw_90secroll'].plot(grid=True, ax=ax)
 
-        ax.set_title(title)
+            # add annotation with average power
+            ann = f"{dutname[dut]} average power: {df['power_mw'].mean():.2f}"
+            ax.annotate(xy=[0, df['power_mw'].max()], s=ann)
+
+
+        ax.set_title(f'Current Use - {os.path.basename(sys.argv[1])}')
         ax.set_xlabel('Time (sec)')
-        ax.set_ylabel('Current (mA)')
-        ax.figure.savefig(sys.argv[1]+".plot.png")
+        ax.set_ylabel('Power (mW)')
+        ax.figure.savefig(sys.argv[1]+".currents-plot.png")
 
 
 def usage():
     print("usage:")
     print(f"{sys.argv[0]} <filename>")
-    print(f"{sys.argv[0]} <filename> extract lognum channeltype channelnum")
-    print(f"{sys.argv[0]} <filename> map lognum")
+    print(f"{sys.argv[0]} <filename> extract <lognum> <channeltype> <channelnum>")
+    print(f"{sys.argv[0]} <filename> map <lognum>")
+    print(f"{sys.argv[0]} <filename> currents <lognum>")
     sys.exit(1)
 
 def main():
@@ -257,6 +271,10 @@ def main():
 
     if len(sys.argv) == 4 and sys.argv[2] == "map":
         log.map(int(sys.argv[3]))
+        return
+
+    if len(sys.argv) == 4 and sys.argv[2] == "currents":
+        log.currents(int(sys.argv[3]))
         return
 
     usage()
