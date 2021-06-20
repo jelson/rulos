@@ -4,6 +4,7 @@ import os
 import sys
 import datetime
 import pandas as pd
+import numpy as np
 import binascii
 import geopandas
 from shapely.geometry import Point
@@ -199,6 +200,7 @@ class Log:
 
             # set up location field as a geopandas geodataframe
             gdf['loc'] = geopandas.GeoSeries(gdf['loc'])
+            gdf['loc'] = gdf['loc'].fillna(None)
             gdf = gdf.set_geometry('loc')
             gdf = gdf.set_crs(epsg=4326)
 
@@ -232,8 +234,15 @@ class Log:
             df['power_mw'] = df['power_uw'] / 1000.0
             df['power_mw_90secroll'] = df['power_mw'].rolling(90, center=True).mean()
 
-            ax = df['power_mw'].plot(grid=True, figsize=(20, 10), ax=ax)
-            df['power_mw_90secroll'].plot(grid=True, ax=ax)
+            # plot power green where we have a gps lock, red where we do not
+            unlocked = df.copy()
+            unlocked.loc[~unlocked['loc'].is_empty, 'power_mw'] = np.nan
+            locked = df.copy()
+            locked.loc[locked['loc'].is_empty, 'power_mw'] = np.nan
+
+            ax = unlocked['power_mw'].plot(grid=True, figsize=(20, 10), ax=ax, color='red')
+            locked['power_mw'].plot(grid=True, ax=ax, color='green')
+            df['power_mw_90secroll'].plot(grid=True, ax=ax, color='black')
 
             # add annotation with average power
             ann = f"{dutname[dut]} average power: {df['power_mw'].mean():.2f}"
@@ -243,6 +252,7 @@ class Log:
         ax.set_title(f'Current Use - {os.path.basename(sys.argv[1])}')
         ax.set_xlabel('Time (sec)')
         ax.set_ylabel('Power (mW)')
+        ax.figure.tight_layout()
         ax.figure.savefig(sys.argv[1]+".currents-plot.png")
 
 
