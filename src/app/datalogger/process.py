@@ -227,10 +227,21 @@ class Log:
             df = datasets[dut].to_crs(epsg=3857)
             #df = datasets[dut]
             ax = df.plot(color='red', markersize=1, figsize=(40, 40))
+
+            for secs in range(100, df.index.max(), 100):
+                loc = df.loc[secs, 'loc']
+                if not loc.is_empty:
+                    ax.annotate(xy=[loc.x, loc.y], s=f"{secs}",
+                                xytext=[10, 0],
+                                textcoords='offset points',
+                                arrowprops=dict(arrowstyle='-'),
+                    )
+
             cx.add_basemap(ax,
-                           #zoom=17,
+                           zoom=15,
                            crs=df.crs,
                            source=cx.providers.OpenStreetMap.Mapnik)
+            ax.set_title(f"Drive map - {dutname[dut]} - {sys.argv[1]}")
             ax.figure.tight_layout()
             ax.figure.savefig(f"{sys.argv[1]}-map-{dutname[dut]}.png",dpi=200)
 
