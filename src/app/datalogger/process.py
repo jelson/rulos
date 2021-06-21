@@ -10,6 +10,8 @@ import geopandas
 from shapely.geometry import Point
 import contextily as cx
 
+cx.set_cache_dir("/tmp/cached-tiles")
+
 REF_CHAN = 4
 SONY_CHAN = 1
 UBLOX_CHAN = 3
@@ -215,15 +217,22 @@ class Log:
 
             datasets[dut] = gdf
 
+        sys.stderr.write("parsing complete\n")
         return datasets
 
     def map(self, lognum):
         datasets = self.parse(lognum)
-        df = datasets[UBLOX_CHAN].to_crs(epsg=3857)
-        ax = df.plot(color='red', markersize=1, figsize=(50, 50))
-        cx.add_basemap(ax, zoom=15)
-        ax.figure.tight_layout()
-        ax.figure.savefig("test.png")
+
+        for dut in [SONY_CHAN, UBLOX_CHAN, REF_CHAN]:
+            df = datasets[dut].to_crs(epsg=3857)
+            #df = datasets[dut]
+            ax = df.plot(color='red', markersize=1, figsize=(40, 40))
+            cx.add_basemap(ax,
+                           #zoom=17,
+                           crs=df.crs,
+                           source=cx.providers.OpenStreetMap.Mapnik)
+            ax.figure.tight_layout()
+            ax.figure.savefig(f"{sys.argv[1]}-map-{dutname[dut]}.png",dpi=200)
 
     def currents(self, lognum):
         datasets = self.parse(lognum)
