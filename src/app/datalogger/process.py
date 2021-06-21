@@ -251,12 +251,15 @@ class Log:
 
             ax = unlocked['power_mw'].plot(grid=True, figsize=(20, 10), ax=ax, color='red')
             locked['power_mw'].plot(grid=True, ax=ax, color='green')
-            df['power_mw_90secroll'].plot(grid=True, ax=ax, color='black')
+            df['power_mw_90secroll'].plot(grid=True, ax=ax, color='blue')
 
             # add annotation with average power
             ann = f"{dutname[dut]} average power: {df['power_mw'].mean():.2f}"
-            ax.annotate(xy=[0, df['power_mw'].max()], s=ann)
+            ax.annotate(xy=[0, df['power_mw'].max()], s=ann, size=15)
 
+            ax.minorticks_on()
+            ax.grid(which='major', linestyle='-', color='black')
+            ax.grid(which='minor', linestyle=':', color='black')
 
         ax.set_title(f'Current Use - {os.path.basename(sys.argv[1])}')
         ax.set_xlabel('Time (sec)')
