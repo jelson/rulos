@@ -216,8 +216,8 @@ static void enable_sony(void *data) {
     write_sony_config_string(sr);
   } else {
     Time now = clock_time_us();
-    LOG("sony seems okay (now %ld, last %ld, %ld ago",
-        now, sr->last_active, now - sr->last_active);
+    LOG("sony seems okay (now %ld, last %ld, %ld ago", now, sr->last_active,
+        now - sr->last_active);
   }
   schedule_us(5000000, enable_sony, data);
 }
@@ -225,7 +225,7 @@ static void enable_sony(void *data) {
 //// ublox config
 
 static uint8_t ublox_config[] = {
-  // Ublox config: UBX-CFG-GNSS, to enable GPS, Galileo, GLONASS
+    // Ublox config: UBX-CFG-GNSS, to enable GPS, Galileo, GLONASS
     0xB5, 0x62, 0x06, 0x3E, 0x34, 0x00, 0x00, 0x00, 0x3F, 0x06, 0x00, 0x08,
     0x10, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x03, 0x03, 0x00, 0x01, 0x00,
     0x01, 0x01, 0x02, 0x08, 0x0C, 0x00, 0x01, 0x00, 0x01, 0x01, 0x03, 0x02,
@@ -244,9 +244,8 @@ static void enable_ublox(void *data) {
     uart_write(&sr->uart, ublox_config, sizeof(ublox_config));
 
     char flashlog[300];
-    int len =
-      snprintf(flashlog, sizeof(flashlog), "out,%d,<ublox config string>",
-               sr->uart.uart_id);
+    int len = snprintf(flashlog, sizeof(flashlog),
+                       "out,%d,<ublox config string>", sr->uart.uart_id);
     flash_dumper_append(sr->flash_dumper, flashlog, len);
   }
   ublox_glonass_active = false;
@@ -420,10 +419,10 @@ int main() {
   memset(currmeas, 0, sizeof(currmeas));
   currmeas[0].channel_num = 1;
   currmeas[0].addr = DUT1_POWERMEASURE_ADDR;
-  currmeas[0].scale = 1; // we read in microamps
+  currmeas[0].scale = 1;  // we read in microamps
   currmeas[1].channel_num = 3;
   currmeas[1].addr = DUT2_POWERMEASURE_ADDR;
-  currmeas[1].scale = 10; // we read in 10 microamps
+  currmeas[1].scale = 10;  // we read in 10 microamps
 
   // docs say calibration register should be trunc[0.04096 / (current_lsb *
   // R_shunt)] R_shunt for the sony is 5.1 ohms, we'll set current_lsb to be 1
