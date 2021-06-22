@@ -214,10 +214,11 @@ static void enable_sony(void *data) {
     gpio_set(DUT1_PWR_PIN);
     last_sony_step = 0;
     write_sony_config_string(sr);
+  } else {
+    Time now = clock_time_us();
+    LOG("sony seems okay (now %ld, last %ld, %ld ago",
+        now, sr->last_active, now - sr->last_active);
   }
-  Time now = clock_time_us();
-  LOG("sony seems okay (now %ld, last %ld, %ld ago",
-      now, sr->last_active, now - sr->last_active);
   schedule_us(5000000, enable_sony, data);
 }
 
