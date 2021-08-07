@@ -29,6 +29,11 @@ static bool iseol(char c) {
 
 static void _lines_complete(void *data) {
   LineReader_t *l = (LineReader_t *)data;
+
+  // In a critical section, record how many characters we will
+  // process, and clear cb_pending. This guarantees that if a later
+  // interrupt appends any new data, it will also re-queue a run of
+  // the handler.
   rulos_irq_state_t old_interrupts = hal_start_atomic();
   char *s = CharQueue_ptr(&l->rx_queue.q);
   int len = CharQueue_length(&l->rx_queue.q);

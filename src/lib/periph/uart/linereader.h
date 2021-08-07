@@ -24,6 +24,8 @@
 // Utility that reads from a serial port interrupt handlers, groups characters
 // into complete lines (terminated by \r or \n), and produces user-context
 // upcalls of each complete line received.
+//
+// Blank/empty lines do not generate upcalls.
 
 typedef void (*linereader_cb)(UartState_t *uart, void *user_data, char *line);
 
