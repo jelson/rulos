@@ -9,6 +9,7 @@ import binascii
 import geopandas
 from shapely.geometry import Point
 import contextily as cx
+import matplotlib.pyplot as plt
 
 cx.set_cache_dir("/tmp/cached-tiles")
 
@@ -160,9 +161,13 @@ class Log:
             datasets[dut] = {
                 'current_ua': {},
                 'loc': {},
+                'speed_mph': {},
+                'num_sats': {},
             }
 
         md = self.get_log_metadata(lognum)
+        nmea_good = 0
+        nmea_bad = 0
         for linenum in range(md['startline'], md['endline']+1):
             line = self.lines[linenum]
             fields = line.split(",")
@@ -184,7 +189,15 @@ class Log:
             elif fields[1] == "in":
                 nmea = self.checked_nmea(fields[4:])
                 if not nmea:
+                    nmea_bad += 1
                     continue
+                nmea_good += 1
+                if nmea[0].startswith("$G") and nmea[0].endswith("RMC"):
+                    if nmea[2] == "A" or nmea[2] == "D":
+                        speed_mph = float(nmea[7]) * 1.151
+                    else:
+                        speed_mph = None
+                    dataset['speed_mph'][timestamp] = speed_mph
                 if nmea[0].endswith("GGA"):
                     # valid fix?
                     if nmea[6] == "0":
@@ -195,6 +208,7 @@ class Log:
                         loc = Point(lon, lat)
 
                     dataset['loc'][timestamp] = loc
+                    dataset['num_sats'][timestamp] = int(nmea[7])
 
         for dut in datasets:
             # convert dictionaries to pandas dataframes
@@ -207,7 +221,7 @@ class Log:
             gdf = gdf.set_crs(epsg=4326)
 
             # remove insane current measurements
-            gdf['current_ua'] = gdf['current_ua'].apply(lambda x: x if x < 350000 else 0)
+            gdf['current_ua'] = gdf['current_ua'].apply(lambda x: x if x < 40000 else np.nan)
 
             # convert current to power
             if dut == SONY_CHAN:
@@ -217,7 +231,7 @@ class Log:
 
             datasets[dut] = gdf
 
-        sys.stderr.write("parsing complete\n")
+        sys.stderr.write(f"parsing complete -- {nmea_bad}/{nmea_good+nmea_bad} NMEA sentence errors\n")
         return datasets
 
     def map(self, lognum):
@@ -248,7 +262,13 @@ class Log:
     def currents(self, lognum):
         datasets = self.parse(lognum)
 
-        ax = None
+        # create current plot on top, speed plot next, then num sats
+        fig, ((currplot, satplot, speedplot)) = plt.subplots(
+            3, 1,
+            figsize=(30, 15),
+            sharex=True,
+        )
+
         for dut in [SONY_CHAN, UBLOX_CHAN]:
             df = datasets[dut]
             df['power_mw'] = df['power_uw'] / 1000.0
@@ -260,23 +280,34 @@ class Log:
             locked = df.copy()
             locked.loc[locked['loc'].is_empty, 'power_mw'] = np.nan
 
-            ax = unlocked['power_mw'].plot(grid=True, figsize=(20, 10), ax=ax, color='red')
-            locked['power_mw'].plot(grid=True, ax=ax, color='green')
-            df['power_mw_90secroll'].plot(grid=True, ax=ax, color='blue')
+            unlocked['power_mw'].plot(grid=True, ax=currplot, color='red')
+            locked['power_mw'].plot(grid=True, ax=currplot, color='green')
+            df['power_mw_90secroll'].plot(grid=True, ax=currplot, color='blue')
 
             # add annotation with average power
             ann = f"{dutname[dut]} average power: {df['power_mw'].mean():.2f}"
-            ax.annotate(xy=[0, df['power_mw'].max()], s=ann, size=15)
+            currplot.annotate(xy=[0, df['power_mw'].max()], s=ann, size=15)
 
-            ax.minorticks_on()
-            ax.grid(which='major', linestyle='-', color='black')
-            ax.grid(which='minor', linestyle=':', color='black')
 
-        ax.set_title(f'Current Use - {os.path.basename(sys.argv[1])}')
-        ax.set_xlabel('Time (sec)')
-        ax.set_ylabel('Power (mW)')
-        ax.figure.tight_layout()
-        ax.figure.savefig(sys.argv[1]+".currents-plot.png")
+        datasets[SONY_CHAN]['speed_mph'].plot(grid=True, ax=speedplot)
+        speedplot.grid(which='major', linestyle='-', color='black')
+        speedplot.grid(which='minor', linestyle=':', color='black')
+        speedplot.set_ylabel('Speed (mph)')
+
+        datasets[SONY_CHAN]['num_sats'].plot(grid=True, ax=satplot)
+        satplot.grid(which='major', linestyle='-', color='black')
+        satplot.grid(which='minor', linestyle=':', color='black')
+        satplot.set_ylabel('Num Sats')
+
+        currplot.minorticks_on()
+        currplot.grid(which='major', linestyle='-', color='black')
+        currplot.grid(which='minor', linestyle=':', color='black')
+        currplot.set_title(f'Current Use - {os.path.basename(sys.argv[1])}')
+        currplot.set_ylabel('Power (mW)')
+        currplot.figure.tight_layout()
+
+        speedplot.set_xlabel('Time (sec)')
+        fig.savefig(sys.argv[1]+".currents-plot.png")
 
 
 def usage():
