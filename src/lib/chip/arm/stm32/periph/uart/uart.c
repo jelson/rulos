@@ -310,6 +310,8 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 typedef struct {
   // housekeeping
   bool initted;
+  bool rx_gpio_initted;
+  bool tx_gpio_initted;
   uint32_t frame_errors;
   uint32_t parity_errors;
   uint32_t noise_errors;
@@ -416,8 +418,15 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *hal_uart_handle) {
   }
 }
 
+static void config_gpio(const stm32_uart_config_t *config, bool rx);
+
 void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb) {
   stm32_uart_t *u = &g_stm32_uarts[uart_id];
+  if (!u->tx_gpio_initted) {
+    const stm32_uart_config_t *config = &stm32_uart_config[uart_id];
+    config_gpio(config, false);
+    u->tx_gpio_initted = true;
+  }
   assert(u->next_sendbuf_cb == NULL);
   u->next_sendbuf_cb = cb;
   maybe_launch_next_tx(u);
@@ -438,11 +447,37 @@ void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb) {
   assert(uart_id < NUM_UARTS);
   stm32_uart_t *u = &g_stm32_uarts[uart_id];
   const stm32_uart_config_t *config = &stm32_uart_config[uart_id];
+  if (!u->rx_gpio_initted) {
+    config_gpio(config, true);
+    u->rx_gpio_initted = true;
+  }
   u->rx_cb = rx_cb;
   LL_USART_EnableIT_RXNE(config->instance);
 }
 
 ///// initialization
+
+// We configure the GPIO only on-demand, i.e. configure the rx pin on the first
+// rx and the tx pin on the first tx. This makes it easy to do half-duplex,
+// e.g. use the tx pin for something else if you only plan to receive on the
+// uart.
+static void config_gpio(const stm32_uart_config_t *config, bool rx) {
+  GPIO_InitTypeDef GPIO_InitStruct;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+#if !defined(RULOS_ARM_stm32f1)
+  GPIO_InitStruct.Alternate = config->altfunc;
+#endif
+
+  if (rx) {
+    GPIO_InitStruct.Pin = config->rx_pin;
+    HAL_GPIO_Init(config->rx_port, &GPIO_InitStruct);
+  } else {
+    GPIO_InitStruct.Pin = config->tx_pin;
+    HAL_GPIO_Init(config->tx_port, &GPIO_InitStruct);
+  }
+}
 
 void hal_uart_init(uint8_t uart_id, uint32_t baud, bool stop2,
                    void *user_data /* for both rx and tx upcalls */,
@@ -498,22 +533,6 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud, bool stop2,
     default:
       assert(false);
       break;
-  }
-
-  // Configure GPIO peripherals
-  {
-    GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.Pin = config->tx_pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-#if !defined(RULOS_ARM_stm32f1)
-    GPIO_InitStruct.Alternate = config->altfunc;
-#endif
-    HAL_GPIO_Init(config->tx_port, &GPIO_InitStruct);
-
-    GPIO_InitStruct.Pin = config->rx_pin;
-    HAL_GPIO_Init(config->rx_port, &GPIO_InitStruct);
   }
 
   // Configure UART HAL
