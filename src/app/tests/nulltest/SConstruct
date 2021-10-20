@@ -28,7 +28,7 @@ for chip in ArmStmPlatform.CHIPS:
     ).build()
 
 for mcu in ["atmega8", "atmega328", "atmega328p", "atmega1284", "atmega1284p",
-            "attiny84", "attiny84a", "attiny45", "attiny85"]:
+            "attiny84", "attiny84a", "attiny85"]:
     RulosBuildTarget(
         name = "nulltest",
         sources = ["nulltest.c"],

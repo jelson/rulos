@@ -55,8 +55,8 @@ def parse_peripherals(peripherals):
 def configure_compiler(env, compiler_prefix):
     env.Replace(CC = compiler_prefix+"gcc")
     env.Replace(AS = compiler_prefix+"as")
-    env.Replace(AR = compiler_prefix+"ar")
-    env.Replace(RANLIB = compiler_prefix+"ranlib")
+    env.Replace(AR = compiler_prefix+"gcc-ar")
+    env.Replace(RANLIB = compiler_prefix+"gcc-ranlib")
 
     lss_builder = Builder(
         src_suffix = ".elf",
@@ -109,7 +109,7 @@ class Platform:
             "-Wall",
             "-Werror",
             "-g",
-            #, "-flto"
+            "-flto",
         ]
 
     def common_include_dirs(self):
@@ -350,7 +350,7 @@ class ArmStmPlatform(ArmPlatform):
             "-DUSE_HAL_DRIVER",
             "-DRULOS_ARM_"+self.chip.major_family_name.lower(),
             f"-D{self.chip.family}=1",
-            ]
+        ]
 
     def ld_flags(self, target):
         return self.arm_ld_flags(target)
@@ -451,7 +451,10 @@ class SimulatorPlatform(Platform):
         return "sim"
 
     def configure_env(self, env):
-        env.Append(LIBS = ["m", "ncurses"] + pkgconfig("--libs", "gtk+-2.0"))
+        env.Append(LIBS = ["m", "ncurses"])
+
+        # needed for 6-matrix
+        #env.Append(LIBS = pkgconfig("--libs", "gtk+-2.0"))
 
     def periph_dir(self):
         return os.path.join("sim", "periph")
@@ -460,9 +463,10 @@ class SimulatorPlatform(Platform):
         return cglob(SRC_ROOT, "lib", "chip", "sim", "core")
 
     def cflags(self):
-        return self.common_cflags() + pkgconfig("--cflags", "gtk+-2.0") + [
+        return self.common_cflags() + [
             "-DSIM"
         ]
+        # add for 6matrix: pkgconfig("--cflags", "gtk+-2.0")
 
     def ld_flags(self, target):
         return  self.common_ld_flags(target)
