@@ -62,10 +62,12 @@
 #if defined(BOARD_RULOS_AUDIO_REV_B)
 #define SD_LL_SPI_CLOCK     LL_APB2_GRP1_PERIPH_SPI1
 #define SD_SPI_PERIPH       SPI1
-#define SD_LL_PORT          GPIOB
 #define SD_LL_ALTFUNC       LL_GPIO_AF_5
+#define SD_LL_SCK_PORT      GPIOB
 #define SD_LL_SCK_PIN       LL_GPIO_PIN_3
+#define SD_LL_MISO_PORT     GPIOB
 #define SD_LL_MISO_PIN      LL_GPIO_PIN_4
+#define SD_LL_MOSI_PIN      GPIOB
 #define SD_LL_MOSI_PIN      LL_GPIO_PIN_5
 #define SD_PIN_CHIPENABLE   GPIO_B6
 
@@ -73,11 +75,26 @@
 
 #define SD_LL_SPI_CLOCK     LL_APB2_GRP1_PERIPH_SPI1
 #define SD_SPI_PERIPH       SPI1
-#define SD_LL_PORT          GPIOA
 #define SD_LL_ALTFUNC       LL_GPIO_AF_0
+#define SD_LL_SCK_PORT      GPIOA
 #define SD_LL_SCK_PIN       LL_GPIO_PIN_5
+#define SD_LL_MISO_PORT     GPIOA
 #define SD_LL_MISO_PIN      LL_GPIO_PIN_6
+#define SD_LL_MOSI_PORT     GPIOA
 #define SD_LL_MOSI_PIN      LL_GPIO_PIN_7
+#define SD_PIN_CHIPENABLE   GPIO_A4
+
+#elif defined(BOARD_LTETAG_DEV_REV_A)
+
+#define SD_LL_SPI_CLOCK     LL_APB2_GRP1_PERIPH_SPI1
+#define SD_SPI_PERIPH       SPI1
+#define SD_LL_ALTFUNC       LL_GPIO_AF_0
+#define SD_LL_SCK_PORT      GPIOB
+#define SD_LL_SCK_PIN       LL_GPIO_PIN_3
+#define SD_LL_MISO_PORT     GPIOA
+#define SD_LL_MISO_PIN      LL_GPIO_PIN_11
+#define SD_LL_MOSI_PORT     GPIOA
+#define SD_LL_MOSI_PIN      LL_GPIO_PIN_12
 #define SD_PIN_CHIPENABLE   GPIO_A4
 
 #else

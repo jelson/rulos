@@ -105,43 +105,13 @@ static void read_4meg_file(bool validate) {
   }
 }
 
-static void try_write(void *data) {
-  if (f_mount(&fatfs, "", 0) != FR_OK) {
-    LOG("can't mount");
-    __builtin_trap();
-  }
-
-  LOG("mount successful");
-
-  UINT bytes_written;
-  FRESULT retval;
-  const char test_filename[] = "testout.txt";
-
-  if (f_open(&f, test_filename, FA_CREATE_ALWAYS | FA_WRITE) != FR_OK) {
-    LOG("can't open %s", test_filename);
-    __builtin_trap();
-  }
-  strcpy(fatbuf, "This is a file written by RULOS. Enjoy!\n");
-  retval = f_write(&f, fatbuf, strlen(fatbuf), &bytes_written);
-  if (retval != FR_OK) {
-    LOG("write error writing to %s: %d", test_filename, retval);
-    __builtin_trap();
-  }
-  LOG("write data to %s: %s", test_filename, fatbuf);
-  f_close(&f);
-}
+const char test_filename[] = "rulos.txt";
 
 static void try_read(void *data) {
-  if (f_mount(&fatfs, "", 0) != FR_OK) {
-    LOG("can't mount");
-    __builtin_trap();
-  }
-
-  LOG("mount successful");
+  LOG("starting read test");
 
   UINT bytes_read;
   FRESULT retval;
-  const char test_filename[] = "rocket2.txt";
 
   if (f_open(&f, test_filename, FA_OPEN_EXISTING | FA_READ) != FR_OK) {
     LOG("can't open %s", test_filename);
@@ -156,10 +126,41 @@ static void try_read(void *data) {
   LOG("read data from %s: %s", test_filename, fatbuf);
   f_close(&f);
 
+  LOG("trying validation test");
+
   read_4meg_file(true);
   read_4meg_file(false);
 
   __builtin_trap();
+}
+
+static void try_write(void *data) {
+  LOG("starting write test");
+
+  if (f_mount(&fatfs, "", 0) != FR_OK) {
+    LOG("can't mount");
+    __builtin_trap();
+  }
+
+  LOG("mount successful");
+
+  UINT bytes_written;
+  FRESULT retval;
+
+  if (f_open(&f, test_filename, FA_CREATE_ALWAYS | FA_WRITE) != FR_OK) {
+    LOG("can't open %s", test_filename);
+    __builtin_trap();
+  }
+  strcpy(fatbuf, "This is a file written by RULOS. Enjoy!\n");
+  retval = f_write(&f, fatbuf, strlen(fatbuf), &bytes_written);
+  if (retval != FR_OK) {
+    LOG("write error writing to %s: %d", test_filename, retval);
+    __builtin_trap();
+  }
+  LOG("write data to %s: %s", test_filename, fatbuf);
+  f_close(&f);
+
+  try_read(NULL);
 }
 
 int main() {
@@ -173,7 +174,6 @@ int main() {
   // Give the SD card power 10ms to stabilize
   schedule_us(10000, try_write, NULL);
   cpumon_main_loop();
-  try_read(NULL);
 
   return 0;
 }
