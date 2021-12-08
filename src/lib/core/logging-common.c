@@ -29,9 +29,9 @@ void log_bind_uart(UartState_t *u) {
   logging_uart = u;
 }
 
-void log_common_emit_to_bound_uart(const char *s, int len) {
+void log_write(const void *buf, int len) {
   if (logging_uart != NULL) {
-    uart_write(logging_uart, s, len);
+    uart_write(logging_uart, buf, len);
   }
 }
 

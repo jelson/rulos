@@ -39,7 +39,7 @@ void arm_log(const char *fmt, ...) {
   message[sizeof(message) - 1] = '\0';
   va_end(ap);
 
-  log_common_emit_to_bound_uart(message, len);
+  log_write(message, len);
 }
 
 void arm_assert(const char *file, const uint32_t line) {

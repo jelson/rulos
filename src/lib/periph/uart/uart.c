@@ -86,7 +86,7 @@ static void _get_next_data(uint8_t uart_id, void *user_data,
   }
 }
 
-void uart_write(UartState_t *u, const void *buf, uint8_t len) {
+void uart_write(UartState_t *u, const void *buf, uint16_t len) {
   const char *c = (char *)buf;
   assert(u->initted);
 

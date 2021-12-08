@@ -25,7 +25,7 @@ void log_bind_uart(UartState_t *u);
 
 // Emit to log system. Not really meant to be called directly, but through the
 // LOG() macro.
-void log_common_emit_to_bound_uart(const char *s, int len);
+void log_write(const void *buf, int len);
 
 // wait until log is drained
 void log_common_flush();

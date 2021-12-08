@@ -29,5 +29,5 @@ void avr_log(const char *fmt_p /* PROGMEM */, ...) {
   va_start(ap, fmt_p);
   int len = vsnprintf_P(message, sizeof(message), fmt_p, ap);
   va_end(ap);
-  log_common_emit_to_bound_uart(message, len);
+  log_write(message, len);
 }
