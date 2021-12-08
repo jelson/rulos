@@ -67,7 +67,7 @@
 #define SD_LL_SCK_PIN       LL_GPIO_PIN_3
 #define SD_LL_MISO_PORT     GPIOB
 #define SD_LL_MISO_PIN      LL_GPIO_PIN_4
-#define SD_LL_MOSI_PIN      GPIOB
+#define SD_LL_MOSI_PORT     GPIOB
 #define SD_LL_MOSI_PIN      LL_GPIO_PIN_5
 #define SD_PIN_CHIPENABLE   GPIO_B6
 
