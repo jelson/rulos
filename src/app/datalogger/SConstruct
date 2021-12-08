@@ -21,9 +21,10 @@ sys.path.insert(0, "../../build-tools")
 from BuildRules import *
 
 COMMON_SOURCES = [
+    "curr_meas.c",
     "flash_dumper.c",
-    "serial_reader.c",
     "ina219.c",
+    "serial_reader.c",
 ]
 
 RulosBuildTarget(

@@ -18,11 +18,11 @@
 
 #include "core/hardware.h"
 #include "core/rulos.h"
-#include "periph/uart/uart.h"
-
-#include "ina219.h"
-#include "serial_reader.h"
+#include "curr_meas.h"
 #include "flash_dumper.h"
+#include "ina219.h"
+#include "periph/uart/uart.h"
+#include "serial_reader.h"
 
 // uart definitions
 #define CONSOLE_UART_NUM 0
@@ -38,31 +38,13 @@
 #define DUT2_PWR_PIN GPIO_B5
 
 // power measurement
-#define NUM_POWERMEASURE_CHANNELS  2
-#define DUT1_POWERMEASURE_ADDR     0b1000001
-#define DUT2_POWERMEASURE_ADDR     0b1000000
-#define POWERMEASURE_POLLTIME_USEC 20000
-// minimum length of data to buffer before writing to FAT
-
-typedef struct {
-  int addr;
-  int channel_num;
-  int scale;
-
-  // number of times we've polled the current measurement module and gotten back
-  // either "ready" or "not ready"
-  int num_not_ready;
-  int num_ready;
-
-  // averaging: cumulative current and number of measurements
-  int num_measurements;
-  int32_t cum_current;
-} currmeas_state_t;
+#define DUT1_POWERMEASURE_ADDR 0b1000001
+#define DUT2_POWERMEASURE_ADDR 0b1000000
 
 UartState_t console;
 flash_dumper_t flash_dumper;
 serial_reader_t refgps, dut1, dut2;
-currmeas_state_t currmeas[2];
+currmeas_state_t cms1, cms2;
 
 //// sony config
 
@@ -168,55 +150,6 @@ static void indicate_alive(void *data) {
   gpio_set_or_clr(DUT2_LED_PIN, serial_reader_is_active(&dut2));
 }
 
-////// power measurement
-
-static void measure_one_current(currmeas_state_t *cms) {
-  static int32_t current;
-  bool is_ready = ina219_read_microamps(cms->addr, &current);
-
-  if (!is_ready) {
-    cms->num_not_ready++;
-  } else {
-    cms->num_ready++;
-    cms->cum_current += current;
-    cms->num_measurements++;
-  }
-}
-
-static void print_one_current(currmeas_state_t *cms) {
-  char flashlog[100];
-  int len =
-      snprintf(flashlog, sizeof(flashlog), "curr,%d,%ld", cms->channel_num,
-               cms->scale * cms->cum_current / cms->num_measurements);
-  cms->cum_current = 0;
-  cms->num_measurements = 0;
-  flash_dumper_write(&flash_dumper, flashlog, len);
-
-  uint32_t usec =
-      POWERMEASURE_POLLTIME_USEC * (cms->num_ready + cms->num_not_ready);
-  uint32_t ups = usec / cms->num_ready;
-  LOG("chan %d current: %d samples ready, %d not; avg %ld usec per sample",
-      cms->channel_num, cms->num_ready, cms->num_not_ready, ups);
-}
-
-// current measurement
-static void measure_current(void *data) {
-  schedule_us(POWERMEASURE_POLLTIME_USEC, measure_current, NULL);
-  static int loops_since_print = 0;
-  loops_since_print++;
-
-  for (int i = 0; i < NUM_POWERMEASURE_CHANNELS; i++) {
-    measure_one_current(&currmeas[i]);
-  }
-
-  if (loops_since_print == (1000000 / POWERMEASURE_POLLTIME_USEC)) {
-    loops_since_print = 0;
-    for (int i = 0; i < NUM_POWERMEASURE_CHANNELS; i++) {
-      print_one_current(&currmeas[i]);
-    }
-  }
-}
-
 int main() {
   hal_init();
   init_clock(10000, TIMER1);
@@ -244,31 +177,30 @@ int main() {
   serial_reader_init(&refgps, REFGPS_UART_NUM, 9600, &flash_dumper, NULL);
 
   // enable sony on dut1
-  serial_reader_init(&dut1, DUT1_UART_NUM, 115200, &flash_dumper, sony_config_received);
+  serial_reader_init(&dut1, DUT1_UART_NUM, 115200, &flash_dumper,
+                     sony_config_received);
   schedule_us(1000000, enable_sony, &dut1);
 
   // enable ublox on dut2
-  serial_reader_init(&dut2, DUT2_UART_NUM, 38400, &flash_dumper, ublox_config_received);
+  serial_reader_init(&dut2, DUT2_UART_NUM, 38400, &flash_dumper,
+                     ublox_config_received);
   schedule_us(1000000, enable_ublox, &dut2);
 
   // initialize current measurement
-  memset(currmeas, 0, sizeof(currmeas));
-  currmeas[0].channel_num = 1;
-  currmeas[0].addr = DUT1_POWERMEASURE_ADDR;
-  currmeas[0].scale = 1;  // we read in microamps
-  currmeas[1].channel_num = 3;
-  currmeas[1].addr = DUT2_POWERMEASURE_ADDR;
-  currmeas[1].scale = 10;  // we read in 10 microamps
 
   // docs say calibration register should be trunc[0.04096 / (current_lsb *
   // R_shunt)] R_shunt for the sony is 5.1 ohms, we'll set current_lsb to be 1
   // microamp; that gives us 8031. manually calibrated using 34401A to get a
   // better value.
-  ina219_init(DUT1_POWERMEASURE_ADDR, VOLT_PRESCALE_DIV1, 8577);
+  currmeas_init(&cms1, DUT1_POWERMEASURE_ADDR, VOLT_PRESCALE_DIV1, 8577,
+                1,  // we read in microamps
+                DUT1_UART_NUM, &flash_dumper);
+
   // the ublox has a builtin current shunt of 0.1 ohms. we must make current_lsb
   // 0.01mA so we get 40960 as the prescale
-  ina219_init(DUT2_POWERMEASURE_ADDR, VOLT_PRESCALE_DIV1, 40960);
-  schedule_now(measure_current, NULL);
+  currmeas_init(&cms2, DUT2_POWERMEASURE_ADDR, VOLT_PRESCALE_DIV1, 40960,
+                10,  // we read in 10 microamps
+                DUT2_UART_NUM, &flash_dumper);
 
   // enable periodic blink to indicate liveness
   schedule_now(indicate_alive, NULL);

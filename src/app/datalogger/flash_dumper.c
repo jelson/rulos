@@ -21,8 +21,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "core/rulos.h"
 #include "core/rtc.h"
+#include "core/rulos.h"
 
 void flash_dumper_init(flash_dumper_t *fd) {
   const char *filename = "log.txt";
@@ -71,9 +71,6 @@ void flash_dumper_write(flash_dumper_t *fd, const void *buf, int len) {
     memcpy(&fd->buf[fd->len], buf, len);
     fd->len += len;
     fd->buf[fd->len++] = '\n';
-
-    // null-terminate, but don't extend 
-    fd->buf[fd->len] = 0;
   }
 
   // write the entry to the console for debug

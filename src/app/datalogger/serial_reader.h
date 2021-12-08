@@ -17,9 +17,9 @@
  */
 
 #include "core/time.h"
+#include "flash_dumper.h"
 #include "periph/uart/linereader.h"
 #include "periph/uart/uart.h"
-#include "flash_dumper.h"
 
 typedef struct serial_reader_t_s serial_reader_t;
 
@@ -36,9 +36,8 @@ struct serial_reader_t_s {
 
 // initialize a serial reader -- reads from a uart and pipes the output to a
 // flash dumper
-void serial_reader_init(serial_reader_t *sr, uint8_t uart_id,
-                        uint32_t baud, flash_dumper_t *flash_dumper,
-                        serial_reader_cb_t cb);
+void serial_reader_init(serial_reader_t *sr, uint8_t uart_id, uint32_t baud,
+                        flash_dumper_t *flash_dumper, serial_reader_cb_t cb);
 
 // manually append a line to a serial reader
 void serial_reader_print(serial_reader_t *sr, const char *s);

@@ -4,8 +4,9 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "flash_dumper.h"
+
 #include "core/clock.h"
+#include "flash_dumper.h"
 
 static void sr_line_received(UartState_t *uart, void *user_data, char *line) {
   serial_reader_t *sr = (serial_reader_t *)user_data;
@@ -20,9 +21,8 @@ static void sr_line_received(UartState_t *uart, void *user_data, char *line) {
   }
 }
 
-void serial_reader_init(serial_reader_t *sr, uint8_t uart_id,
-                        uint32_t baud, flash_dumper_t *flash_dumper,
-                        serial_reader_cb_t cb) {
+void serial_reader_init(serial_reader_t *sr, uint8_t uart_id, uint32_t baud,
+                        flash_dumper_t *flash_dumper, serial_reader_cb_t cb) {
   memset(sr, 0, sizeof(*sr));
   sr->last_active = clock_time_us();
   sr->flash_dumper = flash_dumper;

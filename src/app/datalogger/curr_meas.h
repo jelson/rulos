@@ -18,24 +18,27 @@
 
 #pragma once
 
-#include <stdbool.h>
 #include <stdint.h>
 
-#include "core/rtc.h"
-#include "periph/fatfs/ff.h"
-#include "periph/uart/linereader.h"
-
-#define WRITE_INCREMENT 2048
+#include "flash_dumper.h"
 
 typedef struct {
-  FATFS fatfs;  // SD card filesystem global state
-  FIL fp;
-  char buf[WRITE_INCREMENT * 2];
-  int len;
-  bool ok;
-  rtc_t rtc;
-} flash_dumper_t;
+  int addr;
+  int channel_num;  // used for debug message only
+  int scale;
+  flash_dumper_t *flash_dumper;
+  int loops_since_print;
 
-void flash_dumper_init(flash_dumper_t *fd);
-void flash_dumper_write(flash_dumper_t *fd, const void *buf, int len);
-void flash_dumper_print(flash_dumper_t *fd, char *s);
+  // number of times we've polled the current measurement module and gotten back
+  // either "ready" or "not ready"
+  int num_not_ready;
+  int num_ready;
+
+  // averaging: cumulative current and number of measurements
+  int num_measurements;
+  int32_t cum_current;
+} currmeas_state_t;
+
+void currmeas_init(currmeas_state_t *cms, uint8_t device_addr,
+                   uint32_t prescale, uint16_t calibration, uint32_t scale,
+                   uint32_t channel_num, flash_dumper_t *flash_dumper);
