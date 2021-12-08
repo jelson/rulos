@@ -20,11 +20,16 @@ import sys
 sys.path.insert(0, "../../build-tools")
 from BuildRules import *
 
+COMMON_SOURCES = [
+    "flash_dumper.c",
+    "serial_reader.c",
+    "ina219.c",
+]
+
 RulosBuildTarget(
     name = "datalogger",
-    sources = [
+    sources = COMMON_SOURCES + [
         "datalogger.c",
-        "ina219.c",
     ],
     platforms = [
         ArmStmPlatform("stm32g0b1xe",

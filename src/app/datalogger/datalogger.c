@@ -17,12 +17,12 @@
  */
 
 #include "core/hardware.h"
-#include "core/rtc.h"
 #include "core/rulos.h"
-#include "ina219.h"
-#include "periph/fatfs/ff.h"
-#include "periph/uart/linereader.h"
 #include "periph/uart/uart.h"
+
+#include "ina219.h"
+#include "serial_reader.h"
+#include "flash_dumper.h"
 
 // uart definitions
 #define CONSOLE_UART_NUM 0
@@ -44,25 +44,6 @@
 #define POWERMEASURE_POLLTIME_USEC 20000
 // minimum length of data to buffer before writing to FAT
 
-#define WRITE_INCREMENT 2048
-
-typedef struct {
-  FATFS fatfs;  // SD card filesystem global state
-  FIL fp;
-  char buf[WRITE_INCREMENT * 2];
-  int len;
-  bool ok;
-} flash_dumper_t;
-
-typedef struct {
-  UartState_t uart;
-  LineReader_t linereader;
-  flash_dumper_t *flash_dumper;
-  int num_total_lines;
-  Time last_active;
-  // gpio_pin_t led;
-} serial_reader_t;
-
 typedef struct {
   int addr;
   int channel_num;
@@ -78,97 +59,10 @@ typedef struct {
   int32_t cum_current;
 } currmeas_state_t;
 
-static bool serial_reader_is_active(serial_reader_t *sr);
-static void serial_reader_print(serial_reader_t *sr, const char *s);
-
-rtc_t rtc;
 UartState_t console;
 flash_dumper_t flash_dumper;
 serial_reader_t refgps, dut1, dut2;
 currmeas_state_t currmeas[2];
-
-//////////////////////////////////////////////////////////////////////////////
-
-void flash_dumper_init(flash_dumper_t *fd) {
-  const char *filename = "log.txt";
-
-  memset(fd, 0, sizeof(*fd));
-  if (f_mount(&fd->fatfs, "", 0) != FR_OK) {
-    LOG("can't mount flash filesystem");
-    return;
-  }
-
-  LOG("trying to create file");
-  int retval = f_open(&fd->fp, filename, FA_WRITE | FA_OPEN_APPEND);
-  if (retval != FR_OK) {
-    LOG("can't open file: %d", retval);
-    return;
-  }
-  LOG("opened file ok");
-  fd->ok = true;
-}
-
-void flash_dumper_append(flash_dumper_t *fd, const void *buf, int len) {
-  // prepend all lines with the current time in milliseconds and a comma
-  char prefix[50];
-  uint32_t sec, usec;
-  rtc_get_uptime(&rtc, &sec, &usec);
-  int prefix_len = sprintf(prefix, "%ld,", sec * 1000 + usec / 1000);
-
-  // compute total length of the string: the prefix, the string we were passed,
-  // and one extra for the trailing \n
-  int len_with_extras = 0;
-  len_with_extras += prefix_len;
-  len_with_extras += len;
-  len_with_extras += 1;
-
-  // make sure there's sufficient space
-  if (fd->len + len_with_extras > sizeof(fd->buf)) {
-    LOG("ERROR: Flash buf overflow!");
-    fd->len = 0;
-  } else {
-    // append prefix, message and \n to buffer
-    memcpy(&fd->buf[fd->len], prefix, prefix_len);
-    fd->len += prefix_len;
-    memcpy(&fd->buf[fd->len], buf, len);
-    fd->len += len;
-    fd->buf[fd->len] = '\n';
-    fd->len++;
-  }
-
-  // write the entry to the console for debug
-  uart_write(&console, &fd->buf[fd->len - len_with_extras], len_with_extras);
-
-  // if we've reached 2 complete FAT sectors, write
-  while (fd->len >= WRITE_INCREMENT) {
-    uint32_t written;
-    int retval = f_write(&fd->fp, fd->buf, WRITE_INCREMENT, &written);
-    if (retval != FR_OK) {
-      LOG("couldn't write to sd card: got retval of %d", retval);
-      fd->ok = false;
-      return;
-    }
-    if (written == 0) {
-      LOG("error writing to SD card: nothing written");
-      fd->ok = false;
-      return;
-    }
-    retval = f_sync(&fd->fp);
-    if (retval != FR_OK) {
-      fd->ok = false;
-      return;
-    }
-
-    // success!
-    LOG("flash: wrote %ld bytes", written);
-    memmove(&fd->buf[0], &fd->buf[written], fd->len - written);
-    fd->len -= written;
-  }
-}
-
-void flash_dumper_print(flash_dumper_t *fd, char *s) {
-  flash_dumper_append(fd, s, strlen(s));
-}
 
 //// sony config
 
@@ -246,71 +140,16 @@ static void enable_ublox(void *data) {
     char flashlog[300];
     int len = snprintf(flashlog, sizeof(flashlog),
                        "out,%d,<ublox config string>", sr->uart.uart_id);
-    flash_dumper_append(sr->flash_dumper, flashlog, len);
+    flash_dumper_write(sr->flash_dumper, flashlog, len);
   }
   ublox_glonass_active = false;
 
   schedule_us(5000000, enable_ublox, data);
 }
 
-static void ublox_config_received(serial_reader_t *sr, char *line) {
+static void ublox_config_received(serial_reader_t *sr, const char *line) {
   if (!strncmp(line, "$GLGSV", strlen("$GLGSV"))) {
     ublox_glonass_active = true;
-  }
-}
-
-//// serial reader
-
-static void sr_line_received(UartState_t *uart, void *user_data, char *line) {
-  serial_reader_t *sr = (serial_reader_t *)user_data;
-  sr->last_active = clock_time_us();
-  char buf[300];
-  int len = snprintf(buf, sizeof(buf), "in,%d,%d,%s", uart->uart_id,
-                     sr->num_total_lines++, line);
-  flash_dumper_append(sr->flash_dumper, buf, len);
-
-  // this is hacky
-  if (uart->uart_id == DUT1_UART_NUM) {
-    sony_config_received(sr, line);
-  }
-  if (uart->uart_id == DUT2_UART_NUM) {
-    ublox_config_received(sr, line);
-  }
-}
-
-static void serial_reader_init(serial_reader_t *sr, uint8_t uart_id,
-                               uint32_t baud, flash_dumper_t *flash_dumper) {
-  memset(sr, 0, sizeof(*sr));
-  sr->last_active = clock_time_us();
-  sr->flash_dumper = flash_dumper;
-  uart_init(&sr->uart, uart_id, baud, true);
-  linereader_init(&sr->linereader, &sr->uart, sr_line_received, sr);
-}
-
-static void serial_reader_print(serial_reader_t *sr, const char *s) {
-  uart_print(&sr->uart, s);
-
-  // record the fact that we sent this string to the uart
-  char flashlog[300];
-  int len =
-      snprintf(flashlog, sizeof(flashlog), "out,%d,%s", sr->uart.uart_id, s);
-  flash_dumper_append(sr->flash_dumper, flashlog, len);
-}
-
-#define ACTIVITY_TIMEOUT_US 2000000
-
-static bool serial_reader_is_active(serial_reader_t *sr) {
-  Time now = clock_time_us();
-  Time time_since_active = now - sr->last_active;
-
-  if (time_since_active >= ACTIVITY_TIMEOUT_US) {
-    // if inactive, move the last-active time forward to prevent rollover
-    // problems (but still far enough in the past that the serial reader does
-    // not appear to be artificially active)
-    sr->last_active = now - ACTIVITY_TIMEOUT_US - 1;
-    return false;
-  } else {
-    return true;
   }
 }
 
@@ -351,7 +190,7 @@ static void print_one_current(currmeas_state_t *cms) {
                cms->scale * cms->cum_current / cms->num_measurements);
   cms->cum_current = 0;
   cms->num_measurements = 0;
-  flash_dumper_append(&flash_dumper, flashlog, len);
+  flash_dumper_write(&flash_dumper, flashlog, len);
 
   uint32_t usec =
       POWERMEASURE_POLLTIME_USEC * (cms->num_ready + cms->num_not_ready);
@@ -394,9 +233,6 @@ int main() {
   gpio_make_output(DUT1_PWR_PIN);
   gpio_make_output(DUT2_PWR_PIN);
 
-  // initialize rtc
-  rtc_init(&rtc);
-
   // turn off power to DUT1 and DUT2
   gpio_clr(DUT1_PWR_PIN);
   gpio_clr(DUT2_PWR_PIN);
@@ -405,14 +241,14 @@ int main() {
   flash_dumper_init(&flash_dumper);
 
   // initialize reference gps
-  serial_reader_init(&refgps, REFGPS_UART_NUM, 9600, &flash_dumper);
+  serial_reader_init(&refgps, REFGPS_UART_NUM, 9600, &flash_dumper, NULL);
 
   // enable sony on dut1
-  serial_reader_init(&dut1, DUT1_UART_NUM, 115200, &flash_dumper);
+  serial_reader_init(&dut1, DUT1_UART_NUM, 115200, &flash_dumper, sony_config_received);
   schedule_us(1000000, enable_sony, &dut1);
 
   // enable ublox on dut2
-  serial_reader_init(&dut2, DUT2_UART_NUM, 38400, &flash_dumper);
+  serial_reader_init(&dut2, DUT2_UART_NUM, 38400, &flash_dumper, ublox_config_received);
   schedule_us(1000000, enable_ublox, &dut2);
 
   // initialize current measurement
