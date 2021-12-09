@@ -77,6 +77,7 @@ void currmeas_init(currmeas_state_t *cms, uint8_t device_addr,
   cms->channel_num = channel_num;
   cms->flash_dumper = flash_dumper;
 
-  ina219_init(device_addr, prescale, calibration);
-  schedule_now(monitor_current, cms);
+  if (ina219_init(device_addr, prescale, calibration)) {
+    schedule_now(monitor_current, cms);
+  }
 }

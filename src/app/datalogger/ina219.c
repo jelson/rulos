@@ -27,6 +27,16 @@
 #include "stm32g0xx_ll_i2c.h"
 #include "stm32g0xx_ll_pwr.h"
 
+#if defined(BOARD_DATALOGGER_REV_B)
+#define SCL_PIN GPIO_PIN_6
+#define SDA_PIN GPIO_PIN_9
+#elif defined(BOARD_LTETAG_DEV_REV_A)
+#define SCL_PIN GPIO_PIN_6
+#define SDA_PIN GPIO_PIN_7
+#else
+#error "unknown pins"
+#endif
+
 #define WRITE_ADDR(addr) (addr << 1)
 #define READ_ADDR(addr)  ((addr << 1) | 1)
 
@@ -45,7 +55,7 @@ static void reg_write(uint8_t device_addr, uint8_t reg_addr, uint16_t value) {
 }
 
 // read from one of the 16-bit registers, writing results to inbuf
-static void reg_read(uint8_t device_addr, uint8_t reg_addr,
+static bool reg_read(uint8_t device_addr, uint8_t reg_addr,
                      uint16_t *value /* OUT */) {
   uint8_t outbuf[1];
 
@@ -55,22 +65,27 @@ static void reg_read(uint8_t device_addr, uint8_t reg_addr,
                           sizeof(outbuf), HAL_MAX_DELAY);
 
   uint8_t inbuf[2];
-  HAL_I2C_Master_Receive(&i2c_handle, READ_ADDR(device_addr), inbuf, 2,
-                         HAL_MAX_DELAY);
+  if (HAL_OK != HAL_I2C_Master_Receive(&i2c_handle, READ_ADDR(device_addr), inbuf, 2,
+                                       HAL_MAX_DELAY)) {
+    LOG("error reading from INA219 at 0x%x", device_addr);
+    *value = 0;
+    return false;
+  }
   *value = inbuf[0] << 8 | inbuf[1];
+  return true;
 }
 
 static void start_i2c() {
   // I2C pins are on PB6 (I2C1 SCL) and PB9 (I2C1 SDA)
   GPIO_InitTypeDef GPIO_InitStruct;
-  GPIO_InitStruct.Pin = GPIO_PIN_6;
+  GPIO_InitStruct.Pin = SCL_PIN;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.Alternate = GPIO_AF6_I2C1;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = GPIO_PIN_9;
+  GPIO_InitStruct.Pin = SDA_PIN;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   // Enable the I2C peripheral
@@ -95,18 +110,27 @@ static void start_i2c() {
   }
 }
 
-void ina219_init(uint8_t device_addr, uint32_t prescale, uint16_t calibration) {
+bool ina219_init(uint8_t device_addr, uint32_t prescale, uint16_t calibration) {
   static bool i2c_started = false;
   if (!i2c_started) {
     i2c_started = true;
     start_i2c();
   }
 
+  LOG("Trying to initialize INA219 on address 0x%x...", device_addr);
+
   // reset device
   uint16_t reset_reg = 1 << 15;
   reg_write(device_addr, 0x0, reset_reg);
-  reg_read(device_addr, 0x0, &reset_reg);
-  assert(reset_reg == 0x399f);
+  bool ok = reg_read(device_addr, 0x0, &reset_reg);
+  if (!ok) {
+    LOG("...could not initialize!");
+    return false;
+  }
+  if (reset_reg != 0x399f) {
+    LOG("...bad register read, I2C failure?");
+    return false;
+  }
 
   // configuration register:
   // * PG scaling as passed in from init
@@ -117,10 +141,14 @@ void ina219_init(uint8_t device_addr, uint32_t prescale, uint16_t calibration) {
 
   // read back the config register and make sure it was set as we requested
   reg_read(device_addr, 0x0, &reset_reg);
+  if (reset_reg != config_reg) {
+    LOG("...could not write to register");
+    return false;
+  }
   LOG("INA219@0x%x: configuration set to 0x%x", device_addr, reset_reg);
-  assert(reset_reg == config_reg);
 
   reg_write(device_addr, 0x5, calibration);
+  return true;
 }
 
 bool ina219_read_microamps(uint8_t device_addr, int32_t *val /* OUT */) {

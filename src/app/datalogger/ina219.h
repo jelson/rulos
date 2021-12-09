@@ -21,5 +21,5 @@
 #define VOLT_PRESCALE_DIV4 (0b10 << 11)
 #define VOLT_PRESCALE_DIV8 (0b11 << 11)
 
-void ina219_init(uint8_t device_addr, uint32_t prescale, uint16_t calibration);
+bool ina219_init(uint8_t device_addr, uint32_t prescale, uint16_t calibration);
 bool ina219_read_microamps(uint8_t device_addr, int32_t *val /* OUT */);
