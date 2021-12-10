@@ -26,12 +26,12 @@
 
 // uart definitions
 #define CONSOLE_UART_NUM 0
-#define GPS_UART_NUM 1
-#define MODEM_UART_NUM 2
+#define GPS_UART_NUM     1
+#define MODEM_UART_NUM   2
 
 // power measurement
-#define GPS_POWERMEASURE_ADDR     0b1000000
-#define MODEM_POWERMEASURE_ADDR   0b1000001
+#define GPS_POWERMEASURE_ADDR   0b1000000
+#define MODEM_POWERMEASURE_ADDR 0b1000001
 
 UartState_t console;
 flash_dumper_t flash_dumper;
@@ -39,7 +39,7 @@ currmeas_state_t gps_cms, modem_cms;
 
 static void indicate_alive(void *data) {
   LOG("run");
-  schedule_us(250000, indicate_alive, NULL);
+  schedule_us(1000000, indicate_alive, NULL);
 }
 
 int main() {
@@ -59,8 +59,7 @@ int main() {
 
   // GPS: R_shunt is 150 milliohms, Iresolution = 66.7
   // .04096 / (66.7 uA * 0.150 ohms) = 4094
-  currmeas_init(&gps_cms, GPS_POWERMEASURE_ADDR, VOLT_PRESCALE_DIV1, 4094,
-                66.7,
+  currmeas_init(&gps_cms, GPS_POWERMEASURE_ADDR, VOLT_PRESCALE_DIV1, 54613, 5,
                 GPS_UART_NUM, &flash_dumper);
 
   // LTE: Rshunt = 0.50 ohms, Iresolution = 10uA

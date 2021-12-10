@@ -26,7 +26,7 @@
 #define POWERMEASURE_POLLTIME_USEC 20000
 
 static void measure_current(currmeas_state_t *cms) {
-  static int32_t current;
+  static int16_t current;
   bool is_ready = ina219_read_microamps(cms->addr, &current);
 
   if (!is_ready) {

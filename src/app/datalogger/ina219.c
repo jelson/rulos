@@ -65,8 +65,8 @@ static bool reg_read(uint8_t device_addr, uint8_t reg_addr,
                           sizeof(outbuf), HAL_MAX_DELAY);
 
   uint8_t inbuf[2];
-  if (HAL_OK != HAL_I2C_Master_Receive(&i2c_handle, READ_ADDR(device_addr), inbuf, 2,
-                                       HAL_MAX_DELAY)) {
+  if (HAL_OK != HAL_I2C_Master_Receive(&i2c_handle, READ_ADDR(device_addr),
+                                       inbuf, 2, HAL_MAX_DELAY)) {
     LOG("error reading from INA219 at 0x%x", device_addr);
     *value = 0;
     return false;
@@ -151,7 +151,7 @@ bool ina219_init(uint8_t device_addr, uint32_t prescale, uint16_t calibration) {
   return true;
 }
 
-bool ina219_read_microamps(uint8_t device_addr, int32_t *val /* OUT */) {
+bool ina219_read_microamps(uint8_t device_addr, int16_t *val /* OUT */) {
   uint16_t reg;
 
   // Read the bus voltage register, which also has the "conversion
@@ -163,12 +163,13 @@ bool ina219_read_microamps(uint8_t device_addr, int32_t *val /* OUT */) {
     return false;
   }
 
+  reg_read(device_addr, 0x4, (uint16_t *)val);
+
 #if 0
   int16_t voltage_register;
   reg_read(device_addr, 0x1, (uint16_t *) &voltage_register);
-  LOG("voltage register: %d", voltage_register);
+  LOG("device 0x%x voltage %d, current %d", device_addr, voltage_register, *val);
 #endif
 
-  reg_read(device_addr, 0x4, (uint16_t *)val);
   return true;
 }
