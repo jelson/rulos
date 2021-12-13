@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-ARM_COMPILER_PREFIX = "/usr/local/bin/gcc-arm-none-eabi-9-2019-q4-major/bin/arm-none-eabi-"
+ARM_COMPILER_PREFIX = "/usr/local/bin/gcc-arm-none-eabi-10-2020-q4-major/bin/arm-none-eabi-"
 
 from BaseRules import *
 import glob

@@ -23,6 +23,8 @@
 void arm_assert(const char *file, uint32_t line);
 void arm_log(const char *fmt, ...) __attribute((format(printf, 1, 2)));
 
+#undef assert
+
 #define assert(x)                     \
   do {                                \
     if (!(x)) {                       \
