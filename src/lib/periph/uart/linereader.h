@@ -43,7 +43,6 @@ typedef struct {
   UartState_t *uart;
   linereader_cb cb;
   void *user_data;
-  uint8_t upcall_pending_len;
   bool cb_pending;
 } LineReader_t;
 
