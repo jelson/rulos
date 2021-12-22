@@ -20,4 +20,4 @@
 
 #include <inttypes.h>
 
-typedef uint32_t rulos_irq_state_t;
+typedef uint8_t rulos_irq_state_t;
