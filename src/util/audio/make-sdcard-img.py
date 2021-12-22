@@ -22,6 +22,7 @@ def sdcard_space_kb():
     return int(mo.groups(1)[0])
 
 def make_empty_image(img_filename, space_kb):
+    print(f"Making {space_kb}kb")
     unlink(img_filename)
     subprocess.call(["dd", "if=/dev/zero", "bs=1024", "count=%d" % space_kb, "of="+img_filename])
 
@@ -35,7 +36,7 @@ def main():
     except FileNotFoundError:
         pass
     os.mkdir(mount_point)
-    space_kb = sdcard_space_kb() + 1000; # extra capacity for FS overhead, inodes
+    space_kb = sdcard_space_kb() + 3000; # extra capacity for FS overhead, inodes
     make_empty_image(img_filename, space_kb)
     subprocess.call(["mkfs.vfat", img_filename])
     subprocess.call(["mount", "-o", "loop", img_filename, mount_point])

@@ -128,6 +128,7 @@ class AudioIndexer:
                 except OSError:    # File exists
                     pass
                 outpath = os.path.join(outpath, clip.token.fat_filename())
+                print(f"Writing to {outpath}")
                 fp = open(outpath, "wb")
                 fp.write(clip.aubytes)
                 fp.close()
