@@ -21,7 +21,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "core/rtc.h"
+#include "core/wallclock.h"
 #include "periph/fatfs/ff.h"
 #include "periph/uart/linereader.h"
 
@@ -33,7 +33,7 @@ typedef struct {
   char buf[WRITE_INCREMENT * 2];
   int len;
   bool ok;
-  rtc_t rtc;
+  wallclock_t wallclock;
 } flash_dumper_t;
 
 void flash_dumper_init(flash_dumper_t *fd);

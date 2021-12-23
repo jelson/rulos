@@ -21,15 +21,15 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "core/rtc.h"
 #include "core/rulos.h"
+#include "core/wallclock.h"
 
 void flash_dumper_init(flash_dumper_t *fd) {
   const char *filename = "log.txt";
 
   memset(fd, 0, sizeof(*fd));
 
-  rtc_init(&fd->rtc);
+  wallclock_init(&fd->wallclock);
 
   if (f_mount(&fd->fatfs, "", 0) != FR_OK) {
     LOG("can't mount flash filesystem");
@@ -50,7 +50,7 @@ void flash_dumper_write(flash_dumper_t *fd, const void *buf, int len) {
   // prepend all lines with the current time in milliseconds and a comma
   char prefix[50];
   uint32_t sec, usec;
-  rtc_get_uptime(&fd->rtc, &sec, &usec);
+  wallclock_get_uptime(&fd->wallclock, &sec, &usec);
   int prefix_len = sprintf(prefix, "%ld,", sec * 1000 + usec / 1000);
 
   // compute total length of the string: the prefix, the string we were passed,

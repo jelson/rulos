@@ -24,8 +24,8 @@
 typedef struct {
   uint32_t seconds_since_boot;
   uint32_t curr_second_start_us;
-} rtc_t;
+} wallclock_t;
 
-void rtc_init(rtc_t *rtc);
-void rtc_get_uptime(rtc_t *rtc, uint32_t *sec /* OUT */,
-                    uint32_t *usec /* OUT */);
+void wallclock_init(wallclock_t *wallclock);
+void wallclock_get_uptime(wallclock_t *wallclock, uint32_t *sec /* OUT */,
+                          uint32_t *usec /* OUT */);
