@@ -22,6 +22,10 @@ class SimulatorPlatform(BaseRules.Platform):
     def __init__(self, extra_peripherals = [], extra_cflags = []):
         super().__init__(extra_peripherals, extra_cflags)
 
+        # Simulator always requires uart peripheral since it's involved with
+        # logging
+        self.extra_peripherals.append("uart")
+
     def name(self):
         return "simulator"
 
@@ -29,6 +33,8 @@ class SimulatorPlatform(BaseRules.Platform):
         return "sim"
 
     def configure_env(self, env):
+        self.configure_compiler(env, "")
+
         env.Append(LIBS = ["m", "ncurses"])
 
         # needed for 6-matrix

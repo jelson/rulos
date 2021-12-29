@@ -89,6 +89,10 @@ bool sim_uart_keystroke_handler(char c) {
 
 typedef void (*SimKeystrokeHandler)(char k);
 
+extern FILE *logfp;
+extern uint64_t init_time;
+extern uint64_t curr_time_usec();
+
 void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb) {
   char buf[4096];
   int i = 0;
@@ -106,9 +110,13 @@ void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb) {
     }
   }
 
-  buf[i + 1] = '\0';
+  buf[i] = '\0';
 
-  LOG("Sent to uart %d: %s", uart_id, buf);
+  uint64_t normalized_time_usec = curr_time_usec() - init_time;
+  fprintf(logfp, "%" PRIu64 ".%06" PRIu64 " UART %d: %s",
+          normalized_time_usec / 1000000, normalized_time_usec % 1000000,
+          uart_id, buf);
+  fflush(logfp);
 }
 
 /********** uart input simulator ***************/

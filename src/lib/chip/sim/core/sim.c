@@ -333,29 +333,13 @@ static void sim_twi_send(MediaStateIfc *media, Addr dest_addr, const void *data,
 
 /************ init ***********************/
 
-static FILE *logfp = NULL;
-static uint64_t init_time = 0;
+FILE *logfp = NULL;
+uint64_t init_time = 0;
 
 uint64_t curr_time_usec() {
   struct timeval tv;
   gettimeofday(&tv, NULL);
   return ((uint64_t)1000000) * tv.tv_sec + tv.tv_usec;
-}
-
-void sim_log(const char *fmt, ...) {
-  va_list ap;
-  char message[4096];
-
-  va_start(ap, fmt);
-  vsnprintf(message, sizeof(message), fmt, ap);
-  va_end(ap);
-
-  uint64_t normalized_time_usec = curr_time_usec() - init_time;
-
-  fprintf(logfp, "%" PRIu64 ".%06" PRIu64 ": %s",
-          normalized_time_usec / 1000000, normalized_time_usec % 1000000,
-          message);
-  fflush(logfp);
 }
 
 void hal_init() {
