@@ -17,8 +17,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
-sys.path.insert(0, "../../../build-tools")
-from BuildRules import *
+sys.path.insert(0, "../../../util")
+from build_tools import *
 
 RulosBuildTarget(
     name = "rocketsouthbridge",

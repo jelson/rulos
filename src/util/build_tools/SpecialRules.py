@@ -1,4 +1,4 @@
-from BaseRules import *
+from .util import *
 import glob
 import os
 
