@@ -8,6 +8,7 @@ from .BuildTarget import RulosBuildTarget
 from .ArmBuildRules import ArmPlatform, ArmStmPlatform
 from .AvrBuildRules import AvrPlatform
 from .SimBuildRules import SimulatorPlatform
+from .Esp32BuildRules import Esp32Platform
 
 if not os.path.exists(BUILD_ROOT):
     os.makedirs(BUILD_ROOT)

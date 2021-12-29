@@ -20,6 +20,15 @@
 
 #include "core/rulos.h"
 
+#if defined(RULOS_ESP32)
+
+// The ESP32 allocates task stacks on the heap, so there's no easy way to tell
+// if any of them have overflowed. We just disable bss_canary on ESP32.
+void bss_canary_init() {
+}
+
+#else  // RULOS_ESP32
+
 // The linker automatically creates symbols that indicate the end of BSS.
 // Unfortunately, they're named differently on different platforms.
 #if defined(RULOS_AVR)
@@ -45,3 +54,5 @@ void bss_canary_init() {
 
   schedule_us(250000, bss_canary_update, NULL);
 }
+
+#endif  // RULOS_ESP32
