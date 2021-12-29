@@ -31,12 +31,18 @@ class Platform:
         env.Replace(AR = compiler_prefix+"gcc-ar")
         env.Replace(RANLIB = compiler_prefix+"gcc-ranlib")
 
-        lss_builder = Builder(
-            src_suffix = ".elf",
-            suffix = ".lss",
-            action = compiler_prefix+"objdump -h -S --syms $SOURCE > $TARGET"
-        )
-        env.Append(BUILDERS = {"MakeLSS": lss_builder})
+        env.Append(BUILDERS = {
+            "MakeLSS": Builder(
+                src_suffix = ".elf",
+                suffix = ".lss",
+                action = compiler_prefix+"objdump -h -S --syms $SOURCE > $TARGET",
+            ),
+            "ShowSizes": Builder(
+                src_suffix = ".elf",
+                suffix = "-sizes",
+                action = compiler_prefix+"size $SOURCE",
+            )
+        })
 
     def common_libs(self, target):
         src_files = []
@@ -150,3 +156,7 @@ class Platform:
 
         self.post_configure(env, app_binary)
         Default([app_binary])
+
+        # Show sizes
+        show_sizes = env.ShowSizes(app_binary)
+        Default([show_sizes])
