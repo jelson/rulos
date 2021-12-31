@@ -15,12 +15,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
+import subprocess
+
 from . import BaseRules, util
 from SCons.Script import *
 
 ARM_COMPILER_PREFIX = "/usr/local/bin/gcc-arm-none-eabi-10-2020-q4-major/bin/arm-none-eabi-"
 ARM_ROOT = os.path.join(util.SRC_ROOT, "lib", "chip", "arm")
 STM32_ROOT = os.path.join(ARM_ROOT, "stm32")
+
+created_programming_target = False
 
 class ArmPlatform(BaseRules.Platform):
     def __init__(self, chip_name, extra_peripherals, extra_cflags):
@@ -87,8 +91,50 @@ class ArmPlatform(BaseRules.Platform):
     def arm_configure_env(self, env):
         self.configure_compiler(env, ARM_COMPILER_PREFIX)
 
+    def programming_cmdline(env, usbpath, elfpath):
+        return [
+            ARM_COMPILER_PREFIX + 'gdb', elfpath,
+            '-ex', 'set pagination off',
+            '-ex', 'set confirm off',
+            '-ex', f'target extended-remote {usbpath}',
+            '-ex', 'monitor swd',
+            '-ex', 'attach 1',
+            '-ex', 'load',
+            '-ex', 'quit',
+        ]
+
+    def find_bmp_port(self):
+        import serial.tools.list_ports as list_ports
+
+        bmp_ports = list(list_ports.grep('Black Magic GDB Server'))
+
+        if len(bmp_ports) == 0:
+            print("No Black Magic Probe found; is it plugged in?")
+            return None
+
+        if len(bmp_ports) > 1:
+            print("Multiple Black Magic probes found! Unplug some.")
+            return None
+
+        return bmp_ports[0].device
+
+    def program_with_bmp(self, target, source, env):
+        elffile = source[0].get_abspath()
+
+        usb_path = self.find_bmp_port()
+
+        if not usb_path:
+            return
+
+        print(self.programming_cmdline(usb_path, elffile))
+        subprocess.call(self.programming_cmdline(usb_path, elffile))
+
     def post_configure(self, env, outputs):
-        pass
+        # Create a programming target for the first binary only
+        global created_programming_target
+        if not created_programming_target:
+            env.Command("program", outputs, self.program_with_bmp)
+            created_programming_target = True
 
 class ArmStmPlatform(ArmPlatform):
     def __init__(self, chip_name, extra_peripherals = [], extra_cflags = []):
