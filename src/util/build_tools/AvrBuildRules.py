@@ -63,11 +63,10 @@ class AvrPlatform(BaseRules.Platform):
     def platform_specific_app_sources(self):
         return []
 
-    def post_configure(self, env, app_binary):
+    def post_configure(self, env, outputs):
         HEX_FLASH_FLAGS = "-R .eeprom -R .fuse -R .lock -R .signature"
         env.Append(BUILDERS = {"MakeHex": Builder(
             src_suffix = ".elf",
             suffix = ".hex",
             action = f"avr-objcopy -O ihex {HEX_FLASH_FLAGS}  $SOURCE $TARGET")})
-        Default(env.MakeHex(app_binary))
-        Default(env.MakeLSS(app_binary))
+        Default(env.MakeHex(outputs[0]))

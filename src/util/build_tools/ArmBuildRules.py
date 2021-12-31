@@ -87,9 +87,8 @@ class ArmPlatform(BaseRules.Platform):
     def arm_configure_env(self, env):
         self.configure_compiler(env, ARM_COMPILER_PREFIX)
 
-    def post_configure(self, env, app_binary):
-        # Returns list of extra Default targets
-        Default(env.MakeLSS(app_binary))
+    def post_configure(self, env, outputs):
+        pass
 
 class ArmStmPlatform(ArmPlatform):
     def __init__(self, chip_name, extra_peripherals = [], extra_cflags = []):

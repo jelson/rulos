@@ -39,7 +39,7 @@ class Platform:
             ),
             "ShowSizes": Builder(
                 src_suffix = ".elf",
-                suffix = "-sizes",
+                suffix = "show_sizes",
                 action = compiler_prefix+"size $SOURCE",
             )
         })
@@ -126,11 +126,11 @@ class Platform:
         # compilation
         map_filename = os.path.join(build_obj_dir, f"{target.name}.map")
         env.Append(LINKFLAGS = f"-Wl,-Map={map_filename},--cref")
-        def map_emitter(target, source, env):
-            assert(len(target) == 1)
-            assert(str(target[0]) == os.path.abspath(program_name))
-            target.append(map_filename)
-            return target, source
+        def map_emitter(scons_target, source, env):
+            assert(len(scons_target) == 1)
+            assert(str(scons_target[0]) == os.path.abspath(program_name))
+            scons_target.append(map_filename)
+            return scons_target, source
         env.Append(PROGEMITTER = [map_emitter])
 
         # Build the lib
@@ -153,10 +153,8 @@ class Platform:
 
         app_binary = env.Program(env["RulosProgramName"],
                                  source=target_sources + rocket_lib)
-
-        self.post_configure(env, app_binary)
-        Default([app_binary])
-
-        # Show sizes
-        show_sizes = env.ShowSizes(app_binary)
-        Default([show_sizes])
+        lss = env.MakeLSS(app_binary)
+        sizes = env.ShowSizes(app_binary)
+        outputs = [app_binary, lss, sizes]
+        self.post_configure(env, outputs)
+        Default(outputs)

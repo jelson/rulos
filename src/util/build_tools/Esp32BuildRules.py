@@ -167,15 +167,19 @@ class Esp32Platform(BaseRules.Platform):
         else:
             usbpath = self.find_esp32_port()
 
-        if usbpath:
-            subprocess.call(self.programming_cmdline(usbpath, binfile, partfile))
+        if not usbpath:
+            return
 
-    def post_configure(self, env, app_binary):
-        binfile = env.MakeBin(app_binary)[0]
+        cmdline = self.programming_cmdline(usbpath, binfile, partfile)
+        print(cmdline)
+        subprocess.call(cmdline)
+
+    def post_configure(self, env, outputs):
+        binfile = env.MakeBin(outputs[0])
         partfile = env.MakePartMap(
             source=os.path.join(self.tool_root, "partitions", "default.csv"),
-            target=os.path.join(os.path.dirname(app_binary[0].get_abspath()), "partitions.bin"),
-        )[0]
+            target=f"{outputs[0][0].get_abspath()}.partitions.bin",
+        )
         Default([binfile, partfile])
 
-        env.Command("program", [binfile, partfile], self.program_esp32)
+        env.Command("program", [binfile, partfile] + outputs, self.program_esp32)
