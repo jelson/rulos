@@ -50,34 +50,34 @@ avr_uart_state_t g_uart_state[2] = {};
 #if defined(MCU8_line)
 // Only one UART, named without an index
 
-#define _UBRRH UBRRH
-#define _UBRRL UBRRL
-#define _UCSRA UCSRA
-#define _UCSRB UCSRB
-#define _UCSRC UCSRC
-#define _RXEN RXEN
-#define _RXCIE RXCIE
-#define _TXEN TXEN
-#define _TXCIE TXCIE
-#define _UCSZ0 UCSZ0
-#define _UCSZ1 UCSZ1
-#define _UDR UDR
-#define _UDRE UDRE
-#define _UDRIE UDRIE
-#define _USBS USBS
-#define _USART_RXC_vect USART_RXC_vect
-#define _USART_UDRE_vect USART_UDRE_vect
-#define hal_uart_init_name hal_uart_init0
+#define _UBRRH                          UBRRH
+#define _UBRRL                          UBRRL
+#define _UCSRA                          UCSRA
+#define _UCSRB                          UCSRB
+#define _UCSRC                          UCSRC
+#define _RXEN                           RXEN
+#define _RXCIE                          RXCIE
+#define _TXEN                           TXEN
+#define _TXCIE                          TXCIE
+#define _UCSZ0                          UCSZ0
+#define _UCSZ1                          UCSZ1
+#define _UDR                            UDR
+#define _UDRE                           UDRE
+#define _UDRIE                          UDRIE
+#define _USBS                           USBS
+#define _USART_RXC_vect                 USART_RXC_vect
+#define _USART_UDRE_vect                USART_UDRE_vect
+#define hal_uart_init_name              hal_uart_init0
 #define enable_sendready_interrupt_name enable_sendready_interrupt0
-#define hal_uart_start_rx_name hal_uart_start_rx0
-#define hal_uart_start_send_name hal_uart_start_send0
-#define _handle_recv_ready_name _handle_recv_ready0
-#define _handle_send_ready_name _handle_send_ready0
-#define sync_send_byte_name sync_send_byte0
-#define hal_uart_sync_send_bytes_name hal_uart_sync_send_bytes0
-#define hal_uart_sync_send_name hal_uart_sync_send0
-#define UARTID 0
-#define HAVE_UARTID0 1
+#define hal_uart_start_rx_name          hal_uart_start_rx0
+#define hal_uart_start_send_name        hal_uart_start_send0
+#define _handle_recv_ready_name         _handle_recv_ready0
+#define _handle_send_ready_name         _handle_send_ready0
+#define sync_send_byte_name             sync_send_byte0
+#define hal_uart_sync_send_bytes_name   hal_uart_sync_send_bytes0
+#define hal_uart_sync_send_name         hal_uart_sync_send0
+#define UARTID                          0
+#define HAVE_UARTID0                    1
 #include "hardware_uart.ch"
 
 #endif
@@ -87,41 +87,41 @@ avr_uart_state_t g_uart_state[2] = {};
 // Except the vector names. Geez what a mess.
 
 #if defined(MCU328_line)
-#define _USART_RXC_vect USART_RX_vect
+#define _USART_RXC_vect  USART_RX_vect
 #define _USART_UDRE_vect USART_UDRE_vect
 #elif defined(MCU1284_line)
-#define _USART_RXC_vect USART0_RX_vect
+#define _USART_RXC_vect  USART0_RX_vect
 #define _USART_UDRE_vect USART0_UDRE_vect
 #else
 #error missing arch
 #endif
 
-#define _UBRRH UBRR0H
-#define _UBRRL UBRR0L
-#define _UCSRA UCSR0A
-#define _UCSRB UCSR0B
-#define _UCSRC UCSR0C
-#define _RXEN RXEN0
-#define _RXCIE RXCIE0
-#define _TXEN TXEN0
-#define _TXCIE TXCIE0
-#define _UCSZ0 UCSZ00
-#define _UCSZ1 UCSZ01
-#define _UDR UDR0
-#define _UDRE UDRE0
-#define _UDRIE UDRIE0
-#define _USBS USBS0
-#define hal_uart_init_name hal_uart_init0
+#define _UBRRH                          UBRR0H
+#define _UBRRL                          UBRR0L
+#define _UCSRA                          UCSR0A
+#define _UCSRB                          UCSR0B
+#define _UCSRC                          UCSR0C
+#define _RXEN                           RXEN0
+#define _RXCIE                          RXCIE0
+#define _TXEN                           TXEN0
+#define _TXCIE                          TXCIE0
+#define _UCSZ0                          UCSZ00
+#define _UCSZ1                          UCSZ01
+#define _UDR                            UDR0
+#define _UDRE                           UDRE0
+#define _UDRIE                          UDRIE0
+#define _USBS                           USBS0
+#define hal_uart_init_name              hal_uart_init0
 #define enable_sendready_interrupt_name enable_sendready_interrupt0
-#define hal_uart_start_rx_name hal_uart_start_rx0
-#define hal_uart_start_send_name hal_uart_start_send0
-#define _handle_recv_ready_name _handle_recv_ready0
-#define _handle_send_ready_name _handle_send_ready0
-#define sync_send_byte_name sync_send_byte0
-#define hal_uart_sync_send_bytes_name hal_uart_sync_send_bytes0
-#define hal_uart_sync_send_name hal_uart_sync_send0
-#define UARTID 0
-#define HAVE_UARTID0 1
+#define hal_uart_start_rx_name          hal_uart_start_rx0
+#define hal_uart_start_send_name        hal_uart_start_send0
+#define _handle_recv_ready_name         _handle_recv_ready0
+#define _handle_send_ready_name         _handle_send_ready0
+#define sync_send_byte_name             sync_send_byte0
+#define hal_uart_sync_send_bytes_name   hal_uart_sync_send_bytes0
+#define hal_uart_sync_send_name         hal_uart_sync_send0
+#define UARTID                          0
+#define HAVE_UARTID0                    1
 #include "hardware_uart.ch"
 
 #undef _UBRRH
@@ -157,50 +157,50 @@ avr_uart_state_t g_uart_state[2] = {};
 #if defined(MCU1284_line)
 // Two uarts; second uart has 1 in its name.
 
-#define _UBRRH UBRR1H
-#define _UBRRL UBRR1L
-#define _UCSRA UCSR1A
-#define _UCSRB UCSR1B
-#define _UCSRC UCSR1C
-#define _RXEN RXEN1
-#define _RXCIE RXCIE1
-#define _TXEN TXEN1
-#define _TXCIE TXCIE1
-#define _UCSZ0 UCSZ10
-#define _UCSZ1 UCSZ11
-#define _UDR UDR1
-#define _UDRE UDRE1
-#define _UDRIE UDRIE1
-#define _USBS USBS1
-#define _USART_RXC_vect USART1_RX_vect
-#define _USART_UDRE_vect USART1_UDRE_vect
-#define hal_uart_init_name hal_uart_init1
+#define _UBRRH                          UBRR1H
+#define _UBRRL                          UBRR1L
+#define _UCSRA                          UCSR1A
+#define _UCSRB                          UCSR1B
+#define _UCSRC                          UCSR1C
+#define _RXEN                           RXEN1
+#define _RXCIE                          RXCIE1
+#define _TXEN                           TXEN1
+#define _TXCIE                          TXCIE1
+#define _UCSZ0                          UCSZ10
+#define _UCSZ1                          UCSZ11
+#define _UDR                            UDR1
+#define _UDRE                           UDRE1
+#define _UDRIE                          UDRIE1
+#define _USBS                           USBS1
+#define _USART_RXC_vect                 USART1_RX_vect
+#define _USART_UDRE_vect                USART1_UDRE_vect
+#define hal_uart_init_name              hal_uart_init1
 #define enable_sendready_interrupt_name enable_sendready_interrupt1
-#define hal_uart_start_rx_name hal_uart_start_rx1
-#define hal_uart_start_send_name hal_uart_start_send1
-#define _handle_recv_ready_name _handle_recv_ready1
-#define _handle_send_ready_name _handle_send_ready1
-#define sync_send_byte_name sync_send_byte1
-#define hal_uart_sync_send_bytes_name hal_uart_sync_send_bytes1
-#define hal_uart_sync_send_name hal_uart_sync_send1
-#define UARTID 1
-#define HAVE_UARTID1 1
+#define hal_uart_start_rx_name          hal_uart_start_rx1
+#define hal_uart_start_send_name        hal_uart_start_send1
+#define _handle_recv_ready_name         _handle_recv_ready1
+#define _handle_send_ready_name         _handle_send_ready1
+#define sync_send_byte_name             sync_send_byte1
+#define hal_uart_sync_send_bytes_name   hal_uart_sync_send_bytes1
+#define hal_uart_sync_send_name         hal_uart_sync_send1
+#define UARTID                          1
+#define HAVE_UARTID1                    1
 #include "hardware_uart.ch"
 
 #endif
 
-void hal_uart_init(uint8_t uart_id, uint32_t baud, bool stop2, void *user_data,
+void hal_uart_init(uint8_t uart_id, uint32_t baud, void *user_data,
                    uint16_t *max_tx_len) {
   *max_tx_len = 1;
   switch (uart_id) {
 #if HAVE_UARTID0
     case 0:
-      hal_uart_init0(baud, stop2, user_data);
+      hal_uart_init0(baud, user_data);
       return;
 #endif
 #if HAVE_UARTID1
     case 1:
-      hal_uart_init1(baud, stop2, user_data);
+      hal_uart_init1(baud, user_data);
       return;
 #endif
     default:

@@ -479,7 +479,7 @@ static void config_gpio(const stm32_uart_config_t *config, bool rx) {
   }
 }
 
-void hal_uart_init(uint8_t uart_id, uint32_t baud, bool stop2,
+void hal_uart_init(uint8_t uart_id, uint32_t baud,
                    void *user_data /* for both rx and tx upcalls */,
                    uint16_t *max_tx_len /* OUT */) {
   assert(uart_id < NUM_UARTS);
@@ -540,8 +540,7 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud, bool stop2,
   uart->hal_uart_handle.Init.BaudRate = baud;
   uart->hal_uart_handle.Init.WordLength = UART_WORDLENGTH_8B;
   uart->hal_uart_handle.Init.Parity = UART_PARITY_NONE;
-  uart->hal_uart_handle.Init.StopBits =
-      stop2 ? UART_STOPBITS_2 : UART_STOPBITS_1;
+  uart->hal_uart_handle.Init.StopBits = UART_STOPBITS_1;
   uart->hal_uart_handle.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   uart->hal_uart_handle.Init.Mode = UART_MODE_TX_RX;
 #if defined(RULOS_ARM_stm32g4) || defined(RULOS_ARM_stm32g0)

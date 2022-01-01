@@ -43,7 +43,7 @@
 
 #define POTSTICKER_CHANNEL 0
 #define VOLUME_POT_CHANNEL 1
-#define USE_LOCAL_KEYPAD 0
+#define USE_LOCAL_KEYPAD   0
 
 CpumonAct cpumon;
 Snake snake;
@@ -60,7 +60,7 @@ int main() {
   hal_init();
 
   UartState_t uart;
-  uart_init(&uart, /* uart_id= */ 0, 115200, true);
+  uart_init(&uart, /* uart_id= */ 0, 115200);
   log_bind_uart(&uart);
   LOG("Log output running");
 

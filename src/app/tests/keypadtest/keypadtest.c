@@ -93,7 +93,7 @@ int main() {
   hal_init_rocketpanel();
 
   KeyTestActivation_t kta;
-  uart_init(&kta.uart, /*uart_id=*/0, 38400, true);
+  uart_init(&kta.uart, /*uart_id=*/0, 38400);
   log_bind_uart(&kta.uart);
   linereader_init(&kta.linereader, &kta.uart, uart_line_received, &kta);
   LOG(TEST_STR);

@@ -53,7 +53,7 @@ char recent_uart_buf[40];
 static hal_uart_receive_cb uart_recv_cb = NULL;
 static void *uart_user_data = NULL;
 
-void hal_uart_init(uint8_t uart_id, uint32_t baud, bool stop2,
+void hal_uart_init(uint8_t uart_id, uint32_t baud,
                    void *user_data /* for both rx and tx upcalls */,
                    uint16_t *max_tx_len /* OUT */) {
   *max_tx_len = 3;
@@ -147,7 +147,9 @@ static void uart_simulator_input(int c) {
   }
 }
 
-static void uart_simulator_stop() { delwin(uart_input_window); }
+static void uart_simulator_stop() {
+  delwin(uart_input_window);
+}
 
 #if 0
 Jon: I disabled this because it conflicted with the 
@@ -175,7 +177,7 @@ void sim_uart_recv(void *data)
 	}
 }
 
-void hal_uart_init(HalUart* handler, uint32_t baud, bool stop2,
+void hal_uart_init(HalUart* handler, uint32_t baud,
                    uint8_t uart_id)
 {
 	handler->uart_id = uart_id;

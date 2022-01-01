@@ -27,7 +27,7 @@ void serial_reader_init(serial_reader_t *sr, uint8_t uart_id, uint32_t baud,
   sr->last_active = clock_time_us();
   sr->flash_dumper = flash_dumper;
   sr->cb = cb;
-  uart_init(&sr->uart, uart_id, baud, true);
+  uart_init(&sr->uart, uart_id, baud);
   linereader_init(&sr->linereader, &sr->uart, sr_line_received, sr);
 }
 

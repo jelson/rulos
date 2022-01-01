@@ -167,7 +167,7 @@ int main() {
   hal_init();
   init_clock(10000, TIMER1);
 
-  uart_init(&uart, /* uart_id= */ 0, 1000000, true);
+  uart_init(&uart, /* uart_id= */ 0, 1000000);
   log_bind_uart(&uart);
   LOG("Log output running");
 

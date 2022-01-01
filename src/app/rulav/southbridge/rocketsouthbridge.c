@@ -20,12 +20,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "core/bss_canary.h"
 #include "core/clock.h"
 #include "core/cpumon.h"
 #include "core/hal.h"
 #include "core/network.h"
 #include "core/util.h"
-#include "core/bss_canary.h"
 #include "periph/input_controller/input_controller.h"
 #include "periph/quadknob/quadknob.h"
 #include "periph/remote_keyboard/remote_keyboard.h"
@@ -37,7 +37,7 @@ int main() {
   bss_canary_init();
 
   UartState_t uart;
-  uart_init(&uart, /* uart_id= */ 0, 115200, true);
+  uart_init(&uart, /* uart_id= */ 0, 115200);
   log_bind_uart(&uart);
   LOG("South bridge serial logging up");
 

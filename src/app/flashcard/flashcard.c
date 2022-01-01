@@ -769,7 +769,7 @@ typedef struct {
 void shell_func(UartState_t *uart, void *data, char *line);
 
 void shell_init(Shell *shell, Flashcard *fl) {
-  uart_init(&shell->uart, 0, 38400, true);
+  uart_init(&shell->uart, 0, 38400);
   log_bind_uart(&shell->uart);
   linereader_init(&shell->linereader, &shell->uart, shell_func, shell);
   shell->fl = fl;

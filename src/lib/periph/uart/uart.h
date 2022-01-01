@@ -56,7 +56,7 @@ struct UartState_t_s {
 ///////////////// application API
 
 // initialize an instance of a uart
-void uart_init(UartState_t *u, uint8_t uart_id, uint32_t baud, bool stop2);
+void uart_init(UartState_t *u, uint8_t uart_id, uint32_t baud);
 
 // Registers a char-received callback to be called at interrupt time each time a
 // character arrives.

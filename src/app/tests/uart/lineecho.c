@@ -44,7 +44,7 @@ static void line_received(UartState_t *uart, void *user_data, char *line) {
 int main() {
   hal_init();
 
-  uart_init(&uart, /* uart_id= */ 0, 38400, true);
+  uart_init(&uart, /* uart_id= */ 0, 38400);
   log_bind_uart(&uart);
   linereader_init(&linereader, &uart, line_received, &uart);
   LOG("lineecho up and running");

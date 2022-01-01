@@ -47,7 +47,7 @@ int main() {
   init_clock(10000, TIMER1);
 
   // initialize console uart
-  uart_init(&console, CONSOLE_UART_NUM, 1000000, true);
+  uart_init(&console, CONSOLE_UART_NUM, 1000000);
   log_bind_uart(&console);
   LOG("LTE Tag Dev Board Datalogger starting");
 

@@ -65,7 +65,7 @@ int main() {
   cpumon_init(&cpumon);  // includes slow calibration phase
 
   mark_point(4);
-  uart_init(&log_uart, 0, 38400, TRUE);
+  uart_init(&log_uart, 0, 38400);
   log_bind_uart(&log_uart);
   LOG("SALWOW up.");
 

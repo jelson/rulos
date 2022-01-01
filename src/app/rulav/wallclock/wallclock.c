@@ -312,7 +312,7 @@ int main() {
 
   // start the uart running at 38.4k baud
   UartState_t uart;
-  uart_init(&uart, /* uart_id= */ 0, 38400, TRUE);
+  uart_init(&uart, /* uart_id= */ 0, 38400);
   log_bind_uart(&uart);
 
   // initialize our internal state

@@ -68,7 +68,9 @@ void debug_result(char *msg, uint16_t state) {
   }
 }
 
-void debug_state(uint16_t state) { debug_result("state", state); }
+void debug_state(uint16_t state) {
+  debug_result("state", state);
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -101,12 +103,8 @@ void serial_echo_update(SerialCmdAct *sca) {
   schedule_us(120, (ActivationFuncPtr)serial_echo_update, sca);
 }
 
-#define FOSC 8000000  // Clock Speed
-#define BAUD 38400
-#define MYUBRR FOSC / 16 / BAUD - 1
-
 void serial_echo_init(SerialCmdAct *sca, cmd_cb_f *cmd_cb) {
-  uart_init(RULOS_UART0, MYUBRR, TRUE);
+  uart_init(RULOS_UART0, 38400);
   sca->recvQueue = uart_recvq(RULOS_UART0);
   sca->cmd_ptr = sca->cmd;
   sca->cmd_cb = cmd_cb;
@@ -222,7 +220,8 @@ int wait_ready(void) {
   rcvr_spi();
   int i;
   for (i = 0; i < 1000; i++) {
-    if (rcvr_spi() == 0xff) return 1;
+    if (rcvr_spi() == 0xff)
+      return 1;
   }
   return 0;
 }
@@ -242,30 +241,30 @@ bool select(void) {
 }
 
 /* Definitions for MMC/SDC command */
-#define CMD0 (0)           /* GO_IDLE_STATE */
-#define CMD1 (1)           /* SEND_OP_COND (MMC) */
+#define CMD0   (0)         /* GO_IDLE_STATE */
+#define CMD1   (1)         /* SEND_OP_COND (MMC) */
 #define ACMD41 (0x80 + 41) /* SEND_OP_COND (SDC) */
-#define CMD8 (8)           /* SEND_IF_COND */
-#define CMD9 (9)           /* SEND_CSD */
-#define CMD10 (10)         /* SEND_CID */
-#define CMD12 (12)         /* STOP_TRANSMISSION */
+#define CMD8   (8)         /* SEND_IF_COND */
+#define CMD9   (9)         /* SEND_CSD */
+#define CMD10  (10)        /* SEND_CID */
+#define CMD12  (12)        /* STOP_TRANSMISSION */
 #define ACMD13 (0x80 + 13) /* SD_STATUS (SDC) */
-#define CMD16 (16)         /* SET_BLOCKLEN */
-#define CMD17 (17)         /* READ_SINGLE_BLOCK */
-#define CMD18 (18)         /* READ_MULTIPLE_BLOCK */
-#define CMD23 (23)         /* SET_BLOCK_COUNT (MMC) */
+#define CMD16  (16)        /* SET_BLOCKLEN */
+#define CMD17  (17)        /* READ_SINGLE_BLOCK */
+#define CMD18  (18)        /* READ_MULTIPLE_BLOCK */
+#define CMD23  (23)        /* SET_BLOCK_COUNT (MMC) */
 #define ACMD23 (0x80 + 23) /* SET_WR_BLK_ERASE_COUNT (SDC) */
-#define CMD24 (24)         /* WRITE_BLOCK */
-#define CMD25 (25)         /* WRITE_MULTIPLE_BLOCK */
-#define CMD55 (55)         /* APP_CMD */
-#define CMD58 (58)         /* READ_OCR */
+#define CMD24  (24)        /* WRITE_BLOCK */
+#define CMD25  (25)        /* WRITE_MULTIPLE_BLOCK */
+#define CMD55  (55)        /* APP_CMD */
+#define CMD58  (58)        /* READ_OCR */
 
 /* Card type flags (CardType) */
-#define CT_MMC 0x01              /* MMC ver 3 */
-#define CT_SD1 0x02              /* SD ver 1 */
-#define CT_SD2 0x04              /* SD ver 2 */
-#define CT_SDC (CT_SD1 | CT_SD2) /* SD */
-#define CT_BLOCK 0x08            /* Block addressing */
+#define CT_MMC   0x01              /* MMC ver 3 */
+#define CT_SD1   0x02              /* SD ver 1 */
+#define CT_SD2   0x04              /* SD ver 2 */
+#define CT_SDC   (CT_SD1 | CT_SD2) /* SD */
+#define CT_BLOCK 0x08              /* Block addressing */
 
 uint8_t start_cmd(uint8_t cmd, uint32_t arg) {
   uint8_t crc, result;
@@ -289,7 +288,8 @@ uint8_t start_cmd(uint8_t cmd, uint32_t arg) {
   }  // valid CRC for CMD8(0x1AA)
   xmit_spi(crc);
 
-  if (cmd == CMD12) rcvr_spi();  // skip a stuff byte when stop reading
+  if (cmd == CMD12)
+    rcvr_spi();  // skip a stuff byte when stop reading
 
   int n = 10;
   do {
@@ -476,7 +476,7 @@ int main() {
 
   blink_init(&blink, FALSE);
 
-#define AUDIO_LED_RED GPIO_D2
+#define AUDIO_LED_RED    GPIO_D2
 #define AUDIO_LED_YELLOW GPIO_D3
   gpio_make_output(AUDIO_LED_RED);
   gpio_make_output(AUDIO_LED_YELLOW);

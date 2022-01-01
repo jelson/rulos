@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "core/board_defs.h"
+#include "core/bss_canary.h"
 #include "core/clock.h"
 #include "core/cpumon.h"
 #include "core/hal.h"
@@ -30,7 +31,6 @@
 #include "periph/7seg_panel/7seg_panel.h"
 #include "periph/7seg_panel/display_controller.h"
 #include "periph/7seg_panel/remote_bbuf.h"
-#include "core/bss_canary.h"
 #include "periph/display_rtc/display_rtc.h"
 #include "periph/input_controller/input_controller.h"
 #include "periph/rasters/rasters.h"
@@ -108,9 +108,9 @@ typedef struct {
  *  m,n (pong)
  */
 
-#define KEY_VOL_DOWN KeystrokeCtor('j')
-#define KEY_VOL_UP KeystrokeCtor('k')
-#define KEY_NPONG_LEFT KeystrokeCtor('m')
+#define KEY_VOL_DOWN    KeystrokeCtor('j')
+#define KEY_VOL_UP      KeystrokeCtor('k')
+#define KEY_NPONG_LEFT  KeystrokeCtor('m')
 #define KEY_NPONG_RIGHT KeystrokeCtor('n')
 
 #if defined(BOARD_LPEM2)
@@ -150,17 +150,16 @@ void init_rocket0(Rocket0 *r0) {
   max3421e_init(&r0->max);
   init_joystick_usb(&r0->joystick, &r0->max);
 #endif
-  JoystickState_t* joystick = (JoystickState_t*) &r0->joystick;
+  JoystickState_t *joystick = (JoystickState_t *)&r0->joystick;
 
-  thrusters_init(&r0->ts, 9, joystick, &r0->hpam,
-                 &r0->idle, &r0->audio_client);
+  thrusters_init(&r0->ts, 9, joystick, &r0->hpam, &r0->idle, &r0->audio_client);
   init_screenblanker(&r0->screenblanker, &r0->hpam, &r0->idle);
 
   daer_init(&r0->daer, 10, ((Time)5) << 20);
 
   init_control_panel(&r0->cp, 3, 1, &r0->network, &r0->hpam, &r0->audio_client,
-                     &r0->idle, &r0->screenblanker,
-                     joystick, &r0->ts, KEY_VOL_UP, KEY_VOL_DOWN,
+                     &r0->idle, &r0->screenblanker, joystick, &r0->ts,
+                     KEY_VOL_UP, KEY_VOL_DOWN,
                      (FetchCalcDecorationValuesIfc *)&r0->daer.decoration_ifc);
   r0->cp.ccl.launch.main_rtc = &r0->dr;
   r0->cp.ccl.launch.lunar_distance = &r0->ld;
@@ -213,7 +212,7 @@ int main() {
   hal_init();
 
   UartState_t uart;
-  uart_init(&uart, /* uart_id= */ 0, 115200, true);
+  uart_init(&uart, /* uart_id= */ 0, 115200);
   log_bind_uart(&uart);
   LOG("Log output running");
 

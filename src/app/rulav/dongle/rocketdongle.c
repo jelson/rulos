@@ -26,7 +26,7 @@ int main() {
   hal_init_rocketpanel();
 
   UartState_t uart;
-  uart_init(&uart, /* uart_id= */ 0, 115200, true);
+  uart_init(&uart, /* uart_id= */ 0, 115200);
   log_bind_uart(&uart);
   LOG("Rocket dongle running");
 

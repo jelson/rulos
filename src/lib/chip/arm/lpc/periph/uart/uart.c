@@ -76,8 +76,7 @@ static void init_pins() {
 #endif
 }
 
-void hal_uart_init(HalUart *hal_uart, uint32_t baud, bool stop2,
-                   uint8_t uart_id) {
+void hal_uart_init(HalUart *hal_uart, uint32_t baud, uint8_t uart_id) {
   assert(uart_id < NUM_UARTS);
 
   uart_t *uart = &g_uarts[uart_id];
@@ -86,9 +85,8 @@ void hal_uart_init(HalUart *hal_uart, uint32_t baud, bool stop2,
   Chip_UART_SetBaud(uart->LPC_UART, baud);
 
   uint32_t config_data = UART_LCR_WLEN8;  // 8 bits
-  if (stop2) {
-    config_data |= UART_LCR_SBS_1BIT;  // 1 stop bit
-  }
+  config_data |= UART_LCR_SBS_1BIT;       // 1 stop bit
+
   Chip_UART_ConfigData(uart->LPC_UART, config_data);
 
   // Enable hardware fifos with a receive trigger level of 8 bytes

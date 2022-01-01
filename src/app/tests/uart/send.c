@@ -77,7 +77,7 @@ void test_func(void *data) {
 int main() {
   hal_init();
 
-  uart_init(&uart, /* uart_id= */ 0, 38400, true);
+  uart_init(&uart, /* uart_id= */ 0, 38400);
   log_bind_uart(&uart);
   LOG("Log output running");
   LOG("Even more log output running!");

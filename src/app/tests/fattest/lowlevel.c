@@ -130,7 +130,6 @@ void do_test(void *data) {
     read_end = precise_clock_time_us();
   }
 
-
   int speed_test_bytes = NUM_SECTORS * SECTOR_SIZE;
   int write_time = read_start - write_start;
   int write_speed = speed_test_bytes / (write_time / 1000);
@@ -147,7 +146,7 @@ int main() {
   hal_init();
   init_clock(10000, TIMER1);
 
-  uart_init(&uart, /* uart_id= */ 0, 1000000, true);
+  uart_init(&uart, /* uart_id= */ 0, 1000000);
   log_bind_uart(&uart);
   LOG("Log output running");
 

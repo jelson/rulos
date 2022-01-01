@@ -16,11 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "core/bss_canary.h"
 #include "core/rulos.h"
 #include "core/twi.h"
 #include "periph/7seg_panel/display_controller.h"
 #include "periph/7seg_panel/remote_bbuf.h"
-#include "core/bss_canary.h"
 #include "periph/rocket6line/rocket6line.h"
 
 // For legacy backcompat with the old 4-line matrix, we assume the first line of
@@ -70,7 +70,7 @@ int main() {
 
 #ifdef LOG_TO_SERIAL
   UartState_t uart;
-  uart_init(&uart, /* uart_id= */ 0, 115200, true);
+  uart_init(&uart, /* uart_id= */ 0, 115200);
   log_bind_uart(&uart);
   LOG("Log output running");
 #endif

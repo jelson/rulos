@@ -128,7 +128,7 @@ void shell_func(UartState_t *uart, void *data, char *line);
 void print_func(Shell *shell);
 
 void shell_init(Shell *shell) {
-  uart_init(&shell->uart, 0, 38400, true);
+  uart_init(&shell->uart, 0, 38400);
   log_bind_uart(&shell->uart);
   linereader_init(&shell->linereader, &shell->uart, shell_func, shell);
   print_func(shell);

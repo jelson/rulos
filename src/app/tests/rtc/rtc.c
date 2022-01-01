@@ -29,7 +29,7 @@ int main() {
   init_clock(10000, TIMER1);
 
   // initialize console uart
-  uart_init(&console, CONSOLE_UART_NUM, 1000000, true);
+  uart_init(&console, CONSOLE_UART_NUM, 1000000);
   log_bind_uart(&console);
   LOG("RTC test starting");
 
@@ -37,7 +37,8 @@ int main() {
   for (int i = 0; i < 10000000; i++) {
     Time curr_time = precise_clock_time_us();
     if (curr_time < last_time) {
-      LOG("test %d failed! time %ld came before time %ld", i, last_time, curr_time);
+      LOG("test %d failed! time %ld came before time %ld", i, last_time,
+          curr_time);
       goto done;
     }
     last_time = curr_time;
@@ -48,5 +49,6 @@ int main() {
   LOG("success!");
 
 done:
-  while(1) {}
+  while (1) {
+  }
 }

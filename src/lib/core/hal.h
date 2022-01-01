@@ -76,7 +76,7 @@ bool hal_read_joystick_button();
 // At the HAL layer, UARTs are identified by integers. hal_uart_init initializes
 // a UART. max_tx_len is an out parameter that describes the maximum length of a
 // tx the UART can accept at a time.
-void hal_uart_init(uint8_t uart_id, uint32_t baud, bool stop2,
+void hal_uart_init(uint8_t uart_id, uint32_t baud,
                    void *user_data /* for both rx and tx upcalls */,
                    uint16_t *max_tx_len /* OUT */);
 

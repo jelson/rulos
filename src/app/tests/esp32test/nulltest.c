@@ -35,5 +35,7 @@ int main() {
     gpio_clr(TEST_PIN);
     gpio_set(TEST_PIN);
     gpio_clr(TEST_PIN);
+    gpio_set(TEST_PIN);
+    gpio_clr(TEST_PIN);
   }
 }

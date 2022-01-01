@@ -16,11 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "periph/rocket6line/rocket6line.h"
-
+#include "core/bss_canary.h"
 #include "core/rulos.h"
 #include "periph/7seg_panel/display_controller.h"
-#include "core/bss_canary.h"
+#include "periph/rocket6line/rocket6line.h"
 
 #define UPDATE_RATE_US 1000000
 
@@ -84,7 +83,7 @@ int main() {
 
 #if LOG_TO_SERIAL
   UartState_t uart;
-  uart_init(&uart, /* uart_id= */ 0, 115200, true);
+  uart_init(&uart, /* uart_id= */ 0, 115200);
   log_bind_uart(&uart);
   LOG("Log output running");
 #endif

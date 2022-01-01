@@ -19,7 +19,7 @@
 // definitions; we include it multiple times to provide access to both
 // UARTs.
 
-void hal_uart_init_name(uint32_t baud, bool stop2, void *user_data) {
+void hal_uart_init_name(uint32_t baud, void *user_data) {
   uint16_t ubrr = baud_to_ubrr(baud);
 
   g_uart_state[UARTID].user_data = user_data;
@@ -36,7 +36,7 @@ void hal_uart_init_name(uint32_t baud, bool stop2, void *user_data) {
       ;
 
   // set frame format: async, 8 bit data, 1 stop bit, no parity
-  _UCSRC = _BV(_UCSZ1) | _BV(_UCSZ0) | (stop2 ? _BV(_USBS) : 0)
+  _UCSRC = _BV(_UCSZ1) | _BV(_UCSZ0)
 #ifdef MCU8_line
            | _BV(URSEL)
 #endif

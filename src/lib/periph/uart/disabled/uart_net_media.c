@@ -42,7 +42,7 @@ MediaStateIfc *uart_media_init(UartMedia *um, MediaRecvSlot *mrs,
   um->mrs = mrs;
   um->recv_state = UR_sync0;
 
-  hal_uart_init(&um->uart_handler, 38400, TRUE, uart_id);
+  hal_uart_init(&um->uart_handler, 38400, uart_id);
   return &um->uart_media_ptr.media;
 }
 

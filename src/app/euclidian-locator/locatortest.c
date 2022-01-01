@@ -638,7 +638,7 @@ int main() {
 
   memset(&locatorAct_g, 0, sizeof(locatorAct_g));
   locatorAct_g.twiState = hal_twi_init(100, 0, NULL);
-  uart_init(&locatorAct_g.uart, /*uart_id*/ 0, SERIAL_BAUD_RATE, TRUE);
+  uart_init(&locatorAct_g.uart, /*uart_id*/ 0, SERIAL_BAUD_RATE);
   // TODO if ever unrotting: connect process_serial_command to uart input
 
   if (strlen(FIRMWARE_ID) > ID_OFFSET) {

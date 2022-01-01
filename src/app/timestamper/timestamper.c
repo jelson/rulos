@@ -127,7 +127,7 @@ void TIM2_IRQHandler() {
 
   }
 
-    // Channel 2
+  // Channel 2
   else if (LL_TIM_IsActiveFlag_CC2(TIM2)) {
     // Timer channel 2 has captured an input signal.
     LL_TIM_ClearFlag_CC2(TIM2);
@@ -145,7 +145,8 @@ void TIM2_IRQHandler() {
     // unexpected interrupt
     volatile int tim2sr = TIM2->SR;
     char buf[100];
-    sprintf(buf, "got unexpected interrupt, timer2 status register=0x%x", tim2sr);
+    sprintf(buf, "got unexpected interrupt, timer2 status register=0x%x",
+            tim2sr);
     uart_print(&uart, buf);
     __builtin_trap();
   }
@@ -284,7 +285,7 @@ int main() {
   init_timer();
 
   // initialize uart
-  uart_init(&uart, /*uart_id=*/0, 1000000, true);
+  uart_init(&uart, /*uart_id=*/0, 1000000);
   uart_print(&uart, "# Starting timestamper\n");
 
   schedule_us(1, create_test_input, NULL);

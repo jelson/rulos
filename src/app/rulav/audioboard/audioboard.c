@@ -51,14 +51,15 @@ int main() {
 
 #ifdef LOG_TO_SERIAL
   UartState_t uart;
-  uart_init(&uart, /* uart_id= */ 0, 115200, true);
+  uart_init(&uart, /* uart_id= */ 0, 115200);
   log_bind_uart(&uart);
   LOG("Log output running");
 #endif
 
   init_twi_network(&mc.network, 100, AUDIO_ADDR);
 
-  mc.startup_delay_sec = 0; //TODO does this affect real hardware? Gulp. jonh sorry. Used to be 2.
+  mc.startup_delay_sec = 0;  // TODO does this affect real hardware? Gulp. jonh
+                             // sorry. Used to be 2.
   schedule_us(1, init_audio_server_delayed_start, &mc);
 
   cpumon_main_loop();
