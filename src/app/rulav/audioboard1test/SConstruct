@@ -25,6 +25,7 @@ RulosBuildTarget(
     sources = ["audiotest.c"],
     extra_cflags = [
         "-DBOARD_GENERIC",
+        "-DLOG_TO_SERIAL",
     ],
     platforms = [
         SimulatorPlatform(),
