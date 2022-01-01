@@ -5,10 +5,11 @@ import os
 import glob
 import subprocess
 
-all_scons_files = glob.glob("../app/**/SConstruct", recursive=True)
+SRC_ROOT = os.path.join(os.path.dirname(__file__), "..")
+all_scons_files = glob.glob(f"{SRC_ROOT}/app/**/SConstruct", recursive=True)
 
 def test_compile(sconsfile):
-    sys.stdout.write("%-30s ... " % (os.path.dirname(sconsfile)))
+    sys.stdout.write("%-30s ... " % (os.path.relpath(os.path.dirname(sconsfile), SRC_ROOT)))
     sys.stdout.flush()
 
     retval = subprocess.run(
