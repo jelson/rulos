@@ -29,6 +29,7 @@ RulosBuildTarget(
         SimulatorPlatform(
             extra_cflags = [
                 "-DBOARDCONFIG_UNIROCKET_LOCALSIM",
+                "-DLOG_TO_SERIAL",
             ],
             extra_peripherals = "keypad",
         ),
