@@ -50,7 +50,7 @@ void write_sectors(int sector, int count, bool skip_validate) {
   if (retval != RES_OK) {
     sector_errors++;
     LOG("ERROR %d writing sector %d", retval, sector);
-    LOG_FLUSH();
+    log_flush();
     __builtin_trap();
   } else {
     // LOG("success writing sector %d", sector);
