@@ -18,6 +18,7 @@
 
 #include "core/logging.h"
 #include "core/rulos.h"
+#include "core/hardware.h"
 
 typedef struct {
   bool state;
