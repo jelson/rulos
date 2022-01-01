@@ -94,7 +94,7 @@ void blink_init(BlinkAct *ba) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-#include "starbitmaps.ch"
+#include "app/flashcard/starbitmaps.ch"
 
 uint8_t lma_question[] = {0x3c, 0x42, 0x02, 0x04, 0x08, 0x08, 0x00, 0x08};
 uint8_t lma_x[] = {0x81, 0x42, 0x24, 0x18, 0x18, 0x24, 0x42, 0x81};
