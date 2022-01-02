@@ -25,16 +25,33 @@
 #include "core/hardware.h"
 #include "core/rulos.h"
 
+#include "soc/timer_group_struct.h"
+
 #define TEST_PIN GPIO_2
+
+void print_one_timergroup(timg_dev_t *dev, const char *label) {
+  for (int i = 0; i < 2; i++) {
+    LOG("%s, timer %d: %d", label, i, dev->hw_timer[i].config.enable);
+  }
+}
+
+void print_timer_info(void) {
+  LOG("printing timer info");
+  print_one_timergroup(&TIMERG0, "TIMERG0");
+  print_one_timergroup(&TIMERG1, "TIMERG1");
+}
 
 int main() {
   UartState_t uart;
   hal_init();
   uart_init(&uart, /* uart_id= */ 0, 38400);
   log_bind_uart(&uart);
+
+  LOG("Log output running!");
+  print_timer_info();
+
   gpio_make_output(TEST_PIN);
   int line = 0;
-
   while (true) {
     gpio_set(TEST_PIN);
     gpio_clr(TEST_PIN);
