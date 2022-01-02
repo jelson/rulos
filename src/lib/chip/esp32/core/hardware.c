@@ -25,6 +25,10 @@
 #include "core/hardware_types.h"
 #include "soc/rtc.h"
 #include "xtensa/xtruntime.h"
+#include "esp_attr.h"
+#include "esp_task.h"
+
+const int __attribute__((used)) DRAM_ATTR uxTopUsedPriority = configMAX_PRIORITIES - 1;
 
 void hal_init(void) {
 }

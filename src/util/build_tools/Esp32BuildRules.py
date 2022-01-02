@@ -76,6 +76,7 @@ class Esp32Platform(BaseRules.Platform):
         ]
         for linkscript in linkscripts:
             env.Append(LINKFLAGS = ["-T", linkscript])
+        env.Append(LINKFLAGS = ["-Wl,--undefined=uxTopUsedPriority"])
 
         genpart_path = os.path.join(self.tool_root, "gen_esp32part.py")
         env.Append(BUILDERS = {
@@ -100,6 +101,7 @@ class Esp32Platform(BaseRules.Platform):
             os.path.join(self.sdk_root, "include", "esp32"),
             os.path.join(self.sdk_root, "include", "soc"),
             os.path.join(self.sdk_root, "include", "config"),
+            os.path.join(self.sdk_root, "include", "freertos"),
         ]
 
     def ld_flags(self, target):
