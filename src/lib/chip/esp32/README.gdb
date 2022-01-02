@@ -48,4 +48,4 @@ sudo apt-get install libpython2.7
 
 7) In another window while openocd is running, switch to the application's source directory and run:
 
-../../../../build/compilers/esp32/1.0.6/xtensa-esp32-elf-gcc/xtensa-esp32-elf/bin/xtensa-esp32-elf-gdb ../../../../build/nulltest/esp32/nulltest.elf -ex 'target remote localhost:3333'
+../../../../build/compilers/esp32/1.0.6/xtensa-esp32-elf-gcc/xtensa-esp32-elf/bin/xtensa-esp32-elf-gdb ../../../../build/esp32test/esp32/esp32test.elf -ex 'target remote localhost:3333'

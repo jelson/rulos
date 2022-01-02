@@ -21,8 +21,8 @@ sys.path.insert(0, "../../../util")
 from build_tools import *
 
 RulosBuildTarget(
-    name = "nulltest",
-    sources = ["nulltest.c"],
+    name = "esp32test",
+    sources = ["esp32test.c"],
     peripherals = ["uart"],
     extra_cflags = [
         "-DLOG_TO_SERIAL",
