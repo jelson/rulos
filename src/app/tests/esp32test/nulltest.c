@@ -28,7 +28,12 @@
 #define TEST_PIN GPIO_2
 
 int main() {
+  UartState_t uart;
+  hal_init();
+  uart_init(&uart, /* uart_id= */ 0, 38400);
+  log_bind_uart(&uart);
   gpio_make_output(TEST_PIN);
+  int line = 0;
 
   while (true) {
     gpio_set(TEST_PIN);
@@ -37,5 +42,6 @@ int main() {
     gpio_clr(TEST_PIN);
     gpio_set(TEST_PIN);
     gpio_clr(TEST_PIN);
+    LOG("This is a test from the esp32, line number %d", line++);
   }
 }

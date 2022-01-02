@@ -91,10 +91,15 @@ class Esp32Platform(BaseRules.Platform):
             ),
         })
 
+    def periph_dir(self):
+        return os.path.join("esp32", "periph")
+
     def include_dirs(self):
         return self.common_include_dirs() + [
             os.path.join(util.SRC_ROOT, "lib", "chip", "esp32"),
+            os.path.join(self.sdk_root, "include", "esp32"),
             os.path.join(self.sdk_root, "include", "soc"),
+            os.path.join(self.sdk_root, "include", "config"),
         ]
 
     def ld_flags(self, target):
@@ -105,8 +110,16 @@ class Esp32Platform(BaseRules.Platform):
     def cflags(self):
         return self.common_cflags() + [
             "-DRULOS_ESP32",
+            "-Os",
+            "-g3",
+            "-Wpointer-arith",
+            "-fexceptions",
+            "-fstack-protector",
+            "-ffunction-sections",
             "-fdata-sections",
-            "-ffunction-sections", # Put all funcs/data in their own sections
+            "-fstrict-volatile-bitfields",
+            "-mlongcalls",
+            "-nostdlib",
             "-gdwarf-2",
             "-std=gnu99",
             "-Os",

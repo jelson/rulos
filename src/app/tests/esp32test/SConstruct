@@ -23,5 +23,9 @@ from build_tools import *
 RulosBuildTarget(
     name = "nulltest",
     sources = ["nulltest.c"],
+    peripherals = ["uart"],
+    extra_cflags = [
+        "-DLOG_TO_SERIAL",
+    ],
     platforms = [Esp32Platform()],
 ).build()
