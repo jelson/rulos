@@ -110,6 +110,10 @@ class Esp32Platform(BaseRules.Platform):
     def cflags(self):
         return self.common_cflags() + [
             "-DRULOS_ESP32",
+            "-DESP_PLATFORM",
+            "-DESP32",
+            "-DCORE_DEBUG_LEVEL=0",
+            "-DGCC_NOT_5_2_0=0",
             "-Os",
             "-g3",
             "-Wpointer-arith",
@@ -122,7 +126,7 @@ class Esp32Platform(BaseRules.Platform):
             "-nostdlib",
             "-gdwarf-2",
             "-std=gnu99",
-            "-Os",
+#            "-CC",
         ]
 
     def platform_lib_source_files(self):
