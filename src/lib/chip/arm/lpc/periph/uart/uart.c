@@ -124,10 +124,6 @@ int uart_enqueue(HalUart *uart, char *s) {
   return uart_enqueue_bytes(uart, s, strlen(s));
 }
 
-void uart_flush(const uint8_t uart_id) {
-  // TODO: flush
-}
-
 void uart_sync_send_bytes_by_id(uint8_t uart_id, const char *s, uint32_t len) {
   while (1) {
     int sent = uart_enqueue_bytes_by_id(uart_id, s, len);

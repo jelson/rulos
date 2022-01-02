@@ -72,4 +72,4 @@ void uart_print(UartState_t *u, const char *s);
 bool uart_is_busy(UartState_t *u);
 
 // Waits until the uart is completely flushed.
-void uart_flush(UartState_t *u);
+void rulos_uart_flush(UartState_t *u);

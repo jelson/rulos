@@ -136,7 +136,7 @@ bool uart_is_busy(UartState_t *u) {
   return CharQueue_length(&u->tx_queue.q) > 0 || u->writes_active;
 }
 
-void uart_flush(UartState_t *u) {
+void rulos_uart_flush(UartState_t *u) {
   while (uart_is_busy(u)) {
     hal_idle();
   }

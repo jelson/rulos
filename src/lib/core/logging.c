@@ -40,7 +40,7 @@ void log_write(const void *buf, int len) {
 
 void log_flush() {
   if (logging_uart != NULL) {
-    uart_flush(logging_uart);
+    rulos_uart_flush(logging_uart);
   }
 }
 
