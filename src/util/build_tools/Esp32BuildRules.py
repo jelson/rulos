@@ -200,5 +200,5 @@ class Esp32Platform(BaseRules.Platform):
         )
         Default([binfile, partfile])
 
-        program = env.Command("program", [binfile, partfile] + outputs, self.program_esp32)
-        env.Command("run", program, self.run_esp32)
+        program = env.Alias("program", [binfile, partfile] + outputs, self.program_esp32)
+        env.Alias("run", program, self.run_esp32)

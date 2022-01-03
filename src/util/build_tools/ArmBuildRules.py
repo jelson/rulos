@@ -133,7 +133,7 @@ class ArmPlatform(BaseRules.Platform):
         # Create a programming target for the first binary only
         global created_programming_target
         if not created_programming_target:
-            env.Command("program", outputs, self.program_with_bmp)
+            env.Alias("program", outputs, self.program_with_bmp)
             created_programming_target = True
 
 class ArmStmPlatform(ArmPlatform):
