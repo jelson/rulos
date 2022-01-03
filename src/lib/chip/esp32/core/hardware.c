@@ -23,12 +23,13 @@
 
 #include "core/hal.h"
 #include "core/hardware_types.h"
-#include "soc/rtc.h"
-#include "xtensa/xtruntime.h"
 #include "esp_attr.h"
 #include "esp_task.h"
+#include "soc/rtc.h"
+#include "xtensa/xtruntime.h"
 
-const int __attribute__((used)) DRAM_ATTR uxTopUsedPriority = configMAX_PRIORITIES - 1;
+const int __attribute__((used)) DRAM_ATTR uxTopUsedPriority =
+    configMAX_PRIORITIES - 1;
 
 void rulos_hal_init(void) {
 }
@@ -61,11 +62,3 @@ void hal_end_atomic(rulos_irq_state_t old_interrupts) {
 
 void hal_idle() {
 }
-
-#if 0
-
-uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data, uint8_t timer_id) {return 0;} 
-uint16_t hal_elapsed_milliintervals() { return 0; }
-bool hal_clock_interrupt_is_pending() { return false; }
-
-#endif

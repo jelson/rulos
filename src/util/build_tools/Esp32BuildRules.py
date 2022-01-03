@@ -19,8 +19,8 @@ import subprocess
 from . import BaseRules, util
 from SCons.Script import *
 
-ESP32_PLATFORM_VERSION = '1.0.6'
-KIT_DESCRIPTION_URL = 'https://dl.espressif.com/dl/package_esp32_index.json'
+ESP32_PLATFORM_VERSION = '2.0.2'
+KIT_DESCRIPTION_URL = 'https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json'
 
 
 class Esp32Platform(BaseRules.Platform):
@@ -41,7 +41,7 @@ class Esp32Platform(BaseRules.Platform):
         self.tool_root = os.path.join(self.kit_root, "esp32", f"esp32-{ESP32_PLATFORM_VERSION}", "tools")
         assert os.path.exists(self.tool_root)
 
-        self.sdk_root = os.path.join(self.tool_root, "sdk")
+        self.sdk_root = os.path.join(self.tool_root, "sdk", "esp32")
         assert os.path.exists(self.sdk_root)
 
         self.esptool_path = os.path.join(self.kit_root, "esptool_py", "esptool", "esptool.py")
@@ -64,17 +64,15 @@ class Esp32Platform(BaseRules.Platform):
         # automatically.
         env.Replace(LINKCOM='$LINK -o $TARGET -Wl,--start-group $LINKFLAGS $__RPATH $SOURCES $_LIBDIRFLAGS $_LIBFLAGS -Wl,--end-group')
 
-        arduino_cargocult = "-lgcc -lesp_websocket_client -lwpa2 -ldetection -lesp_https_server -lwps -lhal -lconsole -lpe -lsoc -lsdmmc -lpthread -llog -lesp_http_client -ljson -lmesh -lesp32-camera -lnet80211 -lwpa_supplicant -lc -lmqtt -lcxx -lesp_https_ota -lulp -lefuse -lpp -lmdns -lbt -lwpa -lspiffs -lheap -limage_util -lunity -lrtc -lmbedtls -lface_recognition -lnghttp -ljsmn -lopenssl -lcore -lfatfs -lm -lprotocomm -lsmartconfig -lxtensa-debug-module -ldl -lesp_event -lesp-tls -lfd -lespcoredump -lesp_http_server -lfr -lsmartconfig_ack -lwear_levelling -ltcp_transport -llwip -lphy -lvfs -lcoap -lesp32 -llibsodium -lbootloader_support -ldriver -lcoexist -lasio -lod -lmicro-ecc -lesp_ringbuf -ldetection_cat_face -lapp_update -lespnow -lface_detection -lapp_trace -lnewlib -lbtdm_app -lwifi_provisioning -lfreertos -lfreemodbus -lethernet -lnvs_flash -lspi_flash -lc_nano -lexpat -lfb_gfx -lprotobuf-c -lesp_adc_cal -ltcpip_adapter -lstdc++"
+        arduino_cargocult = "-lesp_ringbuf -lefuse -lesp_ipc -ldriver -lesp_pm -lmbedtls -lapp_update -lbootloader_support -lspi_flash -lnvs_flash -lpthread -lesp_gdbstub -lespcoredump -lesp_phy -lesp_system -lesp_rom -lhal -lvfs -lesp_eth -ltcpip_adapter -lesp_netif -lesp_event -lwpa_supplicant -lesp_wifi -lconsole -llwip -llog -lheap -lsoc -lesp_hw_support -lxtensa -lesp_common -lesp_timer -lfreertos -lnewlib -lcxx -lapp_trace -lasio -lbt -lcbor -lunity -lcmock -lcoap -lnghttp -lesp-tls -lesp_adc_cal -lesp_hid -ltcp_transport -lesp_http_client -lesp_http_server -lesp_https_ota -lesp_lcd -lprotobuf-c -lprotocomm -lmdns -lesp_local_ctrl -lsdmmc -lesp_serial_slave_link -lesp_websocket_client -lexpat -lwear_levelling -lfatfs -lfreemodbus -ljsmn -ljson -llibsodium -lmqtt -lopenssl -lperfmon -lspiffs -lulp -lwifi_provisioning -lbutton -ljson_parser -ljson_generator -lesp_schedule -lesp_rainmaker -lqrcode -lws2812_led -lesp-dsp -lesp32-camera -lesp_littlefs -lfb_gfx -lasio -lcbor -lcmock -lunity -lcoap -lesp_lcd -lesp_local_ctrl -lesp_websocket_client -lexpat -lfreemodbus -ljsmn -llibsodium -lperfmon -lesp_adc_cal -lesp_hid -lfatfs -lwear_levelling -lopenssl -lspiffs -lesp_rainmaker -lmqtt -lwifi_provisioning -lprotocomm -lbt -lbtdm_app -lprotobuf-c -lmdns -ljson -ljson_parser -ljson_generator -lesp_schedule -lqrcode -lcat_face_detect -lhuman_face_detect -lcolor_detect -lmfn -ldl -lesp_ringbuf -lefuse -lesp_ipc -ldriver -lesp_pm -lmbedtls -lapp_update -lbootloader_support -lspi_flash -lnvs_flash -lpthread -lesp_gdbstub -lespcoredump -lesp_phy -lesp_system -lesp_rom -lhal -lvfs -lesp_eth -ltcpip_adapter -lesp_netif -lesp_event -lwpa_supplicant -lesp_wifi -lconsole -llwip -llog -lheap -lsoc -lesp_hw_support -lxtensa -lesp_common -lesp_timer -lfreertos -lnewlib -lcxx -lapp_trace -lnghttp -lesp-tls -ltcp_transport -lesp_http_client -lesp_http_server -lesp_https_ota -lsdmmc -lesp_serial_slave_link -lulp -lmbedtls -lmbedcrypto -lmbedx509 -lcoexist -lcore -lespnow -lmesh -lnet80211 -lpp -lsmartconfig -lwapi -lesp_ringbuf -lefuse -lesp_ipc -ldriver -lesp_pm -lmbedtls -lapp_update -lbootloader_support -lspi_flash -lnvs_flash -lpthread -lesp_gdbstub -lespcoredump -lesp_phy -lesp_system -lesp_rom -lhal -lvfs -lesp_eth -ltcpip_adapter -lesp_netif -lesp_event -lwpa_supplicant -lesp_wifi -lconsole -llwip -llog -lheap -lsoc -lesp_hw_support -lxtensa -lesp_common -lesp_timer -lfreertos -lnewlib -lcxx -lapp_trace -lnghttp -lesp-tls -ltcp_transport -lesp_http_client -lesp_http_server -lesp_https_ota -lsdmmc -lesp_serial_slave_link -lulp -lmbedtls -lmbedcrypto -lmbedx509 -lcoexist -lcore -lespnow -lmesh -lnet80211 -lpp -lsmartconfig -lwapi -lesp_ringbuf -lefuse -lesp_ipc -ldriver -lesp_pm -lmbedtls -lapp_update -lbootloader_support -lspi_flash -lnvs_flash -lpthread -lesp_gdbstub -lespcoredump -lesp_phy -lesp_system -lesp_rom -lhal -lvfs -lesp_eth -ltcpip_adapter -lesp_netif -lesp_event -lwpa_supplicant -lesp_wifi -lconsole -llwip -llog -lheap -lsoc -lesp_hw_support -lxtensa -lesp_common -lesp_timer -lfreertos -lnewlib -lcxx -lapp_trace -lnghttp -lesp-tls -ltcp_transport -lesp_http_client -lesp_http_server -lesp_https_ota -lsdmmc -lesp_serial_slave_link -lulp -lmbedtls -lmbedcrypto -lmbedx509 -lcoexist -lcore -lespnow -lmesh -lnet80211 -lpp -lsmartconfig -lwapi -lesp_ringbuf -lefuse -lesp_ipc -ldriver -lesp_pm -lmbedtls -lapp_update -lbootloader_support -lspi_flash -lnvs_flash -lpthread -lesp_gdbstub -lespcoredump -lesp_phy -lesp_system -lesp_rom -lhal -lvfs -lesp_eth -ltcpip_adapter -lesp_netif -lesp_event -lwpa_supplicant -lesp_wifi -lconsole -llwip -llog -lheap -lsoc -lesp_hw_support -lxtensa -lesp_common -lesp_timer -lfreertos -lnewlib -lcxx -lapp_trace -lnghttp -lesp-tls -ltcp_transport -lesp_http_client -lesp_http_server -lesp_https_ota -lsdmmc -lesp_serial_slave_link -lulp -lmbedtls -lmbedcrypto -lmbedx509 -lcoexist -lcore -lespnow -lmesh -lnet80211 -lpp -lsmartconfig -lwapi -lesp_ringbuf -lefuse -lesp_ipc -ldriver -lesp_pm -lmbedtls -lapp_update -lbootloader_support -lspi_flash -lnvs_flash -lpthread -lesp_gdbstub -lespcoredump -lesp_phy -lesp_system -lesp_rom -lhal -lvfs -lesp_eth -ltcpip_adapter -lesp_netif -lesp_event -lwpa_supplicant -lesp_wifi -lconsole -llwip -llog -lheap -lsoc -lesp_hw_support -lxtensa -lesp_common -lesp_timer -lfreertos -lnewlib -lcxx -lapp_trace -lnghttp -lesp-tls -ltcp_transport -lesp_http_client -lesp_http_server -lesp_https_ota -lsdmmc -lesp_serial_slave_link -lulp -lmbedtls -lmbedcrypto -lmbedx509 -lcoexist -lcore -lespnow -lmesh -lnet80211 -lpp -lsmartconfig -lwapi -lphy -lrtc -lesp_phy -lphy -lrtc -lesp_phy -lphy -lrtc -lxt_hal -lm -lnewlib -lstdc++ -lpthread -lgcc -lcxx -lapp_trace -lgcov -lapp_trace -lgcov -lc"
+
         env.Append(LIBS = arduino_cargocult.split())
-        linkscripts = [
-                "esp32_out.ld",
-                "esp32.project.ld",
-                "esp32.rom.ld",
-                "esp32.peripherals.ld",
-                "esp32.rom.libgcc.ld",
-                "esp32.rom.spiram_incompatible_fns.ld",
-        ]
-        for linkscript in linkscripts:
+
+        arduino_link_cargocult = "-T esp32.rom.redefined.ld -T memory.ld -T sections.ld -T esp32.rom.ld -T esp32.rom.api.ld -T esp32.rom.libgcc.ld -T esp32.rom.newlib-data.ld -T esp32.rom.syscalls.ld -T esp32.peripherals.ld"
+
+        for linkscript in arduino_link_cargocult.split():
+            if linkscript == "-T":
+                continue
             env.Append(LINKFLAGS = ["-T", linkscript])
         env.Append(LINKFLAGS = ["-Wl,--undefined=uxTopUsedPriority"])
 
@@ -97,12 +95,32 @@ class Esp32Platform(BaseRules.Platform):
 
     def include_dirs(self):
         return self.common_include_dirs() + [
+            # Rulos include dirs
             os.path.join(util.SRC_ROOT, "lib", "chip", "esp32"),
-            os.path.join(self.sdk_root, "include", "esp32"),
-            os.path.join(self.sdk_root, "include", "soc"),
+
+            # Espressif SDK include dirs
             os.path.join(self.sdk_root, "include", "config"),
-            os.path.join(self.sdk_root, "include", "freertos"),
-            os.path.join(self.sdk_root, "include", "driver"),
+            os.path.join(self.sdk_root, "include", "driver", "include"),
+            os.path.join(self.sdk_root, "include", "esp_common", "include"),
+            os.path.join(self.sdk_root, "include", "esp32", "include"),
+            os.path.join(self.sdk_root, "include", "esp_ipc", "include"),
+            os.path.join(self.sdk_root, "include", "esp_hw_support", "include"),
+            os.path.join(self.sdk_root, "include", "esp_hw_support", "include", "soc"),
+            os.path.join(self.sdk_root, "include", "esp_rom", "include"),
+            os.path.join(self.sdk_root, "include", "esp_system", "include"),
+            os.path.join(self.sdk_root, "include", "esp_timer", "include"),
+            os.path.join(self.sdk_root, "include", "freertos", "include"),
+            os.path.join(self.sdk_root, "include", "freertos", "include", "esp_additions"),
+            os.path.join(self.sdk_root, "include", "freertos", "include", "esp_additions", "freertos"),
+            os.path.join(self.sdk_root, "include", "freertos", "port", "xtensa", "include"),
+            os.path.join(self.sdk_root, "include", "hal", "esp32", "include"),
+            os.path.join(self.sdk_root, "include", "hal", "include"),
+            os.path.join(self.sdk_root, "include", "heap", "include"),
+            os.path.join(self.sdk_root, "include", "newlib", "platform_include"),
+            os.path.join(self.sdk_root, "include", "soc", "esp32", "include"),
+            os.path.join(self.sdk_root, "include", "soc", "include"),
+            os.path.join(self.sdk_root, "include", "xtensa", "esp32", "include"),
+            os.path.join(self.sdk_root, "include", "xtensa", "include"),
         ]
 
     def ld_flags(self, target):
@@ -155,7 +173,7 @@ class Esp32Platform(BaseRules.Platform):
             "0xe000",
             f"{self.tool_root}/partitions/boot_app0.bin",
             "0x1000",
-            f"{self.tool_root}/sdk/bin/bootloader_dio_80m.bin",
+            f"{self.sdk_root}/bin/bootloader_dio_80m.bin",
             "0x10000",
             binfile.get_abspath(),
             "0x8000",

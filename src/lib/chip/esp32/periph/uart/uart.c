@@ -19,7 +19,7 @@
 #include "core/hal.h"
 #include "core/hardware.h"
 #include "core/rulos.h"
-#include "rom/gpio.h"
+#include "esp32/rom/gpio.h"
 #include "soc/dport_reg.h"
 #include "soc/gpio_sig_map.h"
 #include "soc/uart_struct.h"
