@@ -102,6 +102,7 @@ class Esp32Platform(BaseRules.Platform):
             os.path.join(self.sdk_root, "include", "soc"),
             os.path.join(self.sdk_root, "include", "config"),
             os.path.join(self.sdk_root, "include", "freertos"),
+            os.path.join(self.sdk_root, "include", "driver"),
         ]
 
     def ld_flags(self, target):
@@ -162,17 +163,18 @@ class Esp32Platform(BaseRules.Platform):
         ]
 
     def find_esp32_port(self):
+        if 'RULOS_ESP32_PORT' in os.environ:
+            return os.environ['RULOS_ESP32_PORT']
+
         import serial.tools.list_ports as list_ports
 
         esp32_ports = list(list_ports.grep('CP2104'))
 
         if len(esp32_ports) == 0:
-            print("No CP2104 USB ports found; is your ESP32 plugged in?")
-            return None
+            raise Exception("No CP2104 USB ports found; is your ESP32 plugged in?")
 
         if len(esp32_ports) > 1:
-            print("Multiple CP2104 USB ports found. Unplug some, or specify with RULOS_ESP32_PORT env var")
-            return None
+            raise Exception("Multiple CP2104 USB ports found. Unplug some, or specify with RULOS_ESP32_PORT env var")
 
         return esp32_ports[0].device
 
@@ -181,17 +183,14 @@ class Esp32Platform(BaseRules.Platform):
         partfile = source[1]
         print("Programming ESP32...")
 
-        if 'RULOS_ESP32_PORT' in os.environ:
-            usbpath = os.environ['RULOS_ESP32_PORT']
-        else:
-            usbpath = self.find_esp32_port()
-
-        if not usbpath:
-            return
-
+        usbpath = self.find_esp32_port()
         cmdline = self.programming_cmdline(usbpath, binfile, partfile)
         print(cmdline)
         subprocess.call(cmdline)
+
+    def run_esp32(self, target, source, env):
+        usbpath = self.find_esp32_port()
+        subprocess.call(["grabserial", "-t", "-d", usbpath, "-b", "38400"])
 
     def post_configure(self, env, outputs):
         binfile = env.MakeBin(outputs[0])
@@ -201,4 +200,5 @@ class Esp32Platform(BaseRules.Platform):
         )
         Default([binfile, partfile])
 
-        env.Command("program", [binfile, partfile] + outputs, self.program_esp32)
+        program = env.Command("program", [binfile, partfile] + outputs, self.program_esp32)
+        env.Command("run", program, self.run_esp32)
