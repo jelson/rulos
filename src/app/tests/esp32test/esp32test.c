@@ -78,5 +78,6 @@ int main() {
       ints_printed = ints_received;
       print_timer_info();
     }
+    hal_idle();
   }
 }

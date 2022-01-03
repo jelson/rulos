@@ -25,18 +25,39 @@
 #include "core/hardware_types.h"
 #include "esp_attr.h"
 #include "esp_task.h"
+#include "esp_task_wdt.h"
 #include "soc/rtc.h"
 #include "xtensa/xtruntime.h"
 
+const int RULOS_STACK_SIZE = 16*1024;
 const int __attribute__((used)) DRAM_ATTR uxTopUsedPriority =
     configMAX_PRIORITIES - 1;
+
+// when we run RULOS on core 0, we get watchdog timer timeouts unless
+// we put vTaskDelay() in hal_idle() -- I guess there are other
+// FreeRTOS tasks pinned to core 0, and they time out unless RULOS
+// yields to them.
+//
+// Running RULOS on core 1, we do not get watchdog timeouts even
+// without vTaskDelay().
+//
+// Belt-and-suspenders solution: run on core 1, *and* put a call to
+// vTaskDelay() in hal_idle().
+const int RULOS_ESP32_CORE_ID = 1;
 
 void rulos_hal_init(void) {
 }
 
-void app_main(void) {
+static void run_rulos_main(void *data) {
   extern int main(void);
   main();
+}
+
+
+void app_main(void) {
+  xTaskCreatePinnedToCore(run_rulos_main, "rulosMain", RULOS_STACK_SIZE, NULL, 1,
+                          NULL, RULOS_ESP32_CORE_ID);
+
 }
 
 static uint32_t calculateApb(rtc_cpu_freq_config_t* conf) {
@@ -61,4 +82,6 @@ void hal_end_atomic(rulos_irq_state_t old_interrupts) {
 }
 
 void hal_idle() {
+  // yield to other freeRTOS tasks running on the esp32
+  vTaskDelay(1);
 }
