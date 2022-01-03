@@ -24,21 +24,39 @@
 
 #include "core/hardware.h"
 #include "core/rulos.h"
-
 #include "soc/timer_group_struct.h"
 
 #define TEST_PIN GPIO_2
 
 void print_one_timergroup(timg_dev_t *dev, const char *label) {
   for (int i = 0; i < 2; i++) {
-    LOG("%s, timer %d: %d", label, i, dev->hw_timer[i].config.enable);
+    uint32_t ena = dev->hw_timer[i].config.enable;
+    uint32_t al_en = dev->hw_timer[i].config.alarm_en;
+    dev->hw_timer[i].update = 1;
+    uint32_t val = dev->hw_timer[i].cnt_low;
+    LOG("%s, timer %d: ", label, i);
+    LOG("  enabled: %d", ena);
+    LOG("  alarm enabled: %d", al_en);
+    LOG("  value: %d", val);
   }
 }
 
-void print_timer_info(void) {
+static void print_timer_info(void) {
   LOG("printing timer info");
   print_one_timergroup(&TIMERG0, "TIMERG0");
   print_one_timergroup(&TIMERG1, "TIMERG1");
+}
+
+static volatile int ints_received = 0;
+
+static void tick(void *arg) {
+  gpio_set(TEST_PIN);
+  gpio_clr(TEST_PIN);
+  gpio_set(TEST_PIN);
+  gpio_clr(TEST_PIN);
+  gpio_set(TEST_PIN);
+  gpio_clr(TEST_PIN);
+  ints_received++;
 }
 
 int main() {
@@ -48,17 +66,17 @@ int main() {
   log_bind_uart(&uart);
 
   LOG("Log output running!");
-  print_timer_info();
 
   gpio_make_output(TEST_PIN);
-  int line = 0;
+  uint32_t period = hal_start_clock_us(1000000, tick, NULL, TIMER0);
+  LOG("Started clock, period of %d", period);
+  print_timer_info();
+  int ints_printed = 0;
   while (true) {
-    gpio_set(TEST_PIN);
-    gpio_clr(TEST_PIN);
-    gpio_set(TEST_PIN);
-    gpio_clr(TEST_PIN);
-    gpio_set(TEST_PIN);
-    gpio_clr(TEST_PIN);
-    LOG("This is a test from the esp32, line number %d", line++);
+    if (ints_printed != ints_received) {
+      LOG("%d interrupts received", ints_received);
+      ints_printed = ints_received;
+      print_timer_info();
+    }
   }
 }
