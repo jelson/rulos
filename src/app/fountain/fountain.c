@@ -173,7 +173,7 @@ static void fountain_update(FountainState_t *f) {
 int main() {
   FountainState_t f;
 
-  hal_init();
+  rulos_hal_init();
   hal_fountain_init();
 
   debounce_button_init(&f.button, BUTTON_REFRAC_TIME_US);

@@ -417,7 +417,7 @@ SequencableFunc func_array[] = {(SequencableFunc)wait_uart,
                                 NULL};
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   init_clock(1000, TIMER1);
 
 #if 0

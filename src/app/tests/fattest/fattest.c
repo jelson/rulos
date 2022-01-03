@@ -164,7 +164,7 @@ static void try_write(void *data) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   init_clock(10000, TIMER1);
 
   uart_init(&uart, /* uart_id= */ 0, 1000000);

@@ -72,7 +72,7 @@ void key_scan(KeyScan *ks) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   init_clock(10000, TIMER1);
 
   SerialConsole sca;

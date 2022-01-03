@@ -170,7 +170,7 @@ void shell_func(UartState_t *uart, void *data, char *line) {
 //////////////////////////////////////////////////////////////////////////////
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   init_clock(1000, TIMER1);
 
   Shell shell;

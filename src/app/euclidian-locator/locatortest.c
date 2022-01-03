@@ -633,7 +633,7 @@ int main() {
   CLKPR = 0x00;
   // rats, external clock can only be set by fuses.
 
-  hal_init();
+  rulos_hal_init();
   init_clock(SCHED_QUANTUM, TIMER1);
 
   memset(&locatorAct_g, 0, sizeof(locatorAct_g));

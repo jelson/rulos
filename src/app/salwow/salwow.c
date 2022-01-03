@@ -54,7 +54,7 @@ void send_done(void *data) {
 int main() {
   mark_point_init();
   mark_point(1);
-  hal_init();
+  rulos_hal_init();
   mark_point(2);
   init_clock(SYSTEM_CLOCK, TIMER0);
 

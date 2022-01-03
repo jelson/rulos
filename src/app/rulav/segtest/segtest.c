@@ -27,7 +27,7 @@
 /*******************************************************************************/
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   hal_init_rocketpanel();
 #if 0
 	int seg=0, dig=0;

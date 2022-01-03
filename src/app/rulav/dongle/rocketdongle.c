@@ -22,7 +22,7 @@
 #include "periph/7seg_panel/remote_bbuf.h"
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   hal_init_rocketpanel();
 
   UartState_t uart;

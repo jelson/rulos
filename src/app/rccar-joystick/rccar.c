@@ -56,7 +56,7 @@ void joyfunc(Joy* joy) {
 /************************************************************************************/
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
   UartState_t uart;
   uart_init(&uart, /*uart_id=*/0, 38400);

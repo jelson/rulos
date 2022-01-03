@@ -71,7 +71,7 @@ void test_update(TestAct *act) {
 
 int main() {
   util_init();
-  hal_init(bc_rocket0);
+  rulos_hal_init(bc_rocket0);
 
 #if 0
 	init_clock(1000, TIMER1);

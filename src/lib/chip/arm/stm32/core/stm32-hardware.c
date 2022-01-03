@@ -298,7 +298,7 @@ void _init() {
   // entry point used by __libc_init_array()
 }
 
-void hal_init() {
+void rulos_hal_init() {
   // Initialize the STM32 HAL library. (Good thing the name didn't
   // collide...)
   HAL_Init();

@@ -66,7 +66,7 @@ static void init_r6l_bbuf_recv(RemoteBBufRecv *rbr, Network *network) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
 #ifdef LOG_TO_SERIAL
   UartState_t uart;

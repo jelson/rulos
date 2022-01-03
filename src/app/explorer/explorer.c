@@ -159,7 +159,7 @@ void sample(void *arg) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
   init_clock(10000, TIMER1);
 

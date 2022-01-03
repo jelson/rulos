@@ -43,7 +43,7 @@ static void indicate_alive(void *data) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   init_clock(10000, TIMER1);
 
   // initialize console uart

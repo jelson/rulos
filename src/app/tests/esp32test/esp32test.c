@@ -43,7 +43,7 @@ void print_timer_info(void) {
 
 int main() {
   UartState_t uart;
-  hal_init();
+  rulos_hal_init();
   uart_init(&uart, /* uart_id= */ 0, 38400);
   log_bind_uart(&uart);
 

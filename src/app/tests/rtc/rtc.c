@@ -25,7 +25,7 @@
 UartState_t console;
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   init_clock(10000, TIMER1);
 
   // initialize console uart

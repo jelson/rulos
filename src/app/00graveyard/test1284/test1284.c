@@ -180,7 +180,7 @@ void shell_func(Shell *shell) {
 //////////////////////////////////////////////////////////////////////////////
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   init_clock(1000, TIMER1);
 
   GLCD glcd;

@@ -70,7 +70,7 @@ BlinkAct blink4;
 BlinkAct blink3;
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
   // start clock with 10 msec resolution
   init_clock(10000, TIMER1);

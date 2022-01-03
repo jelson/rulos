@@ -35,7 +35,7 @@
 
 uint8_t g_hal_initted = 0;
 
-void hal_init() {
+void rulos_hal_init() {
 #ifdef MCUatmega1284p
   // Disable JTAG, which opens up PC2..PC5 as gpios (or their other features)
   MCUCR |= _BV(JTD);

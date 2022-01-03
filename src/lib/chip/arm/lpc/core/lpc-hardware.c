@@ -37,7 +37,7 @@ void SystemInit() {
 
 // RULOS-specific init function. We use this to initialize various modules on
 // the chip.
-void hal_init() {
+void rulos_hal_init() {
   // init GPIO subsystem
   Chip_GPIO_Init(LPC_GPIO);
 

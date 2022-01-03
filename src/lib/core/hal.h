@@ -32,7 +32,7 @@
 
 typedef void (*Handler)(void *data);
 
-void hal_init();
+void rulos_hal_init();
 
 // block interrupts/signals; returns previous state of interrupts
 rulos_irq_state_t hal_start_atomic();

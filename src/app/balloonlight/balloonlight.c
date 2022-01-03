@@ -96,7 +96,7 @@ void sample(void *data) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
   init_clock(SAMPLING_TIME_MSEC * 1000, TIMER1);
 

@@ -65,7 +65,7 @@ void sample(void *data) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
   init_clock(100000, TIMER1);
 

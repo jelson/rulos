@@ -595,7 +595,7 @@ void init_blink(BlinkAct *act) {
 /****************************************************************************/
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   init_clock(SYSTEM_CLOCK, TIMER2);
   hal_init_adc(ADC_PERIOD);
   hal_init_adc_channel(POT_ADC_CHANNEL);

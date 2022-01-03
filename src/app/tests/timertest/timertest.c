@@ -47,7 +47,7 @@ void hal_test_func(void *data) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   gpio_make_output(TEST_PIN);
   gpio_clr(TEST_PIN);
 

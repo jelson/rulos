@@ -150,7 +150,7 @@ void update_time_vals(ChaseClockActivation_t *cc) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   hal_init_rocketpanel();
   board_buffer_module_init();
 

@@ -272,7 +272,7 @@ static void create_test_input(void *data) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
   // initialize scheduler with 10msec jiffy clock
   init_clock(10000, TIMER1);

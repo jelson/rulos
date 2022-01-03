@@ -210,7 +210,7 @@ void bike_sleep() {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
   init_clock(JIFFY_TIME_US, TIMER1);
 

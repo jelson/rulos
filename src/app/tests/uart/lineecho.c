@@ -42,7 +42,7 @@ static void line_received(UartState_t *uart, void *user_data, char *line) {
 #define USE_GPS 0
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
   uart_init(&uart, /* uart_id= */ 0, 38400);
   log_bind_uart(&uart);

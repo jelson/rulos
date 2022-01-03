@@ -31,7 +31,7 @@
 // UartState_t uart;
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   init_clock(SYSTEM_CLOCK, TIMER0);
 
   CpumonAct cpumon;

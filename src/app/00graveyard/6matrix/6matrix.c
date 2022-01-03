@@ -131,7 +131,7 @@ void rowtest(drawCtx *draw) {
 drawCtx draw;
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   init_clock(10000, TIMER2);
 
   hal_6matrix_init(&draw.matrix);

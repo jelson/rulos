@@ -303,7 +303,7 @@ static void update(WallClockActivation_t *wca) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   hal_init_rocketpanel();
   board_buffer_module_init();
 

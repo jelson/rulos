@@ -67,7 +67,7 @@ static uint8_t return_recv_slot() {
 #endif
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
   // start clock with 10 msec resolution
   init_clock(10000, TIMER1);

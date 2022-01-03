@@ -49,7 +49,7 @@ void switch_outputs(void *data) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
   gpio_make_output(OUTPUT1);
   gpio_make_output(OUTPUT2);

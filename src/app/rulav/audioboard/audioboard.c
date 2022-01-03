@@ -46,7 +46,7 @@ void init_audio_server_delayed_start(void *state) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   init_clock(1000, TIMER1);
 
 #ifdef LOG_TO_SERIAL

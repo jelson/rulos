@@ -30,7 +30,7 @@
 
 const int __attribute__((used)) DRAM_ATTR uxTopUsedPriority = configMAX_PRIORITIES - 1;
 
-void hal_init(void) {
+void rulos_hal_init(void) {
 }
 
 void app_main(void) {

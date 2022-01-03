@@ -32,7 +32,7 @@
 int main() {
   heap_init();
   util_init();
-  hal_init();
+  rulos_hal_init();
   clock_init(300);
 
   InputControllerAct ia;

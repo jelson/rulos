@@ -143,7 +143,7 @@ static void duktig_update(DuktigState_t *duktig) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
   // set up output pins as drivers
   gpio_make_output(LED_DRIVER_SDI);

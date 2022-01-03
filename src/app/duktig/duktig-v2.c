@@ -272,7 +272,7 @@ void TIM3_IRQHandler() {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
   // set up output pins as drivers
   gpio_clr(LED1);

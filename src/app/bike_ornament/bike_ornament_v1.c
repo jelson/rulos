@@ -107,7 +107,7 @@ static void bike_update(BikeState_t *bike) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
   // set up output pins as drivers
   gpio_make_output(LED_DRIVER_SDI_L);

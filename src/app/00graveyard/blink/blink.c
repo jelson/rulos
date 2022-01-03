@@ -72,7 +72,7 @@ void blink_init(BlinkAct *ba) {
 
 int main() {
   util_init();
-  hal_init(bc_audioboard);  // TODO need a "bc_custom"
+  rulos_hal_init(bc_audioboard);  // TODO need a "bc_custom"
   init_clock(1000, TIMER1);
 
   BlinkAct ba;

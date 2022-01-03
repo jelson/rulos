@@ -39,7 +39,7 @@ static void update(RolloverTest_t *rt) {
 int main() {
   heap_init();
   util_init();
-  hal_init();
+  rulos_hal_init();
   clock_init(1000);
 
   RolloverTest_t t1, t2, t3, t4;

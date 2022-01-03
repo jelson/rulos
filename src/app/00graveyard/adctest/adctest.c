@@ -47,7 +47,7 @@ static void update(ADCAct_t *a) {
 int main() {
   heap_init();
   util_init();
-  hal_init();
+  rulos_hal_init();
   clock_init(10000);
   board_buffer_module_init();
 

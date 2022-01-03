@@ -132,7 +132,7 @@ void g_tick_say(char *msg) { tick_say(&mc.tick, msg); }
 
 int main() {
   audioled_init();
-  hal_init();
+  rulos_hal_init();
   init_clock(1000, TIMER1);
 
   audioled_set(0, 0);

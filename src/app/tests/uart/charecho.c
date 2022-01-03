@@ -27,7 +27,7 @@ void char_received(UartState_t *s, void *user_data, char c) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
   uart_init(&uart, /* uart_id= */ 0, 38400);
   uart_start_rx(&uart, char_received, NULL);

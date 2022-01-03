@@ -107,7 +107,7 @@ static void sim_sigio_handler(int signo) {
 
 uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
                             uint8_t timer_id) {
-  assert(hal_initted == HAL_MAGIC);  // did you forget to call hal_init()?
+  assert(hal_initted == HAL_MAGIC);  // did you forget to call rulos_hal_init()?
 
   /* init clock stuff */
   sigemptyset(&mask_set);
@@ -342,7 +342,7 @@ uint64_t curr_time_usec() {
   return ((uint64_t)1000000) * tv.tv_sec + tv.tv_usec;
 }
 
-void hal_init() {
+void rulos_hal_init() {
   logfp = fopen("log", "w");
   init_time = curr_time_usec();
   signal(SIGIO, sim_sigio_handler);

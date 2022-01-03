@@ -105,7 +105,7 @@ void test_ring_buffer() {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   test_shortqueue();
   test_ring_buffer();
   return 0;

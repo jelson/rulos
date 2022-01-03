@@ -57,7 +57,7 @@ void cp_inject(struct s_direct_injector *di, char k) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
   UartState_t uart;
   uart_init(&uart, /* uart_id= */ 0, 115200);

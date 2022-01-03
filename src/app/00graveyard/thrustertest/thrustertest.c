@@ -32,7 +32,7 @@ int main() {
   ThrusterUpdate *thrusterUpdate[4];
 
   util_init();
-  hal_init(bc_rocket0);
+  rulos_hal_init(bc_rocket0);
   init_clock(10000, TIMER1);
   memset(thrusterUpdate, 0, sizeof(thrusterUpdate));
   init_hpam(&hpam, 7, thrusterUpdate);

@@ -79,7 +79,7 @@ static void test_mode_update(void *data) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
 #if LOG_TO_SERIAL
   UartState_t uart;

@@ -42,7 +42,7 @@ static void one_sec(void *data) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
   gpio_make_output(LIGHT_PIN);
   gpio_set(LIGHT_PIN);

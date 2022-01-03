@@ -33,7 +33,7 @@
 /************************************************************************/
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   bss_canary_init();
 
   UartState_t uart;

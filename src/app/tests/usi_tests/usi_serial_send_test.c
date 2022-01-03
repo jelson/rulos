@@ -22,7 +22,7 @@
 #include "core/rulos.h"
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
   while (true) {
     for (int i = 0; i < 10000; i++) {

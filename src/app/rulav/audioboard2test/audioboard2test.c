@@ -117,7 +117,7 @@ int main() {
   volatile uint16_t testnum = 0xcc33;
   testnum++;
 
-  hal_init();
+  rulos_hal_init();
   init_clock(10000, TIMER1);
 
 #ifdef LOG_TO_SERIAL

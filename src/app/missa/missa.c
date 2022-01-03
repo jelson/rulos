@@ -164,7 +164,7 @@ static void do_prime_count(void* data) {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
   missa_hal_init();
   missa_hal_set_led(0, 0);
   missa_hal_set_led(1, 0);

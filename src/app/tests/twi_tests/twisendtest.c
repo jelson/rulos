@@ -125,7 +125,7 @@ void test_netstack() {
 }
 
 int main() {
-  hal_init();
+  rulos_hal_init();
 
 #ifdef STATUS_TO_LOCAL_PANEL
   hal_init_rocketpanel();
