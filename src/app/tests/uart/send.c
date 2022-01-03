@@ -70,7 +70,7 @@ void test_func(void *data) {
   gpio_clr(TEST_PIN);
 
   gpio_set(TEST_PIN);
-  uart_flush(&uart);
+  rulos_uart_flush(&uart);
   gpio_clr(TEST_PIN);
 }
 
