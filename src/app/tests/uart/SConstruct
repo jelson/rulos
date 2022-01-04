@@ -20,32 +20,36 @@ import sys
 sys.path.insert(0, "../../../util")
 from build_tools import *
 
-for testprog in ["send", "charecho", "lineecho"]:
-    for chip in [
-            "stm32f103x8",
-            "stm32f031x6",
-            "stm32f303x8",
-            "stm32g031x8",
-            "stm32g0b1xe",
-            "stm32g431x8",
-        ]:
-        RulosBuildTarget(
-            name = testprog,
-            sources = [f"{testprog}.c"],
-            platforms = [ArmStmPlatform(chip)],
-            peripherals = ["uart"],
-            extra_cflags = [
-                "-DLOG_TO_SERIAL",
-            ],
-        ).build()
+platforms = []
 
-    for mcu in ["atmega328", "atmega328p", "atmega1284", "attiny84", "attiny85"]:
-        RulosBuildTarget(
-            name = testprog,
-            sources = [f"{testprog}.c"],
-            platforms = [AvrPlatform(mcu)],
-            peripherals = ["uart"],
-            extra_cflags = [
-                "-DLOG_TO_SERIAL",
-            ],
-        ).build()
+for chip in [
+        "stm32f103x8",
+        "stm32f031x6",
+        "stm32f303x8",
+        "stm32g031x8",
+        "stm32g0b1xe",
+        "stm32g431x8",
+]:
+    platforms.append(ArmStmPlatform(chip))
+
+for chip in [
+        "atmega328",
+        "atmega328p",
+        "atmega1284",
+#        "attiny84",
+#        "attiny85",
+]:
+    platforms.append(AvrPlatform(chip))
+
+platforms.append(Esp32Platform())
+
+for testprog in ["send", "charecho", "lineecho"]:
+    RulosBuildTarget(
+        name = testprog,
+        sources = [f"{testprog}.c"],
+        platforms = platforms,
+        peripherals = ["uart"],
+        extra_cflags = [
+            "-DLOG_TO_SERIAL",
+        ],
+    ).build()
