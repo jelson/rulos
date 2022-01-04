@@ -26,7 +26,7 @@
 #include "core/rulos.h"
 #include "soc/timer_group_struct.h"
 
-#define TEST_PIN GPIO_2
+#include "../test-pin.h"
 
 void print_one_timergroup(timg_dev_t *dev, const char *label) {
   for (int i = 0; i < 2; i++) {

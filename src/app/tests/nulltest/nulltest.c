@@ -28,17 +28,7 @@
 
 #define FREQ_USEC 50000
 
-#if defined(RULOS_ARM_LPC)
-#define TEST_PIN GPIO0_08
-#elif defined(RULOS_ARM_STM32)
-#define TEST_PIN GPIO_A6
-#elif defined(RULOS_AVR)
-#define TEST_PIN GPIO_B3
-#elif defined(RULOS_ESP32)
-#define TEST_PIN GPIO_2
-#else
-#error "No test pin defined"
-#endif
+#include "../test-pin.h"
 
 void test_func(void *data) {
   gpio_set(TEST_PIN);

@@ -19,25 +19,27 @@
 #include "core/hardware.h"
 #include "core/rulos.h"
 
-#if defined(RULOS_ARM_STM32)
-#define TEST_PIN GPIO_B5
-#elif defined(RULOS_AVR)
-#define TEST_PIN GPIO_B5
-#elif defined(RULOS_ARM_NXP)
-#define TEST_PIN GPIO0_00
-#else
-#include <stophere>
+#define FREQ_USEC 500000
+#define NUM_TASKS 20
+
+//#define TEST_HAL
+#define TEST_SCHEDULER
+
+#include "../test-pin.h"
+
+#ifdef LOG_TO_SERIAL
+#include "periph/uart/uart.h"
 #endif
 
-#define FREQ_USEC 50000
-#define TOTAL     20
-#define TEST_HAL
+#ifdef TEST_SCHEDULER
+static void test_func(void *data) {
+  static int i = 0;
 
-#if TEST_SCHEDULER
-void test_func(void *data) {
   gpio_set(TEST_PIN);
-  schedule_us(FREQ_USEC, a);
+  schedule_us(FREQ_USEC * NUM_TASKS, test_func, data);
   gpio_clr(TEST_PIN);
+  LOG("line %d printed by task %d at time %" PRId32, i++, (int)data,
+      clock_time_us());
 }
 #endif
 
@@ -47,6 +49,12 @@ void hal_test_func(void *data) {
 }
 
 int main() {
+#ifdef LOG_TO_SERIAL
+  UartState_t u;
+  uart_init(&u, /* uart_id= */ 0, 38400);
+  log_bind_uart(&u);
+#endif
+
   rulos_hal_init();
   gpio_make_output(TEST_PIN);
   gpio_clr(TEST_PIN);
@@ -61,15 +69,12 @@ int main() {
 #ifdef TEST_SCHEDULER
   init_clock(FREQ_USEC, TIMER1);
 
-  a.func = test_func;
+  for (int i = 0; i < NUM_TASKS; i++) {
+    schedule_us(FREQ_USEC * (i + 1), test_func, (void *)i);
+  }
 
-  int i;
-  for (i = 0; i < TOTAL - 1; i++) schedule_us(1000000 + i, &a);
+  schedule_now(test_func, (void *)-1);
 
-  schedule_now(&a);
-
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);
   cpumon_main_loop();
 #endif
 }

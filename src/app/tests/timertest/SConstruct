@@ -23,10 +23,15 @@ from build_tools import *
 RulosBuildTarget(
     name = "timertest",
     sources = ["timertest.c"],
+    extra_cflags = [
+        "-DLOG_TO_SERIAL",
+    ],
+    peripherals = ["uart"],
     platforms = [
         AvrPlatform("attiny85"),
         AvrPlatform("atmega328p"),
         ArmStmPlatform("stm32g031x8"),
         #ArmNxpPlatform("lpc1114-102"),
+        Esp32Platform(),
     ],
 ).build()
