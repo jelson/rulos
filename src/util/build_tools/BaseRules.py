@@ -107,7 +107,8 @@ class Platform:
 
         # Export names & paths to subclasses and converter actions
         env.Replace(RulosBuildObjDir = build_obj_dir)
-        env.Replace(RulosProgramName = program_name)
+        env.Replace(RulosProgramName = target.name)
+        env.Replace(RulosBinaryPath = program_name)
         env.Replace(RulosProjectRoot = PROJECT_ROOT)
 
         self.configure_env(env)
@@ -151,7 +152,7 @@ class Platform:
             os.path.join(build_obj_dir, s) for s in
             target.sources + self.platform_specific_app_sources()]
 
-        app_binary = env.Program(env["RulosProgramName"],
+        app_binary = env.Program(env["RulosBinaryPath"],
                                  source=target_sources + rocket_lib)
         lss = env.MakeLSS(app_binary)
         sizes = env.ShowSizes(app_binary)

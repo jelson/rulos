@@ -262,4 +262,4 @@ class ArmStmPlatform(ArmPlatform):
             target = os.path.join(env["RulosBuildObjDir"], "src", "lib", linkscript_name),
             action = f'sed "s/%RULOS_FLASHK%/{self.chip.flashk}/; s/%RULOS_RAMK%/{self.chip.ramk}/" $SOURCE > $TARGET')
         env.Append(LINKFLAGS = ["-T", linkscript])
-        env.Depends(env["RulosProgramName"], linkscript)
+        env.Depends(env["RulosBinaryPath"], linkscript)
