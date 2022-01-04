@@ -67,6 +67,9 @@ static void missa_hal_set_led(uint8_t led_num, uint8_t onoff) {
 #elif defined(RULOS_ARM_NXP)
 #define LED0_PIN GPIO0_00
 #define LED1_PIN GPIO0_01
+#elif defined(RULOS_ESP32)
+#define LED0_PIN GPIO_2
+#define LED1_PIN GPIO_3
 #else
 #define LED0_PIN GPIO_B0
 #define LED1_PIN GPIO_B2

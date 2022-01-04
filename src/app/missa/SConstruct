@@ -32,5 +32,6 @@ RulosBuildTarget(
         AvrPlatform("attiny85"),
         ArmStmPlatform("stm32g031x8"),
         #ArmNxpPlatform("lpc1114-102"),
+        Esp32Platform(),
     ],
 ).build()
