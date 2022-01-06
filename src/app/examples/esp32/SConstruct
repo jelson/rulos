@@ -21,8 +21,8 @@ sys.path.insert(0, "../../../util")
 from build_tools import *
 
 RulosBuildTarget(
-    name = "esp32-helloworld",
-    sources = ["esp32-helloworld.c"],
+    name = "helloworld",
+    sources = ["helloworld.c"],
     extra_cflags = [
         "-DLOG_TO_SERIAL",
     ],
