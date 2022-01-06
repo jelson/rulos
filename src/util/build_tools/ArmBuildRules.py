@@ -92,11 +92,17 @@ class ArmPlatform(BaseRules.Platform):
         self.configure_compiler(env, ARM_COMPILER_PREFIX)
 
     def programming_cmdline(env, usbpath, elfpath):
+        if 'BMP_POWER' in os.environ:
+            power = ['-ex', 'mon tpwr enable']
+        else:
+            power = []
+
         return [
             ARM_COMPILER_PREFIX + 'gdb', elfpath,
             '-ex', 'set pagination off',
             '-ex', 'set confirm off',
             '-ex', f'target extended-remote {usbpath}',
+        ] + power + [
             '-ex', 'monitor swd',
             '-ex', 'attach 1',
             '-ex', 'load',
@@ -130,10 +136,18 @@ class ArmPlatform(BaseRules.Platform):
         subprocess.call(self.programming_cmdline(usb_path, elffile))
 
     def post_configure(self, env, outputs):
-        # Create a programming target for the first binary only
+        # Create programming aliases so a command like "scons
+        # program-stm32-<progname>" works, even for SConstruct files
+        # that have multiple targets
+        prog_target = f"program-stm32-{os.path.basename(env['RulosProgramName'])}"
+        program = env.Alias(prog_target, outputs, self.program_with_bmp)
+
+        # If there's only one binary, create a simpler "scons program"
+        # target that works without specifying the platform and binary
+        # name
         global created_programming_target
         if not created_programming_target:
-            env.Alias("program", outputs, self.program_with_bmp)
+            env.Alias("program", prog_target)
             created_programming_target = True
 
 class ArmStmPlatform(ArmPlatform):

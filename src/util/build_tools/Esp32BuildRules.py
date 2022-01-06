@@ -218,21 +218,20 @@ class Esp32Platform(BaseRules.Platform):
         )
         Default([binfile, partfile])
 
-        program_command = f"esp32-{os.path.basename(env['RulosProgramName'])}"
-
         # Create programming aliases so a command like "scons
         # program-esp32-<progname>" works, even for SConstruct files
         # that have multiple targets
+        prog_target = f"esp32-{os.path.basename(env['RulosProgramName'])}"
         program = env.Alias(
-            f"program-{program_command}",
+            f"program-{prog_target}",
             [binfile, partfile] + outputs,
             self.program_esp32)
         env.Alias(
-            f"run-{program_command}",
+            f"run-{prog_target}",
             program,
             self.run_esp32)
 
         # Simpler "scons program" and "scons run" commands for simple
         # SConstruct files that have only a single target
-        env.Alias("program", f"program-{program_command}")
-        env.Alias("run", f"run-{program_command}")
+        env.Alias("program", f"program-{prog_target}")
+        env.Alias("run", f"run-{prog_target}")
