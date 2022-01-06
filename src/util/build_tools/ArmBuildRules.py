@@ -109,10 +109,10 @@ class ArmPlatform(BaseRules.Platform):
             '-ex', 'quit',
         ]
 
-    def find_bmp_port(self):
+    def find_bmp_port(self, name):
         import serial.tools.list_ports as list_ports
 
-        bmp_ports = list(list_ports.grep('Black Magic GDB Server'))
+        bmp_ports = list(list_ports.grep(f'Black Magic {name}'))
 
         if len(bmp_ports) == 0:
             print("No Black Magic Probe found; is it plugged in?")
@@ -127,27 +127,38 @@ class ArmPlatform(BaseRules.Platform):
     def program_with_bmp(self, target, source, env):
         elffile = source[0].get_abspath()
 
-        usb_path = self.find_bmp_port()
+        gdb_path = self.find_bmp_port('GDB Server')
 
-        if not usb_path:
+        if not gdb_path:
             return
 
-        print(self.programming_cmdline(usb_path, elffile))
-        subprocess.call(self.programming_cmdline(usb_path, elffile))
+        cmdline = self.programming_cmdline(gdb_path, elffile)
+        print(cmdline)
+        subprocess.call(cmdline)
+
+    def read_bmp_serial(self, target, source, env):
+        uart_path = self.find_bmp_port('UART Port')
+
+        if not uart_path:
+            return
+
+        subprocess.call(["grabserial", "-d", uart_path, "-b", "1000000", "-t"])
 
     def post_configure(self, env, outputs):
         # Create programming aliases so a command like "scons
         # program-stm32-<progname>" works, even for SConstruct files
         # that have multiple targets
-        prog_target = f"program-stm32-{os.path.basename(env['RulosProgramName'])}"
-        program = env.Alias(prog_target, outputs, self.program_with_bmp)
+        prog_target = f"stm32-{os.path.basename(env['RulosProgramName'])}"
+        program = env.Alias(f"program-{prog_target}", outputs, self.program_with_bmp)
+        env.Alias(f"run-{prog_target}", program, self.read_bmp_serial)
 
         # If there's only one binary, create a simpler "scons program"
         # target that works without specifying the platform and binary
         # name
         global created_programming_target
         if not created_programming_target:
-            env.Alias("program", prog_target)
+            env.Alias("program", f"program-{prog_target}")
+            env.Alias("run", f"run-{prog_target}")
             created_programming_target = True
 
 class ArmStmPlatform(ArmPlatform):
