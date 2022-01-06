@@ -24,10 +24,16 @@ apps = [
     {
         'name': 'datalogger',
         'board': 'BOARD_DATALOGGER_REV_B',
+        'extra_sources': ["ina219.c"],
     },
     {
         'name': 'ltetag-dev1',
         'board': 'BOARD_LTETAG_DEV_REV_A',
+        'extra_sources': ["ina219.c"],
+    },
+    {
+        'name': 'gemini-logger',
+        'board': 'BOARD_GEMINI_DATALOGGER_REV_A',
     },
 ]
 
@@ -37,10 +43,9 @@ for app in apps:
         sources = [
             "curr_meas.c",
             "flash_dumper.c",
-            "ina219.c",
             "serial_reader.c",
             f"{app['name']}.c",
-        ],
+        ] + app.get('extra_sources', []),
         platforms = [
             ArmStmPlatform("stm32g0b1xe",
                 extra_cflags=[
