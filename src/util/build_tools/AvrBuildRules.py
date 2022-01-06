@@ -50,7 +50,7 @@ class AvrPlatform(BaseRules.Platform):
             "-fdata-sections",
             "-ffunction-sections", # Put all funcs/data in their own sections
             "-gdwarf-2",
-            "-std=gnu99",
+            "-std=gnu++17",
             "-Os",
         ]
 

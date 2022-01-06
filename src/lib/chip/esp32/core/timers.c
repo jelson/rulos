@@ -31,8 +31,8 @@ typedef struct {
   void *cb_data;
 
   // pointers to underlying hardware registers
-  int group;
-  int index;
+  timer_group_t group;
+  timer_idx_t index;
   uint32_t intr_source;
 } esp32_timer_t;
 
@@ -40,23 +40,23 @@ typedef struct {
 
 static esp32_timer_t esp32_timer[NUM_TIMERS] = {
     {
-        .group = 0,
-        .index = 0,
+        .group = TIMER_GROUP_0,
+        .index = TIMER_0,
         .intr_source = ETS_TG0_T0_EDGE_INTR_SOURCE,
     },
     {
-        .group = 0,
-        .index = 1,
+        .group = TIMER_GROUP_0,
+        .index = TIMER_1,
         .intr_source = ETS_TG0_T1_EDGE_INTR_SOURCE,
     },
     {
-        .group = 1,
-        .index = 0,
+        .group = TIMER_GROUP_1,
+        .index = TIMER_0,
         .intr_source = ETS_TG1_T0_EDGE_INTR_SOURCE,
     },
     {
-        .group = 1,
-        .index = 1,
+        .group = TIMER_GROUP_1,
+        .index = TIMER_1,
         .intr_source = ETS_TG1_T1_EDGE_INTR_SOURCE,
     },
 };
@@ -82,11 +82,11 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
 
   // set up timer config
   timer_config_t config = {
-      .divider = 2,  // minimum allowed divider
-      .counter_dir = TIMER_COUNT_UP,
-      .counter_en = TIMER_PAUSE,
       .alarm_en = TIMER_ALARM_EN,
-      .auto_reload = true,
+      .counter_en = TIMER_PAUSE,
+      .counter_dir = TIMER_COUNT_UP,
+      .auto_reload = TIMER_AUTORELOAD_EN,
+      .divider = 2,  // minimum allowed divider
   };
   timer_init(eu->group, eu->index, &config);
 

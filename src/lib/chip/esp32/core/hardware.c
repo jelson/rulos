@@ -29,7 +29,7 @@
 #include "soc/rtc.h"
 #include "xtensa/xtruntime.h"
 
-const int RULOS_STACK_SIZE = 16*1024;
+const int RULOS_STACK_SIZE = 16 * 1024;
 const int __attribute__((used)) DRAM_ATTR uxTopUsedPriority =
     configMAX_PRIORITIES - 1;
 
@@ -48,16 +48,16 @@ const int RULOS_ESP32_CORE_ID = 1;
 void rulos_hal_init(void) {
 }
 
-static void run_rulos_main(void *data) {
+static void run_rulos_main(void* data) {
   extern int main(void);
   main();
 }
 
-
+extern "C" {
 void app_main(void) {
-  xTaskCreatePinnedToCore(run_rulos_main, "rulosMain", RULOS_STACK_SIZE, NULL, 1,
-                          NULL, RULOS_ESP32_CORE_ID);
-
+  xTaskCreatePinnedToCore(run_rulos_main, "rulosMain", RULOS_STACK_SIZE, NULL,
+                          1, NULL, RULOS_ESP32_CORE_ID);
+}
 }
 
 static uint32_t calculateApb(rtc_cpu_freq_config_t* conf) {

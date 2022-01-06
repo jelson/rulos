@@ -26,7 +26,7 @@ class Platform:
         self.extra_cflags = extra_cflags
 
     def configure_compiler(self, env, compiler_prefix):
-        env.Replace(CC = compiler_prefix+"gcc")
+        env.Replace(CC = compiler_prefix+"g++")
         env.Replace(AS = compiler_prefix+"as")
         env.Replace(AR = compiler_prefix+"gcc-ar")
         env.Replace(RANLIB = compiler_prefix+"gcc-ranlib")

@@ -42,7 +42,8 @@ uint32_t hardware_f_cpu;
 #include "core/hardware.h"
 #include "core/rulos.h"
 
-void null_handler(void *data) {}
+void null_handler(void *data) {
+}
 
 Handler timer0_handler = null_handler;
 Handler timer1_handler = null_handler;
@@ -216,7 +217,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
   switch (timer_id) {
 #if defined(MCU328_line) || defined(MCU1284_line) || \
     defined(MCUtiny84_line) || defined(MCUtiny85_line)
-    case TIMER0:
+    case TIMER0: {
       find_prescaler(us, &timer0, &actual_us_per_period, &cs, &ocr);
 
       uint8_t tccr0b = 0;
@@ -241,11 +242,12 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
       /* reset counter */
       TCNT0 = 0;
       break;
+    }
 #endif
 
 #if defined(MCU8_line) || defined(MCU328_line) || defined(MCU1284_line) || \
     defined(MCUtiny84_line)
-    case TIMER1:
+    case TIMER1: {
       find_prescaler(us, &timer1, &actual_us_per_period, &cs, &ocr);
 
       uint8_t tccr1b = _BV(WGM12);  // CTC Mode 4 (interrupt on count-up)
@@ -271,10 +273,11 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
       /* reset counter */
       TCNT1 = 0;
       break;
+    }
 #endif
 
 #if defined(MCU8_line) || defined(MCU328_line) || defined(MCU1284_line)
-    case TIMER2:
+    case TIMER2: {
       find_prescaler(us, &timer2, &actual_us_per_period, &cs, &ocr);
 
       uint8_t tccr2a = _BV(WGM21);  // CTC Mode 2 (interrupt on count-up)
@@ -302,6 +305,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
       /* reset counter */
       TCNT2 = 0;
       break;
+    }
 #endif
 
     default:
@@ -352,7 +356,8 @@ void hal_speedup_clock_ppm(int32_t ratio) {
   new_ocr1a += (uint16_t)adjustment;
 
   OCR1A = new_ocr1a;
-  if (TCNT1 >= new_ocr1a) TCNT1 = new_ocr1a - 1;
+  if (TCNT1 >= new_ocr1a)
+    TCNT1 = new_ocr1a - 1;
 
   hal_end_atomic(old_interrupts);
 }
