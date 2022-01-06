@@ -119,6 +119,15 @@ static inline void gpio_make_input_enable_pullup(const gpio_pin_t pin) {
   _gpio_enable_pull(pin, true);
 }
 
+
+/*
+ * configure a pin as input, and enable its internal pulldown resistors
+ */
+static inline void gpio_make_input_enable_pulldown(const gpio_pin_t pin) {
+  _gpio_make_input(pin);
+  _gpio_enable_pull(pin, false);
+}
+
 /*
  * configure a pin as input and disable its pullup resistor.
  */
