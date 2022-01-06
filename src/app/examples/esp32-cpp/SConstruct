@@ -21,7 +21,7 @@ sys.path.insert(0, "../../../util")
 from build_tools import *
 
 RulosBuildTarget(
-    name = "helloworld",
+    name = "helloworld-cpp",
     sources = ["helloworld.cpp"],
     extra_cflags = [
         "-DLOG_TO_SERIAL",
