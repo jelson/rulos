@@ -27,12 +27,32 @@
 
 static int line = 0;
 
+static void malloc_test() {
+  int total = 0;
+  const int increment = 1024;
+
+  while (true) {
+    void *mem = malloc(increment);
+    if (mem == NULL) {
+      LOG("failed to allocate memory");
+      return;
+    } else {
+      total += increment;
+      LOG("allocated %d bytes, total %d", increment, total);
+    }
+  }
+}
+
 static void test_func(void *data) {
   schedule_us(MESSAGE_FREQ_US, test_func, data);
 
   gpio_set(TEST_PIN);
   gpio_clr(TEST_PIN);
   LOG("Hello world from esp32, line %d at time %d", line++, clock_time_us());
+
+  if (line == 2) {
+    malloc_test();
+  }
 }
 
 int main() {
