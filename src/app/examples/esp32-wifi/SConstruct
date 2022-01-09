@@ -22,7 +22,7 @@ from build_tools import *
 
 RulosBuildTarget(
     name = "esp32-wifi",
-    sources = ["example.c"],
+    sources = ["https-example.c"],
     extra_cflags = [
         "-DLOG_TO_SERIAL",
     ],
