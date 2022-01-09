@@ -26,7 +26,7 @@ RulosBuildTarget(
     extra_cflags = [
         "-DLOG_TO_SERIAL",
     ],
-    peripherals = ["uart"],
+    peripherals = ["uart", "inet"],
     platforms = [
         Esp32Platform(),
     ],

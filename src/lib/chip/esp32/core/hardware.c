@@ -26,6 +26,7 @@
 #include "esp_attr.h"
 #include "esp_task.h"
 #include "esp_task_wdt.h"
+#include "nvs_flash.h"
 #include "soc/rtc.h"
 #include "xtensa/xtruntime.h"
 
@@ -46,6 +47,14 @@ const int __attribute__((used)) DRAM_ATTR uxTopUsedPriority =
 const int RULOS_ESP32_CORE_ID = 1;
 
 void rulos_hal_init(void) {
+  // TODO move this to esp32 hal init
+  esp_err_t ret = nvs_flash_init();
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
+      ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    ret = nvs_flash_init();
+  }
+  ESP_ERROR_CHECK(ret);
 }
 
 static void run_rulos_main(void *data) {
