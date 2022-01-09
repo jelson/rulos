@@ -55,7 +55,7 @@ void flash_dumper_write(flash_dumper_t *fd, const void *buf, int len) {
 
   // compute total length of the string: the prefix, the string we were passed,
   // and one extra for the trailing \n
-  int len_with_extras = 0;
+  uint32_t len_with_extras = 0;
   len_with_extras += prefix_len;
   len_with_extras += len;
   len_with_extras += 1;
@@ -103,6 +103,6 @@ void flash_dumper_write(flash_dumper_t *fd, const void *buf, int len) {
   }
 }
 
-void flash_dumper_print(flash_dumper_t *fd, char *s) {
+void flash_dumper_print(flash_dumper_t *fd, const char *s) {
   flash_dumper_write(fd, s, strlen(s));
 }

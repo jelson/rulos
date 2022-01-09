@@ -38,4 +38,4 @@ typedef struct {
 
 void flash_dumper_init(flash_dumper_t *fd);
 void flash_dumper_write(flash_dumper_t *fd, const void *buf, int len);
-void flash_dumper_print(flash_dumper_t *fd, char *s);
+void flash_dumper_print(flash_dumper_t *fd, const char *s);

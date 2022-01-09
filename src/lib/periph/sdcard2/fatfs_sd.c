@@ -615,7 +615,7 @@ DRESULT TM_FATFS_SD_disk_ioctl (
 		if (!(TM_FATFS_SD_CardType & CT_SDC)) break;				/* Check if the card is SDC */
 		if (TM_FATFS_SD_disk_ioctl(MMC_GET_CSD, csd)) break;	/* Get CSD */
 		if (!(csd[0] >> 6) && !(csd[10] & 0x40)) break;	/* Check if sector erase can be applied to the card */
-		dp = buff; st = dp[0]; ed = dp[1];				/* Load sector block */
+		dp = (DWORD *)buff; st = dp[0]; ed = dp[1];				/* Load sector block */
 		if (!(TM_FATFS_SD_CardType & CT_BLOCK)) {
 			st *= 512; ed *= 512;
 		}
