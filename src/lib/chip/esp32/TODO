@@ -1,0 +1,6 @@
+
+* Refactor network code out of example program and into a peripheral library
+* Event handler vs multi-cpu madness
+* Add interrupt-driven peripheral RMT
+* Get receive path of UART working
+* Interrupt-driven send path for UART
