@@ -23,6 +23,7 @@ from SCons.Script import *
 ARM_COMPILER_PREFIX = "/usr/local/bin/gcc-arm-none-eabi-10-2020-q4-major/bin/arm-none-eabi-"
 ARM_ROOT = os.path.join(util.SRC_ROOT, "lib", "chip", "arm")
 STM32_ROOT = os.path.join(ARM_ROOT, "stm32")
+STM32_VENDOR_ROOT = os.path.join(util.SRC_ROOT, "ext", "stm32")
 
 created_programming_target = False
 
@@ -227,7 +228,7 @@ class ArmStmPlatform(ArmPlatform):
         def __init__(self, name, arch_name):
             self.name = name
             self.arch = ArmPlatform.ARCHITECTURES[arch_name]
-            driver_root = os.path.join(STM32_ROOT, "vendor_libraries", name.lower(), "Drivers")
+            driver_root = os.path.join(STM32_VENDOR_ROOT, "STM32Cube" + name[-2:], "Drivers")
             self.cmsis_root = os.path.join(driver_root, "CMSIS", "Device", "ST", name+"xx")
             self.hal_root = os.path.join(driver_root, name+"xx_HAL_Driver")
             self.sources = os.path.join(self.cmsis_root, "Source", "Templates", "system_"+name.lower()+"xx.c")
