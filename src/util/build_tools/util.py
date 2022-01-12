@@ -41,8 +41,11 @@ def die(msg):
     sys.exit(1)
 
 def cglob(*kargs):
-    globpath = tuple(list(kargs) + ["*.c"])
-    return cwd_to_project_root(glob.glob(os.path.join(*globpath)))
+    retval = []
+    for ext in ["*.c", "*.cpp"]:
+        globpath = tuple(list(kargs) + [ext])
+        retval.extend(cwd_to_project_root(glob.glob(os.path.join(*globpath))))
+    return retval
 
 def template_free_cglob(*kargs):
     return [f for f in cglob(*kargs) if not f.endswith("_template.c")]
