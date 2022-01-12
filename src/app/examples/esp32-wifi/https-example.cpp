@@ -70,21 +70,34 @@ static const inet_wifi_creds_t wifi_creds[] = {
     },
 };
 
-void execute_https_request(void *data);
+void run(void *data);
 
-class TestClient : public HttpsClient {
- protected:
-  void on_done() {
-    LOG("http done");
-    schedule_us(1000000 * REQ_FREQ_SEC, execute_https_request, this);
+class TestClient : public HttpsHandlerIfc {
+  HttpsClient hc;
+  char response_buffer[100];
+
+ public:
+  TestClient() {
+    hc.set_timeout_ms(5000);
+    hc.set_https_cert(cert);
+    hc.set_response_buffer(response_buffer, sizeof(response_buffer));
+  }
+
+  void execute_request() {
+    LOG("executing http request");
+    hc.post(TEST_URL, TEST_DATA, strlen(TEST_DATA), this);
+  }
+
+  void on_done(HttpsClient *hc, int response_code) {
+    LOG("http done with code %d", response_code);
+    schedule_us(1000000 * REQ_FREQ_SEC, execute_trampoline, this);
+  }
+
+  static void execute_trampoline(void *data) {
+    TestClient *tc = static_cast<TestClient *>(data);
+    tc->execute_request();
   }
 };
-
-void execute_https_request(void *data) {
-  LOG("executing http request");
-  TestClient *c = static_cast<TestClient *>(data);
-  c->post(TEST_URL, TEST_DATA, strlen(TEST_DATA));
-}
 
 int main() {
   rulos_hal_init();
@@ -97,13 +110,8 @@ int main() {
   inet_wifi_client_start(wifi_creds,
                          sizeof(wifi_creds) / sizeof(wifi_creds[0]));
 
-  TestClient c;
-  char response_buffer[100];
-  c.set_timeout_ms(5000);
-  c.set_https_cert(cert);
-  c.set_response_buffer(response_buffer, sizeof(response_buffer));
-
-  schedule_now(execute_https_request, &c);
+  TestClient tc;
+  schedule_now(TestClient::execute_trampoline, &tc);
 
   cpumon_main_loop();
 }

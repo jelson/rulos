@@ -165,24 +165,26 @@ void HttpsClient::_check_https_result() {
     return;
   }
 
+  int code = -1;
   if (err == ESP_OK) {
-    LOG("HTTPS Status = %d, content_length = %d",
-        esp_http_client_get_status_code(_client),
+    code = esp_http_client_get_status_code(_client);
+    LOG("HTTPS Status = %d, content_length = %d", code,
         esp_http_client_get_content_length(_client));
   } else {
     LOG("Error performing http request %s", esp_err_to_name(err));
   }
   esp_http_client_cleanup(_client);
   _in_use = false;
-  on_done();
+  _on_done->on_done(this, code);
 }
 
-void HttpsClient::post(const char *url, const char *post_body,
-                       size_t body_len) {
+void HttpsClient::post(const char *url, const char *post_body, size_t body_len,
+                       HttpsHandlerIfc *on_done) {
   assert(!_in_use);
   assert(_response_buffer != NULL);
   assert(_response_buffer_len != 0);
   _response_bytes_written = 0;
+  _on_done = on_done;
   _in_use = true;
 
   esp_http_client_config_t config = {
@@ -206,6 +208,6 @@ void HttpsClient::post(const char *url, const char *post_body,
   schedule_us(100000, HttpsClient::_check_https_result_trampoline, this);
 }
 
-void HttpsClient::get(const char *url) {
-  post(url, NULL, 0);
+void HttpsClient::get(const char *url, HttpsHandlerIfc *on_done) {
+  post(url, NULL, 0, on_done);
 }

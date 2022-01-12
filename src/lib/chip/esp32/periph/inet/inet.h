@@ -31,17 +31,22 @@ typedef struct {
 
 void inet_wifi_client_start(const inet_wifi_creds_t *wifi_creds, int num_creds);
 
+class HttpsClient;
+
+class HttpsHandlerIfc {
+ public:
+  virtual void on_done(HttpsClient *hc, int response_code) = 0;
+};
+
 class HttpsClient {
  public:
   HttpsClient();
   void set_response_buffer(char *buf, size_t len);
   void set_timeout_ms(int timeout_ms);
   void set_https_cert(const char *cert);
-  void get(const char *url);
-  void post(const char *url, const char *post_body, size_t body_len);
-
- protected:
-  virtual void on_done(){};
+  void get(const char *url, HttpsHandlerIfc *on_done);
+  void post(const char *url, const char *post_body, size_t body_len,
+            HttpsHandlerIfc *on_done);
 
  private:
   bool _in_use;
@@ -51,6 +56,7 @@ class HttpsClient {
   size_t _response_buffer_len;
   size_t _response_bytes_written;
   esp_http_client_handle_t _client;
+  HttpsHandlerIfc *_on_done;
 
   static esp_err_t _event_handler_trampoline(esp_http_client_event_t *evt);
   esp_err_t _event_handler(esp_http_client_event_t *evt);
