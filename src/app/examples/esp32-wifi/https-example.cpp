@@ -21,15 +21,10 @@
 #include "periph/inet/inet.h"
 #include "periph/uart/uart.h"
 
-#define JIFFY_CLOCK_US  10000   // 10 ms jiffy clock
-#define MESSAGE_FREQ_US 500000  // how often to print a message
-
-#define TEST_PIN GPIO_2
-
-#include "esp_http_client.h"
-
-void execute_https_request(void *data);
-void check_https_result(void *data);
+#define JIFFY_CLOCK_US 10000  // 10 ms jiffy clock
+#define REQ_FREQ_SEC   5      // how often to execute an http request
+#define TEST_URL       "https://secure.megabozo.com/scripts/reverse"
+#define TEST_DATA      "ABCDE12345"
 
 const char cert[] =
     "-----BEGIN CERTIFICATE-----\n"
@@ -64,62 +59,6 @@ const char cert[] =
     "Dfvp7OOGAN6dEOM4+qR9sdjoSYKEBpsr6GtPAQw4dy753ec5\n"
     "-----END CERTIFICATE-----\n";
 
-esp_err_t _http_event_handler(esp_http_client_event_t *evt) {
-  switch (evt->event_id) {
-    case HTTP_EVENT_ERROR:
-      LOG("Error on http operation");
-      break;
-    case HTTP_EVENT_ON_HEADER:
-      LOG("got an http header: key=%s, value=%s", evt->header_key,
-          evt->header_value);
-      break;
-    case HTTP_EVENT_ON_DATA:
-      LOG("got http response data:");
-      log_write(evt->data, evt->data_len);
-      LOG("");
-    default:
-      break;
-  }
-
-  return ESP_OK;
-}
-
-void execute_https_request(void *data) {
-  schedule_us(5000000, execute_https_request, NULL);
-
-  esp_http_client_config_t config = {
-      .url = "https://secure.megabozo.com/scripts/reverse",
-      .cert_pem = cert,
-      .timeout_ms = 5000,
-      .event_handler = _http_event_handler,
-      .is_async = true,
-  };
-  esp_http_client_handle_t client = esp_http_client_init(&config);
-  const char *post_data = "ABCDE12345";
-  esp_http_client_set_method(client, HTTP_METHOD_POST);
-  esp_http_client_set_post_field(client, post_data, strlen(post_data));
-  schedule_now(check_https_result, client);
-}
-
-void check_https_result(void *data) {
-  esp_http_client_handle_t client = (esp_http_client_handle_t)data;
-  esp_err_t err = esp_http_client_perform(client);
-
-  if (err == ESP_ERR_HTTP_EAGAIN) {
-    schedule_us(100000, check_https_result, data);
-    return;
-  }
-
-  if (err == ESP_OK) {
-    LOG("HTTPS Status = %d, content_length = %d",
-        esp_http_client_get_status_code(client),
-        esp_http_client_get_content_length(client));
-  } else {
-    LOG("Error perform http request %s", esp_err_to_name(err));
-  }
-  esp_http_client_cleanup(client);
-}
-
 static const inet_wifi_creds_t wifi_creds[] = {
     {
         .ssid = "Jon's House",
@@ -131,6 +70,22 @@ static const inet_wifi_creds_t wifi_creds[] = {
     },
 };
 
+void execute_https_request(void *data);
+
+class TestClient : public HttpsClient {
+ protected:
+  void on_done() {
+    LOG("http done");
+    schedule_us(1000000 * REQ_FREQ_SEC, execute_https_request, this);
+  }
+};
+
+void execute_https_request(void *data) {
+  LOG("executing http request");
+  TestClient *c = static_cast<TestClient *>(data);
+  c->post(TEST_URL, TEST_DATA, strlen(TEST_DATA));
+}
+
 int main() {
   rulos_hal_init();
   init_clock(JIFFY_CLOCK_US, TIMER0);
@@ -141,7 +96,14 @@ int main() {
 
   inet_wifi_client_start(wifi_creds,
                          sizeof(wifi_creds) / sizeof(wifi_creds[0]));
-  schedule_now(execute_https_request, NULL);
+
+  TestClient c;
+  char response_buffer[100];
+  c.set_timeout_ms(5000);
+  c.set_https_cert(cert);
+  c.set_response_buffer(response_buffer, sizeof(response_buffer));
+
+  schedule_now(execute_https_request, &c);
 
   cpumon_main_loop();
 }

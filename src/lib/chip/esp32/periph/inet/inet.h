@@ -16,11 +16,44 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
+
+extern "C" {
+#include "esp_http_client.h"
+}
 
 typedef struct {
-  const char* ssid;
-  const char* password;
+  const char *ssid;
+  const char *password;
 } inet_wifi_creds_t;
 
-void inet_wifi_client_start(const inet_wifi_creds_t* wifi_creds, int num_creds);
+void inet_wifi_client_start(const inet_wifi_creds_t *wifi_creds, int num_creds);
+
+class HttpsClient {
+ public:
+  HttpsClient();
+  void set_response_buffer(char *buf, size_t len);
+  void set_timeout_ms(int timeout_ms);
+  void set_https_cert(const char *cert);
+  void get(const char *url);
+  void post(const char *url, const char *post_body, size_t body_len);
+
+ protected:
+  virtual void on_done(){};
+
+ private:
+  bool _in_use;
+  const char *_cert;
+  int _timeout_ms;
+  char *_response_buffer;
+  size_t _response_buffer_len;
+  size_t _response_bytes_written;
+  esp_http_client_handle_t _client;
+
+  static esp_err_t _event_handler_trampoline(esp_http_client_event_t *evt);
+  esp_err_t _event_handler(esp_http_client_event_t *evt);
+  static void _check_https_result_trampoline(void *context);
+  void _check_https_result();
+};
