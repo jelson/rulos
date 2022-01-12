@@ -306,18 +306,22 @@ typedef enum {
   cm_setRight,
 } ControlMode;
 
+struct s_control_act;
+
+struct s_control_event_handler {
+    UIEventHandlerFunc handler_func;
+    struct s_control_act *controlAct;
+};
+
 typedef struct s_control_act {
   ControlMode mode;
   Quadrature quad;
   Config config;
   ServoAct servo;
   uint16_t pot_servo;
-  struct s_control_event_handler {
-    UIEventHandlerFunc handler_func;
-    struct s_control_act *controlAct;
-  } handler;
+  struct s_control_event_handler handler;
 #if 0
-	uint8_t msg;
+  uint8_t msg;
 #endif
   Time lastPanTime;
   uint16_t pan_pos;

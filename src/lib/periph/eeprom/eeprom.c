@@ -57,14 +57,14 @@ uint16_t _eeprom_checksum(uint8_t *buf, int len) {
 }
 
 void eeprom_write(uint8_t *buf, int len) {
-  eeprom_write_word((void *)EEPROM_BASE, EEPROM_MAGIC);
+  eeprom_write_word((uint16_t *)EEPROM_BASE, EEPROM_MAGIC);
   eeprom_write_block(buf, (void *)(EEPROM_BASE + 2), len);
   uint16_t checksum = _eeprom_checksum(buf, len);
-  eeprom_write_word((void *)(EEPROM_BASE + 2 + len), checksum);
+  eeprom_write_word((uint16_t *)(EEPROM_BASE + 2 + len), checksum);
 }
 
 bool eeprom_read(uint8_t *buf, int len) {
-  uint16_t magic = eeprom_read_word((void *)EEPROM_BASE);
+  uint16_t magic = eeprom_read_word((uint16_t*)EEPROM_BASE);
   syncdebug(1, 'm', magic);
   if (magic != EEPROM_MAGIC) {
     SYNCDEBUG();
@@ -75,7 +75,7 @@ bool eeprom_read(uint8_t *buf, int len) {
 
   uint16_t computed_checksum = _eeprom_checksum(buf, len);
   syncdebug(2, 'c', computed_checksum);
-  uint16_t stored_checksum = eeprom_read_word((void *)(EEPROM_BASE + 2 + len));
+  uint16_t stored_checksum = eeprom_read_word((uint16_t *)(EEPROM_BASE + 2 + len));
   syncdebug(2, 's', stored_checksum);
   if (computed_checksum != stored_checksum) {
     SYNCDEBUG();

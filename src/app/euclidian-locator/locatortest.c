@@ -119,7 +119,7 @@ static locatorAct_t locatorAct_g;
 
 /***** serial port helpers ******/
 
-static inline void emit(locatorAct_t *locatorAct, char *s) {
+static inline void emit(locatorAct_t *locatorAct, const char *s) {
   uart_print(&locatorAct->uart, s);
 }
 

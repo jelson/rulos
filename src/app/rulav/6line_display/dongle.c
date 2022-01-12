@@ -35,13 +35,13 @@ typedef struct {
 Rocket6LineDongle_t r6l_dongle;
 
 static void r6l_bbuf_recv(MessageRecvBuffer *msg) {
+  BBufMessage *bbm = (BBufMessage *)msg->data;
+
   if (msg->payload_len != sizeof(BBufMessage)) {
     LOG("rbr_recv: Error: expected BBufMessage of size %zu, got %d bytes",
         sizeof(BBufMessage), msg->payload_len);
     goto done;
   }
-
-  BBufMessage *bbm = (BBufMessage *)msg->data;
 
   if (bbm->index < FIRST_LINE_IDX ||
       bbm->index >= FIRST_LINE_IDX + ROCKET6LINE_NUM_ROWS) {

@@ -61,7 +61,6 @@ class ArmPlatform(BaseRules.Platform):
             "--specs=nosys.specs",
             "-fdata-sections", # Put all funcs/data in their own sections
             "-ffunction-sections",
-            "-std=gnu99",
 #            "-O0",
             "-O2",
 #            "-D__STACK_SIZE=$(STACK_SIZE)",
@@ -70,7 +69,6 @@ class ArmPlatform(BaseRules.Platform):
 
     def arm_ld_flags(self, target):
         return self.common_ld_flags(target) + [
-            "-nostartfiles",
             "-static",
         ]
 

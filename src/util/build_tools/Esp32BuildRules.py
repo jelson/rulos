@@ -158,7 +158,6 @@ class Esp32Platform(BaseRules.Platform):
             "-mlongcalls",
             "-nostdlib",
             "-gdwarf-2",
-            "-std=gnu99",
 #            "-CC",
         ]
 

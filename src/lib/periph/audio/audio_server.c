@@ -118,7 +118,7 @@ void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id) {
 
 // Concatenate onto dst, without overflowing capacity, and
 // enforcing that dst stays nul-terminated.
-void safecat(char *dst, int capacity, char *src) {
+void safecat(char *dst, int capacity, const char *src) {
   strncat(dst, src, capacity - strlen(dst));
   dst[capacity - 1] = '\0';
 }

@@ -39,14 +39,14 @@ static void dispatch_dma(uint8_t uart_id);
 
 typedef struct {
   USART_TypeDef *instance;
-  uint32_t instance_irqn;
+  IRQn_Type instance_irqn;
   GPIO_TypeDef *rx_port;
   uint32_t rx_pin;
   GPIO_TypeDef *tx_port;
   uint32_t tx_pin;
   DMA_Channel_TypeDef *tx_dma_chan;
+  IRQn_Type tx_dma_irqn;
   uint32_t tx_dma_request;
-  uint32_t tx_dma_irqn;
   uint32_t altfunc;
 } stm32_uart_config_t;
 
@@ -401,7 +401,7 @@ static void maybe_launch_next_tx(stm32_uart_t *uart) {
     uart->next_sendbuf_cb = NULL;
   } else {
     // Start the transfer
-    if (HAL_UART_Transmit_DMA(&uart->hal_uart_handle, (void *)buf, len) !=
+    if (HAL_UART_Transmit_DMA(&uart->hal_uart_handle, (uint8_t *)buf, len) !=
         HAL_OK) {
       __builtin_trap();
     }
@@ -411,7 +411,7 @@ static void maybe_launch_next_tx(stm32_uart_t *uart) {
 // Callback called when TX is complete. This overrides a weak symbol in the HAL
 // implementation.
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *hal_uart_handle) {
-  for (int i = 0; i < NUM_UARTS; i++) {
+  for (unsigned int i = 0; i < NUM_UARTS; i++) {
     if (&g_stm32_uarts[i].hal_uart_handle == hal_uart_handle) {
       maybe_launch_next_tx(&g_stm32_uarts[i]);
     }

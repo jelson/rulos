@@ -89,10 +89,10 @@ void execute_https_request(void *data) {
 
   esp_http_client_config_t config = {
       .url = "https://secure.megabozo.com/scripts/reverse",
-      .event_handler = _http_event_handler,
       .cert_pem = cert,
-      .is_async = true,
       .timeout_ms = 5000,
+      .event_handler = _http_event_handler,
+      .is_async = true,
   };
   esp_http_client_handle_t client = esp_http_client_init(&config);
   const char *post_data = "ABCDE12345";

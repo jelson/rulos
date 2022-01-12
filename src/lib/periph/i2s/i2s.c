@@ -28,7 +28,7 @@
                               I2S_BUFSIZE_BYTES((i2s)->samples_per_buf)]))
 
 #if SIM
-static char* decode_buf_state[] = {"EMPTY", "FILLING", "FULL", "PLAYING"};
+static const char* decode_buf_state[] = {"EMPTY", "FILLING", "FULL", "PLAYING"};
 #endif
 
 // Called at schedule time.

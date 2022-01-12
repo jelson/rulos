@@ -16,7 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#define _GNU_SOURCE
 #include <fcntl.h>
 #include <unistd.h>
 #include <signal.h> // XXX yuck
@@ -95,8 +94,8 @@ void hal_i2s_init(uint16_t sample_rate, hal_i2s_play_done_cb_t play_done_cb,
       }
     }
     dup2(pipefd[0], 0); // read end of pipe becomes stdin
-    char* argv[] = {"aplay", "-f", "S16_LE", "--file-type", "raw", "--rate", "50000", "--channels", "2", "-", NULL};
-    execv("/usr/bin/aplay", argv);
+    const char* const argv[] = {"aplay", "-f", "S16_LE", "--file-type", "raw", "--rate", "50000", "--channels", "2", "-", NULL};
+    execv("/usr/bin/aplay", (char* const*) argv);
     assert(false);
     exit(-1);
   }

@@ -58,7 +58,7 @@ static void read_4meg_file(bool validate) {
       uint8_t *ptr = (uint8_t *)&curr_num_bigendian;
       uint32_t *fatbuf_uint32 = (uint32_t *)fatbuf;
 
-      for (int j = 0; j < sizeof(fatbuf) / 4; j++) {
+      for (size_t j = 0; j < sizeof(fatbuf) / 4; j++) {
         ptr[0] = expected_next_num >> 24;
         ptr[1] = expected_next_num >> 16;
         ptr[2] = expected_next_num >> 8;

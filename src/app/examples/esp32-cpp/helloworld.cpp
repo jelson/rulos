@@ -16,26 +16,35 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "core/hardware.h"
+#include "core/rulos.h"
+#include "periph/uart/uart.h"
 
-#include <stdbool.h>
-#include <stdint.h>
+#define JIFFY_CLOCK_US  10000   // 10 ms jiffy clock
+#define MESSAGE_FREQ_US 500000  // how often to print a message
 
-#include "core/wallclock.h"
-#include "periph/fatfs/ff.h"
-#include "periph/uart/linereader.h"
+#define TEST_PIN GPIO_2
 
-#define WRITE_INCREMENT 2048
+static int line = 0;
 
-typedef struct {
-  FATFS fatfs;  // SD card filesystem global state
-  FIL fp;
-  char buf[WRITE_INCREMENT * 2];
-  int len;
-  bool ok;
-  wallclock_t wallclock;
-} flash_dumper_t;
+static void test_func(void *data) {
+  schedule_us(MESSAGE_FREQ_US, test_func, data);
 
-void flash_dumper_init(flash_dumper_t *fd);
-void flash_dumper_write(flash_dumper_t *fd, const void *buf, int len);
-void flash_dumper_print(flash_dumper_t *fd, const char *s);
+  gpio_set(TEST_PIN);
+  gpio_clr(TEST_PIN);
+  LOG("Hello world from esp32, line %d at time %d", line++, clock_time_us());
+}
+
+int main() {
+  rulos_hal_init();
+  init_clock(JIFFY_CLOCK_US, TIMER0);
+
+  UartState_t u;
+  uart_init(&u, /* uart_id= */ 0, 38400);
+  log_bind_uart(&u);
+
+  gpio_make_output(TEST_PIN);
+  gpio_clr(TEST_PIN);
+  schedule_now(test_func, NULL);
+  cpumon_main_loop();
+}

@@ -26,7 +26,8 @@ class Platform:
         self.extra_cflags = extra_cflags
 
     def configure_compiler(self, env, compiler_prefix):
-        env.Replace(CC = compiler_prefix+"gcc")
+        env.Replace(CC = compiler_prefix+"g++")
+        env.Replace(CXX = compiler_prefix+"g++")
         env.Replace(AS = compiler_prefix+"as")
         env.Replace(AR = compiler_prefix+"gcc-ar")
         env.Replace(RANLIB = compiler_prefix+"gcc-ranlib")
@@ -81,6 +82,7 @@ class Platform:
             "-Werror",
             "-g",
             "-flto",
+            "-std=gnu++11",
         ]
 
     def common_include_dirs(self):
@@ -114,8 +116,8 @@ class Platform:
         self.configure_env(env)
 
         platform_lib_srcs = [os.path.join(build_obj_dir, s) for s in self.common_libs(target)]
-        env.Append(CFLAGS = self.cflags())
-        env.Append(CFLAGS = target.cflags())
+        env.Append(CCFLAGS = self.cflags())
+        env.Append(CCFLAGS = target.cflags())
         env.Append(LINKFLAGS = self.cflags())
         env.Append(LINKFLAGS = target.cflags())
         env.Append(LINKFLAGS = self.ld_flags(target))

@@ -89,7 +89,7 @@ void read_and_verify_sectors(int sector, int count, bool skip_validate) {
 }
 
 void do_test(void *data) {
-  DRESULT retval = disk_initialize(0);
+  DSTATUS retval = disk_initialize(0);
   if (retval != RES_OK) {
     LOG("can't initialize disk - retval %d", retval);
     return;

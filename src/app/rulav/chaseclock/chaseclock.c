@@ -124,7 +124,7 @@ void update_time_vals(ChaseClockActivation_t *cc) {
       if (tptr->pm == TRUE) {
         tptr->pm = FALSE;
         tptr->date += 1;
-        tptr->day += 1;
+        tptr->day = static_cast<Day>(static_cast<int>(tptr->day) + 1);
       } else
         tptr->pm = TRUE;
     }
@@ -132,7 +132,7 @@ void update_time_vals(ChaseClockActivation_t *cc) {
   if (tptr->hour > 12) tptr->hour = 1;
   if (tptr->date > days_in_month[tptr->month]) {
     tptr->date = 1;
-    tptr->month += 1;
+    tptr->month = static_cast<Month>(static_cast<int>(tptr->month) + 1);
     if (tptr->month > DEC) tptr->month = JAN;
   }
   if (tptr->day > SAT) tptr->day = SUN;

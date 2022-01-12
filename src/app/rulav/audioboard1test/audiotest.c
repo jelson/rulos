@@ -92,7 +92,7 @@ void emit_waveform(waveformAct_t *wa) {
 }
 
 void start_frequency(waveformAct_t *ta, float frequency) {
-  LOG("starting frequency %f", frequency);
+  LOG("starting frequency %f", (double) frequency);
 
   // silence
   if (frequency == 0) {

@@ -41,7 +41,7 @@ DRESULT disk_read(BYTE pdrv, BYTE* buff, DWORD sector, UINT count) {
   rc = fseek(disk_fp, sector * SECTOR_SIZE, SEEK_SET);
   assert(rc==0);
   rc = fread(buff, SECTOR_SIZE, count, disk_fp);
-  assert(rc==count);
+  assert(rc==(int)count);
   LOG("read sector %d for count %d", sector, count);
   return RES_OK;
 }

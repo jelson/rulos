@@ -43,15 +43,17 @@ static void reconfigure_wifi_creds() {
 
   LOG("Trying to connect to wifi SSID %s", curr_wifi_ssid());
 
-  wifi_config_t wifi_config = {.sta = {
-                                   .threshold.authmode = WIFI_AUTH_WPA2_PSK,
-
-                                   .pmf_cfg =
-                                       {
-                                           .capable = true,
-                                           .required = false,
-                                       },
-                               }};
+  wifi_config_t wifi_config = {
+    .sta = {
+      .threshold = {
+        .authmode = WIFI_AUTH_WPA2_PSK,
+      },
+      .pmf_cfg = {
+        .capable = true,
+        .required = false,
+      },
+    }
+  };
   strcpy((char*)wifi_config.sta.ssid, curr_wifi_ssid());
   strcpy((char*)wifi_config.sta.password,
          g_wifi_creds[g_wifi_creds_idx].password);

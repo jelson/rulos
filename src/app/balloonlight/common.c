@@ -56,7 +56,7 @@ static void reg_read(uint8_t reg_addr, void *inbuf, uint8_t len) {
 
   HAL_I2C_Master_Transmit(&i2c_handle, ACCEL_WRITE_ADDR, outbuf, sizeof(outbuf),
                           HAL_MAX_DELAY);
-  HAL_I2C_Master_Receive(&i2c_handle, ACCEL_READ_ADDR, inbuf, len,
+  HAL_I2C_Master_Receive(&i2c_handle, ACCEL_READ_ADDR, (uint8_t*) inbuf, len,
                          HAL_MAX_DELAY);
 }
 

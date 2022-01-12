@@ -548,6 +548,7 @@ void step1_probe_bus(void *data) {
   // status register before bus sampling is complete.
   uint8_t num_consistent_samples = 0;
   uint8_t bus_state = 0xFF;
+  uint8_t is_lowspeed = 0;
   do {
     write_reg(rHCTL, bmSAMPLEBUS);
     uint8_t sample = read_reg(rHRSL) & (bmJSTATUS | bmKSTATUS);
@@ -572,7 +573,7 @@ void step1_probe_bus(void *data) {
   }
 
   max->last_bus_state = bus_state;
-  uint8_t is_lowspeed = read_reg(rMODE) & bmLOWSPEED;
+  is_lowspeed = read_reg(rMODE) & bmLOWSPEED;
 
   switch (bus_state) {
     case 0:
