@@ -190,7 +190,7 @@ avr_uart_state_t g_uart_state[2] = {};
 #endif
 
 void hal_uart_init(uint8_t uart_id, uint32_t baud, void *user_data,
-                   uint16_t *max_tx_len) {
+                   size_t *max_tx_len) {
   *max_tx_len = 1;
   switch (uart_id) {
 #if HAVE_UARTID0

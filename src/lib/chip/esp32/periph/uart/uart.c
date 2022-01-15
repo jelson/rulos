@@ -52,7 +52,7 @@ static esp32_uart_t esp32_uart[NUM_UARTS] = {
 
 void hal_uart_init(uint8_t uart_id, uint32_t baud,
                    void *user_data /* for both rx and tx upcalls */,
-                   uint16_t *max_tx_len /* OUT */) {
+                   size_t *max_tx_len /* OUT */) {
   assert(uart_id >= 0 && uart_id < NUM_UARTS);
   esp32_uart_t *eu = &esp32_uart[uart_id];
 

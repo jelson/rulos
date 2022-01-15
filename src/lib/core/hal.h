@@ -78,7 +78,7 @@ bool hal_read_joystick_button();
 // tx the UART can accept at a time.
 void hal_uart_init(uint8_t uart_id, uint32_t baud,
                    void *user_data /* for both rx and tx upcalls */,
-                   uint16_t *max_tx_len /* OUT */);
+                   size_t *max_tx_len /* OUT */);
 
 // Callback for incoming serial data. If a callback is set using
 // hal_uart_set_receive_cb, incoming characters will be passed into that

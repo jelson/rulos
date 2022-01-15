@@ -15,12 +15,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
 
-// 32-bits on 32-bit platforms;
-// 8-bits on 8-bit platforms.
-typedef unsigned int qlen_t;
+typedef size_t qlen_t;
 
 #define QUEUE_DECLARE(TYPE) \
 typedef struct { \

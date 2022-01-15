@@ -55,7 +55,7 @@ static void *uart_user_data = NULL;
 
 void hal_uart_init(uint8_t uart_id, uint32_t baud,
                    void *user_data /* for both rx and tx upcalls */,
-                   uint16_t *max_tx_len /* OUT */) {
+                   size_t *max_tx_len /* OUT */) {
   *max_tx_len = 3;
   uart_user_data = user_data;
   sim_maybe_init_and_register_keystroke_handler(sim_uart_keystroke_handler);

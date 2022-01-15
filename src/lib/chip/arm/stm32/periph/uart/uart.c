@@ -481,7 +481,7 @@ static void config_gpio(const stm32_uart_config_t *config, bool rx) {
 
 void hal_uart_init(uint8_t uart_id, uint32_t baud,
                    void *user_data /* for both rx and tx upcalls */,
-                   uint16_t *max_tx_len /* OUT */) {
+                   size_t *max_tx_len /* OUT */) {
   assert(uart_id < NUM_UARTS);
   stm32_uart_t *uart = &g_stm32_uarts[uart_id];
   const stm32_uart_config_t *config = &stm32_uart_config[uart_id];

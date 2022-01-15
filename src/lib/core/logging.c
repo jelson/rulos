@@ -32,7 +32,7 @@ void log_bind_uart(UartState_t *u) {
   logging_uart = u;
 }
 
-void log_write(const void *buf, int len) {
+void log_write(const void *buf, size_t len) {
   if (logging_uart != NULL) {
     uart_write(logging_uart, buf, len);
   }
