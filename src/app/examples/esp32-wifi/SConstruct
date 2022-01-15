@@ -17,14 +17,18 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
+import os
 sys.path.insert(0, "../../../util")
 from build_tools import *
 
 RulosBuildTarget(
     name = "esp32-wifi",
-    sources = ["https-example.c"],
+    sources = ["https-example.cpp"],
     extra_cflags = [
         "-DLOG_TO_SERIAL",
+
+        # include out-of-repo directory to get wifi credentials
+        "-I" + os.path.expanduser("~/.config/rulos")
     ],
     peripherals = ["uart", "inet"],
     platforms = [
