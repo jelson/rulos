@@ -57,10 +57,11 @@ void hal_init_keypad() { init_keypad(&g_theKeypad); }
 char hal_read_keybuf() {
   char k;
 
-  if (CharQueue_pop((CharQueue *)g_theKeypad.keypad_q, &k))
+  if (CharQueue_pop((CharQueue *)g_theKeypad.keypad_q, &k)) {
     return k;
-  else
+  } else {
     return 0;
+  }
 }
 
 /////////// Hardware Implementation /////////////////
@@ -106,7 +107,9 @@ static void keypad_update(KeypadState *key) {
 
   // If the key state hasn't changed since the last time we
   // checked, ignore it.
-  if (k == key->keypad_last) return;
+  if (k == key->keypad_last) {
+    return;
+  }
 
   if (k != 0) {
     // A key was just pressed, enqueue it.
@@ -122,10 +125,16 @@ static void keypad_update(KeypadState *key) {
 
 static uint8_t scan_row() {
   /*
+   * Wait briefly for the lines to settle before sampling
+   */
+  for (volatile int i = 0; i < 20; i++) {
+    _NOP();
+  }
+
+  /*
    * Scan the four columns in of the row.  Return 1..4 if any of
    * them are low.  Return 0 if they're all high.
    */
-  _NOP();
   if (gpio_is_clr(KEYPAD_COL0)) return 1;
   if (gpio_is_clr(KEYPAD_COL1)) return 2;
   if (gpio_is_clr(KEYPAD_COL2)) return 3;
