@@ -29,6 +29,7 @@ typedef struct {
   // rulos data
   Handler cb;
   void *cb_data;
+  uint64_t alarm_value;
 
   // pointers to underlying hardware registers
   timer_group_t group;
@@ -94,10 +95,10 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
   timer_set_counter_value(eu->group, eu->index, 0);
 
   // compute the period in counter ticks, set and enable the alarm
-  uint64_t alarm_value = (uint64_t)getApbFrequency() * (uint64_t)us;
-  alarm_value /= 1000000;
-  alarm_value /= config.divider;
-  timer_set_alarm_value(eu->group, eu->index, alarm_value);
+  eu->alarm_value = (uint64_t)getApbFrequency() * (uint64_t)us;
+  eu->alarm_value /= 1000000;
+  eu->alarm_value /= config.divider;
+  timer_set_alarm_value(eu->group, eu->index, eu->alarm_value);
 
   // attach and enable interrupts
   timer_enable_intr(eu->group, eu->index);
@@ -107,15 +108,19 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
   timer_start(eu->group, eu->index);
 
   LOG("starting timer %d with a reload value of %d", timer_id,
-      (uint32_t)alarm_value);
+      (uint32_t)eu->alarm_value);
 
   // return the exact timer period, in microseconds, accounting for
   // any rouding that might have happened
-  return (alarm_value * config.divider * 1000000) / getApbFrequency();
+  return (eu->alarm_value * config.divider * 1000000) / getApbFrequency();
 }
 
 uint16_t hal_elapsed_milliintervals() {
-  return 0;
+  uint8_t timer_id = 0;
+  esp32_timer_t *const eu = get_timer(timer_id);
+  uint64_t val;
+  timer_get_counter_value(eu->group, eu->index, &val);
+  return (val * 1000) / eu->alarm_value;
 }
 
 bool hal_clock_interrupt_is_pending() {
