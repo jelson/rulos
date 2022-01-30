@@ -29,7 +29,7 @@ class NtpClient {
  public:
   const char *DEFAULT_SERVER = "us.pool.ntp.org";
   const uint16_t NTP_PORT = 123;
-  const int32_t NTP_TIMEOUT_US = 5000000;
+  const int32_t NTP_TIMEOUT_US = 2000000;
 
   NtpClient(void);
   NtpClient(const char *hostname);

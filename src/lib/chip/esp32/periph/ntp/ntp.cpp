@@ -25,22 +25,29 @@
 #include "periph/ntp/ntp-packet.h"
 
 extern "C" {
-#include <lwip/sockets.h>
-#include <lwip/netdb.h>
 #include <errno.h>
+#include <lwip/netdb.h>
+#include <lwip/sockets.h>
 }
 
 bool NtpClient::_sendRequest(ntp_packet_t *req) {
+  // ensure there isn't already a transaction outstanding
+  if (_req_time != 0) {
+    LOG("[NTP] not sending req; one is outstanding already");
+    return false;
+  }
+
   // resolve hostname
   struct hostent *server;
   server = gethostbyname(_hostname);
   if (server == NULL) {
-    LOG("could not resolve '%s': errno %d", _hostname, errno);
+    LOG("[NTP] could not resolve '%s': errno %d", _hostname, errno);
     return false;
   }
   uint32_t remote_ip;
   if (server->h_addrtype != AF_INET) {
-    LOG("got weird addr type of %d for host %s", server->h_addrtype, _hostname);
+    LOG("[NTP] got weird addr type of %d for host %s", server->h_addrtype,
+        _hostname);
     return false;
   }
 
@@ -48,7 +55,7 @@ bool NtpClient::_sendRequest(ntp_packet_t *req) {
   memcpy(&remote_ip, server->h_addr_list[0], sizeof(remote_ip));
   struct in_addr a;
   a.s_addr = remote_ip;
-  LOG("resolved %s to %s", _hostname, inet_ntoa(a));
+  LOG("[NTP] resolved %s to %s", _hostname, inet_ntoa(a));
   struct sockaddr_in dest;
   dest.sin_addr.s_addr = remote_ip;
   dest.sin_family = AF_INET;
@@ -56,8 +63,8 @@ bool NtpClient::_sendRequest(ntp_packet_t *req) {
 
   // create socket, if not already created
   if (_sock == -1) {
-    if ((_sock=socket(AF_INET, SOCK_DGRAM, 0)) == -1){
-      LOG("could not create socket: %d", errno);
+    if ((_sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+      LOG("[NTP] could not create socket: %d", errno);
       return false;
     }
 
@@ -65,20 +72,22 @@ bool NtpClient::_sendRequest(ntp_packet_t *req) {
   }
 
   _req_time = precise_clock_time_us();
-  int sent = sendto(_sock, req, sizeof(*req), 0, (struct sockaddr*) &dest, sizeof(dest));
-  if(sent < 0){
-    LOG("could not send UDP packet to %s: errno %d", _hostname, errno);
+  int sent = sendto(_sock, req, sizeof(*req), 0, (struct sockaddr *)&dest,
+                    sizeof(dest));
+  if (sent < 0) {
+    LOG("[NTP] could not send UDP packet to %s: errno %d", _hostname, errno);
+    _req_time = 0;
     return false;
   }
 
-  LOG("sent ntp request");
+  LOG("[NTP] sent request");
   return true;
 }
 
 static int num_req = 0;
 void NtpClient::_schedule_next_sync() {
   num_req++;
-  if (num_req < 10){
+  if (num_req < 10) {
     schedule_us(5000000, NtpClient::_sync_trampoline, this);
   }
 }
@@ -93,16 +102,16 @@ void NtpClient::_sync() {
 
   bool ok = _sendRequest(&req);
   if (!ok) {
-    LOG("NTP request failed");
+    LOG("[NTP] request failed");
     return;
   }
 
-  // request succeeded! schedule an attepmt at reception
-  schedule_now(NtpClient::_try_receive_trampoline, this);
+  // request succeeded! schedule an attempt at reception
+  schedule_us(1, NtpClient::_try_receive_trampoline, this);
 }
 
 void NtpClient::_sync_trampoline(void *data) {
-  NtpClient *ntp = static_cast<NtpClient*>(data);
+  NtpClient *ntp = static_cast<NtpClient *>(data);
   ntp->_sync();
 }
 
@@ -114,30 +123,34 @@ void NtpClient::_try_receive() {
 
   if (len == -1) {
     // no data available yet
-    if(errno == EWOULDBLOCK){
+    if (errno == EWOULDBLOCK) {
       // how long have we been waiting for a response?
       if (rtt > NTP_TIMEOUT_US) {
-        LOG("Timeout waiting for NTP response");
+        LOG("[NTP] Timeout waiting for response");
+        _req_time = 0;
+        return;
       } else {
-        schedule_now(NtpClient::_try_receive_trampoline, this);
+        schedule_us(1, NtpClient::_try_receive_trampoline, this);
         return;
       }
     }
 
     // hard error on reception
-    LOG("could not receive ntp response: %d", errno);
+    LOG("[NTP] could not receive response: %d", errno);
+    _req_time = 0;
     return;
   }
 
   // packet successfully received!
-  LOG("got ntp response! time %u", ntohl(resp.txTime_sec));
+  _req_time = 0;
+  LOG("[NTP] got response! time %u", ntohl(resp.txTime_sec));
   uint32_t epoch = ntohl(resp.txTime_sec) - UNIX_EPOCH_NTP_TIMESTAMP;
-  LOG("...epoch time %u", epoch);
-  LOG("rtt was %d usec", rtt);
+  LOG("[NTP] ...epoch time %u", epoch);
+  LOG("[NTP] rtt was %d usec", rtt);
 }
 
 void NtpClient::_try_receive_trampoline(void *data) {
-  NtpClient *ntp = static_cast<NtpClient*>(data);
+  NtpClient *ntp = static_cast<NtpClient *>(data);
   ntp->_try_receive();
 }
 

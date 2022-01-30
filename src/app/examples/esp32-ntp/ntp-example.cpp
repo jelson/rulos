@@ -19,8 +19,8 @@
 #include "core/hardware.h"
 #include "core/rulos.h"
 #include "periph/inet/inet.h"
-#include "periph/uart/uart.h"
 #include "periph/ntp/ntp.h"
+#include "periph/uart/uart.h"
 
 #define JIFFY_CLOCK_US 10000  // 10 ms jiffy clock
 
@@ -37,10 +37,10 @@ void show_time(void *arg) {
     LOG("NTP epoch time is %d sec, %lld ms", ntp.get_epoch_time_sec(),
         ntp.get_epoch_time_msec());
   } else {
-    //LOG("NTP not synchronized");
+    LOG("NTP not synchronized");
   }
 }
-  
+
 int main() {
   rulos_hal_init();
   init_clock(JIFFY_CLOCK_US, TIMER0);

@@ -11,10 +11,10 @@ typedef struct {
   uint8_t leap_indictor : 2;  // Leap second indicator
 
   // byte 1
-  uint8_t stratum;    // Stratum level of the local clock
+  uint8_t stratum;  // Stratum level of the local clock
 
   // byte 2
-  uint8_t poll;       // Maximum interval between successive messages
+  uint8_t poll;  // Maximum interval between successive messages
   // byte 3
   uint8_t precision;  // Precision of the local clock
 
@@ -35,18 +35,18 @@ typedef struct {
   uint32_t refId;  // Reference clock identifier
 
   // byte 16
-  uint32_t refTime_sec;    // Reference timestamp, seconds
-  uint32_t refTime_frac;   // Reference timestamp, fractions of a second
+  uint32_t refTime_sec;   // Reference timestamp, seconds
+  uint32_t refTime_frac;  // Reference timestamp, fractions of a second
 
   // byte 24
   uint32_t origTime_sec;   // Originate timestamp, seconds
   uint32_t origTime_frac;  // Originate timestamp, fractions of a second
 
   // byte 32
-  uint32_t rxTime_sec;     // Received timestamp, seconds
-  uint32_t rxTime_frac;    // Received timestamp, fractions of a second
+  uint32_t rxTime_sec;   // Received timestamp, seconds
+  uint32_t rxTime_frac;  // Received timestamp, fractions of a second
 
   //  byte 40
-  uint32_t txTime_sec;     // Transmit timestamp, seconds
-  uint32_t txTime_frac;    // Transmit timestamp, fraction of a second
+  uint32_t txTime_sec;   // Transmit timestamp, seconds
+  uint32_t txTime_frac;  // Transmit timestamp, fraction of a second
 } ntp_packet_t;
