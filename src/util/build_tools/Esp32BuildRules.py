@@ -219,7 +219,7 @@ class Esp32Platform(BaseRules.Platform):
 
     def run_esp32(self, target, source, env):
         usbpath = self.find_esp32_port()
-        subprocess.call(["grabserial", "-t", "-d", usbpath, "-b", "38400"])
+        subprocess.call(["grabserial", "-t", "-d", usbpath, "-b", "38400", "-o", "esp32.log"])
 
     def post_configure(self, env, outputs):
         binfile = env.MakeBin(outputs[0])
