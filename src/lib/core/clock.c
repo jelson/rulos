@@ -124,9 +124,9 @@ void init_clock(Time interval_us, uint8_t timer_id) {
 }
 
 void schedule_us(Time offset_us, ActivationFuncPtr func, void *data) {
-  // never schedule anything for "now", or we might stick the scheduler
-  // in a loop at "now".
-  assert(offset_us > 0);
+  // warning: scheduling something for "now" will re-run the scheduler
+  // immediately, which may not be what you want
+  assert(offset_us >= 0);
   schedule_us_internal(offset_us, func, data);
 }
 
