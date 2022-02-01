@@ -23,6 +23,7 @@
 #include <stdint.h>
 
 #include "core/rulos.h"
+#include "core/wallclock.h"
 #include "periph/ntp/ntp-packet.h"
 
 class NtpClient {
@@ -43,6 +44,7 @@ class NtpClient {
   const char *_hostname;
   int _sock;
   Time _req_time;
+  wallclock_t _uptime;
 
   void _init(const char *hostname);
   void _schedule_next_sync();

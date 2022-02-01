@@ -22,6 +22,7 @@
 #include <stdlib.h>
 
 #include "core/rulos.h"
+#include "core/wallclock.h"
 #include "periph/ntp/ntp-packet.h"
 
 extern "C" {
@@ -71,9 +72,9 @@ bool NtpClient::_sendRequest(ntp_packet_t *req) {
     fcntl(_sock, F_SETFL, O_NONBLOCK);
   }
 
-  _req_time = precise_clock_time_us();
   int sent = sendto(_sock, req, sizeof(*req), 0, (struct sockaddr *)&dest,
                     sizeof(dest));
+  _req_time = wallclock_get_uptime_usec(&_uptime);
   if (sent < 0) {
     LOG("[NTP] could not send UDP packet to %s: errno %d", _hostname, errno);
     _req_time = 0;
@@ -87,8 +88,8 @@ bool NtpClient::_sendRequest(ntp_packet_t *req) {
 static int num_req = 0;
 void NtpClient::_schedule_next_sync() {
   num_req++;
-  if (num_req < 10) {
-    schedule_us(5000000, NtpClient::_sync_trampoline, this);
+  if (num_req < 50) {
+    schedule_us(15000000, NtpClient::_sync_trampoline, this);
   }
 }
 
@@ -107,7 +108,7 @@ void NtpClient::_sync() {
   }
 
   // request succeeded! schedule an attempt at reception
-  schedule_us(1, NtpClient::_try_receive_trampoline, this);
+  schedule_us(0, NtpClient::_try_receive_trampoline, this);
 }
 
 void NtpClient::_sync_trampoline(void *data) {
@@ -117,7 +118,7 @@ void NtpClient::_sync_trampoline(void *data) {
 
 void NtpClient::_try_receive() {
   ntp_packet_t resp;
-  Time _resp_time = precise_clock_time_us();
+  Time _resp_time = wallclock_get_uptime_usec(&_uptime);
   int len = recvfrom(_sock, &resp, sizeof(resp), MSG_DONTWAIT, NULL, NULL);
   Time rtt = _resp_time - _req_time;
 
@@ -130,7 +131,7 @@ void NtpClient::_try_receive() {
         _req_time = 0;
         return;
       } else {
-        schedule_us(1, NtpClient::_try_receive_trampoline, this);
+        schedule_us(0, NtpClient::_try_receive_trampoline, this);
         return;
       }
     }
@@ -142,11 +143,24 @@ void NtpClient::_try_receive() {
   }
 
   // packet successfully received!
+  LOG("[NTP] got response after %u uesc", rtt);
+
+  // compute the time at which the response packet was transmitted by
+  // the server
+  uint64_t ntp_usecs = (((uint64_t) 1000000) * ntohl(resp.txTime_frac)) >> 32;
+  ntp_usecs += (uint64_t) 1000000 * ntohl(resp.txTime_sec);
+
+  // compute how long the server took between incoming and outgoing packets
+  uint64_t rx_at_server_ntp_usecs = (((uint64_t) 1000000) * ntohl(resp.rxTime_frac)) >> 32;
+  rx_at_server_ntp_usecs += (uint64_t) 1000000 * ntohl(resp.rxTime_sec);
+  uint64_t server_delay_usec = ntp_usecs - rx_at_server_ntp_usecs;
+
+  uint64_t epoch_usecs = ntp_usecs - ((uint64_t) 1000000 * UNIX_EPOCH_NTP_TIMESTAMP);
+  int64_t offset_usecs = epoch_usecs - _resp_time;
+  LOG("[NTP] stats: local_rx_time=%d, server_delay=%llu, epoch_usec=%llu, raw_rtt_usec=%u, offset_usec=%lld",
+      _resp_time, server_delay_usec,
+      epoch_usecs, rtt, offset_usecs);
   _req_time = 0;
-  LOG("[NTP] got response! time %u", ntohl(resp.txTime_sec));
-  uint32_t epoch = ntohl(resp.txTime_sec) - UNIX_EPOCH_NTP_TIMESTAMP;
-  LOG("[NTP] ...epoch time %u", epoch);
-  LOG("[NTP] rtt was %d usec", rtt);
 }
 
 void NtpClient::_try_receive_trampoline(void *data) {
@@ -167,6 +181,7 @@ uint64_t NtpClient::get_epoch_time_msec(void) {
 }
 
 void NtpClient::start(void) {
+  wallclock_init(&_uptime);
   schedule_now(NtpClient::_sync_trampoline, this);
 }
 
