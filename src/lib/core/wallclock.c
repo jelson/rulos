@@ -27,8 +27,11 @@ void schedule_next_tick(wallclock_t *wallclock);
 
 static void wallclock_tick(void *data) {
   wallclock_t *wallclock = (wallclock_t *)data;
+  rulos_irq_state_t old_intr;
+  old_intr = hal_start_atomic();
   wallclock->seconds_since_boot++;
   wallclock->curr_second_start_us += 1000000;
+  hal_end_atomic(old_intr);
   schedule_next_tick(wallclock);
 }
 
@@ -45,8 +48,16 @@ void wallclock_init(wallclock_t *wallclock) {
 
 void wallclock_get_uptime(wallclock_t *wallclock, uint32_t *sec /* OUT */,
                           uint32_t *usec /* OUT */) {
+  // This should be correct even there's a callback pending. In that
+  // case, us_since_last_tick might be greater than 1,000,000.
   uint32_t us_since_last_tick =
       precise_clock_time_us() - wallclock->curr_second_start_us;
   *sec = wallclock->seconds_since_boot + us_since_last_tick / 1000000;
   *usec = us_since_last_tick % 1000000;
+}
+
+uint64_t wallclock_get_uptime_usec(wallclock_t *wallclock) {
+  uint32_t sec, usec;
+  wallclock_get_uptime(wallclock, &sec, &usec);
+  return ((uint64_t) sec) * 1000000 + usec;
 }
