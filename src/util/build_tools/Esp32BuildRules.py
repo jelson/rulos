@@ -221,6 +221,10 @@ class Esp32Platform(BaseRules.Platform):
         usbpath = self.find_esp32_port()
         subprocess.call(["grabserial", "-t", "-d", usbpath, "-b", "38400", "-o", "esp32.log"])
 
+    def run_esp32_epochsec(self, target, source, env):
+        usbpath = self.find_esp32_port()
+        subprocess.call(["grabserial", "-T", "-F", "%s.%f", "-d", usbpath, "-b", "38400", "-o", "esp32.log"])
+
     def post_configure(self, env, outputs):
         binfile = env.MakeBin(outputs[0])
         partfile = env.MakePartMap(
@@ -241,8 +245,13 @@ class Esp32Platform(BaseRules.Platform):
             f"run-{prog_target}",
             program,
             self.run_esp32)
+        env.Alias(
+            f"rune-{prog_target}",
+            program,
+            self.run_esp32_epochsec)
 
         # Simpler "scons program" and "scons run" commands for simple
         # SConstruct files that have only a single target
         env.Alias("program", f"program-{prog_target}")
         env.Alias("run", f"run-{prog_target}")
+        env.Alias("rune", f"rune-{prog_target}")
