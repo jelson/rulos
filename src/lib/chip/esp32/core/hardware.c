@@ -23,7 +23,9 @@
 
 #include "core/hal.h"
 #include "core/hardware_types.h"
+#include "driver/gpio.h"
 #include "esp_attr.h"
+#include "esp_intr_alloc.h"
 #include "esp_task.h"
 #include "esp_task_wdt.h"
 #include "nvs_flash.h"
@@ -47,7 +49,6 @@ const int __attribute__((used)) DRAM_ATTR uxTopUsedPriority =
 const int RULOS_ESP32_CORE_ID = 1;
 
 void rulos_hal_init(void) {
-  // TODO move this to esp32 hal init
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
       ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -64,6 +65,7 @@ static void run_rulos_main(void* data) {
 
 extern "C" {
 void app_main(void) {
+  gpio_install_isr_service(0);
   xTaskCreatePinnedToCore(run_rulos_main, "rulosMain", RULOS_STACK_SIZE, NULL,
                           1, NULL, RULOS_ESP32_CORE_ID);
 }

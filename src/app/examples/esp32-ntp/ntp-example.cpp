@@ -22,25 +22,38 @@
 #include "periph/ntp/ntp.h"
 #include "periph/uart/uart.h"
 
+// esp32-specific includes needed only for catching pin interrupts
+#include "driver/gpio.h"
+
 #define JIFFY_CLOCK_US 10000  // 10 ms jiffy clock
+const gpio_num_t EXT_REF_PIN_NUM = (gpio_num_t)GPIO_27;
 
 // An example of the contents of this file is found in
 // wifi-credentials-example.h. Copy it to your home directory,
 // ~/.config/rulos/wifi-credentials.h, and fill it in with real data.
 #include "wifi-credentials.h"
 
+Time next_print_time;
 NtpClient ntp("time.gin.ntt.net");
 
-Time next_print_time;
+void print_timestamp(const char *source) {
+  uint64_t u = ntp.get_epoch_time_usec();
+  uint32_t pct = precise_clock_time_us();
 
-void show_time(void *arg) {
-  if (ntp.is_synced()) {
-    uint32_t pct = precise_clock_time_us();
-    uint64_t u = ntp.get_epoch_time_usec();
-    LOG("NTP epoch time is %llu.%llu sec, local %d", u/1000000, u%1000000, pct);
+  if (u == 0) {
+    LOG("%s: NTP not locked", source);
   } else {
-    LOG("NTP not synchronized");
+    LOG("%s: NTP epoch time is %llu.%06llu sec, local %d", source, u / 1000000,
+        u % 1000000, pct);
   }
+}
+
+void external_gpio_handler(void *arg) {
+  print_timestamp("External GPIO");
+}
+
+static void show_time(void *arg) {
+  print_timestamp("Internal 1hz");
   next_print_time += 1000000;
   schedule_absolute(next_print_time, show_time, arg);
 }
@@ -54,11 +67,22 @@ int main() {
 
   init_clock(JIFFY_CLOCK_US, TIMER0);
 
+  // start wifi
   inet_wifi_client_start(wifi_creds,
                          sizeof(wifi_creds) / sizeof(wifi_creds[0]));
+
+  // start ntp
   ntp.start();
+
+  // print our estimate of the time once per second
   next_print_time = clock_time_us();
   schedule_absolute(next_print_time, show_time, NULL);
+
+  gpio_make_input_enable_pullup(EXT_REF_PIN_NUM);
+  // install a handler to print the time on an external reference event
+  gpio_set_intr_type(EXT_REF_PIN_NUM, GPIO_INTR_POSEDGE);
+  gpio_isr_handler_add(EXT_REF_PIN_NUM, external_gpio_handler, NULL);
+  gpio_intr_enable(EXT_REF_PIN_NUM);
 
   cpumon_main_loop();
 }
