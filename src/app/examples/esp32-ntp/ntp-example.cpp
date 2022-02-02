@@ -37,14 +37,14 @@ Time next_print_time;
 NtpClient ntp("time.gin.ntt.net");
 
 void print_timestamp(const char *source) {
-  uint64_t u = ntp.get_epoch_time_usec();
-  uint32_t pct = precise_clock_time_us();
+  uint64_t epoch, local;
+  ntp.get_epoch_and_local_usec(&epoch, &local);
 
-  if (u == 0) {
+  if (epoch == 0) {
     LOG("%s: NTP not locked", source);
   } else {
-    LOG("%s: NTP epoch time is %llu.%06llu sec, local %d", source, u / 1000000,
-        u % 1000000, pct);
+    LOG("%s: ntp timestamp: epoch_time=%llu.%06llu, local=%llu", source,
+        epoch / 1000000, epoch % 1000000, local);
   }
 }
 
