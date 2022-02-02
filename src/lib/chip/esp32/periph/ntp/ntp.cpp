@@ -146,7 +146,8 @@ void NtpClient::_try_receive() {
   LOG("[NTP] got response after %u usec", rtt_usec);
 
   // time at which the ntp server transmitted its response
-  uint64_t server_ntp_usec = (((uint64_t)1000000) * ntohl(resp.txTime_frac)) >> 32;
+  uint64_t server_ntp_usec =
+      (((uint64_t)1000000) * ntohl(resp.txTime_frac)) >> 32;
   server_ntp_usec += (uint64_t)1000000 * ntohl(resp.txTime_sec);
 
   // how long the remote server took between its incoming and outgoing
@@ -169,14 +170,16 @@ void NtpClient::_try_receive() {
   offset_usec = epoch_time_when_received - _resp_time_usec;
 
   char logbuf[300];
-  int loglen = snprintf(
-      logbuf, sizeof(logbuf),
-      "[NTP] stats: local_rx_time=%llu,server_delay=%llu,server_epoch_usec=%llu,"
-      "raw_rtt_usec=%u,onway_rtt_usec=%u,offset_usec=%lld,",
-      _resp_time_usec, server_delay_usec, server_epoch_usec, rtt_usec, oneway_latency_usec,
-      offset_usec);
+  int loglen =
+      snprintf(logbuf, sizeof(logbuf),
+               "[NTP] stats: "
+               "local_rx_time=%llu,server_delay=%llu,server_epoch_usec=%llu,"
+               "raw_rtt_usec=%u,onway_rtt_usec=%u,offset_usec=%lld,",
+               _resp_time_usec, server_delay_usec, server_epoch_usec, rtt_usec,
+               oneway_latency_usec, offset_usec);
 
-  //_add_observation(local_time_when_sent, server_epoch_usec, logbuf[loglen], sizeof(logbuf)-loglen);
+  //_add_observation(local_time_when_sent, server_epoch_usec, logbuf[loglen],
+  //sizeof(logbuf)-loglen);
   logbuf[loglen++] = '\n';
   log_write(logbuf, loglen);
   _req_time_usec = 0;
@@ -191,16 +194,24 @@ bool NtpClient::is_synced(void) {
   return (offset_usec != 0);
 }
 
+void NtpClient::get_epoch_and_local_usec(uint64_t *epoch, uint64_t *local) {
+  if (is_synced()) {
+    *local = wallclock_get_uptime_usec(&_uptime);
+    *epoch = *local + offset_usec;
+  } else {
+    *local = 0;
+    *epoch = 0;
+  }
+}
+
 uint32_t NtpClient::get_epoch_time_sec(void) {
   return get_epoch_time_usec() / 1000000;
 }
 
 uint64_t NtpClient::get_epoch_time_usec(void) {
-  if (is_synced()) {
-    return wallclock_get_uptime_usec(&_uptime) + offset_usec;
-  } else {
-    return 0;
-  }
+  uint64_t epoch, local;
+  get_epoch_and_local_usec(&epoch, &local);
+  return epoch;
 }
 
 void NtpClient::start(void) {

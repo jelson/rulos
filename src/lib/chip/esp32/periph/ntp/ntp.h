@@ -46,6 +46,7 @@ class NtpClient {
   bool is_synced(void);
   uint32_t get_epoch_time_sec(void);
   uint64_t get_epoch_time_usec(void);
+  void get_epoch_and_local_usec(uint64_t *epoch, uint64_t *local);
 
  private:
   const char *_hostname;
