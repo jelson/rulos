@@ -49,8 +49,8 @@ void log_format_and_write(const char *fmt, ...) {
   char message[120];
   va_start(ap, fmt);
 
-  // Under RULOS, the static strings are in progmem, so they need a special
-  // version of printf
+  // Under AVR, the static strings are in progmem, so they need a
+  // special version of printf
 #ifdef RULOS_AVR
   int len = vsnprintf_P(message, sizeof(message), fmt, ap);
 #else
