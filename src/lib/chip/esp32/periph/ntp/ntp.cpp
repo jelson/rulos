@@ -33,7 +33,7 @@ extern "C" {
 
 bool NtpClient::_sendRequest(ntp_packet_t *req) {
   // ensure there isn't already a transaction outstanding
-  if (_req_time != 0) {
+  if (_req_time_usec != 0) {
     LOG("[NTP] not sending req; one is outstanding already");
     return false;
   }
@@ -74,10 +74,10 @@ bool NtpClient::_sendRequest(ntp_packet_t *req) {
 
   int sent = sendto(_sock, req, sizeof(*req), 0, (struct sockaddr *)&dest,
                     sizeof(dest));
-  _req_time = wallclock_get_uptime_usec(&_uptime);
+  _req_time_usec = wallclock_get_uptime_usec(&_uptime);
   if (sent < 0) {
     LOG("[NTP] could not send UDP packet to %s: errno %d", _hostname, errno);
-    _req_time = 0;
+    _req_time_usec = 0;
     return false;
   }
 
@@ -118,17 +118,17 @@ void NtpClient::_sync_trampoline(void *data) {
 
 void NtpClient::_try_receive() {
   ntp_packet_t resp;
-  Time _resp_time = wallclock_get_uptime_usec(&_uptime);
+  uint64_t _resp_time_usec = wallclock_get_uptime_usec(&_uptime);
   int len = recvfrom(_sock, &resp, sizeof(resp), MSG_DONTWAIT, NULL, NULL);
-  Time rtt = _resp_time - _req_time;
+  uint32_t rtt_usec = _resp_time_usec - _req_time_usec;
 
   if (len == -1) {
     // no data available yet
     if (errno == EWOULDBLOCK) {
       // how long have we been waiting for a response?
-      if (rtt > NTP_TIMEOUT_US) {
+      if (rtt_usec > NTP_TIMEOUT_US) {
         LOG("[NTP] Timeout waiting for response");
-        _req_time = 0;
+        _req_time_usec = 0;
         return;
       } else {
         schedule_us(0, NtpClient::_try_receive_trampoline, this);
@@ -138,29 +138,48 @@ void NtpClient::_try_receive() {
 
     // hard error on reception
     LOG("[NTP] could not receive response: %d", errno);
-    _req_time = 0;
+    _req_time_usec = 0;
     return;
   }
 
   // packet successfully received!
-  LOG("[NTP] got response after %u uesc", rtt);
+  LOG("[NTP] got response after %u usec", rtt_usec);
 
-  // compute the time at which the response packet was transmitted by
-  // the server
-  uint64_t ntp_usecs = (((uint64_t) 1000000) * ntohl(resp.txTime_frac)) >> 32;
-  ntp_usecs += (uint64_t) 1000000 * ntohl(resp.txTime_sec);
+  // time at which the ntp server transmitted its response
+  uint64_t server_ntp_usec = (((uint64_t)1000000) * ntohl(resp.txTime_frac)) >> 32;
+  server_ntp_usec += (uint64_t)1000000 * ntohl(resp.txTime_sec);
 
-  // compute how long the server took between incoming and outgoing packets
-  uint64_t rx_at_server_ntp_usecs = (((uint64_t) 1000000) * ntohl(resp.rxTime_frac)) >> 32;
-  rx_at_server_ntp_usecs += (uint64_t) 1000000 * ntohl(resp.rxTime_sec);
-  uint64_t server_delay_usec = ntp_usecs - rx_at_server_ntp_usecs;
+  // how long the remote server took between its incoming and outgoing
+  // packets
+  uint64_t rx_at_server_ntp_usec =
+      (((uint64_t)1000000) * ntohl(resp.rxTime_frac)) >> 32;
+  rx_at_server_ntp_usec += (uint64_t)1000000 * ntohl(resp.rxTime_sec);
+  uint64_t server_delay_usec = server_ntp_usec - rx_at_server_ntp_usec;
 
-  uint64_t epoch_usecs = ntp_usecs - ((uint64_t) 1000000 * UNIX_EPOCH_NTP_TIMESTAMP);
-  int64_t offset_usecs = epoch_usecs - _resp_time;
-  LOG("[NTP] stats: local_rx_time=%d, server_delay=%llu, epoch_usec=%llu, raw_rtt_usec=%u, offset_usec=%lld",
-      _resp_time, server_delay_usec,
-      epoch_usecs, rtt, offset_usecs);
-  _req_time = 0;
+  // estimate one way latency: half of (locally observed RTT - server delay)
+  uint32_t oneway_latency_usec = (rtt_usec - server_delay_usec) / 2;
+
+  // compute the epoch time
+  uint64_t server_epoch_usec =
+      server_ntp_usec - ((uint64_t)1000000 * UNIX_EPOCH_NTP_TIMESTAMP);
+
+  // our estimate of the true epoch time when this packet was received locally
+  uint64_t epoch_time_when_received = server_epoch_usec + oneway_latency_usec;
+
+  offset_usec = epoch_time_when_received - _resp_time_usec;
+
+  char logbuf[300];
+  int loglen = snprintf(
+      logbuf, sizeof(logbuf),
+      "[NTP] stats: local_rx_time=%llu,server_delay=%llu,server_epoch_usec=%llu,"
+      "raw_rtt_usec=%u,onway_rtt_usec=%u,offset_usec=%lld,",
+      _resp_time_usec, server_delay_usec, server_epoch_usec, rtt_usec, oneway_latency_usec,
+      offset_usec);
+
+  //_add_observation(local_time_when_sent, server_epoch_usec, logbuf[loglen], sizeof(logbuf)-loglen);
+  logbuf[loglen++] = '\n';
+  log_write(logbuf, loglen);
+  _req_time_usec = 0;
 }
 
 void NtpClient::_try_receive_trampoline(void *data) {
@@ -169,15 +188,19 @@ void NtpClient::_try_receive_trampoline(void *data) {
 }
 
 bool NtpClient::is_synced(void) {
-  return false;
+  return (offset_usec != 0);
 }
 
 uint32_t NtpClient::get_epoch_time_sec(void) {
-  return 0;
+  return get_epoch_time_usec() / 1000000;
 }
 
-uint64_t NtpClient::get_epoch_time_msec(void) {
-  return 0;
+uint64_t NtpClient::get_epoch_time_usec(void) {
+  if (is_synced()) {
+    return wallclock_get_uptime_usec(&_uptime) + offset_usec;
+  } else {
+    return 0;
+  }
 }
 
 void NtpClient::start(void) {

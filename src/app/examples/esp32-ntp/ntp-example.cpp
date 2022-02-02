@@ -29,30 +29,36 @@
 // ~/.config/rulos/wifi-credentials.h, and fill it in with real data.
 #include "wifi-credentials.h"
 
-NtpClient ntp;
+NtpClient ntp("time.gin.ntt.net");
+
+Time next_print_time;
 
 void show_time(void *arg) {
-  schedule_us(1000000, show_time, arg);
   if (ntp.is_synced()) {
-    LOG("NTP epoch time is %d sec, %lld ms", ntp.get_epoch_time_sec(),
-        ntp.get_epoch_time_msec());
+    uint32_t pct = precise_clock_time_us();
+    uint64_t u = ntp.get_epoch_time_usec();
+    LOG("NTP epoch time is %llu.%llu sec, local %d", u/1000000, u%1000000, pct);
   } else {
     LOG("NTP not synchronized");
   }
+  next_print_time += 1000000;
+  schedule_absolute(next_print_time, show_time, arg);
 }
 
 int main() {
   rulos_hal_init();
-  init_clock(JIFFY_CLOCK_US, TIMER0);
 
   UartState_t u;
   uart_init(&u, /* uart_id= */ 0, 38400);
   log_bind_uart(&u);
 
+  init_clock(JIFFY_CLOCK_US, TIMER0);
+
   inet_wifi_client_start(wifi_creds,
                          sizeof(wifi_creds) / sizeof(wifi_creds[0]));
   ntp.start();
-  schedule_now(show_time, NULL);
+  next_print_time = clock_time_us();
+  schedule_absolute(next_print_time, show_time, NULL);
 
   cpumon_main_loop();
 }

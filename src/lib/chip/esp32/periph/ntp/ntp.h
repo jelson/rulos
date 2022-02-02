@@ -26,11 +26,18 @@
 #include "core/wallclock.h"
 #include "periph/ntp/ntp-packet.h"
 
+typedef struct {
+  Time local_time;
+  int64_t epoch_time;
+} time_observation_t;
+
 class NtpClient {
  public:
   const char *DEFAULT_SERVER = "us.pool.ntp.org";
-  const uint16_t NTP_PORT = 123;
-  const int32_t NTP_TIMEOUT_US = 2000000;
+  static const uint16_t NTP_PORT = 123;
+  static const int32_t NTP_TIMEOUT_US = 2000000;
+  static const uint16_t OBSERVATION_PERIOD_SEC = 30;
+  static const uint16_t MAX_OBSERVATIONS = 10;
 
   NtpClient(void);
   NtpClient(const char *hostname);
@@ -38,13 +45,16 @@ class NtpClient {
   void start(void);
   bool is_synced(void);
   uint32_t get_epoch_time_sec(void);
-  uint64_t get_epoch_time_msec(void);
+  uint64_t get_epoch_time_usec(void);
 
  private:
   const char *_hostname;
   int _sock;
-  Time _req_time;
+  uint64_t _req_time_usec;
   wallclock_t _uptime;
+  int64_t offset_usec;
+  time_observation_t obs[MAX_OBSERVATIONS];
+  uint16_t obs_idx;
 
   void _init(const char *hostname);
   void _schedule_next_sync();
