@@ -213,16 +213,17 @@ Time precise_clock_time_us() {
   // jiffy. If none is pending, we use the pre-check value; it's guaranteed to
   // be pre-rollover.
   rulos_irq_state_t old_interrupts = hal_start_atomic();
-  uint16_t milliintervals_precheck = hal_elapsed_milliintervals();
+  uint16_t tenthou_precheck = hal_elapsed_tenthou_intervals();
   bool int_pending = hal_clock_interrupt_is_pending();
-  uint16_t milliintervals_postcheck = hal_elapsed_milliintervals();
+  uint16_t tenthou_postcheck = hal_elapsed_tenthou_intervals();
   Time t = g_interrupt_driven_jiffy_clock_us;
   hal_end_atomic(old_interrupts);
 
+  // max value of the pre-division expression is 200M for tick intervals of 10ms
   if (int_pending) {
-    t += (g_rtc_interval_us * (1000 + milliintervals_postcheck)) / 1000;
+    t += (g_rtc_interval_us * (10000 + tenthou_postcheck)) / 10000;
   } else {
-    t += (g_rtc_interval_us * milliintervals_precheck) / 1000;
+    t += (g_rtc_interval_us * tenthou_precheck) / 10000;
   }
   return t;
 }

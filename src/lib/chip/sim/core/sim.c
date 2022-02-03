@@ -126,7 +126,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
   return us;
 }
 
-uint16_t hal_elapsed_milliintervals() {
+uint16_t hal_elapsed_tenthou_intervals() {
   // this COULD be implemented with gettimeofday(), but I'm too lazy. If any
   // simulation apps actually need precise timing services, this function and
   // the one below should be implemented.

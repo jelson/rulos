@@ -366,7 +366,7 @@ void arm_hal_start_clock_us(uint32_t ticks_per_interrupt, Handler handler,
   SysTick_Config(ticks_per_interrupt);
 }
 
-uint16_t hal_elapsed_milliintervals() {
+uint16_t hal_elapsed_tenthou_intervals() {
   // The systick timer counts down.
-  return (1000 * (SysTick->LOAD - SysTick->VAL)) / SysTick->LOAD;
+  return (10000 * (SysTick->LOAD - SysTick->VAL)) / SysTick->LOAD;
 }

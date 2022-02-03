@@ -115,12 +115,12 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
   return (eu->alarm_value * config.divider * 1000000) / getApbFrequency();
 }
 
-uint16_t hal_elapsed_milliintervals() {
+uint16_t hal_elapsed_tenthou_intervals() {
   uint8_t timer_id = 0;
   esp32_timer_t *const eu = get_timer(timer_id);
   uint64_t val;
   timer_get_counter_value(eu->group, eu->index, &val);
-  return (val * 1000) / eu->alarm_value;
+  return (val * 10000) / eu->alarm_value;
 }
 
 bool hal_clock_interrupt_is_pending() {

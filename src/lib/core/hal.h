@@ -45,6 +45,8 @@ void hal_idle();  // hw: spin. sim: sleep
 
 #define HAL_MAGIC 0x74
 
+///// timer/clock HAL
+
 #define TIMER0 (0)
 #define TIMER1 (1)
 #define TIMER2 (2)
@@ -52,16 +54,20 @@ void hal_idle();  // hw: spin. sim: sleep
 uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
                             uint8_t timer_id);
 bool hal_clock_interrupt_is_pending();
+// how far is the clock into its current tick, out of 10,000?
+uint16_t hal_elapsed_tenthou_intervals();
+void hal_speedup_clock_ppm(int32_t ratio);
+void hal_delay_ms(uint16_t ms);
+
+//// 7-segment panel HAL
 
 void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
                          uint8_t onoff);
 void hal_7seg_bus_enter_sleep();  // Call to stop driving 7seg bus
+
+////
 char hal_read_keybuf();
 char hal_scan_keypad();
-// used for "hold a key at startup" check.
-uint16_t hal_elapsed_milliintervals();
-void hal_speedup_clock_ppm(int32_t ratio);
-void hal_delay_ms(uint16_t ms);
 
 void hal_init_keypad();
 void hal_init_adc(Time scan_period);
