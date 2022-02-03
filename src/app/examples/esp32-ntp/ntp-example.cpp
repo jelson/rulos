@@ -1,5 +1,5 @@
 /*
-41;363;0c * Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson
+ * Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson
  * (jelson@gmail.com).
  *
  * This program is free software: you can redistribute it and/or modify
