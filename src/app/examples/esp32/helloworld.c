@@ -60,7 +60,7 @@ int main() {
   init_clock(JIFFY_CLOCK_US, TIMER0);
 
   UartState_t u;
-  uart_init(&u, /* uart_id= */ 0, 38400);
+  uart_init(&u, /* uart_id= */ 0, 1000000);
   log_bind_uart(&u);
 
   gpio_make_output(TEST_PIN);
