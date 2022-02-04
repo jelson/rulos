@@ -62,12 +62,22 @@ def ntp_stats(parsed_file):
 
 def gpio_stats(parsed_file):
     df = parsed_file.get_dataframe('GPIO: ntp timestamp')
+    syncstats = parsed_file.get_dataframe('stats')
+
     df['nearest_sec'] = round(df['epoch_time'])
     df['error_usec'] = 1000000 * (df['epoch_time'] - df['nearest_sec'])
+
+    # at each gpio point, find the rtt of the most recent sync packet
+    def find_latest_sync_rtt(row):
+        latest_sync = syncstats.loc[syncstats['exptime'] < row['exptime']].iloc[-1]
+        return latest_sync['raw_rtt_usec']
+
+    df['latest_sync_rtt'] = df.apply(find_latest_sync_rtt, axis=1)
     print(df)
+
     ax = df.plot(
         x='exptime',
-        y=['error_usec'],
+        y=['error_usec', 'latest_sync_rtt'],
         grid=True,
         figsize=(20, 10))
     ax.set(

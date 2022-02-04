@@ -72,9 +72,9 @@ bool NtpClient::_sendRequest(ntp_packet_t *req) {
     fcntl(_sock, F_SETFL, O_NONBLOCK);
   }
 
+  _req_time_usec = wallclock_get_uptime_usec(&_uptime);
   int sent = sendto(_sock, req, sizeof(*req), 0, (struct sockaddr *)&dest,
                     sizeof(dest));
-  _req_time_usec = wallclock_get_uptime_usec(&_uptime);
   if (sent < 0) {
     LOG("[NTP] could not send UDP packet to %s: errno %d", _hostname, errno);
     _req_time_usec = 0;
@@ -118,8 +118,8 @@ void NtpClient::_sync_trampoline(void *data) {
 
 void NtpClient::_try_receive() {
   ntp_packet_t resp;
-  uint64_t _resp_time_usec = wallclock_get_uptime_usec(&_uptime);
   int len = recvfrom(_sock, &resp, sizeof(resp), MSG_DONTWAIT, NULL, NULL);
+  uint64_t _resp_time_usec = wallclock_get_uptime_usec(&_uptime);
   uint32_t rtt_usec = _resp_time_usec - _req_time_usec;
 
   if (len == -1) {
@@ -173,9 +173,9 @@ void NtpClient::_try_receive() {
   int loglen =
       snprintf(logbuf, sizeof(logbuf),
                "[NTP] stats: "
-               "local_rx_time=%llu,server_delay=%llu,server_epoch_usec=%llu,"
-               "raw_rtt_usec=%u,onway_rtt_usec=%u,offset_usec=%lld,",
-               _resp_time_usec, server_delay_usec, server_epoch_usec, rtt_usec,
+               "sent=%llu,local_rx_time=%llu,server_delay=%llu,server_epoch_usec=%llu,"
+               "raw_rtt_usec=%u,oneway_rtt_usec=%u,offset_usec=%lld,",
+               _req_time_usec, _resp_time_usec, server_delay_usec, server_epoch_usec, rtt_usec,
                oneway_latency_usec, offset_usec);
 
   //_add_observation(local_time_when_sent, server_epoch_usec, logbuf[loglen],
