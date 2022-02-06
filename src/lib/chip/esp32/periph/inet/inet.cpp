@@ -144,7 +144,7 @@ esp_err_t HttpsClient::_event_handler(esp_http_client_event_t *evt) {
       break;
     case HTTP_EVENT_ON_DATA: {
       size_t data_to_store =
-        min((size_t)evt->data_len,
+          r_min((size_t)evt->data_len,
             _response_buffer_len - _response_bytes_written);
       memcpy(_response_buffer + _response_bytes_written, evt->data,
              data_to_store);

@@ -40,8 +40,8 @@ void minmax_add_sample(MinMaxMean_t *mmm, const int32_t sample) {
     mmm->max = sample;
     mmm->sum = sample;
   } else {
-    mmm->min = min(mmm->min, sample);
-    mmm->max = max(mmm->max, sample);
+    mmm->min = r_min(mmm->min, sample);
+    mmm->max = r_max(mmm->max, sample);
     mmm->sum += sample;
   }
   mmm->count++;

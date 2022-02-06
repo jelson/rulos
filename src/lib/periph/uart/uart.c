@@ -74,7 +74,7 @@ static void _get_next_data(uint8_t uart_id, void *user_data,
   }
 
   // determine how much data should be transmitted in the next batch
-  u->pending_tx_len = min(CharQueue_length(&u->tx_queue.q), u->max_tx_len);
+  u->pending_tx_len = r_min(CharQueue_length(&u->tx_queue.q), u->max_tx_len);
 
   if (u->pending_tx_len == 0) {
     *tx_buf = NULL;
@@ -96,7 +96,7 @@ void uart_write(UartState_t *u, const void *buf, size_t len) {
     // In critical section: add as much new data to the send queue as will fit.
     rulos_irq_state_t old_interrupts = hal_start_atomic();
     uint16_t write_size =
-      min((size_t)len, CharQueue_free_space(&u->tx_queue.q));
+        r_min((size_t)len, CharQueue_free_space(&u->tx_queue.q));
 
     if (write_size == 0) {
       // If there's more data that did not fit in the queue, block until there's

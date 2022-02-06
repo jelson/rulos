@@ -39,6 +39,8 @@ void log_format_and_write(const char *fmt, ...)
 // typically noot called directly, but via the assert() macro
 void log_assert(const char *file, long unsigned int line);
 
+#ifndef KEEP_SYSTEM_ASSERT
+
 #undef assert
 
 #define assert(x)                     \
@@ -47,6 +49,8 @@ void log_assert(const char *file, long unsigned int line);
       log_assert(__FILE__, __LINE__); \
     }                                 \
   } while (0)
+
+#endif  // KEEP_SYSTEM_ASSERT
 
 #ifdef LOG_TO_SERIAL
 

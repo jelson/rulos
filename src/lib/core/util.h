@@ -34,8 +34,8 @@ void util_init();
 int32_t bound(int32_t v, int32_t l, int32_t h);
 uint32_t isqrt(uint32_t v);
 
-#define min(a, b) (((a) < (b)) ? (a) : (b))
-#define max(a, b) (((a) > (b)) ? (a) : (b))
+#define r_min(a, b) (((a) < (b)) ? (a) : (b))
+#define r_max(a, b) (((a) > (b)) ? (a) : (b))
 
 int int_div_with_correct_truncation(int a, int b);
 int int_to_string2(char *strp, uint8_t min_width, uint8_t min_zeros, int32_t i);
