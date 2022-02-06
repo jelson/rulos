@@ -34,7 +34,7 @@ const gpio_num_t EXT_REF_PIN_NUM = (gpio_num_t)GPIO_27;
 #include "wifi-credentials.h"
 
 Time next_print_time;
-//NtpClient ntp("time.gin.ntt.net");
+// NtpClient ntp("time.gin.ntt.net");
 NtpClient ntp("seiko.s.uw.edu");
 
 void print_timestamp(const char *source) {

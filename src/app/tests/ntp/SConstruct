@@ -1,0 +1,13 @@
+env = Environment()
+env.Append(CCFLAGS=[
+    "-DKEEP_SYSTEM_ASSERT",
+    "-DSIMULATOR",
+])
+env.Append(CPPPATH=[
+    "../../../lib",
+    "../../../lib/chip/esp32",
+])
+env.Program("regression-test", source=[
+    "../../../lib/chip/esp32/periph/ntp/regression.cpp",
+    "./regression-test.cpp",
+])

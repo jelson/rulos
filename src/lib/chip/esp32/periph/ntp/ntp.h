@@ -27,8 +27,9 @@
 #include "periph/ntp/ntp-packet.h"
 
 typedef struct {
-  Time local_time;
-  int64_t epoch_time;
+  uint64_t local_time_usec;
+  uint64_t epoch_time_usec;
+  uint32_t rtt_usec;
 } time_observation_t;
 
 class NtpClient {
@@ -36,8 +37,9 @@ class NtpClient {
   const char *DEFAULT_SERVER = "us.pool.ntp.org";
   static const uint16_t NTP_PORT = 123;
   static const int32_t NTP_TIMEOUT_US = 2000000;
-  static const uint16_t OBSERVATION_PERIOD_SEC = 30;
-  static const uint16_t MAX_OBSERVATIONS = 10;
+  static const uint16_t OBSERVATION_PERIOD_SEC = 5;
+  static const uint16_t MIN_OBSERVATIONS = 4;
+  static const uint16_t MAX_OBSERVATIONS = 20;
 
   NtpClient(void);
   NtpClient(const char *hostname);
@@ -53,9 +55,17 @@ class NtpClient {
   int _sock;
   uint64_t _req_time_usec;
   wallclock_t _uptime;
-  int64_t offset_usec;
-  time_observation_t obs[MAX_OBSERVATIONS];
-  uint16_t obs_idx;
+
+  bool _locked;
+  int64_t _most_recent_offset_usec;
+  // circular buffer of recent observations
+  time_observation_t _obs[MAX_OBSERVATIONS];
+  // index of last obs written
+  uint16_t _obs_idx;
+
+  // linear regression outputs
+  uint64_t _offset_usec;
+  int64_t _freq_error_ppb;
 
   void _init(const char *hostname);
   void _schedule_next_sync();
@@ -64,4 +74,11 @@ class NtpClient {
   bool _sendRequest(ntp_packet_t *req);
   void _try_receive();
   static void _try_receive_trampoline(void *data);
+  int _update_epoch_estimate(char *logbuf, int logbuflen);
 };
+
+bool update_epoch_estimate(const time_observation_t *obs, char *logbuf,
+                           int *logbufcap, uint64_t *offset_usec /* OUT */,
+                           int64_t *freq_ppb /* OUT */);
+uint64_t local_to_epoch(uint64_t local_time_usec, uint64_t offset_usec,
+                        int64_t freq_ppb);

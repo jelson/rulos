@@ -167,21 +167,36 @@ void NtpClient::_try_receive() {
   // our estimate of the true epoch time when this packet was received locally
   uint64_t epoch_time_when_received = server_epoch_usec + oneway_latency_usec;
 
-  offset_usec = epoch_time_when_received - _resp_time_usec;
+  uint64_t offset_usec = epoch_time_when_received - _resp_time_usec;
 
-  char logbuf[300];
-  int loglen =
-      snprintf(logbuf, sizeof(logbuf),
-               "[NTP] stats: "
-               "sent=%llu,local_rx_time=%llu,server_delay=%llu,server_epoch_usec=%llu,"
-               "raw_rtt_usec=%u,oneway_rtt_usec=%u,offset_usec=%lld,",
-               _req_time_usec, _resp_time_usec, server_delay_usec, server_epoch_usec, rtt_usec,
-               oneway_latency_usec, offset_usec);
+  // record this observation in the circlular buffer
+  time_observation_t *this_obs = &_obs[_obs_idx];
+  _obs_idx++;
+  if (_obs_idx >= MAX_OBSERVATIONS) {
+    _obs_idx = 0;
+  }
+  this_obs->local_time_usec = _resp_time_usec;
+  this_obs->epoch_time_usec = epoch_time_when_received;
+  this_obs->rtt_usec = rtt_usec;
 
-  //_add_observation(local_time_when_sent, server_epoch_usec, logbuf[loglen],
-  //sizeof(logbuf)-loglen);
-  logbuf[loglen++] = '\n';
-  log_write(logbuf, loglen);
+  // log statistics
+  char logbuf[1000];
+  int logcapacity = sizeof(logbuf);
+  logcapacity -= snprintf(
+      logbuf, sizeof(logbuf),
+      "[NTP] stats: "
+      "sent=%llu,local_rx_time=%llu,server_delay=%llu,server_epoch_usec=%llu,"
+      "raw_rtt_usec=%u,oneway_rtt_usec=%u,epoch_time_when_received=%llu,this_"
+      "offset_usec=%lld,",
+      _req_time_usec, _resp_time_usec, server_delay_usec, server_epoch_usec,
+      rtt_usec, oneway_latency_usec, epoch_time_when_received, offset_usec);
+
+  _locked =
+      update_epoch_estimate(_obs, &logbuf[sizeof(logbuf) - logcapacity],
+                            &logcapacity, &_offset_usec, &_freq_error_ppb);
+  logbuf[sizeof(logbuf) - logcapacity] = '\n';
+  logcapacity--;
+  log_write(logbuf, sizeof(logbuf) - logcapacity);
   _req_time_usec = 0;
 }
 
@@ -191,13 +206,13 @@ void NtpClient::_try_receive_trampoline(void *data) {
 }
 
 bool NtpClient::is_synced(void) {
-  return (offset_usec != 0);
+  return _locked;
 }
 
 void NtpClient::get_epoch_and_local_usec(uint64_t *epoch, uint64_t *local) {
   if (is_synced()) {
     *local = wallclock_get_uptime_usec(&_uptime);
-    *epoch = *local + offset_usec;
+    *epoch = local_to_epoch(*local, _offset_usec, _freq_error_ppb);
   } else {
     *local = 0;
     *epoch = 0;
@@ -222,6 +237,8 @@ void NtpClient::start(void) {
 void NtpClient::_init(const char *hostname) {
   _sock = -1;
   _hostname = hostname;
+  memset(&_obs, 0, sizeof(_obs));
+  _obs_idx = 0;
 }
 
 NtpClient::NtpClient() {
