@@ -2,6 +2,7 @@ import sys
 import os
 sys.path.insert(0, "../../../util")
 from build_tools import *
+from build_tools import util
 
 RulosBuildTarget(
     name = "gpio-test",
@@ -20,6 +21,8 @@ RulosBuildTarget(
 
 # "Manual" build of the test suite for the NTP linear regression code.
 env = Environment()
+build_dir = os.path.join(util.BUILD_ROOT, "regression-test")
+env.VariantDir(build_dir, util.PROJECT_ROOT, duplicate=0)
 env.Append(CCFLAGS=[
     "-DKEEP_SYSTEM_ASSERT",
     "-DSIMULATOR",
@@ -28,7 +31,7 @@ env.Append(CPPPATH=[
     "../../../lib",
     "../../../lib/chip/esp32",
 ])
-env.Program("regression-test", source=[
-    "../../../lib/chip/esp32/periph/ntp/regression.cpp",
-    "./regression-test.cpp",
-])
+Default(env.Program(os.path.join(build_dir, "regression-test"), source=[
+    os.path.join(build_dir, "src/lib/chip/esp32/periph/ntp/regression.cpp"),
+    os.path.join(build_dir, "src/app/tests/ntp/regression-test.cpp"),
+]))
