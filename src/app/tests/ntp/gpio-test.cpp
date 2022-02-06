@@ -22,26 +22,30 @@
 #include "periph/ntp/ntp.h"
 #include "periph/uart/uart.h"
 
+// esp32-specific includes needed only for catching pin interrupts
+#include "driver/gpio.h"
+
 #define JIFFY_CLOCK_US 10000  // 10 ms jiffy clock
+const gpio_num_t EXT_REF_PIN_NUM = (gpio_num_t)GPIO_27;
 
 // An example of the contents of this file is found in
 // wifi-credentials-example.h. Copy it to your home directory,
 // ~/.config/rulos/wifi-credentials.h, and fill it in with real data.
 #include "wifi-credentials.h"
 
-Time next_print_time;
-NtpClient ntp;
+// NtpClient ntp("time.gin.ntt.net");
+NtpClient ntp("seiko.s.uw.edu");
 
-static void show_time(void *arg) {
-  uint64_t t = ntp.get_epoch_time_usec();
+void external_gpio_handler(void *arg) {
+  uint64_t epoch, local;
+  ntp.get_epoch_and_local_usec(&epoch, &local);
 
-  if (t == 0) {
-    LOG("NTP not locked");
+  if (epoch == 0) {
+    LOG("GPIO: NTP not locked");
   } else {
-    LOG("epoch_time=%llu.%06llu", t / 1000000, t % 1000000);
+    LOG("GPIO: local=%llu,epoch_time=%llu.%06llu, local=%llu", local,
+        epoch / 1000000, epoch % 1000000, local);
   }
-  next_print_time += 1000000;
-  schedule_absolute(next_print_time, show_time, arg);
 }
 
 int main() {
@@ -60,9 +64,11 @@ int main() {
   // start ntp
   ntp.start();
 
-  // print our estimate of the time once per second
-  next_print_time = clock_time_us();
-  schedule_absolute(next_print_time, show_time, NULL);
+  // install a handler to print the time on an external reference event
+  gpio_make_input_enable_pullup(EXT_REF_PIN_NUM);
+  gpio_set_intr_type(EXT_REF_PIN_NUM, GPIO_INTR_POSEDGE);
+  gpio_isr_handler_add(EXT_REF_PIN_NUM, external_gpio_handler, NULL);
+  gpio_intr_enable(EXT_REF_PIN_NUM);
 
   cpumon_main_loop();
 }

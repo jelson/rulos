@@ -1,3 +1,24 @@
+import sys
+import os
+sys.path.insert(0, "../../../util")
+from build_tools import *
+
+RulosBuildTarget(
+    name = "gpio-test",
+    sources = ["gpio-test.cpp"],
+    extra_cflags = [
+        "-DLOG_TO_SERIAL",
+
+        # include out-of-repo directory to get wifi credentials
+        "-I" + os.path.expanduser("~/.config/rulos")
+    ],
+    peripherals = ["uart", "inet", "ntp"],
+    platforms = [
+        Esp32Platform(),
+    ],
+).build()
+
+# "Manual" build of the test suite for the NTP linear regression code.
 env = Environment()
 env.Append(CCFLAGS=[
     "-DKEEP_SYSTEM_ASSERT",
