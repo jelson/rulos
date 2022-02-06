@@ -72,6 +72,13 @@ bool NtpClient::_sendRequest(ntp_packet_t *req) {
     fcntl(_sock, F_SETFL, O_NONBLOCK);
   }
 
+  // clear the incoming buffer in case of duplicate packet receptions
+  int len = 0;
+  do {
+    char resp[100];
+    len = recvfrom(_sock, &resp, sizeof(resp), MSG_DONTWAIT, NULL, NULL);
+  } while (len > 0);
+
   _req_time_usec = wallclock_get_uptime_usec(&_uptime);
   int sent = sendto(_sock, req, sizeof(*req), 0, (struct sockaddr *)&dest,
                     sizeof(dest));
@@ -139,6 +146,15 @@ void NtpClient::_try_receive() {
     // hard error on reception
     LOG("[NTP] could not receive response: %d", errno);
     _req_time_usec = 0;
+    return;
+  }
+
+  // indicate there's no longer an outstanding request
+  _req_time_usec = 0;
+
+  // check for valid response length
+  if (len != sizeof(ntp_packet_t)) {
+    LOG("[NTP] got weird %d-byte response from ntp server", len);
     return;
   }
 
