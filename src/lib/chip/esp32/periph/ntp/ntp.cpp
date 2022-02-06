@@ -79,6 +79,7 @@ bool NtpClient::_sendRequest(ntp_packet_t *req) {
     len = recvfrom(_sock, &resp, sizeof(resp), MSG_DONTWAIT, NULL, NULL);
   } while (len > 0);
 
+  LOG("[NTP] sending request");
   _req_time_usec = wallclock_get_uptime_usec(&_uptime);
   int sent = sendto(_sock, req, sizeof(*req), 0, (struct sockaddr *)&dest,
                     sizeof(dest));
@@ -88,7 +89,6 @@ bool NtpClient::_sendRequest(ntp_packet_t *req) {
     return false;
   }
 
-  LOG("[NTP] sent request");
   return true;
 }
 

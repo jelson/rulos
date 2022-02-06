@@ -21,7 +21,7 @@ class ParsedLine:
         # with something that looks like '[300.40'
         timesearch = re.search('^\[([\d\.]+\w)', l)
         if timesearch:
-            self.vals['exptime_raw'] = float(timesearch.group(1))
+            self.vals['exptime_abs'] = float(timesearch.group(1))
 
 class ParsedFile:
     def __init__(self, filename):
@@ -32,10 +32,10 @@ class ParsedFile:
 
         # If the lines are timestamped, normalize each one against the
         # first timestamp in the file
-        if 'exptime_raw' in self.parsed_lines[0].vals:
-            start_time = self.parsed_lines[0].vals['exptime_raw']
+        if 'exptime_abs' in self.parsed_lines[0].vals:
+            start_time = self.parsed_lines[0].vals['exptime_abs']
             for parsed_line in self.parsed_lines:
-                parsed_line.vals['exptime'] = parsed_line.vals['exptime_raw'] - start_time
+                parsed_line.vals['exptime'] = parsed_line.vals['exptime_abs'] - start_time
 
     def get_dataframe(self, search_string):
         pairs = [pl.vals for pl in self.parsed_lines if search_string in pl.raw_line]
@@ -60,12 +60,12 @@ def ntp_stats(parsed_file):
     plot_fn = parsed_file.filename + ".offsets.png"
     ax.figure.savefig(plot_fn)
 
-def gpio_stats(parsed_file):
-    df = parsed_file.get_dataframe('GPIO: ntp timestamp')
-    syncstats = parsed_file.get_dataframe('stats')
+def gpio_raw_stats(parsed_file):
+    return
 
-    df['nearest_sec'] = round(df['epoch_time'])
-    df['error_usec'] = 1000000 * (df['epoch_time'] - df['nearest_sec'])
+    # for later
+
+    syncstats = parsed_file.get_dataframe('stats')
 
     # at each gpio point, find the rtt of the most recent sync packet
     def find_latest_sync_rtt(row):
@@ -75,9 +75,16 @@ def gpio_stats(parsed_file):
     df['latest_sync_rtt'] = df.apply(find_latest_sync_rtt, axis=1)
     print(df)
 
+
+def gpio_regression_stats(parsed_file):
+    df = parsed_file.get_dataframe('GPIO: has_lock')
+
+    df['nearest_sec'] = round(df['exptime_abs'])
+    df['error_usec'] = 1000000 * (df['epoch_time'] - df['nearest_sec'])
+
     ax = df.plot(
         x='exptime',
-        y=['error_usec', 'latest_sync_rtt'],
+        y=['error_usec'],
         grid=True,
         figsize=(20, 10))
     ax.set(
@@ -91,4 +98,4 @@ def gpio_stats(parsed_file):
 if __name__ == "__main__":
     parsed_file = ParsedFile(sys.argv[1])
     #emit_ntp_stats(sys.argv[1])
-    gpio_stats(parsed_file)
+    gpio_regression_stats(parsed_file)

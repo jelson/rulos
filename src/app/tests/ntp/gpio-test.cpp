@@ -41,9 +41,9 @@ void external_gpio_handler(void *arg) {
   ntp.get_epoch_and_local_usec(&epoch, &local);
 
   if (epoch == 0) {
-    LOG("GPIO: NTP not locked");
+    LOG("GPIO: not_locked");
   } else {
-    LOG("GPIO: local=%llu,epoch_time=%llu.%06llu, local=%llu", local,
+    LOG("GPIO: has_lock,local=%llu,epoch_time=%llu.%06llu, local=%llu", local,
         epoch / 1000000, epoch % 1000000, local);
   }
 }
