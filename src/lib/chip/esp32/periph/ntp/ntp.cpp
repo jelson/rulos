@@ -92,12 +92,15 @@ bool NtpClient::_sendRequest(ntp_packet_t *req) {
   return true;
 }
 
-static int num_req = 0;
 void NtpClient::_schedule_next_sync() {
-  num_req++;
-  if (num_req < 50) {
-    schedule_us(15000000, NtpClient::_sync_trampoline, this);
+  Time period;
+
+  if (is_synced()) {
+    period = SYNCED_OBSERVATION_PERIOD_SEC;
+  } else {
+    period = NOTSYNCED_OBSERVATION_PERIOD_SEC;
   }
+  schedule_us(period * 1e6, NtpClient::_sync_trampoline, this);
 }
 
 void NtpClient::_sync() {
