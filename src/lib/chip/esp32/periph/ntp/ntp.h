@@ -37,10 +37,10 @@ class NtpClient {
   const char *DEFAULT_SERVER = "us.pool.ntp.org";
   static const uint16_t NTP_PORT = 123;
   static const int32_t NTP_TIMEOUT_US = 2000000;
-  static const uint16_t NOTSYNCED_OBSERVATION_PERIOD_SEC = 5;
+  static const uint16_t NOTSYNCED_OBSERVATION_PERIOD_SEC = 3;
   static const uint16_t SYNCED_OBSERVATION_PERIOD_SEC = 60;
-  static const uint16_t MIN_OBSERVATIONS = 4;
-  static const uint16_t MAX_OBSERVATIONS = 20;
+  static const uint16_t MIN_OBSERVATIONS = 8;
+  static const uint16_t MAX_OBSERVATIONS = 30;
 
   NtpClient(void);
   NtpClient(const char *hostname);
