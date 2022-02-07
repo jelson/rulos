@@ -6,12 +6,20 @@ import os
 import re
 import numpy as np
 
+pd.set_option("display.precision", 18)
+
 class ParsedLine:
     # given a line of text, extra all foo=<numeric val> pairs from it and return a
     # dict containing them
     def find_pairs(self, line):
         pairs = re.findall("(\w+)=([\d\.]+)", line)
-        return {kv[0]: np.double(kv[1]) for kv in pairs}
+        pairs = {kv[0]: kv[1] for kv in pairs}
+        for k in pairs:
+            if '.' in pairs[k]:
+                pairs[k] = np.longdouble(pairs[k])
+            else:
+                pairs[k] = np.longlong(pairs[k])
+        return pairs
 
     def __init__(self, l):
         self.raw_line = l
@@ -81,6 +89,11 @@ def gpio_regression_stats(parsed_file):
 
     df['nearest_sec'] = round(df['exptime_abs'])
     df['error_usec'] = 1000000 * (df['epoch_time'] - df['nearest_sec'])
+    df['abserror_usec'] = df['error_usec'].abs()
+    worst = df.nlargest(10, 'abserror_usec')
+    print(worst)
+
+    print(df['abserror_usec'].describe())
 
     ax = df.plot(
         x='exptime',

@@ -43,8 +43,8 @@ void external_gpio_handler(void *arg) {
   if (epoch == 0) {
     LOG("GPIO: not_locked");
   } else {
-    LOG("GPIO: has_lock,local=%llu,epoch_time=%llu.%06llu, local=%llu", local,
-        epoch / 1000000, epoch % 1000000, local);
+    LOG("GPIO: has_lock,local=%llu,epoch_time=%llu.%06llu", local,
+        epoch / 1000000, epoch % 1000000);
   }
 }
 
