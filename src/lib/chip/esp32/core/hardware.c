@@ -84,12 +84,30 @@ uint32_t getApbFrequency() {
   return calculateApb(&conf);
 }
 
+// For information on how Espressif has modified FreeRTOS to work on SMP, see:
+//
+// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/freertos-smp.html
+//
+// In particular the section called "Critical Sections" has important
+// information on how to enter and exit critical sections in the presence of
+// SMP. In particular, merely disabling interrupts does not protect critical
+// sections because the other CPU might take an interrupt. taskENTER_CRITIAL()
+// both disables interrupts (on same-cpu) and then takes a spinlock (to protect
+// against interrupts on other-cpu).
+//
+// The old, incorrect code that was here that merely disabled interrupts was:
+// XTOS_SET_INTLEVEL(XCHAL_EXCM_LEVEL);
+// XTOS_RESTORE_JUST_INTLEVEL(old_interrupts);
+
+static portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+
 rulos_irq_state_t hal_start_atomic() {
-  return XTOS_SET_INTLEVEL(XCHAL_EXCM_LEVEL);
+  taskENTER_CRITICAL(&mux);
+  return 0;
 }
 
 void hal_end_atomic(rulos_irq_state_t old_interrupts) {
-  XTOS_RESTORE_JUST_INTLEVEL(old_interrupts);
+  taskEXIT_CRITICAL(&mux);
 }
 
 void hal_idle() {

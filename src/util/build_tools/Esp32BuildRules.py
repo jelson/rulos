@@ -120,6 +120,7 @@ class Esp32Platform(BaseRules.Platform):
             os.path.join(self.sdk_root, "include", "freertos", "port", "xtensa", "include"),
             os.path.join(self.sdk_root, "include", "hal", "esp32", "include"),
             os.path.join(self.sdk_root, "include", "hal", "include"),
+            os.path.join(self.sdk_root, "include", "hal", "platform_port", "include"),
             os.path.join(self.sdk_root, "include", "heap", "include"),
             os.path.join(self.sdk_root, "include", "lwip", "include", "apps"),
             os.path.join(self.sdk_root, "include", "lwip", "lwip", "src", "include"),

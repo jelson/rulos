@@ -222,9 +222,10 @@ Time precise_clock_time_us() {
   // max value of the pre-division expression is 200M for tick intervals of 10ms
   if (int_pending) {
     t += g_rtc_interval_us;
-    t += (g_rtc_interval_us * tenthou_postcheck) / 10000;
+    t += (g_rtc_interval_us * (uint32_t) tenthou_postcheck) / 10000;
+    LOG("rollover detected, precheck %d, postcheck %d", tenthou_precheck, tenthou_postcheck);
   } else {
-    t += (g_rtc_interval_us * tenthou_precheck) / 10000;
+    t += (g_rtc_interval_us * (uint32_t) tenthou_precheck) / 10000;
   }
   return t;
 }

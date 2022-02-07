@@ -23,6 +23,7 @@
 #include "core/hardware.h"
 #include "core/rulos.h"
 #include "driver/timer.h"
+#include "hal/timer_ll.h"
 #include "soc/soc.h"
 
 typedef struct {
@@ -67,10 +68,15 @@ static esp32_timer_t *get_timer(uint8_t timer_id) {
   return &esp32_timer[timer_id];
 }
 
-static bool IRAM_ATTR timer_isr(void *arg) {
+static void IRAM_ATTR timer_isr(void *arg) {
   esp32_timer_t *const eu = (esp32_timer_t *)arg;
-  eu->cb(eu->cb_data);
-  return false;
+  hal_start_atomic();
+  timer_ll_clear_intr_status(TIMER_LL_GET_HW(eu->group), eu->index);
+  timer_group_enable_alarm_in_isr(eu->group, eu->index);
+  if (eu->cb) {
+    eu->cb(eu->cb_data);
+  }
+  hal_end_atomic(0);
 }
 
 uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
@@ -102,7 +108,7 @@ uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
 
   // attach and enable interrupts
   timer_enable_intr(eu->group, eu->index);
-  timer_isr_callback_add(eu->group, eu->index, timer_isr, eu, 0);
+  timer_isr_register(eu->group, eu->index, timer_isr, eu, 0, NULL);
 
   // enable the timer
   timer_start(eu->group, eu->index);
@@ -124,5 +130,8 @@ uint16_t hal_elapsed_tenthou_intervals() {
 }
 
 bool hal_clock_interrupt_is_pending() {
-  return false;
+  uint8_t timer_id = 0;
+  esp32_timer_t *const eu = get_timer(timer_id);
+  uint32_t intr_status = timer_group_get_intr_status_in_isr(eu->group);
+  return intr_status & (1 << eu->index);
 }
