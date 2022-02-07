@@ -6,7 +6,7 @@ import os
 import re
 import numpy as np
 
-pd.set_option("display.precision", 18)
+pd.set_option("display.precision", 15)
 
 class ParsedLine:
     # given a line of text, extra all foo=<numeric val> pairs from it and return a
@@ -93,7 +93,12 @@ def gpio_regression_stats(parsed_file):
     worst = df.nlargest(10, 'abserror_usec')
     print(worst)
 
+    print("abserror:")
     print(df['abserror_usec'].describe())
+    print(df['abserror_usec'].quantile([0.90, 0.95, 0.99, 0.999]))
+
+    print("signed error:")
+    print(df['error_usec'].describe())
 
     ax = df.plot(
         x='exptime',
