@@ -186,6 +186,10 @@ void NtpClient::_try_receive() {
   // our estimate of the true epoch time when this packet was received locally
   uint64_t epoch_time_when_received = server_epoch_usec + oneway_latency_usec;
 
+  // add in empirically derived correction for the latency asymmetry in the send
+  // and receive directions of the esp32's wifi stack
+  epoch_time_when_received -= SEND_TIME_BIAS_USEC;
+
   uint64_t offset_usec = epoch_time_when_received - _resp_time_usec;
 
   // record this observation in the circlular buffer
@@ -205,8 +209,8 @@ void NtpClient::_try_receive() {
       logbuf, sizeof(logbuf),
       "[NTP] stats: "
       "sent=%llu,local_rx_time=%llu,server_delay=%llu,server_epoch_usec=%llu,"
-      "raw_rtt_usec=%u,oneway_rtt_usec=%u,epoch_time_when_received=%llu,this_"
-      "offset_usec=%lld,",
+      "raw_rtt_usec=%u,oneway_latency_usec=%u,epoch_time_when_received=%llu,"
+      "this_offset_usec=%lld,",
       _req_time_usec, _resp_time_usec, server_delay_usec, server_epoch_usec,
       rtt_usec, oneway_latency_usec, epoch_time_when_received, offset_usec);
 
