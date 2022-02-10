@@ -44,6 +44,7 @@ static Time g_rtc_interval_us;
 // Clock updated by timer interrupt.  Should not be accessed without a
 // lock since it is updated at interrupt time.
 static volatile Time g_interrupt_driven_jiffy_clock_us;
+static volatile uint32_t g_jiffy_timer;
 
 uint32_t g_spin_counter;
 
@@ -96,6 +97,10 @@ static void clock_handler(void *data) {
   // NB we assume this runs in interrupt context and is hence
   // automatically atomic.
   g_interrupt_driven_jiffy_clock_us += g_rtc_interval_us;
+  if (g_jiffy_timer > 0) {
+    g_jiffy_timer--;
+  }
+
   run_scheduler_now = TRUE;
 #ifdef TIMING_DEBUG
   gpio_clr(GPIO_D5);
@@ -222,12 +227,21 @@ Time precise_clock_time_us() {
   // max value of the pre-division expression is 200M for tick intervals of 10ms
   if (int_pending) {
     t += g_rtc_interval_us;
-    t += (g_rtc_interval_us * (uint32_t) tenthou_postcheck) / 10000;
-    LOG("rollover detected, precheck %d, postcheck %d", tenthou_precheck, tenthou_postcheck);
+    t += (g_rtc_interval_us * (uint32_t)tenthou_postcheck) / 10000;
+    LOG("rollover detected, precheck %d, postcheck %d", tenthou_precheck,
+        tenthou_postcheck);
   } else {
-    t += (g_rtc_interval_us * (uint32_t) tenthou_precheck) / 10000;
+    t += (g_rtc_interval_us * (uint32_t)tenthou_precheck) / 10000;
   }
   return t;
+}
+
+// The goal of this is to delay without ever disabling interrupts.
+void delay_us(uint32_t delay) {
+  g_jiffy_timer = (delay + 1) / g_rtc_interval_us;
+  while (g_jiffy_timer > 0) {
+    hal_idle();
+  }
 }
 
 void spin_counter_increment() {
@@ -255,7 +269,7 @@ void scheduler_run_once() {
       act = sched_state.now_queue[0];
       sched_state.now_queue_size -= 1;
       memmove(&sched_state.now_queue[0], &sched_state.now_queue[1],
-              sizeof(sched_state.now_queue[0])* sched_state.now_queue_size);
+              sizeof(sched_state.now_queue[0]) * sched_state.now_queue_size);
       valid = TRUE;
     } else {
       Time due_time;

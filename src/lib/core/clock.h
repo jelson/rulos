@@ -24,12 +24,14 @@
 
 void init_clock(Time interval_us, uint8_t timer_id);
 
-// very cheap but only precise to one jiffy.  this should be used my
-// most functions.
+// Pretty cheap but only precise to one jiffy
 Time clock_time_us();
 
-// more expensive and more accurate
+// More expensive and more accurate
 Time precise_clock_time_us();
+
+// Synchronous delay that does not take interrupts
+void delay_us(uint32_t delay);
 
 void schedule_us(Time offset_us, ActivationFuncPtr func, void *data);
 // schedule in the future. (asserts us>0)
