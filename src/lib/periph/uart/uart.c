@@ -104,7 +104,10 @@ void uart_write(UartState_t *u, const void *buf, size_t len) {
       // some application than blocking, there could be two variants of
       // uart_write with different behavior here.
       hal_end_atomic(old_interrupts);
-      hal_idle();
+
+      // Note that we should *not* just call hal_idle here: we end up spinning
+      // too quickly, disable interrupts for too long
+      delay_us(20000);
       continue;
     }
 
