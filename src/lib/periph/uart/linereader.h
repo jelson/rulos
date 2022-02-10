@@ -44,6 +44,7 @@ typedef struct {
   linereader_cb cb;
   void *user_data;
   bool cb_pending;
+  uint32_t overflows;
 } LineReader_t;
 
 void linereader_init(LineReader_t *linereader, UartState_t *uart,

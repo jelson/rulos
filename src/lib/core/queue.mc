@@ -30,7 +30,11 @@ void TYPE##Queue_init(TYPE##Queue *bq, qlen_t buf_size) \
  \
 qlen_t TYPE##Queue_free_space(TYPE##Queue *bq) \
 { \
-        return bq->capacity - bq->size; \
+	if (bq->capacity > bq->size) { \
+                return bq->capacity - bq->size; \
+        } else { \
+               return 0; \
+        } \
 } \
 \
 bool TYPE##Queue_append_n(TYPE##Queue *bq, const TYPE *elt, qlen_t n) \

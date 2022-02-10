@@ -85,7 +85,10 @@ static void _lines_complete(void *data) {
 // warning, called at interrupt time!
 static void _char_received(UartState_t *s, void *user_data, char c) {
   LineReader_t *l = (LineReader_t *)user_data;
-  CharQueue_append(&l->rx_queue.q, c);
+  bool success = CharQueue_append(&l->rx_queue.q, c);
+  if (!success) {
+    l->overflows++;
+  }
   if (iseol(c) && !l->cb_pending) {
     l->cb_pending = true;
     schedule_now(_lines_complete, l);
