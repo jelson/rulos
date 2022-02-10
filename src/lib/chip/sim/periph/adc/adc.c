@@ -75,8 +75,8 @@ static void adc_simulator_input(int c) {
       break;
   }
 
-  adc_input_channel = max(0, min(NUM_ADC, adc_input_channel));
-  adc[adc_input_channel] = max(0, min(1023, adc[adc_input_channel]));
+  adc_input_channel = r_max(0, r_min(NUM_ADC, adc_input_channel));
+  adc[adc_input_channel] = r_max(0, r_min(1023, adc[adc_input_channel]));
 
   draw_adc_input_window();
 }

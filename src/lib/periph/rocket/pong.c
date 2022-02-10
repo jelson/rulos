@@ -195,19 +195,19 @@ UIEventDisposition pong_event_handler(UIEventHandler *raw_handler,
   switch (evt) {
     case '1':
     case 'm':
-      pong->paddley[0] = max(pong->paddley[0] - 2, 0);
+      pong->paddley[0] = r_max(pong->paddley[0] - 2, 0);
       break;
     case '4':
     case 'n':
-      pong->paddley[0] = min(pong->paddley[0] + 2, PADDLEMAXY);
+      pong->paddley[0] = r_min(pong->paddley[0] + 2, PADDLEMAXY);
       break;
     case '3':
     case 'e':
-      pong->paddley[1] = max(pong->paddley[1] - 2, 0);
+      pong->paddley[1] = r_max(pong->paddley[1] - 2, 0);
       break;
     case '6':
     case 'f':
-      pong->paddley[1] = min(pong->paddley[1] + 2, PADDLEMAXY);
+      pong->paddley[1] = r_min(pong->paddley[1] + 2, PADDLEMAXY);
       break;
     case uie_focus:
       if (!pong->focused) {

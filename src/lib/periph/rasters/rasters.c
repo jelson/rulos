@@ -26,7 +26,7 @@ void raster_big_digit_update(RasterBigDigit *digit);
 
 uint16_t get_bitfield(uint16_t offset, uint8_t len) {
   uint8_t bitsAvaiableThisByte = 8 - (offset % 8);
-  uint8_t bitsUsedThisByte = min(bitsAvaiableThisByte, len);
+  uint8_t bitsUsedThisByte = r_min(bitsAvaiableThisByte, len);
   uint8_t byte = pgm_read_byte(&(rasterData[offset / 8]));
   uint16_t v = byte >> (bitsAvaiableThisByte - bitsUsedThisByte);
   v &= ((1 << bitsUsedThisByte) - 1);
@@ -134,7 +134,7 @@ void raster_big_digit_update(RasterBigDigit *digit) {
   int tens = ((t / 10000) % 10);
   int ones = ((t / 1000) % 10);
   int ones_offset =
-      min((t * (spacing + roll) / 1000) % (spacing + roll), spacing);
+      r_min((t * (spacing + roll) / 1000) % (spacing + roll), spacing);
   int tens_offset = 0;
   if (ones == 9) {
     tens_offset = ones_offset;
