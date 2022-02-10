@@ -19,6 +19,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stddef.h>
 
 #include "core/hardware_types.h"
 #include "core/heap.h"

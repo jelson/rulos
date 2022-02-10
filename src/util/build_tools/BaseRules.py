@@ -24,10 +24,12 @@ class Platform:
     def __init__(self, extra_peripherals, extra_cflags):
         self.extra_peripherals = parse_peripherals(extra_peripherals)
         self.extra_cflags = extra_cflags
+        self.use_cpp = False
 
     def configure_compiler(self, env, compiler_prefix):
-        env.Replace(CC = compiler_prefix+"g++")
-        env.Replace(CXX = compiler_prefix+"g++")
+        compiler = "g++" if self.use_cpp else "gcc"
+        env.Replace(CC = compiler_prefix+compiler)
+        env.Replace(CXX = compiler_prefix+compiler)
         env.Replace(AS = compiler_prefix+"as")
         env.Replace(AR = compiler_prefix+"gcc-ar")
         env.Replace(RANLIB = compiler_prefix+"gcc-ranlib")
@@ -77,12 +79,13 @@ class Platform:
         return src_files
 
     def common_cflags(self):
+        std = "-std=gnu++11" if self.use_cpp else "-std=gnu99"
         return self.extra_cflags + [
             "-Wall",
             "-Werror",
             "-g",
             "-flto",
-            "-std=gnu++11",
+            std,
         ]
 
     def common_include_dirs(self):

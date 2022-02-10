@@ -69,6 +69,7 @@ class ArmPlatform(BaseRules.Platform):
 
     def arm_ld_flags(self, target):
         return self.common_ld_flags(target) + [
+            "-nostartfiles",
             "-static",
         ]
 
