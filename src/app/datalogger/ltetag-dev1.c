@@ -28,6 +28,7 @@
 #define CONSOLE_UART_NUM 0
 #define GPS_UART_NUM     1
 #define MODEM_UART_NUM   2
+#define PSOC_TX_UART_NUM 3
 
 // power measurement
 #define GPS_POWERMEASURE_ADDR   0b1000000
@@ -36,6 +37,7 @@
 UartState_t console;
 flash_dumper_t flash_dumper;
 currmeas_state_t gps_cms, modem_cms;
+serial_reader_t psoc_console_tx;
 
 static void indicate_alive(void *data) {
   LOG("run");
@@ -54,6 +56,12 @@ int main() {
   // initialize flash dumper
   flash_dumper_init(&flash_dumper);
 
+  flash_dumper_print(&flash_dumper, "restarting\n\n\n");
+  flash_dumper_print(&flash_dumper, "startup");
+
+  // initialize serial readers
+  serial_reader_init(&psoc_console_tx, PSOC_TX_UART_NUM, 1000000, &flash_dumper, NULL);
+
   // initialize current measurement. docs say calibration register should be
   // trunc[0.04096 / (current_lsb * R_shunt)]
 
@@ -71,7 +79,5 @@ int main() {
   // enable periodic blink to indicate liveness
   schedule_now(indicate_alive, NULL);
 
-  flash_dumper_print(&flash_dumper, "restarting\n\n\n");
-  flash_dumper_print(&flash_dumper, "startup");
   cpumon_main_loop();
 }
