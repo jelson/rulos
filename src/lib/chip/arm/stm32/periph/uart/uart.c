@@ -315,6 +315,7 @@ typedef struct {
   uint32_t frame_errors;
   uint32_t parity_errors;
   uint32_t noise_errors;
+  uint32_t overruns;
 
   // HAL API: the upcall to get more data and the user data for that callback
   uint8_t uart_id;
@@ -355,6 +356,16 @@ static void dispatch_int(uint8_t uart_id) {
     return;
   }
 
+  // dispatch rx upcall, if needed -- not handled through the HAL
+  while (LL_USART_IsActiveFlag_RXNE(c->instance)) {
+    // note: we have to read the character whether or not we send it anywhere;
+    // reading the char is what clears the interrupt
+    char inchar = LL_USART_ReceiveData8(c->instance);
+    if (u->rx_cb != NULL) {
+      u->rx_cb(uart_id, u->user_data, inchar);
+    }
+  }
+
   // clear RX errors not handled through HAL
   if (LL_USART_IsActiveFlag_FE(c->instance)) {
     LL_USART_ClearFlag_FE(c->instance);
@@ -368,16 +379,9 @@ static void dispatch_int(uint8_t uart_id) {
     LL_USART_ClearFlag_NE(c->instance);
     u->noise_errors++;
   }
-
-  // dispatch rx upcall, if needed -- not handled through the HAL
-  if (LL_USART_IsActiveFlag_RXNE(c->instance) &&
-      LL_USART_IsEnabledIT_RXNE(c->instance)) {
-    // note: we have to read the character whether or not we send it anywhere;
-    // reading the char is what clears the interrupt
-    char inchar = LL_USART_ReceiveData8(c->instance);
-    if (u->rx_cb != NULL) {
-      u->rx_cb(uart_id, u->user_data, inchar);
-    }
+  if (LL_USART_IsActiveFlag_ORE(c->instance)) {
+    LL_USART_ClearFlag_ORE(c->instance);
+    u->overruns++;
   }
 
   // dispatch the rest of the interrupt handling through the HAL
