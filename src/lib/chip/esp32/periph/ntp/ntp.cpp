@@ -23,6 +23,7 @@
 
 #include "core/rulos.h"
 #include "core/wallclock.h"
+#include "esp_wifi.h"
 #include "periph/ntp/ntp-packet.h"
 
 extern "C" {
@@ -30,6 +31,9 @@ extern "C" {
 #include <lwip/netdb.h>
 #include <lwip/sockets.h>
 }
+
+uint64_t NtpClient::_resp_time_usec;
+wallclock_t NtpClient::_uptime;
 
 bool NtpClient::_sendRequest(ntp_packet_t *req) {
   // ensure there isn't already a transaction outstanding
@@ -80,11 +84,14 @@ bool NtpClient::_sendRequest(ntp_packet_t *req) {
   } while (len > 0);
 
   LOG("[NTP] sending request");
+  esp_wifi_set_promiscuous(true);
+  _resp_time_usec = 0;
   _req_time_usec = wallclock_get_uptime_usec(&_uptime);
   int sent = sendto(_sock, req, sizeof(*req), 0, (struct sockaddr *)&dest,
                     sizeof(dest));
   if (sent < 0) {
     LOG("[NTP] could not send UDP packet to %s: errno %d", _hostname, errno);
+    esp_wifi_set_promiscuous(false);
     _req_time_usec = 0;
     return false;
   }
@@ -126,34 +133,56 @@ void NtpClient::_sync_trampoline(void *data) {
   ntp->_sync();
 }
 
+void NtpClient::sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
+  if (type != WIFI_PKT_DATA) {
+    return;
+  }
+  wifi_promiscuous_pkt_t *p = (wifi_promiscuous_pkt_t *)buf;
+  // this is cheesy; in theory we should parse the whole packet and
+  // make sure it's UDP, destined for our port number. but this
+  // quick-and-dirty check for the right length is a quick hack which
+  // works since sniffing is only turned on after we send a request
+  if (p->rx_ctrl.sig_len != 130) {
+    return;
+  }
+  NtpClient::_resp_time_usec = wallclock_get_uptime_usec(&NtpClient::_uptime);
+}
+
 void NtpClient::_try_receive() {
   ntp_packet_t resp;
   int len = recvfrom(_sock, &resp, sizeof(resp), MSG_DONTWAIT, NULL, NULL);
-  uint64_t _resp_time_usec = wallclock_get_uptime_usec(&_uptime);
-  uint32_t rtt_usec = _resp_time_usec - _req_time_usec;
 
-  if (len == -1) {
-    // no data available yet
-    if (errno == EWOULDBLOCK) {
-      // how long have we been waiting for a response?
-      if (rtt_usec > NTP_TIMEOUT_US) {
-        LOG("[NTP] Timeout waiting for response");
-        _req_time_usec = 0;
-        return;
-      } else {
-        schedule_us(0, NtpClient::_try_receive_trampoline, this);
-        return;
-      }
+  if (len == -1 && errno == EWOULDBLOCK) {
+    // no data available yet.  how long have we been waiting for a
+    // response?
+    uint64_t now = wallclock_get_uptime_usec(&_uptime);
+    uint32_t rtt_usec = now - _req_time_usec;
+
+    if (rtt_usec > NTP_TIMEOUT_US) {
+      LOG("[NTP] Timeout waiting for response");
+      len = -1;
+    } else {
+      schedule_us(0, NtpClient::_try_receive_trampoline, this);
+      return;
     }
+  }
 
-    // hard error on reception
-    LOG("[NTP] could not receive response: %d", errno);
-    _req_time_usec = 0;
+  // request no longer outstanding
+  esp_wifi_set_promiscuous(false);
+  uint32_t rtt_usec = _resp_time_usec - _req_time_usec;
+  _req_time_usec = 0;
+
+  // was resp time recorded?
+  if (_resp_time_usec == 0) {
+    LOG("[NTP] did not get sniffer timestamp on response");
     return;
   }
 
-  // indicate there's no longer an outstanding request
-  _req_time_usec = 0;
+  // error on reception? stop here
+  if (len == -1) {
+    LOG("[NTP] could not receive response: %d", errno);
+    return;
+  }
 
   // check for valid response length
   if (len != sizeof(ntp_packet_t)) {
@@ -254,6 +283,11 @@ uint64_t NtpClient::get_epoch_time_usec(void) {
 
 void NtpClient::start(void) {
   wallclock_init(&_uptime);
+
+  const wifi_promiscuous_filter_t filt = {.filter_mask =
+                                              WIFI_PROMIS_FILTER_MASK_DATA};
+  esp_wifi_set_promiscuous_filter(&filt);
+  esp_wifi_set_promiscuous_rx_cb(&sniffer);
   schedule_now(NtpClient::_sync_trampoline, this);
 }
 

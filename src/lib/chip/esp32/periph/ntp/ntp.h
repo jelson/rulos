@@ -24,6 +24,7 @@
 
 #include "core/rulos.h"
 #include "core/wallclock.h"
+#include "esp_wifi.h"
 #include "periph/ntp/ntp-packet.h"
 
 typedef struct {
@@ -37,11 +38,12 @@ class NtpClient {
   const char *DEFAULT_SERVER = "us.pool.ntp.org";
   static const uint16_t NTP_PORT = 123;
   static const int32_t NTP_TIMEOUT_US = 2000000;
-  static const uint16_t NOTSYNCED_OBSERVATION_PERIOD_SEC = 2;
+  static const uint16_t NOTSYNCED_OBSERVATION_PERIOD_SEC = 4;
+  static const uint16_t PARTIAL_SYNC_OBSERVATION_PERIOD_SEC = 20;
   static const uint16_t SYNCED_OBSERVATION_PERIOD_SEC = 60;
   static const uint16_t MIN_OBSERVATIONS = 10;
   static const uint16_t MAX_OBSERVATIONS = 40;
-  static const uint32_t SEND_TIME_BIAS_USEC = 470;
+  static const uint32_t SEND_TIME_BIAS_USEC = 200;
 
   NtpClient(void);
   NtpClient(const char *hostname);
@@ -56,7 +58,8 @@ class NtpClient {
   const char *_hostname;
   int _sock;
   uint64_t _req_time_usec;
-  wallclock_t _uptime;
+  static uint64_t _resp_time_usec;
+  static wallclock_t _uptime;
 
   bool _locked;
   int64_t _most_recent_offset_usec;
@@ -75,6 +78,7 @@ class NtpClient {
   static void _sync_trampoline(void *data);
   bool _sendRequest(ntp_packet_t *req);
   void _try_receive();
+  static void sniffer(void *buf, wifi_promiscuous_pkt_type_t type);
   static void _try_receive_trampoline(void *data);
   int _update_epoch_estimate(char *logbuf, int logbuflen);
 };
