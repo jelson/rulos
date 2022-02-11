@@ -1,7 +1,7 @@
 all: sdcard.img audio_sim2
 
-sdcard: compile_audio.py ../../lib/periph/audio/sound.def ../../../Media/audio/fx/* ../../../Media/audio/disco/*
-	./compile_audio.py -fatfs ../../lib/periph/audio/sound.def ../../../Media/audio sdcard
+sdcard: compile_audio.py ../../lib/periph/audio/sound.def ../../../ext/Media/audio/fx/* ../../../ext/Media/audio/disco/*
+	./compile_audio.py -fatfs ../../lib/periph/audio/sound.def ../../../ext/Media/audio sdcard
 
 sdcard.img: sdcard ./make-sdcard-img.py
 	sudo ./make-sdcard-img.py

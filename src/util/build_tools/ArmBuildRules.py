@@ -23,7 +23,7 @@ from SCons.Script import *
 ARM_COMPILER_PREFIX = "/usr/local/bin/gcc-arm-none-eabi-10-2020-q4-major/bin/arm-none-eabi-"
 ARM_ROOT = os.path.join(util.SRC_ROOT, "lib", "chip", "arm")
 STM32_ROOT = os.path.join(ARM_ROOT, "stm32")
-STM32_VENDOR_ROOT = os.path.join(util.SRC_ROOT, "ext", "stm32")
+STM32_VENDOR_ROOT = os.path.join(util.PROJECT_ROOT, "ext", "stm32")
 
 created_programming_target = False
 

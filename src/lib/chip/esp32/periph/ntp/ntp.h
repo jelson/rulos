@@ -24,8 +24,8 @@
 
 #include "core/rulos.h"
 #include "core/wallclock.h"
-#include "esp_wifi.h"
 #include "periph/ntp/ntp-packet.h"
+#include "esp_wifi.h"
 
 typedef struct {
   uint64_t local_time_usec;

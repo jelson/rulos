@@ -273,8 +273,8 @@ void config_read_eeprom(Config *config) {
 
 uint16_t config_clip(Config *config, Quadrature *quad) {
   int16_t newDoor = quad_get_position(quad);
-  newDoor = min(newDoor, config->doorMax);
-  newDoor = max(newDoor, 0);
+  newDoor = r_min(newDoor, config->doorMax);
+  newDoor = r_max(newDoor, 0);
   quad_set_position(quad, newDoor);
   return newDoor;
 }

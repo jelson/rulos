@@ -81,7 +81,7 @@ static void recv_func(MessageRecvBuffer *msg) {
   SYNCDEBUG();
 
   // display the first 8 chars to the leds
-  buf[min(payload_len, 8)] = '\0';
+  buf[r_min(payload_len, 8)] = '\0';
   board_say(buf);
 }
 
