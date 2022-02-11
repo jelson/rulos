@@ -228,8 +228,8 @@ Time precise_clock_time_us() {
   if (int_pending) {
     t += g_rtc_interval_us;
     t += (g_rtc_interval_us * (uint32_t)tenthou_postcheck) / 10000;
-    LOG("rollover detected, precheck %d, postcheck %d", tenthou_precheck,
-        tenthou_postcheck);
+    //LOG("rollover detected, precheck %d, postcheck %d", tenthou_precheck,
+    //    tenthou_postcheck);
   } else {
     t += (g_rtc_interval_us * (uint32_t)tenthou_precheck) / 10000;
   }
