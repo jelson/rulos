@@ -1,9 +1,9 @@
+#include "periph/ntp/regression.h"
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-
-#include "periph/ntp/ntp.h"
 
 int rand_range(int minval, int maxval) {
   int range = maxval - minval + 1;
@@ -33,7 +33,7 @@ void test_rand() {
   assert(seen_max);
 }
 
-static const time_observation_t real_data_1[NtpClient::MAX_OBSERVATIONS] = {
+static const time_observation_t real_data_1[MAX_OBSERVATIONS] = {
     {
         .local_time_usec = 15132128,
         .epoch_time_usec = 1643967455758940,
@@ -73,7 +73,7 @@ void test_perfect_clocks() {
   uint64_t start_local = 10000;
   uint64_t start_epoch = 1643967455758940;
 
-  time_observation_t o[NtpClient::MAX_OBSERVATIONS] = {};
+  time_observation_t o[MAX_OBSERVATIONS] = {};
   for (int i = 0; i < 10; i++) {
     o[i].rtt_usec = 1000;
     o[i].local_time_usec = start_local + (i * 15 * 1e6);
@@ -110,7 +110,7 @@ void test_clock_rate_error() {
   uint64_t start_epoch = 1643967455123456;
   int32_t freq_error_ppm = -250;
 
-  time_observation_t o[NtpClient::MAX_OBSERVATIONS] = {};
+  time_observation_t o[MAX_OBSERVATIONS] = {};
   for (int i = 0; i < 10; i++) {
     o[i].rtt_usec = 1000;
     o[i].local_time_usec = start_local + (i * 10 * 1e6);
@@ -147,13 +147,14 @@ void test_with_observation_error() {
     int32_t freq_error_ppm = rand_range(-1000, 1000);
     printf("test %d: picked error of %d ppm\n", testnum, freq_error_ppm);
 
-    time_observation_t o[NtpClient::MAX_OBSERVATIONS] = {};
+    time_observation_t o[MAX_OBSERVATIONS] = {};
     uint32_t rtt = rand_range(1000, 50000);
-    for (int i = 0; i < NtpClient::MAX_OBSERVATIONS; i++) {
+    for (int i = 0; i < MAX_OBSERVATIONS; i++) {
       o[i].rtt_usec = rtt;
       o[i].local_time_usec = i * sec_between_probes * 1e6;
       o[i].epoch_time_usec = start_epoch +
-        (i * sec_between_probes) * (1e6 - freq_error_ppm) + rand_range(-rtt, rtt);
+                             (i * sec_between_probes) * (1e6 - freq_error_ppm) +
+                             rand_range(-rtt, rtt);
     }
     uint64_t offset_usec;
     int64_t freq_ppb;
@@ -164,11 +165,13 @@ void test_with_observation_error() {
 
     // do some test conversions; make sure each is accurate to within 1ms
     for (int i = 0; i < 10; i++) {
-      uint64_t expected = start_epoch + (i * sec_between_probes) * (1e6 - freq_error_ppm);
-      uint64_t actual = local_to_epoch(o[i].local_time_usec, offset_usec, freq_ppb);
+      uint64_t expected =
+          start_epoch + (i * sec_between_probes) * (1e6 - freq_error_ppm);
+      uint64_t actual =
+          local_to_epoch(o[i].local_time_usec, offset_usec, freq_ppb);
       printf("x=%lu,expected=%lu,actual=%lu,error=%ld\n", o[i].local_time_usec,
-             expected, actual, expected-actual);
-      assert(llabs(expected-actual) < rtt);
+             expected, actual, expected - actual);
+      assert(llabs(expected - actual) < rtt);
     }
     printf("test %d: passed\n", testnum);
   }
@@ -187,5 +190,5 @@ int main(int argc, char *argv[]) {
   test_perfect_clocks();
   test_clock_rate_error();
   test_with_observation_error();
-  //test_real_data();
+  // test_real_data();
 }

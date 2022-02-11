@@ -24,14 +24,9 @@
 
 #include "core/rulos.h"
 #include "core/wallclock.h"
-#include "periph/ntp/ntp-packet.h"
 #include "esp_wifi.h"
-
-typedef struct {
-  uint64_t local_time_usec;
-  uint64_t epoch_time_usec;
-  uint32_t rtt_usec;
-} time_observation_t;
+#include "periph/ntp/ntp-packet.h"
+#include "periph/ntp/regression.h"
 
 class NtpClient {
  public:
@@ -41,8 +36,6 @@ class NtpClient {
   static const uint16_t NOTSYNCED_OBSERVATION_PERIOD_SEC = 4;
   static const uint16_t PARTIAL_SYNC_OBSERVATION_PERIOD_SEC = 20;
   static const uint16_t SYNCED_OBSERVATION_PERIOD_SEC = 60;
-  static const uint16_t MIN_OBSERVATIONS = 10;
-  static const uint16_t MAX_OBSERVATIONS = 40;
   static const uint32_t SEND_TIME_BIAS_USEC = 200;
 
   NtpClient(void);
@@ -82,9 +75,3 @@ class NtpClient {
   static void _try_receive_trampoline(void *data);
   int _update_epoch_estimate(char *logbuf, int logbuflen);
 };
-
-bool update_epoch_estimate(const time_observation_t *obs, char *logbuf,
-                           int *logbufcap, uint64_t *offset_usec /* OUT */,
-                           int64_t *freq_ppb /* OUT */);
-uint64_t local_to_epoch(uint64_t local_time_usec, uint64_t offset_usec,
-                        int64_t freq_ppb);

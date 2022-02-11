@@ -16,13 +16,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "periph/ntp/regression.h"
+
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <algorithm>
 #include <functional>
-
-#include "periph/ntp/ntp.h"
 
 #define logappend(...)                                     \
   do {                                                     \
@@ -39,12 +40,12 @@ bool update_epoch_estimate(const time_observation_t *obs, char *logbuf,
                            int64_t *freq_ppb /* OUT */) {
   // Make a sorted list of RTTs so we can compute quartile statistics.
   // Also, find the minimum epoch time of all observations.
-  uint32_t rtts[NtpClient::MAX_OBSERVATIONS];
+  uint32_t rtts[MAX_OBSERVATIONS];
   int num_obs = 0;
   uint64_t min_epoch = obs[0].epoch_time_usec;
 
   logappend("rtts_now:");
-  for (int i = 0; i < NtpClient::MAX_OBSERVATIONS; i++) {
+  for (int i = 0; i < MAX_OBSERVATIONS; i++) {
     if (obs[i].local_time_usec == 0) {
       continue;
     }
@@ -59,7 +60,7 @@ bool update_epoch_estimate(const time_observation_t *obs, char *logbuf,
   }
 
   // If we don't have enough observations yet, stop
-  if (num_obs < NtpClient::MIN_OBSERVATIONS) {
+  if (num_obs < MIN_OBSERVATIONS) {
     logappend("insufficient_obs");
     return false;
   }
@@ -85,7 +86,7 @@ bool update_epoch_estimate(const time_observation_t *obs, char *logbuf,
   // precision.
   double sumX = 0, sumX2 = 0, sumY = 0, sumXY = 0;
   int n = 0;
-  for (int i = 0; i < NtpClient::MAX_OBSERVATIONS; i++) {
+  for (int i = 0; i < MAX_OBSERVATIONS; i++) {
     const time_observation_t *to = &obs[i];
     if (to->rtt_usec == 0 || to->rtt_usec > rtt_limit) {
       continue;
@@ -94,8 +95,7 @@ bool update_epoch_estimate(const time_observation_t *obs, char *logbuf,
     double y = to->epoch_time_usec - min_epoch;
 #if SIMULATOR
     printf("[ %9u , %12.12g , %13lu , %12.12g ]%s\n", to->rtt_usec, x,
-           to->epoch_time_usec, y,
-           i == NtpClient::MAX_OBSERVATIONS - 1 ? "" : ",");
+           to->epoch_time_usec, y, i == MAX_OBSERVATIONS - 1 ? "" : ",");
 #endif
     sumX += x;
     sumX2 += x * x;
