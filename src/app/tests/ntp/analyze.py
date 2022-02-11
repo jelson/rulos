@@ -90,21 +90,31 @@ def gpio_regression_stats(parsed_file):
 
     df['nearest_sec'] = round(df['exptime_abs'])
     df['error_usec'] = 1000000 * (df['epoch_time'] - df['nearest_sec'])
+
     df['abserror_usec'] = df['error_usec'].abs()
     worst = df.nlargest(20, 'abserror_usec')
     print(worst)
 
-    for offset in [0, 120]:
-        print(f"\nSkipping first {offset} seconds of data:")
+    # take out gross outliers, mechanical noise when i touch the pps pin
+    df = df.loc[df['abserror_usec'] < 50000]
+
+    df['abserror_usec'] = df['error_usec'].abs()
+    worst = df.nlargest(20, 'abserror_usec')
+    print(worst)
+
+    SKIP_MIN = 10
+
+    for offset in [0, 60*SKIP_MIN]:
+        desc = f"Skipping first {offset} seconds of data"
         trimmed = df.loc[df['local'] > offset*1e6]
-        print("abserror:")
+        print(f"\nabserror, {desc}:")
         print(trimmed['abserror_usec'].describe())
         print(trimmed['abserror_usec'].quantile([0.90, 0.95, 0.99, 0.999]))
 
-        print("signed error:")
+        print(f"\nsigned error, {desc}:")
         print(trimmed['error_usec'].describe())
 
-    fig, ax = plt.subplots(figsize=(20, 10))
+    fig, ax = plt.subplots(figsize=(15, 7))
     ax = df.plot(
         ax=ax,
         x='exptime',
@@ -116,40 +126,55 @@ def gpio_regression_stats(parsed_file):
         xlabel='Experiment time (sec)',
         ylabel='Error (usec)'
     )
+    ax.minorticks_on()
+    ax.grid(which='minor', linestyle=':')
     plot_fn = parsed_file.filename + ".gps_vs_ntp.timeseries.png"
+    fig.tight_layout()
     fig.savefig(plot_fn)
 
-    fig, ax = plt.subplots(figsize=(20, 10))
-    ax = df['error_usec'].hist(
+    fig, ax = plt.subplots(figsize=(15, 7))
+    ax = trimmed['error_usec'].hist(
         ax=ax,
-        bins=30,
+        bins=40,
         grid=True,
         rwidth=0.9,
     )
     ax.set(
-        title='ESP32 time estimate via NTP vs GPS ground truth',
+        title=f'ESP32 time estimate via NTP vs GPS ground truth, excluding first {SKIP_MIN} minutes',
         xlabel='Error (usec)',
+        ylabel='Number of observations'
     )
     plot_fn = parsed_file.filename + ".gps_vs_ntp.hist.png"
+    fig.tight_layout()
+    fig.savefig(plot_fn)
+    ax.set(
+        yscale='log',
+    )
+    plot_fn = parsed_file.filename + ".gps_vs_ntp.hist.log.png"
+    fig.tight_layout()
     fig.savefig(plot_fn)
 
 def rtt_jitter_stats(parsed_file):
-    df = parsed_file.get_dataframe('stats')
+    RTT_LIMIT_FOR_HIST = 100000
 
-    fig, ax = plt.subplots(figsize=(20, 10))
-    ax = df['raw_rtt_usec'].hist(
+    df = parsed_file.get_dataframe('stats')
+    fig, ax = plt.subplots(figsize=(15, 7))
+    ax = df.loc[df['raw_rtt_usec'] < RTT_LIMIT_FOR_HIST]['raw_rtt_usec'].hist(
         ax=ax,
-        bins=30,
+        bins=50,
         grid=True,
         rwidth=0.9,
     )
     ax.set(
+        yscale='log',
         title='Distribution of NTP Request RTTs',
         xlabel='NTP Request RTT (usec)',
+        ylabel='Number of observations'
     )
 
     plot_fn = parsed_file.filename + ".rtt_hist.png"
-    ax.figure.savefig(plot_fn)
+    fig.tight_layout()
+    fig.savefig(plot_fn)
 
 def gpio_clockrate_stats(parsed_file):
     df = parsed_file.get_dataframe('stats')
