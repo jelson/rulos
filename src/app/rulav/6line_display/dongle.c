@@ -81,5 +81,5 @@ int main() {
   init_twi_network(&r6l_dongle.net, 100, DONGLE_BASE_ADDR + DONGLE_BOARD_ID);
   init_r6l_bbuf_recv(&r6l_dongle.rbr, &r6l_dongle.net);
 
-  cpumon_main_loop();
+  scheduler_run();
 }

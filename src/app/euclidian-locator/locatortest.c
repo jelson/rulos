@@ -656,9 +656,7 @@ int main() {
 
   configLocator(&locatorAct_g);
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);
-  cpumon_main_loop();
+  scheduler_run();
   assert(FALSE);
 
   return 0;

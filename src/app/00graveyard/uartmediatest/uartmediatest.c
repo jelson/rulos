@@ -177,7 +177,6 @@ void _tick_update(Activation *act) {
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-  CpumonAct cpumon;
   //	CmdProc cmdproc;
   UartListener uart_listener;
   Tick tick;
@@ -206,12 +205,11 @@ int main() {
 
   // init_audio_server(&mc.aserv, &mc.network, TIMER2);
 
-  cpumon_init(&mc.cpumon);  // includes slow calibration phase
 
 #if 0
 	board_buffer_module_init();
 #endif
-  cpumon_main_loop();
+  scheduler_run();
 
   return 0;
 }

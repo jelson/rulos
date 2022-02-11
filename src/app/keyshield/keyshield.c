@@ -55,6 +55,6 @@ int main() {
   // set up a TWI slave handler for TWI queries
   usi_twi_slave_init(gpio_address, NULL, get_next_char_to_transmit);
 
-  cpumon_main_loop();
+  scheduler_run();
   assert(FALSE);
 }

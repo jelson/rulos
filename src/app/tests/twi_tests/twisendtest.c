@@ -118,9 +118,7 @@ void test_netstack() {
 
   schedule_us(INTER_MESSAGE_DELAY_US, (ActivationFuncPtr)sendMessage, &sa);
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);
-  cpumon_main_loop();
+  scheduler_run();
   assert(FALSE);
 }
 

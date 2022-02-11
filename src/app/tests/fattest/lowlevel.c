@@ -151,6 +151,6 @@ int main() {
   LOG("Log output running");
 
   schedule_us(20000, do_test, NULL);
-  cpumon_main_loop();
+  scheduler_run();
   return 0;
 }

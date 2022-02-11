@@ -176,8 +176,6 @@ int main() {
   Shell shell;
   shell_init(&shell);
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);  // includes slow calibration phase
-  cpumon_main_loop();
+  scheduler_run();
   return 0;
 }

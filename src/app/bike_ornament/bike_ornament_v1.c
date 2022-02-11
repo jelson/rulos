@@ -133,6 +133,6 @@ int main() {
   // set up periodic update
   init_clock(JIFFY_TIME_US, TIMER1);
   schedule_now((ActivationFuncPtr)bike_update, &bike);
-  cpumon_main_loop();
+  scheduler_run();
   assert(FALSE);
 }

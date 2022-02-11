@@ -77,6 +77,6 @@ int main() {
   usi_twi_master_init();
   schedule_now(send_message, NULL);
 
-  cpumon_main_loop();
+  scheduler_run();
   assert(FALSE);
 }

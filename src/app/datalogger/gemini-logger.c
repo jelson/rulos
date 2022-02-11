@@ -67,5 +67,5 @@ int main() {
 
   flash_dumper_print(&flash_dumper, "restarting\n\n\n");
   flash_dumper_print(&flash_dumper, "startup");
-  cpumon_main_loop();
+  scheduler_run();
 }

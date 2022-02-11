@@ -22,7 +22,6 @@
 
 #include "core/bss_canary.h"
 #include "core/clock.h"
-#include "core/cpumon.h"
 #include "core/hal.h"
 #include "core/network.h"
 #include "core/util.h"
@@ -43,8 +42,6 @@ int main() {
 
   init_clock(10000, TIMER1);
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);  // includes slow calibration phase
 
   Network network;
   init_twi_network(&network, 100, ROCKET1_ADDR);
@@ -75,7 +72,7 @@ int main() {
                 KeystrokeCtor('a'), KeystrokeCtor('b'));
 #endif
 
-  cpumon_main_loop();
+  scheduler_run();
 
   return 0;
 }

@@ -48,7 +48,4 @@ void clock_log_stats();
 #define Exp2Time(v) (((Time)1) << (v))
 //#define schedule_ms(ms,act) { schedule_us(ms*1000, act); }
 
-void scheduler_run_once();
-
-void spin_counter_increment();
-uint32_t read_spin_counter();
+void scheduler_run();

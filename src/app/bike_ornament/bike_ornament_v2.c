@@ -225,6 +225,6 @@ int main() {
   schedule_now((ActivationFuncPtr)bike_update, &bike);
 
   // Loop forever.
-  cpumon_main_loop();
+  scheduler_run();
   assert(FALSE);
 }

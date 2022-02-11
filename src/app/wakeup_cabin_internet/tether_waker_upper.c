@@ -79,5 +79,5 @@ int main() {
   blink_init(&blink4, 4, 3000, 7000);
   blink_init(&blink3, 3, 3000, 7000);
 
-  cpumon_main_loop();
+  scheduler_run();
 }

@@ -192,9 +192,7 @@ int main() {
   BlinkAct ba;
   blink_init(&ba);
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);  // includes slow calibration phase
-  cpumon_main_loop();
+  scheduler_run();
 
   return 0;
 }

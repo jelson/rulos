@@ -66,8 +66,6 @@ int main() {
   init_clock(10000, TIMER1);
   gpio_make_output(GPIO_C5);
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);  // includes slow calibration phase
 
   Blink blink;
   blink.state = 1;
@@ -79,7 +77,7 @@ int main() {
 
   // install_handler(ADC, adc_handler);
 
-  cpumon_main_loop();
+  scheduler_run();
 
   return 0;
 }

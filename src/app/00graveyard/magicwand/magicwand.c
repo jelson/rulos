@@ -476,9 +476,7 @@ int main() {
   aa->debug_state = 'A';
   funcseq_next(&aa->funcseq);
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);
-  cpumon_main_loop();
+  scheduler_run();
   assert(FALSE);
 
   return 0;

@@ -38,9 +38,7 @@ int main() {
   RemoteBBufRecv remoteBBufRecv;
   init_remote_bbuf_recv(&remoteBBufRecv, &net);
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);
-  cpumon_main_loop();
+  scheduler_run();
 
   return 0;
 }

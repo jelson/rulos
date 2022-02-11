@@ -176,5 +176,5 @@ int main() {
 #error "error"
 #endif
   schedule_now(sample, NULL);
-  cpumon_main_loop();
+  scheduler_run();
 }

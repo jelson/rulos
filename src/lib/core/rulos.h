@@ -27,7 +27,6 @@
 #include <string.h>
 
 #include "core/clock.h"
-#include "core/cpumon.h"
 #include "core/debounce.h"
 #include "core/event.h"
 #include "core/hal.h"

@@ -111,5 +111,5 @@ int main() {
   // it 75 just to be safe.
   schedule_us(75000, (ActivationFuncPtr)sample, (void *)1);
 
-  cpumon_main_loop();
+  scheduler_run();
 }

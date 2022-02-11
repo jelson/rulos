@@ -70,8 +70,6 @@ int main() {
 
   sendMessage(&sa);
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);
-  cpumon_main_loop();
+  scheduler_run();
   assert(FALSE);
 }

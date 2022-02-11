@@ -23,7 +23,6 @@
 
 #include "core/board_defs.h"
 #include "core/clock.h"
-#include "core/cpumon.h"
 #include "core/hal.h"
 #include "core/network.h"
 #include "core/util.h"
@@ -45,7 +44,6 @@
 #define VOLUME_POT_CHANNEL 1
 #define USE_LOCAL_KEYPAD   0
 
-CpumonAct cpumon;
 Snake snake;
 
 typedef struct s_direct_injector {
@@ -72,7 +70,6 @@ int main() {
   init_clock(10000, TIMER1);
 
   // includes slow calibration phase
-  cpumon_init(&cpumon);
 
   board_buffer_module_init();
 
@@ -95,7 +92,7 @@ int main() {
   snake_init(&snake, &s4, &audio_client, 2, 1);
 
   snake.handler.func((UIEventHandler *)&snake.handler, uie_focus);  // EWW
-  cpumon_main_loop();
+  scheduler_run();
 
   return 0;
 }

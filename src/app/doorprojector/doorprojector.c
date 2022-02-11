@@ -606,8 +606,6 @@ int main() {
   hal_init_adc_channel(OPT0_ADC_CHANNEL);
   hal_init_adc_channel(OPT1_ADC_CHANNEL);
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);  // includes slow calibration phase
 
   /*
           BlinkAct blink;
@@ -641,7 +639,7 @@ int main() {
   ButtonAct button;
   init_button(&button, (UIEventHandler *)&control.handler);
 
-  cpumon_main_loop();
+  scheduler_run();
 
   return 0;
 }

@@ -38,8 +38,6 @@ int main() {
   InputControllerAct ia;
   input_controller_init(&ia, NULL);
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);  // includes slow calibration phase
 
   MirrorHandler mirror;
   mirror_init(&mirror);
@@ -68,7 +66,7 @@ int main() {
 
   board_buffer_module_init();
 
-  cpumon_main_loop();
+  scheduler_run();
 
   return 0;
 }

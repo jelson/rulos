@@ -85,5 +85,5 @@ int main() {
 
   schedule_now((ActivationFuncPtr)test_func, NULL);
 
-  cpumon_main_loop();
+  scheduler_run();
 }

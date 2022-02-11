@@ -50,5 +50,5 @@ int main() {
   max3421e_init(&max);
   schedule_us(1, poll_joystick, NULL);
 
-  cpumon_main_loop();
+  scheduler_run();
 }

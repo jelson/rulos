@@ -130,13 +130,11 @@ int main() {
   hal_init_rocketpanel();
   init_clock(10000, TIMER1);
   board_buffer_module_init();
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);
 
   HTAct ht;
   ht_init(&ht);
 
-  cpumon_main_loop();
+  scheduler_run();
 
   return 0;
 }

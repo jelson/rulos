@@ -61,8 +61,6 @@ int main() {
   leds_init();
 
   mark_point(3);
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);  // includes slow calibration phase
 
   mark_point(4);
   uart_init(&log_uart, 0, 38400);
@@ -114,7 +112,7 @@ int main() {
   control_test_rudder(&control);
 #endif
 
-  cpumon_main_loop();
+  scheduler_run();
   mark_point(7);
 
   return 0;

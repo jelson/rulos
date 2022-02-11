@@ -36,5 +36,5 @@ int main() {
 
   init_clock(10000, TIMER1);
 
-  cpumon_main_loop();
+  scheduler_run();
 }

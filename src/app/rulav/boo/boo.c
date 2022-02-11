@@ -57,8 +57,6 @@ int main() {
   hal_init_rocketpanel();
   init_clock(10000, TIMER1);
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);  // includes slow calibration phase
 
   // install_handler(ADC, adc_handler);
 
@@ -79,7 +77,7 @@ int main() {
   DRTCAct dr;
   drtc_init(&dr, 1, clock_time_us() + 20000000);
 
-  cpumon_main_loop();
+  scheduler_run();
 
   return 0;
 }

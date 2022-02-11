@@ -61,6 +61,6 @@ int main() {
   //	schedule_us(1, (Activation *) &t3);
   //	schedule_us(1, (Activation *) &t4);
 
-  cpumon_main_loop();
+  scheduler_run();
   return 0;
 }

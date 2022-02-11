@@ -142,9 +142,7 @@ int main() {
   // schedule_us(1, (ActivationFuncPtr) one_led, &draw);
   rowtest(&draw);
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);
-  cpumon_main_loop();
+  scheduler_run();
   assert(FALSE);
 
 #if 0

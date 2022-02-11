@@ -79,5 +79,5 @@ int main() {
   // enable periodic blink to indicate liveness
   schedule_now(indicate_alive, NULL);
 
-  cpumon_main_loop();
+  scheduler_run();
 }

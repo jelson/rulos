@@ -176,5 +176,5 @@ int main() {
   start_birthday_morse(NULL);
   init_prime_counting();
 
-  cpumon_main_loop();
+  scheduler_run();
 }

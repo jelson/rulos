@@ -345,6 +345,6 @@ int main() {
   init_clock(JIFFY_TIME_US, TIMER1);
   schedule_us(1, (ActivationFuncPtr)duktig_update, &duktig);
 
-  cpumon_main_loop();
+  scheduler_run();
   assert(FALSE);
 }

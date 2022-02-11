@@ -290,5 +290,5 @@ int main() {
 
   schedule_us(1, create_test_input, NULL);
   schedule_us(1, drain_output_buffer, NULL);
-  cpumon_main_loop();
+  scheduler_run();
 }

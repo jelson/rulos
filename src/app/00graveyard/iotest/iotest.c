@@ -81,6 +81,6 @@ int main() {
   KeyScan ks;
   key_scan_init(&ks, &sca);
 
-  cpumon_main_loop();
+  scheduler_run();
   return 0;
 }

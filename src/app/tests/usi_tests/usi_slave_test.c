@@ -85,6 +85,6 @@ int main() {
   // version of the most recently received data
   usi_twi_slave_init(50 /* address */, recv_slot, return_recv_slot);
 #endif
-  cpumon_main_loop();
+  scheduler_run();
   assert(FALSE);
 }

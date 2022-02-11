@@ -59,6 +59,6 @@ int main() {
   a.adc1 = hal_get_adc(3);
 
   schedule_us(1, (Activation *)&a);
-  cpumon_main_loop();
+  scheduler_run();
   return 0;
 }

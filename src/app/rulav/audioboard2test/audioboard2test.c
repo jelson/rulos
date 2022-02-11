@@ -168,7 +168,7 @@ int main() {
   init_twi_network(&net, 200, ROCKET_ADDR);
   init_remote_keyboard_recv(&rk, &net, &iii, REMOTE_KEYBOARD_PORT);
 
-  cpumon_main_loop();
+  scheduler_run();
 
   return 0;
 }

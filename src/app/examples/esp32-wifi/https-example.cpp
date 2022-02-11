@@ -110,5 +110,5 @@ int main() {
   TestClient tc;
   schedule_now(TestClient::execute_trampoline, &tc);
 
-  cpumon_main_loop();
+  scheduler_run();
 }

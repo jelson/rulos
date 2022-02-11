@@ -122,7 +122,6 @@ void _tick_update(Activation *act) {
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-  CpumonAct cpumon;
   NetworkListener network_listener;
   Tick tick;
 } MainContext;
@@ -143,8 +142,7 @@ int main() {
 
   g_tick_say("hiya!");
 
-  cpumon_init(&mc.cpumon);  // includes slow calibration phase
-  cpumon_main_loop();
+  scheduler_run();
 
   return 0;
 }

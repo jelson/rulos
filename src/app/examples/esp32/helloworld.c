@@ -66,5 +66,5 @@ int main() {
   gpio_make_output(TEST_PIN);
   gpio_clr(TEST_PIN);
   schedule_now(test_func, NULL);
-  cpumon_main_loop();
+  scheduler_run();
 }

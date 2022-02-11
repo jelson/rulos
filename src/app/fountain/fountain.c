@@ -183,7 +183,7 @@ int main() {
   // Start clock.
   init_clock(JIFFY_TIME_US, TIMER0);
   schedule_now((ActivationFuncPtr)fountain_update, &f);
-  cpumon_main_loop();
+  scheduler_run();
 
   assert(FALSE);
 }

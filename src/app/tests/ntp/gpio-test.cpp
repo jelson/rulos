@@ -70,5 +70,5 @@ int main() {
   gpio_isr_handler_add(EXT_REF_PIN_NUM, external_gpio_handler, NULL);
   gpio_intr_enable(EXT_REF_PIN_NUM);
 
-  cpumon_main_loop();
+  scheduler_run();
 }

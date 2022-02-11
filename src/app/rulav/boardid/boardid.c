@@ -88,6 +88,6 @@ int main() {
   //	KeyTestActivation_t kta;
   //	display_keytest_init(&kta, 7);
 
-  cpumon_main_loop();
+  scheduler_run();
   return 0;
 }

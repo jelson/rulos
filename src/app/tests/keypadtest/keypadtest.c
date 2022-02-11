@@ -115,6 +115,6 @@ int main() {
   m.bbuf = &kta.bbuf_k;
   schedule_us(1000000, (ActivationFuncPtr)tick, &m);
 
-  cpumon_main_loop();
+  scheduler_run();
   return 0;
 }

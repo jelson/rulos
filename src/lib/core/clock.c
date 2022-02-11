@@ -18,15 +18,12 @@
 
 #include "core/clock.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "core/logging.h"
-
-#ifdef TIMING_DEBUG
-#include "core/hardware.h"
-#endif
 
 #ifndef LOG_CLOCK_STATS
 #define LOG_CLOCK_STATS 0
@@ -44,11 +41,10 @@ static Time g_rtc_interval_us;
 // Clock updated by timer interrupt.  Should not be accessed without a
 // lock since it is updated at interrupt time.
 static volatile Time g_interrupt_driven_jiffy_clock_us;
+
 static volatile uint32_t g_jiffy_timer;
 
-uint32_t g_spin_counter;
-
-extern volatile uint8_t run_scheduler_now;
+static volatile bool run_scheduler_now = false;
 
 typedef struct {
   Heap heap;
@@ -90,10 +86,6 @@ void clock_log_stats() {
 }
 
 static void clock_handler(void *data) {
-#ifdef TIMING_DEBUG
-#error TIMING_DEBUG is on. Just wanted you to know.
-  gpio_set(GPIO_D5);
-#endif
   // NB we assume this runs in interrupt context and is hence
   // automatically atomic.
   g_interrupt_driven_jiffy_clock_us += g_rtc_interval_us;
@@ -101,10 +93,7 @@ static void clock_handler(void *data) {
     g_jiffy_timer--;
   }
 
-  run_scheduler_now = TRUE;
-#ifdef TIMING_DEBUG
-  gpio_clr(GPIO_D5);
-#endif
+  run_scheduler_now = true;
 }
 
 void init_clock(Time interval_us, uint8_t timer_id) {
@@ -115,17 +104,11 @@ void init_clock(Time interval_us, uint8_t timer_id) {
   reset_stats();
 #endif
 
-#ifdef TIMING_DEBUG
-  gpio_make_output(GPIO_D4);
-  gpio_make_output(GPIO_D5);
-  gpio_make_output(GPIO_D6);
-#endif
   // Initialize the clock to 20 seconds before rollover time so that
   // rollover bugs happen quickly during testing
   g_interrupt_driven_jiffy_clock_us = (Time)INT32_MAX - 20000000;
   g_rtc_interval_us =
       hal_start_clock_us(interval_us, clock_handler, NULL, timer_id);
-  g_spin_counter = 0;
 }
 
 void schedule_us(Time offset_us, ActivationFuncPtr func, void *data) {
@@ -164,7 +147,7 @@ void schedule_now(ActivationFuncPtr func, void *data) {
     scheduler_insert(clock_time_us(), func, data);
   }
   hal_end_atomic(old_interrupts);
-  run_scheduler_now = TRUE;
+  run_scheduler_now = true;
 }
 
 void schedule_us_internal(Time offset_us, ActivationFuncPtr func, void *data) {
@@ -184,16 +167,9 @@ void schedule_us_internal(Time offset_us, ActivationFuncPtr func, void *data) {
 
 void schedule_absolute(Time at_time, ActivationFuncPtr func, void *data) {
   // LOG("scheduling act %08x func %08x", (int) act, (int) act->func);
-
-#ifdef TIMING_DEBUG
-  gpio_set(GPIO_D6);
-#endif
   rulos_irq_state_t old_interrupts = hal_start_atomic();
   scheduler_insert(at_time, func, data);
   hal_end_atomic(old_interrupts);
-#ifdef TIMING_DEBUG
-  gpio_clr(GPIO_D6);
-#endif
 }
 
 // the cheap but less precise way to get time -- returns the jiffy clock
@@ -228,8 +204,8 @@ Time precise_clock_time_us() {
   if (int_pending) {
     t += g_rtc_interval_us;
     t += (g_rtc_interval_us * (uint32_t)tenthou_postcheck) / 10000;
-    //LOG("rollover detected, precheck %d, postcheck %d", tenthou_precheck,
-    //    tenthou_postcheck);
+    // LOG("rollover detected, precheck %d, postcheck %d", tenthou_precheck,
+    //     tenthou_postcheck);
   } else {
     t += (g_rtc_interval_us * (uint32_t)tenthou_precheck) / 10000;
   }
@@ -244,15 +220,7 @@ void delay_us(uint32_t delay) {
   }
 }
 
-void spin_counter_increment() {
-  g_spin_counter += 1;
-}
-
-uint32_t read_spin_counter() {
-  return g_spin_counter;
-}
-
-void scheduler_run_once() {
+static void scheduler_run_once() {
   Time now = clock_time_us();
 
   while (1)  // run until nothing to do for this time
@@ -261,9 +229,6 @@ void scheduler_run_once() {
 
     bool valid = FALSE;
 
-#ifdef TIMING_DEBUG
-    gpio_set(GPIO_D6);
-#endif
     rulos_irq_state_t old_interrupts = hal_start_atomic();
     if (sched_state.now_queue_size > 0) {
       act = sched_state.now_queue[0];
@@ -280,9 +245,6 @@ void scheduler_run_once() {
       }
     }
     hal_end_atomic(old_interrupts);
-#ifdef TIMING_DEBUG
-    gpio_clr(GPIO_D6);
-#endif
 
     if (!valid) {
       break;
@@ -294,5 +256,17 @@ void scheduler_run_once() {
     act.func(act.data);
     // LOG("returned act %08x func %08x", (uint32_t) act, (uint32_t)
     // act->func);
+  }
+}
+
+void scheduler_run() {
+  while (true) {
+    run_scheduler_now = false;
+
+    scheduler_run_once();
+
+    do {
+      hal_idle();
+    } while (!run_scheduler_now);
   }
 }

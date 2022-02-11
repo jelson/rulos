@@ -163,6 +163,6 @@ int main() {
   ChaseClockActivation_t cca;
   init_chase_clock(&cca);
 
-  cpumon_main_loop();
+  scheduler_run();
   return 0;
 }

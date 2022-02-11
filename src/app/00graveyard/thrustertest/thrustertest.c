@@ -41,8 +41,6 @@ int main() {
   ThrusterState_t ts;
   thrusters_init(&ts, 7, 3, 2, &hpam, NULL);
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);
-  cpumon_main_loop();
+  scheduler_run();
   return 0;
 }

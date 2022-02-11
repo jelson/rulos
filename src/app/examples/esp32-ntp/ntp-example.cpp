@@ -64,5 +64,5 @@ int main() {
   next_print_time = clock_time_us();
   schedule_absolute(next_print_time, show_time, NULL);
 
-  cpumon_main_loop();
+  scheduler_run();
 }

@@ -81,7 +81,7 @@ int main() {
 	TestAct test;
 	test_init(&test);
 
-	cpumon_main_loop();
+	scheduler_run();
 #else
 #if !SIM
   extern void debug_abuse_epb();

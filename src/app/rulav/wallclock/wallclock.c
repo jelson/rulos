@@ -334,6 +334,6 @@ int main() {
   // have the callback get called immediately
   schedule_us(1, (ActivationFuncPtr)update, &wca);
 
-  cpumon_main_loop();
+  scheduler_run();
   return 0;
 }

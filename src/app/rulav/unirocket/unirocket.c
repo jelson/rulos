@@ -24,7 +24,6 @@
 #include "core/board_defs.h"
 #include "core/bss_canary.h"
 #include "core/clock.h"
-#include "core/cpumon.h"
 #include "core/hal.h"
 #include "core/network.h"
 #include "core/util.h"
@@ -206,7 +205,6 @@ void init_rocket0(Rocket0 *r0) {
 }
 
 static Rocket0 rocket0;  // allocate obj in .bss so it's easy to count
-CpumonAct cpumon;
 
 int main() {
   rulos_hal_init();
@@ -224,7 +222,6 @@ int main() {
   init_clock(10000, TIMER1);
 
   // includes slow calibration phase
-  cpumon_init(&cpumon);
 
   board_buffer_module_init();
   init_rocket0(&rocket0);
@@ -243,7 +240,7 @@ int main() {
   idle_display_init(&idle, &dsm, &cpumon);
 #endif  // MEASURE_CPU_FOR_RULOS_PAPER
 
-  cpumon_main_loop();
+  scheduler_run();
 
   return 0;
 }

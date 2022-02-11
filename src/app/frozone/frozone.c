@@ -34,8 +34,6 @@ int main() {
   rulos_hal_init();
   init_clock(SYSTEM_CLOCK, TIMER0);
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);  // includes slow calibration phase
 
   //	uart_init(&uart, 38400, TRUE, 0);
 
@@ -46,7 +44,7 @@ int main() {
   Frobutton fb;
   frobutton_init(&fb, &an);
 
-  cpumon_main_loop();
+  scheduler_run();
 
   return 0;
 }

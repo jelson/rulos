@@ -180,9 +180,7 @@ int main() {
 	wa.sample_idx = 0;
 #endif
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);
-  cpumon_main_loop();
+  scheduler_run();
 
   return 0;
 }

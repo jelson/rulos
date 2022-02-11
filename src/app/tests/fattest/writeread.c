@@ -122,7 +122,7 @@ int main() {
 
   // Give the SD card power 10ms to stabilize
   schedule_us(10000, try_write, NULL);
-  cpumon_main_loop();
+  scheduler_run();
 
   return 0;
 }

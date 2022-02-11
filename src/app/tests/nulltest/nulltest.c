@@ -54,5 +54,5 @@ int main() {
   gpio_make_output(TEST_PIN);
   bss_canary_init();
   schedule_now((ActivationFuncPtr)test_func, NULL);
-  cpumon_main_loop();
+  scheduler_run();
 }

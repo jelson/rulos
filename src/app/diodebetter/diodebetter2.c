@@ -230,5 +230,5 @@ int main() {
 
   throb_state throb;
   schedule_now(throb_act, &throb);
-  cpumon_main_loop();
+  scheduler_run();
 }

@@ -515,5 +515,5 @@ int main() {
 
   // sdtest_init(&sdt);
 
-  cpumon_main_loop();
+  scheduler_run();
 }

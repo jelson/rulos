@@ -63,5 +63,5 @@ int main() {
 
   usi_serial_send("L");
 
-  cpumon_main_loop();
+  scheduler_run();
 }

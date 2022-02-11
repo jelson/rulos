@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include "core/cpumon.h"
 #include "core/hal.h"
 #include "core/heap.h"
 #include "core/network.h"

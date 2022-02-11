@@ -841,9 +841,7 @@ int main() {
           ledpoke_init(&lp);
   */
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);  // includes slow calibration phase
-  cpumon_main_loop();
+  scheduler_run();
   while (1) {
   }
 

@@ -94,5 +94,5 @@ int main() {
 
   schedule_us(1, (ActivationFuncPtr)test_mode_update, NULL);
 
-  cpumon_main_loop();
+  scheduler_run();
 }

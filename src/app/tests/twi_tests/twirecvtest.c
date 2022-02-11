@@ -107,9 +107,7 @@ void test_netstack() {
   net_bind_receiver(&net, &recv);
   SYNCDEBUG();
 
-  CpumonAct cpumon;
-  cpumon_init(&cpumon);
-  cpumon_main_loop();
+  scheduler_run();
 }
 
 int main() {

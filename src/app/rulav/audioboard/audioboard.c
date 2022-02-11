@@ -62,7 +62,7 @@ int main() {
                              // sorry. Used to be 2.
   schedule_us(1, init_audio_server_delayed_start, &mc);
 
-  cpumon_main_loop();
+  scheduler_run();
 
   return 0;
 }

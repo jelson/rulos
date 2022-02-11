@@ -75,6 +75,6 @@ int main() {
 
   schedule_now(test_func, (void *)-1);
 
-  cpumon_main_loop();
+  scheduler_run();
 #endif
 }

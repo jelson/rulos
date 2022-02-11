@@ -18,14 +18,11 @@
 
 #pragma once
 
-#include "core/cpumon.h"
 #include "periph/rocket/display_scroll_msg.h"
 
 typedef struct {
   DScrollMsgAct *scrollAct;
-  CpumonAct *cpumonAct;
   char msg[16];
 } IdleDisplayAct;
 
-void idle_display_init(IdleDisplayAct *act, DScrollMsgAct *scrollAct,
-                       CpumonAct *cpumonAct);
+void idle_display_init(IdleDisplayAct *act, DScrollMsgAct *scrollAct);
