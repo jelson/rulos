@@ -43,7 +43,7 @@ for chip in [
 
 platforms.append(Esp32Platform())
 
-for testprog in ["send", "charecho", "lineecho"]:
+for testprog in ["recv", "send", "charecho", "lineecho"]:
     RulosBuildTarget(
         name = testprog,
         sources = [f"{testprog}.c"],

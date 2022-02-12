@@ -35,6 +35,36 @@ static void dispatch_dma(uint8_t uart_id);
 
 //////////////////////////////////////////////////////////////////////////////
 
+typedef struct {
+  // housekeeping
+  bool initted;
+  bool rx_gpio_initted;
+  bool tx_gpio_initted;
+
+  // HAL API: the upcall to get more data and the user data for that callback
+  uint8_t uart_id;
+  hal_uart_receive_cb rx_cb;
+  hal_uart_next_sendbuf_cb next_sendbuf_cb;
+  void *user_data;
+
+  // UART handle from STM32's HAL
+  UART_HandleTypeDef hal_uart_handle;
+
+  // Transmit and receive DMA buffers and DMA handles
+  DMA_HandleTypeDef hal_dma_tx_handle;
+#if USE_DMA_FOR_RX
+  DMA_HandleTypeDef hal_dma_rx_handle;
+#endif
+
+  // statistics
+  uint32_t frame_errors;
+  uint32_t parity_errors;
+  uint32_t noise_errors;
+  uint32_t overruns;
+  uint16_t min_chars_per_rx_isr;
+  uint16_t max_chars_per_rx_isr;
+} stm32_uart_t;
+
 /// Configuration
 
 typedef struct {
@@ -307,32 +337,6 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 #include <stophere>
 #endif
 
-typedef struct {
-  // housekeeping
-  bool initted;
-  bool rx_gpio_initted;
-  bool tx_gpio_initted;
-  uint32_t frame_errors;
-  uint32_t parity_errors;
-  uint32_t noise_errors;
-  uint32_t overruns;
-
-  // HAL API: the upcall to get more data and the user data for that callback
-  uint8_t uart_id;
-  hal_uart_receive_cb rx_cb;
-  hal_uart_next_sendbuf_cb next_sendbuf_cb;
-  void *user_data;
-
-  // UART handle from STM32's HAL
-  UART_HandleTypeDef hal_uart_handle;
-
-  // Transmit and receive DMA buffers and DMA handles
-  DMA_HandleTypeDef hal_dma_tx_handle;
-#if USE_DMA_FOR_RX
-  DMA_HandleTypeDef hal_dma_rx_handle;
-#endif
-} stm32_uart_t;
-
 // Eventually this should be conditional depending on what kind of
 // chip you have
 #define NUM_UARTS (sizeof(stm32_uart_config) / sizeof(stm32_uart_config[0]))
@@ -357,13 +361,23 @@ static void dispatch_int(uint8_t uart_id) {
   }
 
   // dispatch rx upcall, if needed -- not handled through the HAL
+  int num_read = 0;
   while (LL_USART_IsActiveFlag_RXNE(c->instance)) {
     // note: we have to read the character whether or not we send it anywhere;
     // reading the char is what clears the interrupt
+    num_read++;
     char inchar = LL_USART_ReceiveData8(c->instance);
     if (u->rx_cb != NULL) {
       u->rx_cb(uart_id, u->user_data, inchar);
     }
+  }
+
+  // update some statistics
+  if (num_read > u->max_chars_per_rx_isr) {
+    u->max_chars_per_rx_isr = num_read;
+  }
+  if (u->min_chars_per_rx_isr == 0 || num_read < u->min_chars_per_rx_isr) {
+    u->min_chars_per_rx_isr = num_read;
   }
 
   // clear RX errors not handled through HAL
@@ -456,6 +470,9 @@ void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb) {
     u->rx_gpio_initted = true;
   }
   u->rx_cb = rx_cb;
+#ifdef LL_USART_ISR_RXNE_RXFNE
+  LL_USART_EnableFIFO(config->instance);
+#endif
   LL_USART_EnableIT_RXNE(config->instance);
 }
 
@@ -583,4 +600,23 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
   // Set up USART peripheral interrupt
   HAL_NVIC_SetPriority(config->instance_irqn, 0, 1);
   HAL_NVIC_EnableIRQ(config->instance_irqn);
+}
+
+void hal_uart_log_stats(uint8_t uart_id) {
+  assert(uart_id < NUM_UARTS);
+  stm32_uart_t *u = &g_stm32_uarts[uart_id];
+  (void) u;
+
+  LOG("stats for UART %u", uart_id);
+  LOG("frame_errors: %lu", u->frame_errors);
+  LOG("parity_errors: %lu", u->parity_errors);
+  LOG("noise_errors: %lu", u->noise_errors);
+  LOG("overruns: %lu", u->overruns);
+#ifdef LL_USART_ISR_RXNE_RXFNE
+  const stm32_uart_config_t *config = &stm32_uart_config[uart_id];
+  (void) config;
+  LOG("rx fifo: %lu", LL_USART_GetRXFIFOThreshold(config->instance));
+#endif
+  LOG("min_chars_per_rx_isr: %u", u->min_chars_per_rx_isr);
+  LOG("max_chars_per_rx_isr: %u", u->max_chars_per_rx_isr);
 }

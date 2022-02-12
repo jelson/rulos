@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "core/hardware_types.h"
 #include "core/heap.h"
@@ -110,6 +110,9 @@ typedef void (*hal_uart_next_sendbuf_cb)(uint8_t uart_id, void *user_data,
                                          const char **tx_buf /*OUT*/,
                                          uint16_t *len /*OUT*/);
 void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb);
+
+// write stats to the log
+void hal_uart_log_stats(uint8_t uart_id);
 
 /////////////// TWI ///////////////////////////////////////////////
 
