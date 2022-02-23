@@ -24,12 +24,19 @@
 #include "core/rulos.h"
 #include "core/wallclock.h"
 
+#define DUMP_PERIOD_MSEC 2500
+
+static void flash_dumper_periodic_flush(void *data);
+
 void flash_dumper_init(flash_dumper_t *fd) {
   const char *filename = "log.txt";
 
   memset(fd, 0, sizeof(*fd));
 
   wallclock_init(&fd->wallclock);
+
+  // create periodic task for flushing cache
+  schedule_now(flash_dumper_periodic_flush, fd);
 
   if (f_mount(&fd->fatfs, "", 0) != FR_OK) {
     LOG("can't mount flash filesystem");
@@ -44,6 +51,48 @@ void flash_dumper_init(flash_dumper_t *fd) {
   }
   LOG("opened file ok");
   fd->ok = true;
+}
+
+// returns true on success, false on failure
+static bool flash_dumper_flush(flash_dumper_t *fd, uint32_t flush_size) {
+  if (!fd->ok) {
+    return false;
+  }
+
+  assert(fd->len >= flush_size);
+  uint32_t written;
+  int retval = f_write(&fd->fp, fd->buf, flush_size, &written);
+  if (retval != FR_OK) {
+    LOG("couldn't write to sd card: got retval of %d", retval);
+    fd->ok = false;
+    return false;
+  }
+  if (written == 0) {
+    LOG("error writing to SD card: nothing written");
+    fd->ok = false;
+    return false;
+  }
+  retval = f_sync(&fd->fp);
+  if (retval != FR_OK) {
+    fd->ok = false;
+    return false;
+  }
+
+  // success!
+  LOG("flash: wrote %ld bytes", written);
+  memmove(&fd->buf[0], &fd->buf[written], fd->len - written);
+  fd->len -= written;
+  return true;
+}
+
+static void flash_dumper_periodic_flush(void *data) {
+  flash_dumper_t *fd = (flash_dumper_t *)data;
+  schedule_us(DUMP_PERIOD_MSEC * 1000, flash_dumper_periodic_flush, fd);
+  if (fd->len > 0) {
+    if (!flash_dumper_flush(fd, fd->len)) {
+      LOG("warning: sd card failure");
+    }
+  }
 }
 
 void flash_dumper_write(flash_dumper_t *fd, const void *buf, int len) {
@@ -78,28 +127,9 @@ void flash_dumper_write(flash_dumper_t *fd, const void *buf, int len) {
 
   // if we've reached 2 complete FAT sectors, write
   while (fd->len >= WRITE_INCREMENT) {
-    uint32_t written;
-    int retval = f_write(&fd->fp, fd->buf, WRITE_INCREMENT, &written);
-    if (retval != FR_OK) {
-      LOG("couldn't write to sd card: got retval of %d", retval);
-      fd->ok = false;
+    if (!flash_dumper_flush(fd, WRITE_INCREMENT)) {
       return;
     }
-    if (written == 0) {
-      LOG("error writing to SD card: nothing written");
-      fd->ok = false;
-      return;
-    }
-    retval = f_sync(&fd->fp);
-    if (retval != FR_OK) {
-      fd->ok = false;
-      return;
-    }
-
-    // success!
-    LOG("flash: wrote %ld bytes", written);
-    memmove(&fd->buf[0], &fd->buf[written], fd->len - written);
-    fd->len -= written;
   }
 }
 
