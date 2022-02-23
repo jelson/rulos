@@ -1,6 +1,11 @@
 from SCons.Script import *
-from filelock import FileLock, Timeout
 import os
+
+try:
+    from filelock import FileLock, Timeout
+except ModuleNotFoundError as e:
+    print("Can't find filelock module. Try apt-get install python3-filelock.")
+    sys.exit(-1)
 
 # Global symbols that should be exposed
 from .util import BUILD_ROOT
