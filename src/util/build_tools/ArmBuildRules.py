@@ -20,7 +20,7 @@ import subprocess
 from . import BaseRules, util
 from SCons.Script import *
 
-ARM_COMPILER_PREFIX = "/usr/local/bin/gcc-arm-none-eabi-10-2020-q4-major/bin/arm-none-eabi-"
+DEFAULT_ARM_COMPILER_DIR = "/usr/local/bin/gcc-arm-none-eabi-10-2020-q4-major/bin"
 ARM_ROOT = os.path.join(util.SRC_ROOT, "lib", "chip", "arm")
 STM32_ROOT = os.path.join(ARM_ROOT, "stm32")
 STM32_VENDOR_ROOT = os.path.join(util.PROJECT_ROOT, "ext", "stm32")
@@ -31,6 +31,10 @@ class ArmPlatform(BaseRules.Platform):
     def __init__(self, chip_name, extra_peripherals, extra_cflags):
         super().__init__(extra_peripherals, extra_cflags)
         self.chip_name = chip_name
+        self.toolchain_prefix = os.path.join(
+            os.environ.get('ARM_TOOLCHAIN_DIR', DEFAULT_ARM_COMPILER_DIR),
+            "arm-none-eabi-"
+        )
 
     class Architecture:
         def __init__(self, name, arch, mcpu, more_cflags=[]):
@@ -89,7 +93,7 @@ class ArmPlatform(BaseRules.Platform):
         return ".elf"
 
     def arm_configure_env(self, env):
-        self.configure_compiler(env, ARM_COMPILER_PREFIX)
+        self.configure_compiler(env, self.toolchain_prefix)
 
     def programming_cmdline(env, usbpath, elfpath):
         if 'BMP_POWER' in os.environ:
@@ -98,7 +102,7 @@ class ArmPlatform(BaseRules.Platform):
             power = []
 
         return [
-            ARM_COMPILER_PREFIX + 'gdb', elfpath,
+            self.toolchain_prefix + 'gdb', elfpath,
             '-ex', 'set pagination off',
             '-ex', 'set confirm off',
             '-ex', f'target extended-remote {usbpath}',
