@@ -95,7 +95,7 @@ class ArmPlatform(BaseRules.Platform):
     def arm_configure_env(self, env):
         self.configure_compiler(env, self.toolchain_prefix)
 
-    def programming_cmdline(env, usbpath, elfpath):
+    def programming_cmdline(self, usbpath, elfpath):
         if 'BMP_POWER' in os.environ:
             power = ['-ex', 'mon tpwr enable']
         else:
@@ -131,12 +131,12 @@ class ArmPlatform(BaseRules.Platform):
     def program_with_bmp(self, target, source, env):
         elffile = source[0].get_abspath()
 
-        gdb_path = self.find_bmp_port('GDB Server')
+        gdb_server_path = self.find_bmp_port('GDB Server')
 
-        if not gdb_path:
+        if not gdb_server_path:
             return
 
-        cmdline = self.programming_cmdline(gdb_path, elffile)
+        cmdline = self.programming_cmdline(gdb_server_path, elffile)
         print(cmdline)
         subprocess.call(cmdline)
 
