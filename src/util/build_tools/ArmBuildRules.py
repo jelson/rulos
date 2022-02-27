@@ -149,6 +149,10 @@ class ArmPlatform(BaseRules.Platform):
         subprocess.call(["grabserial", "-d", uart_path, "-b", "1000000", "-t"])
 
     def post_configure(self, env, outputs):
+        # Create a hex file from the elf file
+        hexfile = env.HexFile(outputs[0])
+        Default(hexfile)
+
         # Create programming aliases so a command like "scons
         # program-stm32-<progname>" works, even for SConstruct files
         # that have multiple targets

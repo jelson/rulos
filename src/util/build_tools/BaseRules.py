@@ -38,13 +38,18 @@ class Platform:
             "MakeLSS": Builder(
                 src_suffix = ".elf",
                 suffix = ".lss",
-                action = compiler_prefix+"objdump -h -S --syms $SOURCE > $TARGET",
+                action = f"{compiler_prefix}objdump -h -S --syms $SOURCE > $TARGET",
             ),
             "ShowSizes": Builder(
                 src_suffix = ".elf",
                 suffix = "show_sizes",
-                action = compiler_prefix+"size $SOURCE",
-            )
+                action = f"{compiler_prefix}size $SOURCE",
+            ),
+            "HexFile": Builder(
+                src_suffix = ".elf",
+                suffix = ".hex",
+                action = f"{compiler_prefix}objcopy $SOURCE -O ihex $TARGET",
+            ),
         })
 
     def common_libs(self, target):
