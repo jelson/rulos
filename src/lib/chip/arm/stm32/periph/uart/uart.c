@@ -62,10 +62,13 @@ typedef struct {
   DMA_HandleTypeDef hal_dma_tx_handle;
 
   // statistics
+  uint32_t tot_rx_bytes;
+  uint32_t tot_tx_bytes;
   uint32_t frame_errors;
   uint32_t parity_errors;
   uint32_t noise_errors;
   uint32_t overruns;
+  uint32_t idle_ints;
   uint16_t min_chars_per_rx_isr;
   uint16_t max_chars_per_rx_isr;
 } stm32_uart_t;
@@ -456,6 +459,11 @@ static void dispatch_tx_dma(uint8_t uart_id) {
 // For interrupt-mode receiving: Send any rx data that's buffered up to the next
 // layer, and switch to the other half-buffer.
 static void flush_rx_buf_int(uint8_t uart_id, stm32_uart_t *u) {
+  // if there's nothing stored, do nothing
+  if (u->rx_bytes_stored == 0) {
+    return;
+  }
+
   // send the current buffer up
   u->rx_cb(uart_id, u->user_data, u->rx_curr_base_buf, u->rx_bytes_stored);
 
@@ -468,10 +476,11 @@ static void flush_rx_buf_int(uint8_t uart_id, stm32_uart_t *u) {
   u->rx_bytes_stored = 0;
 }
 
-static void receive_char(uint8_t uart_id, stm32_uart_t *u, char c) {
+static void receive_char_int(uint8_t uart_id, stm32_uart_t *u, char c) {
   // store the character
   u->rx_curr_base_buf[u->rx_bytes_stored] = c;
   u->rx_bytes_stored++;
+  u->tot_rx_bytes++;
 
   // if the half-buffer has filled, make an upcall
   if (u->rx_bytes_stored == u->rx_half_buflen) {
@@ -486,13 +495,13 @@ static void dispatch_int(uint8_t uart_id) {
     return;
   }
 
-  // dispatch rx upcall, if needed -- not handled through the HAL
+  // if a character arrived, add it to the rx buffer
   int num_read = 0;
   while (LL_USART_IsActiveFlag_RXNE(c->instance)) {
     // note: we have to read the character whether or not we send it anywhere;
     // reading the char is what clears the interrupt
     num_read++;
-    receive_char(uart_id, u, LL_USART_ReceiveData8(c->instance));
+    receive_char_int(uart_id, u, LL_USART_ReceiveData8(c->instance));
   }
 
   // update some statistics
@@ -503,7 +512,17 @@ static void dispatch_int(uint8_t uart_id) {
     u->min_chars_per_rx_isr = num_read;
   }
 
-  // clear RX errors not handled through HAL
+  // on idle interrupt, flush the rx buffers upwards
+  if (LL_USART_IsActiveFlag_IDLE(c->instance)) {
+    u->idle_ints++;
+    LL_USART_ClearFlag_IDLE(c->instance);
+    if (USART_USING_RX_DMA(c)) {
+    } else {
+      flush_rx_buf_int(uart_id, u);
+    }
+  }
+
+  // handle RX errors by clearing flags and updating statistics
   if (LL_USART_IsActiveFlag_FE(c->instance)) {
     LL_USART_ClearFlag_FE(c->instance);
     u->frame_errors++;
@@ -541,6 +560,7 @@ static void maybe_launch_next_tx(stm32_uart_t *uart) {
     // tx train complete!
     uart->next_sendbuf_cb = NULL;
   } else {
+    uart->tot_tx_bytes++;
     // Start the transfer
     if (HAL_UART_Transmit_DMA(&uart->hal_uart_handle, (uint8_t *)buf, len) !=
         HAL_OK) {
@@ -652,7 +672,8 @@ void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf,
 
   // Enable the idle interrupt so we can flush rx buffers upwards when each
   // message ends
-  //LL_USART_EnableIT_IDLE(config->instance);
+  LL_USART_ClearFlag_IDLE(config->instance);
+  LL_USART_EnableIT_IDLE(config->instance);
 
   if (USART_USING_RX_DMA(config)) {
     hal_uart_start_rx_dma(u, config);

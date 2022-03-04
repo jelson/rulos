@@ -26,9 +26,11 @@ LineReader_t linereader, gps_linereader;
 int i = 0;
 
 static void line_received(UartState_t *uart, void *user_data, char *line) {
-  LOG("uart %d got line %d: '%s'", uart->uart_id, i++, line);
+  LOG("uart %d got line %d: ", uart->uart_id, i++);
+  log_write(line, strlen(line));
+  log_write("\n", 1);
 #ifdef RULOS_ARM_STM32
-  hal_uart_log_stats(uart->uart_id);
+  //hal_uart_log_stats(uart->uart_id);
 #endif
 }
 
@@ -37,10 +39,12 @@ static void line_received(UartState_t *uart, void *user_data, char *line) {
 int main() {
   rulos_hal_init();
 
-  uart_init(&uart, /* uart_id= */ 0, 38400);
+  uart_init(&uart, /* uart_id= */ 0, 1000000);
   log_bind_uart(&uart);
+
+  init_clock(10000, TIMER1);
+
   linereader_init(&linereader, &uart, line_received, &uart);
-  LOG("lineecho up and running");
 
 #if USE_GPS
   uart_init(&gps_uart, /* uart_id= */ 4, 9600, true);
@@ -48,7 +52,6 @@ int main() {
   LOG("reading from gps too!");
 #endif
 
-  init_clock(10000, TIMER1);
-
+  LOG("lineecho up and running");
   scheduler_run();
 }

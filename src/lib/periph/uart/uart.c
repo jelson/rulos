@@ -41,11 +41,16 @@
 // a task-time callback, invoked from here.
 static void _uart_receive_trampoline(void *data) {
   UartState_t *u = (UartState_t *)data;
-  u->rx_cb(u, u->rx_user_data, u->rx_pending_cb_buf, u->rx_pending_cb_len);
-  u->rx_pending_cb_len = 0;
-  u->rx_pending_cb_buf = NULL;
 
-  // report an overflow, if it happened
+  // store the buffer in a temp var before calling the user callback, to make
+  // overflow just a little less likely
+  char *buf = u->rx_pending_cb_buf;
+  size_t len = u->rx_pending_cb_len;
+  u->rx_pending_cb_buf = NULL;
+  u->rx_pending_cb_len = 0;
+  u->rx_cb(u, u->rx_user_data, buf, len);
+
+  // report an overflow, if we recorded one during the interrupt handler
   if (u->rx_overflow_bytes != u->rx_overflow_bytes_last_reported) {
     LOG("WARNING: uart %u overflowed %u bytes (%u total)", u->uart_id,
         u->rx_overflow_bytes - u->rx_overflow_bytes_last_reported,
