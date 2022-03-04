@@ -25,8 +25,9 @@
 UartState_t console, dut;
 uint32_t dut_rx_chars = 0;
 
-static void _char_received(UartState_t *s, void *user_data, char c) {
-  dut_rx_chars++;
+static void _buf_received(UartState_t *s, void *user_data, char *buf,
+                          size_t buflen) {
+  dut_rx_chars += buflen;
 }
 
 void print_stats(void *data) {
@@ -43,7 +44,7 @@ int main() {
   LOG("Log output running");
 
   uart_init(&dut, /* uart_id= */ 3, 1000000);
-  uart_start_rx(&dut, _char_received, NULL);
+  uart_start_rx(&dut, _buf_received, NULL);
 
   init_clock(10000, TIMER1);
   schedule_now(print_stats, NULL);

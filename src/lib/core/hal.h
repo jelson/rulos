@@ -90,11 +90,20 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
 // Callback for incoming serial data. If a callback is set using
 // hal_uart_set_receive_cb, incoming characters will be passed into that
 // callback at interrupt time.
-typedef void (*hal_uart_receive_cb)(uint8_t uart_id, void *user_data, char c);
+typedef void (*hal_uart_receive_cb)(uint8_t uart_id, void *user_data, char *buf,
+                                    size_t len);
 
-// Enable reception on this UART; when a char is received, the provided upcall
-// is called at interrupt time.
-void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb);
+// Enable reception on this UART. Buffer and its capacity must be provided.
+// Buffer must be even length since it's divided into two halves. The driver
+// will fill half the buffer while providing an upcall to the given callback on
+// the other half. Warning: upcalls *might* be at interrupt time, but will not
+// be if called in response to hal_uart_trigger_rx();
+void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf,
+                       size_t buflen);
+
+// Trigger receive callback to flush any buffered incoming data, even if the
+// buffer isn't full yet.
+void hal_uart_flush_rx(uint8_t uart_id);
 
 // Begin a train of transmissions to a uart. When each completes, the send_next
 // callback will be called at interrupt time to retrieve the next data to be

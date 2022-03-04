@@ -28,11 +28,16 @@
 #define UART_TX_QUEUE_LEN 128
 #endif
 
+#ifndef UART_RX_QUEUE_LEN
+#define UART_RX_QUEUE_LEN 64
+#endif
+
 struct UartState_t_s;
 typedef struct UartState_t_s UartState_t;
 
-// Upcall for reception. Called at interrupt-time.
-typedef void (*uart_rx_cb)(UartState_t *s, void *user_data, char c);
+// Upcall for reception. Called at task-time.
+typedef void (*uart_rx_cb)(UartState_t *s, void *user_data, char *buf,
+                           size_t len);
 
 struct UartState_t_s {
   bool initted;
@@ -52,6 +57,11 @@ struct UartState_t_s {
   // receive
   uart_rx_cb rx_cb;
   void *rx_user_data;
+  char rx_queue[UART_RX_QUEUE_LEN];
+  char *rx_pending_cb_buf;
+  size_t rx_pending_cb_len;
+  size_t rx_overflow_bytes;
+  size_t rx_overflow_bytes_last_reported;
 };
 
 ///////////////// application API
@@ -59,8 +69,8 @@ struct UartState_t_s {
 // initialize an instance of a uart
 void uart_init(UartState_t *u, uint8_t uart_id, uint32_t baud);
 
-// Registers a char-received callback to be called at interrupt time each time a
-// character arrives.
+// Registers a data-received callback to be called at task time each time
+// another batch of data arrives from the serial port.
 void uart_start_rx(UartState_t *u, uart_rx_cb rx_cb, void *user_data);
 
 // Sends binary data to the UART, specified with a length.

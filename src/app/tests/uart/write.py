@@ -6,6 +6,6 @@ import time
 f = open(sys.argv[1], "w")
 
 for i in range(20):
-    f.write(f"hello there number {i}\n")
+    f.write(f"hello there number {i}//")
     f.flush()
 
