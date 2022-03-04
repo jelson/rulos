@@ -51,9 +51,11 @@ typedef struct {
   // rx
   hal_uart_receive_cb rx_cb;
   char *rx_buf;
-  char *rx_curr_base_buf; // points to rx_buf, or halfway into rx_buf
+  char *rx_curr_base_buf;  // points to rx_buf, or halfway into rx_buf
   size_t rx_bytes_stored;
-  size_t rx_half_buflen; // buflen we're given divided by two: size of each half
+
+  // buflen we're given by the layer above, divided by two: size of each half
+  size_t rx_half_buflen;
 
   // UART handle from STM32's HAL
   UART_HandleTypeDef hal_uart_handle;
@@ -255,7 +257,7 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 
         .rx_port = GPIOA,
         .rx_pin = GPIO_PIN_10,
-        //.rx_dma_instance = DMA1,
+        .rx_dma_instance = DMA1,
         .rx_dma_channel = LL_DMA_CHANNEL_2,
         .rx_dma_irqn = DMA1_Channel2_3_IRQn,
         .rx_dma_request = DMA_REQUEST_USART1_RX,
@@ -418,6 +420,34 @@ static stm32_uart_t g_stm32_uarts[NUM_UARTS] = {};
 
 #if USE_RX_DMA_FOR_CHIP
 
+static void hal_uart_start_rx_dma(stm32_uart_t *u,
+                                  const stm32_uart_config_t *config);
+
+static void flush_rx_buf_dma(uint8_t uart_id, stm32_uart_t *u,
+                             const stm32_uart_config_t *c) {
+  // Disable DMA
+  LL_DMA_DisableChannel(c->rx_dma_instance, c->rx_dma_channel);
+
+  // Determine how many bytes are left to read, and thus how many were read
+  uint32_t free_space =
+      LL_DMA_GetDataLength(c->rx_dma_instance, c->rx_dma_channel);
+  uint32_t bytes_read = (u->rx_half_buflen * 2) - free_space;
+
+  // If bytes read is more than half a buffer, it means it's just the second
+  // half of the buffer that has new data
+  char *base_buf = u->rx_buf;
+  if (bytes_read > u->rx_half_buflen) {
+    base_buf += u->rx_half_buflen;
+    bytes_read -= u->rx_half_buflen;
+  }
+
+  // Notify up
+  u->rx_cb(uart_id, u->user_data, base_buf, bytes_read);
+
+  // Restart DMA reads
+  hal_uart_start_rx_dma(u, c);
+}
+
 static void dma_complete_upcall(uint8_t uart_id, stm32_uart_t *u, int halfbuf) {
   char *base_buf = u->rx_buf;
   if (halfbuf) {
@@ -443,6 +473,12 @@ static void dispatch_rx_dma(uint8_t uart_id) {
     LL_DMA_ClearFlag_TC(config->rx_dma_instance, config->rx_dma_channel);
     dma_complete_upcall(uart_id, u, 1);
   }
+}
+
+#else
+
+static void flush_rx_buf_dma(uint8_t uart_id, stm32_uart_t *u,
+                             const stm32_uart_config_t *c) {
 }
 
 #endif
@@ -517,6 +553,7 @@ static void dispatch_int(uint8_t uart_id) {
     u->idle_ints++;
     LL_USART_ClearFlag_IDLE(c->instance);
     if (USART_USING_RX_DMA(c)) {
+      flush_rx_buf_dma(uart_id, u, c);
     } else {
       flush_rx_buf_int(uart_id, u);
     }
@@ -598,7 +635,7 @@ void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb) {
 #if USE_RX_DMA_FOR_CHIP
 
 static void hal_uart_start_rx_dma(stm32_uart_t *u,
-                           const stm32_uart_config_t *config) {
+                                  const stm32_uart_config_t *config) {
   // Enable DMA RX interrupts
   NVIC_SetPriority(config->rx_dma_irqn, 0);
   NVIC_EnableIRQ(config->rx_dma_irqn);
@@ -618,7 +655,7 @@ static void hal_uart_start_rx_dma(stm32_uart_t *u,
       LL_DMA_GetDataTransferDirection(config->rx_dma_instance,
                                       config->rx_dma_channel));
   LL_DMA_SetDataLength(config->rx_dma_instance, config->rx_dma_channel,
-                       2* u->rx_half_buflen);
+                       2 * u->rx_half_buflen);
   LL_DMA_SetPeriphRequest(config->rx_dma_instance, config->rx_dma_channel,
                           config->rx_dma_request);
   LL_DMA_EnableIT_TC(config->rx_dma_instance, config->rx_dma_channel);
@@ -630,8 +667,8 @@ static void hal_uart_start_rx_dma(stm32_uart_t *u,
 #else
 
 static void hal_uart_start_rx_dma(stm32_uart_t *u,
-                                  const stm32_uart_config_t *config) {}
-
+                                  const stm32_uart_config_t *config) {
+}
 
 #endif  // USE_RX_DMA_FOR_CHIP
 
