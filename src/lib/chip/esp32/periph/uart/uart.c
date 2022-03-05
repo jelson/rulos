@@ -113,7 +113,8 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
   eu->dev->idle_conf.tx_idle_num = 0;  // cargo-cult
 }
 
-void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb) {
+void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf,
+                       size_t buflen) {
   assert(false);  // not implemented yet
 }
 

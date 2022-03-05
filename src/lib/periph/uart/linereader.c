@@ -27,18 +27,9 @@ static bool iseol(char c) {
   return (c == '\n' || c == '\r');
 }
 
-static void _lines_complete(void *data) {
-  LineReader_t *l = (LineReader_t *)data;
-
-  // In a critical section, record how many characters we will
-  // process, and clear cb_pending. This guarantees that if a later
-  // interrupt appends any new data, it will also re-queue a run of
-  // the handler.
-  rulos_irq_state_t old_interrupts = hal_start_atomic();
-  char *s = CharQueue_ptr(&l->rx_queue.q);
-  int len = CharQueue_length(&l->rx_queue.q);
-  l->cb_pending = false;
-  hal_end_atomic(old_interrupts);
+static void _parse_lines(LineReader_t *l) {
+  char *s = CharQueue_ptr(&l->line_queue.q);
+  int len = CharQueue_length(&l->line_queue.q);
 
   char *curr_string_start = s;
   int i = 0;
@@ -75,23 +66,27 @@ static void _lines_complete(void *data) {
     }
   }
 
-  old_interrupts = hal_start_atomic();
-  CharQueue_pop_n(&l->rx_queue.q, NULL, consumed);
-  //int remaining = CharQueue_length(&l->rx_queue.q);
-  hal_end_atomic(old_interrupts);
-  //LOG("%d consumed, %d remaining", consumed, remaining);
+  CharQueue_pop_n(&l->line_queue.q, NULL, consumed);
+  // int remaining = CharQueue_length(&l->line_queue.q);
+  // LOG("%d consumed, %d remaining", consumed, remaining);
 }
 
-// warning, called at interrupt time!
-static void _char_received(UartState_t *s, void *user_data, char c) {
+// Called at task time
+static void _buf_received(UartState_t *s, void *user_data, char *buf,
+                          size_t len) {
   LineReader_t *l = (LineReader_t *)user_data;
-  bool success = CharQueue_append(&l->rx_queue.q, c);
-  if (!success) {
-    l->overflows++;
-  }
-  if (iseol(c) && !l->cb_pending) {
-    l->cb_pending = true;
-    schedule_now(_lines_complete, l);
+  while (len > 0) {
+    size_t free_space = CharQueue_free_space(&l->line_queue.q);
+    if (free_space == 0) {
+      l->overflows++;
+      LOG("linereader overflow!");
+      return;
+    }
+    size_t write_size = r_min(free_space, len);
+    CharQueue_append_n(&l->line_queue.q, (char *)buf, write_size);
+    buf += write_size;
+    len -= write_size;
+    _parse_lines(l);
   }
 }
 
@@ -102,6 +97,6 @@ void linereader_init(LineReader_t *l, UartState_t *uart, linereader_cb cb,
   l->uart = uart;
   l->cb = cb;
   l->user_data = user_data;
-  CharQueue_init(&l->rx_queue.q, sizeof(l->rx_queue));
-  uart_start_rx(uart, _char_received, l);
+  CharQueue_init(&l->line_queue.q, sizeof(l->line_queue));
+  uart_start_rx(uart, _buf_received, l);
 }

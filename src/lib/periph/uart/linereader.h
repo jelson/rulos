@@ -31,19 +31,18 @@
 
 typedef void (*linereader_cb)(UartState_t *uart, void *user_data, char *line);
 
-#ifndef UART_RX_QUEUE_LEN
-#define UART_RX_QUEUE_LEN 128
+#ifndef LINEREADER_MAX_LINE_LEN
+#define LINEREADER_MAX_LINE_LEN 128
 #endif
 
 typedef struct {
   union {
-    char storage[sizeof(CharQueue) + UART_RX_QUEUE_LEN];
+    char storage[sizeof(CharQueue) + LINEREADER_MAX_LINE_LEN];
     CharQueue q;
-  } rx_queue;
+  } line_queue;
   UartState_t *uart;
   linereader_cb cb;
   void *user_data;
-  bool cb_pending;
   uint32_t overflows;
 } LineReader_t;
 

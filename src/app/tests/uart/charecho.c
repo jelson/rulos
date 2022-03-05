@@ -22,8 +22,11 @@
 
 UartState_t uart;
 
-void char_received(UartState_t *s, void *user_data, char c) {
-  LOG("got char: '%c'", c);
+void char_received(UartState_t *s, void *user_data, char *buf, size_t len) {
+  char termbuf[UART_RX_QUEUE_LEN+1];
+  memcpy(termbuf, buf, len);
+  termbuf[len] = '\0';
+  LOG("got %d chars: %s", len, termbuf);
 }
 
 int main() {

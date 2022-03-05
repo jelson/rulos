@@ -37,21 +37,55 @@
 
 //// reception
 
+// Data comes up from the UART's HAL layer at interrupt time. We convert it into
+// a task-time callback, invoked from here.
+static void _uart_receive_trampoline(void *data) {
+  UartState_t *u = (UartState_t *)data;
+
+  // store the buffer in a temp var before calling the user callback, to make
+  // overflow just a little less likely
+  char *buf = u->rx_pending_cb_buf;
+  size_t len = u->rx_pending_cb_len;
+  u->rx_pending_cb_buf = NULL;
+  u->rx_pending_cb_len = 0;
+  u->rx_cb(u, u->rx_user_data, buf, len);
+
+  // report an overflow, if we recorded one during the interrupt handler
+  if (u->rx_overflow_bytes != u->rx_overflow_bytes_last_reported) {
+    LOG("WARNING: uart %u overflowed %u bytes (%u total)", u->uart_id,
+        u->rx_overflow_bytes - u->rx_overflow_bytes_last_reported,
+        u->rx_overflow_bytes);
+    u->rx_overflow_bytes_last_reported = u->rx_overflow_bytes;
+  }
+}
+
 // Upcall from HAL when new data arrives.  Happens at interrupt time.
-static void _uart_receive(uint8_t uart_id, void *user_data, char c) {
+static void _uart_receive(uint8_t uart_id, void *user_data, char *buf,
+                          size_t len) {
   UartState_t *u = (UartState_t *)user_data;
   assert(u != NULL);
   assert(u->uart_id == uart_id);
+  assert(u->initted);
 
-  if (u->initted && u->rx_cb != NULL) {
-    u->rx_cb(u, u->rx_user_data, c);
+  // check for overflow; if it happened, record it for later reporting. note we
+  // should not try to emit to serial here because we're in an interrupt handler
+  // and it could block!
+  if (u->rx_pending_cb_buf != NULL) {
+    u->rx_overflow_bytes += len;
+  } else {
+    u->rx_pending_cb_buf = buf;
+    u->rx_pending_cb_len = len;
   }
+
+  // schedule the callback, overflow or not, to make sure we don't grind to a
+  // halt in case one got lost
+  schedule_now(_uart_receive_trampoline, u);
 }
 
 void uart_start_rx(UartState_t *u, uart_rx_cb rx_cb, void *user_data) {
   u->rx_cb = rx_cb;
   u->rx_user_data = user_data;
-  hal_uart_start_rx(u->uart_id, _uart_receive);
+  hal_uart_start_rx(u->uart_id, _uart_receive, &u->rx_queue, UART_RX_QUEUE_LEN);
 }
 
 //// sending

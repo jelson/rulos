@@ -61,7 +61,8 @@ static inline void _handle_recv_ready_name(char c) {
     g_uart_state[UARTID].rx_cb(
         UARTID,
         g_uart_state[UARTID].user_data,
-        c);
+        &c,
+        1);
   }
 }
 

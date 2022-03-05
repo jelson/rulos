@@ -25,13 +25,15 @@
 UartState_t console, dut;
 uint32_t dut_rx_chars = 0;
 
-static void _char_received(UartState_t *s, void *user_data, char c) {
-  dut_rx_chars++;
+static void _buf_received(UartState_t *s, void *user_data, char *buf,
+                          size_t buflen) {
+  dut_rx_chars += buflen;
 }
 
 void print_stats(void *data) {
   schedule_us(FREQ_USEC, print_stats, NULL);
-  hal_uart_log_stats(dut.uart_id);
+  LOG("");
+  hal_uart_log_stats(console.uart_id);
   LOG("dut_rx_chars: %" PRIu32, dut_rx_chars);
 }
 
@@ -42,8 +44,10 @@ int main() {
   log_bind_uart(&console);
   LOG("Log output running");
 
+  uart_start_rx(&console, _buf_received, NULL);
+
   uart_init(&dut, /* uart_id= */ 3, 1000000);
-  uart_start_rx(&dut, _char_received, NULL);
+  uart_start_rx(&dut, _buf_received, NULL);
 
   init_clock(10000, TIMER1);
   schedule_now(print_stats, NULL);

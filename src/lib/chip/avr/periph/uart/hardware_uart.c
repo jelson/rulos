@@ -208,7 +208,8 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud, void *user_data,
   }
 }
 
-void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb) {
+void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf,
+                       size_t len) {
   switch (uart_id) {
 #if HAVE_UARTID0
     case 0:
