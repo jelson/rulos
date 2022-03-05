@@ -53,7 +53,6 @@ typedef struct {
   char *rx_buf;
   char *rx_curr_base_buf;  // points to rx_buf, or halfway into rx_buf
   size_t rx_bytes_stored;
-
   // buflen we're given by the layer above, divided by two: size of each half
   size_t rx_half_buflen;
 
@@ -64,6 +63,7 @@ typedef struct {
   DMA_HandleTypeDef hal_dma_tx_handle;
 
   // statistics
+  uint32_t tot_ints;
   uint32_t tot_rx_bytes;
   uint32_t tot_tx_bytes;
   uint32_t frame_errors;
@@ -423,6 +423,9 @@ static stm32_uart_t g_stm32_uarts[NUM_UARTS] = {};
 static void hal_uart_start_rx_dma(stm32_uart_t *u,
                                   const stm32_uart_config_t *config);
 
+// Called to flush a partial buffer's worth of DMA data up to the upper
+// layer. Called when we get an RX Idle interrupt in DMA mode. We disable DMA,
+// issue an upcall for any data received, and re-enable DMA again.
 static void flush_rx_buf_dma(uint8_t uart_id, stm32_uart_t *u,
                              const stm32_uart_config_t *c) {
   // Disable DMA
@@ -442,20 +445,27 @@ static void flush_rx_buf_dma(uint8_t uart_id, stm32_uart_t *u,
   }
 
   // Notify up
+  u->tot_rx_bytes += bytes_read;
   u->rx_cb(uart_id, u->user_data, base_buf, bytes_read);
 
   // Restart DMA reads
   hal_uart_start_rx_dma(u, c);
 }
 
+// Send an upcall indicating data ready after a half-complete or full-complete
+// interrupt is received from the DMA, indicating an entire half-buffer's worth
+// of data (i.e., half our full ping-pong buffer) has been received.
 static void dma_complete_upcall(uint8_t uart_id, stm32_uart_t *u, int halfbuf) {
   char *base_buf = u->rx_buf;
   if (halfbuf) {
     base_buf += u->rx_half_buflen;
   }
+  u->tot_rx_bytes += u->rx_half_buflen;
   u->rx_cb(uart_id, u->user_data, base_buf, u->rx_half_buflen);
 }
 
+// Called when a DMA interrupt arrives for a UART. Determine if it is a
+// completion interrupt, and if so, send an upcall.
 static void dispatch_rx_dma(uint8_t uart_id) {
   stm32_uart_t *u = &g_stm32_uarts[uart_id];
   const stm32_uart_config_t *config = &stm32_uart_config[uart_id];
@@ -463,6 +473,8 @@ static void dispatch_rx_dma(uint8_t uart_id) {
   if (!u->initted) {
     return;
   }
+
+  u->tot_ints++;
 
   if (LL_DMA_IsActiveFlag_HT(config->rx_dma_instance, config->rx_dma_channel)) {
     LL_DMA_ClearFlag_HT(config->rx_dma_instance, config->rx_dma_channel);
@@ -531,6 +543,8 @@ static void dispatch_int(uint8_t uart_id) {
     return;
   }
 
+  u->tot_ints++;
+
   // if a character arrived, add it to the rx buffer
   int num_read = 0;
   while (LL_USART_IsActiveFlag_RXNE(c->instance)) {
@@ -597,7 +611,7 @@ static void maybe_launch_next_tx(stm32_uart_t *uart) {
     // tx train complete!
     uart->next_sendbuf_cb = NULL;
   } else {
-    uart->tot_tx_bytes++;
+    uart->tot_tx_bytes += len;
     // Start the transfer
     if (HAL_UART_Transmit_DMA(&uart->hal_uart_handle, (uint8_t *)buf, len) !=
         HAL_OK) {
@@ -851,15 +865,17 @@ void hal_uart_log_stats(uint8_t uart_id) {
   (void)u;
 
   LOG("stats for UART %u", uart_id);
-  LOG("frame_errors: %lu", u->frame_errors);
-  LOG("parity_errors: %lu", u->parity_errors);
-  LOG("noise_errors: %lu", u->noise_errors);
-  LOG("overruns: %lu", u->overruns);
+  LOG(" total rx: %lu", u->tot_rx_bytes);
+  LOG(" total tx: %lu", u->tot_tx_bytes);
+  LOG(" frame_errors: %lu", u->frame_errors);
+  LOG(" parity_errors: %lu", u->parity_errors);
+  LOG(" noise_errors: %lu", u->noise_errors);
+  LOG(" overruns: %lu", u->overruns);
 #ifdef LL_USART_ISR_RXNE_RXFNE
   const stm32_uart_config_t *config = &stm32_uart_config[uart_id];
   (void)config;
-  LOG("rx fifo: %lu", LL_USART_GetRXFIFOThreshold(config->instance));
+  LOG(" rx fifo: %lu", LL_USART_GetRXFIFOThreshold(config->instance));
 #endif
-  LOG("min_chars_per_rx_isr: %u", u->min_chars_per_rx_isr);
-  LOG("max_chars_per_rx_isr: %u", u->max_chars_per_rx_isr);
+  LOG(" min isr chars: %u", u->min_chars_per_rx_isr);
+  LOG(" max isr chars: %u", u->max_chars_per_rx_isr);
 }

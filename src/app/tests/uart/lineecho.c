@@ -30,7 +30,7 @@ static void line_received(UartState_t *uart, void *user_data, char *line) {
   log_write(line, strlen(line));
   log_write("\n", 1);
 #ifdef RULOS_ARM_STM32
-  //hal_uart_log_stats(uart->uart_id);
+  // hal_uart_log_stats(uart->uart_id);
 #endif
 }
 
@@ -42,8 +42,6 @@ int main() {
   uart_init(&uart, /* uart_id= */ 0, 1000000);
   log_bind_uart(&uart);
 
-  init_clock(10000, TIMER1);
-
   linereader_init(&linereader, &uart, line_received, &uart);
 
 #if USE_GPS
@@ -52,6 +50,7 @@ int main() {
   LOG("reading from gps too!");
 #endif
 
+  init_clock(10000, TIMER1);
   LOG("lineecho up and running");
   scheduler_run();
 }

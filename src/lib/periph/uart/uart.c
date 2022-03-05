@@ -72,11 +72,13 @@ static void _uart_receive(uint8_t uart_id, void *user_data, char *buf,
   // and it could block!
   if (u->rx_pending_cb_buf != NULL) {
     u->rx_overflow_bytes += len;
-    return;
+  } else {
+    u->rx_pending_cb_buf = buf;
+    u->rx_pending_cb_len = len;
   }
 
-  u->rx_pending_cb_buf = buf;
-  u->rx_pending_cb_len = len;
+  // schedule the callback, overflow or not, to make sure we don't grind to a
+  // halt in case one got lost
   schedule_now(_uart_receive_trampoline, u);
 }
 
