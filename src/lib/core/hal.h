@@ -78,51 +78,6 @@ uint16_t hal_read_adc(uint8_t idx);
 void hal_init_joystick_button();
 bool hal_read_joystick_button();
 
-/////////////// UART ///////////////////////////////////////////////
-
-// At the HAL layer, UARTs are identified by integers. hal_uart_init initializes
-// a UART. max_tx_len is an out parameter that describes the maximum length of a
-// tx the UART can accept at a time.
-void hal_uart_init(uint8_t uart_id, uint32_t baud,
-                   void *user_data /* for both rx and tx upcalls */,
-                   size_t *max_tx_len /* OUT */);
-
-// Callback for incoming serial data. If a callback is set using
-// hal_uart_set_receive_cb, incoming characters will be passed into that
-// callback at interrupt time.
-typedef void (*hal_uart_receive_cb)(uint8_t uart_id, void *user_data, char *buf,
-                                    size_t len);
-
-// Enable reception on this UART. Buffer and its capacity must be provided.
-// Buffer must be even length since it's divided into two halves. The driver
-// will fill half the buffer while providing an upcall to the given callback on
-// the other half. Warning: upcalls *might* be at interrupt time, but will not
-// be if called in response to hal_uart_trigger_rx();
-void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf,
-                       size_t buflen);
-
-// Trigger receive callback to flush any buffered incoming data, even if the
-// buffer isn't full yet.
-void hal_uart_flush_rx(uint8_t uart_id);
-
-// Begin a train of transmissions to a uart. When each completes, the send_next
-// callback will be called at interrupt time to retrieve the next data to be
-// sent.
-//
-// The value returned as the max_tx_len out param of hal_uart_init the maximum
-// size of a buffer that can be returned on each callback. This is to deal with
-// the hardware differences between AVR-class devices, which can only transmit
-// one character per interrupt, and ARM-class devices that support DMA.
-//
-// If there is no more data to send, len should be set to 0.
-typedef void (*hal_uart_next_sendbuf_cb)(uint8_t uart_id, void *user_data,
-                                         const char **tx_buf /*OUT*/,
-                                         uint16_t *len /*OUT*/);
-void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb);
-
-// write stats to the log
-void hal_uart_log_stats(uint8_t uart_id);
-
 /////////////// TWI ///////////////////////////////////////////////
 
 MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,

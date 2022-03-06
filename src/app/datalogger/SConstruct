@@ -50,7 +50,13 @@ for app in apps:
             ArmStmPlatform("stm32g0b1xe",
                 extra_cflags=[
                     f"-D{app['board']}",
-                    "-DUART_RX_QUEUE_LEN=4096",
+                    "-DLINEREADER_MAX_LINE_LEN=256",
+                    "-DUART_TX_QUEUE_LEN=4096",
+                    "-DUART_RX_QUEUE_LEN=8192",
+
+                    # don't use these DMA channels for UART RX, since they're
+                    # used by the SD card
+                    "-DUART_SURRENDER_DMA1_CHAN2_3",
                 ],
             )],
         peripherals = "uart sdcard2 fatfs",

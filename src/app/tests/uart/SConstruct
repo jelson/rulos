@@ -51,5 +51,7 @@ for testprog in ["recv", "send", "charecho", "lineecho"]:
         peripherals = ["uart"],
         extra_cflags = [
             "-DLOG_TO_SERIAL",
+            "-DUART_TX_QUEUE_LEN=256",
+            "-DUART_RX_QUEUE_LEN=256",
         ],
     ).build()

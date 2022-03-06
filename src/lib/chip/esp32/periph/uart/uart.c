@@ -20,6 +20,7 @@
 #include "core/hardware.h"
 #include "core/rulos.h"
 #include "esp32/rom/gpio.h"
+#include "periph/uart/uart_hal.h"
 #include "soc/dport_reg.h"
 #include "soc/gpio_sig_map.h"
 #include "soc/uart_struct.h"
@@ -115,6 +116,10 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
 
 void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf,
                        size_t buflen) {
+  assert(false);  // not implemented yet
+}
+
+void hal_uart_rx_cb_done(uint8_t uart_id) {
   assert(false);  // not implemented yet
 }
 

@@ -5,7 +5,11 @@ import time
 
 f = open(sys.argv[1], "w")
 
+s = ""
+
 for i in range(20):
-    f.write(f"hello there number {i}//")
-    f.flush()
+    s += f"hello there number {i}\n"
+
+f.write(s)
+f.flush()
 

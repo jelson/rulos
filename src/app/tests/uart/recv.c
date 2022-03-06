@@ -19,21 +19,28 @@
 #include "core/hardware.h"
 #include "core/rulos.h"
 #include "periph/uart/uart.h"
+#include "periph/uart/uart_hal.h"
 
 #define FREQ_USEC 1000000
 
 UartState_t console, dut;
+uint32_t console_rx_chars = 0;
 uint32_t dut_rx_chars = 0;
 
 static void _buf_received(UartState_t *s, void *user_data, char *buf,
                           size_t buflen) {
-  dut_rx_chars += buflen;
+  if (s == &console) {
+    console_rx_chars += buflen;
+  } else {
+    dut_rx_chars += buflen;
+  }
 }
 
 void print_stats(void *data) {
   schedule_us(FREQ_USEC, print_stats, NULL);
   LOG("");
   hal_uart_log_stats(console.uart_id);
+  LOG("console_rx_chars: %" PRIu32, console_rx_chars);
   LOG("dut_rx_chars: %" PRIu32, dut_rx_chars);
 }
 

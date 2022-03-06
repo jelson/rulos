@@ -80,6 +80,7 @@ static void _buf_received(UartState_t *s, void *user_data, char *buf,
     if (free_space == 0) {
       l->overflows++;
       LOG("linereader overflow!");
+      CharQueue_pop_n(&l->line_queue.q, NULL, LINEREADER_MAX_LINE_LEN);
       return;
     }
     size_t write_size = r_min(free_space, len);

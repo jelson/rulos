@@ -32,6 +32,7 @@
 #include "core/hardware.h"
 #include "core/rulos.h"
 #include "periph/uart/uart.h"
+#include "periph/uart/uart_hal.h"
 
 void audioled_set(bool red, bool yellow);
 
@@ -241,4 +242,7 @@ void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb) {
     default:
       assert(false);
   }
+}
+
+void hal_uart_rx_cb_done(uint8_t uart_id) {
 }

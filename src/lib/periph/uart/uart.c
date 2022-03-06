@@ -25,6 +25,7 @@
 #include "core/queue.h"
 #include "core/rulos.h"
 #include "core/util.h"
+#include "periph/uart/uart_hal.h"
 
 // XXX TODO HELPME:
 //
@@ -42,13 +43,13 @@
 static void _uart_receive_trampoline(void *data) {
   UartState_t *u = (UartState_t *)data;
 
-  // store the buffer in a temp var before calling the user callback, to make
-  // overflow just a little less likely
-  char *buf = u->rx_pending_cb_buf;
-  size_t len = u->rx_pending_cb_len;
+  // call the user callback
+  u->rx_cb(u, u->rx_user_data, u->rx_pending_cb_buf, u->rx_pending_cb_len);
+
+  // indicate to the HAL that we're ready for the next callback
   u->rx_pending_cb_buf = NULL;
   u->rx_pending_cb_len = 0;
-  u->rx_cb(u, u->rx_user_data, buf, len);
+  hal_uart_rx_cb_done(u->uart_id);
 
   // report an overflow, if we recorded one during the interrupt handler
   if (u->rx_overflow_bytes != u->rx_overflow_bytes_last_reported) {
@@ -67,18 +68,12 @@ static void _uart_receive(uint8_t uart_id, void *user_data, char *buf,
   assert(u->uart_id == uart_id);
   assert(u->initted);
 
-  // check for overflow; if it happened, record it for later reporting. note we
-  // should not try to emit to serial here because we're in an interrupt handler
-  // and it could block!
-  if (u->rx_pending_cb_buf != NULL) {
-    u->rx_overflow_bytes += len;
-  } else {
-    u->rx_pending_cb_buf = buf;
-    u->rx_pending_cb_len = len;
-  }
+  // hal should never give us an RX callback unless we called down to say the
+  // previous one was complete
+  assert(u->rx_pending_cb_buf == NULL);
 
-  // schedule the callback, overflow or not, to make sure we don't grind to a
-  // halt in case one got lost
+  u->rx_pending_cb_buf = buf;
+  u->rx_pending_cb_len = len;
   schedule_now(_uart_receive_trampoline, u);
 }
 
