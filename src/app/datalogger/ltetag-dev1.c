@@ -34,14 +34,24 @@
 #define GPS_POWERMEASURE_ADDR   0b1000000
 #define MODEM_POWERMEASURE_ADDR 0b1000001
 
+#define LED_PIN GPIO_A8
+
 UartState_t console;
 flash_dumper_t flash_dumper;
 currmeas_state_t gps_cms, modem_cms;
 serial_reader_t psoc_console_tx;
 
+static void turn_off_led(void *data) {
+  gpio_clr(LED_PIN);
+}
+
 static void indicate_alive(void *data) {
   LOG("run");
-  schedule_us(1000000, indicate_alive, NULL);
+  schedule_us(2500000, indicate_alive, NULL);
+  if (flash_dumper.ok) {
+    gpio_set(LED_PIN);
+    schedule_us(20000, turn_off_led, NULL);
+  }
 }
 
 int main() {
@@ -78,6 +88,8 @@ int main() {
 
   // enable periodic blink to indicate liveness
   schedule_now(indicate_alive, NULL);
+
+  gpio_make_output(LED_PIN);
 
   scheduler_run();
 }
