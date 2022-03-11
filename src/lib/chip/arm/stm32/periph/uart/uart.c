@@ -289,7 +289,11 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .instance = USART2,
         .instance_irqn = USART2_IRQn,
         .rx_port = GPIOA,
+#ifdef USART2_RX_ON_A15
+        .rx_pin = GPIO_PIN_15,
+#else
         .rx_pin = GPIO_PIN_3,
+#endif
 #ifndef UART_SURRENDER_DMA1_CHAN2_3
         .rx_dma_instance = DMA1,
         .rx_dma_channel = LL_DMA_CHANNEL_3,
@@ -351,9 +355,16 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .instance = USART5,
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
         .rx_port = GPIOB,
+#ifdef USART5_RX_ON_B4
+        .rx_pin = GPIO_PIN_4,
+        .altfunc = GPIO_AF3_USART5,
+#else
         .rx_pin = GPIO_PIN_1,
+        .altfunc = GPIO_AF8_USART5,
+#endif
         .rx_dma_instance = DMA2,
         .rx_dma_channel = LL_DMA_CHANNEL_5,
+        .rx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
         .rx_dma_request = DMA_REQUEST_USART5_RX,
 
         .tx_port = GPIOB,
@@ -361,7 +372,6 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .tx_dma_chan = DMA1_Channel7,
         .tx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
         .tx_dma_request = DMA_REQUEST_USART5_TX,
-        .altfunc = GPIO_AF8_USART5,
     },
 #endif
 #ifdef USART6
