@@ -63,7 +63,7 @@ int main() {
   // initialize console uart
   uart_init(&console, CONSOLE_UART_NUM, 1000000);
   log_bind_uart(&console);
-  LOG("LTE Tag Dev Board Datalogger starting, rev %s", STRINGIFY(GIT_COMMIT));
+  LOG("LTE Tag Dev Board Datalogger starting, rev " STRINGIFY(GIT_COMMIT));
 
   // initialize flash dumper
   flash_dumper_init(&flash_dumper);

@@ -51,10 +51,11 @@ int main() {
   // initialize console uart
   uart_init(&console, CONSOLE_UART_NUM, 1000000);
   log_bind_uart(&console);
-  LOG("Gemini Datalogger starting");
+  LOG("Gemini Datalogger starting, rev " STRINGIFY(GIT_COMMIT));
 
   // initialize flash dumper
   flash_dumper_init(&flash_dumper);
+  flash_dumper_print(&flash_dumper, "startup," STRINGIFY(GIT_COMMIT));
 
   // initialize serial readers
   serial_reader_init(&psoc_rx, PSOC_RX_UART_NUM, 1000000, &flash_dumper, NULL);
