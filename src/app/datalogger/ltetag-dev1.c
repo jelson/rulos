@@ -26,8 +26,8 @@
 
 // uart definitions
 #define CONSOLE_UART_NUM 0
-#define GPS_UART_NUM     1
-#define MODEM_UART_NUM   2
+#define GPS_UART_NUM     4
+#define MODEM_UART_NUM   1
 #define PSOC_TX_UART_NUM 3
 
 // power measurement
@@ -40,6 +40,8 @@ UartState_t console;
 flash_dumper_t flash_dumper;
 currmeas_state_t gps_cms, modem_cms;
 serial_reader_t psoc_console_tx;
+serial_reader_t modem_uart;
+serial_reader_t gps_uart;
 
 static void turn_off_led(void *data) {
   gpio_clr(LED_PIN);
@@ -71,6 +73,8 @@ int main() {
 
   // initialize serial readers
   serial_reader_init(&psoc_console_tx, PSOC_TX_UART_NUM, 1000000, &flash_dumper, NULL);
+  serial_reader_init(&modem_uart,      MODEM_UART_NUM, 115200, &flash_dumper, NULL);
+  serial_reader_init(&gps_uart,        GPS_UART_NUM, 115200, &flash_dumper, NULL);
 
   // initialize current measurement. docs say calibration register should be
   // trunc[0.04096 / (current_lsb * R_shunt)]
