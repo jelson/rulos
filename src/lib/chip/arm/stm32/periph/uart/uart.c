@@ -362,6 +362,7 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 #endif
         .rx_dma_instance = DMA2,
         .rx_dma_channel = LL_DMA_CHANNEL_5,
+        .rx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
         .rx_dma_request = DMA_REQUEST_USART5_RX,
 
         .tx_port = GPIOB,
