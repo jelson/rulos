@@ -55,7 +55,7 @@ for app in apps:
         extra_cflags = app.get('extra_cflags', []) + [
             f"-D{app['board']}",
             "-DLOG_TO_SERIAL",
-            "-DLINEREADER_MAX_LINE_LEN=256",
+            "-DLINEREADER_MAX_LINE_LEN=4096",
             "-DUART_TX_QUEUE_LEN=4096",
             "-DUART_RX_QUEUE_LEN=8192",
 
