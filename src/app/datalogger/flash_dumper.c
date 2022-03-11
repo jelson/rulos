@@ -64,8 +64,7 @@ static const char *makeFileName() {
 	    count += 1;
 	    f_lseek(&fp, 0);
             bytes_count = 0;
-	    // finally, increment the count and write it back to the 
-	    // file
+	    // finally, increment the count and write it back to the file
 	    int wr_ok = f_write(&fp, &count, 4, &bytes_count);
 	    if ((wr_ok == FR_OK) && (bytes_count == 4)) {
                 LOG("File count updated.");
