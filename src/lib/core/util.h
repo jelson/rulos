@@ -48,6 +48,10 @@ uint16_t atoi_hex(char *in);
 uint16_t stack_ptr();
 void debug_delay(int ms);
 
+// weird preprocessor magic to turn a #define into a string
+#define STRINGIFY2(x)  #x
+#define STRINGIFY(x)  STRINGIFY2(x)
+
 #ifdef AVR
 #include <avr/pgmspace.h>
 #else

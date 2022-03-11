@@ -63,4 +63,4 @@ def repo_is_dirty():
     return len(get_shell_output(["git", "status", "--porcelain"])) > 0
 
 def commit_hash():
-    return get_shell_output(["git", "rev-parse", "--short", "HEAD"])
+    return get_shell_output(["git", "describe", "--dirty", "--always", "--tags"])

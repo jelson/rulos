@@ -90,6 +90,7 @@ class Platform:
             "-Werror",
             "-g",
             "-flto",
+            f"-DGIT_COMMIT={commit_hash()}",
             std,
         ]
 

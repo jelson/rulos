@@ -63,13 +63,13 @@ int main() {
   // initialize console uart
   uart_init(&console, CONSOLE_UART_NUM, 1000000);
   log_bind_uart(&console);
-  LOG("LTE Tag Dev Board Datalogger starting");
+  LOG("LTE Tag Dev Board Datalogger starting, rev %s", STRINGIFY(GIT_COMMIT));
 
   // initialize flash dumper
   flash_dumper_init(&flash_dumper);
 
   flash_dumper_print(&flash_dumper, "restarting\n\n\n");
-  flash_dumper_print(&flash_dumper, "startup");
+  flash_dumper_print(&flash_dumper, "startup," STRINGIFY(GIT_COMMIT));
 
   // initialize serial readers
   serial_reader_init(&psoc_console_tx, PSOC_TX_UART_NUM, 1000000, &flash_dumper, NULL);
