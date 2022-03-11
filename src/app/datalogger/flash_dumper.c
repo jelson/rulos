@@ -92,7 +92,6 @@ static const char *makeFileName() {
 
 
 void flash_dumper_init(flash_dumper_t *fd) {
-
   memset(fd, 0, sizeof(*fd));
 
   wallclock_init(&fd->wallclock);
@@ -117,6 +116,8 @@ void flash_dumper_init(flash_dumper_t *fd) {
   }
   LOG("opened file ok");
   fd->ok = true;
+
+  flash_dumper_print(fd, "startup," STRINGIFY(GIT_COMMIT));
 }
 
 // returns true on success, false on failure

@@ -68,9 +68,6 @@ int main() {
   // initialize flash dumper
   flash_dumper_init(&flash_dumper);
 
-  flash_dumper_print(&flash_dumper, "restarting\n\n\n");
-  flash_dumper_print(&flash_dumper, "startup," STRINGIFY(GIT_COMMIT));
-
   // initialize serial readers
   serial_reader_init(&psoc_console_tx, PSOC_TX_UART_NUM, 1000000, &flash_dumper, NULL);
   serial_reader_init(&modem_uart,      MODEM_UART_NUM, 115200, &flash_dumper, NULL);

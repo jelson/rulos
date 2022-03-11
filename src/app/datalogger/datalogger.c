@@ -205,7 +205,5 @@ int main() {
   // enable periodic blink to indicate liveness
   schedule_now(indicate_alive, NULL);
 
-  flash_dumper_print(&flash_dumper, "restarting\n\n\n");
-  flash_dumper_print(&flash_dumper, "startup");
   scheduler_run();
 }
