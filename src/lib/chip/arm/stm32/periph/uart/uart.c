@@ -289,7 +289,11 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .instance = USART2,
         .instance_irqn = USART2_IRQn,
         .rx_port = GPIOA,
+#ifdef USART2_RX_ON_A15
+        .rx_pin = GPIO_PIN_15,
+#else
         .rx_pin = GPIO_PIN_3,
+#endif
 #ifndef UART_SURRENDER_DMA1_CHAN2_3
         .rx_dma_instance = DMA1,
         .rx_dma_channel = LL_DMA_CHANNEL_3,
@@ -351,7 +355,11 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .instance = USART5,
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
         .rx_port = GPIOB,
+#ifdef USART5_RX_ON_B4
+        .rx_pin = GPIO_PIN_4,
+#else
         .rx_pin = GPIO_PIN_1,
+#endif
         .rx_dma_instance = DMA2,
         .rx_dma_channel = LL_DMA_CHANNEL_5,
         .rx_dma_request = DMA_REQUEST_USART5_RX,

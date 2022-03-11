@@ -30,6 +30,10 @@ apps = [
         'name': 'ltetag-dev1',
         'board': 'BOARD_LTETAG_DEV_REV_A',
         'extra_sources': ["ina219.c"],
+        'extra_cflags': [
+            "-DUSART2_RX_ON_A15",
+            "-DUSART5_RX_ON_B4",
+        ],
     },
     {
         'name': 'gemini-logger',
@@ -40,27 +44,23 @@ apps = [
 for app in apps:
     RulosBuildTarget(
         name = app['name'],
-        sources = [
+        sources = app.get('extra_sources', []) + [
             "curr_meas.c",
             "flash_dumper.c",
             "serial_reader.c",
             f"{app['name']}.c",
-        ] + app.get('extra_sources', []),
-        platforms = [
-            ArmStmPlatform("stm32g0b1xe",
-                extra_cflags=[
-                    f"-D{app['board']}",
-                    "-DLINEREADER_MAX_LINE_LEN=256",
-                    "-DUART_TX_QUEUE_LEN=4096",
-                    "-DUART_RX_QUEUE_LEN=8192",
-
-                    # don't use these DMA channels for UART RX, since they're
-                    # used by the SD card
-                    "-DUART_SURRENDER_DMA1_CHAN2_3",
-                ],
-            )],
+        ],
+        platforms = [ArmStmPlatform("stm32g0b1xe")],
         peripherals = "uart sdcard2 fatfs",
-        extra_cflags = [
+        extra_cflags = app.get('extra_cflags', []) + [
+            f"-D{app['board']}",
             "-DLOG_TO_SERIAL",
+            "-DLINEREADER_MAX_LINE_LEN=256",
+            "-DUART_TX_QUEUE_LEN=4096",
+            "-DUART_RX_QUEUE_LEN=8192",
+
+            # don't use these DMA channels for UART RX, since they're
+            # used by the SD card
+            "-DUART_SURRENDER_DMA1_CHAN2_3",
         ],
     ).build()
