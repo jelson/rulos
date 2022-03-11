@@ -113,7 +113,15 @@ class Platform:
         build_obj_dir = os.path.join(BUILD_ROOT, target.name, self.name())
         env.VariantDir(build_obj_dir, PROJECT_ROOT, duplicate=0)
 
-        program_name = os.path.join(build_obj_dir, target.name+self.target_suffix())
+        # If TAG_BUILD is set, also tag the binary name with the git commit hash
+        if 'TAG_BUILD' in os.environ:
+            if repo_is_dirty():
+                raise Exception("Can't tag builds from dirty repos. Clean up!")
+            commit = "-" + commit_hash()
+        else:
+            commit = ""
+
+        program_name = os.path.join(build_obj_dir, target.name + commit + self.target_suffix())
 
         # Export names & paths to subclasses and converter actions
         env.Replace(RulosBuildObjDir = build_obj_dir)

@@ -52,3 +52,15 @@ def template_free_cglob(*kargs):
 
 def pkgconfig(mode, package):
     return subprocess.check_output(["pkg-config", mode, package]).decode("utf-8").split()
+
+def get_shell_output(args):
+    retval = subprocess.run(args, stdout=subprocess.PIPE)
+    if retval.returncode != 0:
+        raise Exception(f"Running '{args}' gave non-zero exit code {retval.returncode}")
+    return retval.stdout.decode('utf-8').rstrip()
+
+def repo_is_dirty():
+    return len(get_shell_output(["git", "status", "--porcelain"])) > 0
+
+def commit_hash():
+    return get_shell_output(["git", "rev-parse", "--short", "HEAD"])
