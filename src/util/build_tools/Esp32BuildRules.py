@@ -96,7 +96,7 @@ class Esp32Platform(BaseRules.Platform):
 
     def include_dirs(self):
         return self.common_include_dirs() + [
-            # Rulos include dirs
+            # RULOS include dirs
             os.path.join(util.SRC_ROOT, "lib", "chip", "esp32"),
 
             # Espressif SDK include dirs
@@ -238,7 +238,7 @@ class Esp32Platform(BaseRules.Platform):
         # Create programming aliases so a command like "scons
         # program-esp32-<progname>" works, even for SConstruct files
         # that have multiple targets
-        prog_target = f"esp32-{os.path.basename(env['RulosProgramName'])}"
+        prog_target = f"esp32-{os.path.basename(env['RulosTargetName'])}"
         program = env.Alias(
             f"program-{prog_target}",
             [binfile, partfile] + outputs,

@@ -156,7 +156,7 @@ class ArmPlatform(BaseRules.Platform):
         # Create programming aliases so a command like "scons
         # program-stm32-<progname>" works, even for SConstruct files
         # that have multiple targets
-        prog_target = f"stm32-{os.path.basename(env['RulosProgramName'])}"
+        prog_target = f"stm32-{os.path.basename(env['RulosTargetName'])}"
         program = env.Alias(f"program-{prog_target}", outputs, self.program_with_bmp)
         env.Alias(f"run-{prog_target}", program, self.read_bmp_serial)
 
@@ -295,4 +295,4 @@ class ArmStmPlatform(ArmPlatform):
             target = os.path.join(env["RulosBuildObjDir"], "src", "lib", linkscript_name),
             action = f'sed "s/%RULOS_FLASHK%/{self.chip.flashk}/; s/%RULOS_RAMK%/{self.chip.ramk}/" $SOURCE > $TARGET')
         env.Append(LINKFLAGS = ["-T", linkscript])
-        env.Depends(env["RulosBinaryPath"], linkscript)
+        env.Depends(env["RulosProgramPath"], linkscript)

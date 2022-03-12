@@ -122,12 +122,17 @@ class Platform:
         else:
             commit = ""
 
-        program_name = os.path.join(build_obj_dir, target.name + commit + self.target_suffix())
+        # e.g., /build/datalogger/stm32/datalogger
+        program_path_stem = os.path.join(build_obj_dir, target.name + commit)
+
+        # e.g., /build/datalogger/stm32/datalogger.elf
+        program_path = program_path_stem + self.target_suffix()
 
         # Export names & paths to subclasses and converter actions
         env.Replace(RulosBuildObjDir = build_obj_dir)
-        env.Replace(RulosProgramName = target.name)
-        env.Replace(RulosBinaryPath = program_name)
+        env.Replace(RulosTargetName = target.name)
+        env.Replace(RulosProgramPathStem = program_path_stem)
+        env.Replace(RulosProgramPath = program_path)
         env.Replace(RulosProjectRoot = PROJECT_ROOT)
 
         self.configure_env(env)
@@ -144,11 +149,11 @@ class Platform:
         # Add a linker flag so gcc generates a map, and modify the standard
         # Program builder to know that map generation is a side-effect of
         # compilation
-        map_filename = os.path.join(build_obj_dir, f"{target.name}.map")
+        map_filename = os.path.join(build_obj_dir, f"{program_path_stem}.map")
         env.Append(LINKFLAGS = f"-Wl,-Map={map_filename},--cref")
         def map_emitter(scons_target, source, env):
             assert(len(scons_target) == 1)
-            assert(str(scons_target[0]) == os.path.abspath(program_name))
+            assert(str(scons_target[0]) == os.path.abspath(env['RulosProgramPath']))
             scons_target.append(map_filename)
             return scons_target, source
         env.Append(PROGEMITTER = [map_emitter])
@@ -171,8 +176,7 @@ class Platform:
             os.path.join(build_obj_dir, s) for s in
             target.sources + self.platform_specific_app_sources()]
 
-        app_binary = env.Program(env["RulosBinaryPath"],
-                                 source=target_sources + rocket_lib)
+        app_binary = env.Program(program_path, source=target_sources + rocket_lib)
         lss = env.MakeLSS(app_binary)
         sizes = env.ShowSizes(app_binary)
         outputs = [app_binary, lss, sizes]
