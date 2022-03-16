@@ -31,64 +31,62 @@ static void flash_dumper_periodic_flush(void *data);
 #define MAX_FNAME_L (128)
 
 static const char *makeFileName() {
-    const char *counter_fname = "filenum.dat";
-    static char return_name[MAX_FNAME_L] = {};
-    unsigned int count = 0;
-    strcpy(return_name, "datalog.txt");
+  const char *counter_fname = "filenum.dat";
+  static char return_name[MAX_FNAME_L] = {};
+  unsigned int count = 0;
+  strcpy(return_name, "datalog.txt");
 
-    FIL fp;
+  FIL fp;
 
-    // try to open the counter file
-    int open_res = f_open(&fp, counter_fname, FA_READ | FA_WRITE);
-    if (open_res == FR_OK) {
-	uint32_t bytes_count = 0;
-	int file_size = f_size(&fp);
-	// if the size of the file is not exactly four bytes,
-	// then initialize it with four bytes of zeroes,
-	// then jump back to beginning
-	if (file_size != 4) {
-            LOG("Looks like a new counter file.");
-	    f_write(&fp, &count, 4, &bytes_count);
-	    f_sync(&fp);
-	    f_lseek(&fp, 0);
-            if (bytes_count == 4) {
-                LOG("counter initialized");
-            }
-        }
-        int rd_ok = f_read(&fp, &count, 4, &bytes_count);
-	if ((rd_ok == FR_OK) && (bytes_count== 4)) {
-	    // read four bytes and if successful, use them as the
-	    // counter value
-            LOG("Success Reading %s. File count is %u", counter_fname, count);
-            snprintf(return_name, MAX_FNAME_L-1, "log_%03u.txt", count % 1000);
-	    count += 1;
-	    f_lseek(&fp, 0);
-            bytes_count = 0;
-	    // finally, increment the count and write it back to the file
-	    int wr_ok = f_write(&fp, &count, 4, &bytes_count);
-	    if ((wr_ok == FR_OK) && (bytes_count == 4)) {
-                LOG("File count updated.");
-            }
-	    f_sync(&fp);
-            f_close(&fp);
-        }
-        f_close(&fp);
-    } else if ((open_res == FR_NO_FILE) || (open_res == FR_NO_PATH)) {
-        // If there is no counter file, that's ok, we'll just use
-	// the fixed name
-        LOG("No %s found", counter_fname);
-    } else {
-	// there is a counter file but it could not be opened for some
-	// other reasons...
-        LOG("Failed to open %s; Error: %d.", counter_fname, open_res);
+  // try to open the counter file
+  int open_res = f_open(&fp, counter_fname, FA_READ | FA_WRITE);
+  if (open_res == FR_OK) {
+    uint32_t bytes_count = 0;
+    int file_size = f_size(&fp);
+    // if the size of the file is not exactly four bytes,
+    // then initialize it with four bytes of zeroes,
+    // then jump back to beginning
+    if (file_size != 4) {
+      LOG("Looks like a new counter file.");
+      f_write(&fp, &count, 4, &bytes_count);
+      f_sync(&fp);
+      f_lseek(&fp, 0);
+      if (bytes_count == 4) {
+        LOG("counter initialized");
+      }
     }
+    int rd_ok = f_read(&fp, &count, 4, &bytes_count);
+    if ((rd_ok == FR_OK) && (bytes_count == 4)) {
+      // read four bytes and if successful, use them as the
+      // counter value
+      LOG("Success Reading %s. File count is %u", counter_fname, count);
+      snprintf(return_name, MAX_FNAME_L - 1, "log_%03u.txt", count % 1000);
+      count += 1;
+      f_lseek(&fp, 0);
+      bytes_count = 0;
+      // finally, increment the count and write it back to the file
+      int wr_ok = f_write(&fp, &count, 4, &bytes_count);
+      if ((wr_ok == FR_OK) && (bytes_count == 4)) {
+        LOG("File count updated.");
+      }
+      f_sync(&fp);
+      f_close(&fp);
+    }
+    f_close(&fp);
+  } else if ((open_res == FR_NO_FILE) || (open_res == FR_NO_PATH)) {
+    // If there is no counter file, that's ok, we'll just use
+    // the fixed name
+    LOG("No %s found", counter_fname);
+  } else {
+    // there is a counter file but it could not be opened for some
+    // other reasons...
+    LOG("Failed to open %s; Error: %d.", counter_fname, open_res);
+  }
 
-    LOG("makeFileName returning: %s", return_name);
+  LOG("makeFileName returning: %s", return_name);
 
-    return return_name;
+  return return_name;
 }
-
-
 
 void flash_dumper_init(flash_dumper_t *fd) {
   memset(fd, 0, sizeof(*fd));

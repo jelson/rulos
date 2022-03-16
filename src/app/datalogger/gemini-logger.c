@@ -30,8 +30,8 @@
 // serial port, using two of our RX ports.
 #define PSOC_RX_UART_NUM 2
 #define PSOC_TX_UART_NUM 0
-#define ISP_RX_UART_NUM 3
-#define ISP_TX_UART_NUM 1
+#define ISP_RX_UART_NUM  3
+#define ISP_TX_UART_NUM  1
 
 #define CONSOLE_UART_NUM 4
 
