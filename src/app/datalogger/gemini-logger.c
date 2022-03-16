@@ -16,11 +16,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// os headers
 #include "core/hardware.h"
 #include "core/rulos.h"
+#include "periph/uart/uart.h"
+
+// local headers
 #include "curr_meas.h"
 #include "flash_dumper.h"
-#include "periph/uart/uart.h"
 #include "serial_reader.h"
 
 // uart definitions. Note that, other than the board's console, we
