@@ -49,8 +49,8 @@ static void turn_off_led(void *data) {
 
 static void indicate_alive(void *data) {
   LOG("run");
-  schedule_us(2500000, indicate_alive, NULL);
-  if (flash_dumper.ok) {
+  schedule_us(2000000, indicate_alive, NULL);
+  if (flash_dumper.ok && serial_reader_is_active(&psoc_console_tx)) {
     gpio_set(LED_PIN);
     schedule_us(20000, turn_off_led, NULL);
   }
