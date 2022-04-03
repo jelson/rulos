@@ -172,8 +172,9 @@ class ArmPlatform(BaseRules.Platform):
 class ArmStmPlatform(ArmPlatform):
     def __init__(self, chip_name, extra_peripherals = [], extra_cflags = []):
         super().__init__(chip_name, extra_peripherals, extra_cflags)
-        if (chip_name not in self.CHIPS):
-            die(f"Unrecognized chip {chip_name}")
+        if chip_name not in self.CHIPS:
+            util.die(f"Unrecognized chip {chip_name}. Known chips: " +
+                     ",".join(self.CHIPS))
         self.chip = self.CHIPS[self.chip_name]
         self.major_family = self.MAJOR_FAMILIES[self.chip.major_family_name]
 
