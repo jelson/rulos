@@ -114,6 +114,7 @@ class Esp32Platform(BaseRules.Platform):
             os.path.join(self.sdk_root, "include", "esp_hw_support", "include", "soc"),
             os.path.join(self.sdk_root, "include", "esp_ipc", "include"),
             os.path.join(self.sdk_root, "include", "esp_netif", "include"),
+            os.path.join(self.sdk_root, "include", "esp_ringbuf", "include"),
             os.path.join(self.sdk_root, "include", "esp_rom", "include"),
             os.path.join(self.sdk_root, "include", "esp_system", "include"),
             os.path.join(self.sdk_root, "include", "esp_timer", "include"),
