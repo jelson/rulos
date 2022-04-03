@@ -27,6 +27,9 @@ class Esp32Platform(BaseRules.Platform):
     def __init__(self, extra_peripherals = [], extra_cflags = []):
         super().__init__(extra_peripherals, extra_cflags)
         self.use_cpp = True
+        self.env_to_ifdefs.extend([
+            "RULOS_NTP_SERVER",
+        ])
         self.kit_root = os.path.join(util.BUILD_ROOT, "compilers", "esp32", ESP32_PLATFORM_VERSION)
 
         if not os.path.exists(self.kit_root):

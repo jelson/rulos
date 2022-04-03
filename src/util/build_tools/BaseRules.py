@@ -24,6 +24,7 @@ class Platform:
     def __init__(self, extra_peripherals, extra_cflags):
         self.extra_peripherals = parse_peripherals(extra_peripherals)
         self.extra_cflags = extra_cflags
+        self.env_to_ifdefs = []
         self.use_cpp = False
 
     def configure_compiler(self, env, compiler_prefix):
@@ -84,15 +85,18 @@ class Platform:
         return src_files
 
     def common_cflags(self):
-        std = "-std=gnu++11" if self.use_cpp else "-std=gnu99"
-        return self.extra_cflags + [
+        retval = self.extra_cflags + [
             "-Wall",
             "-Werror",
             "-g",
             "-flto",
             f"-DGIT_COMMIT={commit_hash()}",
-            std,
         ]
+        retval.append("-std=gnu++11" if self.use_cpp else "-std=gnu99")
+        for e in self.env_to_ifdefs:
+            if e in os.environ:
+                retval.append(f'-D{e}=\\"{os.environ[e]}\\"')
+        return retval
 
     def common_include_dirs(self):
         return [

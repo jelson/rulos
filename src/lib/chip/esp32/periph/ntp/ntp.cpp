@@ -299,7 +299,11 @@ void NtpClient::_init(const char *hostname) {
 }
 
 NtpClient::NtpClient() {
+#ifdef RULOS_NTP_SERVER
+  _init(RULOS_NTP_SERVER);
+#else
   _init(DEFAULT_SERVER);
+#endif
 }
 
 NtpClient::NtpClient(const char *hostname) {
