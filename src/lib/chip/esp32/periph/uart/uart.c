@@ -25,31 +25,43 @@
 // esp32 includes
 #include "driver/uart.h"
 
+// note: uart driver fails to install if this is too small! (128 caused a
+// failure)
+#define UART_BUFLEN 2048
+
 typedef struct {
   uart_port_t esp32_uart_num;
+  uint8_t rulos_uart_id;
   int rx_pin;
   int tx_pin;
   hal_uart_next_sendbuf_cb tx_cb;
-  hal_uart_receive_cb rx_cb;
   void *cb_data;
+
+  // rx
+  hal_uart_receive_cb rx_cb;
+  char *rx_buf;
+  uint32_t rx_buflen;
+  bool rx_outstanding;
 } esp32_uart_t;
 
-#define NUM_UARTS   3
-#define UART_BUFLEN 2048
+#define NUM_UARTS 3
 
 static esp32_uart_t esp32_uart[NUM_UARTS] = {
     {
         .esp32_uart_num = UART_NUM_0,
+        .rulos_uart_id = 0,
         .rx_pin = 3,
         .tx_pin = 1,
     },
     {
         .esp32_uart_num = UART_NUM_1,
+        .rulos_uart_id = 1,
         .rx_pin = 9,
         .tx_pin = 10,
     },
     {
         .esp32_uart_num = UART_NUM_2,
+        .rulos_uart_id = 2,
         .rx_pin = 16,
         .tx_pin = 17,
     },
@@ -84,15 +96,6 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
                                UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
 }
 
-void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf,
-                       size_t buflen) {
-  assert(false);  // not implemented yet
-}
-
-void hal_uart_rx_cb_done(uint8_t uart_id) {
-  assert(false);  // not implemented yet
-}
-
 void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb) {
   assert(uart_id >= 0 && uart_id < NUM_UARTS);
   esp32_uart_t *eu = &esp32_uart[uart_id];
@@ -106,4 +109,49 @@ void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb) {
     }
     uart_write_bytes(eu->esp32_uart_num, this_buf, this_send_len);
   }
+}
+
+//////////////// receiving /////////////////////
+
+// We're going to cheat on the esp32 and just spin up a task that blocks on uart
+// input.
+
+static void rx_task(void *arg) {
+  esp32_uart_t *eu = (esp32_uart_t *)arg;
+  while (true) {
+    while (eu->rx_outstanding) {
+      vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+
+    // note the third argument is the amount of time data will be accumulated
+    // before the read completes, so 50ms is both the latency to read a single
+    // byte and the frequency this task loops around. This is not great, since
+    // it's effectively polling, so someday this should be more clever: either
+    // interrupt-driven, or maybe just a proper blocking read since we're in a
+    // task anyway??
+    const int num_read =
+        uart_read_bytes(eu->esp32_uart_num, eu->rx_buf, eu->rx_buflen,
+                        /* timeout */ 50 / portTICK_PERIOD_MS);
+    if (num_read > 0) {
+      eu->rx_outstanding = true;
+      eu->rx_cb(eu->rulos_uart_id, eu->cb_data, eu->rx_buf, num_read);
+    }
+  }
+}
+
+void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf,
+                       size_t buflen) {
+  assert(uart_id >= 0 && uart_id < NUM_UARTS);
+  esp32_uart_t *eu = &esp32_uart[uart_id];
+  eu->rx_cb = rx_cb;
+  eu->rx_buf = (char *)buf;
+  eu->rx_buflen = buflen;
+  xTaskCreate(rx_task, "uart_rx_task", 1024 * 2, eu, configMAX_PRIORITIES,
+              NULL);
+}
+
+void hal_uart_rx_cb_done(uint8_t uart_id) {
+  assert(uart_id >= 0 && uart_id < NUM_UARTS);
+  esp32_uart_t *eu = &esp32_uart[uart_id];
+  eu->rx_outstanding = false;
 }
