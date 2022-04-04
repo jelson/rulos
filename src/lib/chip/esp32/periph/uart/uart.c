@@ -42,6 +42,7 @@ typedef struct {
   char *rx_buf;
   uint32_t rx_buflen;
   bool rx_outstanding;
+  QueueHandle_t event_queue;
 } esp32_uart_t;
 
 #define NUM_UARTS 3
@@ -86,11 +87,10 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
       .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
       .source_clk = UART_SCLK_APB,
   };
-  ESP_ERROR_CHECK(
-      uart_driver_install(eu->esp32_uart_num, /*rx_buflen=*/UART_BUFLEN,
-                          /*tx_buflen=*/UART_BUFLEN, /* queue_size */ 0,
-                          /* queue handle */ NULL,
-                          /*intr_alloc_flags */ 0));
+  ESP_ERROR_CHECK(uart_driver_install(
+      eu->esp32_uart_num, /*rx_buflen=*/UART_BUFLEN,
+      /*tx_buflen=*/UART_BUFLEN, /* queue_size */ 20, &eu->event_queue,
+      /*intr_alloc_flags */ 0));
   ESP_ERROR_CHECK(uart_param_config(eu->esp32_uart_num, &uart_config));
   ESP_ERROR_CHECK(uart_set_pin(eu->esp32_uart_num, eu->tx_pin, eu->rx_pin,
                                UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
@@ -119,19 +119,28 @@ void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb) {
 static void rx_task(void *arg) {
   esp32_uart_t *eu = (esp32_uart_t *)arg;
   while (true) {
+    // wait until the app has finished processing the previous data
     while (eu->rx_outstanding) {
       vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 
-    // note the third argument is the amount of time data will be accumulated
-    // before the read completes, so 50ms is both the latency to read a single
-    // byte and the frequency this task loops around. This is not great, since
-    // it's effectively polling, so someday this should be more clever: either
-    // interrupt-driven, or maybe just a proper blocking read since we're in a
-    // task anyway??
+    // If there's no data available, wait for an event indicating some has
+    // arrived
+    size_t bytes_avail = 0;
+    uart_get_buffered_data_len(eu->esp32_uart_num, &bytes_avail);
+    while (bytes_avail == 0) {
+      uart_event_t event;
+      xQueueReceive(eu->event_queue, &event, (TickType_t)portMAX_DELAY);
+      // we could inspect event here and see if it's a data-received type, but
+      // not much point
+      uart_get_buffered_data_len(eu->esp32_uart_num, &bytes_avail);
+    }
+
+    // read data from esp32 uart driver's queue
     const int num_read =
-        uart_read_bytes(eu->esp32_uart_num, eu->rx_buf, eu->rx_buflen,
-                        /* timeout */ 50 / portTICK_PERIOD_MS);
+        uart_read_bytes(eu->esp32_uart_num, eu->rx_buf, eu->rx_buflen, 0);
+
+    // send up to rulos-land
     if (num_read > 0) {
       eu->rx_outstanding = true;
       eu->rx_cb(eu->rulos_uart_id, eu->cb_data, eu->rx_buf, num_read);
