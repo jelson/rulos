@@ -24,7 +24,7 @@
 #include "core/rulos.h"
 #include "core/wallclock.h"
 
-#define DUMP_PERIOD_MSEC 2500
+#define DUMP_PERIOD_MSEC 30000
 
 static void flash_dumper_periodic_flush(void *data);
 
