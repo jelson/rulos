@@ -63,8 +63,8 @@ int main() {
   // initialize serial readers
   serial_reader_init(&psoc_rx, PSOC_RX_UART_NUM, 1000000, &flash_dumper, NULL);
   serial_reader_init(&psoc_tx, PSOC_TX_UART_NUM, 1000000, &flash_dumper, NULL);
-  serial_reader_init(&isp_rx, ISP_RX_UART_NUM, 500000, &flash_dumper, NULL);
-  serial_reader_init(&isp_tx, ISP_TX_UART_NUM, 500000, &flash_dumper, NULL);
+  serial_reader_init(&isp_rx, ISP_RX_UART_NUM, 115200, &flash_dumper, NULL);
+  serial_reader_init(&isp_tx, ISP_TX_UART_NUM, 115200, &flash_dumper, NULL);
 
   // enable periodic blink to indicate liveness
   schedule_now(indicate_alive, NULL);
