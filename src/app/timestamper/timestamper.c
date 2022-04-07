@@ -286,7 +286,7 @@ int main() {
 
   // initialize uart
   uart_init(&uart, /*uart_id=*/0, 1000000);
-  uart_print(&uart, "# Starting timestamper\n");
+  uart_print(&uart, "# Starting timestamper, version " STRINGIFY(GIT_COMMIT) "\n");
 
   schedule_us(1, create_test_input, NULL);
   schedule_us(1, drain_output_buffer, NULL);
