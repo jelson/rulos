@@ -66,6 +66,7 @@
 #include "stm32g4xx_ll_rcc.h"
 #include "stm32g4xx_ll_tim.h"
 
+#define NUM_CHANNELS  2
 #define CLOCK_FREQ_HZ 170000000
 
 #define TEST_INPUT_PIN         GPIO_B4
@@ -73,6 +74,13 @@
 
 #define TIMESTAMP_PRINT_PERIOD_USEC 100000
 #define TIMESTAMP_BUFLEN            200
+// channel configurations
+typedef struct {
+  uint32_t divider;
+  uint32_t count;
+} channel_t;
+
+static channel_t channels[NUM_CHANNELS];
 
 // buffer of recorded timestamps that have not yet been transmitted over uart
 typedef struct {
@@ -89,20 +97,28 @@ bool buffer_overflow = false;
 // total seconds elapsed since boot
 uint32_t seconds;
 
-void store_timestamp(uint8_t channel, uint32_t seconds, uint32_t counter) {
+void maybe_store_timestamp(uint8_t channel_num, uint32_t seconds,
+                           uint32_t counter) {
+  channel_t *chan = &channels[channel_num];
+
+  chan->count++;
+  if (chan->count < chan->divider) {
+    return;
+  }
+
+  // divider count has been reached: reset the counter and store the timestamp
+  chan->count = 0;
+
   if (num_timestamps >= TIMESTAMP_BUFLEN) {
     buffer_overflow = true;
     return;
   }
 
-  timestamp_buffer[num_timestamps].channel = channel;
+  timestamp_buffer[num_timestamps].channel = channel_num;
   timestamp_buffer[num_timestamps].seconds = seconds;
   timestamp_buffer[num_timestamps].counter = counter;
   num_timestamps++;
 }
-
-static int chan2_divider = 0;
-#define CHAN2_DIV_VALUE 10000000
 
 // Timer interrupt that fires under two conditions:
 // 1) When the timer rolls over, once per second.
@@ -120,23 +136,17 @@ void TIM2_IRQHandler() {
   else if (LL_TIM_IsActiveFlag_CC1(TIM2)) {
     // Timer channel 1 has captured an input signal.
     LL_TIM_ClearFlag_CC1(TIM2);
-    store_timestamp(1, seconds, TIM2->CCR1);
+    maybe_store_timestamp(0, seconds, TIM2->CCR1);
   } else if (LL_TIM_IsActiveFlag_CC1OVR(TIM2)) {
     // overflow on capture. should we remember?
     LL_TIM_ClearFlag_CC1OVR(TIM2);
-
   }
 
   // Channel 2
   else if (LL_TIM_IsActiveFlag_CC2(TIM2)) {
     // Timer channel 2 has captured an input signal.
     LL_TIM_ClearFlag_CC2(TIM2);
-
-    chan2_divider++;
-    if (chan2_divider == CHAN2_DIV_VALUE) {
-      store_timestamp(1, seconds, TIM2->CCR2);
-      chan2_divider = 0;
-    }
+    maybe_store_timestamp(1, seconds, TIM2->CCR2);
   } else if (LL_TIM_IsActiveFlag_CC2OVR(TIM2)) {
     // overflow on capture. should we remember?
     LL_TIM_ClearFlag_CC2OVR(TIM2);
@@ -172,7 +182,7 @@ static void print_one_timestamp(timestamp_t *t) {
   uint32_t sub_microseconds = picoseconds % 1000000;
 
   char buf[50];
-  int len = snprintf(buf, sizeof(buf), "%d %ld.%06ld%06ld\n", t->channel,
+  int len = snprintf(buf, sizeof(buf), "%d %ld.%06ld%06ld\n", t->channel + 1,
                      t->seconds, microseconds, sub_microseconds);
   uart_write(&uart, buf, len);
 }
@@ -244,6 +254,8 @@ void init_timer() {
   LL_TIM_EnableIT_CC1(TIM2);
 
   // Configure input capture to be the rising edge of timer 2, channel 2
+  gpio_init.Pin = LL_GPIO_PIN_1;
+  LL_GPIO_Init(GPIOA, &gpio_init);
   LL_TIM_IC_SetActiveInput(TIM2, LL_TIM_CHANNEL_CH2,
                            LL_TIM_ACTIVEINPUT_DIRECTTI);
   LL_TIM_IC_SetPrescaler(TIM2, LL_TIM_CHANNEL_CH2, LL_TIM_ICPSC_DIV1);
@@ -284,9 +296,17 @@ int main() {
   // initialize the main timer and its input capture pin
   init_timer();
 
+  // initialize channel configs. TODO: Add command-line interface so divider
+  // values can be configured dynamically
+  memset(&channels, 0, sizeof(channels));
+  for (int i = 0; i < NUM_CHANNELS; i++) {
+    channels[i].divider = 1;
+  }
+
   // initialize uart
   uart_init(&uart, /*uart_id=*/0, 1000000);
-  uart_print(&uart, "# Starting timestamper, version " STRINGIFY(GIT_COMMIT) "\n");
+  uart_print(&uart,
+             "# Starting timestamper, version " STRINGIFY(GIT_COMMIT) "\n");
 
   schedule_us(1, create_test_input, NULL);
   schedule_us(1, drain_output_buffer, NULL);
