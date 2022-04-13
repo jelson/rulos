@@ -21,12 +21,23 @@
 #include "periph/uart/linereader.h"
 #include "periph/uart/uart.h"
 
-UartState_t uart, gps_uart;
-LineReader_t linereader, gps_linereader;
-int i = 0;
+#ifdef RULOS_ESP32
+#define DUT_UART       1
+#define DUT_UART_SPEED 9600
+#endif
+
+typedef struct {
+  UartState_t uart;
+  LineReader_t lr;
+  int line_num;
+} serial_state;
+
+serial_state console = {};
+serial_state dut = {};
 
 static void line_received(UartState_t *uart, void *user_data, char *line) {
-  LOG("uart %d got line %d: ", uart->uart_id, i++);
+  serial_state *ss = (serial_state *)user_data;
+  LOG("uart %d got line %d: ", ss->uart.uart_id, ss->line_num++);
   log_write(line, strlen(line));
   log_write("\n", 1);
 #ifdef RULOS_ARM_STM32
@@ -34,23 +45,21 @@ static void line_received(UartState_t *uart, void *user_data, char *line) {
 #endif
 }
 
-#define USE_GPS 0
-
 int main() {
   rulos_hal_init();
 
-  uart_init(&uart, /* uart_id= */ 0, 1000000);
-  log_bind_uart(&uart);
+  uart_init(&console.uart, /* uart_id= */ 0, 1000000);
+  log_bind_uart(&console.uart);
+  LOG("lineecho up and running");
 
-  linereader_init(&linereader, &uart, line_received, &uart);
+  linereader_init(&console.lr, &console.uart, line_received, &console);
 
-#if USE_GPS
-  uart_init(&gps_uart, /* uart_id= */ 4, 9600, true);
-  linereader_init(&gps_linereader, &gps_uart, line_received, &gps_uart);
-  LOG("reading from gps too!");
+#if DUT_UART
+  uart_init(&dut.uart, /* uart_id= */ DUT_UART, DUT_UART_SPEED);
+  linereader_init(&dut.lr, &dut.uart, line_received, &dut);
+  LOG("reading from dut, uart %d, too!", DUT_UART);
 #endif
 
   init_clock(10000, TIMER1);
-  LOG("lineecho up and running");
   scheduler_run();
 }

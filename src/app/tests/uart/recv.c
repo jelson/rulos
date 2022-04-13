@@ -21,11 +21,13 @@
 #include "periph/uart/uart.h"
 #include "periph/uart/uart_hal.h"
 
-#define FREQ_USEC 1000000
+#define FREQ_USEC    100000
+#define DUT_UART_NUM 1
+#define DUT_BAUD     9600
 
 UartState_t console, dut;
-uint32_t console_rx_chars = 0;
-uint32_t dut_rx_chars = 0;
+uint32_t console_rx_chars = 0, last_console_rx_chars = 0;
+uint32_t dut_rx_chars = 0, last_dut_rx_chars = 0;
 
 static void _buf_received(UartState_t *s, void *user_data, char *buf,
                           size_t buflen) {
@@ -36,12 +38,21 @@ static void _buf_received(UartState_t *s, void *user_data, char *buf,
   }
 }
 
+void maybe_print(const char *desc, uint32_t *last, uint32_t *now) {
+  if (*last == *now) {
+    return;
+  }
+  LOG("%s: %" PRIu32 " (%" PRIu32 " new)", desc, *now, *now - *last);
+  *last = *now;
+}
+
 void print_stats(void *data) {
   schedule_us(FREQ_USEC, print_stats, NULL);
-  LOG("");
+#ifdef RULOS_ARM_STM32
   hal_uart_log_stats(console.uart_id);
-  LOG("console_rx_chars: %" PRIu32, console_rx_chars);
-  LOG("dut_rx_chars: %" PRIu32, dut_rx_chars);
+#endif
+  maybe_print("console_rx_chars", &last_console_rx_chars, &console_rx_chars);
+  maybe_print("dut_rx_chars", &last_dut_rx_chars, &dut_rx_chars);
 }
 
 int main() {
@@ -53,7 +64,7 @@ int main() {
 
   uart_start_rx(&console, _buf_received, NULL);
 
-  uart_init(&dut, /* uart_id= */ 3, 1000000);
+  uart_init(&dut, /* uart_id= */ DUT_UART_NUM, DUT_BAUD);
   uart_start_rx(&dut, _buf_received, NULL);
 
   init_clock(10000, TIMER1);
