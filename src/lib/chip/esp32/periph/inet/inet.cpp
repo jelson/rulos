@@ -85,6 +85,19 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
   }
 }
 
+static char _macaddr_string[20] = {};
+
+const char *inet_wifi_macaddr() {
+  if (!*_macaddr_string) {
+    uint8_t binary_mac[6];
+    esp_wifi_get_mac((wifi_interface_t)ESP_MAC_WIFI_STA, binary_mac);
+    snprintf(_macaddr_string, sizeof(_macaddr_string),
+             "%02X:%02X:%02X:%02X:%02X:%02X", binary_mac[0], binary_mac[1],
+             binary_mac[2], binary_mac[3], binary_mac[4], binary_mac[5]);
+  }
+  return _macaddr_string;
+}
+
 void inet_wifi_client_start(const inet_wifi_creds_t *wifi_creds,
                             int num_creds) {
   // store credentials for later
@@ -145,7 +158,7 @@ esp_err_t HttpsClient::_event_handler(esp_http_client_event_t *evt) {
     case HTTP_EVENT_ON_DATA: {
       size_t data_to_store =
           r_min((size_t)evt->data_len,
-            _response_buffer_len - _response_bytes_written);
+                _response_buffer_len - _response_bytes_written);
       memcpy(_response_buffer + _response_bytes_written, evt->data,
              data_to_store);
       _response_bytes_written += data_to_store;
@@ -175,10 +188,10 @@ void HttpsClient::_check_https_result() {
   int code = -1;
   if (err == ESP_OK) {
     code = esp_http_client_get_status_code(_client);
-    LOG("HTTPS Status = %d, content_length = %d", code,
+    LOG("HTTPS Client: request complete: status=%d, content_length=%d", code,
         esp_http_client_get_content_length(_client));
   } else {
-    LOG("Error performing http request %s", esp_err_to_name(err));
+    LOG("HTTPS Client: error: %s", esp_err_to_name(err));
   }
   esp_http_client_cleanup(_client);
   _in_use = false;

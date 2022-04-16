@@ -22,10 +22,15 @@ from build_tools import *
 
 RulosBuildTarget(
     name = "aqi-sensor",
-    sources = ["aqi-sensor.c"],
-    peripherals = "uart pms5003",
+    sources = [
+        "aqi-sensor.cpp",
+    ],
+    peripherals = "uart pms5003 inet",
     extra_cflags = [
         "-DLOG_TO_SERIAL",
+
+        # include out-of-repo directory to get wifi credentials
+        "-I" + os.path.expanduser("~/.config/rulos")
     ],
     platforms = [Esp32Platform()],
 ).build()

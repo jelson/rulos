@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#pragma once
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -30,6 +32,7 @@ typedef struct {
 } inet_wifi_creds_t;
 
 void inet_wifi_client_start(const inet_wifi_creds_t *wifi_creds, int num_creds);
+const char *inet_wifi_macaddr();
 
 class HttpsClient;
 
