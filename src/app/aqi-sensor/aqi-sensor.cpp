@@ -16,25 +16,43 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "cert_airquality.circlemud.org.h"
+// OS includes
 #include "core/rulos.h"
 #include "periph/inet/inet.h"
+#include "periph/ntp/ntp.h"
 #include "periph/pms5003/pms5003.h"
+
+// app includes
+#include "cert_airquality.circlemud.org.h"
+#include "pms5003cache.h"
 #include "sensor_name.h"
 
-static void data_received(pms5003_data_t *data, void *user_data) {
-  LOG("data:pm1.0=%d,pm2.5=%d,pm10.0=%d", data->pm10_standard,
-      data->pm25_standard, data->pm100_standard);
-}
-
-/////////
-
 static constexpr const char *BASE_URL = "https://airquality.circlemud.org";
+static constexpr const size_t CACHE_SIZE = 200;
 
 UartState_t console;
 HttpsClient hc;
-pms5003_t pms;
 SensorName sensor_name(&hc, BASE_URL);
+NtpClient ntp;
+pms5003_t pms;
+PMS5003Cache pms_cache(CACHE_SIZE);
+
+static void data_received(pms5003_data_t *data, void *user_data) {
+  uint64_t t = ntp.get_epoch_time_usec();
+
+  LOG("data:time_usec=%llu.%06llu,pm1.0=%d,pm2.5=%d,pm10.0=%d", t / 1000000,
+      t % 1000000, data->pm10_standard, data->pm25_standard,
+      data->pm100_standard);
+
+  // drop samples that are collected before we have ntp lock
+  if (t != 0) {
+    pms_cache.add(data, t);
+  } else {
+    LOG("...dropping sample because NTP is not locked");
+  }
+}
+
+/////////
 
 int main() {
   rulos_hal_init();
@@ -49,6 +67,7 @@ int main() {
   hc.set_timeout_ms(5000);
   hc.set_https_cert(cert_airquality_circlemud_org);
 
+  ntp.start();
   sensor_name.start();
 
   pms5003_init(&pms, 1, data_received, NULL);

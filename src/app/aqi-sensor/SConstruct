@@ -1,3 +1,4 @@
+
 #!/usr/bin/python3
 #
 # Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson
@@ -25,7 +26,7 @@ RulosBuildTarget(
     sources = [
         "aqi-sensor.cpp",
     ],
-    peripherals = "uart pms5003 inet",
+    peripherals = "uart pms5003 inet ntp",
     extra_cflags = [
         "-DLOG_TO_SERIAL",
 
