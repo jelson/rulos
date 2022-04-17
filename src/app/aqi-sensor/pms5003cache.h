@@ -67,8 +67,20 @@ class PMS5003Cache {
     return _len;
   }
 
-  pms5003_timestamped_t *peek(size_t index) {
+  size_t encode(size_t index, char *dest, size_t max_len) {
     assert(index < _len);
-    return &_cache[index];
+    pms5003_timestamped_t *pt = &_cache[index];
+
+    return snprintf(dest, max_len,
+                    "%s\n"
+                    "{\n"
+                    "   \"time\": %llu.%06llu,\n"
+                    "   \"pm1.0\": %d,\n"
+                    "   \"pm2.5\": %d,\n"
+                    "   \"pm10.0\": %d\n"
+                    "}",
+                    index > 0 ? ",\n" : "", pt->epoch_time_usec / 1000000,
+                    pt->epoch_time_usec % 1000000, pt->data.pm10_standard,
+                    pt->data.pm25_standard, pt->data.pm100_standard);
   }
 };

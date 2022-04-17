@@ -16,7 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// OS includes
+// system includes
+#include <stdint.h>
+
+#include <algorithm>
+
+// RULOS includes
 #include "core/rulos.h"
 #include "periph/inet/inet.h"
 #include "periph/ntp/ntp.h"
@@ -24,6 +29,7 @@
 
 // app includes
 #include "cert_airquality.circlemud.org.h"
+#include "data-uploader.h"
 #include "pms5003cache.h"
 #include "sensor_name.h"
 
@@ -36,6 +42,7 @@ SensorName sensor_name(&hc, BASE_URL);
 NtpClient ntp;
 pms5003_t pms;
 PMS5003Cache pms_cache(CACHE_SIZE);
+DataUploader data_uploader(&hc, BASE_URL, &sensor_name, &pms_cache);
 
 static void data_received(pms5003_data_t *data, void *user_data) {
   uint64_t t = ntp.get_epoch_time_usec();
@@ -69,6 +76,7 @@ int main() {
 
   ntp.start();
   sensor_name.start();
+  data_uploader.start();
 
   pms5003_init(&pms, 1, data_received, NULL);
   scheduler_run();
