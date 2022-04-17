@@ -28,7 +28,7 @@
 // app includes
 #include "data-uploader.h"
 #include "pms5003cache.h"
-#include "sensor_name.h"
+#include "sensor-name.h"
 
 // config
 #include "wifi-credentials.h"

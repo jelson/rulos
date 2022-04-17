@@ -28,10 +28,10 @@
 #include "periph/pms5003/pms5003.h"
 
 // app includes
-#include "cert_x3_ca.h"
+#include "cert-x3-ca.h"
 #include "data-uploader.h"
 #include "pms5003cache.h"
-#include "sensor_name.h"
+#include "sensor-name.h"
 
 static constexpr const char *BASE_URL = "https://airquality.circlemud.org";
 static constexpr const size_t CACHE_SIZE = 200;
