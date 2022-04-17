@@ -1,4 +1,4 @@
-static const char cert_airquality_circlemud_org[] =
+static const char cert_x3_ca[] =
     "-----BEGIN CERTIFICATE-----\n"
     "MIIFYDCCBEigAwIBAgIQQAF3ITfU6UK47naqPGQKtzANBgkqhkiG9w0BAQsFADA/\n"
     "MSQwIgYDVQQKExtEaWdpdGFsIFNpZ25hdHVyZSBUcnVzdCBDby4xFzAVBgNVBAMT\n"

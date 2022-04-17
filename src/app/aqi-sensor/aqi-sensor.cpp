@@ -28,7 +28,7 @@
 #include "periph/pms5003/pms5003.h"
 
 // app includes
-#include "cert_airquality.circlemud.org.h"
+#include "cert_x3_ca.h"
 #include "data-uploader.h"
 #include "pms5003cache.h"
 #include "sensor_name.h"
@@ -72,7 +72,7 @@ int main() {
   inet_wifi_client_start(wifi_creds,
                          sizeof(wifi_creds) / sizeof(wifi_creds[0]));
   hc.set_timeout_ms(5000);
-  hc.set_https_cert(cert_airquality_circlemud_org);
+  hc.set_https_cert(cert_x3_ca);
 
   ntp.start();
   sensor_name.start();
