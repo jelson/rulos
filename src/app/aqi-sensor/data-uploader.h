@@ -16,11 +16,22 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdint.h>
-#include <stdbool.h>
+#pragma once
 
+#include <stdbool.h>
+#include <stdint.h>
+
+// rulos includes
 #include "core/rulos.h"
 #include "periph/inet/inet.h"
+
+// app includes
+#include "data-uploader.h"
+#include "pms5003cache.h"
+#include "sensor_name.h"
+
+// config
+#include "wifi-credentials.h"
 
 class DataUploader : public HttpsHandlerIfc {
  private:
@@ -46,7 +57,7 @@ class DataUploader : public HttpsHandlerIfc {
                           "   \"clowny-cleartext-password\": \"%s\",\n"
                           "   \"sensorname\": \"%s\",\n"
                           "   \"sensordata\": [\n",
-                          "i love air",
+                          lectrobox_aqi_password,  // from wifi-credentials.h
                           _sn->get_sensor_name());
     p += len;
     cap -= len;
@@ -60,7 +71,7 @@ class DataUploader : public HttpsHandlerIfc {
 
     snprintf(p, cap, "]}");
   }
-  
+
   void _upload() {
     // if a previous upload is still in process, do not upload
     if (_num_outstanding > 0) {
@@ -112,8 +123,13 @@ class DataUploader : public HttpsHandlerIfc {
   }
 
  public:
-  DataUploader(HttpsClient *hc, const char *base_url, SensorName *sn, PMS5003Cache *cache)
-      : _hc(hc), _base_url(base_url), _sn(sn), _cache(cache), _num_outstanding(0) {
+  DataUploader(HttpsClient *hc, const char *base_url, SensorName *sn,
+               PMS5003Cache *cache)
+      : _hc(hc),
+        _base_url(base_url),
+        _sn(sn),
+        _cache(cache),
+        _num_outstanding(0) {
     _json_max_size = MAX_POINTS_PER_UPLOAD * 100;
     _jsonbuf = new char[_json_max_size];
     assert(_jsonbuf != NULL);
@@ -123,4 +139,3 @@ class DataUploader : public HttpsHandlerIfc {
     schedule_us(1, _upload_trampoline, this);
   }
 };
-
