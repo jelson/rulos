@@ -44,10 +44,10 @@ class HttpsHandlerIfc {
 
 class HttpsClient {
  public:
-  HttpsClient();
+  HttpsClient(int timeout_ms, const char *cert);
+  ~HttpsClient();
+  void set_header(const char *header, const char *value);
   void set_response_buffer(char *buf, size_t len);
-  void set_timeout_ms(int timeout_ms);
-  void set_https_cert(const char *cert);
   void get(const char *url, HttpsHandlerIfc *on_done);
   void post(const char *url, const char *post_body, size_t body_len,
             HttpsHandlerIfc *on_done);

@@ -44,9 +44,20 @@ class PMS5003Cache {
     assert(n <= _len);
     memmove(&_cache[0], &_cache[n], sizeof(_cache[0]) * (_len - n));
     _len -= n;
-    LOG("pms5003 cache: popping %d items; %d remaining (%llu-%llu)", n, _len,
-        _cache[0].epoch_time_usec / 1000000,
-        _cache[_len - 1].epoch_time_usec / 1000000);
+
+    char log_msg[100];
+    int log_len = snprintf(
+        log_msg, sizeof(log_msg),
+        "pms5003 cache: popping %d items; %d remaining", n, _len);
+    if (_len > 0) {
+      log_len += snprintf(
+          log_msg+log_len, sizeof(log_msg)-log_len,
+          " (%llu-%llu)",
+          _cache[0].epoch_time_usec / 1000000,
+          _cache[_len - 1].epoch_time_usec / 1000000);
+    }
+    log_msg[log_len++] = '\n';
+    log_write(log_msg, log_len);
   }
 
   void add(pms5003_data_t *data, uint64_t epoch_time_usec) {

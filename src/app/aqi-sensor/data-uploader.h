@@ -102,6 +102,7 @@ class DataUploader : public HttpsHandlerIfc {
     snprintf(url, sizeof(url), "%s/%s", _base_url, DATA_UPLOAD_URL);
     LOG("posting to %s", url);
     log_write(_jsonbuf, strlen(_jsonbuf));
+    log_write("\n", 1);
     _hc->post(url, _jsonbuf, strlen(_jsonbuf), this);
   }
 

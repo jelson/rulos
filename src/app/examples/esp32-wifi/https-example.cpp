@@ -65,14 +65,13 @@ const char cert[] =
 #include "wifi-credentials.h"
 
 class TestClient : public HttpsHandlerIfc {
+ private:
+  const static int HTTPS_TIMEOUT_MS = 5000;
   HttpsClient hc;
   char response_buffer[100];
 
  public:
-  TestClient() {
-    hc.set_timeout_ms(5000);
-    hc.set_https_cert(cert);
-
+  TestClient() : hc(HTTPS_TIMEOUT_MS, cert) {
     // set aside one byte for NULL -- we'll null terminate data
     // in-place after we get it
     hc.set_response_buffer(response_buffer, sizeof(response_buffer) - 1);

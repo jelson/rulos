@@ -35,9 +35,10 @@
 
 static constexpr const char *BASE_URL = "https://airquality.circlemud.org";
 static constexpr const size_t CACHE_SIZE = 200;
+static constexpr const int HTTPS_TIMEOUT_MS = 3000;
 
 UartState_t console;
-HttpsClient hc;
+HttpsClient hc(HTTPS_TIMEOUT_MS, cert_x3_ca);
 SensorName sensor_name(&hc, BASE_URL);
 NtpClient ntp;
 pms5003_t pms;
@@ -71,9 +72,7 @@ int main() {
 
   inet_wifi_client_start(wifi_creds,
                          sizeof(wifi_creds) / sizeof(wifi_creds[0]));
-  hc.set_timeout_ms(5000);
-  hc.set_https_cert(cert_x3_ca);
-
+  hc.set_header("Content-Type", "application/json");
   ntp.start();
   sensor_name.start();
   data_uploader.start();

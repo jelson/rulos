@@ -124,21 +124,36 @@ void inet_wifi_client_start(const inet_wifi_creds_t *wifi_creds,
 
 /////// https client
 
-HttpsClient::HttpsClient() {
+HttpsClient::HttpsClient(int timeout_ms, const char *cert) {
   _in_use = false;
+
+  esp_http_client_config_t config = {
+      .url = "https://localhost", // temporary; set on get/post
+      .cert_pem = cert,
+      .timeout_ms = timeout_ms,
+      .event_handler = HttpsClient::_event_handler_trampoline,
+      .user_data = this,
+      .is_async = true,
+  };
+
+  _client = esp_http_client_init(&config);
+
+  if (_client == NULL) {
+    LOG("can not create https client!");
+  }
+}
+
+HttpsClient::~HttpsClient() {
+  esp_http_client_cleanup(_client);
+}
+
+void HttpsClient::set_header(const char *header, const char *value) {
+  ESP_ERROR_CHECK(esp_http_client_set_header(_client, header, value));
 }
 
 void HttpsClient::set_response_buffer(char *buf, size_t len) {
   _response_buffer = buf;
   _response_buffer_len = len;
-}
-
-void HttpsClient::set_timeout_ms(int timeout_ms) {
-  _timeout_ms = timeout_ms;
-}
-
-void HttpsClient::set_https_cert(const char *cert) {
-  _cert = cert;
 }
 
 esp_err_t HttpsClient::_event_handler_trampoline(esp_http_client_event_t *evt) {
@@ -193,7 +208,6 @@ void HttpsClient::_check_https_result() {
   } else {
     LOG("HTTPS Client: error: %s", esp_err_to_name(err));
   }
-  esp_http_client_cleanup(_client);
   _in_use = false;
   _on_done->on_done(this, code, _response_bytes_written);
 }
@@ -207,16 +221,7 @@ void HttpsClient::post(const char *url, const char *post_body, size_t body_len,
   _on_done = on_done;
   _in_use = true;
 
-  esp_http_client_config_t config = {
-      .url = url,
-      .cert_pem = _cert,
-      .timeout_ms = _timeout_ms,
-      .event_handler = HttpsClient::_event_handler_trampoline,
-      .user_data = this,
-      .is_async = true,
-  };
-
-  _client = esp_http_client_init(&config);
+  ESP_ERROR_CHECK(esp_http_client_set_url(_client, url));
 
   if (post_body != NULL) {
     esp_http_client_set_method(_client, HTTP_METHOD_POST);
