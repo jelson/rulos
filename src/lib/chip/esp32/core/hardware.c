@@ -46,7 +46,6 @@ const int __attribute__((used)) DRAM_ATTR uxTopUsedPriority =
 //
 // Belt-and-suspenders solution: run on core 1, *and* put a call to
 // vTaskDelay() in hal_idle().
-const int RULOS_ESP32_CORE_ID = 1;
 
 void rulos_hal_init(void) {
   esp_err_t ret = nvs_flash_init();

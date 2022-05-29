@@ -22,6 +22,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "core/time.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+
 extern "C" {
 #include "esp_http_client.h"
 }
@@ -46,6 +50,7 @@ class HttpsClient {
  public:
   HttpsClient(int timeout_ms, const char *cert);
   ~HttpsClient();
+  bool is_in_use();
   void set_header(const char *header, const char *value);
   void set_response_buffer(char *buf, size_t len);
   void get(const char *url, HttpsHandlerIfc *on_done);
@@ -53,17 +58,30 @@ class HttpsClient {
             HttpsHandlerIfc *on_done);
 
  private:
-  bool _in_use;
+  // params from the caller
   const char *_cert;
   int _timeout_ms;
+  HttpsHandlerIfc *_on_done;
+
+  // state of the client
+  bool _worker_running;
+  bool _in_use;
+  bool _terminate;
+  SemaphoreHandle_t _req_ready;
+  SemaphoreHandle_t _worker_ready;
+
+  // state of the request
+  esp_http_client_handle_t _client;
   char *_response_buffer;
   size_t _response_buffer_len;
   size_t _response_bytes_written;
-  esp_http_client_handle_t _client;
-  HttpsHandlerIfc *_on_done;
+  int _result_code;
 
   static esp_err_t _event_handler_trampoline(esp_http_client_event_t *evt);
   esp_err_t _event_handler(esp_http_client_event_t *evt);
-  static void _check_https_result_trampoline(void *context);
-  void _check_https_result();
+  static void _worker_thread_trampoline(void *context);
+  void _maybeStartWorkerThread();
+  void _worker_thread();
+  void _perform_one_op();
+  static void _invoke_done_callback(void *context);
 };

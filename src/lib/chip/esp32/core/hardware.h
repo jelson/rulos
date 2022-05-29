@@ -31,6 +31,7 @@
   } while (0)
 
 uint32_t getApbFrequency();
+static const int RULOS_ESP32_CORE_ID = 1;
 
 //////////////// GPIO /////////////////////////////////
 
@@ -118,7 +119,6 @@ static inline void gpio_make_input_enable_pullup(const gpio_pin_t pin) {
   _gpio_make_input(pin);
   _gpio_enable_pull(pin, true);
 }
-
 
 /*
  * configure a pin as input, and enable its internal pulldown resistors

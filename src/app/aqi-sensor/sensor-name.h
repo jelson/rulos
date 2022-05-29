@@ -48,6 +48,12 @@ class SensorName : public HttpsHandlerIfc {
     schedule_us(1000000 * RETRY_TIME_SEC, _resolve_sensor_name_trampoline,
                 this);
 
+    // if last request is outstanding, do nothing
+    if (_hc->is_in_use()) {
+      LOG("get sensor name: previous req still outstanding");
+      return;
+    }
+
     // set aside one byte for NULL -- we'll null terminate data
     // in-place after we get it
     _hc->set_response_buffer(_sensor_name, sizeof(_sensor_name) - 1);

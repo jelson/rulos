@@ -23,9 +23,12 @@
 
 #include <algorithm>
 
+#include "core/hardware.h"
 #include "core/rulos.h"
 #include "core/util.h"
 #include "esp_wifi.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 static const inet_wifi_creds_t *g_wifi_creds = NULL;
 static int g_num_wifi_creds = 0;
@@ -44,7 +47,7 @@ static void reconfigure_wifi_creds() {
     g_wifi_creds_idx = 0;
   }
 
-  LOG("Trying to connect to wifi SSID %s", curr_wifi_ssid());
+  LOG("Wifi: Trying to connect to wifi SSID %s", curr_wifi_ssid());
 
   wifi_config_t wifi_config = {.sta = {
                                    .threshold =
@@ -122,32 +125,54 @@ void inet_wifi_client_start(const inet_wifi_creds_t *wifi_creds,
   ESP_ERROR_CHECK(esp_wifi_start());
 }
 
-/////// https client
+/////////////////////////////////////////////////////////////
+////////////////////// https client /////////////////////////
+/////////////////////////////////////////////////////////////
 
 HttpsClient::HttpsClient(int timeout_ms, const char *cert) {
+  _timeout_ms = timeout_ms;
+  _cert = cert;
   _in_use = false;
+  _terminate = false;
+  _worker_running = false;
+}
 
-  esp_http_client_config_t config = {
-      .url = "https://localhost", // temporary; set on get/post
-      .cert_pem = cert,
-      .timeout_ms = timeout_ms,
-      .event_handler = HttpsClient::_event_handler_trampoline,
-      .user_data = this,
-      .is_async = true,
-  };
-
-  _client = esp_http_client_init(&config);
-
-  if (_client == NULL) {
-    LOG("can not create https client!");
+void HttpsClient::_maybeStartWorkerThread() {
+  if (_worker_running) {
+    return;
   }
+
+  // Create semaphores used for inter-task coordination
+  _req_ready = xSemaphoreCreateBinary();
+  _worker_ready = xSemaphoreCreateBinary();
+
+  // Create a task to perform the blocking HTTPS requests.
+  xTaskCreate(HttpsClient::_worker_thread_trampoline, "https_client", 8 * 1024,
+              this, configMAX_PRIORITIES, NULL);
+
+  // Wait for task to start
+  xSemaphoreTake(_worker_ready, portMAX_DELAY);
+  _worker_running = true;
+  LOG("HTTPS Client: worker started");
 }
 
 HttpsClient::~HttpsClient() {
-  esp_http_client_cleanup(_client);
+  // notify the worker it's time to go to terminate
+  if (_worker_running) {
+    _terminate = true;
+    xSemaphoreGive(_req_ready);
+
+    // wait for the worker to tell us it's done
+    xSemaphoreTake(_worker_ready, portMAX_DELAY);
+  }
+}
+
+bool HttpsClient::is_in_use() {
+  return _in_use;
 }
 
 void HttpsClient::set_header(const char *header, const char *value) {
+  _maybeStartWorkerThread();
   ESP_ERROR_CHECK(esp_http_client_set_header(_client, header, value));
 }
 
@@ -164,10 +189,10 @@ esp_err_t HttpsClient::_event_handler_trampoline(esp_http_client_event_t *evt) {
 esp_err_t HttpsClient::_event_handler(esp_http_client_event_t *evt) {
   switch (evt->event_id) {
     case HTTP_EVENT_ERROR:
-      LOG("Error on http operation");
+      LOG("HTTPS Client: Error on http operation");
       break;
     case HTTP_EVENT_ON_HEADER:
-      LOG("got an http header: key=%s, value=%s", evt->header_key,
+      LOG("HTTPS Client: got an http header: key=%s, value=%s", evt->header_key,
           evt->header_value);
       break;
     case HTTP_EVENT_ON_DATA: {
@@ -185,35 +210,14 @@ esp_err_t HttpsClient::_event_handler(esp_http_client_event_t *evt) {
   return ESP_OK;
 }
 
-// little trampoline until the RULOS scheduler understands C++
-// natively
-void HttpsClient::_check_https_result_trampoline(void *context) {
-  HttpsClient *c = static_cast<HttpsClient *>(context);
-  c->_check_https_result();
-}
-
-void HttpsClient::_check_https_result() {
-  esp_err_t err = esp_http_client_perform(_client);
-
-  if (err == ESP_ERR_HTTP_EAGAIN) {
-    schedule_us(100000, HttpsClient::_check_https_result_trampoline, this);
-    return;
-  }
-
-  int code = -1;
-  if (err == ESP_OK) {
-    code = esp_http_client_get_status_code(_client);
-    LOG("HTTPS Client: request complete: status=%d, content_length=%d", code,
-        esp_http_client_get_content_length(_client));
-  } else {
-    LOG("HTTPS Client: error: %s", esp_err_to_name(err));
-  }
-  _in_use = false;
-  _on_done->on_done(this, code, _response_bytes_written);
+void HttpsClient::get(const char *url, HttpsHandlerIfc *on_done) {
+  post(url, NULL, 0, on_done);
 }
 
 void HttpsClient::post(const char *url, const char *post_body, size_t body_len,
                        HttpsHandlerIfc *on_done) {
+  _maybeStartWorkerThread();
+
   assert(!_in_use);
   assert(_response_buffer != NULL);
   assert(_response_buffer_len != 0);
@@ -230,9 +234,67 @@ void HttpsClient::post(const char *url, const char *post_body, size_t body_len,
     esp_http_client_set_method(_client, HTTP_METHOD_GET);
   }
 
-  schedule_us(100000, HttpsClient::_check_https_result_trampoline, this);
+  xSemaphoreGive(_req_ready);
 }
 
-void HttpsClient::get(const char *url, HttpsHandlerIfc *on_done) {
-  post(url, NULL, 0, on_done);
+// little trampoline until the RULOS scheduler understands C++
+// natively
+void HttpsClient::_worker_thread_trampoline(void *context) {
+  HttpsClient *hc = static_cast<HttpsClient *>(context);
+  hc->_worker_thread();
+}
+
+void HttpsClient::_worker_thread() {
+  esp_http_client_config_t config = {
+      .url = "https://localhost",  // temporary; set on get/post
+      .cert_pem = _cert,
+      .timeout_ms = _timeout_ms,
+      .event_handler = HttpsClient::_event_handler_trampoline,
+      .user_data = this,
+      .is_async = false,
+  };
+
+  _client = esp_http_client_init(&config);
+
+  // tell the main thread that the worker is ready
+  xSemaphoreGive(_worker_ready);
+
+  assert(_client != NULL);
+
+  while (true) {
+    xSemaphoreTake(_req_ready, portMAX_DELAY);
+
+    if (_terminate) {
+      LOG("HTTPS Client: terminating worker thread");
+      xSemaphoreGive(_worker_ready);
+      return;
+    }
+
+    _perform_one_op();
+  }
+}
+
+// warning: runs on a separate task!
+void HttpsClient::_perform_one_op() {
+  LOG("HTTPS Client: executing request");
+  esp_err_t err = esp_http_client_perform(_client);
+
+  if (err == ESP_OK) {
+    _result_code = esp_http_client_get_status_code(_client);
+    LOG("HTTPS Client: request complete: status=%d, content_length=%d",
+        _result_code, esp_http_client_get_content_length(_client));
+  } else {
+    _result_code = -1;
+    LOG("HTTPS Client: error: %s", esp_err_to_name(err));
+  }
+
+  // invoke the done callback from the main rulos thread
+  schedule_now(HttpsClient::_invoke_done_callback, this);
+}
+
+void HttpsClient::_invoke_done_callback(void *context) {
+  HttpsClient *hc = static_cast<HttpsClient *>(context);
+
+  hc->_in_use = false;
+  hc->_on_done->on_done(hc, hc->_result_code, hc->_response_bytes_written);
 }

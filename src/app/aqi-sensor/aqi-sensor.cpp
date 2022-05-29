@@ -33,9 +33,11 @@
 #include "pms5003cache.h"
 #include "sensor-name.h"
 
+// static constexpr const char *BASE_URL =
+// "https://secure.megabozo.com/scripts";
 static constexpr const char *BASE_URL = "https://airquality.circlemud.org";
 static constexpr const size_t CACHE_SIZE = 200;
-static constexpr const int HTTPS_TIMEOUT_MS = 3000;
+static constexpr const int HTTPS_TIMEOUT_MS = 5000;
 
 UartState_t console;
 HttpsClient hc(HTTPS_TIMEOUT_MS, cert_x3_ca);
