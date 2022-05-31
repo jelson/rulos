@@ -153,7 +153,7 @@ class Platform:
         # Add a linker flag so gcc generates a map, and modify the standard
         # Program builder to know that map generation is a side-effect of
         # compilation
-        map_filename = os.path.join(build_obj_dir, f"{program_path_stem}.map")
+        map_filename = f"{program_path_stem}.map"
         env.Append(LINKFLAGS = f"-Wl,-Map={map_filename},--cref")
         def map_emitter(scons_target, source, env):
             assert(len(scons_target) == 1)
