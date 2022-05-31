@@ -31,7 +31,7 @@
  * hardware
  */
 
-typedef void (*Handler)(void *data);
+#define HAL_MAGIC 0x74
 
 void rulos_hal_init();
 
@@ -44,7 +44,8 @@ void hal_end_atomic(rulos_irq_state_t old_interrupts);
 void hal_deep_sleep();
 void hal_idle();  // hw: spin. sim: sleep
 
-#define HAL_MAGIC 0x74
+// reboot
+void hal_reset();
 
 ///// timer/clock HAL
 
@@ -52,7 +53,9 @@ void hal_idle();  // hw: spin. sim: sleep
 #define TIMER1 (1)
 #define TIMER2 (2)
 
-uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
+typedef void (*clock_handler_t)(void *data);
+
+uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
                             uint8_t timer_id);
 bool hal_clock_interrupt_is_pending();
 // how far is the clock into its current tick, out of 10,000?
@@ -66,15 +69,17 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
                          uint8_t onoff);
 void hal_7seg_bus_enter_sleep();  // Call to stop driving 7seg bus
 
-////
+//// keypad
+void hal_init_keypad();
 char hal_read_keybuf();
 char hal_scan_keypad();
 
-void hal_init_keypad();
+//// adc
 void hal_init_adc(Time scan_period);
 void hal_init_adc_channel(uint8_t idx);
 uint16_t hal_read_adc(uint8_t idx);
 
+/// joystick
 void hal_init_joystick_button();
 bool hal_read_joystick_button();
 

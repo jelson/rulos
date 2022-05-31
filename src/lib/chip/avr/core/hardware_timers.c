@@ -45,9 +45,9 @@ uint32_t hardware_f_cpu;
 void null_handler(void *data) {
 }
 
-Handler timer0_handler = null_handler;
-Handler timer1_handler = null_handler;
-Handler timer2_handler = null_handler;
+clock_handler_t timer0_handler = null_handler;
+clock_handler_t timer1_handler = null_handler;
+clock_handler_t timer2_handler = null_handler;
 
 void *timer0_data = NULL;
 void *timer1_data = NULL;
@@ -202,7 +202,7 @@ static void find_prescaler(uint32_t req_us_per_period, const TimerDef *timerDef,
 
 #ifndef PRESCALE_TEST
 
-uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
+uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
                             uint8_t timer_id) {
   extern uint8_t g_hal_initted;
   assert(g_hal_initted == HAL_MAGIC);

@@ -39,6 +39,7 @@
 #include "core/rulos.h"
 #include "periph/ring_buffer/rocket_ring_buffer.h"
 #include "periph/uart/uart.h"
+#include "periph/uart/uart_hal.h"
 
 /********************** uart output simulator *********************/
 
@@ -62,8 +63,12 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
   memset(recent_uart_buf, 0, sizeof(recent_uart_buf));
 }
 
-void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb) {
+void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf,
+                       size_t buflen) {
   uart_recv_cb = rx_cb;
+}
+
+void hal_uart_rx_cb_done(uint8_t uart_id) {
 }
 
 static void uart_simulator_start() {
@@ -143,7 +148,8 @@ static void uart_simulator_input(int c) {
 
   // upcall to the uart code
   if (uart_recv_cb != NULL) {
-    (uart_recv_cb)(0, uart_user_data, c);
+    char ch = c;
+    (uart_recv_cb)(0, uart_user_data, &ch, 1);
   }
 }
 

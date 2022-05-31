@@ -43,7 +43,7 @@ bool sim_keypad_keystroke_handler(char c);
 char translate_to_keybuf(char c);
 
 bool g_keypad_enabled = FALSE;
-char keypad_buf[10];
+char keypad_buf[30];
 CharQueue *keypad_q = (CharQueue *)keypad_buf;
 
 void hal_init_keypad() {
@@ -75,26 +75,37 @@ char hal_read_keybuf() {
     return 0;
 }
 
-char hal_scan_keypad() { return 0; }
+char hal_scan_keypad() {
+  return 0;
+}
 
 // translation from a key typed at the keyboard to the simulated
 // keypad input that should be enqueued
 char translate_to_keybuf(char c) {
-  if (c >= 'a' && c <= 'd') return c;
-  if (c == '\t') return 'a';
-  if (c == '\n') return 'c';
-  if (c == 27) return 'd';
+  if (c >= 'a' && c <= 'd')
+    return c;
+  if (c == '\t')
+    return 'a';
+  if (c == '\n')
+    return 'c';
+  if (c == 27)
+    return 'd';
 
-  if (c >= '0' && c <= '9') return c;
+  if (c >= '0' && c <= '9')
+    return c;
 
-  if (c == '*' || c == 's' || c == '.') return 's';
+  if (c == '*' || c == 's' || c == '.')
+    return 's';
 
-  if (c == 'p' || c == '#') return 'p';
+  if (c == 'p' || c == '#')
+    return 'p';
 
   // volume quads
-  if (c == 'j' || c == 'k') return c;
+  if (c == 'j' || c == 'k')
+    return c;
   // pong quads
-  if (c == 'm' || c == 'n' || c == 'e' || c == 'f') return c;
+  if (c == 'm' || c == 'n' || c == 'e' || c == 'f')
+    return c;
 
   return 0;
 }

@@ -31,7 +31,7 @@ typedef struct s_board_layout {
 
 void sim_display_light_status(bool status);
 
-void sim_register_clock_handler(Handler func, void *data);
-void sim_register_sigio_handler(Handler func, void *data);
+void sim_register_clock_handler(clock_handler_t func, void *data);
+void sim_register_sigio_handler(clock_handler_t func, void *data);
 
 #define SIM_TWI_PORT_BASE 9470

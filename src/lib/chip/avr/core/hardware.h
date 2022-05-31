@@ -120,8 +120,7 @@ static inline void gpio_clr(const gpio_pin_t gpio_pin) {
 /*
  * assert an output either high or low depending on the 'onoff' parameter
  */
-static inline void gpio_set_or_clr(const gpio_pin_t gpio_pin,
-                                   uint8_t onoff) {
+static inline void gpio_set_or_clr(const gpio_pin_t gpio_pin, uint8_t onoff) {
   if (onoff)
     gpio_set(gpio_pin);
   else
@@ -147,10 +146,8 @@ static inline int gpio_is_set(const gpio_pin_t gpio_pin) {
     __asm__ __volatile__("nop"); \
   } while (0)
 
-void sensor_interrupt_register_handler(Handler handler);
-
 void avr_log(const char *fmt, ...);
 void avr_assert(uint16_t line);
-void hardware_assign_timer_handler(uint8_t timer_id, Handler handler);
+void hardware_assign_timer_handler(uint8_t timer_id, clock_handler_t handler);
 void init_f_cpu(void);
 extern uint32_t hardware_f_cpu;

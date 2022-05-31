@@ -246,8 +246,10 @@ done:
 // buffer until there are 8 of them, then schedule the non-interrupt-time
 // upcall.
 //
-static void uart_char_received(UartState_t *uart, void *data, char c) {
+static void uart_char_received(UartState_t *uart, void *data, char *buf,
+                               size_t len) {
   WallClockActivation_t *wca = (WallClockActivation_t *)data;
+  char c = buf[0];
 
   // acquire the timestamp first just in case we might need it
   Time now = precise_clock_time_us();

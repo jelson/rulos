@@ -53,7 +53,7 @@ static void _uart_receive_trampoline(void *data) {
 
   // report an overflow, if we recorded one during the interrupt handler
   if (u->rx_overflow_bytes != u->rx_overflow_bytes_last_reported) {
-    LOG("WARNING: uart %u overflowed %u bytes (%u total)", u->uart_id,
+    LOG("WARNING: uart %u overflowed %zu bytes (%zu total)", u->uart_id,
         u->rx_overflow_bytes - u->rx_overflow_bytes_last_reported,
         u->rx_overflow_bytes);
     u->rx_overflow_bytes_last_reported = u->rx_overflow_bytes;

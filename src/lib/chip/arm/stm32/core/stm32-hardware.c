@@ -349,7 +349,7 @@ uint32_t arm_hal_get_clock_rate() {
 }
 
 static void* g_timer_data = NULL;
-static Handler g_timer_handler = NULL;
+static clock_handler_t g_timer_handler = NULL;
 
 void SysTick_Handler() {
   if (g_timer_handler != NULL) {
@@ -357,8 +357,8 @@ void SysTick_Handler() {
   }
 }
 
-void arm_hal_start_clock_us(uint32_t ticks_per_interrupt, Handler handler,
-                            void* data) {
+void arm_hal_start_clock_us(uint32_t ticks_per_interrupt,
+                            clock_handler_t handler, void* data) {
   g_timer_handler = handler;
   g_timer_data = data;
 

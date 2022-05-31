@@ -41,12 +41,14 @@ void hal_end_atomic(rulos_irq_state_t old_interrupts) {
   __set_PRIMASK(old_interrupts);
 }
 
-void hal_idle() { __WFI(); }
+void hal_idle() {
+  __WFI();
+}
 
 // timer_id is ignored for now; we just use the LPC SysTick clock,
 // which is meant for use for a system clock because it doesn't have
 // any pin inputs or outputs.
-uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
+uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
                             uint8_t timer_id) {
   // The correct formula for ticks-per-clock-period is just the
   // frequency of the CPU in MHz times the desired period in

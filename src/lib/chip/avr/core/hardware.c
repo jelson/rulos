@@ -46,28 +46,6 @@ void rulos_hal_init() {
   g_hal_initted = HAL_MAGIC;
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-/**************************************************************/
-/*			 Interrupt-driven senor input                   */
-/**************************************************************/
-// jonh hardcodes this for a specific interrupt line. Not sure
-// yet how to generalize; will do when needed, I guess.
-
-#if 0
-Handler sensor_interrupt_handler;
-
-void sensor_interrupt_register_handler(Handler handler)
-{
-	sensor_interrupt_handler = handler;
-}
-
-ISR(INT0_vect)
-{
-	sensor_interrupt_handler();
-}
-#endif
-
 /*************************************************************************************/
 
 // disable interrupts, and return true if interrupts had been enabled.

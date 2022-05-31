@@ -29,9 +29,9 @@
 #define REGISTER_LAT GPIO_D6  // assert register to parallel output lines
 #define REGISTER_CLK GPIO_D7  // shift in data to register
 
-#define SAMPLE_RATE_HZ 12000
+#define SAMPLE_RATE_HZ  12000
 #define USEC_PER_SAMPLE (1000000 / SAMPLE_RATE_HZ)
-#define MAX_SAMPLES 250
+#define MAX_SAMPLES     250
 
 #define NOTE_LEN 500000
 
@@ -61,10 +61,14 @@ static inline void latch_output() {
 }
 #else  // sim
 
-static inline void shift_out_8bits(uint8_t num) { LOG("%d,", num); }
+static inline void shift_out_8bits(uint8_t num) {
+  LOG("%d,", num);
+}
 
-static inline void latch_output() {}
-static void init_audio_pins() {}
+static inline void latch_output() {
+}
+static void init_audio_pins() {
+}
 #endif
 
 typedef struct {
@@ -92,7 +96,7 @@ void emit_waveform(waveformAct_t *wa) {
 }
 
 void start_frequency(waveformAct_t *ta, float frequency) {
-  LOG("starting frequency %f", (double) frequency);
+  LOG("starting frequency %f", (double)frequency);
 
   // silence
   if (frequency == 0) {
@@ -102,7 +106,8 @@ void start_frequency(waveformAct_t *ta, float frequency) {
 
   uint16_t num_samples = SAMPLE_RATE_HZ / frequency;
 
-  if (num_samples > MAX_SAMPLES) return;
+  if (num_samples > MAX_SAMPLES)
+    return;
 
   uint16_t i;
   for (i = 0; i < num_samples; i++)
@@ -132,7 +137,8 @@ void change_frequency(changeFrequencyAct_t *cfa) {
                    -1};
 
   cfa->i++;
-  if (scale[cfa->i] == -1) cfa->i = 0;
+  if (scale[cfa->i] == -1)
+    cfa->i = 0;
 
   start_frequency(cfa->wa, scale[cfa->i]);
   schedule_us(NOTE_LEN, (ActivationFuncPtr)change_frequency, cfa);
@@ -157,7 +163,8 @@ int main() {
 #ifdef USE_SCHEDULER_FOR_WAVEFORM_PLAYBACK
   schedule_now((Activation *)&wa);
 #else
-  hal_start_clock_us(USEC_PER_SAMPLE, (Handler)emit_waveform, &wa, TIMER2);
+  hal_start_clock_us(USEC_PER_SAMPLE, (clock_handler_t)emit_waveform, &wa,
+                     TIMER2);
 #endif
 
 #if 0

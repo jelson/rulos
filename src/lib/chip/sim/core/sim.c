@@ -56,7 +56,7 @@ sigset_t mask_set;
 #define MAX_HANDLERS 20
 
 typedef struct {
-  Handler func;
+  clock_handler_t func;
   void *data;
 } SimActivation_t;
 
@@ -67,7 +67,7 @@ static SimActivation_t simSIGIOHandlers[MAX_HANDLERS];
 static int numSimSIGIOHandlers = 0;
 
 static void sim_register_generic_handler(SimActivation_t *handlerList,
-                                         int *numHandlers, Handler func,
+                                         int *numHandlers, clock_handler_t func,
                                          void *data) {
   rulos_irq_state_t old_interrupts = hal_start_atomic();
   handlerList[*numHandlers].func = func;
@@ -76,12 +76,12 @@ static void sim_register_generic_handler(SimActivation_t *handlerList,
   hal_end_atomic(old_interrupts);
 }
 
-void sim_register_clock_handler(Handler func, void *data) {
+void sim_register_clock_handler(clock_handler_t func, void *data) {
   sim_register_generic_handler(simClockHandlers, &numSimClockHandlers, func,
                                data);
 }
 
-void sim_register_sigio_handler(Handler func, void *data) {
+void sim_register_sigio_handler(clock_handler_t func, void *data) {
   sim_register_generic_handler(simSIGIOHandlers, &numSimSIGIOHandlers, func,
                                data);
 }
@@ -105,7 +105,7 @@ static void sim_sigio_handler(int signo) {
   sim_generic_fire_handlers(simSIGIOHandlers, numSimSIGIOHandlers);
 }
 
-uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
+uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
                             uint8_t timer_id) {
   assert(hal_initted == HAL_MAGIC);  // did you forget to call rulos_hal_init()?
 
@@ -130,7 +130,7 @@ uint16_t hal_elapsed_tenthou_intervals() {
   // this COULD be implemented with gettimeofday(), but I'm too lazy. If any
   // simulation apps actually need precise timing services, this function and
   // the one below should be implemented.
- return 0;
+  return 0;
 }
 
 bool hal_clock_interrupt_is_pending() {
@@ -172,30 +172,6 @@ void hal_delay_ms(uint16_t ms) {
   tv.tv_sec = ms / 1000;
   tv.tv_usec = 1000 * (ms % 1000);
   select(0, NULL, NULL, NULL, &tv);
-}
-
-/********************** sensors *************************/
-
-Handler sensor_interrupt_handler = NULL;
-void *sensor_interrupt_data = NULL;
-const uint32_t sensor_interrupt_simulator_counter_period = 507;
-uint32_t sensor_interrupt_simulator_counter;
-
-void sim_sensor_poll(void *data) {
-  sensor_interrupt_simulator_counter += 1;
-  if (sensor_interrupt_simulator_counter ==
-      sensor_interrupt_simulator_counter_period) {
-    if (sensor_interrupt_handler != NULL) {
-      sensor_interrupt_handler(sensor_interrupt_data);
-    }
-    sensor_interrupt_simulator_counter = 0;
-  }
-}
-
-void sensor_interrupt_register_handler(Handler handler, void *data) {
-  sensor_interrupt_handler = handler;
-  sensor_interrupt_data = data;
-  sim_register_clock_handler(sim_sensor_poll, NULL);
 }
 
 /*************** twi ************************/

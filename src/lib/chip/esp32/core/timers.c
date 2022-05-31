@@ -28,7 +28,7 @@
 
 typedef struct {
   // rulos data
-  Handler cb;
+  clock_handler_t cb;
   void *cb_data;
   uint64_t alarm_value;
 
@@ -79,7 +79,7 @@ static void IRAM_ATTR timer_isr(void *arg) {
   hal_end_atomic(0);
 }
 
-uint32_t hal_start_clock_us(uint32_t us, Handler handler, void *data,
+uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
                             uint8_t timer_id) {
   esp32_timer_t *const eu = get_timer(timer_id);
 
