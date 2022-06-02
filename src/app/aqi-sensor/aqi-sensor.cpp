@@ -39,7 +39,7 @@
 static constexpr const char *BASE_URL = "https://airquality.circlemud.org";
 static constexpr const size_t CACHE_SIZE = 200;
 static constexpr const int HTTPS_TIMEOUT_MS = 5000;
-static constexpr const int WATCHDOG_TIME_SEC = 3 * 60; // 3 minutes
+static constexpr const int WATCHDOG_TIME_SEC = 3 * 60;  // 3 minutes
 
 UartState_t console;
 watchdog_t watchdog;
