@@ -62,6 +62,10 @@ static void run_rulos_main(void* data) {
   main();
 }
 
+void hal_reset() {
+  esp_restart();
+}
+
 extern "C" {
 void app_main(void) {
   gpio_install_isr_service(0);

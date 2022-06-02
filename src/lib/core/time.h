@@ -25,7 +25,7 @@
 // Definition of time for RulOS, in units of usec.
 typedef int32_t Time;
 
-// Returns true if b is later than a using rollover math, assuming 32-bit
+// Returns true if `a` is later than `b` using rollover math, assuming 32-bit
 // signed time values.
 static inline bool later_than(Time a, Time b) {
   // the subtraction will roll over too
@@ -35,7 +35,7 @@ static inline bool later_than(Time a, Time b) {
   // complicated set of conditionals
 }
 
-// Returns true if b is later than or equal to a using rollover math,
+// Returns true if `a` is later than or equal to `b` using rollover math,
 // assuming 32-bit signed time values.
 static inline bool later_than_or_eq(Time a, Time b) {
   // the subtraction will roll over too
