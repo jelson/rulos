@@ -23,6 +23,7 @@
 
 // RULOS includes
 #include "core/rulos.h"
+#include "core/watchdog.h"
 #include "periph/inet/inet.h"
 #include "periph/ntp/ntp.h"
 #include "periph/pms5003/pms5003.h"
@@ -38,14 +39,16 @@
 static constexpr const char *BASE_URL = "https://airquality.circlemud.org";
 static constexpr const size_t CACHE_SIZE = 200;
 static constexpr const int HTTPS_TIMEOUT_MS = 5000;
+static constexpr const int WATCHDOG_TIME_SEC = 3 * 60; // 3 minutes
 
 UartState_t console;
+watchdog_t watchdog;
 HttpsClient hc(HTTPS_TIMEOUT_MS, cert_x3_ca);
 SensorName sensor_name(&hc, BASE_URL);
 NtpClient ntp;
 pms5003_t pms;
 PMS5003Cache pms_cache(CACHE_SIZE);
-DataUploader data_uploader(&hc, BASE_URL, &sensor_name, &pms_cache);
+DataUploader data_uploader(&hc, BASE_URL, &sensor_name, &pms_cache, &watchdog);
 
 static void data_received(pms5003_data_t *data, void *user_data) {
   uint64_t t = ntp.get_epoch_time_usec();
@@ -71,6 +74,8 @@ int main() {
   uart_init(&console, 0, 1000000);
   log_bind_uart(&console);
   LOG("AQI sensor running");
+
+  watchdog_init(&watchdog, WATCHDOG_TIME_SEC);
 
   inet_wifi_client_start(wifi_creds,
                          sizeof(wifi_creds) / sizeof(wifi_creds[0]));

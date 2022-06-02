@@ -23,6 +23,7 @@
 
 // rulos includes
 #include "core/rulos.h"
+#include "core/watchdog.h"
 #include "periph/inet/inet.h"
 
 // app includes
@@ -39,6 +40,7 @@ class DataUploader : public HttpsHandlerIfc {
   const char *_base_url;
   SensorName *_sn;
   PMS5003Cache *_cache;
+  watchdog_t *_watchdog;
 
   static constexpr const char *DATA_UPLOAD_URL = "data";
   static const uint32_t UPLOAD_FREQ_SEC = 15;
@@ -117,6 +119,7 @@ class DataUploader : public HttpsHandlerIfc {
     if (response_code == 200) {
       LOG("Data upload: success!");
       _cache->pop_n(_num_outstanding);
+      watchdog_keepalive(_watchdog);
     } else {
       LOG("Data upload: failed, code %d", response_code);
     }
@@ -125,11 +128,12 @@ class DataUploader : public HttpsHandlerIfc {
 
  public:
   DataUploader(HttpsClient *hc, const char *base_url, SensorName *sn,
-               PMS5003Cache *cache)
+               PMS5003Cache *cache, watchdog_t *watchdog)
       : _hc(hc),
         _base_url(base_url),
         _sn(sn),
         _cache(cache),
+        _watchdog(watchdog),
         _num_outstanding(0) {
     _json_max_size = MAX_POINTS_PER_UPLOAD * 100;
     _jsonbuf = new char[_json_max_size];
