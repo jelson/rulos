@@ -134,11 +134,12 @@ HttpsClient::HttpsClient(int timeout_ms, const char *cert) {
   _cert = cert;
   _in_use = false;
   _terminate = false;
-  _worker_running = false;
+  _client = NULL;
+  _worker_thread_running = false;
 }
 
 void HttpsClient::_maybeStartWorkerThread() {
-  if (_worker_running) {
+  if (_worker_thread_running) {
     return;
   }
 
@@ -152,13 +153,13 @@ void HttpsClient::_maybeStartWorkerThread() {
 
   // Wait for task to start
   xSemaphoreTake(_worker_ready, portMAX_DELAY);
-  _worker_running = true;
+  _worker_thread_running = true;
   LOG("HTTPS Client: worker started");
 }
 
 HttpsClient::~HttpsClient() {
   // notify the worker it's time to go to terminate
-  if (_worker_running) {
+  if (_worker_thread_running) {
     _terminate = true;
     xSemaphoreGive(_req_ready);
 
@@ -237,14 +238,9 @@ void HttpsClient::post(const char *url, const char *post_body, size_t body_len,
   xSemaphoreGive(_req_ready);
 }
 
-// little trampoline until the RULOS scheduler understands C++
-// natively
-void HttpsClient::_worker_thread_trampoline(void *context) {
-  HttpsClient *hc = static_cast<HttpsClient *>(context);
-  hc->_worker_thread();
-}
+void HttpsClient::_create_esp32_client_object() {
+  LOG("HTTPS Client: creating client object");
 
-void HttpsClient::_worker_thread() {
   esp_http_client_config_t config = {
       .url = "https://localhost",  // temporary; set on get/post
       .cert_pem = _cert,
@@ -254,18 +250,43 @@ void HttpsClient::_worker_thread() {
       .is_async = false,
   };
 
+  // ensure we're not leaking client objects
+  assert(_client == NULL);
+
+  // create the client object
   _client = esp_http_client_init(&config);
+
+  // ensure the client object creation did not fail
+  assert(_client != NULL);
+}
+
+void HttpsClient::_destroy_esp32_client_object() {
+  LOG("HTTPS Client: destroying client object");
+  assert(_client != NULL);
+  esp_http_client_cleanup(_client);
+  _client = NULL;
+}
+
+// little trampoline until the RULOS scheduler understands C++
+// natively
+void HttpsClient::_worker_thread_trampoline(void *context) {
+  HttpsClient *hc = static_cast<HttpsClient *>(context);
+  hc->_worker_thread();
+}
+
+void HttpsClient::_worker_thread() {
+  // create an http object so that set_header works
+  _create_esp32_client_object();
 
   // tell the main thread that the worker is ready
   xSemaphoreGive(_worker_ready);
-
-  assert(_client != NULL);
 
   while (true) {
     xSemaphoreTake(_req_ready, portMAX_DELAY);
 
     if (_terminate) {
       LOG("HTTPS Client: terminating worker thread");
+      _destroy_esp32_client_object();
       xSemaphoreGive(_worker_ready);
       return;
     }
@@ -277,6 +298,7 @@ void HttpsClient::_worker_thread() {
 // warning: runs on a separate task!
 void HttpsClient::_perform_one_op() {
   LOG("HTTPS Client: executing request");
+
   esp_err_t err = esp_http_client_perform(_client);
 
   if (err == ESP_OK) {
@@ -286,6 +308,11 @@ void HttpsClient::_perform_one_op() {
   } else {
     _result_code = -1;
     LOG("HTTPS Client: error: %s", esp_err_to_name(err));
+
+    // destroy and re-create client; some failures leave the client in a state
+    // where it can't be reused and never recovers
+    _destroy_esp32_client_object();
+    _create_esp32_client_object();
   }
 
   // invoke the done callback from the main rulos thread

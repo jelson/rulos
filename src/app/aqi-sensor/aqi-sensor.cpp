@@ -79,7 +79,6 @@ int main() {
 
   inet_wifi_client_start(wifi_creds,
                          sizeof(wifi_creds) / sizeof(wifi_creds[0]));
-  hc.set_header("Content-Type", "application/json");
   ntp.start();
   sensor_name.start();
   data_uploader.start();

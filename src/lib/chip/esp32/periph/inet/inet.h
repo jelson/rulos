@@ -64,7 +64,7 @@ class HttpsClient {
   HttpsHandlerIfc *_on_done;
 
   // state of the client
-  bool _worker_running;
+  bool _worker_thread_running;
   bool _in_use;
   bool _terminate;
   SemaphoreHandle_t _req_ready;
@@ -77,6 +77,8 @@ class HttpsClient {
   size_t _response_bytes_written;
   int _result_code;
 
+  void _destroy_esp32_client_object();
+  void _create_esp32_client_object();
   static esp_err_t _event_handler_trampoline(esp_http_client_event_t *evt);
   esp_err_t _event_handler(esp_http_client_event_t *evt);
   static void _worker_thread_trampoline(void *context);

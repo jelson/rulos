@@ -99,6 +99,7 @@ class DataUploader : public HttpsHandlerIfc {
     _encode();
 
     // post
+    _hc->set_header("Content-Type", "application/json");
     _hc->set_response_buffer(_respbuf, sizeof(_respbuf));
     char url[100];
     snprintf(url, sizeof(url), "%s/%s", _base_url, DATA_UPLOAD_URL);
