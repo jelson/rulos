@@ -26,12 +26,11 @@
 #include "core/watchdog.h"
 #include "periph/inet/inet.h"
 #include "periph/ntp/ntp.h"
-#include "periph/pms5003/pms5003.h"
 
 // app includes
 #include "cert-x3-ca.h"
 #include "data-uploader.h"
-#include "pms5003cache.h"
+#include "sensor-data-cache.h"
 #include "sensor-name.h"
 
 // static constexpr const char *BASE_URL =
@@ -46,26 +45,52 @@ watchdog_t watchdog;
 HttpsClient hc(HTTPS_TIMEOUT_MS, cert_x3_ca);
 SensorName sensor_name(&hc, BASE_URL);
 NtpClient ntp;
+
+//////// pms5003 variant ////////////
+
+#if defined(AQI_PMS5003)
+#include "periph/pms5003/pms5003.h"
+#include "pms5003-cache.h"
+
 pms5003_t pms;
-PMS5003Cache pms_cache(CACHE_SIZE);
-DataUploader data_uploader(&hc, BASE_URL, &sensor_name, &pms_cache, &watchdog);
+PMS5003Cache sensor_cache(CACHE_SIZE, &ntp);
 
 static void data_received(pms5003_data_t *data, void *user_data) {
-  uint64_t t = ntp.get_epoch_time_usec();
+  sensor_cache.add(data);
+}
+static void start_sensor() {
+  pms5003_init(&pms, 1, data_received, NULL);
+}
+#endif
 
-  LOG("data:time_usec=%llu.%06llu,pm1.0=%d,pm2.5=%d,pm10.0=%d", t / 1000000,
-      t % 1000000, data->pm10_standard, data->pm25_standard,
-      data->pm100_standard);
+//////// dht22 variant ////////////
 
-  // drop samples that are collected before we have ntp lock
-  if (t != 0) {
-    pms_cache.add(data, t);
-  } else {
-    LOG("...dropping sample because NTP is not locked");
+#if defined(AQI_DHT22)
+
+#include "dht22-cache.h"
+#include "periph/dht22/dht22.h"
+#define DHT22_IO_PIN  GPIO_5
+#define POLL_FREQ_SEC 15
+
+DHT22Cache sensor_cache(CACHE_SIZE, &ntp);
+
+static void poll_sensor(void *arg) {
+  schedule_us(POLL_FREQ_SEC * 1000000, poll_sensor, arg);
+  dht22_data_t data;
+  if (dht22_read(DHT22_IO_PIN, &data)) {
+    sensor_cache.add(&data);
   }
 }
 
+static void start_sensor() {
+  schedule_now(poll_sensor, NULL);
+}
+#endif
+
 /////////
+
+DataUploader data_uploader(&hc, BASE_URL, &sensor_name, &sensor_cache,
+                           &watchdog);
 
 int main() {
   rulos_hal_init();
@@ -83,6 +108,6 @@ int main() {
   sensor_name.start();
   data_uploader.start();
 
-  pms5003_init(&pms, 1, data_received, NULL);
+  start_sensor();
   scheduler_run();
 }

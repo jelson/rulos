@@ -28,7 +28,7 @@
 
 // app includes
 #include "data-uploader.h"
-#include "pms5003cache.h"
+#include "sensor-data-cache.h"
 #include "sensor-name.h"
 
 // config
@@ -39,7 +39,7 @@ class DataUploader : public HttpsHandlerIfc {
   HttpsClient *_hc;
   const char *_base_url;
   SensorName *_sn;
-  PMS5003Cache *_cache;
+  SensorDataCacheIfc *_cache;
   watchdog_t *_watchdog;
 
   static constexpr const char *DATA_UPLOAD_URL = "data";
@@ -50,7 +50,7 @@ class DataUploader : public HttpsHandlerIfc {
   char *_jsonbuf;
   char _respbuf[10000];
 
-  void _encode() {
+  void _serialize() {
     char *p = _jsonbuf;
     int cap = _json_max_size;
 
@@ -65,7 +65,7 @@ class DataUploader : public HttpsHandlerIfc {
     cap -= len;
 
     for (size_t i = 0; i < _num_outstanding; i++) {
-      len = _cache->encode(i, p, cap);
+      len = _cache->serialize(i, p, cap);
       p += len;
       cap -= len;
       assert(cap > 0);
@@ -94,9 +94,9 @@ class DataUploader : public HttpsHandlerIfc {
       return;
     }
 
-    // encode them to json
+    // serialize them to json
     LOG("preparing %d records for upload", _num_outstanding);
-    _encode();
+    _serialize();
 
     // post
     _hc->set_header("Content-Type", "application/json");
@@ -129,7 +129,7 @@ class DataUploader : public HttpsHandlerIfc {
 
  public:
   DataUploader(HttpsClient *hc, const char *base_url, SensorName *sn,
-               PMS5003Cache *cache, watchdog_t *watchdog)
+               SensorDataCacheIfc *cache, watchdog_t *watchdog)
       : _hc(hc),
         _base_url(base_url),
         _sn(sn),

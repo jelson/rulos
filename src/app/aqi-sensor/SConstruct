@@ -21,17 +21,21 @@ import sys
 sys.path.insert(0, "../../util")
 from build_tools import *
 
-RulosBuildTarget(
-    name = "aqi-sensor",
-    sources = [
-        "aqi-sensor.cpp",
-    ],
-    peripherals = "uart pms5003 inet ntp",
-    extra_cflags = [
-        "-DLOG_TO_SERIAL",
+VARIANTS = ['pms5003', 'dht22']
 
-        # include out-of-repo directory to get wifi credentials
-        "-I" + os.path.expanduser("~/.config/rulos")
-    ],
-    platforms = [Esp32Platform()],
-).build()
+for variant in VARIANTS:
+    RulosBuildTarget(
+        name = f"aqi-sensor-{variant}",
+        sources = [
+            "aqi-sensor.cpp",
+        ],
+        peripherals = f"uart inet ntp {variant}",
+        extra_cflags = [
+            "-DLOG_TO_SERIAL",
+            f"-DAQI_{variant.upper()}",
+
+            # include out-of-repo directory to get wifi credentials
+            "-I" + os.path.expanduser("~/.config/rulos")
+        ],
+        platforms = [Esp32Platform()],
+    ).build()
