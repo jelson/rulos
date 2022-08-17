@@ -18,19 +18,25 @@
 
 #include "core/hardware.h"
 
+// std includes
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "core/hal.h"
-#include "core/hardware_types.h"
+// ESP32 IDF includes
 #include "driver/gpio.h"
 #include "esp_attr.h"
 #include "esp_intr_alloc.h"
 #include "esp_task.h"
 #include "esp_task_wdt.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "nvs_flash.h"
 #include "soc/rtc.h"
 #include "xtensa/xtruntime.h"
+
+// RULOS includes
+#include "core/hal.h"
+#include "core/hardware_types.h"
 
 const int RULOS_STACK_SIZE = 16 * 1024;
 const int __attribute__((used)) DRAM_ATTR uxTopUsedPriority =
@@ -116,4 +122,8 @@ void hal_end_atomic(rulos_irq_state_t old_interrupts) {
 void hal_idle() {
   // yield to other freeRTOS tasks running on the esp32
   vTaskDelay(1);
+}
+
+void hal_delay_ms(uint16_t ms) {
+  vTaskDelay(pdMS_TO_TICKS(ms));
 }

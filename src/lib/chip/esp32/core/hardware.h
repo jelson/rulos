@@ -22,6 +22,8 @@
 #include <stdint.h>
 
 #include "autogen-pins-esp32.h"
+#include "core/hal.h"
+#include "hal/gpio_ll.h"
 #include "soc/gpio_struct.h"
 #include "soc/io_mux_reg.h"
 
@@ -136,13 +138,11 @@ static inline void gpio_make_input_disable_pullup(const gpio_pin_t pin) {
   _gpio_enable_pull(pin, false);
 }
 
-#if 0
-
 /*
  * returns true if an input is being asserted LOW, false otherwise
  */
-static inline int gpio_is_clr(const gpio_pin_t gpio_pin) {
-  return reg_is_clr(gpio_pin.pin, gpio_pin.bit);
+static inline int gpio_is_clr(const gpio_pin_t pin) {
+  return gpio_ll_get_level(&GPIO, (gpio_num_t)pin) == 0;
 }
 
 /*
@@ -151,5 +151,3 @@ static inline int gpio_is_clr(const gpio_pin_t gpio_pin) {
 static inline int gpio_is_set(const gpio_pin_t gpio_pin) {
   return !(gpio_is_clr(gpio_pin));
 }
-
-#endif
