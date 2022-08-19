@@ -19,6 +19,8 @@
 #include "core/morse.h"
 
 #include <ctype.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "core/rulos.h"
 
@@ -57,7 +59,7 @@ static const char* const morse_alphabet[] = {
     "...",   // s
     "-",     // t
     "..-",   // u
-    "...-"   // v
+    "...-",  // v
     ".--",   // w
     "-..-",  // x
     "-.--",  // y
@@ -73,7 +75,7 @@ typedef struct {
 
   // dynamically kept state
   const char* curr_letter;
-  uint8_t is_keyed;
+  bool is_keyed;
 } morse_state_t;
 
 morse_state_t morse_state;
@@ -89,8 +91,8 @@ static void morse_go(morse_state_t* morse_state) {
   // If we're currently keyed (i.e., mid-symbol), unkey, and determine what
   // comes next.
   if (morse_state->is_keyed) {
-    morse_state->toggle_func(0);
-    morse_state->is_keyed = 0;
+    morse_state->toggle_func(false);
+    morse_state->is_keyed = false;
 
     // Move to the next symbol. If there are more symbols in this character,
     // wait the inter-symbol delay (1 dot time).
@@ -140,8 +142,8 @@ static void morse_go(morse_state_t* morse_state) {
   }
 
   // Key on!
-  morse_state->toggle_func(1);
-  morse_state->is_keyed = 1;
+  morse_state->toggle_func(true);
+  morse_state->is_keyed = true;
 
   // Wait to key off depending on if this is a dot or dash.
   const char curr_symbol = *morse_state->curr_letter;
@@ -161,7 +163,7 @@ void emit_morse(const char* send_string, const uint32_t dot_time_us,
   morse_state.dot_time_us = dot_time_us;
   morse_state.toggle_func = toggle_func;
   morse_state.done_func = done_func;
-  morse_state.is_keyed = 0;
+  morse_state.is_keyed = false;
   morse_state.curr_letter = NULL;
   schedule_now((ActivationFuncPtr)morse_go, &morse_state);
 }

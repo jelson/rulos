@@ -18,9 +18,10 @@
 
 #pragma once
 
-#include <inttypes.h>
+#include <stdbool.h>
+#include <stdint.h>
 
-typedef void(MorseOutputToggleFunc)(uint8_t onoff);
+typedef void(MorseOutputToggleFunc)(bool onoff);
 typedef void(MorseOutputDoneFunc)();
 
 // Send a message in morse. send_string is the string to send; it may

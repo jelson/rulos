@@ -16,11 +16,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "core/morse.h"
 #include "core/rulos.h"
 
 static void missa_hal_init();
-static void missa_hal_set_led(uint8_t led_num, uint8_t onoff);
+static void missa_hal_set_led(uint8_t led_num, bool onoff);
 
 ///////////////////////////
 
@@ -39,7 +42,7 @@ static void missa_hal_init() {
   print_led_state();
 }
 
-static void missa_hal_set_led(uint8_t led_num, uint8_t onoff) {
+static void missa_hal_set_led(uint8_t led_num, bool onoff) {
   char new_state;
 
   if (onoff) {
@@ -80,7 +83,7 @@ static void missa_hal_init() {
   gpio_make_output(LED1_PIN);
 }
 
-static void missa_hal_set_led(uint8_t led_num, uint8_t onoff) {
+static void missa_hal_set_led(uint8_t led_num, bool onoff) {
   if (led_num == 0) {
     gpio_set_or_clr(LED0_PIN, !onoff);
   } else {
@@ -92,7 +95,7 @@ static void missa_hal_set_led(uint8_t led_num, uint8_t onoff) {
 
 ////////////////////////////////////
 
-static void morse_toggle_func_trampoline(const uint8_t onoff) {
+static void morse_toggle_func_trampoline(const bool onoff) {
   missa_hal_set_led(0, onoff);
 }
 
