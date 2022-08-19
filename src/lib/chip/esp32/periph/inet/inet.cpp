@@ -67,6 +67,13 @@ static void reconfigure_wifi_creds() {
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
 }
 
+
+static bool _is_connected = false;
+
+bool inet_wifi_is_connected() {
+  return _is_connected;
+}
+
 static void wifi_event_handler(void *arg, esp_event_base_t event_base,
                                int32_t event_id, void *event_data) {
   if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
@@ -77,10 +84,12 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
   } else if (event_base == WIFI_EVENT &&
              event_id == WIFI_EVENT_STA_DISCONNECTED) {
     LOG("Wifi: connection to %s failed", curr_wifi_ssid());
+    _is_connected = false;
     reconfigure_wifi_creds();
     esp_wifi_connect();
   } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
     ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
+    _is_connected = true;
     LOG("Wifi: Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
   } else {
     LOG("Wifi: got unknown event base %d, event id %d", (int)event_base,

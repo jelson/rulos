@@ -37,6 +37,7 @@ typedef struct {
 
 void inet_wifi_client_start(const inet_wifi_creds_t *wifi_creds, int num_creds);
 const char *inet_wifi_macaddr();
+bool inet_wifi_is_connected();
 
 class HttpsClient;
 
