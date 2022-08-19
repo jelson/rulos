@@ -56,15 +56,17 @@ bool dht22_read(gpio_pin_t pin, dht22_data_t *dht22_data) {
     }
   }
 
+  uint32_t cycles[NUM_BITS * 2];
+
   // First expect a low signal for ~80 microseconds followed by a high signal
   // for ~80 microseconds again.
   if (expect_pulse(pin, 0) == DHT22_TIMEOUT) {
-    LOG("DHT22: timeout waiting for start signal low pulse");
-    return false;
+    cycles[0] = DHT22_TIMEOUT;
+    goto release_irq;
   }
   if (expect_pulse(pin, 1) == DHT22_TIMEOUT) {
-    LOG("DHT22: timeout waiting for start signal high pulse");
-    return false;
+    cycles[0] = DHT22_TIMEOUT;
+    goto release_irq;
   }
 
   // Now read the 40 bits sent by the sensor.  Each bit is sent as a 50
@@ -75,13 +77,14 @@ bool dht22_read(gpio_pin_t pin, dht22_data_t *dht22_data) {
   // if the bit is a 0 (high state cycle count < low state cycle count), or a 1
   // (high state cycle count > low state cycle count). Note that for speed all
   // the pulses are read into a array and then examined in a later step.
-  uint32_t cycles[NUM_BITS * 2];
   for (int i = 0; i < NUM_BITS * 2; i += 2) {
     cycles[i] = expect_pulse(pin, 0);
     cycles[i + 1] = expect_pulse(pin, 1);
   }
-  hal_end_atomic(old_interrupts);
   // Timing critical code is now complete.
+
+release_irq:
+  hal_end_atomic(old_interrupts);
 
   // Inspect pulses and determine which ones are 0 (high state cycle count < low
   // state cycle count), or 1 (high state cycle count > low state cycle count).
