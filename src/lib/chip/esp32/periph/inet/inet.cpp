@@ -67,7 +67,6 @@ static void reconfigure_wifi_creds() {
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
 }
 
-
 static bool _is_connected = false;
 
 bool inet_wifi_is_connected() {
