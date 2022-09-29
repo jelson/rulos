@@ -112,7 +112,7 @@ static void dispatch_tx_dma(uint8_t uart_id);
 static void config_gpio(const stm32_uart_config_t *config, bool rx);
 
 #if USE_RX_DMA_FOR_CHIP
-static void on_rx_dma_interrupt(uint8_t uart_id);
+void on_rx_dma_interrupt(uint8_t uart_id);
 #endif
 
 ///////////// stm32f0
@@ -268,8 +268,13 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .instance = USART1,
         .instance_irqn = USART1_IRQn,
 
+#ifdef USART1_RXTX_ON_B7B6
+        .rx_port = GPIOB,
+        .rx_pin = GPIO_PIN_7,
+#else
         .rx_port = GPIOA,
         .rx_pin = GPIO_PIN_10,
+#endif
 #ifndef UART_SURRENDER_DMA1_CHAN2_3
         //. comment out line below to test interrupt mode
         .rx_dma_instance = DMA1,
@@ -278,12 +283,21 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .rx_dma_request = DMA_REQUEST_USART1_RX,
 #endif  // UART_SURRENDER_DMA1_CHAN2_3
 
+#ifdef USART1_RXTX_ON_B7B6
+        .tx_port = GPIOB,
+        .tx_pin = GPIO_PIN_6,
+#else
         .tx_port = GPIOA,
         .tx_pin = GPIO_PIN_9,
+#endif
         .tx_dma_chan = DMA1_Channel1,
         .tx_dma_irqn = DMA1_Channel1_IRQn,
         .tx_dma_request = DMA_REQUEST_USART1_TX,
+#ifdef USART1_RXTX_ON_B7B6
+        .altfunc = GPIO_AF0_USART1,
+#else
         .altfunc = GPIO_AF1_USART1,
+#endif
     },
     {
         .instance = USART2,
@@ -486,7 +500,7 @@ static void hal_uart_start_rx_dma(stm32_uart_t *u,
 
 // Called when a DMA interrupt arrives for a UART. Determine if it is a
 // completion interrupt, and if so, send an upcall.
-static void on_rx_dma_interrupt(uint8_t uart_id) {
+void on_rx_dma_interrupt(uint8_t uart_id) {
   stm32_uart_t *u = &g_stm32_uarts[uart_id];
   const stm32_uart_config_t *config = &stm32_uart_config[uart_id];
 

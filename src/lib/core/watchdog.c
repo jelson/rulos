@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "inttypes.h"
+
 #include "core/watchdog.h"
 
 #include "core/rulos.h"
@@ -23,7 +25,7 @@
 static void watchdog_tick(void *data) {
   watchdog_t *watchdog = (watchdog_t *)data;
   if (later_than(clock_time_us(), watchdog->next_deadline)) {
-    LOG("WATCHDOG: %d-sec timeout expired, resetting", watchdog->timeout_sec);
+    LOG("WATCHDOG: %"PRIu32 "-sec timeout expired, resetting", watchdog->timeout_sec);
     hal_reset();
   }
 
