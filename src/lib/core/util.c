@@ -18,6 +18,8 @@
 
 #include "core/util.h"
 
+#include <stddef.h>
+
 int32_t bound(int32_t v, int32_t l, int32_t h) {
   if (v < l) {
     return l;
@@ -101,11 +103,11 @@ int int_to_string2(char *strp, uint8_t min_width, uint8_t min_zeros,
                    int32_t i) {
   int c = 0;
   int neg = 0;
-  char *ptr = 0;
+  char *ptr = NULL;
 
   // LOG("i %d", );
-  if (strp != 0) {
-    int ct = int_to_string2(0, min_width, min_zeros, i);
+  if (strp != NULL) {
+    int ct = int_to_string2(NULL, min_width, min_zeros, i);
     ptr = strp + ct - 1;
     ptr[1] = '\0';
   }
@@ -115,7 +117,7 @@ int int_to_string2(char *strp, uint8_t min_width, uint8_t min_zeros,
     neg = 1;
   }
   if (i == 0) {
-    if (strp != 0) {
+    if (ptr != NULL) {
       ptr[-c] = '0';
     }
     c += 1;
@@ -129,19 +131,19 @@ int int_to_string2(char *strp, uint8_t min_width, uint8_t min_zeros,
     }
   }
   while (c < min_zeros) {
-    if (strp != 0) {
+    if (ptr != NULL) {
       ptr[-c] = '0';
     }
     c += 1;
   }
   if (neg) {
-    if (strp != 0) {
+    if (ptr != NULL) {
       ptr[-c] = '-';
     }
     c += 1;
   }
   while (c < min_width) {
-    if (strp != 0) {
+    if (ptr != NULL) {
       ptr[-c] = ' ';
     }
     c += 1;

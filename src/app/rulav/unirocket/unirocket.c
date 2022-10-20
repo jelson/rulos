@@ -135,7 +135,7 @@ void init_rocket0(Rocket0 *r0) {
   init_twi_network(&r0->network, 200, ROCKET_ADDR);
   init_remote_bbuf_send(&r0->rbs, &r0->network);
   install_remote_bbuf_send(&r0->rbs);
-  drtc_init(&r0->dr, 0, clock_time_us() + 20000000);
+  drtc_init(&r0->dr, 0, clock_time_us() + time_sec(30));
   lunar_distance_init(&r0->ld, 1, 2 /*, SPEED_POT_CHANNEL*/);
   init_audio_client(&r0->audio_client, &r0->network);
   ac_change_volume(&r0->audio_client, AUDIO_STREAM_BACKGROUND, VOL_MIN);

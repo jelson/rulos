@@ -23,29 +23,18 @@
 #include "core/util.h"
 
 // Definition of time for RulOS, in units of usec.
-typedef int32_t Time;
+typedef uint32_t Time;
 
-// Returns true if `a` is later than `b` using rollover math, assuming 32-bit
-// signed time values.
-static inline bool later_than(Time a, Time b) {
-  // the subtraction will roll over too
-  return a - b > 0;
+// Returns true if `a` is later than `b` using rollover math
+bool later_than(Time a, Time b);
 
-  // this took forever to puzzle out and was originally a
-  // complicated set of conditionals
-}
+// Returns true if `a` is later than or equal to `b` using rollover math
+bool later_than_or_eq(Time a, Time b);
 
-// Returns true if `a` is later than or equal to `b` using rollover math,
-// assuming 32-bit signed time values.
-static inline bool later_than_or_eq(Time a, Time b) {
-  // the subtraction will roll over too
-  return a - b >= 0;
-}
+// Returns the delta from a to b, using rollover logic. If later_than(a, b),
+// will return a negative number, otherwise returns a positive number.
+int32_t time_delta(Time a, Time b);
 
-static inline Time time_sec(uint16_t seconds) {
-  return ((Time)1000000) * seconds;
-}
-
-static inline Time time_msec(uint32_t msec) {
-  return ((Time)1000) * msec;
-}
+// Convert seconds and milliseconds to microseconds
+Time time_sec(uint16_t seconds);
+Time time_msec(uint32_t msec);

@@ -18,6 +18,7 @@
 
 #include "core/clock.h"
 
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -106,7 +107,7 @@ void init_clock(Time interval_us, uint8_t timer_id) {
 
   // Initialize the clock to 20 seconds before rollover time so that
   // rollover bugs happen quickly during testing
-  g_interrupt_driven_jiffy_clock_us = (Time)INT32_MAX - 20000000;
+  g_interrupt_driven_jiffy_clock_us = (Time)UINT32_MAX - time_sec(20);
   g_rtc_interval_us =
       hal_start_clock_us(interval_us, clock_handler, NULL, timer_id);
 }
@@ -228,6 +229,7 @@ static void scheduler_run_once() {
     ActivationRecord act;
 
     bool valid = FALSE;
+    Time due_time;
 
     rulos_irq_state_t old_interrupts = hal_start_atomic();
     if (sched_state.now_queue_size > 0) {
@@ -237,7 +239,6 @@ static void scheduler_run_once() {
               sizeof(sched_state.now_queue[0]) * sched_state.now_queue_size);
       valid = TRUE;
     } else {
-      Time due_time;
       int rc = heap_peek(&sched_state.heap, &due_time, &act);
       if (!rc && !later_than(due_time, now)) {
         valid = TRUE;
@@ -250,12 +251,14 @@ static void scheduler_run_once() {
       break;
     }
 
-    // LOG("popping act %08x func %08x", (uint32_t) act, (uint32_t)
-    // act->func);
+#if 0
+    if (valid) {
+      LOG("running func %p due at %" PRIu32 ", curr time %" PRIu32,
+          act.func, due_time, now);
+    }
+#endif
 
     act.func(act.data);
-    // LOG("returned act %08x func %08x", (uint32_t) act, (uint32_t)
-    // act->func);
   }
 }
 

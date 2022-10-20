@@ -89,8 +89,10 @@ static void sim_program_labels() {
   for (bl = g_sim_theTree; bl->label != NULL; bl += 1) {
     attroff(A_BOLD);
     wcolor_set(curses_get_window(), PAIR_WHITE, NULL);
-    mvwprintw(curses_get_window(), bl->y,
-              bl->x + (4 * NUM_DIGITS - strlen(bl->label)) / 2, bl->label);
+    mvwprintw(curses_get_window(),
+              bl->y,
+              bl->x + (4 * NUM_DIGITS - strlen(bl->label)) / 2,
+              "%s", bl->label);
   }
 }
 
@@ -127,7 +129,8 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
     attron(A_BOLD);
     attroff(A_DIM);
     wcolor_set(curses_get_window(), g_sim_theTree[board].colors[digit], NULL);
-    mvwprintw(curses_get_window(), y_origin, x_origin, segment_defs[segment].s);
+    mvwprintw(curses_get_window(), y_origin, x_origin,
+              "%s", segment_defs[segment].s);
   } else {
 #if SHOW_OFF_SEGMENTS
     attroff(A_BOLD);

@@ -262,10 +262,11 @@ static void maybe_net_send_next_message_down(Network *net) {
 // Mark the SendSlot's buffer as free and call the callback.
 static void net_send_done_cb(void *user_data) {
   Network *net = (Network *)user_data;
-  SendSlot *sendSlot;
+  SendSlot *sendSlot = NULL;
   bool rc = SendSlotPtrQueue_pop(SendQueue(net), &sendSlot);
 
   assert(rc);
+  assert(sendSlot != NULL);
   assert(sendSlot->sending == TRUE);
 
   // mark the packet as no-longer-sending and call the user's

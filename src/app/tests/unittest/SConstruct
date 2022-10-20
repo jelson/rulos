@@ -25,7 +25,13 @@ RulosBuildTarget(
     sources = [ "unittest.c" ],
     platforms = [
         SimulatorPlatform(),
-        AvrPlatform("atmega328p"),
+        #AvrPlatform("atmega328p"),
+        ArmStmPlatform("stm32g031x6"),
     ],
-    peripherals = "ring_buffer",
+    extra_cflags= [
+        '-DLOG_TO_SERIAL',
+        '-DUART_TX_QUEUE_LEN=4096',
+        "-DUSART1_RXTX_ON_B7B6",
+    ],
+    peripherals = "ring_buffer uart",
 ).build()

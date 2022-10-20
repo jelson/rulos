@@ -42,10 +42,11 @@ void drtc_update(DRTCAct *act) {
 }
 
 void drtc_update_once(DRTCAct *act) {
-  Time c = (clock_time_us() - act->base_time) / 1000;
+  int32_t mission_clock_ms =
+      time_delta(act->base_time, clock_time_us()) / 1000;
 
   char buf[16], *p = buf;
-  p += int_to_string2(p, 8, 3, c / 10);
+  p += int_to_string2(p, 8, 3, mission_clock_ms / 10);
   buf[0] = 't';
 
   ascii_to_bitmap_str(act->bbuf.buffer, NUM_DIGITS, buf);
