@@ -24,40 +24,65 @@ apps = [
     {
         'name': 'datalogger',
         'board': 'BOARD_DATALOGGER_REV_B',
-        'extra_sources': ["ina219.c"],
+        'extra_sources': ["ina219.c","curr_meas.c"],
+        'chip': 'stm32g0b1xe',
     },
     {
         'name': 'ltetag-dev1',
         'board': 'BOARD_LTETAG_DEV_REV_A',
-        'extra_sources': ["ina219.c"],
+        'extra_sources': ["ina219.c","curr_meas.c"],
         'extra_cflags': [
             "-DUSART2_RX_ON_A15",
             "-DUSART5_RX_ON_B4",
         ],
+        'chip': 'stm32g0b1xe',
     },
     {
         'name': 'gemini-logger',
         'board': 'BOARD_GEMINI_DATALOGGER_REV_A',
+        'chip': 'stm32g0b1xe',
+        'extra_sources': ["curr_meas.c"],
+    },
+    {
+        'name': 'solo-logger',
+        'board': 'BOARD_SOLO_LOGGER_REV_A',
+        'chip': 'stm32g031x6',
+        'sizes': {
+            'max_line_len': 192,
+            'tx_queue_len': 128,
+            'rx_queue_len': 1024,
+        },
+        'extra_cflags': [
+            "-DUSART1_RXTX_ON_B7B6",
+            "-DWRITE_INCREMENT=512",
+        ],
     },
 ]
 
 for app in apps:
+    sizes = {
+        'max_line_len': 4096,
+        'tx_queue_len': 4096,
+        'rx_queue_len': 8192,
+    }
+    sizes.update(app.get('sizes',{}))
+
     RulosBuildTarget(
         name = app['name'],
+
         sources = app.get('extra_sources', []) + [
-            "curr_meas.c",
             "flash_dumper.c",
             "serial_reader.c",
             f"{app['name']}.c",
         ],
-        platforms = [ArmStmPlatform("stm32g0b1xe")],
+        platforms = [ArmStmPlatform(app['chip'])],
         peripherals = "uart sdcard2 fatfs",
         extra_cflags = app.get('extra_cflags', []) + [
             f"-D{app['board']}",
             "-DLOG_TO_SERIAL",
-            "-DLINEREADER_MAX_LINE_LEN=4096",
-            "-DUART_TX_QUEUE_LEN=4096",
-            "-DUART_RX_QUEUE_LEN=8192",
+            f"-DLINEREADER_MAX_LINE_LEN={sizes['max_line_len']}",
+            f"-DUART_TX_QUEUE_LEN={sizes['tx_queue_len']}",
+            f"-DUART_RX_QUEUE_LEN={sizes['rx_queue_len']}",
 
             # don't use these DMA channels for UART RX, since they're
             # used by the SD card

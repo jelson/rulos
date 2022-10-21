@@ -25,7 +25,9 @@
 #include "periph/fatfs/ff.h"
 #include "periph/uart/linereader.h"
 
-#define WRITE_INCREMENT 2048
+#ifndef WRITE_INCREMENT
+    #define WRITE_INCREMENT 2048
+#endif
 
 typedef struct {
   FATFS fatfs;  // SD card filesystem global state
