@@ -618,8 +618,10 @@ static void on_rx_buffer_full(uint8_t uart_id, stm32_uart_t *u,
   // RX buffer is full, so we better be done processing the other one! Otherwise
   // we have to drop it.
   if (!u->rx_cb_ready) {
-    // uh oh!
+    // uh oh! we can't send the buffer up because the previous upcall is still
+    // outstanding. no choice but to lose the data.
     u->dropped_rx_bytes += u->rx_half_buflen;
+    u->rx_bytes_stored = 0;
   } else {
     char *oldbuf = switch_rx_buffers(u);
     rx_send_up(uart_id, u, oldbuf, u->rx_half_buflen);

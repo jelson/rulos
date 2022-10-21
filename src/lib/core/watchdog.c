@@ -20,6 +20,8 @@
 
 #include "core/rulos.h"
 
+#include <inttypes.h>
+
 static void watchdog_tick(void *data) {
   watchdog_t *watchdog = (watchdog_t *)data;
   if (later_than(clock_time_us(), watchdog->next_deadline)) {
