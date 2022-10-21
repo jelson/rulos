@@ -128,7 +128,7 @@ void test_later_than() {
 void test_delta_case(Time a, Time b, int32_t result) {
   LOG("\ntesting that delta from %"PRIu32" to %"PRIu32" is %"PRIi32,
       a, b, result);
-  int32_t actual_result = time_delta(a, b);
+  volatile int32_t actual_result = time_delta(a, b);
   LOG("...got %"PRIi32, actual_result);
   assert(actual_result == result);
 }
@@ -144,6 +144,9 @@ void test_delta() {
   test_delta_case(0xffffffff, 1000, 1001);
   test_delta_case(0, 0xffffffff, -1);
   test_delta_case(1, 0xfffffffe, -3);
+
+  test_delta_case(1, 100, 99);
+  test_delta_case(100, 1, -99);
 }
 
 int main() {
