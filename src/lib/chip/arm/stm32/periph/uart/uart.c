@@ -204,26 +204,31 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 // unit:channel
 
 // (rulos_id) stm32_id  dma_rx  dma_tx
-//      (0)      1        1:2     1:1
-//      (1)      2        1:3     1:4
-//      (2)      3        2:1     1:5
+//      (0)      1        1:1     1:5
+//      (1)      2        1:4     1:2(*)
+//      (2)      3        2:1     1:3(*)
 //      (3)      4        2:2     1:6
 //      (4)      5        2:3     1:7
 //      (5)      6        2:4     2:5
+//
+// (*) might get surrendered if sd card in use,
+//     until dynamic dma allocation is implemented
 
 void USART1_IRQHandler() {
   on_usart_interrupt(0);
 }
 
 void DMA1_Channel1_IRQHandler() {
-  dispatch_tx_dma(0);
+  on_rx_dma_interrupt(0);  // DMA 1:1
 }
 
 #ifndef UART_SURRENDER_DMA1_CHAN2_3
 
 void DMA1_Channel2_3_IRQHandler() {
-  on_rx_dma_interrupt(0);
-  on_rx_dma_interrupt(1);
+  dispatch_tx_dma(1);  // DMA 1:2
+#if STM32G0B1xx
+  dispatch_tx_dma(2);  // DMA 1:3
+#endif
 }
 
 #endif  // UART_SURRENDER_DMA1_CHAN2_3
@@ -234,17 +239,20 @@ void USART2_LPUART2_IRQHandler() {
   on_usart_interrupt(1);
 }
 
-void DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQHandler() {
-  dispatch_tx_dma(1);
-  dispatch_tx_dma(2);
-  dispatch_tx_dma(3);
-  dispatch_tx_dma(4);
-  dispatch_tx_dma(5);
+#define DMA1_Channel4_IRQn DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn
+#define DMA1_Channel5_IRQn DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn
 
-  on_rx_dma_interrupt(2);
-  on_rx_dma_interrupt(3);
-  on_rx_dma_interrupt(4);
-  on_rx_dma_interrupt(5);
+void DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQHandler() {
+  on_rx_dma_interrupt(1);  // DMA 1:4
+  dispatch_tx_dma(0);      // DMA 1:5
+  dispatch_tx_dma(3);      // DMA 1:6
+  dispatch_tx_dma(4);      // DMA 1:7
+
+  on_rx_dma_interrupt(2);  // DMA 2:1
+  on_rx_dma_interrupt(3);  // DMA 2:2
+  on_rx_dma_interrupt(4);  // DMA 2:3
+  on_rx_dma_interrupt(5);  // DMA 2:4
+  dispatch_tx_dma(5);      // DMA 2:5
 }
 
 void USART3_4_5_6_LPUART1_IRQHandler() {
@@ -258,34 +266,53 @@ void USART3_4_5_6_LPUART1_IRQHandler() {
 void USART2_IRQHandler() {
   on_usart_interrupt(1);
 }
+
+#define DMA1_Channel4_IRQn DMA1_Ch4_5_DMAMUX1_OVR_IRQn
+#define DMA1_Channel5_IRQn DMA1_Ch4_5_DMAMUX1_OVR_IRQn
+
 void DMA1_Ch4_5_DMAMUX1_OVR_IRQHandler() {
-  dispatch_tx_dma(1);
+  on_rx_dma_interrupt(1);  // DMA 1:4
+  dispatch_tx_dma(0);      // DMA 1:5
 }
 #endif
 
 static const stm32_uart_config_t stm32_uart_config[] = {
     {
+      // rulos uart 0
         .instance = USART1,
         .instance_irqn = USART1_IRQn,
 
+#ifdef USART1_RXTX_ON_B7B6
+        .rx_port = GPIOB,
+        .rx_pin = GPIO_PIN_7,
+#else
         .rx_port = GPIOA,
         .rx_pin = GPIO_PIN_10,
-#ifndef UART_SURRENDER_DMA1_CHAN2_3
+#endif
         //. comment out line below to test interrupt mode
         .rx_dma_instance = DMA1,
-        .rx_dma_channel = LL_DMA_CHANNEL_2,
-        .rx_dma_irqn = DMA1_Channel2_3_IRQn,
+        .rx_dma_channel = LL_DMA_CHANNEL_1,
+        .rx_dma_irqn = DMA1_Channel1_IRQn,
         .rx_dma_request = DMA_REQUEST_USART1_RX,
-#endif  // UART_SURRENDER_DMA1_CHAN2_3
 
+#ifdef USART1_RXTX_ON_B7B6
+        .tx_port = GPIOB,
+        .tx_pin = GPIO_PIN_6,
+#else
         .tx_port = GPIOA,
         .tx_pin = GPIO_PIN_9,
-        .tx_dma_chan = DMA1_Channel1,
-        .tx_dma_irqn = DMA1_Channel1_IRQn,
+#endif
+        .tx_dma_chan = DMA1_Channel5,
+        .tx_dma_irqn = DMA1_Channel5_IRQn,
         .tx_dma_request = DMA_REQUEST_USART1_TX,
+#ifdef USART1_RXTX_ON_B7B6
+        .altfunc = GPIO_AF0_USART1,
+#else
         .altfunc = GPIO_AF1_USART1,
+#endif
     },
     {
+      // rulos uart 1
         .instance = USART2,
         .instance_irqn = USART2_IRQn,
         .rx_port = GPIOA,
@@ -294,51 +321,51 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 #else
         .rx_pin = GPIO_PIN_3,
 #endif
-#ifndef UART_SURRENDER_DMA1_CHAN2_3
         .rx_dma_instance = DMA1,
-        .rx_dma_channel = LL_DMA_CHANNEL_3,
-        .rx_dma_irqn = DMA1_Channel2_3_IRQn,
+        .rx_dma_channel = LL_DMA_CHANNEL_4,
+        .rx_dma_irqn = DMA1_Channel4_IRQn,
         .rx_dma_request = DMA_REQUEST_USART2_RX,
-#endif
 
+#ifndef temp_disabled_UART_SURRENDER_DMA1_CHAN2_3
         .tx_port = GPIOA,
         .tx_pin = GPIO_PIN_2,
-        .tx_dma_chan = DMA1_Channel4,
-#if STM32G0B1xx
-        .tx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
-#else
-        .tx_dma_irqn = DMA1_Ch4_5_DMAMUX1_OVR_IRQn,
-#endif
+        .tx_dma_chan = DMA1_Channel2,
+        .tx_dma_irqn = DMA1_Channel2_3_IRQn,
         .tx_dma_request = DMA_REQUEST_USART2_TX,
         .altfunc = GPIO_AF1_USART2,
+#endif
     },
 #ifdef USART3
     {
+      // rulos uart 2
         .instance = USART3,
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
         .rx_port = GPIOB,
         .rx_pin = GPIO_PIN_9,
         .rx_dma_instance = DMA2,
-        .rx_dma_channel = LL_DMA_CHANNEL_3,
+        .rx_dma_channel = LL_DMA_CHANNEL_1,
         .rx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
         .rx_dma_request = DMA_REQUEST_USART3_RX,
 
+#ifndef UART_SURRENDER_DMA1_CHAN2_3
         .tx_port = GPIOB,
         .tx_pin = GPIO_PIN_2,
-        .tx_dma_chan = DMA1_Channel5,
-        .tx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
+        .tx_dma_chan = DMA1_Channel3,
+        .tx_dma_irqn = DMA1_Channel2_3_IRQn,
         .tx_dma_request = DMA_REQUEST_USART3_TX,
         .altfunc = GPIO_AF4_USART3,
+#endif
     },
 #endif
 #ifdef USART4
     {
+      // rulos uart 3
         .instance = USART4,
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
         .rx_port = GPIOA,
         .rx_pin = GPIO_PIN_1,
         .rx_dma_instance = DMA2,
-        .rx_dma_channel = LL_DMA_CHANNEL_4,
+        .rx_dma_channel = LL_DMA_CHANNEL_2,
         .rx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
         .rx_dma_request = DMA_REQUEST_USART4_RX,
 
@@ -352,6 +379,7 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 #endif
 #ifdef USART5
     {
+      // rulos uart 4
         .instance = USART5,
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
         .rx_port = GPIOB,
@@ -363,7 +391,7 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .altfunc = GPIO_AF8_USART5,
 #endif
         .rx_dma_instance = DMA2,
-        .rx_dma_channel = LL_DMA_CHANNEL_5,
+        .rx_dma_channel = LL_DMA_CHANNEL_3,
         .rx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
         .rx_dma_request = DMA_REQUEST_USART5_RX,
 
@@ -380,6 +408,10 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
         .rx_port = GPIOA,
         .rx_pin = GPIO_PIN_5,
+        .rx_dma_instance = DMA2,
+        .rx_dma_channel = LL_DMA_CHANNEL_4,
+        .rx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
+        .rx_dma_request = DMA_REQUEST_USART6_RX,
         .tx_port = GPIOA,
         .tx_pin = GPIO_PIN_4,
         .tx_dma_chan = DMA2_Channel5,
@@ -604,8 +636,10 @@ static void maybe_flush_rx_buf(uint8_t uart_id, stm32_uart_t *u,
   size_t len = 0;
   if (USART_USING_RX_DMA(c)) {
     len = get_rx_stored_chars_dma(uart_id, u, c);
+    //LOG("dma uart %d: got %u", uart_id, len);
   } else {
     len = get_rx_stored_chars_int(uart_id, u, c);
+    //LOG("int uart %d: got %u", uart_id, len);
   }
 
   char *oldbuf = switch_rx_buffers(u);
@@ -729,12 +763,12 @@ static void on_usart_interrupt(uint8_t uart_id) {
 
 void hal_uart_rx_cb_done(uint8_t uart_id) {
   stm32_uart_t *u = &g_stm32_uarts[uart_id];
-  const stm32_uart_config_t *c = &stm32_uart_config[uart_id];
+  //const stm32_uart_config_t *c = &stm32_uart_config[uart_id];
 
   rulos_irq_state_t irq = hal_start_atomic();
   assert(!u->rx_cb_ready);
   u->rx_cb_ready = true;
-  maybe_flush_rx_buf(uart_id, u, c);
+  //maybe_flush_rx_buf(uart_id, u, c);
   hal_end_atomic(irq);
 }
 
