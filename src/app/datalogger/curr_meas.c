@@ -39,10 +39,9 @@ static void measure_current(currmeas_state_t *cms) {
 }
 
 static void print_current(currmeas_state_t *cms) {
-  char msg[100];
-  int len = snprintf(msg, sizeof(msg), "curr,%d,%ld", cms->channel_num,
+  flash_dumper_write(cms->flash_dumper, NULL, 0, "curr,%d,%ld",
+                     cms->channel_num,
                      cms->scale * cms->cum_current / cms->num_measurements);
-  flash_dumper_write(cms->flash_dumper, msg, len);
   cms->cum_current = 0;
   cms->num_measurements = 0;
 

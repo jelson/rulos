@@ -25,19 +25,17 @@
 #include "periph/fatfs/ff.h"
 #include "periph/uart/linereader.h"
 
-#ifndef WRITE_INCREMENT
-    #define WRITE_INCREMENT 2048
-#endif
-
 typedef struct {
   FATFS fatfs;  // SD card filesystem global state
   FIL fp;
-  char buf[WRITE_INCREMENT * 2];
-  int len;
   bool ok;
   wallclock_t wallclock;
+  uint32_t bytes_written;
 } flash_dumper_t;
 
 void flash_dumper_init(flash_dumper_t *fd);
-void flash_dumper_write(flash_dumper_t *fd, const void *buf, int len);
+void flash_dumper_write(flash_dumper_t *fd, const void *buf, uint32_t len,
+                        const char *prefix_fmt, ...)
+    __attribute__((format(printf, 4, 5)));
+
 void flash_dumper_print(flash_dumper_t *fd, const char *s);

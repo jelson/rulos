@@ -29,8 +29,8 @@
 #define GREEN_LED  GPIO_A11
 #define ORANGE_LED GPIO_A12
 
-UartState_t     console;
-flash_dumper_t  flash_dumper;
+UartState_t console;
+flash_dumper_t flash_dumper;
 serial_reader_t psoc_console_tx;
 
 static void turn_off_led(void *data) {
@@ -60,7 +60,8 @@ int main() {
   flash_dumper_init(&flash_dumper);
 
   // initialize serial readers
-  serial_reader_init(&psoc_console_tx, PSOC_TX_UART_NUM, 1000000, &flash_dumper, NULL);
+  serial_reader_init(&psoc_console_tx, PSOC_TX_UART_NUM, 1000000, &flash_dumper,
+                     NULL);
 
   // enable periodic blink to indicate liveness
   schedule_now(indicate_alive, NULL);
@@ -70,4 +71,4 @@ int main() {
 
   scheduler_run();
   return 0;
- }
+}

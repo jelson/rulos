@@ -48,21 +48,20 @@ apps = [
         'board': 'BOARD_SOLO_LOGGER_REV_A',
         'chip': 'stm32g031x6',
         'sizes': {
-            'max_line_len': 192,
+            'max_line_len': 256,
             'tx_queue_len': 128,
-            'rx_queue_len': 1024,
+            'rx_queue_len': 1536,
         },
         'extra_cflags': [
             "-DUSART1_RXTX_ON_B7B6",
-            "-DWRITE_INCREMENT=512",
         ],
     },
 ]
 
 for app in apps:
     sizes = {
-        'max_line_len': 4096,
-        'tx_queue_len': 4096,
+        'max_line_len': 512,
+        'tx_queue_len': 256,
         'rx_queue_len': 8192,
     }
     sizes.update(app.get('sizes',{}))

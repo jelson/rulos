@@ -118,11 +118,8 @@ static void enable_ublox(void *data) {
   if (!ublox_glonass_active) {
     LOG("sending ublox gnss config");
     uart_write(&sr->uart, ublox_config, sizeof(ublox_config));
-
-    char flashlog[300];
-    int len = snprintf(flashlog, sizeof(flashlog),
+    flash_dumper_write(sr->flash_dumper, NULL, 0,
                        "out,%d,<ublox config string>", sr->uart.uart_id);
-    flash_dumper_write(sr->flash_dumper, flashlog, len);
   }
   ublox_glonass_active = false;
 

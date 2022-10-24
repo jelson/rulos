@@ -11,10 +11,8 @@
 static void sr_line_received(UartState_t *uart, void *user_data, char *line) {
   serial_reader_t *sr = (serial_reader_t *)user_data;
   sr->last_active = clock_time_us();
-  char buf[300];
-  int len = snprintf(buf, sizeof(buf), "in,%d,%d,%s", uart->uart_id,
-                     sr->num_total_lines++, line);
-  flash_dumper_write(sr->flash_dumper, buf, len);
+  flash_dumper_write(sr->flash_dumper, line, strlen(line), "in,%d,%d,",
+                     uart->uart_id, sr->num_total_lines++);
 
   if (sr->cb != NULL) {
     sr->cb(sr, line);
@@ -35,10 +33,8 @@ void serial_reader_print(serial_reader_t *sr, const char *s) {
   uart_print(&sr->uart, s);
 
   // record the fact that we sent this string to the uart
-  char flashlog[300];
-  int len =
-      snprintf(flashlog, sizeof(flashlog), "out,%d,%s", sr->uart.uart_id, s);
-  flash_dumper_write(sr->flash_dumper, flashlog, len);
+  flash_dumper_write(sr->flash_dumper, s, strlen(s), "out,%d",
+                     sr->uart.uart_id);
 }
 
 #define ACTIVITY_TIMEOUT_US 2000000

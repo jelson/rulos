@@ -60,8 +60,8 @@ struct UartState_t_s {
   char rx_queue[UART_RX_QUEUE_LEN];
   char *rx_pending_cb_buf;
   size_t rx_pending_cb_len;
-  size_t rx_overflow_bytes;
-  size_t rx_overflow_bytes_last_reported;
+  uint32_t rx_overflow_bytes;
+  uint32_t rx_overflow_bytes_last_reported;
 };
 
 ///////////////// application API

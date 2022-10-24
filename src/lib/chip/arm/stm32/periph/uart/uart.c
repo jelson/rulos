@@ -969,6 +969,7 @@ void hal_uart_log_stats(uint8_t uart_id) {
   LOG(" parity_errors: %lu", u->parity_errors);
   LOG(" noise_errors: %lu", u->noise_errors);
   LOG(" overruns: %lu", u->overruns);
+  LOG(" dropped rx bytes: %lu", u->dropped_rx_bytes);
 #ifdef LL_USART_ISR_RXNE_RXFNE
   const stm32_uart_config_t *config = &stm32_uart_config[uart_id];
   (void)config;
