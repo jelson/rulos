@@ -89,19 +89,18 @@ typedef struct {
   // general
   USART_TypeDef *instance;
   IRQn_Type instance_irqn;
-  uint32_t altfunc;
 
   // rx
-  GPIO_TypeDef *rx_port;
-  uint32_t rx_pin;
+  gpio_pin_t rx_pin;
+  uint32_t rx_altfunc;
   DMA_TypeDef *rx_dma_instance;
   int rx_dma_channel;
   IRQn_Type rx_dma_irqn;
   uint32_t rx_dma_request;
 
   // tx
-  GPIO_TypeDef *tx_port;
-  uint32_t tx_pin;
+  gpio_pin_t tx_pin;
+  uint32_t tx_altfunc;
   DMA_Channel_TypeDef *tx_dma_chan;
   IRQn_Type tx_dma_irqn;
   uint32_t tx_dma_request;
@@ -115,6 +114,64 @@ static void config_gpio(const stm32_uart_config_t *config, bool rx);
 static void on_rx_dma_interrupt(uint8_t uart_id);
 #endif
 
+///// pin selections
+
+// rulos uart 0
+#ifndef RULOS_UART0_RX_PIN
+#define RULOS_UART0_RX_PIN GPIO_A10
+#endif
+
+#ifndef RULOS_UART0_TX_PIN
+#define RULOS_UART0_TX_PIN GPIO_A9
+#endif
+
+// rulos uart 1
+#ifndef RULOS_UART1_RX_PIN
+#define RULOS_UART1_RX_PIN GPIO_A3
+#endif
+
+#ifndef RULOS_UART1_TX_PIN
+#define RULOS_UART1_TX_PIN GPIO_A2
+#endif
+
+// rulos uart 2
+#ifndef RULOS_UART2_RX_PIN
+#define RULOS_UART2_RX_PIN GPIO_B9
+#endif
+
+#ifndef RULOS_UART2_TX_PIN
+#define RULOS_UART2_TX_PIN GPIO_B2
+#endif
+
+// rulos uart 3
+#ifndef RULOS_UART3_RX_PIN
+#define RULOS_UART3_RX_PIN GPIO_A1
+#endif
+
+#ifndef RULOS_UART3_TX_PIN
+#define RULOS_UART3_TX_PIN GPIO_A0
+#endif
+
+// rulos uart 4
+#ifndef RULOS_UART4_RX_PIN
+#define RULOS_UART4_RX_PIN GPIO_B1
+#endif
+
+#ifndef RULOS_UART4_TX_PIN
+#define RULOS_UART4_TX_PIN GPIO_B0
+#endif
+
+// rulos uart 5
+#ifndef RULOS_UART5_RX_PIN
+#define RULOS_UART5_RX_PIN GPIO_A5
+#endif
+
+#ifndef RULOS_UART5_TX_PIN
+#define RULOS_UART5_TX_PIN GPIO_A4
+#endif
+
+
+
 ///////////// stm32f0
 
 #if defined(RULOS_ARM_stm32f0)
@@ -124,13 +181,14 @@ static const stm32_uart_config_t stm32_uart_config[] = {
     {
         .instance = USART1,
         .instance_irqn = USART1_IRQn,
-        .rx_port = GPIOA,
-        .rx_pin = GPIO_PIN_10,
-        .tx_port = GPIOA,
-        .tx_pin = GPIO_PIN_9,
+
+        .rx_pin = RULOS_UART0_RX_PIN,
+        .rx_altfunc = GPIO_AF1_USART1,
+
+        .tx_pin = RULOS_UART0_TX_PIN,
+        .tx_altfunc = GPIO_AF1_USART1,
         .tx_dma_chan = DMA1_Channel2,
         .tx_dma_irqn = DMA1_Channel2_3_IRQn,
-        .altfunc = GPIO_AF1_USART1,
     },
 };
 
@@ -151,10 +209,8 @@ static const stm32_uart_config_t stm32_uart_config[] = {
     {
         .instance = USART1,
         .instance_irqn = USART1_IRQn,
-        .rx_port = GPIOA,
-        .rx_pin = GPIO_PIN_10,
-        .tx_port = GPIOA,
-        .tx_pin = GPIO_PIN_9,
+        .rx_pin = RULOS_UART0_RX_PIN,
+        .tx_pin = RULOS_UART0_TX_PIN,
         .tx_dma_chan = DMA1_Channel4,
         .tx_dma_irqn = DMA1_Channel4_IRQn,
     },
@@ -185,13 +241,14 @@ static const stm32_uart_config_t stm32_uart_config[] = {
     {
         .instance = USART1,
         .instance_irqn = USART1_IRQn,
-        .rx_port = GPIOA,
-        .rx_pin = GPIO_PIN_10,
-        .tx_port = GPIOA,
-        .tx_pin = GPIO_PIN_9,
+
+        .rx_pin = RULOS_UART0_RX_PIN,
+        .rx_altfunc = GPIO_AF7_USART1,
+
+        .tx_pin = RULOS_UART0_TX_PIN,
+        .tx_altfunc = GPIO_AF7_USART1,
         .tx_dma_chan = DMA1_Channel4,
         .tx_dma_irqn = DMA1_Channel4_IRQn,
-        .altfunc = GPIO_AF7_USART1,
     },
 };
 
@@ -276,63 +333,55 @@ void DMA1_Ch4_5_DMAMUX1_OVR_IRQHandler() {
 }
 #endif
 
+
 static const stm32_uart_config_t stm32_uart_config[] = {
     {
       // rulos uart 0
         .instance = USART1,
         .instance_irqn = USART1_IRQn,
 
-#ifdef USART1_RXTX_ON_B7B6
-        .rx_port = GPIOB,
-        .rx_pin = GPIO_PIN_7,
+        .rx_pin = RULOS_UART0_RX_PIN,
+#define GPIO_A10 123
+#if RULOS_UART0_RX_PIN == GPIO_A10
+        .rx_altfunc = GPIO_AF1_USART1,
 #else
-        .rx_port = GPIOA,
-        .rx_pin = GPIO_PIN_10,
+        .rx_altfunc = GPIO_AF0_USART1,
 #endif
-        //. comment out line below to test interrupt mode
-        .rx_dma_instance = DMA1,
+#undef GPIO_A10
+        .rx_dma_instance = DMA1, // comment out to test interrupts
         .rx_dma_channel = LL_DMA_CHANNEL_1,
         .rx_dma_irqn = DMA1_Channel1_IRQn,
         .rx_dma_request = DMA_REQUEST_USART1_RX,
 
-#ifdef USART1_RXTX_ON_B7B6
-        .tx_port = GPIOB,
-        .tx_pin = GPIO_PIN_6,
+        .tx_pin = RULOS_UART0_TX_PIN,
+#define GPIO_A9 123
+#if RULOS_UART0_TX_PIN == GPIO_A9
+        .tx_altfunc = GPIO_AF1_USART1,
 #else
-        .tx_port = GPIOA,
-        .tx_pin = GPIO_PIN_9,
+        .tx_altfunc = GPIO_AF0_USART1,
 #endif
+#undef GPIO_A9
         .tx_dma_chan = DMA1_Channel5,
         .tx_dma_irqn = DMA1_Channel5_IRQn,
         .tx_dma_request = DMA_REQUEST_USART1_TX,
-#ifdef USART1_RXTX_ON_B7B6
-        .altfunc = GPIO_AF0_USART1,
-#else
-        .altfunc = GPIO_AF1_USART1,
-#endif
     },
     {
       // rulos uart 1
         .instance = USART2,
         .instance_irqn = USART2_IRQn,
-        .rx_port = GPIOA,
-#ifdef USART2_RX_ON_A15
-        .rx_pin = GPIO_PIN_15,
-#else
-        .rx_pin = GPIO_PIN_3,
-#endif
+        .rx_pin = RULOS_UART1_RX_PIN,
+        .rx_altfunc = GPIO_AF1_USART2,
         .rx_dma_instance = DMA1,
         .rx_dma_channel = LL_DMA_CHANNEL_4,
         .rx_dma_irqn = DMA1_Channel4_IRQn,
         .rx_dma_request = DMA_REQUEST_USART2_RX,
 
 #ifndef temp_disabled_UART_SURRENDER_DMA1_CHAN2_3
-        .tx_port = GPIOA,
-        .tx_pin = GPIO_PIN_2,
+        .tx_pin = RULOS_UART1_TX_PIN,
+        .tx_altfunc = GPIO_AF1_USART2,
         .tx_dma_chan = DMA1_Channel2,
         .tx_dma_irqn = DMA1_Channel2_3_IRQn,
         .tx_dma_request = DMA_REQUEST_USART2_TX,
-        .altfunc = GPIO_AF1_USART2,
 #endif
     },
 #ifdef USART3
@@ -340,20 +389,20 @@ static const stm32_uart_config_t stm32_uart_config[] = {
       // rulos uart 2
         .instance = USART3,
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
-        .rx_port = GPIOB,
-        .rx_pin = GPIO_PIN_9,
+
+        .rx_pin = RULOS_UART2_RX_PIN,
+        .rx_altfunc = GPIO_AF4_USART3,
         .rx_dma_instance = DMA2,
         .rx_dma_channel = LL_DMA_CHANNEL_1,
         .rx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
         .rx_dma_request = DMA_REQUEST_USART3_RX,
 
+        .tx_pin = RULOS_UART2_TX_PIN,
+        .tx_altfunc = GPIO_AF4_USART3,
 #ifndef UART_SURRENDER_DMA1_CHAN2_3
-        .tx_port = GPIOB,
-        .tx_pin = GPIO_PIN_2,
         .tx_dma_chan = DMA1_Channel3,
         .tx_dma_irqn = DMA1_Channel2_3_IRQn,
         .tx_dma_request = DMA_REQUEST_USART3_TX,
-        .altfunc = GPIO_AF4_USART3,
 #endif
     },
 #endif
@@ -362,19 +411,18 @@ static const stm32_uart_config_t stm32_uart_config[] = {
       // rulos uart 3
         .instance = USART4,
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
-        .rx_port = GPIOA,
-        .rx_pin = GPIO_PIN_1,
+        .rx_pin = RULOS_UART3_RX_PIN,
+        .rx_altfunc = GPIO_AF4_USART4,
         .rx_dma_instance = DMA2,
         .rx_dma_channel = LL_DMA_CHANNEL_2,
         .rx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
         .rx_dma_request = DMA_REQUEST_USART4_RX,
 
-        .tx_port = GPIOA,
-        .tx_pin = GPIO_PIN_0,
+        .tx_pin = RULOS_UART3_TX_PIN,
+        .tx_altfunc = GPIO_AF4_USART4,
         .tx_dma_chan = DMA1_Channel6,
         .tx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
         .tx_dma_request = DMA_REQUEST_USART4_TX,
-        .altfunc = GPIO_AF4_USART4,
     },
 #endif
 #ifdef USART5
@@ -382,21 +430,22 @@ static const stm32_uart_config_t stm32_uart_config[] = {
       // rulos uart 4
         .instance = USART5,
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
-        .rx_port = GPIOB,
-#ifdef USART5_RX_ON_B4
-        .rx_pin = GPIO_PIN_4,
-        .altfunc = GPIO_AF3_USART5,
+
+        .rx_pin = RULOS_UART4_RX_PIN,
+#define GPIO_B1 123
+#if RULOS_UART4_RX_PIN == GPIO_B1
+        .rx_altfunc = GPIO_AF8_USART5,
 #else
-        .rx_pin = GPIO_PIN_1,
-        .altfunc = GPIO_AF8_USART5,
+        .rx_altfunc = GPIO_AF3_USART5,
 #endif
+#undef GPIO_B1
         .rx_dma_instance = DMA2,
         .rx_dma_channel = LL_DMA_CHANNEL_3,
         .rx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
         .rx_dma_request = DMA_REQUEST_USART5_RX,
 
-        .tx_port = GPIOB,
-        .tx_pin = GPIO_PIN_0,
+        .tx_pin = RULOS_UART4_TX_PIN,
+        .rx_altfunc = GPIO_AF3_USART5,
         .tx_dma_chan = DMA1_Channel7,
         .tx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
         .tx_dma_request = DMA_REQUEST_USART5_TX,
@@ -404,20 +453,21 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 #endif
 #ifdef USART6
     {
+      // rulos uart 5
         .instance = USART6,
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
-        .rx_port = GPIOA,
-        .rx_pin = GPIO_PIN_5,
+        .rx_pin = RULOS_UART5_RX_PIN,
+        .rx_altfunc = GPIO_AF3_USART6,
         .rx_dma_instance = DMA2,
         .rx_dma_channel = LL_DMA_CHANNEL_4,
         .rx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
         .rx_dma_request = DMA_REQUEST_USART6_RX,
-        .tx_port = GPIOA,
-        .tx_pin = GPIO_PIN_4,
+
+        .tx_pin = RULOS_UART5_TX_PIN,
+        .tx_altfunc = GPIO_AF3_USART6,
         .tx_dma_chan = DMA2_Channel5,
         .tx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
         .tx_dma_request = DMA_REQUEST_USART6_TX,
-        .altfunc = GPIO_AF3_USART6,
     },
 #endif
 };
@@ -443,18 +493,17 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .instance = USART1,
         .instance_irqn = USART1_IRQn,
 
-        .rx_port = GPIOA,
-        .rx_pin = GPIO_PIN_10,
+        .rx_pin = RULOS_UART0_RX_PIN,
+        .rx_altfunc = GPIO_AF7_USART1,
         .rx_dma_channel = LL_DMA_CHANNEL_2,
         .rx_dma_irqn = DMA1_Channel2_IRQn,
         .rx_dma_request = DMA_REQUEST_USART1_RX,
 
-        .tx_port = GPIOA,
-        .tx_pin = GPIO_PIN_9,
+        .tx_pin = RULOS_UART0_TX_PIN,
+        .tx_altfunc = GPIO_AF7_USART1,
         .tx_dma_chan = DMA1_Channel1,
         .tx_dma_irqn = DMA1_Channel1_IRQn,
         .tx_dma_request = DMA_REQUEST_USART1_TX,
-        .altfunc = GPIO_AF7_USART1,
     },
 };
 
@@ -842,16 +891,19 @@ static void config_gpio(const stm32_uart_config_t *config, bool rx) {
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-#if !defined(RULOS_ARM_stm32f1)
-  GPIO_InitStruct.Alternate = config->altfunc;
-#endif
 
   if (rx) {
-    GPIO_InitStruct.Pin = config->rx_pin;
-    HAL_GPIO_Init(config->rx_port, &GPIO_InitStruct);
+    GPIO_InitStruct.Pin = config->rx_pin.pin;
+#if !defined(RULOS_ARM_stm32f1)
+    GPIO_InitStruct.Alternate = config->rx_altfunc;
+#endif
+    HAL_GPIO_Init(config->rx_pin.port, &GPIO_InitStruct);
   } else {
-    GPIO_InitStruct.Pin = config->tx_pin;
-    HAL_GPIO_Init(config->tx_port, &GPIO_InitStruct);
+    GPIO_InitStruct.Pin = config->tx_pin.pin;
+#if !defined(RULOS_ARM_stm32f1)
+    GPIO_InitStruct.Alternate = config->tx_altfunc;
+#endif
+    HAL_GPIO_Init(config->tx_pin.port, &GPIO_InitStruct);
   }
 }
 

@@ -32,8 +32,8 @@ apps = [
         'board': 'BOARD_LTETAG_DEV_REV_A',
         'extra_sources': ["ina219.c","curr_meas.c"],
         'extra_cflags': [
-            "-DUSART2_RX_ON_A15",
-            "-DUSART5_RX_ON_B4",
+            "-DRULOS_UART1_RX_PIN=GPIO_A15",
+            "-DRULOS_UART4_RX_PIN=GPIO_B4",
         ],
         'chip': 'stm32g0b1xe',
     },
@@ -53,7 +53,8 @@ apps = [
             'rx_queue_len': 1536,
         },
         'extra_cflags': [
-            "-DUSART1_RXTX_ON_B7B6",
+            "-DRULOS_UART0_RX_PIN=GPIO_B7",
+            "-DRULOS_UART0_TX_PIN=GPIO_B6",
         ],
     },
 ]
