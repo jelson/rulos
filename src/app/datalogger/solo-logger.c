@@ -39,12 +39,13 @@ static void turn_off_led(void *data) {
 }
 
 static void indicate_alive(void *data) {
-  schedule_us(2000000, indicate_alive, NULL);
-  gpio_set(ORANGE_LED);
+  schedule_us(30000000, indicate_alive, NULL);
   if (flash_dumper.ok && serial_reader_is_active(&psoc_console_tx)) {
+    gpio_set(ORANGE_LED);
+  } else {
     gpio_set(GREEN_LED);
   }
-  schedule_us(40000, turn_off_led, NULL);
+  schedule_us(3000, turn_off_led, NULL);
 }
 
 int main() {
