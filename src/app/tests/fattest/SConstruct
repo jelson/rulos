@@ -20,7 +20,7 @@ import sys
 sys.path.insert(0, "../../../util")
 from build_tools import *
 
-#BOARD = "-DBOARD_DATALOGGER_REV_B"
+#BOARD = "-DBOARD_GPS_TEST_RIG_REV_B"
 #CHIP = "stm32f303xb"
 
 BOARD = "-DBOARD_LTETAG_DEV_REV_A"

@@ -27,7 +27,7 @@
 #include "stm32g0xx_ll_i2c.h"
 #include "stm32g0xx_ll_pwr.h"
 
-#if defined(BOARD_DATALOGGER_REV_B)
+#if defined(BOARD_GPS_TEST_RIG_REV_B)
 #define SCL_PIN GPIO_PIN_6
 #define SDA_PIN GPIO_PIN_9
 #elif defined(BOARD_LTETAG_DEV_REV_A)

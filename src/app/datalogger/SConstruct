@@ -22,8 +22,8 @@ from build_tools import *
 
 apps = [
     {
-        'name': 'datalogger',
-        'board': 'BOARD_DATALOGGER_REV_B',
+        'name': 'gps-test-rig',
+        'board': 'BOARD_GPS_TEST_RIG_REV_B',
         'extra_sources': ["ina219.c","curr_meas.c"],
         'chip': 'stm32g0b1xe',
     },
