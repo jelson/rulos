@@ -28,6 +28,10 @@ class Platform:
         self.use_cpp = False
 
     def configure_compiler(self, env, compiler_prefix):
+        ccache = which("ccache")
+        if ccache:
+            compiler_prefix = f"{ccache} {compiler_prefix}"
+
         compiler = "g++" if self.use_cpp else "gcc"
         env.Replace(CC = compiler_prefix+compiler)
         env.Replace(CXX = compiler_prefix+compiler)

@@ -64,3 +64,14 @@ def repo_is_dirty():
 
 def commit_hash():
     return get_shell_output(["git", "describe", "--dirty", "--always", "--tags"])
+
+def which(bin_name):
+    try:
+        binpath = get_shell_output(['which', bin_name]).strip()
+    except:
+        binpath = None
+
+    if binpath:
+        return binpath
+    else:
+        return None
