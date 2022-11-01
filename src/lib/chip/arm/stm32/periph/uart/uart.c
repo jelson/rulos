@@ -812,12 +812,12 @@ static void on_usart_interrupt(uint8_t uart_id) {
 
 void hal_uart_rx_cb_done(uint8_t uart_id) {
   stm32_uart_t *u = &g_stm32_uarts[uart_id];
-  //const stm32_uart_config_t *c = &stm32_uart_config[uart_id];
+  const stm32_uart_config_t *c = &stm32_uart_config[uart_id];
 
   rulos_irq_state_t irq = hal_start_atomic();
   assert(!u->rx_cb_ready);
   u->rx_cb_ready = true;
-  //maybe_flush_rx_buf(uart_id, u, c);
+  maybe_flush_rx_buf(uart_id, u, c);
   hal_end_atomic(irq);
 }
 
