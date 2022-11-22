@@ -37,17 +37,17 @@ typedef struct {
   int channel_index;
   dma_callback_t callback;
   void *context;
-} dma_config_t;
+} dma_chan_state_t;
 
-static dma_config_t dma_configs[MAX_DMA_CHANNELS] = {};
+static dma_chan_state_t dma_chan_state[MAX_DMA_CHANNELS] = {};
 
-dma_config_t *channel_config(DMA_TypeDef *DMAx, int channel_index) {
+static dma_chan_state_t *get_dma_chan_state(DMA_TypeDef *DMAx, int channel_index) {
 #if defined(DMA2)
   if (DMAx == DMA2) {
     channel_index += 8;
   }
 #endif
-  return &dma_configs[channel_index];
+  return &dma_chan_state[channel_index];
 }
 
 void allocate_dma_channel(dma_callback_t dma_callback, void *context,
@@ -56,80 +56,81 @@ void allocate_dma_channel(dma_callback_t dma_callback, void *context,
   assert(dma_callback != NULL);
 
   // try to find an unallocated channel
-  dma_config_t *dc = NULL;
+  dma_chan_state_t *dcs = NULL;
   for (int i = 0; i < MAX_DMA_CHANNELS; i++) {
-    // check 1) this is a valid channel; 2) it has not been allocated already
-    if (dma_configs[i].DMAx != NULL && dma_configs[i].callback == NULL) {
-      dc = &dma_configs[i];
+    // check 1) this is a valid channe on this platforml; 2) it has
+    // not been allocated already
+    if (dma_chan_state[i].DMAx != NULL && dma_chan_state[i].callback == NULL) {
+      dcs = &dma_chan_state[i];
       break;
     }
   }
 
   // no slot found? assert
-  assert(dc != NULL);
+  assert(dcs != NULL);
 
   // store callback info, and provide channel info to caller
-  dc->callback = dma_callback;
-  dc->context = context;
-  *DMAx = dc->DMAx;
-  *channel_index = dc->channel_index;
+  dcs->callback = dma_callback;
+  dcs->context = context;
+  *DMAx = dcs->DMAx;
+  *channel_index = dcs->channel_index;
 }
 
 // just used during initialization
-static void add_dma_channel(DMA_TypeDef *dmax, int channel_index) {
-  dma_config_t *dc = channel_config(dmax, channel_index);
-  dc->DMAx = dmax;
-  dc->channel_index = channel_index;
+static void init_dma_channel(DMA_TypeDef *dmax, int channel_index) {
+  dma_chan_state_t *dcs = get_dma_chan_state(dmax, channel_index);
+  dcs->DMAx = dmax;
+  dcs->channel_index = channel_index;
 }
 
 void dynamic_dma_init() {
 #if defined(DMA1_Channel1)
-  add_dma_channel(DMA1, LL_DMA_CHANNEL_1);
+  init_dma_channel(DMA1, LL_DMA_CHANNEL_1);
 #endif
 #if defined(DMA1_Channel2)
-  add_dma_channel(DMA1, LL_DMA_CHANNEL_2);
+  init_dma_channel(DMA1, LL_DMA_CHANNEL_2);
 #endif
 #if defined(DMA1_Channel3)
-  add_dma_channel(DMA1, LL_DMA_CHANNEL_3);
+  init_dma_channel(DMA1, LL_DMA_CHANNEL_3);
 #endif
 #if defined(DMA1_Channel4)
-  add_dma_channel(DMA1, LL_DMA_CHANNEL_4);
+  init_dma_channel(DMA1, LL_DMA_CHANNEL_4);
 #endif
 #if defined(DMA1_Channel5)
-  add_dma_channel(DMA1, LL_DMA_CHANNEL_5);
+  init_dma_channel(DMA1, LL_DMA_CHANNEL_5);
 #endif
 #if defined(DMA1_Channel6)
-  add_dma_channel(DMA1, LL_DMA_CHANNEL_6);
+  init_dma_channel(DMA1, LL_DMA_CHANNEL_6);
 #endif
 #if defined(DMA1_Channel7)
-  add_dma_channel(DMA1, LL_DMA_CHANNEL_7);
+  init_dma_channel(DMA1, LL_DMA_CHANNEL_7);
 #endif
 #if defined(DMA1_Channel8)
-  add_dma_channel(DMA1, LL_DMA_CHANNEL_8);
+  init_dma_channel(DMA1, LL_DMA_CHANNEL_8);
 #endif
 #if defined(DMA2_Channel1)
-  add_dma_channel(DMA2, LL_DMA_CHANNEL_1);
+  init_dma_channel(DMA2, LL_DMA_CHANNEL_1);
 #endif
 #if defined(DMA2_Channel2)
-  add_dma_channel(DMA2, LL_DMA_CHANNEL_2);
+  init_dma_channel(DMA2, LL_DMA_CHANNEL_2);
 #endif
 #if defined(DMA2_Channel3)
-  add_dma_channel(DMA2, LL_DMA_CHANNEL_3);
+  init_dma_channel(DMA2, LL_DMA_CHANNEL_3);
 #endif
 #if defined(DMA2_Channel4)
-  add_dma_channel(DMA2, LL_DMA_CHANNEL_4);
+  init_dma_channel(DMA2, LL_DMA_CHANNEL_4);
 #endif
 #if defined(DMA2_Channel5)
-  add_dma_channel(DMA2, LL_DMA_CHANNEL_5);
+  init_dma_channel(DMA2, LL_DMA_CHANNEL_5);
 #endif
 #if defined(DMA2_Channel6)
-  add_dma_channel(DMA2, LL_DMA_CHANNEL_6);
+  init_dma_channel(DMA2, LL_DMA_CHANNEL_6);
 #endif
 #if defined(DMA2_Channel7)
-  add_dma_channel(DMA2, LL_DMA_CHANNEL_7);
+  init_dma_channel(DMA2, LL_DMA_CHANNEL_7);
 #endif
 #if defined(DMA2_Channel8)
-  add_dma_channel(DMA2, LL_DMA_CHANNEL_8);
+  init_dma_channel(DMA2, LL_DMA_CHANNEL_8);
 #endif
 }
 

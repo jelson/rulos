@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdbool.h>
+
 #include "core/hardware.h"
 #include "stm32.h"
 
@@ -23,7 +25,7 @@
 // (stm32g0/stm32g4). The assigned DMA instance and channel number are written
 // into the output arguments. The provided Callback is called (with context
 // pointer) when an interrupt for the assigned DMA channel is received.
-typedef void (*dma_callback_t)(void *data);
+typedef void (*dma_callback_t)(void *context);
 
 void allocate_dma_channel(dma_callback_t dma_callback, void *context,
                           DMA_TypeDef **DMAx, int *channel_index);
