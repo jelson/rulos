@@ -1,5 +1,5 @@
 #if defined(RULOS_ARM_STM32)
-#define TEST_PIN GPIO_A0
+#define TEST_PIN GPIO_A10
 #elif defined(RULOS_ARM_NXP)
 #define TEST_PIN GPIO0_00
 #elif defined(RULOS_AVR)

@@ -3,7 +3,7 @@
 #if defined(RULOS_ARM_stm32f0)
 #include "stm32f0xx.h"
 #include "stm32f0xx_ll_gpio.h"
-#elif defined(RULOS_ARM_stm32f1)
+#elif defined(RULOS_ARM_stm32f1) || defined(RULOS_ARM_gd32f3)
 #include "stm32f1xx.h"
 #include "stm32f1xx_ll_gpio.h"
 #elif defined(RULOS_ARM_stm32f3)

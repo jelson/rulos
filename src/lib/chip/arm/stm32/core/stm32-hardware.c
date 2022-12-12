@@ -66,7 +66,7 @@ void SystemClock_Config(void) {
   }
 }
 
-#elif defined(RULOS_ARM_stm32f1)
+#elif (defined(RULOS_ARM_stm32f1) || defined(RULOS_ARM_gd32f3))
 /**
  * @brief  System Clock Configuration
  *         The system Clock is configured as follow :

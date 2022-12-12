@@ -48,10 +48,13 @@ class ArmPlatform(BaseRules.Platform):
         Architecture("m0plus", "armv6-m", "cortex-m0plus"),
         Architecture("m3", "armv7-m", "cortex-m3"),
         Architecture("m4", "armv7e-m", "cortex-m4"),
-        Architecture("m4f", "armv7e-m", "cortex-m4", ["-mfloat-abi=hard", "-mfpu=fpv4-sp-d16"]),
+        Architecture("m4f", "armv7e-m", "cortex-m4", [
+            "-mfloat-abi=hard",
+            "-mfpu=fpv4-sp-d16",
+        ]),
     ]])
 
-    def platform_cflags(self, arch):
+    def arm_cflags(self, arch):
         return self.common_cflags() + arch.flags + [
             f"-DCORE_{arch.name.upper()}=1",
             "-mthumb",
@@ -77,13 +80,13 @@ class ArmPlatform(BaseRules.Platform):
             "-static",
         ]
 
-    def platform_include_dirs(self):
+    def arm_include_dirs(self):
         return self.common_include_dirs() + [
             os.path.join(ARM_ROOT, "common"),
             os.path.join(ARM_ROOT, "common", "CMSIS", "Include"),
         ]
 
-    def arm_platform_lib_source_files(self):
+    def arm_lib_source_files(self):
         return util.cglob(ARM_ROOT, "common", "core")
 
     def name(self):
@@ -179,12 +182,18 @@ class ArmStmPlatform(ArmPlatform):
         self.major_family = self.MAJOR_FAMILIES[self.chip.major_family_name]
 
     class Chip:
-        def __init__(self, name, family, flashk, ramk):
+        def __init__(self, name, family, major_family=None, flashk=None, ramk=None):
+            assert(flashk is not None)
+            assert(ramk is not None)
             self.name = name
             self.family = family
             self.flashk = flashk
             self.ramk = ramk
-            self.major_family_name = family[:7]
+
+            if major_family:
+                self.major_family_name = major_family
+            else:
+                self.major_family_name = family[:7]
 
     CHIPS = dict([(chip.name, chip) for chip in [
         # stm32f0
@@ -230,23 +239,38 @@ class ArmStmPlatform(ArmPlatform):
         Chip("stm32g431x6", "STM32G431xx", flashk=  32, ramk= 16),
         Chip("stm32g431x8", "STM32G431xx", flashk=  64, ramk= 16),
         Chip("stm32g431xb", "STM32G431xx", flashk= 128, ramk= 16),
+
+        # gd32f3
+        Chip("gd32f303xe", "STM32F103xE", major_family="GD32F3", flashk= 512, ramk= 64),
     ]])
 
     class MajorFamily:
-        def __init__(self, name, arch_name):
+        def __init__(self, name, arch_name, libname=None, cflags=[]):
             self.name = name
             self.arch = ArmPlatform.ARCHITECTURES[arch_name]
-            driver_root = os.path.join(STM32_VENDOR_ROOT, "STM32Cube" + name[-2:], "Drivers")
-            self.cmsis_root = os.path.join(driver_root, "CMSIS", "Device", "ST", name+"xx")
-            self.hal_root = os.path.join(driver_root, name+"xx_HAL_Driver")
-            self.sources = os.path.join(self.cmsis_root, "Source", "Templates", "system_"+name.lower()+"xx.c")
+
+            if not libname:
+                libname = name
+
+            driver_root = os.path.join(STM32_VENDOR_ROOT, "STM32Cube" + libname[-2:], "Drivers")
+            self.cmsis_root = os.path.join(driver_root, "CMSIS", "Device", "ST", libname+"xx")
+            self.hal_root = os.path.join(driver_root, libname+"xx_HAL_Driver")
+            self.sources = os.path.join(self.cmsis_root, "Source", "Templates",
+                                        "system_"+libname.lower()+"xx.c")
+            self.cflags = cflags
 
     MAJOR_FAMILIES = dict([(fam.name, fam) for fam in [
+        # STM32
         MajorFamily("STM32F0", "m0"),
         MajorFamily("STM32F1", "m3"),
         MajorFamily("STM32F3", "m4f"),
         MajorFamily("STM32G0", "m0plus"),
         MajorFamily("STM32G4", "m4f"),
+
+        # GD32
+        MajorFamily("GD32F3", "m4f", libname="STM32F1", cflags=[
+            "-D__FPU_PRESENT=1",
+        ]),
     ]])
 
     def part_name(self):
@@ -256,26 +280,28 @@ class ArmStmPlatform(ArmPlatform):
         return os.path.join("arm", "stm32", "periph")
 
     def cflags(self):
-        return self.platform_cflags(self.major_family.arch) + [
-            "-DRULOS_ARM_STM32",
-            "-DUSE_FULL_LL_DRIVER",
-            "-DUSE_HAL_DRIVER",
-            "-DRULOS_ARM_"+self.chip.major_family_name.lower(),
-            f"-D{self.chip.family}=1",
-        ]
+        return \
+            self.arm_cflags(self.major_family.arch) + \
+            self.major_family.cflags + [
+                "-DRULOS_ARM_STM32",
+                "-DUSE_FULL_LL_DRIVER",
+                "-DUSE_HAL_DRIVER",
+                "-DRULOS_ARM_"+self.chip.major_family_name.lower(),
+                f"-D{self.chip.family}=1",
+            ]
 
     def ld_flags(self, target):
         return self.arm_ld_flags(target)
 
     def include_dirs(self):
-        return self.platform_include_dirs() + [
+        return self.arm_include_dirs() + [
             STM32_ROOT,
             os.path.join(self.major_family.cmsis_root, "Include"),
             os.path.join(self.major_family.hal_root, "Inc"),
         ]
 
     def platform_lib_source_files(self):
-        return (self.arm_platform_lib_source_files()
+        return (self.arm_lib_source_files()
             + util.cglob(STM32_ROOT, "core")
             + util.template_free_cglob(self.major_family.hal_root, "Src")
             + util.cwd_to_project_root([self.major_family.sources]))
