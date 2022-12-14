@@ -3,7 +3,7 @@
     -ex "set confirm off" \
     -ex "set pagination off" \
     -ex "tar ext /dev/ttyACM0" \
-    -ex "mon tpwr dis" \
+    -ex "mon tpwr ena" \
     -ex "mon conn enable" \
     -ex "mon swd" \
     -ex "at 1" \
