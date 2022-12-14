@@ -144,6 +144,7 @@ static void duktig_update(DuktigState_t *duktig) {
 
 int main() {
   rulos_hal_init();
+  init_clock(JIFFY_TIME_US, TIMER1);
 
   // set up output pins as drivers
   gpio_make_output(LED_DRIVER_SDI);
@@ -166,7 +167,6 @@ int main() {
   debounce_button_init(&duktig.but2, KEY_REFRACTORY_TIME_US);
 
   // set up periodic sampling task
-  init_clock(JIFFY_TIME_US, TIMER1);
   schedule_us(1, (ActivationFuncPtr)duktig_update, &duktig);
 
   scheduler_run();

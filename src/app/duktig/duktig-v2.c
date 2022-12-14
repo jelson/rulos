@@ -273,6 +273,7 @@ void TIM3_IRQHandler() {
 
 int main() {
   rulos_hal_init();
+  init_clock(JIFFY_TIME_US, TIMER1);
 
   // set up output pins as drivers
   gpio_clr(LED1);
@@ -342,7 +343,6 @@ int main() {
   LL_TIM_GenerateEvent_UPDATE(TIM3);
 
   // set up periodic sampling task
-  init_clock(JIFFY_TIME_US, TIMER1);
   schedule_us(1, (ActivationFuncPtr)duktig_update, &duktig);
 
   scheduler_run();

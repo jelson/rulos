@@ -16,13 +16,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "core/debounce.h"
 
 #include "core/clock.h"
 #include "core/util.h"
 
 void debounce_button_init(DebouncedButton_t *b, Time refrac_time_us) {
-  b->is_pressed = FALSE;
+  b->is_pressed = false;
   b->refrac_time_us = refrac_time_us;
   b->next_valid_push_time = clock_time_us();
 }
@@ -39,7 +42,7 @@ bool debounce_button(DebouncedButton_t *b, bool raw_is_down) {
 
   // If the button is in the same state as before, do nothing.
   if (raw_is_down == b->is_pressed) {
-    return FALSE;
+    return false;
   }
 
   b->is_pressed = raw_is_down;
@@ -49,14 +52,14 @@ bool debounce_button(DebouncedButton_t *b, bool raw_is_down) {
     // rollover into account), ignore it as a bounce. Otherwise, return a valid
     // button press.
     if (later_than_or_eq(now, b->next_valid_push_time)) {
-      return TRUE;
+      return true;
     } else {
-      return FALSE;
+      return false;
     }
   } else {
     // Button was just released. Set next valid press time to be after the
     // refractory time.
     b->next_valid_push_time = now + b->refrac_time_us;
-    return FALSE;
+    return false;
   }
 }
