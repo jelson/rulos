@@ -1,0 +1,5 @@
+sony not attached; quectel lc7g evk attached with measurement at vcc_module.
+antenna on dashboard
+
+datalogger seemed to be misbehaving, 1hz callbacks got progressively
+delayed. high interrupt load? still under invesgigation

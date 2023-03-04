@@ -13,19 +13,27 @@ import matplotlib.pyplot as plt
 
 cx.set_cache_dir("/tmp/cached-tiles")
 
-REF_CHAN = 4
-SONY_CHAN = 1
-UBLOX_CHAN = 3
-
-dutname = {
-    REF_CHAN: 'reference',
-    SONY_CHAN: 'Sony',
-    UBLOX_CHAN: 'uBlox',
+SONY_UBLOX_CONF = {
+    'reference': {
+        'channel': 4,
+    },
+    'Sony': {
+        'channel': 1,
+        'volts': 0.8,
+        'extra_power_mw': 6, # to account for the LNA, TCXO not measured
+    },
+    'uBlox': {
+        'channel': 3,
+        'volts': 3.3,
+    },
 }
 
-SONY_VOLTS = 0.8
-SONY_BONUS_MW = 6 # to account for the rf, txco not measured
-UBLOX_VOLTS = 3.3
+QUECTEL_CONF = {
+    'Quectel': {
+        'channel': 3,
+        'volts': 3.3,
+    },
+}
 
 class Log:
     def _log_found(self, metadata):
@@ -70,8 +78,8 @@ class Log:
             last_timestamp = timestamp
 
 
-            if not start_date and len(fields) >= 9 and fields[1] == "in" and fields[2] == "4" \
-               and 'GNRMC' in fields[4]:
+            if not start_date and len(fields) >= 9 and fields[1] == "in" and 'GNRMC' in fields[4] \
+               and fields[6] == 'A':
                 date = fields[13]
                 if date:
                     day = int(date[0:2])
@@ -155,19 +163,13 @@ class Log:
         else:
             return degrees
 
-    def parse(self, lognum):
+    def parse(self, lognum, conf):
         datasets = {}
-        for dut in [SONY_CHAN, UBLOX_CHAN, REF_CHAN]:
-            datasets[dut] = {
-                'current_ua': {},
-                'loc': {},
-                'speed_mph': {},
-                'num_sats': {},
-            }
 
         md = self.get_log_metadata(lognum)
         nmea_good = 0
         nmea_bad = 0
+
         for linenum in range(md['startline'], md['endline']+1):
             line = self.lines[linenum]
             fields = line.split(",")
@@ -177,6 +179,15 @@ class Log:
 
             # get channel number and find corresponding dataset
             chan = int(fields[2])
+
+            if not chan in datasets:
+                datasets[chan] =  {
+                'current_ua': {},
+                'loc': {},
+                'speed_mph': {},
+                'num_sats': {},
+            }
+
             dataset = datasets[chan]
 
             # get time in seconds, rounded
@@ -210,13 +221,14 @@ class Log:
                     dataset['loc'][timestamp] = loc
                     dataset['num_sats'][timestamp] = int(nmea[7])
 
-        for dut in datasets:
+        retval = {}
+        for dutname, dutconf in conf.items():
             # convert dictionaries to pandas dataframes
-            gdf = geopandas.GeoDataFrame(pd.DataFrame(datasets[dut]))
+            chan = dutconf['channel']
+            gdf = geopandas.GeoDataFrame(pd.DataFrame(datasets[chan])).sort_index()
 
             # set up location field as a geopandas geodataframe
             gdf['loc'] = geopandas.GeoSeries(gdf['loc'])
-            gdf['loc'] = gdf['loc'].fillna(None)
             gdf = gdf.set_geometry('loc')
             gdf = gdf.set_crs(epsg=4326)
 
@@ -224,28 +236,27 @@ class Log:
             gdf['current_ua'] = gdf['current_ua'].apply(lambda x: x if x < 40000 else np.nan)
 
             # convert current to power
-            if dut == SONY_CHAN:
-                gdf['power_uw'] = (gdf['current_ua'] * SONY_VOLTS) + (1000 * SONY_BONUS_MW)
-            else:
-                gdf['power_uw'] = gdf['current_ua'] * UBLOX_VOLTS
+            if 'volts' in dutconf:
+                gdf['power_uw'] = (gdf['current_ua'] * dutconf['volts']) + (1000 * dutconf.get('extra_power_mw', 0))
 
-            datasets[dut] = gdf
+            retval[dutname] = gdf
 
         sys.stderr.write(f"parsing complete -- {nmea_bad}/{nmea_good+nmea_bad} NMEA sentence errors\n")
-        return datasets
+        return retval
 
-    def map(self, lognum):
-        datasets = self.parse(lognum)
+    def map(self, lognum, conf):
+        datasets = self.parse(lognum, conf)
 
-        for dut in [SONY_CHAN, UBLOX_CHAN, REF_CHAN]:
-            df = datasets[dut].to_crs(epsg=3857)
-            #df = datasets[dut]
+        for dutname, dutconf in conf.items():
+            df = datasets[dutname]
+            df = df.to_crs(epsg=3857)
             ax = df.plot(color='red', markersize=1, figsize=(40, 40))
 
             for secs in range(100, df.index.max(), 100):
                 loc = df.loc[secs, 'loc']
-                if not loc.is_empty:
-                    ax.annotate(xy=[loc.x, loc.y], s=f"{secs}",
+                if loc:
+                    ax.annotate(xy=[loc.x, loc.y],
+                                text=f"{secs}",
                                 xytext=[10, 0],
                                 textcoords='offset points',
                                 arrowprops=dict(arrowstyle='-'),
@@ -255,12 +266,13 @@ class Log:
                            zoom=15,
                            crs=df.crs,
                            source=cx.providers.OpenStreetMap.Mapnik)
-            ax.set_title(f"Drive map - {dutname[dut]} - {sys.argv[1]}")
+            ax.set_title(f"Drive map - {dutname} - {sys.argv[1]}")
             ax.figure.tight_layout()
-            ax.figure.savefig(f"{sys.argv[1]}-map-{dutname[dut]}.png",dpi=200)
+            ax.axis('off')
+            ax.figure.savefig(f"{sys.argv[1]}.map-{dutname}.png", dpi=200, bbox_inches='tight')
 
-    def currents(self, lognum):
-        datasets = self.parse(lognum)
+    def currents(self, lognum, conf):
+        datasets = self.parse(lognum, conf)
 
         # create current plot on top, speed plot next, then num sats
         fig, ((currplot, satplot, speedplot)) = plt.subplots(
@@ -269,32 +281,34 @@ class Log:
             sharex=True,
         )
 
-        for dut in [SONY_CHAN, UBLOX_CHAN]:
-            df = datasets[dut]
+        for dutname, dutconf in conf.items():
+            df = datasets[dutname]
             df['power_mw'] = df['power_uw'] / 1000.0
             df['power_mw_90secroll'] = df['power_mw'].rolling(90, center=True).mean()
 
             # plot power green where we have a gps lock, red where we do not
-            unlocked = df.copy()
-            unlocked.loc[~unlocked['loc'].is_empty, 'power_mw'] = np.nan
-            locked = df.copy()
-            locked.loc[locked['loc'].is_empty, 'power_mw'] = np.nan
+            currs = df.loc[~pd.isna(df['power_mw'])]
+            unlocked = currs.copy()
+            unlocked.loc[~pd.isna(unlocked['loc']), 'power_mw'] = np.nan
+            locked = currs.copy()
+            locked.loc[pd.isna(locked['loc']), 'power_mw'] = np.nan
 
             unlocked['power_mw'].plot(grid=True, ax=currplot, color='red')
             locked['power_mw'].plot(grid=True, ax=currplot, color='green')
             df['power_mw_90secroll'].plot(grid=True, ax=currplot, color='blue')
 
             # add annotation with average power
-            ann = f"{dutname[dut]} average power: {df['power_mw'].mean():.2f}"
-            currplot.annotate(xy=[0, df['power_mw'].max()], s=ann, size=15)
+            ann = f"{dutname} average power: {df['power_mw'].mean():.2f}"
+            currplot.annotate(xy=[0, df['power_mw'].max()], text=ann, size=15)
 
-
-        datasets[SONY_CHAN]['speed_mph'].plot(grid=True, ax=speedplot)
+        for df in datasets.values():
+            df['speed_mph'].plot(grid=True, ax=speedplot)
         speedplot.grid(which='major', linestyle='-', color='black')
         speedplot.grid(which='minor', linestyle=':', color='black')
         speedplot.set_ylabel('Speed (mph)')
 
-        datasets[SONY_CHAN]['num_sats'].plot(grid=True, ax=satplot)
+        for df in datasets.values():
+            df['num_sats'].plot(grid=True, ax=satplot)
         satplot.grid(which='major', linestyle='-', color='black')
         satplot.grid(which='minor', linestyle=':', color='black')
         satplot.set_ylabel('Num Sats')
@@ -322,6 +336,9 @@ def main():
     if len(sys.argv) < 2:
         usage()
 
+    #conf = SONY_UBLOX_CONF
+    conf = QUECTEL_CONF
+
     log = Log(sys.argv[1])
 
     # no args but filename, just print summary of trips in log file
@@ -334,11 +351,11 @@ def main():
         return
 
     if len(sys.argv) == 4 and sys.argv[2] == "map":
-        log.map(int(sys.argv[3]))
+        log.map(int(sys.argv[3]), conf)
         return
 
     if len(sys.argv) == 4 and sys.argv[2] == "currents":
-        log.currents(int(sys.argv[3]))
+        log.currents(int(sys.argv[3]), conf)
         return
 
     usage()
