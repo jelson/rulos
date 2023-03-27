@@ -26,7 +26,7 @@
 #include "core/wallclock.h"
 
 #define FLUSH_PERIOD_MSEC 3000
-#define MAX_FNAME_L (128)
+#define MAX_FNAME_L       (128)
 
 static const char *makeFileName() {
   const char *counter_fname = "filenum.dat";

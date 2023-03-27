@@ -5,26 +5,29 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "core/clock.h"
+#include "core/rulos.h"
 #include "flash_dumper.h"
 
 static void sr_line_received(UartState_t *uart, void *user_data, char *line) {
   serial_reader_t *sr = (serial_reader_t *)user_data;
+  // LOG("%d: %s", uart->uart_id, line);
   sr->last_active = clock_time_us();
   flash_dumper_write(sr->flash_dumper, line, strlen(line), "in,%d,%d,",
                      uart->uart_id, sr->num_total_lines++);
 
   if (sr->cb != NULL) {
-    sr->cb(sr, line);
+    sr->cb(sr, line, sr->data);
   }
 }
 
 void serial_reader_init(serial_reader_t *sr, uint8_t uart_id, uint32_t baud,
-                        flash_dumper_t *flash_dumper, serial_reader_cb_t cb) {
+                        flash_dumper_t *flash_dumper, serial_reader_cb_t cb,
+                        void *data) {
   memset(sr, 0, sizeof(*sr));
   sr->last_active = clock_time_us();
   sr->flash_dumper = flash_dumper;
   sr->cb = cb;
+  sr->data = data;
   uart_init(&sr->uart, uart_id, baud);
   linereader_init(&sr->linereader, &sr->uart, sr_line_received, sr);
 }
@@ -33,7 +36,7 @@ void serial_reader_print(serial_reader_t *sr, const char *s) {
   uart_print(&sr->uart, s);
 
   // record the fact that we sent this string to the uart
-  flash_dumper_write(sr->flash_dumper, s, strlen(s), "out,%d",
+  flash_dumper_write(sr->flash_dumper, s, strlen(s), "out,%d,",
                      sr->uart.uart_id);
 }
 

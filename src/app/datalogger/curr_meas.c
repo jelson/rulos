@@ -39,17 +39,18 @@ static void measure_current(currmeas_state_t *cms) {
 }
 
 static void print_current(currmeas_state_t *cms) {
+  int32_t current = cms->scale * cms->cum_current / cms->num_measurements;
   flash_dumper_write(cms->flash_dumper, NULL, 0, "curr,%d,%ld",
-                     cms->channel_num,
-                     cms->scale * cms->cum_current / cms->num_measurements);
-  cms->cum_current = 0;
-  cms->num_measurements = 0;
+                     cms->channel_num, current);
 
   uint32_t usec =
       POWERMEASURE_POLLTIME_USEC * (cms->num_ready + cms->num_not_ready);
   uint32_t ups = usec / cms->num_ready;
-  LOG("chan %d current: %d samples ready, %d not; avg %ld usec per sample",
-      cms->channel_num, cms->num_ready, cms->num_not_ready, ups);
+  LOG("chan %d current: %lduA from %d samples; avg %ld usec per sample",
+      cms->channel_num, current, cms->num_measurements, ups);
+
+  cms->cum_current = 0;
+  cms->num_measurements = 0;
 }
 
 // current measurement
