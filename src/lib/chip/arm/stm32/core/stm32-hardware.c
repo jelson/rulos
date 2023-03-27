@@ -368,5 +368,19 @@ void arm_hal_start_clock_us(uint32_t ticks_per_interrupt,
 
 uint16_t hal_elapsed_tenthou_intervals() {
   // The systick timer counts down.
-  return (10000 * (SysTick->LOAD - SysTick->VAL)) / SysTick->LOAD;
+  //
+  // elapsed_ticks might be up to 2^24, so multiplying it by 10k can cause
+  // 32-bit overflow.
+  //
+  // It would be more straightforward to just use a 64-bit intermediate value
+  // here, but I was hoping to keep 64 bit math out of simply reading the
+  // clock. On a CortexM0p running at 64mhz, precise_clock_time_us(), which
+  // calls this, takes about 14 usec using 64 bit math and 8 usec doing this One
+  // Simple Trick.
+  uint32_t elapsed_ticks = SysTick->LOAD - SysTick->VAL;
+  if (elapsed_ticks <= 400000) {
+    return (10000 * elapsed_ticks) / SysTick->LOAD;
+  } else {
+    return (100 * elapsed_ticks) / (SysTick->LOAD / 100);
+  }
 }

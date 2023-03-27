@@ -37,9 +37,14 @@ int main() {
   for (int i = 0; i < 10000000; i++) {
     Time curr_time = precise_clock_time_us();
     if (curr_time < last_time) {
-      LOG("test %d failed! time %ld came before time %ld", i, last_time,
-          curr_time);
-      goto done;
+      if (later_than(curr_time, last_time)) {
+        LOG("test %d: detected normal rollover! time %lu came before time %lu",
+            i, last_time, curr_time);
+      } else {
+        LOG("test %d failed! time %lu came before time %lu", i, last_time,
+            curr_time);
+        goto done;
+      }
     }
     last_time = curr_time;
     if (i % 100000 == 0) {

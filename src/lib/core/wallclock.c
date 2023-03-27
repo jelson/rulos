@@ -42,7 +42,7 @@ void schedule_next_tick(wallclock_t *wallclock) {
 
 void wallclock_init(wallclock_t *wallclock) {
   memset(wallclock, 0, sizeof(*wallclock));
-  wallclock->curr_second_start_us = clock_time_us();
+  wallclock->curr_second_start_us = precise_clock_time_us();
   schedule_next_tick(wallclock);
 }
 
@@ -50,7 +50,7 @@ void wallclock_get_uptime(wallclock_t *wallclock, uint32_t *sec /* OUT */,
                           uint32_t *usec /* OUT */) {
   // This should be correct even there's a callback pending. In that
   // case, us_since_last_tick might be greater than 1,000,000.
-  uint32_t us_since_last_tick =
+  const uint32_t us_since_last_tick =
       precise_clock_time_us() - wallclock->curr_second_start_us;
   *sec = wallclock->seconds_since_boot + us_since_last_tick / 1000000;
   *usec = us_since_last_tick % 1000000;
