@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
-import pandas as pd
+import matplotlib
 import numpy as np
 import os
+import pandas as pd
 import sys
+
+matplotlib.use('Agg')
 
 pd.set_option("display.precision", 9)
 
@@ -58,15 +61,21 @@ def analyze(d, title):
     print(f"{title}: {error_str}")
 
     # create nanosecond-based column for plotting
+    ROLL_SEC = 30
     d['error_ns'] = 1e9 * (d['phase_corrected_timestamp'] - d.index)
+    roll_err_col = f'error_ns_{ROLL_SEC}_avg'
+    d[roll_err_col] = d['error_ns'].rolling(ROLL_SEC, center=True).mean()
     d['fit'] = 1e9 * (d.index * slope_error)
-    print(d)
-    ax = d.plot(y='error_ns', style='.', ms=5, zorder=2)
-    d.plot(y='fit', style='.', ms=1, ax=ax, zorder=1, grid=True, figsize=(20, 10))
+    ax = d.plot(y='error_ns', style='.', ms=5, zorder=2, figsize=(20, 10))
+    d.plot(y=roll_err_col, ms=1, ax=ax, zorder=1)
+    d.plot(y='fit', ms=1, ax=ax, zorder=1, grid=True)
     ax.set_title(f'{title}\n{error_str}')
     ax.set_xlabel("Experiment Time (sec)")
-    ax.set_ylabel("Error (ns)")
-    ax.figure.savefig(f'{title}.time.plot.png')
+    ax.set_ylabel("Cumulative Phase Error (ns)")
+    ax.minorticks_on()
+    ax.grid(which='minor', linestyle=':')
+    ax.grid(which='major', color='red')
+    ax.figure.savefig(f'{title}.time.plot.png', dpi=150, bbox_inches='tight')
 
     d['wander_error_ns'] = 1e9 * d['phase_freq_corrected_timestamp']
     ax = d.plot(y=['wander_error_ns'], grid=True, figsize=(20, 10))
