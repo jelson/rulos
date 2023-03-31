@@ -22,6 +22,10 @@
 
 #define CONSOLE_UART_NUM 0
 
+// 64 bit: rollover at                   1458913
+// variable, 100k threshold: rollover at 1921829
+// variable, 400k threshold: rollover at 2389769
+
 UartState_t console;
 
 int main() {
