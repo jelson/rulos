@@ -69,15 +69,24 @@
 #define NUM_CHANNELS  2
 #define CLOCK_FREQ_HZ 170000000
 
-#define TEST_INPUT_PIN         GPIO_B4
-#define TEST_INPUT_PERIOD_USEC 1000000
-
 #define TIMESTAMP_PRINT_PERIOD_USEC 100000
 #define TIMESTAMP_BUFLEN            200
+#define MONOTONICITY_CHECK          1
+
 // channel configurations
 typedef struct {
+  // number of missed pulses
+  uint32_t num_pulses;
+  uint32_t num_missed;
+  uint32_t buf_overflows;
+
+  // divider state
   uint32_t divider;
   uint32_t count;
+
+  // previously acquired timestamp
+  uint32_t prev_seconds;
+  uint32_t prev_counter;
 } channel_t;
 
 static channel_t channels[NUM_CHANNELS];
@@ -92,14 +101,34 @@ typedef struct {
 UartState_t uart;
 int num_timestamps = 0;
 timestamp_t timestamp_buffer[TIMESTAMP_BUFLEN];
-bool buffer_overflow = false;
 
 // total seconds elapsed since boot
 uint32_t seconds;
 
-void maybe_store_timestamp(uint8_t channel_num, uint32_t seconds,
-                           uint32_t counter) {
+static void missed_pulse(uint8_t channel_num) {
   channel_t *chan = &channels[channel_num];
+
+  chan->num_missed++;
+}
+
+static void maybe_store_timestamp(uint8_t channel_num, uint32_t seconds,
+                                  uint32_t counter) {
+  channel_t *chan = &channels[channel_num];
+
+  chan->num_pulses++;
+
+#if MONOTONICITY_CHECK
+  // check for monotonicity
+  if (chan->prev_seconds > seconds ||
+      (chan->prev_seconds == seconds &&
+       chan->prev_counter > counter)) {
+    uart_print(&uart, ">>>> BUG: Nonmonotonic timestamps!\n");
+    return;
+  }
+#endif
+
+  chan->prev_seconds = seconds;
+  chan->prev_counter = counter;
 
   chan->count++;
   if (chan->count < chan->divider) {
@@ -110,7 +139,7 @@ void maybe_store_timestamp(uint8_t channel_num, uint32_t seconds,
   chan->count = 0;
 
   if (num_timestamps >= TIMESTAMP_BUFLEN) {
-    buffer_overflow = true;
+    chan->buf_overflows++;
     return;
   }
 
@@ -138,8 +167,8 @@ void TIM2_IRQHandler() {
     LL_TIM_ClearFlag_CC1(TIM2);
     maybe_store_timestamp(0, seconds, TIM2->CCR1);
   } else if (LL_TIM_IsActiveFlag_CC1OVR(TIM2)) {
-    // overflow on capture. should we remember?
     LL_TIM_ClearFlag_CC1OVR(TIM2);
+    missed_pulse(0);
   }
 
   // Channel 2
@@ -148,7 +177,7 @@ void TIM2_IRQHandler() {
     LL_TIM_ClearFlag_CC2(TIM2);
     maybe_store_timestamp(1, seconds, TIM2->CCR2);
   } else if (LL_TIM_IsActiveFlag_CC2OVR(TIM2)) {
-    // overflow on capture. should we remember?
+    missed_pulse(1);
     LL_TIM_ClearFlag_CC2OVR(TIM2);
 
   } else {
@@ -213,7 +242,7 @@ static void drain_output_buffer(void *data) {
   }
 }
 
-void init_timer() {
+static void init_timer() {
   // Start the timer's clock
   __HAL_RCC_TIM2_CLK_ENABLE();
 
@@ -273,34 +302,17 @@ void init_timer() {
   seconds = 0;
 }
 
-static void create_test_input(void *data) {
-  schedule_us(TEST_INPUT_PERIOD_USEC, create_test_input, NULL);
-
-  gpio_set(TEST_INPUT_PIN);
-  for (volatile int i = 0; i < 4; i++) {
-    asm("nop");
-  }
-  gpio_clr(TEST_INPUT_PIN);
-}
-
 int main() {
   rulos_hal_init();
 
   // initialize scheduler with 10msec jiffy clock
   init_clock(10000, TIMER1);
 
-  // set test pins to be outputs
-  gpio_make_output(TEST_INPUT_PIN);
-  gpio_clr(TEST_INPUT_PIN);
-
-  // initialize the main timer and its input capture pin
-  init_timer();
-
   // initialize channel configs. TODO: Add command-line interface so divider
   // values can be configured dynamically
   memset(&channels, 0, sizeof(channels));
   for (int i = 0; i < NUM_CHANNELS; i++) {
-    channels[i].divider = 1;
+    channels[i].divider = 1000000;
   }
 
   // initialize uart
@@ -308,7 +320,10 @@ int main() {
   uart_print(&uart,
              "# Starting timestamper, version " STRINGIFY(GIT_COMMIT) "\n");
 
-  schedule_us(1, create_test_input, NULL);
   schedule_us(1, drain_output_buffer, NULL);
+
+  // initialize the main timer and its input capture pin
+  init_timer();
+
   scheduler_run();
 }
