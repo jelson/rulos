@@ -102,8 +102,9 @@ UartState_t uart;
 int num_timestamps = 0;
 timestamp_t timestamp_buffer[TIMESTAMP_BUFLEN];
 
-// total seconds elapsed since boot
-uint32_t seconds;
+// total seconds elapsed since boot -- for details, see comment at top
+uint32_t seconds_A = 0;
+uint32_t seconds_B = 0;
 
 static void missed_pulse(uint8_t channel_num) {
   channel_t *chan = &channels[channel_num];
@@ -111,11 +112,12 @@ static void missed_pulse(uint8_t channel_num) {
   chan->num_missed++;
 }
 
-static void maybe_store_timestamp(uint8_t channel_num, uint32_t seconds,
-                                  uint32_t counter) {
+static void maybe_store_timestamp(uint8_t channel_num, uint32_t counter) {
   channel_t *chan = &channels[channel_num];
-
   chan->num_pulses++;
+
+  // Get the high order bits
+  const uint32_t seconds = counter < (CLOCK_FREQ_HZ / 2) ? seconds_A : seconds_B;
 
 #if MONOTONICITY_CHECK
   // check for monotonicity
@@ -149,23 +151,33 @@ static void maybe_store_timestamp(uint8_t channel_num, uint32_t seconds,
   num_timestamps++;
 }
 
-// Timer interrupt that fires under two conditions:
-// 1) When the timer rolls over, once per second.
-// 2) When the timer captures input
-void TIM2_IRQHandler() {
-  if (LL_TIM_IsActiveFlag_UPDATE(TIM2)) {
-    LL_TIM_ClearFlag_UPDATE(TIM2);
+// TIM15 fires twice per rollover of TIM2, the input capture timer. It is used
+// to update the high order bits. For details, see comment at top.
+void TIM1_BRK_TIM15_IRQHandler() {
+  if (LL_TIM_IsActiveFlag_UPDATE(TIM15)) {
+    LL_TIM_ClearFlag_UPDATE(TIM15);
 
-    // Timer has rolled over. Happens at 1hz, we just update the seconds
-    // counter.
-    seconds++;
+    // Get the big counter value
+    const uint32_t big_counter = TIM2->CNT;
+
+    // If the big counter is in its second half, increment the first-half high order bits.
+    // Otherwise, set the second-half high order bits equal to the first-half.
+    if (big_counter > (CLOCK_FREQ_HZ / 2)) {
+      seconds_A++;
+    } else {
+      seconds_B = seconds_A;
+    }
   }
+}
 
+
+// TIM2 fires only when the timer captures input.
+void TIM2_IRQHandler() {
   // Channel 1
-  else if (LL_TIM_IsActiveFlag_CC1(TIM2)) {
+  if (LL_TIM_IsActiveFlag_CC1(TIM2)) {
     // Timer channel 1 has captured an input signal.
     LL_TIM_ClearFlag_CC1(TIM2);
-    maybe_store_timestamp(0, seconds, TIM2->CCR1);
+    maybe_store_timestamp(0, TIM2->CCR1);
   } else if (LL_TIM_IsActiveFlag_CC1OVR(TIM2)) {
     LL_TIM_ClearFlag_CC1OVR(TIM2);
     missed_pulse(0);
@@ -175,7 +187,7 @@ void TIM2_IRQHandler() {
   else if (LL_TIM_IsActiveFlag_CC2(TIM2)) {
     // Timer channel 2 has captured an input signal.
     LL_TIM_ClearFlag_CC2(TIM2);
-    maybe_store_timestamp(1, seconds, TIM2->CCR2);
+    maybe_store_timestamp(1, TIM2->CCR2);
   } else if (LL_TIM_IsActiveFlag_CC2OVR(TIM2)) {
     missed_pulse(1);
     LL_TIM_ClearFlag_CC2OVR(TIM2);
@@ -242,25 +254,24 @@ static void drain_output_buffer(void *data) {
   }
 }
 
-static void init_timer() {
-  // Start the timer's clock
+static void init_timers() {
+  // Start the TIM2 clock
   __HAL_RCC_TIM2_CLK_ENABLE();
 
   // Configure the timer to roll over and generate an interrupt once per second,
   // i.e. the autoreload value is equal to the clock frequency in hz (minus 1).
   HAL_NVIC_SetPriority(TIM2_IRQn, 3, 0);
   HAL_NVIC_EnableIRQ(TIM2_IRQn);
-  LL_TIM_InitTypeDef timer_init;
-  timer_init.Prescaler = 0;
-  timer_init.CounterMode = LL_TIM_COUNTERMODE_UP;
-  timer_init.Autoreload = CLOCK_FREQ_HZ - 1;
-  timer_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
-  timer_init.RepetitionCounter = 0;
-  LL_TIM_Init(TIM2, &timer_init);
+  LL_TIM_InitTypeDef timer2_init = {
+    .Prescaler = 0,
+    .CounterMode = LL_TIM_COUNTERMODE_UP,
+    .Autoreload = CLOCK_FREQ_HZ - 1,
+    .ClockDivision = LL_TIM_CLOCKDIVISION_DIV1,
+    .RepetitionCounter = 0,
+  };
+  LL_TIM_Init(TIM2, &timer2_init);
   LL_TIM_SetTriggerOutput(TIM2, LL_TIM_TRGO_UPDATE);
   LL_TIM_DisableMasterSlaveMode(TIM2);
-  LL_TIM_EnableIT_UPDATE(TIM2);
-  LL_TIM_GenerateEvent_UPDATE(TIM2);
 
   // Configure port A, pin 0 GPIO to "alternate function 1" mode, which on the
   // G4 is TIM2, channel 1. On the 32-pin QFP package of the STM32G431, PA0 is
@@ -297,9 +308,37 @@ static void init_timer() {
   LL_TIM_CC_EnableChannel(TIM2, LL_TIM_CHANNEL_CH1);
   LL_TIM_CC_EnableChannel(TIM2, LL_TIM_CHANNEL_CH2);
 
-  // reset the seconds part of our clock - should go after timer enablement
-  // because turning on interrupts seems to generate a spurious one
-  seconds = 0;
+
+  // Configure TIM15: fires twice per TIM2 rollover to increment the high bits
+  // of the counter.
+  __HAL_RCC_TIM15_CLK_ENABLE();
+  HAL_NVIC_SetPriority(TIM1_BRK_TIM15_IRQn, 4, 0);
+  HAL_NVIC_EnableIRQ(TIM1_BRK_TIM15_IRQn);
+  #define SMALLCOUNTER_MAX 10000
+  LL_TIM_InitTypeDef timer15_init = {
+    // The main counter counts to the clock frequency (170MHz), but TIM15 is
+    // only a 16-bit counter which can't count that high. We scale everything
+    // down so it counts up to 10,000 in the time it takes the main counter
+    // counts to 170M.
+    .Prescaler = (CLOCK_FREQ_HZ / SMALLCOUNTER_MAX) - 1,
+    .CounterMode = LL_TIM_COUNTERMODE_UP,
+
+    // Set the autoreload to half the 16B count so this timer fires twice per
+    // rollover of the main counter.
+    .Autoreload = (SMALLCOUNTER_MAX/2) - 1,
+    .ClockDivision = LL_TIM_CLOCKDIVISION_DIV1,
+    .RepetitionCounter = 0,
+  };
+  LL_TIM_Init(TIM15, &timer15_init);
+  LL_TIM_DisableMasterSlaveMode(TIM15);
+  LL_TIM_ClearFlag_UPDATE(TIM15);
+  LL_TIM_EnableIT_UPDATE(TIM15);
+
+  // Start the counter one-quarter of the way through the full-counter rollover
+  // period so that this one fires 1/4 and 3/4 of the way through the main
+  // counter.
+  LL_TIM_SetCounter(TIM15, SMALLCOUNTER_MAX/4);
+  LL_TIM_EnableCounter(TIM15);
 }
 
 int main() {
@@ -323,7 +362,7 @@ int main() {
   schedule_us(1, drain_output_buffer, NULL);
 
   // initialize the main timer and its input capture pin
-  init_timer();
+  init_timers();
 
   scheduler_run();
 }
