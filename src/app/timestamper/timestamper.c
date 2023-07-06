@@ -71,7 +71,7 @@
 
 #define TIMESTAMP_PRINT_PERIOD_USEC 100000
 #define TIMESTAMP_BUFLEN            200
-#define MONOTONICITY_CHECK          1
+#define MONOTONICITY_CHECK          0
 
 // channel configurations
 typedef struct {
@@ -351,7 +351,7 @@ int main() {
   // values can be configured dynamically
   memset(&channels, 0, sizeof(channels));
   for (int i = 0; i < NUM_CHANNELS; i++) {
-    channels[i].divider = 1000000;
+    channels[i].divider = 1;
   }
 
   // initialize uart
