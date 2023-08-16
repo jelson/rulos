@@ -49,7 +49,7 @@
 
 ////// configuration //////
 
-#define LIGHT_TIMEOUT_SEC  5
+#define LIGHT_TIMEOUT_SEC  30
 #define SAMPLING_TIME_MSEC 10
 
 // Initialize with the timeout already set in the future. The program starts
