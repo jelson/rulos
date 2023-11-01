@@ -102,11 +102,22 @@ class Platform:
                 retval.append(f'-D{e}=\\"{os.environ[e]}\\"')
         return retval
 
-    def common_include_dirs(self):
-        return [
+    def common_include_dirs(self, target):
+        inc_dirs = [
             os.path.join(SRC_ROOT, "lib"),
             ".", # app source code directory
         ]
+
+        # Check if any peripherals specify a special include directory
+        for periph_name in target.peripherals + self.extra_peripherals:
+            if periph_name in SpecialRules.PERIPHERALS:
+                periph = SpecialRules.PERIPHERALS[periph_name]
+                for incdir in periph.get('incdir', []):
+                    inc_dirs.append(os.path.join(PROJECT_ROOT, incdir))
+
+        return inc_dirs
+
+
 
     def common_ld_flags(self, target):
         return [
@@ -151,7 +162,7 @@ class Platform:
         env.Append(LINKFLAGS = self.cflags())
         env.Append(LINKFLAGS = target.cflags())
         env.Append(LINKFLAGS = self.ld_flags(target))
-        env.Append(CPPPATH = self.include_dirs())
+        env.Append(CPPPATH = self.include_dirs(target))
         env.Append(CPPPATH = os.path.join(build_obj_dir, "src"))
 
         # Add a linker flag so gcc generates a map, and modify the standard

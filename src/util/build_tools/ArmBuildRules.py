@@ -77,8 +77,8 @@ class ArmPlatform(BaseRules.Platform):
             "-static",
         ]
 
-    def platform_include_dirs(self):
-        return self.common_include_dirs() + [
+    def platform_include_dirs(self, target):
+        return self.common_include_dirs(target) + [
             os.path.join(ARM_ROOT, "common"),
             os.path.join(ARM_ROOT, "common", "CMSIS", "Include"),
         ]
@@ -261,14 +261,15 @@ class ArmStmPlatform(ArmPlatform):
             "-DUSE_FULL_LL_DRIVER",
             "-DUSE_HAL_DRIVER",
             "-DRULOS_ARM_"+self.chip.major_family_name.lower(),
+            "-D"+self.major_family.name,
             f"-D{self.chip.family}=1",
         ]
 
     def ld_flags(self, target):
         return self.arm_ld_flags(target)
 
-    def include_dirs(self):
-        return self.platform_include_dirs() + [
+    def include_dirs(self, target):
+        return self.platform_include_dirs(target) + [
             STM32_ROOT,
             os.path.join(self.major_family.cmsis_root, "Include"),
             os.path.join(self.major_family.hal_root, "Inc"),

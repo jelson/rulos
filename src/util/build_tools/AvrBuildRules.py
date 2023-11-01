@@ -53,8 +53,10 @@ class AvrPlatform(BaseRules.Platform):
             "-Os",
         ]
 
-    def include_dirs(self):
-        return self.common_include_dirs() + [ os.path.join(util.SRC_ROOT, "lib", "chip", "avr") ]
+    def include_dirs(self, target):
+        return self.common_include_dirs(target) + [
+            os.path.join(util.SRC_ROOT, "lib", "chip", "avr"),
+        ]
 
     def ld_flags(self, target):
         return self.common_ld_flags(target)

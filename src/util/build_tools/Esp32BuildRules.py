@@ -97,8 +97,8 @@ class Esp32Platform(BaseRules.Platform):
     def periph_dir(self):
         return os.path.join("esp32", "periph")
 
-    def include_dirs(self):
-        return self.common_include_dirs() + [
+    def include_dirs(self, target):
+        return self.common_include_dirs(target) + [
             # RULOS include dirs
             os.path.join(util.SRC_ROOT, "lib", "chip", "esp32"),
 

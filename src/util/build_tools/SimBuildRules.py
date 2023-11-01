@@ -55,8 +55,8 @@ class SimulatorPlatform(BaseRules.Platform):
     def ld_flags(self, target):
         return  self.common_ld_flags(target)
 
-    def include_dirs(self):
-        return self.common_include_dirs() + [
+    def include_dirs(self, target):
+        return self.common_include_dirs(target) + [
             os.path.join(util.SRC_ROOT, "lib", "chip", "sim")
         ]
 

@@ -33,10 +33,23 @@ CONVERTERS = [
 ]
 
 PERIPHERALS = {
-    'test-periph': {
+    'usb-stm32g4': {
         'src': [
-            'foo.c',
-            'bar.c',
+            'ext/stm32/STM32CubeG4/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c',
+        ],
+        'incdir': [
+            'ext/stm32/STM32CubeG4/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc',
+            'ext/stm32/STM32CubeG4/Middlewares/ST/STM32_USB_Device_Library/Core/Inc',
+        ],
+    },
+
+    'usb-stm32-ext': {
+        'src': [
+            'src/lib/chip/arm/stm32/periph/libusb_stm32/src/usbd_core.c',
+            'src/lib/chip/arm/stm32/periph/libusb_stm32/src/usbd_stm32l433_devfs.c',
+        ],
+        'incdir': [
+            'src/lib/chip/arm/stm32/periph/libusb_stm32/inc',
         ],
     },
 }

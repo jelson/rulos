@@ -22,17 +22,11 @@ from build_tools import *
 
 RulosBuildTarget(
     name = "stm32_libusb_test",
-    sources = ["timestamper.c"],
-    peripherals = "uart libusb_stm32",
+    sources = ["main.c"],
+    peripherals = "usb-stm32g4",
     platforms = [
         ArmStmPlatform(
             "stm32g431x8",
-            extra_cflags = [
-                '-DHSE_VALUE=10000000',
-                '-DRULOS_USE_HSE',
-                '-DRULOS_PLLM=RCC_PLLM_DIV1',
-                '-DRULOS_PLLN=34',
-            ],
         ),
     ],
 ).build()
