@@ -20,7 +20,6 @@ import subprocess
 from . import BaseRules, util
 from SCons.Script import *
 
-DEFAULT_ARM_COMPILER_DIR = "/usr/local/bin/gcc-arm-none-eabi-10-2020-q4-major/bin"
 ARM_ROOT = os.path.join(util.SRC_ROOT, "lib", "chip", "arm")
 STM32_ROOT = os.path.join(ARM_ROOT, "stm32")
 STM32_VENDOR_ROOT = os.path.join(util.PROJECT_ROOT, "ext", "stm32")
@@ -31,10 +30,14 @@ class ArmPlatform(BaseRules.Platform):
     def __init__(self, chip_name, extra_peripherals, extra_cflags):
         super().__init__(extra_peripherals, extra_cflags)
         self.chip_name = chip_name
-        self.toolchain_prefix = os.path.join(
-            os.environ.get('ARM_TOOLCHAIN_DIR', DEFAULT_ARM_COMPILER_DIR),
-            "arm-none-eabi-"
-        )
+        toolchain_dir = os.environ.get('ARM_TOOLCHAIN_DIR', '')
+        if toolchain_dir and not os.path.exists(toolchain_dir):
+            sys.exit(f'ARM_TOOLCHAIN_DIR directory {toolchain_dir} does not exist')
+        self.toolchain_prefix = os.path.join(toolchain_dir, 'arm-none-eabi-')
+
+        test_bin = self.toolchain_prefix + 'gcc'
+        if not util.which(test_bin):
+            sys.exit(f"{test_bin} not found; ensure it's in your path or set ARM_TOOLCHAIN_DIR")
 
     class Architecture:
         def __init__(self, name, arch, mcpu, more_cflags=[]):
