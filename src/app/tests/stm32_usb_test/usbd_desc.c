@@ -20,8 +20,8 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "usbd_core.h"
-#include "usbd_desc.h"
 #include "usbd_conf.h"
+#include "usbd_desc.h"
 
 /* USER CODE BEGIN INCLUDE */
 

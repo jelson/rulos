@@ -35,6 +35,9 @@ CONVERTERS = [
 PERIPHERALS = {
     'usb-stm32g4': {
         'src': [
+            'ext/stm32/STM32CubeG4/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c',
+            'ext/stm32/STM32CubeG4/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c',
+            'ext/stm32/STM32CubeG4/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c',
             'ext/stm32/STM32CubeG4/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c',
         ],
         'incdir': [
