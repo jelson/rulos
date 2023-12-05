@@ -33,11 +33,11 @@ class ArmPlatform(BaseRules.Platform):
         toolchain_dir = os.environ.get('ARM_TOOLCHAIN_DIR', '')
         if toolchain_dir and not os.path.exists(toolchain_dir):
             sys.exit(f'ARM_TOOLCHAIN_DIR directory {toolchain_dir} does not exist')
-        self.toolchain_prefix = os.path.join(toolchain_dir, 'arm-none-eabi-')
-
-        test_bin = self.toolchain_prefix + 'gcc'
-        if not util.which(test_bin):
-            sys.exit(f"{test_bin} not found; ensure it's in your path or set ARM_TOOLCHAIN_DIR")
+        test_path = os.path.join(toolchain_dir, 'arm-none-eabi-gcc')
+        test_path_resolved = util.which(test_path)
+        if not test_path_resolved:
+            sys.exit(f"{test_path} not found; ensure it's in your path or set ARM_TOOLCHAIN_DIR")
+        self.toolchain_prefix = os.path.join(os.path.dirname(test_path_resolved), 'arm-none-eabi-')
 
     class Architecture:
         def __init__(self, name, arch, mcpu, more_cflags=[]):
