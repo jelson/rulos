@@ -1,4 +1,4 @@
-/usr/local/bin/gcc-arm-none-eabi-10-2020-q4-major/bin/arm-none-eabi-gdb \
+gdb-multiarch \
     ~/projects/rulos/build/duktig-v2/arm-stm32g030x6/duktig-v2.elf \
     -ex "set confirm off" \
     -ex "set pagination off" \
