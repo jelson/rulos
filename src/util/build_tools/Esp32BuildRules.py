@@ -203,13 +203,19 @@ class Esp32Platform(BaseRules.Platform):
 
         import serial.tools.list_ports as list_ports
 
-        esp32_ports = list(list_ports.grep('CP2104'))
+        print("Port list:");
+        for port in list_ports.comports():
+            print(f"port {port}")
+        #port_type = "CP2104"
+        port_type = "CP2102"
+        #port_type = "USB Single"   # TTGO
+        esp32_ports = list(list_ports.grep(port_type))
 
         if len(esp32_ports) == 0:
-            raise Exception("No CP2104 USB ports found; is your ESP32 plugged in?")
+            raise Exception(f"No {port_type} USB ports found; is your ESP32 plugged in?")
 
         if len(esp32_ports) > 1:
-            raise Exception("Multiple CP2104 USB ports found. Unplug some, or specify with RULOS_ESP32_PORT env var")
+            raise Exception(f"Multiple {port_type} USB ports found. Unplug some, or specify with RULOS_ESP32_PORT env var")
 
         return esp32_ports[0].device
 
