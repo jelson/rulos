@@ -25,14 +25,14 @@
 
 #define TEST_PIN GPIO_2
 
-static int xline = 0;
+static int line = 0;
 
 static void test_func(void *data) {
   schedule_us(MESSAGE_FREQ_US, test_func, data);
 
   gpio_set(TEST_PIN);
   gpio_clr(TEST_PIN);
-  LOG("Hello world from esp32, line %d at time %d", xline++, clock_time_us());
+  LOG("Hello world from esp32, line %d at time %d", line++, clock_time_us());
 }
 
 int main() {
