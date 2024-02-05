@@ -761,23 +761,26 @@ static void on_usart_interrupt(uint8_t uart_id) {
 
   u->tot_ints++;
 
-  // if a character arrived, add it to the rx buffer
-  int num_read = 0;
-  while (LL_USART_IsActiveFlag_RXNE(c->instance)) {
-    // note: we have to read the character whether or not we send it anywhere;
-    // reading the char is what clears the interrupt
-    num_read++;
-    receive_char_int(uart_id, u, c, LL_USART_ReceiveData8(c->instance));
-  }
+  // if this uart is expecting to rx, and a character arrived, add it to the rx
+  // buffer
+  if (u->rx_buf) {
+      int num_read = 0;
+      while (u->rx_buf && LL_USART_IsActiveFlag_RXNE(c->instance)) {
+        // note: we have to read the character whether or not we send it anywhere;
+        // reading the char is what clears the interrupt
+        num_read++;
+        receive_char_int(uart_id, u, c, LL_USART_ReceiveData8(c->instance));
+      }
 
-  // If we read anything, update some statistics
-  if (num_read > 0) {
-    if (num_read > u->max_chars_per_rx_isr) {
-      u->max_chars_per_rx_isr = num_read;
-    }
-    if (u->min_chars_per_rx_isr == 0 || num_read < u->min_chars_per_rx_isr) {
-      u->min_chars_per_rx_isr = num_read;
-    }
+      // If we read anything, update some statistics
+      if (num_read > 0) {
+        if (num_read > u->max_chars_per_rx_isr) {
+          u->max_chars_per_rx_isr = num_read;
+        }
+        if (u->min_chars_per_rx_isr == 0 || num_read < u->min_chars_per_rx_isr) {
+          u->min_chars_per_rx_isr = num_read;
+        }
+      }
   }
 
   // on idle interrupt, flush the rx buffers upwards
