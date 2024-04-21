@@ -73,6 +73,10 @@
 #define TIMESTAMP_BUFLEN            200
 #define MONOTONICITY_CHECK          0
 
+#define LED_CLOCK GPIO_F1
+#define LED_CHAN0 GPIO_A4
+#define LED_CHAN1 GPIO_A5
+
 // channel configurations
 typedef struct {
   // number of missed pulses
@@ -87,6 +91,8 @@ typedef struct {
   // previously acquired timestamp
   uint32_t prev_seconds;
   uint32_t prev_counter;
+
+  bool recent_pulse;
 } channel_t;
 
 static channel_t channels[NUM_CHANNELS];
@@ -115,6 +121,7 @@ static void missed_pulse(uint8_t channel_num) {
 static void maybe_store_timestamp(uint8_t channel_num, uint32_t counter) {
   channel_t *chan = &channels[channel_num];
   chan->num_pulses++;
+  chan->recent_pulse = true;
 
   // Get the high order bits
   const uint32_t seconds = counter < (CLOCK_FREQ_HZ / 2) ? seconds_A : seconds_B;
@@ -228,8 +235,41 @@ static void print_one_timestamp(timestamp_t *t) {
   uart_write(&uart, buf, len);
 }
 
+static bool received_recent_pulse(uint8_t channel_num) {
+  if (channels[channel_num].recent_pulse) {
+    channels[channel_num].recent_pulse = false;
+    return true;
+  }
+
+  return false;
+}
+
+static void update_leds(void) {
+  static bool on_phase = false;
+
+  on_phase = !on_phase;
+
+  if (on_phase) {
+    // blink the clock LED unconditionally
+    gpio_set(LED_CLOCK);
+
+    // blink the channel LEDs only if they've received recent pulses
+    if (received_recent_pulse(0)) {
+        gpio_set(LED_CHAN0);
+    }
+    if (received_recent_pulse(1)) {
+      gpio_set(LED_CHAN1);
+    }
+  } else {
+    gpio_clr(LED_CLOCK);
+    gpio_clr(LED_CHAN0);
+    gpio_clr(LED_CHAN1);
+  }
+}
+
 static void drain_output_buffer(void *data) {
   schedule_us(TIMESTAMP_PRINT_PERIOD_USEC, drain_output_buffer, NULL);
+  update_leds();
 
   // In critical section, copy the entire timestamp buffer into a temporary area
   // and immediately release the lock. This minimizes the time we might miss a
@@ -360,6 +400,11 @@ int main() {
              "# Starting timestamper, version " STRINGIFY(GIT_COMMIT) "\n");
 
   schedule_us(1, drain_output_buffer, NULL);
+
+  // initialize the output LEDs
+  gpio_make_output(LED_CLOCK);
+  gpio_make_output(LED_CHAN0);
+  gpio_make_output(LED_CHAN1);
 
   // initialize the main timer and its input capture pin
   init_timers();
