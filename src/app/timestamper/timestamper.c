@@ -73,7 +73,7 @@
 #define TIMESTAMP_BUFLEN            200
 #define MONOTONICITY_CHECK          0
 
-#define LED_CLOCK GPIO_F1
+#define LED_CLOCK GPIO_B7
 #define LED_CHAN0 GPIO_A4
 #define LED_CHAN1 GPIO_A5
 
