@@ -33,6 +33,9 @@
 #elif defined(BOARD_LTETAG_DEV_REV_A)
 #define SCL_PIN GPIO_PIN_6
 #define SDA_PIN GPIO_PIN_7
+#elif defined(BOARD_LORA_LOGGER_REV_A)
+#define SCL_PIN GPIO_PIN_9
+#define SDA_PIN GPIO_PIN_10
 #else
 #error "unknown pins"
 #endif
@@ -76,8 +79,28 @@ static bool reg_read(uint8_t device_addr, uint8_t reg_addr,
 }
 
 static void start_i2c() {
+GPIO_InitTypeDef GPIO_InitStruct;
+
+#if defined(BOARD_LORA_LOGGER_REV_A)
+  // I2C pins are on PA9 (I2C1 SCL) and PA10 (I2C1 SDA)
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  GPIO_InitStruct.Pin = GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF6_I2C1;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = GPIO_PIN_10;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  // Enable the I2C peripheral
+  __HAL_RCC_I2C1_CLK_ENABLE();
+  i2c_handle.Instance = I2C1;
+  i2c_handle.Init.Timing = 0x10707DBC;
+
+#else
   // I2C pins are on PB6 (I2C1 SCL) and PB9 (I2C1 SDA)
-  GPIO_InitTypeDef GPIO_InitStruct;
   GPIO_InitStruct.Pin = SCL_PIN;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
@@ -87,7 +110,6 @@ static void start_i2c() {
 
   GPIO_InitStruct.Pin = SDA_PIN;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
   // Enable the I2C peripheral
   __HAL_RCC_I2C1_CLK_ENABLE();
   i2c_handle.Instance = I2C1;
@@ -97,7 +119,10 @@ static void start_i2c() {
                                13,  // SDADEL, data hold time
                                54,  // SCLH, clock high period
                                84   // SCLL, clock low period
-      );
+      );  
+  
+  #endif
+
   i2c_handle.Init.OwnAddress1 = 0;
   i2c_handle.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   i2c_handle.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -105,6 +130,7 @@ static void start_i2c() {
   i2c_handle.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
   i2c_handle.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
   i2c_handle.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+
   if (HAL_I2C_Init(&i2c_handle) != HAL_OK) {
     __builtin_trap();
   }
@@ -117,7 +143,11 @@ bool ina219_init(uint8_t device_addr, uint32_t prescale, uint16_t calibration) {
     start_i2c();
   }
 
+#if(BOARD_LORA_LOGGER_REV_A)
+  LOG("Trying to initialize INA219 on address 0x%x using Loralogger...", device_addr);
+#else
   LOG("Trying to initialize INA219 on address 0x%x...", device_addr);
+#endif
 
   // reset device
   uint16_t reset_reg = 1 << 15;
