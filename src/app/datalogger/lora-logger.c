@@ -52,16 +52,44 @@ serial_reader_t psoc_console_tx;
 
 currmeas_state_t bat_cms, modem_cms;
 
+void ClearOptionByte (void){
+
+  /* Clear the LOCK bit in FLASH->CR (precondition for option byte flash) */
+  FLASH->KEYR = 0x45670123;
+  FLASH->KEYR = 0xCDEF89AB;
+  /* Clear the OPTLOCK bit in FLASH->CR */
+  FLASH->OPTKEYR = 0x08192A3B;
+  FLASH->OPTKEYR = 0x4C5D6E7F;
+
+    /* Enable legacy mode (BOOT0 bit defined by BOOT0 pin) */
+  /* by clearing the nBOOT_SELection bit */
+  FLASH->OPTR &= ~FLASH_OPTR_nBOOT_SEL;
+  
+  /* check if there is any flash operation */
+  while( (FLASH->SR & FLASH_SR_BSY1) != 0 )
+    ;
+  
+  /* start the option byte flash */
+  FLASH->CR |= FLASH_CR_OPTSTRT;
+  /* wait until flashing is done */
+  while( (FLASH->SR & FLASH_SR_BSY1) != 0 )
+    ;  
+
+  /* do a busy delay, for about one second, check BSY1 flag to avoid compiler loop optimization */
+  for( unsigned long i = 0; i < 2000000; i++ )
+    if ( (FLASH->SR & FLASH_SR_BSY1) != 0 )
+      break;
+  
+  /* load the new value and do a system reset */
+  /* this will behave like a goto to the begin of this main procedure */
+  FLASH->CR |= FLASH_CR_OBL_LAUNCH;
+
+}
+
 void JumpToBootloader (void)
 {
-void (*SysMemBootJump)(void);
-
-
-/* Set a vector addressed with STM32 Microcontrollers names */
-/* Each vector position contains an address to the boot loader entry point */
-
+  void (*SysMemBootJump)(void);
 	volatile uint32_t BootAddr;
-
 	BootAddr = 0x1FFF0000;
 
 	/* Disable all interrupts */
@@ -74,7 +102,6 @@ void (*SysMemBootJump)(void);
 	HAL_RCC_DeInit();
 
 	/* Clear Interrupt Enable Register & Interrupt Pending Register */
-
   NVIC->ICER[0]=0xFFFFFFFF;
   NVIC->ICPR[0]=0xFFFFFFFF;
   NVIC->ICER[1]=0xFFFFFFFF;
@@ -84,7 +111,7 @@ void (*SysMemBootJump)(void);
   NVIC->ICER[3]=0xFFFFFFFF;
   NVIC->ICPR[3]=0xFFFFFFFF;
   NVIC->ICER[4]=0xFFFFFFFF;
-  NVIC->ICPR[5]=0xFFFFFFFF;      
+  NVIC->ICPR[4]=0xFFFFFFFF;      
 
 	/* Re-enable all interrupts */
 	__enable_irq();
@@ -146,20 +173,26 @@ int main() {
 
   //check the flash option.  If it is not clear, fallback to manually reading the pin and jumping.
   if ( (FLASH->OPTR & FLASH_OPTR_nBOOT_SEL) != 0 ){
-    gpio_set(GREEN_LED);
-    if(gpio_is_clr(BOOT_PIN))
+    ClearOptionByte();
+    if(gpio_is_set(BOOT_PIN))
       JumpToBootloader();
-  }
-  else {
-    gpio_set(ORANGE_LED);
   }
 
   init_clock(10000, TIMER1);
 
+
+  // initialize console USB Uart
+  #if 1
   // initialize console uart
   uart_init(&console, CONSOLE_UART_NUM, 1000000);
   log_bind_uart(&console);
   LOG("Lora Listener starting, rev " STRINGIFY(GIT_COMMIT));
+  #else
+  // initialize console uart
+  uart_init(&console, CONSOLE_UART_NUM, 1000000);
+  log_bind_uart(&console);
+  LOG("Lora Listener starting, rev " STRINGIFY(GIT_COMMIT));
+  #endif
 
   // initialize flash dumper
   flash_dumper_init(&flash_dumper);
@@ -172,7 +205,17 @@ int main() {
   // trunc[0.04096 / (current_lsb * R_shunt)]
 
   //check logger button, set sleep measurement if held at startup.
+  int i = 5;
   if(gpio_is_clr(LOG_PIN)) {
+    
+    while (i>0){    
+    gpio_set(ORANGE_LED);
+    delay_us(250000);
+    gpio_clr(ORANGE_LED);
+    delay_us(250000);
+    i--;
+    }
+
     gpio_clr(RANGE_SEL);
     // BAT: R_shunt is 100R, Iresolution = 0.1
     // .04096 / (0.1 * 100 ohms) = .004096 * 10K
@@ -180,6 +223,15 @@ int main() {
                   10,
                   1, &flash_dumper);
   } else {
+
+    while (i>0){    
+    gpio_set(GREEN_LED);
+    delay_us(250000);
+    gpio_clr(GREEN_LED);
+    delay_us(250000);
+    i--;
+    }
+
     // BAT: R_shunt is 150 milliohms, Iresolution = 66.7
     // .04096 / (66.7 uA * 0.150 ohms) = 4.09395 x 10K 
     currmeas_init(&bat_cms, BAT_POWERMEASURE_ADDR, VOLT_PRESCALE_DIV1, 40940, 
