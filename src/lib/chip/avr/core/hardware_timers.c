@@ -20,16 +20,17 @@
  * hardware_timers.c: Hardware timer setup for AVR line.
  */
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #ifdef PRESCALE_TEST
 
 #include <assert.h>
-#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-#define FALSE 0
 uint32_t hardware_f_cpu;
 
 #else  // !PRESCALE_TEST
@@ -42,53 +43,81 @@ uint32_t hardware_f_cpu;
 #include "core/hardware.h"
 #include "core/rulos.h"
 
-void null_handler(void *data) {
+static void null_handler(void *data) {
 }
 
-clock_handler_t timer0_handler = null_handler;
-clock_handler_t timer1_handler = null_handler;
-clock_handler_t timer2_handler = null_handler;
-
-void *timer0_data = NULL;
-void *timer1_data = NULL;
-void *timer2_data = NULL;
+///// timer0
 
 #if defined(MCU328_line) || defined(MCU1284_line)
-ISR(TIMER0_COMPA_vect)
+#define TIMER0_ISR TIMER0_COMPA_vect
 #elif defined(MCUtiny84_line) || defined(MCUtiny85_line)
-ISR(TIM0_COMPA_vect)
+#define TIMER0_ISR TIM0_COMPA_vect
 #elif defined(MCU8_line)
-static inline void unused_function_0()
+#undef TIMER0_ISR
 #else
 #error hardware-specific timer code needs help!
 #endif
-{
+
+#ifdef TIMER0_ISR
+
+clock_handler_t timer0_handler = null_handler;
+void *timer0_data = NULL;
+
+ISR(TIMER0_ISR) {
   timer0_handler(timer0_data);
 }
 
+#endif
+
+///// timer1
+
 #if defined(MCU328_line) || defined(MCU1284_line) || defined(MCU8_line)
-ISR(TIMER1_COMPA_vect)
-#elif defined(MCUtiny84_line) || defined(MCUtiny85_line)
-ISR(TIM1_COMPA_vect)
+#define TIMER1_ISR TIMER1_COMPA_vect
+#elif defined(MCUtiny84_line)
+#define TIMER1_ISR TIM1_COMPA_vect
+#elif defined (MCUtiny85_line)
+#undef TIMER1_ISR
 #else
 #error hardware-specific timer code needs help!
 #endif
-{
+
+#ifdef TIMER1_ISR
+
+clock_handler_t timer1_handler = null_handler;
+void *timer1_data = NULL;
+
+ISR(TIMER1_ISR) {
   timer1_handler(timer1_data);
 }
 
+#endif
+
+///// timer2
+
 #if defined(MCU8_line)
-ISR(TIMER2_COMP_vect)
+#define TIMER2_ISR TIMER2_COMP_vect
 #elif defined(MCU328_line) || defined(MCU1284_line)
-ISR(TIMER2_COMPA_vect)
+#define TIMER2_ISR TIMER2_COMPA_vect
 #elif defined(MCUtiny84_line) || defined(MCUtiny85_line)
-static inline void unused_function_2()
+#undef TIMER2_ISR
 #else
 #error hardware-specific timer code needs help!
 #endif
-{
+
+#ifdef TIMER2_ISR
+
+clock_handler_t timer2_handler = null_handler;
+void *timer2_data = NULL;
+
+ISR(TIMER2_ISR) {
   timer2_handler(timer2_data);
 }
+
+#endif
+
+
+//////////
+
 
 uint32_t f_cpu_values[] = {
     (1000000),
@@ -143,18 +172,27 @@ void init_f_cpu() {
  * keep the intermediate results fitting in a 32-bit int.
  */
 
-static const uint8_t timer0_prescaler_bits[] = {0xff, 0,  3,    6,
-                                                8,    10, 0xff, 0xff};
-static const uint8_t timer1_prescaler_bits[] = {0xff, 0,  3,    6,
-                                                8,    10, 0xff, 0xff};
-static const uint8_t timer2_prescaler_bits[] = {0xff, 0, 3, 5, 6, 7, 8, 10};
 typedef struct {
   const uint8_t *prescaler_bits;
   const uint8_t ocr_bits;
 } TimerDef;
+
+#ifdef TIMER0_ISR
+static const uint8_t timer0_prescaler_bits[] = {0xff, 0,  3,    6,
+                                                8,    10, 0xff, 0xff};
 static const TimerDef timer0 = {timer0_prescaler_bits, 8};
+#endif
+
+#ifdef TIMER1_ISR
+static const uint8_t timer1_prescaler_bits[] = {0xff, 0,  3,    6,
+                                                8,    10, 0xff, 0xff};
 static const TimerDef timer1 = {timer1_prescaler_bits, 16};
+#endif
+
+#ifdef TIMER2_ISR
+static const uint8_t timer2_prescaler_bits[] = {0xff, 0, 3, 5, 6, 7, 8, 10};
 static const TimerDef timer2 = {timer2_prescaler_bits, 8};
+#endif
 
 static void find_prescaler(uint32_t req_us_per_period, const TimerDef *timerDef,
                            uint32_t *out_us_per_period,
@@ -215,8 +253,7 @@ uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
   cli();
 
   switch (timer_id) {
-#if defined(MCU328_line) || defined(MCU1284_line) || \
-    defined(MCUtiny84_line) || defined(MCUtiny85_line)
+#ifdef TIMER0_ISR
     case TIMER0: {
       find_prescaler(us, &timer0, &actual_us_per_period, &cs, &ocr);
 
@@ -245,8 +282,7 @@ uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
     }
 #endif
 
-#if defined(MCU8_line) || defined(MCU328_line) || defined(MCU1284_line) || \
-    defined(MCUtiny84_line)
+#ifdef TIMER1_ISR
     case TIMER1: {
       find_prescaler(us, &timer1, &actual_us_per_period, &cs, &ocr);
 
@@ -276,7 +312,7 @@ uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
     }
 #endif
 
-#if defined(MCU8_line) || defined(MCU328_line) || defined(MCU1284_line)
+#ifdef TIMER2_ISR
     case TIMER2: {
       find_prescaler(us, &timer2, &actual_us_per_period, &cs, &ocr);
 
