@@ -19,3 +19,6 @@
 [submodule "src/ext/stm32/STM32CubeF1"]
 	path = ext/stm32/STM32CubeF1
 	url = https://github.com/STMicroelectronics/STM32CubeF1
+[submodule "ext/stm32/STM32CubeC0"]
+	path = ext/stm32/STM32CubeC0
+	url = https://github.com/STMicroelectronics/STM32CubeC0
