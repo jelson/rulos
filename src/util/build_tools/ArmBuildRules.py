@@ -190,6 +190,10 @@ class ArmStmPlatform(ArmPlatform):
             self.major_family_name = family[:7]
 
     CHIPS = dict([(chip.name, chip) for chip in [
+        # stm32c0
+        Chip("stm32c011x4", "STM32C011xx", flashk=  16, ramk=  6),
+        Chip("stm32c011x6", "STM32C011xx", flashk=  32, ramk=  6),
+
         # stm32f0
         Chip("stm32f030x4", "STM32F030x6", flashk=  16, ramk=  4),
         Chip("stm32f030x6", "STM32F030x6", flashk=  32, ramk=  4),
@@ -245,6 +249,7 @@ class ArmStmPlatform(ArmPlatform):
             self.sources = os.path.join(self.cmsis_root, "Source", "Templates", "system_"+name.lower()+"xx.c")
 
     MAJOR_FAMILIES = dict([(fam.name, fam) for fam in [
+        MajorFamily("STM32C0", "m0plus"),
         MajorFamily("STM32F0", "m0"),
         MajorFamily("STM32F1", "m3"),
         MajorFamily("STM32F3", "m4f"),

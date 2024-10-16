@@ -1,6 +1,9 @@
 #pragma once
 
-#if defined(RULOS_ARM_stm32f0)
+#if defined(RULOS_ARM_stm32c0)
+#include "stm32c0xx.h"
+#include "stm32c0xx_ll_gpio.h"
+#elif defined(RULOS_ARM_stm32f0)
 #include "stm32f0xx.h"
 #include "stm32f0xx_ll_gpio.h"
 #elif defined(RULOS_ARM_stm32f1)

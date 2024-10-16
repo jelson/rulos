@@ -20,7 +20,53 @@
 #include "core/hal.h"
 #include "core/hardware.h"
 
-#if defined(RULOS_ARM_stm32f0)
+#if defined(RULOS_ARM_stm32c0)
+/**
+  * @brief  System Clock Configuration
+  *         The system Clock is configured as follow :
+  *            System Clock source            = HSI
+  *            SYSCLK(Hz)                     = 48000000
+  *            HCLK(Hz)                       = 48000000
+  *            AHB Pre-scaler                 = 1
+  *            APB1 Pre-scaler                = 1
+  *            VDD(V)                         = 3.3
+  *            Flash Latency(WS)              = 1
+  * @param  None
+  * @retval None
+  */
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+  /* Activate HSI as clock system source  */
+  RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_HSE | RCC_OSCILLATORTYPE_LSE;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.HSEState            = RCC_HSE_OFF;
+  RCC_OscInitStruct.LSEState            = RCC_LSE_OFF;
+  RCC_OscInitStruct.HSIState            = RCC_HSI_ON;
+  RCC_OscInitStruct.HSIDiv              = RCC_HSI_DIV1;
+
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    /* Initialization Error */
+    __builtin_trap();
+  }
+
+  /* Initializes the SYS, AHB and APB busses clocks  */
+  RCC_ClkInitStruct.ClockType      = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1);
+  RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+  {
+    /* Initialization Error */
+    __builtin_trap();
+  }
+}
+
+#elif defined(RULOS_ARM_stm32f0)
 /**
  * @brief  System Clock Configuration
  *         The system Clock is configured as follow :
