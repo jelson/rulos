@@ -70,7 +70,7 @@ int main() {
 
   // initialize serial readers
   serial_reader_init(&psoc_console_tx, PSOC_TX_UART_NUM, 1000000, &flash_dumper,
-                     NULL);
+                     NULL, NULL);
 #if 0
   serial_reader_init(&modem_uart, MODEM_UART_NUM, 115200, &flash_dumper, NULL);
   serial_reader_init(&gps_uart, GPS_UART_NUM, 115200, &flash_dumper, NULL);

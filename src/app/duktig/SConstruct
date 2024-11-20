@@ -36,10 +36,15 @@ RulosBuildTarget(
     platforms = [
         ArmStmPlatform(
             "stm32g030x6",
-            #"stm32g031x8",
             extra_cflags = [
                 "-DRULOS_HSI_SYSCLOCK=RCC_HSI_DIV8",
             ],
-        )
+        ),
+        ArmStmPlatform(
+            "stm32c011x6",
+            extra_cflags = [
+                "-DRULOS_HSI_SYSCLOCK=RCC_HSI_DIV8",
+            ],
+        ),
     ],
 ).build()

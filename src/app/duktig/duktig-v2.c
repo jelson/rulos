@@ -24,17 +24,26 @@
 #include "core/hardware.h"
 #include "core/rulos.h"
 #include "core/util.h"
+
+#if defined(STM32C0)
+#include "stm32c0xx_hal_rcc.h"
+#include "stm32c0xx_ll_exti.h"
+#include "stm32c0xx_ll_pwr.h"
+#include "stm32c0xx_ll_rcc.h"
+#include "stm32c0xx_ll_tim.h"
+#else
 #include "stm32g0xx_hal_rcc.h"
 #include "stm32g0xx_ll_exti.h"
 #include "stm32g0xx_ll_pwr.h"
 #include "stm32g0xx_ll_rcc.h"
 #include "stm32g0xx_ll_tim.h"
+#endif
 
 #define BUT1   GPIO_A2
 #define BUT2   GPIO_A4
 #define LED1   GPIO_A0
 #define LED2   GPIO_A6
-#define PWRLED GPIO_B3
+#define PWRLED GPIO_B6
 
 #define JIFFY_TIME_US          10000
 #define KEY_REFRACTORY_TIME_US 10000
@@ -149,12 +158,21 @@ void power_down() {
   __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WUF2);
   __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WUF4);
 
-  HAL_PWR_EnterSTANDBYMode();
+#if defined(STM32C0)
+  HAL_PWREx_EnterSHUTDOWNMode();
+#else
   // SHUTDOWN: not available on the stm32g0x0
-  // HAL_PWREx_EnterSHUTDOWNMode();
+  HAL_PWR_EnterSTANDBYMode();
+#endif
+
 #else   // USE_SHUTDOWN
   HAL_SuspendTick();
+
+#if defined(STM32C0)
+  HAL_PWR_EnterSTOPMode(PWR_MAINREGULATOR_ON, PWR_STOPENTRY_WFI);
+#else
   HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_STOPENTRY_WFI);
+#endif
   HAL_ResumeTick();
 #endif  // USE_SHUTDOWN
 }
@@ -288,7 +306,9 @@ int main() {
   // note: must be under 2mhz for this mode to work. See makefile for defines
   // that work in conjunction with stm32-hardware.c to set clock options to
   // 2mhz using HSI directly, disabling PLL.
+#if defined(STM32G0)
   LL_PWR_EnableLowPowerRunMode();
+#endif
 
   // init state
   memset(&duktig, 0, sizeof(duktig));
@@ -330,9 +350,12 @@ int main() {
   LL_TIM_InitTypeDef timer_init;
   timer_init.Prescaler = 0;
   timer_init.CounterMode = LL_TIM_COUNTERMODE_UP;
-  // 500 counts = 4khz. Chip configured to run at 2mhz, but clocks
-  // run at 2x core speed (I think)
+  // Update at around 400hz, slow enough that doesn't confuse the built in dimmer
+#if defined(STM32C0)
+  timer_init.Autoreload = 10000;
+#else
   timer_init.Autoreload = 500;
+#endif
   timer_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
   timer_init.RepetitionCounter = 0;
   LL_TIM_Init(TIM3, &timer_init);
