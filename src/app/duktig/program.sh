@@ -1,5 +1,5 @@
-BIN=~/projects/rulos/build/duktig-v2/arm-stm32g030x6/duktig-v2.elf
-#BIN=~/projects/rulos/build/duktig-v2/arm-stm32c011x6/duktig-v2.elf
+#BIN=~/projects/rulos/build/duktig-v2/arm-stm32g030x6/duktig-v2.elf
+BIN=~/projects/rulos/build/duktig-v2/arm-stm32c011x6/duktig-v2.elf
 
 gdb-multiarch \
     $BIN \
