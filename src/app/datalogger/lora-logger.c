@@ -23,6 +23,7 @@
 #include "serial_reader.h"
 #include "curr_meas.h"
 #include "ina219.h"
+#include "periph/uart/uart_hal.h"
 
 // uart definitions
 #define CONSOLE_UART_NUM 0
@@ -145,6 +146,7 @@ static void indicate_alive(void *data) {
     gpio_set(ORANGE_LED);
   }
   schedule_us(30000, turn_off_led, NULL);
+  hal_uart_log_stats(PSOC_TX_UART_NUM);
 }
 
 int main() {
