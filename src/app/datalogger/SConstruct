@@ -65,7 +65,7 @@ apps = [
         'sizes': {
             'max_line_len': 256,
             'tx_queue_len': 128,
-            'rx_queue_len': 8192,
+            'rx_queue_len': 16384,
         },        
         'extra_cflags': [
             "-DRULOS_UART0_RX_PIN=GPIO_B7",

@@ -586,6 +586,16 @@ static void on_rx_dma_interrupt(uint8_t uart_id) {
 
 static size_t get_rx_stored_chars_dma(uint8_t uart_id, stm32_uart_t *u,
                                       const stm32_uart_config_t *c) {
+
+  size_t len = 0;
+  for (int i=0; i<50*8; i++) {
+    size_t l = LL_DMA_GetDataLength(c->rx_dma_instance, c->rx_dma_channel);
+    if (i && l != len) {
+      break;
+    }
+    len = l;
+  }
+  
   // Disable DMA
   LL_DMA_DisableChannel(c->rx_dma_instance, c->rx_dma_channel);
 
