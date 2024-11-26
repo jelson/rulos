@@ -62,7 +62,7 @@ int main() {
 
   // initialize serial readers
   serial_reader_init(&psoc_console_tx, PSOC_TX_UART_NUM, 1000000, &flash_dumper,
-                     NULL);
+                     NULL, NULL);
 
   // enable periodic blink to indicate liveness
   schedule_now(indicate_alive, NULL);
