@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 # Generate a file with 2^20 (~1 million) binary 32-bit numbers. The
 # intent is to copy the generated file on to an SD card and read it
@@ -44,5 +44,3 @@ f = open("4meg.bin", "wb")
 for i in range(1 << 20):
     num = i * 4093;
     f.write(bytes(num.to_bytes(4, byteorder='big')))
-    
-

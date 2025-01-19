@@ -126,7 +126,7 @@ class Platform:
         ]
 
     def build(self, target):
-        env = Environment()
+        env = Environment(ENV = {'PATH' : os.environ['PATH']})
 
         # We're pretending the sources appear in build_obj_dir, so they look
         # adjacent to the build output.

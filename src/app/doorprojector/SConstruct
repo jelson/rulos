@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 #
 # Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson
 # (jelson@gmail.com).
@@ -29,4 +29,3 @@ RulosBuildTarget(
     extra_cflags = ["-DBOARD_GENERIC"],
     peripherals = "adc input_controller",
 ).build()
-

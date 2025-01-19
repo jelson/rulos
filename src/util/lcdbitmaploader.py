@@ -1,17 +1,17 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 # Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson (jelson@gmail.com).
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
@@ -53,7 +53,7 @@ class ImageCat:
 			self.image.paste(img, (self.catsize[0], 0))
 
 		self.catsize = (self.catsize[0]+isize[0], max(self.catsize[1], isize[1]))
-	
+
 	def emit(self, symname, filename):
 		self.index_to_x.append(self.catsize[0])
 		fp = open(filename, "w")
@@ -78,7 +78,7 @@ class ImageCat:
 		fp.write("uint16_t %s_num_rows = %d;\n" % (symname, self.getcatsize()[1]/8))
 
 		#self.image.save("catimage.png")
-		
+
 def main():
 	print("globbing %s" % (os.path.abspath(sys.argv[2])))
 	flist = glob.glob("%s/*.png" % (sys.argv[2]))
