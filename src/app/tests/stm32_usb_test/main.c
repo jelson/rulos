@@ -20,12 +20,17 @@
 #include "core/rulos.h"
 #include "usbd_cdc.h"
 #include "usbd_conf.h"
+#include <stdio.h>
+#include <stdarg.h>
 
 USBD_HandleTypeDef hUsbDeviceFS;
 extern USBD_DescriptorsTypeDef CDC_Desc;
 
 uint8_t UserTxBuffer[2048];
 uint8_t UserRxBuffer[CDC_DATA_FS_MAX_PACKET_SIZE];
+
+// Track whether we're ready to transmit
+static bool usb_ready = false;
 
 static USBD_HandleTypeDef malloc_mem;
 static bool malloc_allocated = false;
@@ -64,13 +69,29 @@ static int8_t CDC_DeInit_FS(void)
 static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 {
   LOG("got usb control command %d", cmd);
+
+  // When host opens the port, mark USB as ready
+  if (cmd == CDC_SET_CONTROL_LINE_STATE) {
+    usb_ready = true;
+    LOG("USB CDC ready!");
+  }
+
   return USBD_OK;
 }
 
 static int8_t CDC_Receive_FS(uint8_t* buf, uint32_t *len)
 {
-  LOG("got %d bytes:", len);
+  LOG("got %d bytes:", *len);
   log_write(buf, *len);
+
+  // Echo the received data back
+  if (usb_ready && *len > 0) {
+    USBD_CDC_SetTxBuffer(&hUsbDeviceFS, buf, *len);
+    USBD_CDC_TransmitPacket(&hUsbDeviceFS);
+  }
+
+  // Prepare to receive more data
+  USBD_CDC_ReceivePacket(&hUsbDeviceFS);
   return USBD_OK;
 }
 
@@ -87,6 +108,57 @@ USBD_CDC_ItfTypeDef USBD_Interface_fops_FS =
   CDC_Receive_FS,
   CDC_TransmitComplete,
 };
+
+//////////////////////////////////////////////////////////////////////////////
+// Helper API for easy USB CDC transmission
+//////////////////////////////////////////////////////////////////////////////
+
+// Send a string over USB CDC
+int usb_cdc_puts(const char *str) {
+  if (!usb_ready) {
+    return -1;  // Not ready
+  }
+
+  uint16_t len = 0;
+  while (str[len] != '\0' && len < sizeof(UserTxBuffer)) {
+    len++;
+  }
+
+  if (len == 0) {
+    return 0;
+  }
+
+  // Copy to tx buffer
+  for (uint16_t i = 0; i < len; i++) {
+    UserTxBuffer[i] = str[i];
+  }
+
+  USBD_CDC_SetTxBuffer(&hUsbDeviceFS, UserTxBuffer, len);
+  uint8_t result = USBD_CDC_TransmitPacket(&hUsbDeviceFS);
+
+  return (result == USBD_OK) ? len : -1;
+}
+
+// Printf-style function for USB CDC
+int usb_cdc_printf(const char *format, ...) {
+  if (!usb_ready) {
+    return -1;
+  }
+
+  va_list args;
+  va_start(args, format);
+  int len = vsnprintf((char *)UserTxBuffer, sizeof(UserTxBuffer), format, args);
+  va_end(args);
+
+  if (len <= 0 || len >= sizeof(UserTxBuffer)) {
+    return -1;
+  }
+
+  USBD_CDC_SetTxBuffer(&hUsbDeviceFS, UserTxBuffer, len);
+  uint8_t result = USBD_CDC_TransmitPacket(&hUsbDeviceFS);
+
+  return (result == USBD_OK) ? len : -1;
+}
 
 
 void init_usb() {
@@ -132,9 +204,28 @@ void init_usb() {
 
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Periodic task to send hello messages
+//////////////////////////////////////////////////////////////////////////////
+
+static uint32_t message_counter = 0;
+
+static void hello_task(void *data) {
+  // Send a periodic hello message
+  usb_cdc_printf("Hello from STM32G4! Message #%lu uptime=%lu ms\r\n",
+                 message_counter++,
+                 clock_time_us() / 1000);
+
+  // Schedule next message in 1 second
+  schedule_us(1000000, hello_task, NULL);
+}
+
 int main() {
   rulos_hal_init();
   init_usb();
-  
+
+  // Send initial greeting after 2 seconds (give USB time to enumerate)
+  schedule_us(2000000, hello_task, NULL);
+
   scheduler_run();
 }
