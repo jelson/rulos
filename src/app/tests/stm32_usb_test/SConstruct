@@ -23,7 +23,10 @@ from build_tools import *
 RulosBuildTarget(
     name = "stm32_libusb_test",
     sources = ["main.c", "usbd_conf.c", "usbd_desc.c"],
-    peripherals = "usb-stm32g4",
+    peripherals = "usb-stm32g4 uart",
+    extra_cflags = [
+        "-DLOG_TO_SERIAL",
+    ],
     platforms = [
         ArmStmPlatform(
             "stm32g431x8",

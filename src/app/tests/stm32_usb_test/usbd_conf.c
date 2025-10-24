@@ -26,6 +26,8 @@
 
 #include "usbd_cdc.h"
 
+#include "core/rulos.h"
+
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
@@ -41,7 +43,27 @@
 /* USER CODE END PV */
 
 PCD_HandleTypeDef hpcd_USB_FS;
-void Error_Handler(void);
+
+void Error_Handler(void) {
+  // Hang here - trap will be caught by debugger
+  __builtin_trap();
+}
+
+/**
+  * @brief This function handles USB low priority interrupt.
+  */
+void USB_LP_IRQHandler(void)
+{
+  HAL_PCD_IRQHandler(&hpcd_USB_FS);
+}
+
+// Stub - system clock already configured by rulos
+void SystemClock_Config(void) {
+}
+
+// Stub - USB clock already configured in init_usb
+void USBD_Clock_Config(void) {
+}
 
 /* USER CODE BEGIN 0 */
 
@@ -82,6 +104,7 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef* pcdHandle)
     __HAL_RCC_USB_CLK_ENABLE();
 
     /* Peripheral interrupt init */
+    // Priority 6 is fine since SysTick is already at lowest priority (15)
     HAL_NVIC_SetPriority(USB_LP_IRQn, 6, 0);
     HAL_NVIC_EnableIRQ(USB_LP_IRQn);
   /* USER CODE BEGIN USB_MspInit 1 */
@@ -679,7 +702,8 @@ uint32_t USBD_LL_GetRxDataSize(USBD_HandleTypeDef *pdev, uint8_t ep_addr)
   */
 void USBD_LL_Delay(uint32_t Delay)
 {
-  HAL_Delay(Delay);
+  // Use RULOS delay API (Delay is in ms, delay_us needs microseconds)
+  delay_us(Delay * 1000);
 }
 
 /* USER CODE BEGIN 5 */
