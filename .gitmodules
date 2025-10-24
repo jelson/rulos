@@ -1,9 +1,6 @@
 [submodule "Media"]
 	path = ext/Media
 	url = ssh://git@svn.circlemud.org:2244/~git/rulos-media
-[submodule "src/lib/chip/arm/stm32/periph/libusb_stm32"]
-	path = src/lib/chip/arm/stm32/periph/libusb_stm32
-	url = https://github.com/dmitrystu/libusb_stm32
 [submodule "src/ext/stm32/STM32CubeG4"]
 	path = ext/stm32/STM32CubeG4
 	url = https://github.com/STMicroelectronics/STM32CubeG4
