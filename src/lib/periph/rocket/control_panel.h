@@ -32,10 +32,11 @@
 #include "periph/rocket/screenblanker.h"
 #include "periph/rocket/sequencer.h"
 #include "periph/rocket/snakegame.h"
+#include "periph/rocket/invaders.h"
 #include "periph/rocket/volume_control.h"
 
 #define CONTROL_PANEL_HEIGHT       SCREEN4SIZE
-#define CONTROL_PANEL_NUM_CHILDREN 6
+#define CONTROL_PANEL_NUM_CHILDREN 7
 #define CP_NO_CHILD                (0xff)
 
 struct s_control_child;
@@ -85,6 +86,12 @@ typedef struct {
 typedef struct {
   UIEventHandler *uie_handler;
   const char *name;
+  Invaders invaders;
+} CCInvaders;
+
+typedef struct {
+  UIEventHandler *uie_handler;
+  const char *name;
   Disco disco;
 } CCDisco;
 
@@ -112,6 +119,7 @@ typedef struct s_control_panel {
   CCDock ccdock;
   CCPong ccpong;
   CCSnake ccsnake;
+  CCInvaders ccinvaders;
   CCDisco ccdisco;
 
   VolumeControl volume_control;
