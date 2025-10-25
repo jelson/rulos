@@ -33,26 +33,23 @@ CONVERTERS = [
 ]
 
 PERIPHERALS = {
-    'usb-stm32g4': {
+    'usb-cdc-stm32': {
         'src': [
+            # STM32 USB Device middleware
             'ext/stm32/STM32CubeG4/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c',
             'ext/stm32/STM32CubeG4/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c',
             'ext/stm32/STM32CubeG4/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c',
             'ext/stm32/STM32CubeG4/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c',
+            # RULOS USB CDC wrapper
+            'src/lib/chip/arm/stm32/periph/usb_cdc/usb_cdc.c',
+            'src/lib/chip/arm/stm32/periph/usb_cdc/usbd_conf.c',
+            'src/lib/chip/arm/stm32/periph/usb_cdc/usbd_desc.c',
         ],
         'incdir': [
             'ext/stm32/STM32CubeG4/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc',
             'ext/stm32/STM32CubeG4/Middlewares/ST/STM32_USB_Device_Library/Core/Inc',
+            'src/lib/chip/arm/stm32/periph/usb_cdc',
         ],
     },
 
-    'usb-stm32-ext': {
-        'src': [
-            'src/lib/chip/arm/stm32/periph/libusb_stm32/src/usbd_core.c',
-            'src/lib/chip/arm/stm32/periph/libusb_stm32/src/usbd_stm32l433_devfs.c',
-        ],
-        'incdir': [
-            'src/lib/chip/arm/stm32/periph/libusb_stm32/inc',
-        ],
-    },
 }

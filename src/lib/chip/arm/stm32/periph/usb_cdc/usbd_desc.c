@@ -62,11 +62,30 @@
   * @{
   */
 
-#define USBD_VID     0x483
+// USB Descriptor defaults - can be overridden at compile time with -D flags
+// Default VID/PID chosen to get Linux DISABLE_ECHO quirk, avoiding garbled output
+// See: https://michael.stapelberg.ch/posts/2021-04-27-linux-usb-virtual-serial-cdc-acm/
+#ifndef USBD_VID
+#define USBD_VID     0x0424  // Microchip Technology, Inc.
+#endif
+
+#ifndef USBD_PID
+#define USBD_PID     0x274e  // Gets DISABLE_ECHO quirk in Linux cdc_acm driver
+#endif
+
+#ifndef USBD_MANUFACTURER_STRING
+#define USBD_MANUFACTURER_STRING     "Lectrobox"
+#endif
+
+#ifndef USBD_PRODUCT_STRING
+#define USBD_PRODUCT_STRING     "STM32 Virtual ComPort"
+#endif
+
+#ifndef USBD_SERIAL_STRING
+#define USBD_SERIAL_STRING     "00000000001A"
+#endif
+
 #define USBD_LANGID_STRING     1033
-#define USBD_MANUFACTURER_STRING     "STMicroelectronics"
-#define USBD_PID     0x5740
-#define USBD_PRODUCT_STRING     "STM32 Virtual ComPort in FS Mode"
 #define USBD_CONFIGURATION_STRING     "CDC Config"
 #define USBD_INTERFACE_STRING     "CDC Interface"
 
