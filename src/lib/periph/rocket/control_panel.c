@@ -85,6 +85,15 @@ void init_cc_invaders(CCInvaders *cci, Screen4 *s4, AudioClient *audioClient,
 
 //////////////////////////////////////////////////////////////////////////////
 
+void init_cc_breakout(CCBreakout *ccb, Screen4 *s4, AudioClient *audioClient,
+                      JoystickState_t *joystick) {
+  breakout_init(&ccb->breakout, s4, audioClient, joystick, 1, 2);
+  ccb->uie_handler = (UIEventHandler *)&ccb->breakout.handler;
+  ccb->name = "Breakout";
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void init_cc_disco(CCDisco *ccp, AudioClient *audioClient,
                    ScreenBlanker *screenblanker, IdleAct *idle, Network* network) {
   disco_init(&ccp->disco, audioClient, screenblanker, idle, network);
@@ -140,6 +149,9 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
 
   cp->children[cp->child_count++] = (ControlChild *)&cp->ccinvaders;
   init_cc_invaders(&cp->ccinvaders, &cp->s4, audioClient, joystick);
+
+  cp->children[cp->child_count++] = (ControlChild *)&cp->ccbreakout;
+  init_cc_breakout(&cp->ccbreakout, &cp->s4, audioClient, joystick);
 
   cp->children[cp->child_count++] = (ControlChild *)&cp->ccdisco;
   init_cc_disco(&cp->ccdisco, audioClient, screenblanker, idle, network);
