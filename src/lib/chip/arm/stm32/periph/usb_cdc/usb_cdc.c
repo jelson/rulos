@@ -127,6 +127,19 @@ static int8_t CDC_Receive_FS(uint8_t *buf, uint32_t *len) {
   return USBD_OK;
 }
 
+// Task to deliver TX complete to application callback (can't call from ISR)
+static void tx_complete_task(void *data) {
+  usbd_cdc_state_t *cdc = (usbd_cdc_state_t *)data;
+
+  // Mark TX as complete just before invoking callback, so tx_ready()
+  // returns true exactly when the callback runs (not before)
+  cdc->tx_busy = false;
+
+  if (cdc->tx_complete_cb) {
+    cdc->tx_complete_cb(cdc, cdc->user_data);
+  }
+}
+
 static int8_t CDC_TransmitComplete(uint8_t *buf, uint32_t *len, uint8_t epnum) {
   if (cdc_device == NULL) {
     LOG("CDC_TransmitComplete: no device");
@@ -139,12 +152,10 @@ static int8_t CDC_TransmitComplete(uint8_t *buf, uint32_t *len, uint8_t epnum) {
     return USBD_FAIL;
   }
 
-  cdc_device->tx_busy = false;
-
-  // Notify application
-  if (cdc_device->tx_complete_cb) {
-    cdc_device->tx_complete_cb(cdc_device, cdc_device->user_data);
-  }
+  // Notify application via scheduler (not from ISR context)
+  // Note: tx_busy is cleared in tx_complete_task, not here, so that
+  // tx_ready() returns false until the callback actually runs
+  schedule_now(tx_complete_task, cdc_device);
 
   return USBD_OK;
 }
