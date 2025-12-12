@@ -23,7 +23,7 @@ from build_tools import *
 RulosBuildTarget(
     name = "timestamper",
     sources = ["timestamper.c"],
-    peripherals = "uart",
+    peripherals = "uart usb-cdc-stm32",
     platforms = [
         ArmStmPlatform(
             "stm32g431x8",

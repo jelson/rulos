@@ -52,6 +52,39 @@
  * timer scale of one tick per 170-millionths of a second to picoseconds, by
  * multiplying it by 100,000 and then dividing it by 17. (64-bit math is used
  * for this to prevent overflow.)
+ *
+ * RACE CONDITION AVOIDANCE WITH seconds_A / seconds_B:
+ *
+ * A timestamp consists of two parts: the high-order "seconds" counter
+ * (maintained in software) and the low-order timer value (latched in hardware
+ * at the moment of input capture). There's a potential race condition: if the
+ * timer rolls over between when an input capture occurs and when the ISR reads
+ * the seconds counter, the wrong seconds value could be paired with the timer
+ * value.
+ *
+ * To solve this, we maintain two copies of the seconds counter (seconds_A and
+ * seconds_B) and use a separate timer (TIM15) that fires twice per TIM2 cycle:
+ * at the 1/4 and 3/4 points of each second. The TIM15 ISR checks TIM2's current
+ * value to determine which firing it is:
+ *
+ * - At the 3/4 point (TIM2 counter is in second half): increment seconds_A,
+ *   preparing it for the upcoming rollover
+ * - At the 1/4 point (TIM2 counter is in first half): copy seconds_A to
+ *   seconds_B, syncing them for the new second
+ *
+ * In the input capture ISR, we check the captured timer value:
+ * - If counter < half: use seconds_A (event was in the first half of the second)
+ * - If counter >= half: use seconds_B (event was in the second half)
+ *
+ * This ensures correctness even if there's a delay between input capture and
+ * ISR execution. For example, if an input capture occurs just before rollover
+ * (counter near max) but the ISR runs just after rollover (when seconds_A has
+ * already been incremented), the ISR sees counter >= half and correctly uses
+ * seconds_B, which still holds the pre-rollover value.
+ *
+ * The 1/4 and 3/4 timing (rather than 0 and 1/2) provides margin: the seconds
+ * counters are updated 1/4 second before they're needed, allowing for any ISR
+ * latency.
  */
 
 #include <stdbool.h>
@@ -61,6 +94,7 @@
 #include "core/hardware.h"
 #include "core/rulos.h"
 #include "periph/uart/uart.h"
+#include "periph/usb_cdc/usb_cdc.h"
 #include "stm32g4xx_ll_bus.h"
 #include "stm32g4xx_ll_gpio.h"
 #include "stm32g4xx_ll_rcc.h"
@@ -70,7 +104,7 @@
 #define CLOCK_FREQ_HZ 170000000
 
 #define TIMESTAMP_PRINT_PERIOD_USEC 100000
-#define TIMESTAMP_BUFLEN            200
+#define TIMESTAMP_BUFLEN            256  // should be power of 2 for fast modulo ops
 #define MONOTONICITY_CHECK          0
 
 #define LED_CLOCK GPIO_B7
@@ -80,7 +114,6 @@
 // channel configurations
 typedef struct {
   // number of missed pulses
-  uint32_t num_pulses;
   uint32_t num_missed;
   uint32_t buf_overflows;
 
@@ -102,11 +135,19 @@ typedef struct {
   uint32_t seconds;
   uint32_t counter;
   uint8_t channel;
+  uint8_t _pad[7];  // pad to 16 bytes for power-of-2 indexing in ISR
 } timestamp_t;
 
 UartState_t uart;
-int num_timestamps = 0;
+static usbd_cdc_state_t usb_cdc;
+
+// Circular buffer for timestamps: ISR writes at ts_head, USB drains from ts_tail
 timestamp_t timestamp_buffer[TIMESTAMP_BUFLEN];
+static volatile uint32_t ts_head = 0;  // next write position (ISR)
+static volatile uint32_t ts_tail = 0;  // next read position (USB output)
+
+// USB TX buffer - must persist until tx_complete callback
+static char usb_tx_buf[50];
 
 // total seconds elapsed since boot -- for details, see comment at top
 uint32_t seconds_A = 0;
@@ -120,8 +161,6 @@ static void missed_pulse(uint8_t channel_num) {
 
 static void maybe_store_timestamp(uint8_t channel_num, uint32_t counter) {
   channel_t *chan = &channels[channel_num];
-  chan->num_pulses++;
-  chan->recent_pulse = true;
 
   // Get the high order bits
   const uint32_t seconds = counter < (CLOCK_FREQ_HZ / 2) ? seconds_A : seconds_B;
@@ -134,28 +173,32 @@ static void maybe_store_timestamp(uint8_t channel_num, uint32_t counter) {
     uart_print(&uart, ">>>> BUG: Nonmonotonic timestamps!\n");
     return;
   }
-#endif
-
   chan->prev_seconds = seconds;
   chan->prev_counter = counter;
+#endif
 
-  chan->count++;
-  if (chan->count < chan->divider) {
-    return;
+  // Skip divider logic entirely when divider == 1 (common case)
+  if (__builtin_expect(chan->divider != 1, 0)) {
+    chan->count++;
+    if (chan->count < chan->divider) {
+      return;
+    }
+    chan->count = 0;
   }
 
-  // divider count has been reached: reset the counter and store the timestamp
-  chan->count = 0;
-
-  if (num_timestamps >= TIMESTAMP_BUFLEN) {
+  // Cache ts_head locally - ISR is sole writer, so safe to read once
+  uint32_t head = ts_head;
+  uint32_t next_head = (head + 1) % TIMESTAMP_BUFLEN;
+  if (__builtin_expect(next_head == ts_tail, 0)) {
+    // buffer full
     chan->buf_overflows++;
     return;
   }
 
-  timestamp_buffer[num_timestamps].channel = channel_num;
-  timestamp_buffer[num_timestamps].seconds = seconds;
-  timestamp_buffer[num_timestamps].counter = counter;
-  num_timestamps++;
+  timestamp_buffer[head].channel = channel_num;
+  timestamp_buffer[head].seconds = seconds;
+  timestamp_buffer[head].counter = counter;
+  ts_head = next_head;
 }
 
 // TIM15 fires twice per rollover of TIM2, the input capture timer. It is used
@@ -180,9 +223,8 @@ void TIM1_BRK_TIM15_IRQHandler() {
 
 // TIM2 fires only when the timer captures input.
 void TIM2_IRQHandler() {
-  // Channel 1
+  // Channel
   if (LL_TIM_IsActiveFlag_CC1(TIM2)) {
-    // Timer channel 1 has captured an input signal.
     LL_TIM_ClearFlag_CC1(TIM2);
     maybe_store_timestamp(0, TIM2->CCR1);
   } else if (LL_TIM_IsActiveFlag_CC1OVR(TIM2)) {
@@ -191,22 +233,12 @@ void TIM2_IRQHandler() {
   }
 
   // Channel 2
-  else if (LL_TIM_IsActiveFlag_CC2(TIM2)) {
-    // Timer channel 2 has captured an input signal.
+  if (LL_TIM_IsActiveFlag_CC2(TIM2)) {
     LL_TIM_ClearFlag_CC2(TIM2);
     maybe_store_timestamp(1, TIM2->CCR2);
   } else if (LL_TIM_IsActiveFlag_CC2OVR(TIM2)) {
-    missed_pulse(1);
     LL_TIM_ClearFlag_CC2OVR(TIM2);
-
-  } else {
-    // unexpected interrupt
-    volatile int tim2sr = TIM2->SR;
-    char buf[100];
-    sprintf(buf, "got unexpected interrupt, timer2 status register=0x%x",
-            tim2sr);
-    uart_print(&uart, buf);
-    __builtin_trap();
+    missed_pulse(1);
   }
 }
 
@@ -229,10 +261,9 @@ static void print_one_timestamp(timestamp_t *t) {
   uint32_t microseconds = picoseconds / 1000000;
   uint32_t sub_microseconds = picoseconds % 1000000;
 
-  char buf[50];
-  int len = snprintf(buf, sizeof(buf), "%d %ld.%06ld%06ld\n", t->channel + 1,
-                     t->seconds, microseconds, sub_microseconds);
-  uart_write(&uart, buf, len);
+  int len = snprintf(usb_tx_buf, sizeof(usb_tx_buf), "%d %ld.%06ld%06ld\n",
+                     t->channel + 1, t->seconds, microseconds, sub_microseconds);
+  usbd_cdc_write(&usb_cdc, usb_tx_buf, len);
 }
 
 static bool received_recent_pulse(uint8_t channel_num) {
@@ -267,31 +298,23 @@ static void update_leds(void) {
   }
 }
 
-static void drain_output_buffer(void *data) {
-  schedule_us(TIMESTAMP_PRINT_PERIOD_USEC, drain_output_buffer, NULL);
-  update_leds();
-
-  // In critical section, copy the entire timestamp buffer into a temporary area
-  // and immediately release the lock. This minimizes the time we might miss a
-  // timestamp.
-  //
-  // TODO: avoid copies by switching back and forth between two buffers, one of
-  // which is filling with new timestamps and one of which is draining to uart.
-  timestamp_t tmpbuf[TIMESTAMP_BUFLEN];
-  int num_copied;
-
-  // start of critical section
-  rulos_irq_state_t old_interrupts = hal_start_atomic();
-  memcpy(tmpbuf, timestamp_buffer, num_timestamps * sizeof(timestamp_t));
-  num_copied = num_timestamps;
-  num_timestamps = 0;
-  hal_end_atomic(old_interrupts);
-  // end of critical section
-
-  // print any timestamps we have have copied out of the buffer
-  for (int i = 0; i < num_copied; i++) {
-    print_one_timestamp(&tmpbuf[i]);
+static void try_send_next_timestamp(void) {
+  if (ts_tail != ts_head && usbd_cdc_tx_ready(&usb_cdc)) {
+    timestamp_t t = timestamp_buffer[ts_tail];
+    ts_tail = (ts_tail + 1) % TIMESTAMP_BUFLEN;
+    channels[t.channel].recent_pulse = true;  // for LED blinking
+    print_one_timestamp(&t);
   }
+}
+
+static void usb_tx_complete(usbd_cdc_state_t *cdc, void *user_data) {
+  try_send_next_timestamp();
+}
+
+static void periodic_task(void *data) {
+  schedule_us(TIMESTAMP_PRINT_PERIOD_USEC, periodic_task, NULL);
+  update_leds();
+  try_send_next_timestamp();
 }
 
 static void init_timers() {
@@ -394,12 +417,20 @@ int main() {
     channels[i].divider = 1;
   }
 
-  // initialize uart
+  // initialize uart for debug logging
   uart_init(&uart, /*uart_id=*/0, 1000000);
-  uart_print(&uart,
-             "# Starting timestamper, version " STRINGIFY(GIT_COMMIT) "\n");
+  log_bind_uart(&uart);
+  LOG("Starting timestamper, version " STRINGIFY(GIT_COMMIT));
 
-  schedule_us(1, drain_output_buffer, NULL);
+  // initialize USB CDC for timestamp output
+  usb_cdc = (usbd_cdc_state_t){
+      .rx_cb = NULL,
+      .tx_complete_cb = usb_tx_complete,
+      .user_data = NULL,
+  };
+  usbd_cdc_init(&usb_cdc);
+
+  schedule_us(1, periodic_task, NULL);
 
   // initialize the output LEDs
   gpio_make_output(LED_CLOCK);
