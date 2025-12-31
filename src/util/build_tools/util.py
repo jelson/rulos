@@ -23,6 +23,18 @@ PROJECT_ROOT = os.path.relpath(os.path.join(os.path.dirname(__file__), "..", "..
 SRC_ROOT = os.path.join(PROJECT_ROOT, "src")
 BUILD_ROOT = os.path.join(PROJECT_ROOT, "build")
 
+def ensure_cachedir_tag():
+    """Create CACHEDIR.TAG in the build directory to prevent backup tools from backing it up."""
+    tag_path = os.path.join(BUILD_ROOT, "CACHEDIR.TAG")
+    if not os.path.exists(tag_path):
+        os.makedirs(BUILD_ROOT, exist_ok=True)
+        with open(tag_path, "w") as f:
+            f.write("Signature: 8a477f597d28d172789f06886806bc55\n")
+            f.write("# This file marks the directory as a cache directory.\n")
+            f.write("# For more info see https://bford.info/cachedir/\n")
+
+ensure_cachedir_tag()
+
 def cwd_to_project_root(inp):
     if type(inp)==type([]):
         return [os.path.relpath(s, PROJECT_ROOT) for s in inp]
