@@ -57,6 +57,21 @@ apps = [
             "-DRULOS_UART0_TX_PIN=GPIO_B6",
         ],
     },
+    {
+        'name': 'lora-logger',
+        'board': 'BOARD_LORA_LOGGER_REV_A',
+        'extra_sources': ["ina219.c","curr_meas.c"],
+        'chip': 'stm32g0b1xe',
+        'sizes': {
+            'max_line_len': 256,
+            'tx_queue_len': 128,
+            'rx_queue_len': 16384,
+        },        
+        'extra_cflags': [
+            "-DRULOS_UART0_RX_PIN=GPIO_B7",
+            "-DRULOS_UART0_TX_PIN=GPIO_B6",
+        ],
+    },    
 ]
 
 for app in apps:
