@@ -43,17 +43,21 @@ class Platform:
             "MakeLSS": Builder(
                 src_suffix = ".elf",
                 suffix = ".lss",
-                action = f"{compiler_prefix}objdump -h -S --syms $SOURCE > $TARGET",
+                action = env.SpinnerAction(
+                    f"{compiler_prefix}objdump -h -S --syms $SOURCE > $TARGET",
+                    'Disassembling'),
             ),
             "ShowSizes": Builder(
                 src_suffix = ".elf",
                 suffix = "show_sizes",
-                action = f"{compiler_prefix}size $SOURCE",
+                action = Action(f"{compiler_prefix}size $SOURCE", ""),
             ),
             "HexFile": Builder(
                 src_suffix = ".elf",
                 suffix = ".hex",
-                action = f"{compiler_prefix}objcopy $SOURCE -O ihex $TARGET",
+                action = env.SpinnerAction(
+                    f"{compiler_prefix}objcopy $SOURCE -O ihex $TARGET",
+                    'Creating hex', use_source=False),
             ),
         })
 
@@ -93,7 +97,7 @@ class Platform:
             "-Wall",
             "-Werror",
             "-g",
-            "-flto",
+            "-flto=auto",
             f"-DGIT_COMMIT={commit_hash()}",
         ]
         retval.append("-std=gnu++11" if self.use_cpp else "-std=gnu99")
@@ -126,7 +130,13 @@ class Platform:
         ]
 
     def build(self, target):
-        env = Environment(ENV = {'PATH' : os.environ['PATH']})
+        scons_tools = os.path.join(os.path.dirname(__file__), 'scons_tools')
+        env = Environment(
+            ENV = {'PATH' : os.environ['PATH']},
+            tools = ['default', 'spinner'],
+            toolpath = [scons_tools],
+            SPINNER_DISABLE = GetOption('verbose'),
+        )
 
         # We're pretending the sources appear in build_obj_dir, so they look
         # adjacent to the build output.
@@ -154,6 +164,7 @@ class Platform:
         env.Replace(RulosProgramPath = program_path)
         env.Replace(RulosProjectRoot = PROJECT_ROOT)
 
+        env['SPINNER_PREFIX'] = self.name()
         self.configure_env(env)
 
         platform_lib_srcs = [os.path.join(build_obj_dir, s) for s in self.common_libs(target)]
@@ -184,7 +195,7 @@ class Platform:
             converter_output = env.Command(
                 source = [os.path.join(build_obj_dir, p) for p in converter.script_input],
                 target = os.path.join(build_obj_dir, converter.intermediate_file),
-                action = converter.action,
+                action = env.SpinnerAction(converter.action, 'Generating', use_source=False),
             )
             env.Depends(
                 os.path.join(build_obj_dir, converter.dependent_source),

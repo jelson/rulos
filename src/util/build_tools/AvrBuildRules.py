@@ -69,5 +69,7 @@ class AvrPlatform(BaseRules.Platform):
         env.Append(BUILDERS = {"MakeHex": Builder(
             src_suffix = ".elf",
             suffix = ".hex",
-            action = f"avr-objcopy -O ihex {HEX_FLASH_FLAGS}  $SOURCE $TARGET")})
+            action = env.SpinnerAction(
+                f"avr-objcopy -O ihex {HEX_FLASH_FLAGS}  $SOURCE $TARGET",
+                'Creating hex', use_source=False))})
         Default(env.MakeHex(outputs[0]))

@@ -303,6 +303,8 @@ class ArmStmPlatform(ArmPlatform):
             source = os.path.join(env["RulosBuildObjDir"],
                 util.cwd_to_project_root(os.path.join(STM32_ROOT, "linker", "stm32-generic.ld"))),
             target = os.path.join(env["RulosBuildObjDir"], "src", "lib", linkscript_name),
-            action = f'sed "s/%RULOS_FLASHK%/{self.chip.flashk}/; s/%RULOS_RAMK%/{self.chip.ramk}/" $SOURCE > $TARGET')
+            action = env.SpinnerAction(
+                f'sed "s/%RULOS_FLASHK%/{self.chip.flashk}/; s/%RULOS_RAMK%/{self.chip.ramk}/" $SOURCE > $TARGET',
+                'Generating linker script', use_source=False))
         env.Append(LINKFLAGS = ["-T", linkscript])
         env.Depends(env["RulosProgramPath"], linkscript)

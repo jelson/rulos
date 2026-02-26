@@ -1,6 +1,12 @@
 from SCons.Script import *
 import os
 
+AddOption('-V', '--verbose',
+          dest='verbose',
+          action='store_true',
+          default=False,
+          help='Show full build commands instead of spinner output')
+
 try:
     from filelock import FileLock, Timeout
 except ModuleNotFoundError as e:

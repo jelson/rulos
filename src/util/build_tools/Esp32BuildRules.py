@@ -85,12 +85,16 @@ class Esp32Platform(BaseRules.Platform):
             "MakeBin": Builder(
                 src_suffix = ".elf",
                 suffix = ".bin",
-                action = f"python3 {self.esptool_path} --chip esp32 elf2image --flash_mode dio --flash_freq 80m --flash_size 4MB -o $TARGET $SOURCE",
+                action = env.SpinnerAction(
+                    f"python3 {self.esptool_path} --chip esp32 elf2image --flash_mode dio --flash_freq 80m --flash_size 4MB -o $TARGET $SOURCE",
+                    'Creating binary', use_source=False),
             ),
             "MakePartMap": Builder(
                 src_suffix = ".csv",
                 suffix = ".bin",
-                action = f"python3 {genpart_path} -q $SOURCE $TARGET",
+                action = env.SpinnerAction(
+                    f"python3 {genpart_path} -q $SOURCE $TARGET",
+                    'Creating partition map', use_source=False),
             ),
         })
 
