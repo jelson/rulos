@@ -288,10 +288,38 @@ static void SystemClock_Config(void) {
  * @param  None
  * @retval None
  */
-#ifndef RULOS_USE_HSE
-#define RULOS_PLLM RCC_PLLM_DIV4
-#define RULOS_PLLN 85
+
+// Default PLL parameters for HSI: 16MHz / 4 * 85 / 2 = 170MHz
+#define HSI_PLLM RCC_PLLM_DIV4
+#define HSI_PLLN 85
+
+#ifndef RULOS_PLLM
+#define RULOS_PLLM HSI_PLLM
 #endif
+#ifndef RULOS_PLLN
+#define RULOS_PLLN HSI_PLLN
+#endif
+
+#ifdef RULOS_USE_HSE
+// True if HSE (external oscillator) failed at boot or was lost during
+// operation. Applications can check this after rulos_hal_init() to detect
+// oscillator failure.
+bool g_rulos_hse_failed = false;
+#endif
+
+static void config_hsi_pll(RCC_OscInitTypeDef *osc) {
+  osc->OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  osc->HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  osc->HSIState = RCC_HSI_ON;
+  osc->PLL.PLLState = RCC_PLL_ON;
+  osc->PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  osc->PLL.PLLM = HSI_PLLM;
+  osc->PLL.PLLN = HSI_PLLN;
+  osc->PLL.PLLP = RCC_PLLP_DIV2;
+  osc->PLL.PLLQ = RCC_PLLQ_DIV2;
+  osc->PLL.PLLR = RCC_PLLR_DIV2;
+}
+
 static void SystemClock_Config(void) {
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -300,27 +328,38 @@ static void SystemClock_Config(void) {
   __HAL_RCC_PWR_CLK_ENABLE();
   HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1_BOOST);
 
-  /* Activate PLL with HSI as source */
 #ifdef RULOS_USE_HSE
+  /* Try HSE + PLL first */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-#else
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-#endif
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = RULOS_PLLM;
   RCC_OscInitStruct.PLL.PLLN = RULOS_PLLN;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
+
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) == HAL_OK) {
+    /* HSE started successfully. Enable Clock Security System to detect
+     * mid-stream HSE failure. On failure, hardware auto-switches to HSI
+     * and fires NMI. */
+    HAL_RCC_EnableCSS();
+  } else {
+    /* HSE failed to start. Fall back to HSI + PLL.
+     * HSI(16MHz) / 4 * 85 / 2 = 170MHz -- same speed, less accurate. */
+    g_rulos_hse_failed = true;
+    config_hsi_pll(&RCC_OscInitStruct);
+    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+      __builtin_trap();
+    }
+  }
+#else
+  config_hsi_pll(&RCC_OscInitStruct);
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-    /* Initialization Error */
     __builtin_trap();
   }
+#endif
 
   /* Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2
      clocks dividers */
@@ -331,10 +370,27 @@ static void SystemClock_Config(void) {
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_8) != HAL_OK) {
-    /* Initialization Error */
     __builtin_trap();
   }
 }
+
+#ifdef RULOS_USE_HSE
+// Default NMI handler for CSS. The startup file defines NMI_Handler as a weak
+// alias to Default_Handler. This weak definition overrides it but can itself be
+// overridden by applications that need custom NMI behavior.
+__attribute__((weak))
+void NMI_Handler(void) {
+  HAL_RCC_NMI_IRQHandler();
+}
+
+// CSS callback invoked by HAL_RCC_NMI_IRQHandler when HSE failure is detected.
+// Overrides the HAL's weak default. Sets the generic failure flag; apps needing
+// additional behavior should override NMI_Handler and act after calling
+// HAL_RCC_NMI_IRQHandler().
+void HAL_RCC_CSSCallback(void) {
+  g_rulos_hse_failed = true;
+}
+#endif
 #else
 #error "Your chip needs to know how to init its clock!"
 #include <stophere>
@@ -398,6 +454,7 @@ static void* g_timer_data = NULL;
 static clock_handler_t g_timer_handler = NULL;
 
 void SysTick_Handler() {
+  HAL_IncTick();
   if (g_timer_handler != NULL) {
     g_timer_handler(g_timer_data);
   }
@@ -410,6 +467,17 @@ void arm_hal_start_clock_us(uint32_t ticks_per_interrupt,
 
   // Setup the timer to fire interrupts at the requested interval.
   SysTick_Config(ticks_per_interrupt);
+
+  // Update the HAL's tick frequency so HAL_GetTick() remains correct.
+  // HAL_IncTick() adds uwTickFreq (in ms) on each SysTick interrupt.
+  // HAL_Init() configures SysTick for 1ms ticks with uwTickFreq=1;
+  // if RULOS changes the SysTick period, we must update uwTickFreq to match.
+  uint32_t ms_per_tick =
+      ticks_per_interrupt / (HAL_RCC_GetSysClockFreq() / 1000);
+  if (ms_per_tick < 1) {
+    ms_per_tick = 1;
+  }
+  uwTickFreq = ms_per_tick;
 }
 
 uint16_t hal_elapsed_tenthou_intervals() {

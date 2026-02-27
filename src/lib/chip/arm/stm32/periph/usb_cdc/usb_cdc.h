@@ -95,3 +95,8 @@ int usbd_cdc_write(usbd_cdc_state_t *cdc, const void *buf, uint32_t len);
 
 // Check if ready to transmit (true if USB enumerated and not busy)
 bool usbd_cdc_tx_ready(usbd_cdc_state_t *cdc);
+
+// Convenience: transmit a null-terminated string.
+// Buffer must remain valid until tx_complete callback is invoked.
+// Returns 0 on success, -1 if previous transmission still in progress.
+int usbd_cdc_print(usbd_cdc_state_t *cdc, const char *s);

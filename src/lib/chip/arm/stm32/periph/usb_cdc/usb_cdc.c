@@ -265,3 +265,7 @@ int usbd_cdc_write(usbd_cdc_state_t *cdc, const void *buf, uint32_t len) {
 
   return 0;
 }
+
+int usbd_cdc_print(usbd_cdc_state_t *cdc, const char *s) {
+  return usbd_cdc_write(cdc, s, strlen(s));
+}

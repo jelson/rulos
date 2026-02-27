@@ -313,6 +313,31 @@ static void usb_tx_complete(usbd_cdc_state_t *cdc, void *user_data) {
 
 static void periodic_task(void *data) {
   schedule_us(TIMESTAMP_PRINT_PERIOD_USEC, periodic_task, NULL);
+
+  // Check for mid-stream clock failure detected by CSS via the generic
+  // NMI handler in stm32-hardware.c
+  if (g_rulos_hse_failed) {
+    LL_TIM_DisableCounter(TIM2);
+    LL_TIM_DisableCounter(TIM15);
+    LL_TIM_DisableIT_CC1(TIM2);
+    LL_TIM_DisableIT_CC2(TIM2);
+    LL_TIM_DisableIT_UPDATE(TIM15);
+
+    // quick flash showing clock failure
+    static bool on = false;
+    on = !on;
+    gpio_set_or_clr(LED_CLOCK, on);
+    gpio_set_or_clr(LED_CHAN0, on);
+    gpio_set_or_clr(LED_CHAN1, on);
+
+    static bool error_printed = false;
+    if (!error_printed && usbd_cdc_tx_ready(&usb_cdc)) {
+      error_printed = true;
+      usbd_cdc_print(&usb_cdc, "# FATAL: External oscillator failure. Connect a 10MHz source and press reset.");
+    }
+    return;
+  }
+
   update_leds();
   try_send_next_timestamp();
 }
@@ -420,7 +445,11 @@ int main() {
   // initialize uart for debug logging
   uart_init(&uart, /*uart_id=*/0, 1000000);
   log_bind_uart(&uart);
-  LOG("Starting timestamper, version " STRINGIFY(GIT_COMMIT));
+
+  // initialize the output LEDs
+  gpio_make_output(LED_CLOCK);
+  gpio_make_output(LED_CHAN0);
+  gpio_make_output(LED_CHAN1);
 
   // initialize USB CDC for timestamp output
   usb_cdc = (usbd_cdc_state_t){
@@ -430,15 +459,12 @@ int main() {
   };
   usbd_cdc_init(&usb_cdc);
 
-  schedule_us(1, periodic_task, NULL);
-
-  // initialize the output LEDs
-  gpio_make_output(LED_CLOCK);
-  gpio_make_output(LED_CHAN0);
-  gpio_make_output(LED_CHAN1);
-
   // initialize the main timer and its input capture pin
   init_timers();
+
+  schedule_us(1, periodic_task, NULL);
+
+  LOG("Starting timestamper, version " STRINGIFY(GIT_COMMIT));
 
   scheduler_run();
 }

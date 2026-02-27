@@ -19,6 +19,7 @@
 #pragma once
 
 #include <inttypes.h>
+#include <stdbool.h>
 
 #include "stm32.h"
 
@@ -127,3 +128,10 @@ static inline int gpio_is_clr(const gpio_pin_t gpio_pin) {
 static inline int gpio_is_set(const gpio_pin_t gpio_pin) {
   return !(gpio_is_clr(gpio_pin));
 }
+
+#ifdef RULOS_USE_HSE
+// Set to true if HSE failed at boot or was lost during operation (CSS).
+// Applications should check this after rulos_hal_init() to determine if
+// the external oscillator is available.
+extern bool g_rulos_hse_failed;
+#endif
