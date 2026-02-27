@@ -182,11 +182,12 @@ class ArmStmPlatform(ArmPlatform):
         self.major_family = self.MAJOR_FAMILIES[self.chip.major_family_name]
 
     class Chip:
-        def __init__(self, name, family, flashk, ramk):
+        def __init__(self, name, family, flashk, ramk, ccmramk=0):
             self.name = name
             self.family = family
             self.flashk = flashk
             self.ramk = ramk
+            self.ccmramk = ccmramk
             self.major_family_name = family[:7]
 
     CHIPS = dict([(chip.name, chip) for chip in [
@@ -216,12 +217,12 @@ class ArmStmPlatform(ArmPlatform):
         Chip("stm32f103xg", "STM32F103xG", flashk=1024, ramk= 96),
 
         # stm32f3
-        Chip("stm32f303x6", "STM32F303x8", flashk=  32, ramk= 12),
-        Chip("stm32f303x8", "STM32F303x8", flashk=  64, ramk= 12),
-        Chip("stm32f303xb", "STM32F303xC", flashk= 128, ramk= 32),
-        Chip("stm32f303xc", "STM32F303xC", flashk= 256, ramk= 40),
-        Chip("stm32f303xd", "STM32F303xE", flashk= 384, ramk= 64),
-        Chip("stm32f303xe", "STM32F303xE", flashk= 512, ramk= 64),
+        Chip("stm32f303x6", "STM32F303x8", flashk=  32, ramk= 12, ccmramk= 4),
+        Chip("stm32f303x8", "STM32F303x8", flashk=  64, ramk= 12, ccmramk= 4),
+        Chip("stm32f303xb", "STM32F303xC", flashk= 128, ramk= 32, ccmramk= 8),
+        Chip("stm32f303xc", "STM32F303xC", flashk= 256, ramk= 40, ccmramk= 8),
+        Chip("stm32f303xd", "STM32F303xE", flashk= 384, ramk= 64, ccmramk=16),
+        Chip("stm32f303xe", "STM32F303xE", flashk= 512, ramk= 64, ccmramk=16),
 
         # stm32g0
         Chip("stm32g030x6", "STM32G030xx", flashk=  32, ramk=  8),
@@ -234,9 +235,9 @@ class ArmStmPlatform(ArmPlatform):
         Chip("stm32g0b1xe", "STM32G0B1xx", flashk= 512, ramk=128),
 
         # stm32g4
-        Chip("stm32g431x6", "STM32G431xx", flashk=  32, ramk= 16),
-        Chip("stm32g431x8", "STM32G431xx", flashk=  64, ramk= 16),
-        Chip("stm32g431xb", "STM32G431xx", flashk= 128, ramk= 16),
+        Chip("stm32g431x6", "STM32G431xx", flashk=  32, ramk= 16, ccmramk=10),
+        Chip("stm32g431x8", "STM32G431xx", flashk=  64, ramk= 16, ccmramk=10),
+        Chip("stm32g431xb", "STM32G431xx", flashk= 128, ramk= 16, ccmramk=10),
     ]])
 
     class MajorFamily:
@@ -304,7 +305,7 @@ class ArmStmPlatform(ArmPlatform):
                 util.cwd_to_project_root(os.path.join(STM32_ROOT, "linker", "stm32-generic.ld"))),
             target = os.path.join(env["RulosBuildObjDir"], "src", "lib", linkscript_name),
             action = env.SpinnerAction(
-                f'sed "s/%RULOS_FLASHK%/{self.chip.flashk}/; s/%RULOS_RAMK%/{self.chip.ramk}/" $SOURCE > $TARGET',
+                f'sed "s/%RULOS_FLASHK%/{self.chip.flashk}/; s/%RULOS_RAMK%/{self.chip.ramk}/; s/%RULOS_CCMRAMK%/{self.chip.ccmramk}/" $SOURCE > $TARGET',
                 'Generating linker script', use_source=False))
         env.Append(LINKFLAGS = ["-T", linkscript])
         env.Depends(env["RulosProgramPath"], linkscript)

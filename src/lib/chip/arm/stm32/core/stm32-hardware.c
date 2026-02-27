@@ -401,6 +401,14 @@ void _init() {
 }
 
 void rulos_hal_init() {
+  // Copy .ccmram section from flash to CCM SRAM. This must happen before
+  // any CCM-resident functions are called. Safe to run before HAL_Init()
+  // since CCM SRAM needs no clock enable.
+  extern uint32_t _siccmram, _sccmram, _eccmram;
+  for (uint32_t *src = &_siccmram, *dst = &_sccmram; dst < &_eccmram;) {
+    *dst++ = *src++;
+  }
+
   // Initialize the STM32 HAL library. (Good thing the name didn't
   // collide...)
   HAL_Init();

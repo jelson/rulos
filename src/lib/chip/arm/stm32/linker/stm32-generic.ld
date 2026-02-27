@@ -12,15 +12,13 @@
  *
  * We're going to assume that within the STM32 line (F0, F1, F3), the location
  * of flash and location of RAM are always the same; only the lengths change.
- * In addition, we'll just ignore the extra-fast CCM RAM sections that some
- * chips have, at least for now.
  *
- * So the RULOS ARM makefiles specify the amount of FLASH and RAM for every
- * chip and run a script that just sed's this template.
- *
- * If later we want to support CCM RAM, or we run into a chip line whose
- * RAM doesn't start at 0x20000000, or whose flash doesn't start at 0x08000000,
- * we might need more Makefile parameters.
+ * So the RULOS ARM makefiles specify the amount of FLASH, RAM, and CCM RAM
+ * for every chip and run a script that sed's this template. CCM SRAM
+ * (Core Coupled Memory) is zero-wait-state RAM on STM32F3/G4, connected to
+ * both the I-bus and D-bus. Functions placed in .ccmram are copied from flash
+ * at boot by rulos_hal_init(). For chips without CCM, CCMRAMK is 0 and the
+ * section is empty.
  */
 
 /* Entry Point */
@@ -34,6 +32,7 @@ MEMORY
 {
 FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = %RULOS_FLASHK%K
 RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = %RULOS_RAMK%K
+CCMSRAM (xrw)   : ORIGIN = 0x10000000, LENGTH = %RULOS_CCMRAMK%K
 }
 
 /* Highest address of the user mode stack */
@@ -119,7 +118,18 @@ SECTIONS
     _edata = .;        /* define a global symbol at data end */
   } >RAM AT> FLASH
 
-  
+  /* CCM SRAM section: code/data copied from flash to CCM RAM at boot */
+  _siccmram = LOADADDR(.ccmram);
+  .ccmram :
+  {
+    . = ALIGN(4);
+    _sccmram = .;
+    *(.ccmram)
+    *(.ccmram*)
+    . = ALIGN(4);
+    _eccmram = .;
+  } >CCMSRAM AT> FLASH
+
   /* Uninitialized data section */
   . = ALIGN(4);
   .bss :

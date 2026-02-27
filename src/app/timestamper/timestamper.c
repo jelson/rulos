@@ -153,13 +153,13 @@ static char usb_tx_buf[50];
 uint32_t seconds_A = 0;
 uint32_t seconds_B = 0;
 
-static void missed_pulse(uint8_t channel_num) {
+CCMRAM static void missed_pulse(uint8_t channel_num) {
   channel_t *chan = &channels[channel_num];
 
   chan->num_missed++;
 }
 
-static void maybe_store_timestamp(uint8_t channel_num, uint32_t counter) {
+CCMRAM static void maybe_store_timestamp(uint8_t channel_num, uint32_t counter) {
   channel_t *chan = &channels[channel_num];
 
   // Get the high order bits
@@ -203,7 +203,7 @@ static void maybe_store_timestamp(uint8_t channel_num, uint32_t counter) {
 
 // TIM15 fires twice per rollover of TIM2, the input capture timer. It is used
 // to update the high order bits. For details, see comment at top.
-void TIM1_BRK_TIM15_IRQHandler() {
+CCMRAM void TIM1_BRK_TIM15_IRQHandler() {
   if (LL_TIM_IsActiveFlag_UPDATE(TIM15)) {
     LL_TIM_ClearFlag_UPDATE(TIM15);
 
@@ -222,7 +222,7 @@ void TIM1_BRK_TIM15_IRQHandler() {
 
 
 // TIM2 fires only when the timer captures input.
-void TIM2_IRQHandler() {
+CCMRAM void TIM2_IRQHandler() {
   // Channel
   if (LL_TIM_IsActiveFlag_CC1(TIM2)) {
     LL_TIM_ClearFlag_CC1(TIM2);

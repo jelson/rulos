@@ -129,6 +129,11 @@ static inline int gpio_is_set(const gpio_pin_t gpio_pin) {
   return !(gpio_is_clr(gpio_pin));
 }
 
+// Place a function in CCM SRAM for zero-wait-state execution (STM32F3/G4).
+// The function is stored in flash and copied to CCM RAM at boot by
+// rulos_hal_init(). On chips without CCM, this is a no-op.
+#define CCMRAM __attribute__((section(".ccmram")))
+
 #ifdef RULOS_USE_HSE
 // Set to true if HSE failed at boot or was lost during operation (CSS).
 // Applications should check this after rulos_hal_init() to determine if
