@@ -134,6 +134,7 @@ static void tx_complete_task(void *data) {
   // Mark TX as complete just before invoking callback, so tx_ready()
   // returns true exactly when the callback runs (not before)
   cdc->tx_busy = false;
+  cdc->tx_buf_in_flight = NULL;
 
   if (cdc->tx_complete_cb) {
     cdc->tx_complete_cb(cdc, cdc->user_data);
