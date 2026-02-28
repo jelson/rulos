@@ -223,11 +223,12 @@ CCMRAM void TIM1_BRK_TIM15_IRQHandler() {
 
 // TIM2 fires only when the timer captures input.
 CCMRAM void TIM2_IRQHandler() {
-  // Channel
+  // Channel 1
   if (LL_TIM_IsActiveFlag_CC1(TIM2)) {
     LL_TIM_ClearFlag_CC1(TIM2);
     maybe_store_timestamp(0, TIM2->CCR1);
-  } else if (LL_TIM_IsActiveFlag_CC1OVR(TIM2)) {
+  }
+  if (LL_TIM_IsActiveFlag_CC1OVR(TIM2)) {
     LL_TIM_ClearFlag_CC1OVR(TIM2);
     missed_pulse(0);
   }
@@ -236,7 +237,8 @@ CCMRAM void TIM2_IRQHandler() {
   if (LL_TIM_IsActiveFlag_CC2(TIM2)) {
     LL_TIM_ClearFlag_CC2(TIM2);
     maybe_store_timestamp(1, TIM2->CCR2);
-  } else if (LL_TIM_IsActiveFlag_CC2OVR(TIM2)) {
+  }
+  if (LL_TIM_IsActiveFlag_CC2OVR(TIM2)) {
     LL_TIM_ClearFlag_CC2OVR(TIM2);
     missed_pulse(1);
   }
