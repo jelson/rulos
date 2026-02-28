@@ -317,7 +317,7 @@ static void periodic_task(void *data) {
   // Check for mid-stream clock failure detected by CSS via the generic
   // NMI handler in stm32-hardware.c
   if (g_rulos_hse_failed) {
-    LL_TIM_DisableCounter(TIM2);
+      LL_TIM_DisableCounter(TIM2);
     LL_TIM_DisableCounter(TIM15);
     LL_TIM_DisableIT_CC1(TIM2);
     LL_TIM_DisableIT_CC2(TIM2);
@@ -333,12 +333,37 @@ static void periodic_task(void *data) {
     static bool error_printed = false;
     if (!error_printed && usbd_cdc_tx_ready(&usb_cdc)) {
       error_printed = true;
-      usbd_cdc_print(&usb_cdc, "# FATAL: External oscillator failure. Connect a 10MHz source and press reset.");
+      usbd_cdc_print(&usb_cdc, "# FATAL: External oscillator failure. Connect a 10MHz source and press reset.\n");
     }
     return;
   }
 
+  // If USB has just come up for the first time, print a welcome message
+  static bool welcome_printed = false;
+  if (!welcome_printed && usbd_cdc_tx_ready(&usb_cdc)) {
+     usbd_cdc_print(&usb_cdc, "# Starting timestamper, version " STRINGIFY(GIT_COMMIT) "\n");
+     welcome_printed = true;
+  }
+
   update_leds();
+
+  // Report missed pulses when USB is idle
+  if (ts_tail == ts_head && usbd_cdc_tx_ready(&usb_cdc)) {
+    for (int i = 0; i < NUM_CHANNELS; i++) {
+      uint32_t missed = channels[i].num_missed;
+      uint32_t overflows = channels[i].buf_overflows;
+      if (missed || overflows) {
+        channels[i].num_missed = 0;
+        channels[i].buf_overflows = 0;
+        int len = snprintf(usb_tx_buf, sizeof(usb_tx_buf),
+                           "# ch%d: %ld overcaptures, %ld buf overflows\n",
+                           i + 1, missed, overflows);
+        usbd_cdc_write(&usb_cdc, usb_tx_buf, len);
+        return;  // one message per period; USB will drain the rest
+      }
+    }
+  }
+
   try_send_next_timestamp();
 }
 
@@ -463,8 +488,5 @@ int main() {
   init_timers();
 
   schedule_us(1, periodic_task, NULL);
-
-  LOG("Starting timestamper, version " STRINGIFY(GIT_COMMIT));
-
   scheduler_run();
 }
