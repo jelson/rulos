@@ -104,7 +104,7 @@
 #define CLOCK_FREQ_HZ 170000000
 
 #define TIMESTAMP_PRINT_PERIOD_USEC 100000
-#define TIMESTAMP_BUFLEN            256  // should be power of 2 for fast modulo ops
+#define TIMESTAMP_BUFLEN            1024  // should be power of 2 for fast modulo ops
 #define MONOTONICITY_CHECK          0
 
 #define LED_CLOCK GPIO_B7
