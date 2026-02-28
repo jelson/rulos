@@ -223,24 +223,37 @@ CCMRAM void TIM1_BRK_TIM15_IRQHandler() {
 
 // TIM2 fires only when the timer captures input.
 CCMRAM void TIM2_IRQHandler() {
-  // Channel 1
-  if (LL_TIM_IsActiveFlag_CC1(TIM2)) {
-    LL_TIM_ClearFlag_CC1(TIM2);
+  // Cache SR to determine which channels have pending captures.
+  // In input capture mode, reading CCRx auto-clears CCxIF in hardware
+  // (RM0440 §29.4.12), so no explicit flag clear is needed.
+  const uint32_t sr = TIM2->SR;
+
+  if (sr & TIM_SR_CC1IF) {
     maybe_store_timestamp(0, TIM2->CCR1);
   }
-  if (LL_TIM_IsActiveFlag_CC1OVR(TIM2)) {
-    LL_TIM_ClearFlag_CC1OVR(TIM2);
-    missed_pulse(0);
-  }
-
-  // Channel 2
-  if (LL_TIM_IsActiveFlag_CC2(TIM2)) {
-    LL_TIM_ClearFlag_CC2(TIM2);
+  if (sr & TIM_SR_CC2IF) {
     maybe_store_timestamp(1, TIM2->CCR2);
   }
-  if (LL_TIM_IsActiveFlag_CC2OVR(TIM2)) {
-    LL_TIM_ClearFlag_CC2OVR(TIM2);
-    missed_pulse(1);
+
+  // Re-read SR for overcapture detection instead of using the cached value.
+  // A new capture can arrive between the initial SR read and the CCRx read,
+  // setting CCxOF (overcapture) without being visible in the cached SR. Since
+  // CCxOF doesn't generate its own interrupt, a missed OVR flag would linger
+  // undetected until the next capture event.
+  //
+  // After the CCRx reads above, CCxIF is cleared, so any pulse arriving after
+  // this re-read sets CCxIF fresh (not overcapture) and triggers ISR re-entry
+  // normally -- there is no equivalent race after this point.
+  const uint32_t sr_ovr = TIM2->SR;
+  if (__builtin_expect(sr_ovr & (TIM_SR_CC1OF | TIM_SR_CC2OF), 0)) {
+    if (sr_ovr & TIM_SR_CC1OF) {
+      LL_TIM_ClearFlag_CC1OVR(TIM2);
+      missed_pulse(0);
+    }
+    if (sr_ovr & TIM_SR_CC2OF) {
+      LL_TIM_ClearFlag_CC2OVR(TIM2);
+      missed_pulse(1);
+    }
   }
 }
 
@@ -319,7 +332,7 @@ static void periodic_task(void *data) {
   // Check for mid-stream clock failure detected by CSS via the generic
   // NMI handler in stm32-hardware.c
   if (g_rulos_hse_failed) {
-      LL_TIM_DisableCounter(TIM2);
+    LL_TIM_DisableCounter(TIM2);
     LL_TIM_DisableCounter(TIM15);
     LL_TIM_DisableIT_CC1(TIM2);
     LL_TIM_DisableIT_CC2(TIM2);
