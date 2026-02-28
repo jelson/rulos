@@ -539,7 +539,7 @@ static void hal_uart_start_rx_dma(stm32_uart_t *u,
   LL_DMA_DisableChannel(config->rx_dma_instance, config->rx_dma_channel);
 
   // Enable DMA RX interrupts
-  NVIC_SetPriority(config->rx_dma_irqn, 0);
+  NVIC_SetPriority(config->rx_dma_irqn, 1);
   NVIC_EnableIRQ(config->rx_dma_irqn);
 
   LL_DMA_ClearFlag_TC(config->rx_dma_instance, config->rx_dma_channel);
@@ -1004,11 +1004,11 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
   __HAL_LINKDMA(&uart->hal_uart_handle, hdmatx, uart->hal_dma_tx_handle);
 
   // Set up DMA interrupt
-  HAL_NVIC_SetPriority(config->tx_dma_irqn, 0, 1);
+  HAL_NVIC_SetPriority(config->tx_dma_irqn, 1, 0);
   HAL_NVIC_EnableIRQ(config->tx_dma_irqn);
 
   // Set up USART peripheral interrupt
-  HAL_NVIC_SetPriority(config->instance_irqn, 0, 1);
+  HAL_NVIC_SetPriority(config->instance_irqn, 1, 0);
   HAL_NVIC_EnableIRQ(config->instance_irqn);
 }
 

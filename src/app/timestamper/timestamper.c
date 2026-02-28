@@ -153,13 +153,13 @@ static char usb_tx_buf[50];
 uint32_t seconds_A = 0;
 uint32_t seconds_B = 0;
 
-CCMRAM static void missed_pulse(uint8_t channel_num) {
+CCMRAM static inline __attribute__((always_inline)) void missed_pulse(uint8_t channel_num) {
   channel_t *chan = &channels[channel_num];
 
   chan->num_missed++;
 }
 
-CCMRAM static void maybe_store_timestamp(uint8_t channel_num, uint32_t counter) {
+CCMRAM static inline __attribute__((always_inline)) void maybe_store_timestamp(uint8_t channel_num, uint32_t counter) {
   channel_t *chan = &channels[channel_num];
 
   // Get the high order bits
@@ -388,7 +388,7 @@ static void init_timers() {
 
   // Configure the timer to roll over and generate an interrupt once per second,
   // i.e. the autoreload value is equal to the clock frequency in hz (minus 1).
-  HAL_NVIC_SetPriority(TIM2_IRQn, 3, 0);
+  HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(TIM2_IRQn);
   LL_TIM_InitTypeDef timer2_init = {
     .Prescaler = 0,
