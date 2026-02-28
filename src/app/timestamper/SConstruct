@@ -32,6 +32,7 @@ RulosBuildTarget(
                 '-DRULOS_USE_HSE',
                 '-DRULOS_PLLM=RCC_PLLM_DIV1',
                 '-DRULOS_PLLN=34',
+                '-DSCHEDULER_CAPACITY=4',
             ],
         ),
     ],
