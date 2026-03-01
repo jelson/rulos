@@ -96,6 +96,8 @@
 #include "periph/uart/uart.h"
 #include "periph/usb_cdc/usb_cdc.h"
 #include "stm32g4xx_ll_bus.h"
+#include "stm32g4xx_ll_dma.h"
+#include "stm32g4xx_ll_dmamux.h"
 #include "stm32g4xx_ll_gpio.h"
 #include "stm32g4xx_ll_rcc.h"
 #include "stm32g4xx_ll_tim.h"
@@ -104,7 +106,7 @@
 #define CLOCK_FREQ_HZ 170000000
 
 #define TIMESTAMP_PRINT_PERIOD_USEC 100000
-#define TIMESTAMP_BUFLEN            2048  // should be power of 2 for fast modulo ops
+#define TIMESTAMP_BUFLEN            1024  // should be power of 2 for fast modulo ops
 #define MONOTONICITY_CHECK          0
 
 // Channel number is packed into the top 2 bits of the counter field.
@@ -149,60 +151,25 @@ timestamp_t timestamp_buffer[TIMESTAMP_BUFLEN];
 static volatile uint32_t ts_head = 0;  // next write position (ISR)
 static volatile uint32_t ts_tail = 0;  // next read position (USB output)
 
-// USB TX buffer - must persist until tx_complete callback
-static char usb_tx_buf[CDC_DATA_FS_MAX_PACKET_SIZE];
+// USB TX buffer - must persist until tx_complete callback.
+// Larger buffer packs many timestamps per USB transfer, enabling multiple
+// 64-byte packets per USB frame for higher throughput.
+#define USB_TX_BUFLEN 1024
+static char usb_tx_buf[USB_TX_BUFLEN];
+
+// DMA circular buffers for input capture — one per channel.
+// DMA writes raw CCR values here; HT/TC interrupts process each half.
+#define DMA_CAPTURE_BUFLEN 256
+static volatile uint32_t dma_buf_ch1[DMA_CAPTURE_BUFLEN];
+static volatile uint32_t dma_buf_ch2[DMA_CAPTURE_BUFLEN];
+// Tracks how far we've processed for the periodic flush of slow pulses
+static uint32_t dma_processed_pos_ch1 = 0;
+static uint32_t dma_processed_pos_ch2 = 0;
 
 
 // total seconds elapsed since boot -- for details, see comment at top
 uint32_t seconds_A = 0;
 uint32_t seconds_B = 0;
-
-CCMRAM static inline __attribute__((always_inline)) void missed_pulse(uint8_t channel_num) {
-  channel_t *chan = &channels[channel_num];
-
-  chan->num_missed++;
-}
-
-CCMRAM static inline __attribute__((always_inline)) void maybe_store_timestamp(uint8_t channel_num, uint32_t counter) {
-  channel_t *chan = &channels[channel_num];
-
-  // Get the high order bits
-  const uint32_t seconds = counter < (CLOCK_FREQ_HZ / 2) ? seconds_A : seconds_B;
-
-#if MONOTONICITY_CHECK
-  // check for monotonicity
-  if (chan->prev_seconds > seconds ||
-      (chan->prev_seconds == seconds &&
-       chan->prev_counter > counter)) {
-    uart_print(&uart, ">>>> BUG: Nonmonotonic timestamps!\n");
-    return;
-  }
-  chan->prev_seconds = seconds;
-  chan->prev_counter = counter;
-#endif
-
-  // Skip divider logic entirely when divider == 1 (common case)
-  if (__builtin_expect(chan->divider != 1, 0)) {
-    chan->count++;
-    if (chan->count < chan->divider) {
-      return;
-    }
-    chan->count = 0;
-  }
-
-  // Cache ts_head locally - ISR is sole writer, so safe to read once
-  uint32_t head = ts_head;
-  uint32_t next_head = (head + 1) % TIMESTAMP_BUFLEN;
-  if (__builtin_expect(next_head == ts_tail, 0)) {
-    // buffer full
-    chan->buf_overflows++;
-    return;
-  }
-
-  timestamp_buffer[head].seconds = seconds;
-  timestamp_buffer[head].counter = counter | ((uint32_t)channel_num << COUNTER_CHAN_SHIFT);
-  ts_head = next_head;
-}
 
 // TIM15 fires twice per rollover of TIM2, the input capture timer. It is used
 // to update the high order bits. For details, see comment at top.
@@ -224,39 +191,90 @@ CCMRAM void TIM1_BRK_TIM15_IRQHandler() {
 }
 
 
-// TIM2 fires only when the timer captures input.
-CCMRAM void TIM2_IRQHandler() {
-  // Cache SR to determine which channels have pending captures.
-  // In input capture mode, reading CCRx auto-clears CCxIF in hardware
-  // (RM0440 §29.4.12), so no explicit flag clear is needed.
-  const uint32_t sr = TIM2->SR;
+// Process a batch of raw DMA-captured counter values into timestamp_buffer.
+// Called from DMA ISR and periodic flush — ts_head/ts_tail can't change
+// during execution, so we cache them locally to avoid volatile penalties.
+CCMRAM static void process_dma_captures(uint8_t channel_num,
+                                  volatile uint32_t *buf,
+                                  uint32_t offset, uint32_t count) {
+  channel_t *chan = &channels[channel_num];
+  uint32_t head = ts_head;
+  const uint32_t tail = ts_tail;
+  const uint32_t chan_tag = (uint32_t)channel_num << COUNTER_CHAN_SHIFT;
+  const uint32_t divider = chan->divider;
 
-  if (sr & TIM_SR_CC1IF) {
-    maybe_store_timestamp(0, TIM2->CCR1);
-  }
-  if (sr & TIM_SR_CC2IF) {
-    maybe_store_timestamp(1, TIM2->CCR2);
+  // Pre-check that the timestamp buffer has room for the entire batch.
+  // If not enough space, store what we can and count the drops.
+  uint32_t available = (tail - head - 1) % TIMESTAMP_BUFLEN;
+  if (__builtin_expect(available < count, 0)) {
+    chan->buf_overflows += count - available;
+    count = available;
+    if (count == 0) return;
   }
 
-  // Re-read SR for overcapture detection instead of using the cached value.
-  // A new capture can arrive between the initial SR read and the CCRx read,
-  // setting CCxOF (overcapture) without being visible in the cached SR. Since
-  // CCxOF doesn't generate its own interrupt, a missed OVR flag would linger
-  // undetected until the next capture event.
-  //
-  // After the CCRx reads above, CCxIF is cleared, so any pulse arriving after
-  // this re-read sets CCxIF fresh (not overcapture) and triggers ISR re-entry
-  // normally -- there is no equivalent race after this point.
-  const uint32_t sr_ovr = TIM2->SR;
-  if (__builtin_expect(sr_ovr & (TIM_SR_CC1OF | TIM_SR_CC2OF), 0)) {
-    if (sr_ovr & TIM_SR_CC1OF) {
-      LL_TIM_ClearFlag_CC1OVR(TIM2);
-      missed_pulse(0);
+  // Use pointer-based iteration so the compiler doesn't spill count
+  volatile uint32_t *src = buf + offset;
+  volatile uint32_t *const end = src + count;
+
+  while (src < end) {
+    uint32_t counter = *src++;
+    uint32_t seconds = counter < (CLOCK_FREQ_HZ / 2) ? seconds_A : seconds_B;
+
+    if (__builtin_expect(divider != 1, 0)) {
+      chan->count++;
+      if (chan->count < divider) continue;
+      chan->count = 0;
     }
-    if (sr_ovr & TIM_SR_CC2OF) {
-      LL_TIM_ClearFlag_CC2OVR(TIM2);
-      missed_pulse(1);
+
+    timestamp_buffer[head].seconds = seconds;
+    timestamp_buffer[head].counter = counter | chan_tag;
+    head = (head + 1) % TIMESTAMP_BUFLEN;
+  }
+
+  ts_head = head;
+}
+
+// DMA ISRs for TIM2 input capture. HT fires when the first half of the
+// circular buffer is full; TC fires when the second half is full.
+// Both start from dma_processed_pos rather than fixed offsets, so they
+// don't reprocess entries the periodic flush already handled.
+CCMRAM void DMA1_Channel3_IRQHandler() {
+  const uint32_t half = DMA_CAPTURE_BUFLEN / 2;
+  if (LL_DMA_IsActiveFlag_HT3(DMA1)) {
+    LL_DMA_ClearFlag_HT3(DMA1);
+    uint32_t last = dma_processed_pos_ch1;
+    if (last < half) {
+      process_dma_captures(0, dma_buf_ch1, last, half - last);
+      dma_processed_pos_ch1 = half;
     }
+  }
+  if (LL_DMA_IsActiveFlag_TC3(DMA1)) {
+    LL_DMA_ClearFlag_TC3(DMA1);
+    uint32_t last = dma_processed_pos_ch1;
+    if (last >= half) {
+      process_dma_captures(0, dma_buf_ch1, last, DMA_CAPTURE_BUFLEN - last);
+    }
+    dma_processed_pos_ch1 = 0;
+  }
+}
+
+CCMRAM void DMA1_Channel4_IRQHandler() {
+  const uint32_t half = DMA_CAPTURE_BUFLEN / 2;
+  if (LL_DMA_IsActiveFlag_HT4(DMA1)) {
+    LL_DMA_ClearFlag_HT4(DMA1);
+    uint32_t last = dma_processed_pos_ch2;
+    if (last < half) {
+      process_dma_captures(1, dma_buf_ch2, last, half - last);
+      dma_processed_pos_ch2 = half;
+    }
+  }
+  if (LL_DMA_IsActiveFlag_TC4(DMA1)) {
+    LL_DMA_ClearFlag_TC4(DMA1);
+    uint32_t last = dma_processed_pos_ch2;
+    if (last >= half) {
+      process_dma_captures(1, dma_buf_ch2, last, DMA_CAPTURE_BUFLEN - last);
+    }
+    dma_processed_pos_ch2 = 0;
   }
 }
 
@@ -343,6 +361,55 @@ static void usb_tx_complete(usbd_cdc_state_t *cdc, void *user_data) {
   try_send_timestamps();
 }
 
+// Flush any DMA-captured values that haven't reached a half-buffer boundary
+// yet. This ensures slow pulses get processed promptly rather than waiting for
+// DMA_CAPTURE_BUFLEN/2 more captures to fill the half-buffer. Called from
+// periodic_task.
+static void flush_dma_captures(void) {
+  struct {
+    uint32_t dma_channel;
+    volatile uint32_t *buf;
+    uint32_t *processed_pos;
+    uint8_t channel_num;
+  } chans[] = {
+    {LL_DMA_CHANNEL_3, dma_buf_ch1, &dma_processed_pos_ch1, 0},
+    {LL_DMA_CHANNEL_4, dma_buf_ch2, &dma_processed_pos_ch2, 1},
+  };
+
+  const uint32_t half = DMA_CAPTURE_BUFLEN / 2;
+
+  for (int i = 0; i < 2; i++) {
+    // Disable interrupts to coordinate with the DMA HT/TC ISR — both
+    // read and update the same processed_pos, so we must not race.
+    __disable_irq();
+
+    // DMA counts DOWN from DMA_CAPTURE_BUFLEN; current write position is
+    // DMA_CAPTURE_BUFLEN minus the remaining count.
+    uint32_t remaining = LL_DMA_GetDataLength(DMA1, chans[i].dma_channel);
+    uint32_t current_pos = DMA_CAPTURE_BUFLEN - remaining;
+    if (current_pos == DMA_CAPTURE_BUFLEN) {
+      current_pos = 0;  // DMA counter reads 0 right at wrap
+    }
+
+    // Only process within the current half — never cross a half-boundary.
+    // The DMA HT/TC ISR handles boundary transitions. Clamp current_pos
+    // to the next boundary so we don't step on the ISR's territory.
+    uint32_t last = *chans[i].processed_pos;
+    uint32_t limit = (last < half) ? half : DMA_CAPTURE_BUFLEN;
+    if (current_pos > limit) {
+      current_pos = limit;
+    }
+
+    if (current_pos > last) {
+      process_dma_captures(chans[i].channel_num, chans[i].buf,
+                           last, current_pos - last);
+      *chans[i].processed_pos = current_pos;
+    }
+
+    __enable_irq();
+  }
+}
+
 static void periodic_task(void *data) {
   schedule_us(TIMESTAMP_PRINT_PERIOD_USEC, periodic_task, NULL);
 
@@ -351,8 +418,8 @@ static void periodic_task(void *data) {
   if (g_rulos_hse_failed) {
     LL_TIM_DisableCounter(TIM2);
     LL_TIM_DisableCounter(TIM15);
-    LL_TIM_DisableIT_CC1(TIM2);
-    LL_TIM_DisableIT_CC2(TIM2);
+    LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
+    LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_4);
     LL_TIM_DisableIT_UPDATE(TIM15);
 
     // quick flash showing clock failure
@@ -377,6 +444,7 @@ static void periodic_task(void *data) {
      welcome_printed = true;
   }
 
+  flush_dma_captures();
   update_leds();
 
   // Report missed pulses when USB is idle
@@ -405,8 +473,6 @@ static void init_timers() {
 
   // Configure the timer to roll over and generate an interrupt once per second,
   // i.e. the autoreload value is equal to the clock frequency in hz (minus 1).
-  HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(TIM2_IRQn);
   LL_TIM_InitTypeDef timer2_init = {
     .Prescaler = 0,
     .CounterMode = LL_TIM_COUNTERMODE_UP,
@@ -436,7 +502,6 @@ static void init_timers() {
   LL_TIM_IC_SetPrescaler(TIM2, LL_TIM_CHANNEL_CH1, LL_TIM_ICPSC_DIV1);
   LL_TIM_IC_SetFilter(TIM2, LL_TIM_CHANNEL_CH1, LL_TIM_IC_FILTER_FDIV1);
   LL_TIM_IC_SetPolarity(TIM2, LL_TIM_CHANNEL_CH1, LL_TIM_IC_POLARITY_RISING);
-  LL_TIM_EnableIT_CC1(TIM2);
 
   // Configure input capture to be the rising edge of timer 2, channel 2
   gpio_init.Pin = LL_GPIO_PIN_1;
@@ -446,12 +511,57 @@ static void init_timers() {
   LL_TIM_IC_SetPrescaler(TIM2, LL_TIM_CHANNEL_CH2, LL_TIM_ICPSC_DIV1);
   LL_TIM_IC_SetFilter(TIM2, LL_TIM_CHANNEL_CH2, LL_TIM_IC_FILTER_FDIV1);
   LL_TIM_IC_SetPolarity(TIM2, LL_TIM_CHANNEL_CH2, LL_TIM_IC_POLARITY_RISING);
-  LL_TIM_EnableIT_CC2(TIM2);
 
   /// Start the counter running and enable the input capture channels
   LL_TIM_EnableCounter(TIM2);
   LL_TIM_CC_EnableChannel(TIM2, LL_TIM_CHANNEL_CH1);
   LL_TIM_CC_EnableChannel(TIM2, LL_TIM_CHANNEL_CH2);
+
+  // Set up DMA for input capture. Each capture channel gets its own DMA
+  // channel in circular mode. HT/TC interrupts fire at each half-buffer
+  // boundary so we can process captures while the other half fills.
+  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMAMUX1);
+  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
+
+  // DMA1 Channel 3: TIM2_CH1 capture -> dma_buf_ch1
+  LL_DMA_SetPeriphRequest(DMA1, LL_DMA_CHANNEL_3, LL_DMAMUX_REQ_TIM2_CH1);
+  LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_3, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
+  LL_DMA_SetChannelPriorityLevel(DMA1, LL_DMA_CHANNEL_3, LL_DMA_PRIORITY_VERYHIGH);
+  LL_DMA_SetMode(DMA1, LL_DMA_CHANNEL_3, LL_DMA_MODE_CIRCULAR);
+  LL_DMA_SetPeriphIncMode(DMA1, LL_DMA_CHANNEL_3, LL_DMA_PERIPH_NOINCREMENT);
+  LL_DMA_SetMemoryIncMode(DMA1, LL_DMA_CHANNEL_3, LL_DMA_MEMORY_INCREMENT);
+  LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_3, LL_DMA_PDATAALIGN_WORD);
+  LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_3, LL_DMA_MDATAALIGN_WORD);
+  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_3,
+      (uint32_t)&TIM2->CCR1, (uint32_t)dma_buf_ch1,
+      LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
+  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, DMA_CAPTURE_BUFLEN);
+  LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_3);
+  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_3);
+  NVIC_SetPriority(DMA1_Channel3_IRQn, 1);
+  NVIC_EnableIRQ(DMA1_Channel3_IRQn);
+  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
+  LL_TIM_EnableDMAReq_CC1(TIM2);
+
+  // DMA1 Channel 4: TIM2_CH2 capture -> dma_buf_ch2
+  LL_DMA_SetPeriphRequest(DMA1, LL_DMA_CHANNEL_4, LL_DMAMUX_REQ_TIM2_CH2);
+  LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_4, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
+  LL_DMA_SetChannelPriorityLevel(DMA1, LL_DMA_CHANNEL_4, LL_DMA_PRIORITY_VERYHIGH);
+  LL_DMA_SetMode(DMA1, LL_DMA_CHANNEL_4, LL_DMA_MODE_CIRCULAR);
+  LL_DMA_SetPeriphIncMode(DMA1, LL_DMA_CHANNEL_4, LL_DMA_PERIPH_NOINCREMENT);
+  LL_DMA_SetMemoryIncMode(DMA1, LL_DMA_CHANNEL_4, LL_DMA_MEMORY_INCREMENT);
+  LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_4, LL_DMA_PDATAALIGN_WORD);
+  LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_4, LL_DMA_MDATAALIGN_WORD);
+  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_4,
+      (uint32_t)&TIM2->CCR2, (uint32_t)dma_buf_ch2,
+      LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
+  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_4, DMA_CAPTURE_BUFLEN);
+  LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_4);
+  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_4);
+  NVIC_SetPriority(DMA1_Channel4_IRQn, 1);
+  NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_4);
+  LL_TIM_EnableDMAReq_CC2(TIM2);
 
 
   // Configure TIM15: fires twice per TIM2 rollover to increment the high bits
