@@ -3,15 +3,12 @@
 """Binary-search for the timestamper's dead time.
 
 Drives a Rigol DG1022Z (via siggen.py's Siggen class) to produce pulse
-bursts (3 pulses) at various spacings while reading the timestamper's
-serial output to determine whether all pulses in each burst are captured.
-
-Using triples rather than pairs measures the full ISR round-trip time:
-the 3rd pulse arrives while the ISR may still be processing the 2nd,
-so the constraint is N > (total_ISR_time + time_to_CCR_read) / 2.
+bursts at various spacings while reading the timestamper's serial output
+to determine whether all pulses in each burst are captured.
 
 Usage:
-  deadtime.py                           defaults: 100-1000 ns, /dev/ttyACM0
+  deadtime.py                           defaults: 3 pulses, 100-1000 ns
+  deadtime.py --ncyc 1000              test with 1000-pulse bursts
   deadtime.py --bottom 50 --top 500     custom range in ns
   deadtime.py --port /dev/ttyACM1       custom serial port
   deadtime.py --host siggen2            custom signal generator hostname
@@ -26,14 +23,12 @@ from dataclasses import dataclass
 from siggen import Siggen
 
 
-NCYC = 3  # pulses per burst
-
-
 @dataclass
 class PulseCount:
     timestamps: int    # number of timestamp lines received
     overcaptures: int  # number of "overcapture" comment lines
-    complete: int      # bursts where all NCYC pulses were captured
+    overflows: int     # number of "buf overflow" comment lines
+    burst_sizes: list  # list of per-burst timestamp counts
 
 
 def count_pulses(port, settle_time_s=2.0, measure_time_s=3.0, verbose=True):
@@ -50,6 +45,7 @@ def count_pulses(port, settle_time_s=2.0, measure_time_s=3.0, verbose=True):
         ser.reset_input_buffer()
         timestamps = []
         overcaptures = 0
+        overflows = 0
         deadline = time.monotonic() + measure_time_s
         while time.monotonic() < deadline:
             line = ser.readline().decode(errors="replace").strip()
@@ -60,16 +56,17 @@ def count_pulses(port, settle_time_s=2.0, measure_time_s=3.0, verbose=True):
             if line.startswith("#"):
                 if "overcapture" in line.lower():
                     overcaptures += 1
+                if "overflow" in line.lower():
+                    overflows += 1
                 continue
             # Timestamp line: "1 123.456789012345" or "2 ..."
             timestamps.append(line)
 
         # Group timestamps into bursts. Bursts repeat 1/sec, so
         # timestamps within 0.5s of each other belong to the same burst.
-        complete = 0
+        burst_sizes = []
         i = 0
         while i < len(timestamps):
-            # Start a new burst with this timestamp
             burst_size = 1
             try:
                 t_start = float(timestamps[i].split()[1])
@@ -87,14 +84,14 @@ def count_pulses(port, settle_time_s=2.0, measure_time_s=3.0, verbose=True):
                     j += 1
                 else:
                     break
-            if burst_size >= NCYC:
-                complete += 1
+            burst_sizes.append(burst_size)
             i = j
 
         return PulseCount(
             timestamps=len(timestamps),
             overcaptures=overcaptures,
-            complete=complete,
+            overflows=overflows,
+            burst_sizes=burst_sizes,
         )
 
     finally:
@@ -103,30 +100,39 @@ def count_pulses(port, settle_time_s=2.0, measure_time_s=3.0, verbose=True):
 
 
 
-def test_spacing(sg, port, ns, verbose=True):
+def test_spacing(sg, port, ns, ncyc=3, verbose=True):
     """Set the signal generator to the given spacing and check results.
 
     Returns True if all pulses in each burst are reliably captured
     (no dead time issue), False if pulses are being missed.
     """
-    print(f"  Testing {ns:.1f} ns...")
+    print(f"  Testing {ns:.1f} ns ({ncyc} pulses/burst)...")
 
-    sg.pulse_burst(ns)
+    sg.pulse_burst(ns, ncyc=ncyc)
 
     # Read timestamper output
     result = count_pulses(port, verbose=verbose)
 
     # We expect ~3 bursts in the 3-second measurement window.
-    # "pass" = we see pairs (both pulses captured) and no overcaptures.
-    # "fail" = overcaptures reported OR we never see pairs (second pulse
-    # is lost entirely, which at very short spacings means the hardware
-    # overwrites CCR before the ISR can read it).
-    passed = result.complete >= 2 and result.overcaptures == 0
+    # "pass" = every burst has all ncyc pulses, no overcaptures or overflows.
+    # "fail" = any burst is missing pulses, or overcaptures/overflows reported.
+    # Ignore partial bursts at measurement window boundaries
+    complete = [sz for sz in result.burst_sizes if sz >= ncyc]
+    partial = [sz for sz in result.burst_sizes if sz < ncyc]
+
+    if len(complete) < 2:
+        passed = False
+    else:
+        passed = (result.overcaptures == 0
+                  and result.overflows == 0)
 
     status = "PASS" if passed else "FAIL"
+    burst_str = ",".join(str(s) for s in result.burst_sizes)
     print(f"  {ns:6.1f} ns: {status}  "
-          f"(timestamps={result.timestamps}, complete={result.complete}, "
-          f"overcaptures={result.overcaptures})")
+          f"(timestamps={result.timestamps}, "
+          f"bursts=[{burst_str}], "
+          f"overcaptures={result.overcaptures}, "
+          f"overflows={result.overflows})")
 
     return passed
 
@@ -144,15 +150,19 @@ def main():
                         help="Signal generator hostname (default: siggen)")
     parser.add_argument("--precision", type=float, default=5,
                         help="Stop when range narrows to this many ns (default: 5)")
+    parser.add_argument("--ncyc", type=int, default=3,
+                        help="Pulses per burst (default: 3)")
     parser.add_argument("--quiet", "-q", action="store_true",
                         help="Suppress raw serial output")
     args = parser.parse_args()
 
     lo = args.bottom
     hi = args.top
+    ncyc = args.ncyc
     verbose = not args.quiet
 
-    print(f"Searching for dead time in range [{lo:.0f}, {hi:.0f}] ns")
+    print(f"Searching for dead time in range [{lo:.0f}, {hi:.0f}] ns, "
+          f"{ncyc} pulses/burst")
     print(f"Timestamper port: {args.port}")
     print(f"Signal generator: {args.host}")
     print()
@@ -163,12 +173,12 @@ def main():
 
         # Verify endpoints: top should pass, bottom should fail
         print("Verifying upper bound...")
-        if not test_spacing(sg, args.port, hi, verbose):
+        if not test_spacing(sg, args.port, hi, ncyc=ncyc, verbose=verbose):
             print(f"ERROR: Upper bound {hi:.0f} ns fails -- increase --top")
             sys.exit(1)
 
         print("Verifying lower bound...")
-        if test_spacing(sg, args.port, lo, verbose):
+        if test_spacing(sg, args.port, lo, ncyc=ncyc, verbose=verbose):
             print(f"NOTE: Lower bound {lo:.0f} ns already passes -- "
                   f"decrease --bottom or dead time is below {lo:.0f} ns")
             sg.output_off()
@@ -184,7 +194,7 @@ def main():
             if mid == lo or mid == hi:
                 break
 
-            if test_spacing(sg, args.port, mid, verbose):
+            if test_spacing(sg, args.port, mid, ncyc=ncyc, verbose=verbose):
                 hi = mid
             else:
                 lo = mid
