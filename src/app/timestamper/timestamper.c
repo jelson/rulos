@@ -104,8 +104,13 @@
 #define CLOCK_FREQ_HZ 170000000
 
 #define TIMESTAMP_PRINT_PERIOD_USEC 100000
-#define TIMESTAMP_BUFLEN            1024  // should be power of 2 for fast modulo ops
+#define TIMESTAMP_BUFLEN            2048  // should be power of 2 for fast modulo ops
 #define MONOTONICITY_CHECK          0
+
+// Channel number is packed into the top 2 bits of the counter field.
+// Counter maxes out at 170,000,000 (0x0A21FE80), well within 30 bits.
+#define COUNTER_CHAN_SHIFT 30
+#define COUNTER_CHAN_MASK  0x3FFFFFFFU
 
 #define LED_CLOCK GPIO_B7
 #define LED_CHAN0 GPIO_A4
@@ -133,9 +138,7 @@ static channel_t channels[NUM_CHANNELS];
 // buffer of recorded timestamps that have not yet been transmitted over uart
 typedef struct {
   uint32_t seconds;
-  uint32_t counter;
-  uint8_t channel;
-  uint8_t _pad[7];  // pad to 16 bytes for power-of-2 indexing in ISR
+  uint32_t counter;  // top 2 bits = channel, bottom 30 = counter value
 } timestamp_t;
 
 UartState_t uart;
@@ -196,9 +199,8 @@ CCMRAM static inline __attribute__((always_inline)) void maybe_store_timestamp(u
     return;
   }
 
-  timestamp_buffer[head].channel = channel_num;
   timestamp_buffer[head].seconds = seconds;
-  timestamp_buffer[head].counter = counter;
+  timestamp_buffer[head].counter = counter | ((uint32_t)channel_num << COUNTER_CHAN_SHIFT);
   ts_head = next_head;
 }
 
@@ -268,7 +270,10 @@ static int format_timestamp(timestamp_t *t, char *buf, int buf_size) {
   // tick. We can achieve this by multiplying by 100,000 and then dividing by
   // 17. 170M * 100,000 is more than 32 bits, so we use 64-bit math for the
   // conversion.
-  uint64_t picoseconds = t->counter;
+  uint8_t channel = t->counter >> COUNTER_CHAN_SHIFT;
+  uint32_t counter = t->counter & COUNTER_CHAN_MASK;
+
+  uint64_t picoseconds = counter;
   picoseconds *= 100000;
   picoseconds /= 17;
 
@@ -279,7 +284,7 @@ static int format_timestamp(timestamp_t *t, char *buf, int buf_size) {
   uint32_t sub_microseconds = picoseconds % 1000000;
 
   return snprintf(buf, buf_size, "%d %ld.%06ld%06ld\n",
-                  t->channel + 1, t->seconds, microseconds, sub_microseconds);
+                  channel + 1, t->seconds, microseconds, sub_microseconds);
 }
 
 static bool received_recent_pulse(uint8_t channel_num) {
@@ -327,7 +332,7 @@ static void try_send_timestamps(void) {
   for (int i = 0; i < max_timestamps && ts_tail != ts_head; i++) {
     timestamp_t t = timestamp_buffer[ts_tail];
     ts_tail = (ts_tail + 1) % TIMESTAMP_BUFLEN;
-    channels[t.channel].recent_pulse = true;  // for LED blinking
+    channels[t.counter >> COUNTER_CHAN_SHIFT].recent_pulse = true;  // for LED blinking
     pos += format_timestamp(&t, usb_tx_buf + pos,
                             CDC_DATA_FS_MAX_PACKET_SIZE - pos);
   }
