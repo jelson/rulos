@@ -46,9 +46,11 @@ class Siggen:
         self.cmd(f":OUTP{ch} ON")
 
     def output_off(self, ch=1):
-        """Turn off output, settling to 0V DC first to avoid a transient."""
+        """Turn off output cleanly: zero amplitude, settle to DC, then off."""
+        self.cmd(f":SOUR{ch}:BURS:STAT OFF")
+        self.cmd(f":SOUR{ch}:VOLT:HIGH 0")
+        self.cmd(f":SOUR{ch}:VOLT:LOW 0")
         self.cmd(f":SOUR{ch}:FUNC DC")
-        self.cmd(f":SOUR{ch}:VOLT:OFFS 0")
         self.cmd(f":OUTP{ch} OFF")
 
     def verify(self, queries):
@@ -103,14 +105,12 @@ def cmd_1pps(sg, args):
     print("Output ON: 1 PPS continuous")
 
 
-def cmd_pair_ns(sg, args):
+def cmd_burst(sg, args):
     """Burst of pulses separated by <ns> nanoseconds, once/sec."""
-    ns = args.ns
-    ncyc = args.ncyc
-    freq = 1e9 / ns
-    print(f"Burst: {ncyc} pulses, {ns} ns spacing (freq={freq:.1f} Hz)")
+    freq = 1e9 / args.ns
+    print(f"Burst: {args.ncyc} pulses, {args.ns} ns spacing (freq={freq:.1f} Hz)")
 
-    sg.pulse_burst(ns, ncyc=ncyc)
+    sg.pulse_burst(args.ns, ncyc=args.ncyc)
     print("Output ON: pulse bursts, repeating 1/sec")
 
 
@@ -128,15 +128,15 @@ def main():
     sub.add_parser("1pps", help="1 Hz continuous pulse")
     sub.add_parser("off", help="Turn off output")
 
-    pair = sub.add_parser("pair_ns", help="Burst of pulses N ns apart")
-    pair.add_argument("ns", type=int, help="Spacing between pulses in nanoseconds")
-    pair.add_argument("--ncyc", type=int, default=3, help="Number of pulses (default: 3)")
+    burst = sub.add_parser("burst", help="Burst of pulses N ns apart")
+    burst.add_argument("ns", type=int, help="Spacing between pulses in nanoseconds")
+    burst.add_argument("ncyc", type=int, help="Number of pulses per burst")
 
     args = parser.parse_args()
 
     commands = {
         "1pps": cmd_1pps,
-        "pair_ns": cmd_pair_ns,
+        "burst": cmd_burst,
         "off": cmd_off,
     }
 
