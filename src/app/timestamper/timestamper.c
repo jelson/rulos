@@ -147,7 +147,8 @@ static volatile uint32_t ts_head = 0;  // next write position (ISR)
 static volatile uint32_t ts_tail = 0;  // next read position (USB output)
 
 // USB TX buffer - must persist until tx_complete callback
-static char usb_tx_buf[50];
+static char usb_tx_buf[CDC_DATA_FS_MAX_PACKET_SIZE];
+
 
 // total seconds elapsed since boot -- for details, see comment at top
 uint32_t seconds_A = 0;
@@ -257,7 +258,8 @@ CCMRAM void TIM2_IRQHandler() {
   }
 }
 
-static void print_one_timestamp(timestamp_t *t) {
+// Format a timestamp into buf, returning the number of bytes written.
+static int format_timestamp(timestamp_t *t, char *buf, int buf_size) {
   // Conversion from ticks to picoseconds:
   //
   // The clock frequency is 170 mhz, and we have the timer/counter configured to
@@ -276,9 +278,8 @@ static void print_one_timestamp(timestamp_t *t) {
   uint32_t microseconds = picoseconds / 1000000;
   uint32_t sub_microseconds = picoseconds % 1000000;
 
-  int len = snprintf(usb_tx_buf, sizeof(usb_tx_buf), "%d %ld.%06ld%06ld\n",
-                     t->channel + 1, t->seconds, microseconds, sub_microseconds);
-  usbd_cdc_write(&usb_cdc, usb_tx_buf, len);
+  return snprintf(buf, buf_size, "%d %ld.%06ld%06ld\n",
+                  t->channel + 1, t->seconds, microseconds, sub_microseconds);
 }
 
 static bool received_recent_pulse(uint8_t channel_num) {
@@ -313,17 +314,28 @@ static void update_leds(void) {
   }
 }
 
-static void try_send_next_timestamp(void) {
-  if (ts_tail != ts_head && usbd_cdc_tx_ready(&usb_cdc)) {
+static void try_send_timestamps(void) {
+  if (ts_tail == ts_head || !usbd_cdc_tx_ready(&usb_cdc)) {
+    return;
+  }
+  // Pack multiple timestamps into one USB packet. Each timestamp is 16 bytes
+  // plus the number of decimal digits in the seconds field. At <100k seconds
+  // (under ~27.8 hours) each is <=21 bytes so 3 fit in 64; beyond that, 2
+  // always fit (worst case 2*26=52 at max uint32).
+  int max_timestamps = (timestamp_buffer[ts_tail].seconds >= 100000) ? 2 : 3;
+  int pos = 0;
+  for (int i = 0; i < max_timestamps && ts_tail != ts_head; i++) {
     timestamp_t t = timestamp_buffer[ts_tail];
     ts_tail = (ts_tail + 1) % TIMESTAMP_BUFLEN;
     channels[t.channel].recent_pulse = true;  // for LED blinking
-    print_one_timestamp(&t);
+    pos += format_timestamp(&t, usb_tx_buf + pos,
+                            CDC_DATA_FS_MAX_PACKET_SIZE - pos);
   }
+  usbd_cdc_write(&usb_cdc, usb_tx_buf, pos);
 }
 
 static void usb_tx_complete(usbd_cdc_state_t *cdc, void *user_data) {
-  try_send_next_timestamp();
+  try_send_timestamps();
 }
 
 static void periodic_task(void *data) {
@@ -379,7 +391,7 @@ static void periodic_task(void *data) {
     }
   }
 
-  try_send_next_timestamp();
+  try_send_timestamps();
 }
 
 static void init_timers() {
