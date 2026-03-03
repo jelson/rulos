@@ -586,6 +586,16 @@ static void on_rx_dma_interrupt(uint8_t uart_id) {
 
 static size_t get_rx_stored_chars_dma(uint8_t uart_id, stm32_uart_t *u,
                                       const stm32_uart_config_t *c) {
+
+  size_t len = 0;
+  for (int i=0; i<50*8; i++) {
+    size_t l = LL_DMA_GetDataLength(c->rx_dma_instance, c->rx_dma_channel);
+    if (i && l != len) {
+      break;
+    }
+    len = l;
+  }
+  
   // Disable DMA
   LL_DMA_DisableChannel(c->rx_dma_instance, c->rx_dma_channel);
 
@@ -1015,21 +1025,24 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
 void hal_uart_log_stats(uint8_t uart_id) {
   assert(uart_id < NUM_UARTS);
   stm32_uart_t *u = &g_stm32_uarts[uart_id];
+  const stm32_uart_config_t *config = &stm32_uart_config[uart_id];
   (void)u;
 
   LOG("stats for UART %u", uart_id);
   LOG(" total rx: %lu", u->tot_rx_bytes);
   LOG(" total tx: %lu", u->tot_tx_bytes);
+  LOG(" interrupt count: %lu", u->tot_ints);
   LOG(" frame_errors: %lu", u->frame_errors);
   LOG(" parity_errors: %lu", u->parity_errors);
   LOG(" noise_errors: %lu", u->noise_errors);
   LOG(" overruns: %lu", u->overruns);
   LOG(" dropped rx bytes: %lu", u->dropped_rx_bytes);
 #ifdef LL_USART_ISR_RXNE_RXFNE
-  const stm32_uart_config_t *config = &stm32_uart_config[uart_id];
   (void)config;
   LOG(" rx fifo: %lu", LL_USART_GetRXFIFOThreshold(config->instance));
 #endif
   LOG(" min isr chars: %u", u->min_chars_per_rx_isr);
   LOG(" max isr chars: %u", u->max_chars_per_rx_isr);
+  LOG(" DMA in use: %d,%d", USART_USING_RX_DMA(config),
+    u->rx_half_buflen);
 }
