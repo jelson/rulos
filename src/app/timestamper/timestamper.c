@@ -17,9 +17,9 @@
  */
 
 /*
- * This program timestamps pulses that it sees on its input capture pin and
- * prints a list of those timestamps (relative to program start) on the serial
- * port. It has a resolution of 6 nanoseconds.
+ * This program timestamps pulses that it sees on its input capture pins and
+ * prints a list of those timestamps (relative to program start) to its USB
+ * serial interface. It has a resolution of 6 nanoseconds.
  *
  * It is based on the STM32G431x8, a wonderful little CPU that costs $5 but can
  * run at 170Mhz. The software assumes that a 10Mhz clock reference is provided
@@ -31,36 +31,31 @@
  * size of the diode drop will be about how far below ground the shifted signal
  * goes.
  *
- * The input signal should be provided on PA0 (pin 5).
+ * Output is simply a list of channel numbers and timestamps, one per line:
  *
- * Output is written to the UART at 1Mbps. Output is simply a list of
- * timestamps, one per line. Each is in decimal seconds, with 12 digits
- * following the decimal point representing picoseconds. Though the current
- * version only has 9ns resolution, future versions are expected to have 184ps
- * resolution, and emitting picoseconds avoids quantization effects. Timestamps
- * are relative to the time the program started.
+ * 1 5293.585203495384
+ *
+ * Timestamps are decimal seconds, with 12 digits following the decimal point
+ * representing picoseconds. Timestamps are relative to the time the program
+ * started.
  *
  * The implementation uses input-capture feature of TIM2, a 32-bit timer of the
  * STM32G431. Input capture waits for the rising edge of the input signal and
  * then latches the timer value at the moment of the signal's edge. The timer
  * runs at the system clock rate of 170MHz. The 170MHz clock is achieved by
- * using the STM32's PLL to multiply the 10MHz input reference frequency by
- * 17. The timer is configured to roll over once per second, i.e. every 170
- * million clock ticks. On each rollover interrupt, the program increments a
- * counter of the total number of seconds that have elapsed. On each input
- * capture interrupt, the latched timer value is read and converted from the
- * timer scale of one tick per 170-millionths of a second to picoseconds, by
- * multiplying it by 100,000 and then dividing it by 17. (64-bit math is used
- * for this to prevent overflow.)
+ * using the STM32's PLL to multiply the 10MHz reference frequency by 17. The
+ * timer is configured to roll over once per second, i.e. every 170 million
+ * clock ticks.
  *
  * RACE CONDITION AVOIDANCE WITH seconds_A / seconds_B:
  *
  * A timestamp consists of two parts: the high-order "seconds" counter
  * (maintained in software) and the low-order timer value (latched in hardware
- * at the moment of input capture). There's a potential race condition: if the
- * timer rolls over between when an input capture occurs and when the ISR reads
- * the seconds counter, the wrong seconds value could be paired with the timer
- * value.
+ * at the moment of input capture). A naive implementation would increment the
+ * seconds counter every time we get an interrupt indicating the 170MHz counter
+ * has rolled over. But there's a potential race condition: if the timer rolls
+ * over between when an input capture occurs and when the ISR reads the seconds
+ * counter, the wrong seconds value could be paired with the timer value.
  *
  * To solve this, we maintain two copies of the seconds counter (seconds_A and
  * seconds_B) and use a separate timer (TIM15) that fires twice per TIM2 cycle:
@@ -73,7 +68,8 @@
  *   seconds_B, syncing them for the new second
  *
  * In the input capture ISR, we check the captured timer value:
- * - If counter < half: use seconds_A (event was in the first half of the second)
+ * - If counter < half: use seconds_A (event was in the first half of the
+ *   second)
  * - If counter >= half: use seconds_B (event was in the second half)
  *
  * This ensures correctness even if there's a delay between input capture and
@@ -107,6 +103,8 @@
 
 #define TIMESTAMP_PRINT_PERIOD_USEC 100000
 #define TIMESTAMP_BUFLEN            1024  // should be power of 2 for fast modulo ops
+#define DMA_CAPTURE_BUFLEN          256
+#define USB_TX_BUFLEN               1024
 #define MONOTONICITY_CHECK          0
 
 // Channel number is packed into the top 2 bits of the counter field.
@@ -118,7 +116,7 @@
 #define LED_CHAN0 GPIO_A4
 #define LED_CHAN1 GPIO_A5
 
-// channel configurations
+// channel configurations and state
 typedef struct {
   // number of missed pulses
   uint32_t num_missed;
@@ -137,39 +135,35 @@ typedef struct {
 
 static channel_t channels[NUM_CHANNELS];
 
-// buffer of recorded timestamps that have not yet been transmitted over uart
-typedef struct {
-  uint32_t seconds;
-  uint32_t counter;  // top 2 bits = channel, bottom 30 = counter value
-} timestamp_t;
-
-UartState_t uart;
-static usbd_cdc_state_t usb_cdc;
-
-// Circular buffer for timestamps: ISR writes at ts_head, USB drains from ts_tail
-timestamp_t timestamp_buffer[TIMESTAMP_BUFLEN];
-static volatile uint32_t ts_head = 0;  // next write position (ISR)
-static volatile uint32_t ts_tail = 0;  // next read position (USB output)
-
-// USB TX buffer - must persist until tx_complete callback.
-// Larger buffer packs many timestamps per USB transfer, enabling multiple
-// 64-byte packets per USB frame for higher throughput.
-#define USB_TX_BUFLEN 1024
-static char usb_tx_buf[USB_TX_BUFLEN];
-
 // DMA circular buffers for input capture — one per channel.
 // DMA writes raw CCR values here; HT/TC interrupts process each half.
-#define DMA_CAPTURE_BUFLEN 256
 static volatile uint32_t dma_buf_ch1[DMA_CAPTURE_BUFLEN];
 static volatile uint32_t dma_buf_ch2[DMA_CAPTURE_BUFLEN];
 // Tracks how far we've processed for the periodic flush of slow pulses
 static uint32_t dma_processed_pos_ch1 = 0;
 static uint32_t dma_processed_pos_ch2 = 0;
 
-
 // total seconds elapsed since boot -- for details, see comment at top
 uint32_t seconds_A = 0;
 uint32_t seconds_B = 0;
+
+// Circular buffer for timestamps not yet written to USB
+typedef struct {
+  uint32_t seconds;
+  uint32_t counter;  // top 2 bits = channel, bottom 30 = counter value
+} timestamp_t;
+
+timestamp_t timestamp_buffer[TIMESTAMP_BUFLEN];
+static volatile uint32_t ts_head = 0;  // next write position (ISR)
+static volatile uint32_t ts_tail = 0;  // next read position (USB output)
+
+// Output device state. USB packets carry at most 64 bytes of payload, but we
+// want the buffer to be big enough that the USB stack can complete multiple
+// transactions per frame, maximizing throughput.
+static UartState_t uart;
+static usbd_cdc_state_t usb_cdc;
+static char usb_tx_buf[USB_TX_BUFLEN];
+
 
 // TIM15 fires twice per rollover of TIM2, the input capture timer. It is used
 // to update the high order bits. For details, see comment at top.
@@ -198,6 +192,7 @@ CCMRAM static void process_dma_captures(uint8_t channel_num,
                                   volatile uint32_t *buf,
                                   uint32_t offset, uint32_t count) {
   channel_t *chan = &channels[channel_num];
+  chan->recent_pulse = true;
   uint32_t head = ts_head;
   const uint32_t tail = ts_tail;
   const uint32_t chan_tag = (uint32_t)channel_num << COUNTER_CHAN_SHIFT;
@@ -341,18 +336,19 @@ static void try_send_timestamps(void) {
   if (ts_tail == ts_head || !usbd_cdc_tx_ready(&usb_cdc)) {
     return;
   }
-  // Pack multiple timestamps into one USB packet. Each timestamp is 16 bytes
-  // plus the number of decimal digits in the seconds field. At <100k seconds
-  // (under ~27.8 hours) each is <=21 bytes so 3 fit in 64; beyond that, 2
-  // always fit (worst case 2*26=52 at max uint32).
-  int max_timestamps = (timestamp_buffer[ts_tail].seconds >= 100000) ? 2 : 3;
+  // Pack as many timestamps as fit into the USB TX buffer. The HAL
+  // handles splitting into 64-byte USB packets automatically, sending
+  // multiple packets per 1ms USB frame for ~16x higher throughput.
   int pos = 0;
-  for (int i = 0; i < max_timestamps && ts_tail != ts_head; i++) {
+  while (ts_tail != ts_head) {
+    // Max formatted length: "2 4294967295.999999999999\n" = 26 bytes.
+    // Stop if there's not enough room for the largest possible timestamp.
+    if (pos + 26 > USB_TX_BUFLEN) {
+      break;
+    }
     timestamp_t t = timestamp_buffer[ts_tail];
     ts_tail = (ts_tail + 1) % TIMESTAMP_BUFLEN;
-    channels[t.counter >> COUNTER_CHAN_SHIFT].recent_pulse = true;  // for LED blinking
-    pos += format_timestamp(&t, usb_tx_buf + pos,
-                            CDC_DATA_FS_MAX_PACKET_SIZE - pos);
+    pos += format_timestamp(&t, usb_tx_buf + pos, USB_TX_BUFLEN - pos);
   }
   usbd_cdc_write(&usb_cdc, usb_tx_buf, pos);
 }
