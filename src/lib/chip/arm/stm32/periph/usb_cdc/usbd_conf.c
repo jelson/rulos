@@ -131,7 +131,7 @@ void HAL_PCD_MspDeInit(PCD_HandleTypeDef* pcdHandle)
     HAL_NVIC_DisableIRQ(USB_LP_IRQn);
 
   /* USER CODE BEGIN USB_MspDeInit 1 */
-    __HAL_RCC_GPIOA_CLK_DISABLE();
+    // Do NOT disable GPIOA here -- it's shared with UART, timers, SWD, etc.
   /* USER CODE END USB_MspDeInit 1 */
   }
 }

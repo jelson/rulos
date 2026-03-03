@@ -88,6 +88,13 @@ static int8_t CDC_Init_FS(void) {
 }
 
 static int8_t CDC_DeInit_FS(void) {
+  if (cdc_device) {
+    cdc_device->usb_ready = false;
+    // If USB drops mid-transfer, TransmitComplete will never fire.
+    // Reset tx state so the device can TX again after reconnect.
+    cdc_device->tx_busy = false;
+    cdc_device->tx_buf_in_flight = NULL;
+  }
   return USBD_OK;
 }
 
@@ -96,9 +103,13 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t *pbuf, uint16_t length) {
     LOG("CDC_Control_FS: no device");
     return USBD_FAIL;
   }
-  // When host opens the port, mark USB as ready
+  // Track host port open/close via DTR bit in SET_CONTROL_LINE_STATE.
+  // When wLength==0 the middleware passes the raw setup packet as pbuf.
+  // DTR (bit 0 of wValue) is set when the host opens the port and cleared
+  // when it closes it.
   if (cmd == CDC_SET_CONTROL_LINE_STATE) {
-    cdc_device->usb_ready = true;
+    USBD_SetupReqTypedef *req = (USBD_SetupReqTypedef *)pbuf;
+    cdc_device->usb_ready = (req->wValue & 0x01) != 0;
   }
   return USBD_OK;
 }
