@@ -331,7 +331,11 @@ static void SystemClock_Config(void) {
 #ifdef RULOS_USE_HSE
   /* Try HSE + PLL first */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+#ifdef RULOS_HSE_BYPASS
+  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
+#else
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+#endif
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = RULOS_PLLM;

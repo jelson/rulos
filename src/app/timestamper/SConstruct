@@ -30,6 +30,7 @@ RulosBuildTarget(
             extra_cflags = [
                 '-DHSE_VALUE=10000000',
                 '-DRULOS_USE_HSE',
+                '-DRULOS_HSE_BYPASS',
                 '-DRULOS_PLLM=RCC_PLLM_DIV1',
                 '-DRULOS_PLLN=34',
                 '-DSCHEDULER_CAPACITY=4',
