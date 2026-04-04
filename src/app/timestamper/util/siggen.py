@@ -3,8 +3,9 @@
 """Control a Rigol DG1022Z signal generator over LAN.
 
 Usage:
-  siggen.py 1pps               1 Hz continuous pulse, 3.3V, 1ms width
-  siggen.py pair_ns <ns>        Burst of 2 pulses <ns> apart, repeating 1/sec
+  siggen.py periodic <hz>       Continuous pulse at <hz> Hz, 3.3V, 1ms width
+  siggen.py 1pps                Shorthand for 'periodic 1'
+  siggen.py burst <ns> <ncyc>   Burst of <ncyc> pulses <ns> apart, repeating 1/sec
   siggen.py off                 Turn off channel 1 output
   siggen.py --host HOST         Override default hostname (default: siggen)
 """
@@ -57,6 +58,23 @@ class Siggen:
         for q in queries:
             print(f"  {q:30s} {self.query(q)}")
 
+    def periodic(self, hz):
+        """Configure continuous pulse output at the given frequency in Hz."""
+        self.output_off()
+        self.cmd(":SOUR1:BURS:STAT OFF")
+        self.cmd(":SOUR1:FUNC PULS")
+        self.cmd(f":SOUR1:FREQ {hz}")
+        self.cmd(":SOUR1:VOLT:HIGH 3.3")
+        self.cmd(":SOUR1:VOLT:LOW 0")
+        self.cmd(":SOUR1:PULS:WIDT 0.001")
+        self.output_on()
+
+        self.verify([
+            ":SOUR1:FUNC?", ":SOUR1:FREQ?", ":SOUR1:VOLT:HIGH?",
+            ":SOUR1:VOLT:LOW?", ":SOUR1:PULS:WIDT?", ":SOUR1:BURS:STAT?",
+            ":SYST:ERR?",
+        ])
+
     def pulse_burst(self, ns, ncyc=3):
         """Configure burst of <ncyc> pulses separated by <ns> ns, repeating 1/sec."""
         freq = 1e9 / ns
@@ -86,22 +104,15 @@ class Siggen:
         ])
 
 
+def cmd_periodic(sg, args):
+    """Configure channel 1: continuous pulse at <hz> Hz, 0-3.3V, 1ms width."""
+    sg.periodic(args.hz)
+    print(f"Output ON: {args.hz} Hz continuous")
+
+
 def cmd_1pps(sg, args):
     """Configure channel 1: 1 Hz pulse, 0-3.3V, 1ms width."""
-    sg.output_off()
-    sg.cmd(":SOUR1:BURS:STAT OFF")
-    sg.cmd(":SOUR1:FUNC PULS")
-    sg.cmd(":SOUR1:FREQ 1")
-    sg.cmd(":SOUR1:VOLT:HIGH 3.3")
-    sg.cmd(":SOUR1:VOLT:LOW 0")
-    sg.cmd(":SOUR1:PULS:WIDT 0.001")
-    sg.output_on()
-
-    sg.verify([
-        ":SOUR1:FUNC?", ":SOUR1:FREQ?", ":SOUR1:VOLT:HIGH?",
-        ":SOUR1:VOLT:LOW?", ":SOUR1:PULS:WIDT?", ":SOUR1:BURS:STAT?",
-        ":SYST:ERR?",
-    ])
+    sg.periodic(1)
     print("Output ON: 1 PPS continuous")
 
 
@@ -125,7 +136,9 @@ def main():
     parser.add_argument("--host", default="siggen")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("1pps", help="1 Hz continuous pulse")
+    periodic = sub.add_parser("periodic", help="Continuous pulse at given Hz")
+    periodic.add_argument("hz", type=float, help="Pulse frequency in Hz")
+    sub.add_parser("1pps", help="1 Hz continuous pulse (shorthand for 'periodic 1')")
     sub.add_parser("off", help="Turn off output")
 
     burst = sub.add_parser("burst", help="Burst of pulses N ns apart")
@@ -135,6 +148,7 @@ def main():
     args = parser.parse_args()
 
     commands = {
+        "periodic": cmd_periodic,
         "1pps": cmd_1pps,
         "burst": cmd_burst,
         "off": cmd_off,
