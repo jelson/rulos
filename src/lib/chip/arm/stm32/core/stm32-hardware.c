@@ -518,6 +518,12 @@ void rulos_hal_init() {
 #ifdef __HAL_RCC_DMAMUX1_CLK_ENABLE
   __HAL_RCC_DMAMUX1_CLK_ENABLE();
 #endif
+#ifdef __HAL_RCC_GPDMA1_CLK_ENABLE
+  __HAL_RCC_GPDMA1_CLK_ENABLE();
+#endif
+#ifdef __HAL_RCC_GPDMA2_CLK_ENABLE
+  __HAL_RCC_GPDMA2_CLK_ENABLE();
+#endif
 #ifdef __HAL_RCC_SYSCFG_CLK_ENABLE
   __HAL_RCC_SYSCFG_CLK_ENABLE();
 #endif

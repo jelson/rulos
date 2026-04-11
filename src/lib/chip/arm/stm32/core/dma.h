@@ -61,9 +61,10 @@ typedef struct rulos_dma_channel rulos_dma_channel_t;  // opaque
 /*
  * Direction, mode, and priority are pass-through wrappers around the
  * vendor LL constants. init_channel can OR them directly into the DMA
- * CCR register with no runtime conversion. Every supported LL header
- * defines LL_DMA_DIRECTION_*, LL_DMA_MODE_*, and LL_DMA_PRIORITY_*
- * with family-native values.
+ * CCR register with no runtime conversion. The vendor LL headers use
+ * different symbol names for classic DMA (F/G families) vs GPDMA (H5)
+ * but the value at the rulos_dma API boundary is opaque -- callers
+ * just pass the symbolic RULOS_DMA_* names.
  */
 typedef uint32_t rulos_dma_direction_t;
 #define RULOS_DMA_DIR_PERIPH_TO_MEM LL_DMA_DIRECTION_PERIPH_TO_MEMORY
@@ -71,14 +72,33 @@ typedef uint32_t rulos_dma_direction_t;
 #define RULOS_DMA_DIR_MEM_TO_MEM    LL_DMA_DIRECTION_MEMORY_TO_MEMORY
 
 typedef uint32_t rulos_dma_mode_t;
+#if defined(RULOS_ARM_stm32h5)
+// GPDMA. Normal exists as LL_DMA_NORMAL (no _MODE_ infix). Circular
+// mode on GPDMA requires linked-list descriptors which the H5 backend
+// doesn't implement yet -- use a sentinel so init_channel can reject
+// RULOS_DMA_MODE_CIRCULAR loudly if a caller asks for it.
+#define RULOS_DMA_MODE_NORMAL   LL_DMA_NORMAL
+#define RULOS_DMA_MODE_CIRCULAR 0xFFFFFFFFU
+#else
 #define RULOS_DMA_MODE_NORMAL   LL_DMA_MODE_NORMAL
 #define RULOS_DMA_MODE_CIRCULAR LL_DMA_MODE_CIRCULAR
+#endif
 
 typedef uint32_t rulos_dma_priority_t;
+#if defined(RULOS_ARM_stm32h5)
+// GPDMA priority is a two-axis (priority level, weight) scheme rather
+// than the classic four-level scheme. Map the four RULOS names to the
+// four GPDMA levels that exist.
+#define RULOS_DMA_PRIORITY_LOW       LL_DMA_LOW_PRIORITY_LOW_WEIGHT
+#define RULOS_DMA_PRIORITY_MEDIUM    LL_DMA_LOW_PRIORITY_MID_WEIGHT
+#define RULOS_DMA_PRIORITY_HIGH      LL_DMA_LOW_PRIORITY_HIGH_WEIGHT
+#define RULOS_DMA_PRIORITY_VERYHIGH  LL_DMA_HIGH_PRIORITY
+#else
 #define RULOS_DMA_PRIORITY_LOW       LL_DMA_PRIORITY_LOW
 #define RULOS_DMA_PRIORITY_MEDIUM    LL_DMA_PRIORITY_MEDIUM
 #define RULOS_DMA_PRIORITY_HIGH      LL_DMA_PRIORITY_HIGH
 #define RULOS_DMA_PRIORITY_VERYHIGH  LL_DMA_PRIORITY_VERYHIGH
+#endif
 
 /*
  * Width is the one case where pass-through doesn't work: classic DMA

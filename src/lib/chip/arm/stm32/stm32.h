@@ -32,7 +32,9 @@
 #include "stm32g4xx_ll_usart.h"
 #elif defined(RULOS_ARM_stm32h5)
 #include "stm32h5xx.h"
+#include "stm32h5xx_ll_dma.h"
 #include "stm32h5xx_ll_gpio.h"
+#include "stm32h5xx_ll_usart.h"
 
 #else
 #error "Add support for your STM32 family!"

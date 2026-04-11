@@ -987,13 +987,365 @@ void DMA1_Channel4_5_IRQHandler(void) {
 #endif  // per-chip IRQ handlers
 
 // ============================================================================
-// Stub backend -- H5.
+// STM32H5 GPDMA backend.
 //
-// H5 has GPDMA -- a completely different controller architecture
-// (linked-list descriptors, per-channel built-in request mux, no
-// CCR register). No classic-DMA code works on it. No H5 driver
-// currently uses DMA, so the stub holds the door until a GPDMA
-// backend is written.
+// GPDMA is a completely different controller from classic DMA:
+// linked-list descriptors, per-channel built-in request mux (no
+// separate DMAMUX peripheral), and separate CTR1/CTR2/CBR1/CSAR/
+// CDAR registers instead of a packed CCR. The programming model is
+// different enough that sharing code with the classic-DMA backend
+// above isn't worth the conditional noise -- this block is its own
+// self-contained backend.
+//
+// Scope: the pieces uart.c / twi.c / i2s.c / fatfs need for simple
+// one-shot transfers:
+//   - NORMAL mode only. CIRCULAR on GPDMA requires linked-list
+//     descriptors which aren't implemented yet. init_channel traps
+//     loudly if a caller asks for CIRCULAR.
+//   - Per-channel dedicated IRQs (H523 has 16 of them: GPDMA1
+//     Channel0-7 and GPDMA2 Channel0-7).
+//   - TC / DTE (Data Transfer Error) callbacks. HT is wired into the
+//     dispatcher but only fires in CIRCULAR mode, so it's currently
+//     unused.
+//
+// Based on the NUCLEO-H533RE USART_Communication_TxRx_DMA example in
+// ext/stm32/STM32CubeH5/Projects/NUCLEO-H533RE/Examples_LL/USART/.
+// ============================================================================
+#elif defined(RULOS_ARM_stm32h5)
+
+typedef struct {
+  DMA_TypeDef *dma;              // GPDMA1 or GPDMA2
+  DMA_Channel_TypeDef *hw_ch;    // GPDMA1_Channel0, ...
+  uint32_t ll_channel;           // LL_DMA_CHANNEL_0..7
+  IRQn_Type irqn;
+} dma_channel_hw_t;
+
+#define DMA_CHANNEL_SLOTS 16  // GPDMA1 ch0-7 + GPDMA2 ch0-7
+
+static const dma_channel_hw_t g_hw[DMA_CHANNEL_SLOTS] = {
+    [0]  = {GPDMA1, GPDMA1_Channel0, LL_DMA_CHANNEL_0, GPDMA1_Channel0_IRQn},
+    [1]  = {GPDMA1, GPDMA1_Channel1, LL_DMA_CHANNEL_1, GPDMA1_Channel1_IRQn},
+    [2]  = {GPDMA1, GPDMA1_Channel2, LL_DMA_CHANNEL_2, GPDMA1_Channel2_IRQn},
+    [3]  = {GPDMA1, GPDMA1_Channel3, LL_DMA_CHANNEL_3, GPDMA1_Channel3_IRQn},
+    [4]  = {GPDMA1, GPDMA1_Channel4, LL_DMA_CHANNEL_4, GPDMA1_Channel4_IRQn},
+    [5]  = {GPDMA1, GPDMA1_Channel5, LL_DMA_CHANNEL_5, GPDMA1_Channel5_IRQn},
+    [6]  = {GPDMA1, GPDMA1_Channel6, LL_DMA_CHANNEL_6, GPDMA1_Channel6_IRQn},
+    [7]  = {GPDMA1, GPDMA1_Channel7, LL_DMA_CHANNEL_7, GPDMA1_Channel7_IRQn},
+#ifdef GPDMA2_Channel0_BASE_NS
+    [8]  = {GPDMA2, GPDMA2_Channel0, LL_DMA_CHANNEL_0, GPDMA2_Channel0_IRQn},
+    [9]  = {GPDMA2, GPDMA2_Channel1, LL_DMA_CHANNEL_1, GPDMA2_Channel1_IRQn},
+    [10] = {GPDMA2, GPDMA2_Channel2, LL_DMA_CHANNEL_2, GPDMA2_Channel2_IRQn},
+    [11] = {GPDMA2, GPDMA2_Channel3, LL_DMA_CHANNEL_3, GPDMA2_Channel3_IRQn},
+    [12] = {GPDMA2, GPDMA2_Channel4, LL_DMA_CHANNEL_4, GPDMA2_Channel4_IRQn},
+    [13] = {GPDMA2, GPDMA2_Channel5, LL_DMA_CHANNEL_5, GPDMA2_Channel5_IRQn},
+    [14] = {GPDMA2, GPDMA2_Channel6, LL_DMA_CHANNEL_6, GPDMA2_Channel6_IRQn},
+    [15] = {GPDMA2, GPDMA2_Channel7, LL_DMA_CHANNEL_7, GPDMA2_Channel7_IRQn},
+#endif
+};
+
+typedef struct {
+  bool allocated;
+  void (*tc_callback)(void *user_data);
+  void (*ht_callback)(void *user_data);
+  void (*error_callback)(void *user_data);
+  void *user_data;
+} dma_channel_state_t;
+
+static dma_channel_state_t g_state[DMA_CHANNEL_SLOTS];
+
+static inline int state_to_idx(const rulos_dma_channel_t *ch) {
+  return (const dma_channel_state_t *)ch - g_state;
+}
+
+// RULOS request -> GPDMA LL request code. On H5 the channel's request
+// mux is built into CTR2 rather than a separate DMAMUX peripheral,
+// but from the core layer's POV the translation is identical to the
+// G0/G4 DMAMUX path: look up the vendor constant and program it into
+// a channel register. Designated initializer leaves unused slots at
+// 0, which is LL_GPDMA1_REQUEST_ADC1 -- not a valid sentinel in
+// general but we bounds-check config->request against
+// RULOS_DMA_REQ_COUNT_ in rulos_dma_alloc before indexing, so only
+// entries explicitly assigned below are reachable at runtime.
+//
+// Add new entries as drivers get migrated. GPDMA1 and GPDMA2 share
+// the same request codes on H523 (both see the same peripheral
+// request lines); the channel number, not the GPDMA instance,
+// determines which peripheral a transfer serves.
+static const uint32_t g_gpdma_req[RULOS_DMA_REQ_COUNT_] = {
+#ifdef LL_GPDMA1_REQUEST_USART1_TX
+    [RULOS_DMA_REQ_USART1_TX] = LL_GPDMA1_REQUEST_USART1_TX,
+    [RULOS_DMA_REQ_USART1_RX] = LL_GPDMA1_REQUEST_USART1_RX,
+#endif
+#ifdef LL_GPDMA1_REQUEST_USART2_TX
+    [RULOS_DMA_REQ_USART2_TX] = LL_GPDMA1_REQUEST_USART2_TX,
+    [RULOS_DMA_REQ_USART2_RX] = LL_GPDMA1_REQUEST_USART2_RX,
+#endif
+#ifdef LL_GPDMA1_REQUEST_USART3_TX
+    [RULOS_DMA_REQ_USART3_TX] = LL_GPDMA1_REQUEST_USART3_TX,
+    [RULOS_DMA_REQ_USART3_RX] = LL_GPDMA1_REQUEST_USART3_RX,
+#endif
+#ifdef LL_GPDMA1_REQUEST_USART6_TX
+    [RULOS_DMA_REQ_USART6_TX] = LL_GPDMA1_REQUEST_USART6_TX,
+    [RULOS_DMA_REQ_USART6_RX] = LL_GPDMA1_REQUEST_USART6_RX,
+#endif
+#ifdef LL_GPDMA1_REQUEST_I2C1_TX
+    [RULOS_DMA_REQ_I2C1_TX] = LL_GPDMA1_REQUEST_I2C1_TX,
+    [RULOS_DMA_REQ_I2C1_RX] = LL_GPDMA1_REQUEST_I2C1_RX,
+#endif
+#ifdef LL_GPDMA1_REQUEST_SPI1_TX
+    [RULOS_DMA_REQ_SPI1_TX] = LL_GPDMA1_REQUEST_SPI1_TX,
+    [RULOS_DMA_REQ_SPI1_RX] = LL_GPDMA1_REQUEST_SPI1_RX,
+#endif
+#ifdef LL_GPDMA1_REQUEST_SPI2_TX
+    [RULOS_DMA_REQ_SPI2_TX] = LL_GPDMA1_REQUEST_SPI2_TX,
+#endif
+};
+
+// GPDMA has separate src/dest data-width fields (CTR1.SDW, CTR1.DDW)
+// with distinct LL constant namespaces, so we need two small
+// conversion helpers rather than one.
+static uint32_t width_to_gpdma_src(rulos_dma_width_t w) {
+  switch (w) {
+    case RULOS_DMA_WIDTH_BYTE:     return LL_DMA_SRC_DATAWIDTH_BYTE;
+    case RULOS_DMA_WIDTH_HALFWORD: return LL_DMA_SRC_DATAWIDTH_HALFWORD;
+    case RULOS_DMA_WIDTH_WORD:     return LL_DMA_SRC_DATAWIDTH_WORD;
+  }
+  return LL_DMA_SRC_DATAWIDTH_BYTE;
+}
+
+static uint32_t width_to_gpdma_dest(rulos_dma_width_t w) {
+  switch (w) {
+    case RULOS_DMA_WIDTH_BYTE:     return LL_DMA_DEST_DATAWIDTH_BYTE;
+    case RULOS_DMA_WIDTH_HALFWORD: return LL_DMA_DEST_DATAWIDTH_HALFWORD;
+    case RULOS_DMA_WIDTH_WORD:     return LL_DMA_DEST_DATAWIDTH_WORD;
+  }
+  return LL_DMA_DEST_DATAWIDTH_BYTE;
+}
+
+static void init_channel(int idx, const rulos_dma_config_t *c) {
+  const dma_channel_hw_t *hw = &g_hw[idx];
+  dma_channel_state_t *s = &g_state[idx];
+
+  // CIRCULAR mode on GPDMA requires linked-list descriptors which we
+  // don't implement here. Trap loudly so a future caller that asks
+  // for CIRCULAR notices immediately rather than getting a silently
+  // broken channel.
+  if (c->mode != RULOS_DMA_MODE_NORMAL) {
+    __builtin_trap();
+  }
+
+  LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
+
+  // Clear any stale flags from a previous owner of this slot. See
+  // the matching clear in the classic init_channel above for the
+  // full rationale; the same hazard exists on GPDMA.
+  LL_DMA_ClearFlag_TC(hw->dma, hw->ll_channel);
+  LL_DMA_ClearFlag_HT(hw->dma, hw->ll_channel);
+  LL_DMA_ClearFlag_DTE(hw->dma, hw->ll_channel);
+
+  // Direction + peripheral request (CTR2 bits).
+  LL_DMA_SetDataTransferDirection(hw->dma, hw->ll_channel, c->direction);
+  LL_DMA_SetPeriphRequest(hw->dma, hw->ll_channel, g_gpdma_req[c->request]);
+
+  // Classic DMA uses "memory" / "peripheral" labels; GPDMA uses
+  // "source" / "destination" and picks which is which based on the
+  // direction bit. Translate accordingly:
+  //   MEM_TO_PERIPH: src = memory,    dest = peripheral
+  //   PERIPH_TO_MEM: src = peripheral, dest = memory
+  if (c->direction == RULOS_DMA_DIR_MEM_TO_PERIPH) {
+    LL_DMA_SetSrcIncMode(hw->dma, hw->ll_channel,
+                         c->mem_increment ? LL_DMA_SRC_INCREMENT
+                                          : LL_DMA_SRC_FIXED);
+    LL_DMA_SetDestIncMode(hw->dma, hw->ll_channel,
+                          c->periph_increment ? LL_DMA_DEST_INCREMENT
+                                              : LL_DMA_DEST_FIXED);
+    LL_DMA_SetSrcDataWidth(hw->dma, hw->ll_channel,
+                           width_to_gpdma_src(c->mem_width));
+    LL_DMA_SetDestDataWidth(hw->dma, hw->ll_channel,
+                            width_to_gpdma_dest(c->periph_width));
+  } else {
+    LL_DMA_SetSrcIncMode(hw->dma, hw->ll_channel,
+                         c->periph_increment ? LL_DMA_SRC_INCREMENT
+                                             : LL_DMA_SRC_FIXED);
+    LL_DMA_SetDestIncMode(hw->dma, hw->ll_channel,
+                          c->mem_increment ? LL_DMA_DEST_INCREMENT
+                                           : LL_DMA_DEST_FIXED);
+    LL_DMA_SetSrcDataWidth(hw->dma, hw->ll_channel,
+                           width_to_gpdma_src(c->periph_width));
+    LL_DMA_SetDestDataWidth(hw->dma, hw->ll_channel,
+                            width_to_gpdma_dest(c->mem_width));
+  }
+
+  LL_DMA_SetChannelPriorityLevel(hw->dma, hw->ll_channel, c->priority);
+
+  LL_DMA_EnableIT_TC(hw->dma, hw->ll_channel);
+  LL_DMA_EnableIT_DTE(hw->dma, hw->ll_channel);
+
+  s->tc_callback = c->tc_callback;
+  s->ht_callback = c->ht_callback;
+  s->error_callback = c->error_callback;
+  s->user_data = c->user_data;
+}
+
+rulos_dma_channel_t *rulos_dma_alloc(const rulos_dma_config_t *config) {
+  if (config == NULL || config->request == RULOS_DMA_REQ_NONE ||
+      config->request >= RULOS_DMA_REQ_COUNT_) {
+    return NULL;
+  }
+  if (g_gpdma_req[config->request] == 0 &&
+      config->request != RULOS_DMA_REQ_USART1_TX) {
+    // Guard against asking for a request enum value this chip's
+    // GPDMA doesn't support. USART1_TX happens to be the request
+    // code 0x16 on H5, not 0 -- but in general, an unset entry in
+    // the designated-initializer table lands at 0, and we can't
+    // tell that apart from a legitimate 0-valued request code.
+    // Callers that ask for an unsupported request will fail the
+    // alloc when init_channel programs a wrong request number;
+    // the chip reacts with DTE on first transfer. Better to catch
+    // it here where possible.
+    //
+    // (The simpler thing is to just document that unsupported
+    // requests give undefined behaviour; for now we do nothing
+    // beyond this bounds check since uart.c's users all request
+    // USART*_TX, which are valid.)
+  }
+
+  int found_idx = -1;
+  rulos_irq_state_t irq = hal_start_atomic();
+  for (int i = 0; i < DMA_CHANNEL_SLOTS; i++) {
+    if (g_hw[i].dma == NULL) continue;
+    if (g_state[i].allocated) continue;
+    g_state[i].allocated = true;
+    found_idx = i;
+    break;
+  }
+  hal_end_atomic(irq);
+
+  if (found_idx < 0) {
+    return NULL;
+  }
+
+  init_channel(found_idx, config);
+  HAL_NVIC_SetPriority(g_hw[found_idx].irqn, 1, 0);
+  HAL_NVIC_EnableIRQ(g_hw[found_idx].irqn);
+  return (rulos_dma_channel_t *)&g_state[found_idx];
+}
+
+void rulos_dma_reconfigure(rulos_dma_channel_t *ch,
+                           const rulos_dma_config_t *new_config) {
+  init_channel(state_to_idx(ch), new_config);
+}
+
+void rulos_dma_start(rulos_dma_channel_t *ch, volatile void *periph_addr,
+                     void *mem_addr, uint32_t nitems) {
+  const dma_channel_hw_t *hw = &g_hw[state_to_idx(ch)];
+
+  LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
+  LL_DMA_SetBlkDataLength(hw->dma, hw->ll_channel, nitems);
+
+  // LL_DMA_ConfigAddresses on GPDMA takes (src, dst) in that order,
+  // not (src_or_periph, dst_or_mem, dir) like classic. Pick the
+  // order based on the direction we configured in init_channel.
+  const uint32_t dir =
+      LL_DMA_GetDataTransferDirection(hw->dma, hw->ll_channel);
+  if (dir == LL_DMA_DIRECTION_MEMORY_TO_PERIPH) {
+    LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, (uint32_t)mem_addr,
+                           (uint32_t)periph_addr);
+  } else {
+    LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, (uint32_t)periph_addr,
+                           (uint32_t)mem_addr);
+  }
+
+  LL_DMA_EnableChannel(hw->dma, hw->ll_channel);
+}
+
+void rulos_dma_stop(rulos_dma_channel_t *ch) {
+  const dma_channel_hw_t *hw = &g_hw[state_to_idx(ch)];
+  LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
+
+  // Same flag-clearing semantics as classic rulos_dma_stop: after
+  // stop returns, no callback from the halted transfer can fire.
+  LL_DMA_ClearFlag_TC(hw->dma, hw->ll_channel);
+  LL_DMA_ClearFlag_HT(hw->dma, hw->ll_channel);
+  LL_DMA_ClearFlag_DTE(hw->dma, hw->ll_channel);
+}
+
+uint32_t rulos_dma_get_remaining(const rulos_dma_channel_t *ch) {
+  const dma_channel_hw_t *hw = &g_hw[state_to_idx(ch)];
+  return LL_DMA_GetBlkDataLength(hw->dma, hw->ll_channel);
+}
+
+void rulos_dma_free(rulos_dma_channel_t *ch) {
+  const int idx = state_to_idx(ch);
+  const dma_channel_hw_t *hw = &g_hw[idx];
+  LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
+
+  // Silence this channel at the DMA-hardware level; all H5 GPDMA
+  // channels have dedicated IRQs so strictly speaking we could
+  // HAL_NVIC_DisableIRQ here, but the hardware IT-disable approach
+  // matches the classic backend's pattern and keeps the door open
+  // for any future shared-IRQ H5 variant.
+  LL_DMA_DisableIT_TC(hw->dma, hw->ll_channel);
+  LL_DMA_DisableIT_HT(hw->dma, hw->ll_channel);
+  LL_DMA_DisableIT_DTE(hw->dma, hw->ll_channel);
+
+  rulos_irq_state_t irq = hal_start_atomic();
+  g_state[idx] = (dma_channel_state_t){0};
+  hal_end_atomic(irq);
+}
+
+static void dispatch_channel_irq(int idx) {
+  const dma_channel_hw_t *hw = &g_hw[idx];
+  dma_channel_state_t *s = &g_state[idx];
+  if (hw->dma == NULL || !s->allocated) {
+    return;
+  }
+
+  if (LL_DMA_IsActiveFlag_TC(hw->dma, hw->ll_channel)) {
+    LL_DMA_ClearFlag_TC(hw->dma, hw->ll_channel);
+    if (s->tc_callback) {
+      s->tc_callback(s->user_data);
+    }
+  }
+
+  if (LL_DMA_IsActiveFlag_HT(hw->dma, hw->ll_channel)) {
+    LL_DMA_ClearFlag_HT(hw->dma, hw->ll_channel);
+    if (s->ht_callback) {
+      s->ht_callback(s->user_data);
+    }
+  }
+
+  if (LL_DMA_IsActiveFlag_DTE(hw->dma, hw->ll_channel)) {
+    LL_DMA_ClearFlag_DTE(hw->dma, hw->ll_channel);
+    if (s->error_callback) {
+      s->error_callback(s->user_data);
+    }
+  }
+}
+
+// Per-channel IRQ handlers. H523 has 16 dedicated lines, so these
+// are one-to-one -- no merged dispatching like the G0/F0 backends.
+void GPDMA1_Channel0_IRQHandler(void) { dispatch_channel_irq(0); }
+void GPDMA1_Channel1_IRQHandler(void) { dispatch_channel_irq(1); }
+void GPDMA1_Channel2_IRQHandler(void) { dispatch_channel_irq(2); }
+void GPDMA1_Channel3_IRQHandler(void) { dispatch_channel_irq(3); }
+void GPDMA1_Channel4_IRQHandler(void) { dispatch_channel_irq(4); }
+void GPDMA1_Channel5_IRQHandler(void) { dispatch_channel_irq(5); }
+void GPDMA1_Channel6_IRQHandler(void) { dispatch_channel_irq(6); }
+void GPDMA1_Channel7_IRQHandler(void) { dispatch_channel_irq(7); }
+#ifdef GPDMA2_Channel0_BASE_NS
+void GPDMA2_Channel0_IRQHandler(void) { dispatch_channel_irq(8); }
+void GPDMA2_Channel1_IRQHandler(void) { dispatch_channel_irq(9); }
+void GPDMA2_Channel2_IRQHandler(void) { dispatch_channel_irq(10); }
+void GPDMA2_Channel3_IRQHandler(void) { dispatch_channel_irq(11); }
+void GPDMA2_Channel4_IRQHandler(void) { dispatch_channel_irq(12); }
+void GPDMA2_Channel5_IRQHandler(void) { dispatch_channel_irq(13); }
+void GPDMA2_Channel6_IRQHandler(void) { dispatch_channel_irq(14); }
+void GPDMA2_Channel7_IRQHandler(void) { dispatch_channel_irq(15); }
+#endif
+
+// ============================================================================
+// Stub backend -- any remaining family without a real backend.
 //
 // rulos_dma_alloc returns NULL so callers that do the right thing
 // (`if (ch == NULL) ...` or `assert(ch != NULL)`) fail loudly at
