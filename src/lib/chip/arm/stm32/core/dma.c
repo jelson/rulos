@@ -599,6 +599,20 @@ void rulos_dma_start(rulos_dma_channel_t *ch, volatile void *periph_addr,
 void rulos_dma_stop(rulos_dma_channel_t *ch) {
   const dma_channel_hw_t *hw = &g_hw[state_to_idx(ch)];
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
+
+  // Clear any TC/HT/TE flags left over from the transfer we just
+  // halted. Without this, a transfer that completes in hardware
+  // right before we disable the channel leaves the IFCR flag set
+  // and the NVIC line pending; the dispatcher would then fire a
+  // spurious callback as soon as interrupts are next enabled (even
+  // if the next action is another rulos_dma_start on the same
+  // channel -- start doesn't re-run init_channel, so the flags
+  // would survive across the restart). The channel is already
+  // disabled above, so no new flag can be set between here and
+  // return.
+  LL_DMA_ClearFlag_TC(hw->dma, hw->ll_channel);
+  LL_DMA_ClearFlag_HT(hw->dma, hw->ll_channel);
+  ll_dma_clear_flag_te(hw->dma, hw->ll_channel);
 }
 
 uint32_t rulos_dma_get_remaining(const rulos_dma_channel_t *ch) {
