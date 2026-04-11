@@ -157,6 +157,17 @@ SECTIONS
     . = ALIGN(8);
   } >RAM
 
+  /*
+   * Lower bound for the stack, consumed as MSPLIM (Main Stack Pointer
+   * Limit) by ARMv8-M startup code (STM32H5 and other Cortex-M33/M23
+   * chips). The stack grows down from _estack and must not cross below
+   * _sstack, or a UsageFault fires. We default it to _end (the end of
+   * .bss / start of heap) so the stack can freely use all remaining
+   * RAM. Unused by ARMv7-M and ARMv6-M startups, where it resolves to
+   * an unreferenced symbol.
+   */
+  PROVIDE ( _sstack = _end );
+
   /* Remove information from the standard libraries */
   /DISCARD/ :
   {

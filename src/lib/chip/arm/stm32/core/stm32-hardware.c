@@ -395,6 +395,68 @@ void HAL_RCC_CSSCallback(void) {
   g_rulos_hse_failed = true;
 }
 #endif
+#elif defined(RULOS_ARM_stm32h5)
+/*
+ * STM32H5 clock: HSI (64 MHz) -> PLL1 -> 250 MHz SYSCLK.
+ *
+ * Copied verbatim from ST's NUCLEO-H503RB/Examples_MIX/PWR/PWR_STOP/Src/main.c
+ * (same config appears in NUCLEO-H563ZI PWR_STOP). Chosen because it is
+ * ST's only HSI->250 MHz reference in STM32CubeH5 -- other HSI-based
+ * examples use PLLM=8/PLLN=60 for 240 MHz. The H5's PLL1 phase detector
+ * prefers higher input frequencies (16 MHz here, via VCIRANGE_3) for
+ * lower jitter, so we accept a nonzero PLLFRACN rather than dividing
+ * HSI further for integer-only math.
+ *
+ *   HSI=64 MHz / PLLM=4        = 16 MHz ref  (RCC_PLL1_VCIRANGE_3: 8-16 MHz)
+ *   16 MHz * (31 + 2048/8192)  = 500 MHz VCO (RCC_PLL1_VCORANGE_WIDE)
+ *   500 MHz / PLLP=2           = 250 MHz SYSCLK
+ *
+ * VOS0 is required for SYSCLK > 200 MHz. FLASH_LATENCY_5 is correct for
+ * 250 MHz at VOS0 per RM0481. FLASH_PROGRAMMING_DELAY_2 sets WRHIGHFREQ
+ * to the 168+ MHz band.
+ */
+static void SystemClock_Config(void) {
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+  /* Bump voltage scaling to VOS0 and wait for the regulator to settle
+   * before attempting the PLL ramp. */
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
+  while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {
+  }
+
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSIDiv = RCC_HSI_DIV1;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLL1_SOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 4;
+  RCC_OscInitStruct.PLL.PLLN = 31;
+  RCC_OscInitStruct.PLL.PLLP = 2;
+  RCC_OscInitStruct.PLL.PLLQ = 2;
+  RCC_OscInitStruct.PLL.PLLR = 2;
+  RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1_VCIRANGE_3;
+  RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1_VCORANGE_WIDE;
+  RCC_OscInitStruct.PLL.PLLFRACN = 2048;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+    __builtin_trap();
+  }
+
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
+                                RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2 |
+                                RCC_CLOCKTYPE_PCLK3;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB3CLKDivider = RCC_HCLK_DIV1;
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK) {
+    __builtin_trap();
+  }
+
+  __HAL_FLASH_SET_PROGRAM_DELAY(FLASH_PROGRAMMING_DELAY_2);
+}
 #else
 #error "Your chip needs to know how to init its clock!"
 #include <stophere>
@@ -419,6 +481,12 @@ void rulos_hal_init() {
 
   SystemClock_Config();
   SystemCoreClockUpdate();
+
+#ifdef HAL_ICACHE_MODULE_ENABLED
+  // Enable the instruction cache on chips that have one (STM32H5). ART on
+  // G4 is always-on and doesn't need a HAL call.
+  HAL_ICACHE_Enable();
+#endif
 
 #ifdef __HAL_RCC_GPIOA_CLK_ENABLE
   __HAL_RCC_GPIOA_CLK_ENABLE();

@@ -52,6 +52,7 @@ class ArmPlatform(BaseRules.Platform):
         Architecture("m3", "armv7-m", "cortex-m3"),
         Architecture("m4", "armv7e-m", "cortex-m4"),
         Architecture("m4f", "armv7e-m", "cortex-m4", ["-mfloat-abi=hard", "-mfpu=fpv4-sp-d16"]),
+        Architecture("m33", "armv8-m.main+dsp+fp", "cortex-m33", ["-mfloat-abi=hard", "-mfpu=fpv5-sp-d16"]),
     ]])
 
     def platform_cflags(self, arch):
@@ -238,6 +239,10 @@ class ArmStmPlatform(ArmPlatform):
         Chip("stm32g431x6", "STM32G431xx", flashk=  32, ramk= 22, ccmramk=10),
         Chip("stm32g431x8", "STM32G431xx", flashk=  64, ramk= 22, ccmramk=10),
         Chip("stm32g431xb", "STM32G431xx", flashk= 128, ramk= 22, ccmramk=10),
+
+        # stm32h5
+        Chip("stm32h523xc", "STM32H523xx", flashk= 256, ramk=272),
+        Chip("stm32h523xe", "STM32H523xx", flashk= 512, ramk=272),
     ]])
 
     class MajorFamily:
@@ -256,6 +261,7 @@ class ArmStmPlatform(ArmPlatform):
         MajorFamily("STM32F3", "m4f"),
         MajorFamily("STM32G0", "m0plus"),
         MajorFamily("STM32G4", "m4f"),
+        MajorFamily("STM32H5", "m33"),
     ]])
 
     def part_name(self):
