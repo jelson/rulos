@@ -18,8 +18,11 @@
 
 #include "periph/sdcard2/fatfs_rulos.h"
 
+#include "core/dma.h"
 #include "core/hardware.h"
 #include "core/rulos.h"
+
+static void sdcard_dma_init(void);
 
 ////////////////////////////////////////////////////////////////
 ////// Implementation of the SD module's expecting down-facing API.
@@ -93,28 +96,14 @@ void TM_SPI_Init() {
   // Set chip-enable pin as an output
   gpio_make_output(SD_PIN_CHIPENABLE);
 
-  // Configure DMA
-  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
-
-  LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
-  LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
-
-#if defined (RULOS_ARM_stm32g0)
-  NVIC_SetPriority(DMA1_Channel2_3_IRQn, 0);
-  NVIC_EnableIRQ(DMA1_Channel2_3_IRQn);
-#elif defined (RULOS_ARM_stm32f3)
-  NVIC_SetPriority(DMA1_Channel2_IRQn, 0);
-  NVIC_EnableIRQ(DMA1_Channel2_IRQn);
-  NVIC_SetPriority(DMA1_Channel3_IRQn, 0);
-  NVIC_EnableIRQ(DMA1_Channel3_IRQn);
-#else
-  #include <stophere>
+  // Allocate DMA channels for SPI RX and TX. The actual mem_increment
+  // setting flips between read and write operations, so the channels
+  // are reconfigured via rulos_dma_reconfigure in each call to
+  // TM_SPI_WriteMulti / TM_SPI_ReadMulti. The other config fields
+  // (direction, width, priority, callbacks) stay constant.
+#ifndef DO_NOT_USE_DMA
+  sdcard_dma_init();
 #endif
-
-  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_2);
-  LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_2);
-  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_3);
-  LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_3);
 }
 
 // void TM_SPI_SendMulti(SPI_TypeDef* SPIx, uint8_t* dataOut, uint8_t* dataIn,
@@ -177,139 +166,120 @@ void TM_SPI_ReadMulti(SPI_TypeDef* SPIx, uint8_t* dataIn, uint8_t dummy,
 
 #else // DO_NOT_USE_DMA
 
-static int transmissionComplete;
+static volatile bool transmissionComplete;
+static rulos_dma_channel_t* rx_dma_ch;
+static rulos_dma_channel_t* tx_dma_ch;
 
-static void check_channel_2() {
-  if (LL_DMA_IsActiveFlag_TC2(DMA1)) {
-    LL_DMA_ClearFlag_GI2(DMA1);
-    transmissionComplete = true;
-  } else if (LL_DMA_IsActiveFlag_TE2(DMA1)) {
-    transmissionComplete = true;
+// Both channels' TC and error callbacks land here and just wake the
+// busy-wait loop in dma_enable_and_wait. Runs in DMA ISR context.
+// RX TC always fires last on a successful transfer (it has to wait
+// for the last SPI clock cycle to shift in the MISO bit), so the
+// normal path only needs RX. We wire TX too so that a TX DMA error
+// doesn't deadlock the wait loop.
+static void sdcard_dma_done_callback(void* user_data) {
+  (void)user_data;
+  transmissionComplete = true;
+}
+
+// Build a rulos_dma_config_t for either the RX or TX side of the SPI
+// transaction. Only the varying fields are computed here; everything
+// else is constant across reads and writes.
+static rulos_dma_config_t make_rx_cfg(bool mem_increment) {
+  return (rulos_dma_config_t){
+      .request = RULOS_DMA_REQ_SPI1_RX,
+      .direction = RULOS_DMA_DIR_PERIPH_TO_MEM,
+      .mode = RULOS_DMA_MODE_NORMAL,
+      .periph_width = RULOS_DMA_WIDTH_BYTE,
+      .mem_width = RULOS_DMA_WIDTH_BYTE,
+      .periph_increment = false,
+      .mem_increment = mem_increment,
+      .priority = RULOS_DMA_PRIORITY_HIGH,
+      .tc_callback = sdcard_dma_done_callback,
+      .error_callback = sdcard_dma_done_callback,
+  };
+}
+
+static rulos_dma_config_t make_tx_cfg(bool mem_increment) {
+  return (rulos_dma_config_t){
+      .request = RULOS_DMA_REQ_SPI1_TX,
+      .direction = RULOS_DMA_DIR_MEM_TO_PERIPH,
+      .mode = RULOS_DMA_MODE_NORMAL,
+      .periph_width = RULOS_DMA_WIDTH_BYTE,
+      .mem_width = RULOS_DMA_WIDTH_BYTE,
+      .periph_increment = false,
+      .mem_increment = mem_increment,
+      .priority = RULOS_DMA_PRIORITY_HIGH,
+      .tc_callback = sdcard_dma_done_callback,
+      .error_callback = sdcard_dma_done_callback,
+  };
+}
+
+static void sdcard_dma_init(void) {
+  // Default direction: write (RX discards to a dummy, TX increments
+  // through source). The actual mem_increment flags are reconfigured
+  // on every call to TM_SPI_WriteMulti / TM_SPI_ReadMulti.
+  const rulos_dma_config_t rx_cfg = make_rx_cfg(false);
+  rx_dma_ch = rulos_dma_alloc(&rx_cfg);
+  if (rx_dma_ch == NULL) {
+    __builtin_trap();
+  }
+
+  const rulos_dma_config_t tx_cfg = make_tx_cfg(true);
+  tx_dma_ch = rulos_dma_alloc(&tx_cfg);
+  if (tx_dma_ch == NULL) {
+    __builtin_trap();
   }
 }
 
-static void check_channel_3() {
-  if (LL_DMA_IsActiveFlag_TC3(DMA1)) {
-    LL_DMA_ClearFlag_GI3(DMA1);
-    transmissionComplete = true;
-  } else if (LL_DMA_IsActiveFlag_TE3(DMA1)) {
-    transmissionComplete = true;
-  }
-}
+static void dma_enable_and_wait(void* rx_mem, void* tx_mem, uint32_t count) {
+  volatile void* const spi_dr =
+      (volatile void*)LL_SPI_DMA_GetRegAddr(SD_SPI_PERIPH);
 
-#if defined (RULOS_ARM_stm32g0)
-void DMA1_Channel2_3_IRQHandler(void) {
-  check_channel_2();
-  check_channel_3();
-}
-#elif defined (RULOS_ARM_stm32f3)
-void DMA1_Channel2_IRQHandler(void) {
-  check_channel_2();
-}
-void DMA1_Channel3_IRQHandler(void) {
-  check_channel_3();
-}
-#else
-#include <stophere>
-#endif
-
-static void DMA_EnableAndWait(SPI_TypeDef* SPIx) {
   transmissionComplete = false;
 
-  // Enable DMA for SPI
+  rulos_dma_start(rx_dma_ch, spi_dr, rx_mem, count);
+  rulos_dma_start(tx_dma_ch, spi_dr, tx_mem, count);
+
   LL_SPI_EnableDMAReq_RX(SD_SPI_PERIPH);
   LL_SPI_EnableDMAReq_TX(SD_SPI_PERIPH);
-  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_2);
-  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
 
-  // Block until the DMA finishes; the interrupt handler sets
-  // transmissionComplete to true.
+  // Block until a DMA callback fires (TC on successful completion,
+  // or error_callback on DMA error on either channel).
   while (!transmissionComplete) {
     __WFI();
   }
 
-  // Disable DMA again
-  LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
-  LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
   LL_SPI_DisableDMAReq_RX(SD_SPI_PERIPH);
   LL_SPI_DisableDMAReq_TX(SD_SPI_PERIPH);
+  rulos_dma_stop(rx_dma_ch);
+  rulos_dma_stop(tx_dma_ch);
 }
 
 void TM_SPI_WriteMulti(SPI_TypeDef* SPIx, uint8_t* dataOut, uint32_t count) {
-  uint8_t dummy;
+  uint8_t rx_sink;
 
-  // Configure RX side to write incoming data to dummy, since it's
-  // being discarded. Note that having *both* directions be
-  // NOINCREMENT is unusual: I'm *not* incrementing the destination
-  // address of the rx side so we pull all data out of the RX buffer
-  // and sink it to the same dummy memory location.
-  LL_DMA_ConfigTransfer(DMA1, LL_DMA_CHANNEL_2,
-                        LL_DMA_DIRECTION_PERIPH_TO_MEMORY |
-                            LL_DMA_PRIORITY_HIGH | LL_DMA_MODE_NORMAL |
-                            LL_DMA_PERIPH_NOINCREMENT |
-                            LL_DMA_MEMORY_NOINCREMENT | LL_DMA_PDATAALIGN_BYTE |
-                            LL_DMA_MDATAALIGN_BYTE);
-  LL_DMA_ConfigAddresses(
-      DMA1, LL_DMA_CHANNEL_2, LL_SPI_DMA_GetRegAddr(SD_SPI_PERIPH), (uint32_t)&dummy,
-      LL_DMA_GetDataTransferDirection(DMA1, LL_DMA_CHANNEL_2));
-  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_2, count);
-#if defined (RULOS_ARM_stm32g0)
-  LL_DMA_SetPeriphRequest(DMA1, LL_DMA_CHANNEL_2, LL_DMAMUX_REQ_SPI1_RX);
-#endif
+  // RX side discards incoming bytes into a single dummy location
+  // (mem_increment=false). TX side walks through dataOut
+  // (mem_increment=true).
+  const rulos_dma_config_t rx_cfg = make_rx_cfg(false);
+  rulos_dma_reconfigure(rx_dma_ch, &rx_cfg);
+  const rulos_dma_config_t tx_cfg = make_tx_cfg(true);
+  rulos_dma_reconfigure(tx_dma_ch, &tx_cfg);
 
-  // Configure TX side to send data from dataOut
-  LL_DMA_ConfigTransfer(DMA1, LL_DMA_CHANNEL_3,
-                        LL_DMA_DIRECTION_MEMORY_TO_PERIPH |
-                            LL_DMA_PRIORITY_HIGH | LL_DMA_MODE_NORMAL |
-                            LL_DMA_PERIPH_NOINCREMENT |
-                            LL_DMA_MEMORY_INCREMENT | LL_DMA_PDATAALIGN_BYTE |
-                            LL_DMA_MDATAALIGN_BYTE);
-  LL_DMA_ConfigAddresses(
-      DMA1, LL_DMA_CHANNEL_3, (uint32_t)dataOut, LL_SPI_DMA_GetRegAddr(SD_SPI_PERIPH),
-      LL_DMA_GetDataTransferDirection(DMA1, LL_DMA_CHANNEL_3));
-  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, count);
-#if defined (RULOS_ARM_stm32g0)
-  LL_DMA_SetPeriphRequest(DMA1, LL_DMA_CHANNEL_3, LL_DMAMUX_REQ_SPI1_TX);
-#endif
-
-  DMA_EnableAndWait(SD_SPI_PERIPH);
+  dma_enable_and_wait(&rx_sink, dataOut, count);
 }
 
 void TM_SPI_ReadMulti(SPI_TypeDef* SPIx, uint8_t* dataIn, uint8_t dummy,
                       uint32_t count) {
-  // Configure RX side to write incoming data to dataIn
-  LL_DMA_ConfigTransfer(DMA1, LL_DMA_CHANNEL_2,
-                        LL_DMA_DIRECTION_PERIPH_TO_MEMORY |
-                            LL_DMA_PRIORITY_HIGH | LL_DMA_MODE_NORMAL |
-                            LL_DMA_PERIPH_NOINCREMENT |
-                            LL_DMA_MEMORY_INCREMENT | LL_DMA_PDATAALIGN_BYTE |
-                            LL_DMA_MDATAALIGN_BYTE);
-  LL_DMA_ConfigAddresses(
-      DMA1, LL_DMA_CHANNEL_2, LL_SPI_DMA_GetRegAddr(SD_SPI_PERIPH), (uint32_t)dataIn,
-      LL_DMA_GetDataTransferDirection(DMA1, LL_DMA_CHANNEL_2));
-  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_2, count);
-#if defined (RULOS_ARM_stm32g0)
-  LL_DMA_SetPeriphRequest(DMA1, LL_DMA_CHANNEL_2, LL_DMAMUX_REQ_SPI1_RX);
-#endif
+  // RX side walks through dataIn (mem_increment=true). TX side reads
+  // the same dummy byte over and over (mem_increment=false) to clock
+  // the SPI bus.
+  const rulos_dma_config_t rx_cfg = make_rx_cfg(true);
+  rulos_dma_reconfigure(rx_dma_ch, &rx_cfg);
+  const rulos_dma_config_t tx_cfg = make_tx_cfg(false);
+  rulos_dma_reconfigure(tx_dma_ch, &tx_cfg);
 
-  // Configure TX side to keep sending dummy over and over.  Note that having
-  // *both* directions be NOINCREMENT is unusual: I'm *not* incrementing the
-  // source address of the tx side so we just transmit the same byte over and
-  // over.
-  LL_DMA_ConfigTransfer(DMA1, LL_DMA_CHANNEL_3,
-                        LL_DMA_DIRECTION_MEMORY_TO_PERIPH |
-                            LL_DMA_PRIORITY_HIGH | LL_DMA_MODE_NORMAL |
-                            LL_DMA_PERIPH_NOINCREMENT |
-                            LL_DMA_MEMORY_NOINCREMENT | LL_DMA_PDATAALIGN_BYTE |
-                            LL_DMA_MDATAALIGN_BYTE);
-  LL_DMA_ConfigAddresses(
-      DMA1, LL_DMA_CHANNEL_3, (uint32_t)&dummy, LL_SPI_DMA_GetRegAddr(SD_SPI_PERIPH),
-      LL_DMA_GetDataTransferDirection(DMA1, LL_DMA_CHANNEL_3));
-  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, count);
-#if defined (RULOS_ARM_stm32g0)
-  LL_DMA_SetPeriphRequest(DMA1, LL_DMA_CHANNEL_3, LL_DMAMUX_REQ_SPI1_TX);
-#endif
-  DMA_EnableAndWait(SD_SPI_PERIPH);
+  dma_enable_and_wait(dataIn, &dummy, count);
 }
 
 #endif

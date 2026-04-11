@@ -20,6 +20,7 @@
  * STM32 I2S support
  */
 
+#include "core/dma.h"
 #include "core/hardware.h"
 #include "core/hardware_types.h"
 #include "core/rulos.h"
@@ -27,14 +28,11 @@
 
 #if defined(RULOS_ARM_stm32f0)
 #include "stm32f0xx_hal_i2s.h"
-#include "stm32f0xx_ll_dma.h"
 #elif defined(RULOS_ARM_stm32f1)
 #include "stm32f1xx_hal_i2s.h"
-#include "stm32f1xx_ll_dma.h"
 #elif defined(RULOS_ARM_stm32f3)
 #include "stm32f3xx_hal_i2s.h"
 #include "stm32f3xx_ll_bus.h"
-#include "stm32f3xx_ll_dma.h"
 #include "stm32f3xx_ll_rcc.h"
 #include "stm32f3xx_ll_spi.h"
 #else
@@ -47,32 +45,27 @@ typedef struct {
   hal_i2s_play_done_cb_t play_done_cb;
   void* user_data;
 
+  // DMA channel (allocated in hal_i2s_init).
+  rulos_dma_channel_t* dma_ch;
+
   // internal state
   I2S_HandleTypeDef i2s_handle;
 } stm32_i2s_t;
 
 stm32_i2s_t stm32_i2s;
 
-static void call_play_done(uint8_t just_played_idx) {
-  stm32_i2s.play_done_cb(stm32_i2s.user_data, just_played_idx);
+// DMA half-transfer callback: first half of the circular buffer has
+// been sent. Runs in DMA ISR context.
+static void i2s_on_dma_ht(void* user_data) {
+  (void)user_data;
+  stm32_i2s.play_done_cb(stm32_i2s.user_data, 0);
 }
 
-void DMA1_Channel5_IRQHandler() {
-  if (LL_DMA_IsActiveFlag_HT5(DMA1)) {
-    // "Half-transmit" interrupt: means we finished transmitting the
-    // first half of the buffer.
-    LL_DMA_ClearFlag_HT5(DMA1);
-    call_play_done(0);
-  }
-  if (LL_DMA_IsActiveFlag_TC5(DMA1)) {
-    // "Transmit-complete" interrupt: means we finished transmitting
-    // the entire buffer, i.e. the second half has now been
-    // transmitted.
-    LL_DMA_ClearFlag_TC5(DMA1);
-    call_play_done(1);
-  }
-
-  LL_DMA_ClearFlag_GI5(DMA1);
+// DMA transfer-complete callback: second half of the circular buffer
+// has been sent (buffer wraparound). Runs in DMA ISR context.
+static void i2s_on_dma_tc(void* user_data) {
+  (void)user_data;
+  stm32_i2s.play_done_cb(stm32_i2s.user_data, 1);
 }
 
 void hal_i2s_init(uint16_t sample_rate, hal_i2s_play_done_cb_t play_done_cb,
@@ -127,12 +120,27 @@ void hal_i2s_init(uint16_t sample_rate, hal_i2s_play_done_cb_t play_done_cb,
   }
   __HAL_I2S_ENABLE(h);
 
-  // Set up DMA
-  __HAL_RCC_DMA1_CLK_ENABLE();
-  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
-  NVIC_SetPriority(DMA1_Channel5_IRQn, 0);
-  NVIC_EnableIRQ(DMA1_Channel5_IRQn);
-  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_5);
+  // Allocate a DMA channel for SPI2_TX, circular mode so the hardware
+  // keeps wrapping around the double-buffer without driver
+  // intervention. HT fires on first-half completion, TC on
+  // second-half (wraparound) completion.
+  const rulos_dma_config_t cfg = {
+      .request = RULOS_DMA_REQ_SPI2_TX,
+      .direction = RULOS_DMA_DIR_MEM_TO_PERIPH,
+      .mode = RULOS_DMA_MODE_CIRCULAR,
+      .periph_width = RULOS_DMA_WIDTH_HALFWORD,
+      .mem_width = RULOS_DMA_WIDTH_HALFWORD,
+      .periph_increment = false,
+      .mem_increment = true,
+      .priority = RULOS_DMA_PRIORITY_HIGH,
+      .tc_callback = i2s_on_dma_tc,
+      .ht_callback = i2s_on_dma_ht,
+  };
+  stm32_i2s.dma_ch = rulos_dma_alloc(&cfg);
+  if (stm32_i2s.dma_ch == NULL) {
+    __builtin_trap();
+  }
+
   LL_SPI_DisableDMAReq_TX(SPI2);
 }
 
@@ -160,31 +168,13 @@ void hal_i2s_condition_buffer(int16_t* samples, uint16_t num_samples) {
 }
 
 void hal_i2s_start(int16_t* samples, uint16_t num_samples_per_halfbuffer) {
-  LL_DMA_ClearFlag_HT5(DMA1);
-  LL_DMA_ClearFlag_TC5(DMA1);
-
-  LL_DMA_ConfigTransfer(
-      DMA1, LL_DMA_CHANNEL_5,
-      LL_DMA_DIRECTION_MEMORY_TO_PERIPH | LL_DMA_PRIORITY_HIGH |
-          LL_DMA_MODE_CIRCULAR | LL_DMA_PERIPH_NOINCREMENT |
-          LL_DMA_MEMORY_INCREMENT | LL_DMA_PDATAALIGN_HALFWORD |
-          LL_DMA_MDATAALIGN_HALFWORD);
-  LL_DMA_ConfigAddresses(
-      DMA1, LL_DMA_CHANNEL_5, (uint32_t)samples, LL_SPI_DMA_GetRegAddr(SPI2),
-      LL_DMA_GetDataTransferDirection(DMA1, LL_DMA_CHANNEL_5));
-  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_5, 2 * num_samples_per_halfbuffer);
-
-  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_5);
-  LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_5);
+  rulos_dma_start(stm32_i2s.dma_ch,
+                  (volatile void*)LL_SPI_DMA_GetRegAddr(SPI2),
+                  samples, 2 * num_samples_per_halfbuffer);
   LL_SPI_EnableDMAReq_TX(SPI2);
-  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_5);
 }
 
 void hal_i2s_stop() {
   LL_SPI_DisableDMAReq_TX(SPI2);
-  LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_5);
-  LL_DMA_DisableIT_TC(DMA1, LL_DMA_CHANNEL_5);
-  LL_DMA_DisableIT_HT(DMA1, LL_DMA_CHANNEL_5);
-  LL_DMA_ClearFlag_HT5(DMA1);
-  LL_DMA_ClearFlag_TC5(DMA1);
+  rulos_dma_stop(stm32_i2s.dma_ch);
 }

@@ -275,12 +275,16 @@ static inline int state_to_idx(const rulos_dma_channel_t *ch) {
  */
 static const uint8_t g_fixed_slot_plus_one[RULOS_DMA_REQ_COUNT_] = {
 #if defined(RULOS_ARM_stm32f0)
-    [RULOS_DMA_REQ_USART1_TX] = 1 + 1,  // DMA1 Ch2 (conflicts with I2C1_TX)
-    [RULOS_DMA_REQ_USART1_RX] = 2 + 1,  // DMA1 Ch3 (conflicts with I2C1_RX)
-    [RULOS_DMA_REQ_I2C1_TX]   = 1 + 1,  // DMA1 Ch2 (conflicts with USART1_TX)
-    [RULOS_DMA_REQ_I2C1_RX]   = 2 + 1,  // DMA1 Ch3 (conflicts with USART1_RX)
+    [RULOS_DMA_REQ_USART1_TX] = 1 + 1,  // DMA1 Ch2 (conflicts with I2C1_TX/SPI1_RX)
+    [RULOS_DMA_REQ_USART1_RX] = 2 + 1,  // DMA1 Ch3 (conflicts with I2C1_RX/SPI1_TX)
+    [RULOS_DMA_REQ_I2C1_TX]   = 1 + 1,  // DMA1 Ch2 (conflicts with USART1_TX/SPI1_RX)
+    [RULOS_DMA_REQ_I2C1_RX]   = 2 + 1,  // DMA1 Ch3 (conflicts with USART1_RX/SPI1_TX)
+    [RULOS_DMA_REQ_SPI1_RX]   = 1 + 1,  // DMA1 Ch2 (conflicts with USART1_TX/I2C1_TX)
+    [RULOS_DMA_REQ_SPI1_TX]   = 2 + 1,  // DMA1 Ch3 (conflicts with USART1_RX/I2C1_RX)
     [RULOS_DMA_REQ_SPI2_TX]   = 4 + 1,  // DMA1 Ch5
 #elif defined(RULOS_ARM_stm32f1) || defined(RULOS_ARM_stm32f3)
+    [RULOS_DMA_REQ_SPI1_RX]   = 1 + 1,  // DMA1 Ch2
+    [RULOS_DMA_REQ_SPI1_TX]   = 2 + 1,  // DMA1 Ch3
     [RULOS_DMA_REQ_USART1_TX] = 3 + 1,  // DMA1 Ch4
     [RULOS_DMA_REQ_USART1_RX] = 4 + 1,  // DMA1 Ch5 (conflicts with SPI2_TX)
     [RULOS_DMA_REQ_I2C1_TX]   = 5 + 1,  // DMA1 Ch6
@@ -687,13 +691,11 @@ CCMRAM void DMA1_Channel4_IRQHandler(void) {
   dispatch_channel_irq(3);
 }
 #endif
-#if 0  // Phase 6: i2s.c still owns DMA1_Channel5_IRQHandler on F1/F3
 #ifdef DMA1_Channel5_BASE
 CCMRAM void DMA1_Channel5_IRQHandler(void) {
   dispatch_channel_irq(4);
 }
 #endif
-#endif  // Phase 6 gate
 #ifdef DMA1_Channel6_BASE
 CCMRAM void DMA1_Channel6_IRQHandler(void) {
   dispatch_channel_irq(5);
@@ -798,10 +800,10 @@ void DMA1_Channel2_3_IRQHandler(void) {
   dispatch_channel_irq(1);  // DMA1 Channel 2
   dispatch_channel_irq(2);  // DMA1 Channel 3
 }
-// Phase 6 gated: i2s.c owns this handler via its SPI2_TX DMA path
-// (the merged handler would include Channel 5). Leave it to i2s.c
-// until Phase 6 migrates that driver.
-// void DMA1_Channel4_5_IRQHandler(void) { ... }
+void DMA1_Channel4_5_IRQHandler(void) {
+  dispatch_channel_irq(3);  // DMA1 Channel 4
+  dispatch_channel_irq(4);  // DMA1 Channel 5
+}
 
 #endif  // per-chip IRQ handlers
 
