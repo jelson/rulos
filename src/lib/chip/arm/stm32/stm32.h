@@ -20,13 +20,11 @@
 #include "stm32f3xx_ll_usart.h"
 #elif defined(RULOS_ARM_stm32g0)
 #include "stm32g0xx.h"
-#include "stm32g0xx_hal_dma.h"
 #include "stm32g0xx_ll_dma.h"
 #include "stm32g0xx_ll_gpio.h"
 #include "stm32g0xx_ll_usart.h"
 #elif defined(RULOS_ARM_stm32g4)
 #include "stm32g4xx.h"
-#include "stm32g4xx_hal_dma.h"
 #include "stm32g4xx_ll_dma.h"
 #include "stm32g4xx_ll_gpio.h"
 #include "stm32g4xx_ll_usart.h"

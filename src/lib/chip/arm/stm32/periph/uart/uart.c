@@ -184,7 +184,6 @@ static void config_gpio(const stm32_uart_config_t *config, bool rx);
 
 #if defined(RULOS_ARM_stm32f0)
 
-#include "stm32f0xx_ll_usart.h"
 // DMA IRQ handlers are owned by the RULOS DMA core (core/dma.c).
 void USART1_IRQHandler() {
   on_usart_interrupt(0);
@@ -209,7 +208,6 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 
 #elif defined(RULOS_ARM_stm32f1)
 
-#include "stm32f1xx_ll_usart.h"
 // DMA IRQ handlers are owned by the RULOS DMA core (core/dma.c).
 void USART1_IRQHandler() {
   on_usart_interrupt(0);
@@ -230,7 +228,6 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 
 #elif defined(RULOS_ARM_stm32f3)
 
-#include "stm32f3xx_ll_usart.h"
 // DMA IRQ handlers are owned by the RULOS DMA core (core/dma.c).
 void USART1_IRQHandler() {
   on_usart_interrupt(0);

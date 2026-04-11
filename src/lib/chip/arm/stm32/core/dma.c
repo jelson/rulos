@@ -358,9 +358,141 @@ static const uint32_t g_dmamux_req[RULOS_DMA_REQ_COUNT_] = {
 #endif  // RULOS_DMA_HAS_DMAMUX
 
 // ----------------------------------------------------------------------------
-// Private TE flag dispatch helpers (the LL_DMA_*_TE variants aren't wrapped
-// into channel-indexed helpers by stm32g4xx_ll_dma.h; we do it here).
+// Private channel-indexed flag dispatch helpers.
+//
+// The classic-DMA LL headers (stm32fNxx_ll_dma.h, stm32gNxx_ll_dma.h)
+// only expose per-channel flag helpers as
+// LL_DMA_IsActiveFlag_TCn(DMAx) / LL_DMA_ClearFlag_TCn(DMAx) where
+// the channel number N is part of the function name. Our dispatcher
+// needs to index into the flag helpers by a runtime LL_DMA_CHANNEL_*
+// value, so we wrap them in switch-based helpers once per file.
 // ----------------------------------------------------------------------------
+
+CCMRAM static bool ll_dma_is_active_flag_tc(DMA_TypeDef *dma, uint32_t ch) {
+  switch (ch) {
+    case LL_DMA_CHANNEL_1:
+      return LL_DMA_IsActiveFlag_TC1(dma);
+    case LL_DMA_CHANNEL_2:
+      return LL_DMA_IsActiveFlag_TC2(dma);
+    case LL_DMA_CHANNEL_3:
+      return LL_DMA_IsActiveFlag_TC3(dma);
+    case LL_DMA_CHANNEL_4:
+      return LL_DMA_IsActiveFlag_TC4(dma);
+    case LL_DMA_CHANNEL_5:
+      return LL_DMA_IsActiveFlag_TC5(dma);
+#ifdef LL_DMA_CHANNEL_6
+    case LL_DMA_CHANNEL_6:
+      return LL_DMA_IsActiveFlag_TC6(dma);
+#endif
+#ifdef LL_DMA_CHANNEL_7
+    case LL_DMA_CHANNEL_7:
+      return LL_DMA_IsActiveFlag_TC7(dma);
+#endif
+#ifdef LL_DMA_CHANNEL_8
+    case LL_DMA_CHANNEL_8:
+      return LL_DMA_IsActiveFlag_TC8(dma);
+#endif
+  }
+  return false;
+}
+
+CCMRAM static void ll_dma_clear_flag_tc(DMA_TypeDef *dma, uint32_t ch) {
+  switch (ch) {
+    case LL_DMA_CHANNEL_1:
+      LL_DMA_ClearFlag_TC1(dma);
+      break;
+    case LL_DMA_CHANNEL_2:
+      LL_DMA_ClearFlag_TC2(dma);
+      break;
+    case LL_DMA_CHANNEL_3:
+      LL_DMA_ClearFlag_TC3(dma);
+      break;
+    case LL_DMA_CHANNEL_4:
+      LL_DMA_ClearFlag_TC4(dma);
+      break;
+    case LL_DMA_CHANNEL_5:
+      LL_DMA_ClearFlag_TC5(dma);
+      break;
+#ifdef LL_DMA_CHANNEL_6
+    case LL_DMA_CHANNEL_6:
+      LL_DMA_ClearFlag_TC6(dma);
+      break;
+#endif
+#ifdef LL_DMA_CHANNEL_7
+    case LL_DMA_CHANNEL_7:
+      LL_DMA_ClearFlag_TC7(dma);
+      break;
+#endif
+#ifdef LL_DMA_CHANNEL_8
+    case LL_DMA_CHANNEL_8:
+      LL_DMA_ClearFlag_TC8(dma);
+      break;
+#endif
+  }
+}
+
+CCMRAM static bool ll_dma_is_active_flag_ht(DMA_TypeDef *dma, uint32_t ch) {
+  switch (ch) {
+    case LL_DMA_CHANNEL_1:
+      return LL_DMA_IsActiveFlag_HT1(dma);
+    case LL_DMA_CHANNEL_2:
+      return LL_DMA_IsActiveFlag_HT2(dma);
+    case LL_DMA_CHANNEL_3:
+      return LL_DMA_IsActiveFlag_HT3(dma);
+    case LL_DMA_CHANNEL_4:
+      return LL_DMA_IsActiveFlag_HT4(dma);
+    case LL_DMA_CHANNEL_5:
+      return LL_DMA_IsActiveFlag_HT5(dma);
+#ifdef LL_DMA_CHANNEL_6
+    case LL_DMA_CHANNEL_6:
+      return LL_DMA_IsActiveFlag_HT6(dma);
+#endif
+#ifdef LL_DMA_CHANNEL_7
+    case LL_DMA_CHANNEL_7:
+      return LL_DMA_IsActiveFlag_HT7(dma);
+#endif
+#ifdef LL_DMA_CHANNEL_8
+    case LL_DMA_CHANNEL_8:
+      return LL_DMA_IsActiveFlag_HT8(dma);
+#endif
+  }
+  return false;
+}
+
+CCMRAM static void ll_dma_clear_flag_ht(DMA_TypeDef *dma, uint32_t ch) {
+  switch (ch) {
+    case LL_DMA_CHANNEL_1:
+      LL_DMA_ClearFlag_HT1(dma);
+      break;
+    case LL_DMA_CHANNEL_2:
+      LL_DMA_ClearFlag_HT2(dma);
+      break;
+    case LL_DMA_CHANNEL_3:
+      LL_DMA_ClearFlag_HT3(dma);
+      break;
+    case LL_DMA_CHANNEL_4:
+      LL_DMA_ClearFlag_HT4(dma);
+      break;
+    case LL_DMA_CHANNEL_5:
+      LL_DMA_ClearFlag_HT5(dma);
+      break;
+#ifdef LL_DMA_CHANNEL_6
+    case LL_DMA_CHANNEL_6:
+      LL_DMA_ClearFlag_HT6(dma);
+      break;
+#endif
+#ifdef LL_DMA_CHANNEL_7
+    case LL_DMA_CHANNEL_7:
+      LL_DMA_ClearFlag_HT7(dma);
+      break;
+#endif
+#ifdef LL_DMA_CHANNEL_8
+    case LL_DMA_CHANNEL_8:
+      LL_DMA_ClearFlag_HT8(dma);
+      break;
+#endif
+  }
+}
 
 CCMRAM static bool ll_dma_is_active_flag_te(DMA_TypeDef *dma, uint32_t ch) {
   switch (ch) {
@@ -470,8 +602,8 @@ static void init_channel(int idx, const rulos_dma_config_t *c) {
   // IFCR flags are still set from the last transfer, the subsequent
   // LL_DMA_EnableIT_TC below would fire the NVIC immediately and the
   // fresh callback would see a spurious interrupt.
-  LL_DMA_ClearFlag_TC(hw->dma, hw->ll_channel);
-  LL_DMA_ClearFlag_HT(hw->dma, hw->ll_channel);
+  ll_dma_clear_flag_tc(hw->dma, hw->ll_channel);
+  ll_dma_clear_flag_ht(hw->dma, hw->ll_channel);
   ll_dma_clear_flag_te(hw->dma, hw->ll_channel);
 
   // Build the CCR configuration word and apply it in one shot.
@@ -610,8 +742,8 @@ void rulos_dma_stop(rulos_dma_channel_t *ch) {
   // would survive across the restart). The channel is already
   // disabled above, so no new flag can be set between here and
   // return.
-  LL_DMA_ClearFlag_TC(hw->dma, hw->ll_channel);
-  LL_DMA_ClearFlag_HT(hw->dma, hw->ll_channel);
+  ll_dma_clear_flag_tc(hw->dma, hw->ll_channel);
+  ll_dma_clear_flag_ht(hw->dma, hw->ll_channel);
   ll_dma_clear_flag_te(hw->dma, hw->ll_channel);
 }
 
@@ -650,15 +782,15 @@ CCMRAM static void dispatch_channel_irq(int idx) {
     return;
   }
 
-  if (LL_DMA_IsActiveFlag_TC(hw->dma, hw->ll_channel)) {
-    LL_DMA_ClearFlag_TC(hw->dma, hw->ll_channel);
+  if (ll_dma_is_active_flag_tc(hw->dma, hw->ll_channel)) {
+    ll_dma_clear_flag_tc(hw->dma, hw->ll_channel);
     if (s->tc_callback) {
       s->tc_callback(s->user_data);
     }
   }
 
-  if (LL_DMA_IsActiveFlag_HT(hw->dma, hw->ll_channel)) {
-    LL_DMA_ClearFlag_HT(hw->dma, hw->ll_channel);
+  if (ll_dma_is_active_flag_ht(hw->dma, hw->ll_channel)) {
+    ll_dma_clear_flag_ht(hw->dma, hw->ll_channel);
     if (s->ht_callback) {
       s->ht_callback(s->user_data);
     }
@@ -822,12 +954,25 @@ void DMA1_Channel4_5_IRQHandler(void) {
 #endif  // per-chip IRQ handlers
 
 // ============================================================================
-// Stub backend (non-G4 families for Phase 1 of the DMA refactor).
+// Stub backend -- C0 and H5.
 //
-// These families still drive DMA via the old hardcoded paths in their
-// peripheral drivers. The stub lets any nulltest / test app that doesn't
-// call the new API keep compiling. When each family's backend lands in
-// a later phase it will replace the stub.
+// C0 has a classic DMA1 controller but no DMAMUX and a peripheral-to-
+// channel mapping that differs from F0/F1/F3; no driver currently
+// uses DMA on C0, so the stub is sufficient until the first caller
+// lands (the UART DMA path for C0 is the intended first user).
+//
+// H5 has GPDMA -- a completely different controller architecture
+// (linked-list descriptors, per-channel built-in request mux, no
+// CCR register). No classic-DMA code works on it. No H5 driver
+// currently uses DMA, so the stub holds the door until a GPDMA
+// backend is written.
+//
+// rulos_dma_alloc returns NULL so callers that do the right thing
+// (`if (ch == NULL) ...` or `assert(ch != NULL)`) fail loudly at
+// init time instead of silently corrupting state. The other entry
+// points __builtin_trap() because reaching them means a caller
+// passed a bogus handle -- there's no defensible non-trapping
+// behavior once you're down that path.
 // ============================================================================
 #else
 
