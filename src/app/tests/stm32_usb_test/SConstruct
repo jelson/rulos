@@ -29,8 +29,7 @@ RulosBuildTarget(
         "-DUART_TX_QUEUE_LEN=2048",  # Large buffer for debug logging
     ],
     platforms = [
-        ArmStmPlatform(
-            "stm32g431x8",
-        ),
+        ArmStmPlatform("stm32g431x8"),
+        ArmStmPlatform("stm32h523xc"),
     ],
 ).build()

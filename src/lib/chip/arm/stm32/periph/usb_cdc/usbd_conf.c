@@ -19,14 +19,38 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32g4xx.h"
+#include "stm32.h"
+#if defined(RULOS_ARM_stm32g4)
 #include "stm32g4xx_hal.h"
+#elif defined(RULOS_ARM_stm32h5)
+#include "stm32h5xx_hal.h"
+#else
+#error "USB CDC not supported on this chip family"
+#include <stophere>
+#endif
 #include "usbd_def.h"
 #include "usbd_core.h"
 
 #include "usbd_cdc.h"
 
 #include "core/rulos.h"
+
+/*
+ * Family-specific USB peripheral name. On STM32G4 the USB FS device
+ * controller is literally called `USB`; on STM32H5 it's the USB DRD
+ * (Dual-Role Device) controller running in FS device mode, exposed
+ * as `USB_DRD_FS`. The PCD HAL driver is otherwise identical across
+ * the two families.
+ */
+#if defined(RULOS_ARM_stm32h5)
+#define RULOS_USB_INSTANCE USB_DRD_FS
+#define RULOS_USB_IRQn     USB_DRD_FS_IRQn
+#define RULOS_USB_IRQHandler USB_DRD_FS_IRQHandler
+#else
+#define RULOS_USB_INSTANCE USB
+#define RULOS_USB_IRQn     USB_LP_IRQn
+#define RULOS_USB_IRQHandler USB_LP_IRQHandler
+#endif
 
 /* USER CODE BEGIN Includes */
 
@@ -50,9 +74,9 @@ void Error_Handler(void) {
 }
 
 /**
-  * @brief This function handles USB low priority interrupt.
+  * @brief This function handles USB (device-mode FS) global interrupt.
   */
-void USB_LP_IRQHandler(void)
+void RULOS_USB_IRQHandler(void)
 {
   HAL_PCD_IRQHandler(&hpcd_USB_FS);
 }
@@ -95,21 +119,17 @@ static void HAL_PCD_MspInit(PCD_HandleTypeDef* pcdHandle)
 void HAL_PCD_MspInit(PCD_HandleTypeDef* pcdHandle)
 #endif /* USE_HAL_PCD_REGISTER_CALLBACKS */
 {
-  if(pcdHandle->Instance==USB)
+  if(pcdHandle->Instance==RULOS_USB_INSTANCE)
   {
-  /* USER CODE BEGIN USB_MspInit 0 */
-
-  /* USER CODE END USB_MspInit 0 */
-    /* Peripheral clock enable */
+    /* Peripheral clock enable. The H5 DRD-FS and the G4 USB device
+     * controller both bind __HAL_RCC_USB_CLK_ENABLE to the same
+     * macro name. */
     __HAL_RCC_USB_CLK_ENABLE();
 
     /* Peripheral interrupt init */
     // Priority 6 is fine since SysTick is already at lowest priority (15)
-    HAL_NVIC_SetPriority(USB_LP_IRQn, 6, 0);
-    HAL_NVIC_EnableIRQ(USB_LP_IRQn);
-  /* USER CODE BEGIN USB_MspInit 1 */
-
-  /* USER CODE END USB_MspInit 1 */
+    HAL_NVIC_SetPriority(RULOS_USB_IRQn, 6, 0);
+    HAL_NVIC_EnableIRQ(RULOS_USB_IRQn);
   }
 }
 
@@ -119,20 +139,15 @@ static void HAL_PCD_MspDeInit(PCD_HandleTypeDef* pcdHandle)
 void HAL_PCD_MspDeInit(PCD_HandleTypeDef* pcdHandle)
 #endif /* USE_HAL_PCD_REGISTER_CALLBACKS */
 {
-  if(pcdHandle->Instance==USB)
+  if(pcdHandle->Instance==RULOS_USB_INSTANCE)
   {
-  /* USER CODE BEGIN USB_MspDeInit 0 */
-
-  /* USER CODE END USB_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_USB_CLK_DISABLE();
 
     /* Peripheral interrupt Deinit*/
-    HAL_NVIC_DisableIRQ(USB_LP_IRQn);
+    HAL_NVIC_DisableIRQ(RULOS_USB_IRQn);
 
-  /* USER CODE BEGIN USB_MspDeInit 1 */
     // Do NOT disable GPIOA here -- it's shared with UART, timers, SWD, etc.
-  /* USER CODE END USB_MspDeInit 1 */
   }
 }
 
@@ -411,7 +426,7 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
   /* Link the driver to the stack. */
   pdev->pData = &hpcd_USB_FS;
 
-  hpcd_USB_FS.Instance = USB;
+  hpcd_USB_FS.Instance = RULOS_USB_INSTANCE;
   hpcd_USB_FS.Init.dev_endpoints = 8;
   hpcd_USB_FS.Init.speed = PCD_SPEED_FULL;
   hpcd_USB_FS.Init.phy_itface = PCD_PHY_EMBEDDED;

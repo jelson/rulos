@@ -69,7 +69,7 @@ int main() {
   uart_init(&uart, /* uart_id= */ 0, 1000000);
   log_bind_uart(&uart);
 
-  LOG("STM32G4 USB CDC example starting!");
+  LOG("STM32 USB CDC example starting!");
 
   // Configure USB CDC device
   usb_cdc = (usbd_cdc_state_t){

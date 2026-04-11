@@ -190,7 +190,9 @@ static void init_usb_clock(void) {
   RCC_CRSInitTypeDef RCC_CRSInitStruct = {0};
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
 
-  // Enable HSI48 oscillator (48 MHz for USB)
+  // Enable HSI48 oscillator (48 MHz for USB). On G0/G4 the HSI48
+  // output feeds the USB peripheral clock directly; no separate
+  // peripheral-clock-source selector is needed.
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48;
   RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
@@ -199,6 +201,49 @@ static void init_usb_clock(void) {
   }
 
   // Enable CRS (Clock Recovery System) for HSI48
+  __HAL_RCC_CRS_CLK_ENABLE();
+
+  RCC_CRSInitStruct.Prescaler = RCC_CRS_SYNC_DIV1;
+  RCC_CRSInitStruct.Source = RCC_CRS_SYNC_SOURCE_USB;
+  RCC_CRSInitStruct.ReloadValue = __HAL_RCC_CRS_RELOADVALUE_CALCULATE(48000000, 1000);
+  RCC_CRSInitStruct.ErrorLimitValue = RCC_CRS_ERRORLIMIT_DEFAULT;
+  RCC_CRSInitStruct.HSI48CalibrationValue = RCC_CRS_HSI48CALIBRATION_DEFAULT;
+
+  HAL_RCCEx_CRSConfig(&RCC_CRSInitStruct);
+#elif defined(RULOS_ARM_stm32h5)
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
+  RCC_CRSInitTypeDef RCC_CRSInitStruct = {0};
+
+  // Enable HSI48 oscillator (48 MHz for USB). On H5 this does NOT
+  // automatically route to the USB peripheral -- see the peripheral
+  // clock source selection below.
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48;
+  RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+    __builtin_trap();
+  }
+
+  // Route HSI48 to the USB peripheral clock selector. On H5 the
+  // USB peripheral has its own clock mux (selectable between HSI48,
+  // PLL3Q, etc.) that must be programmed via the peripheral-clock
+  // init API, not via the bare RCC_OscInitStruct.
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USB;
+  PeriphClkInitStruct.UsbClockSelection = RCC_USBCLKSOURCE_HSI48;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
+    __builtin_trap();
+  }
+
+  // H5 has an isolated USB power domain (VDDUSB) that must be
+  // explicitly switched on before the USB_DRD_FS peripheral can be
+  // used. Easy to miss -- the bare `__HAL_RCC_USB_CLK_ENABLE()` in
+  // MspInit is not sufficient on H5 where it is on G4.
+  HAL_PWREx_EnableVddUSB();
+
+  // Enable CRS (Clock Recovery System) for HSI48. The sequence is
+  // the same as G0/G4: use USB SOF as the sync source to trim the
+  // internal 48 MHz oscillator to the host's reference.
   __HAL_RCC_CRS_CLK_ENABLE();
 
   RCC_CRSInitStruct.Prescaler = RCC_CRS_SYNC_DIV1;
