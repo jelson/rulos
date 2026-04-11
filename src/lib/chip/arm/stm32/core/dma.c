@@ -461,6 +461,15 @@ static void init_channel(int idx, const rulos_dma_config_t *c) {
 
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
 
+  // Clear any stale TC/HT/TE flags left over from a previous owner of
+  // this slot. If a reconfigure or free+alloc lands on a slot whose
+  // IFCR flags are still set from the last transfer, the subsequent
+  // LL_DMA_EnableIT_TC below would fire the NVIC immediately and the
+  // fresh callback would see a spurious interrupt.
+  LL_DMA_ClearFlag_TC(hw->dma, hw->ll_channel);
+  LL_DMA_ClearFlag_HT(hw->dma, hw->ll_channel);
+  ll_dma_clear_flag_te(hw->dma, hw->ll_channel);
+
   // Build the CCR configuration word and apply it in one shot.
   // Direction, mode, and priority come straight from the caller's
   // config (the RULOS_DMA_* constants for those three are just
@@ -597,7 +606,15 @@ void rulos_dma_free(rulos_dma_channel_t *ch) {
   const int idx = state_to_idx(ch);
   const dma_channel_hw_t *hw = &g_hw[idx];
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
-  HAL_NVIC_DisableIRQ(hw->irqn);
+
+  // Silence this channel at the DMA-hardware level by disabling its
+  // TC/HT/TE interrupt enables, rather than disabling the NVIC line.
+  // On merged-IRQ families (G0/F0) the NVIC line is shared with up
+  // to 9 other DMA channels, so HAL_NVIC_DisableIRQ(hw->irqn) would
+  // knock out every other allocated channel on the same line.
+  LL_DMA_DisableIT_TC(hw->dma, hw->ll_channel);
+  LL_DMA_DisableIT_HT(hw->dma, hw->ll_channel);
+  LL_DMA_DisableIT_TE(hw->dma, hw->ll_channel);
 
   rulos_irq_state_t irq = hal_start_atomic();
   g_state[idx] = (dma_channel_state_t){0};
