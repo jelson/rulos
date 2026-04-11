@@ -41,15 +41,16 @@
 #include "stm32g4xx_ll_dma.h"
 
 /*
- * Per-channel state. The array is sized to cover all 16 possible G4
- * channels (DMA1 channels 1..8, DMA2 channels 1..8). Variants like
- * STM32G431 that only expose 6 channels per DMA leave the upper slots
- * zero-initialized; the allocator skips entries whose `dma` pointer is
- * NULL.
+ * Per-channel hardware descriptor. Immutable, const, lives in .rodata
+ * (flash only, zero RAM cost). The array is sized to cover all 16
+ * possible G4 channels (DMA1 channels 1..8, DMA2 channels 1..8).
+ * Variants like STM32G431 that only expose 6 channels per DMA leave
+ * the upper slots zero-initialized; the allocator skips entries
+ * whose `dma` pointer is NULL.
  *
- * The per-channel IRQ handlers further down in this file hardcode the
- * array index they manage, so the designated initializer positions are
- * load-bearing:
+ * The per-channel IRQ handlers at the bottom of this file hardcode
+ * the array index they manage, so the designated initializer positions
+ * are load-bearing:
  *   [0..7]  = DMA1 channels 1..8
  *   [8..15] = DMA2 channels 1..8
  */
@@ -58,110 +59,85 @@ typedef struct {
   DMA_Channel_TypeDef *hw_ch;    // DMA1_Channel1, ...
   uint32_t ll_channel;           // LL_DMA_CHANNEL_1..8 (values 0..7)
   IRQn_Type irqn;
-  bool allocated;
-  rulos_dma_config_t config;
-} dma_channel_state_t;
+} dma_channel_hw_t;
 
 #define DMA_CHANNEL_SLOTS 16
 
-static dma_channel_state_t g_channels[DMA_CHANNEL_SLOTS] = {
+static const dma_channel_hw_t g_hw[DMA_CHANNEL_SLOTS] = {
 #ifdef DMA1_Channel1_BASE
-    [0] = {.dma = DMA1,
-           .hw_ch = DMA1_Channel1,
-           .ll_channel = LL_DMA_CHANNEL_1,
-           .irqn = DMA1_Channel1_IRQn},
+    [0] = {DMA1, DMA1_Channel1, LL_DMA_CHANNEL_1, DMA1_Channel1_IRQn},
 #endif
 #ifdef DMA1_Channel2_BASE
-    [1] = {.dma = DMA1,
-           .hw_ch = DMA1_Channel2,
-           .ll_channel = LL_DMA_CHANNEL_2,
-           .irqn = DMA1_Channel2_IRQn},
+    [1] = {DMA1, DMA1_Channel2, LL_DMA_CHANNEL_2, DMA1_Channel2_IRQn},
 #endif
 #ifdef DMA1_Channel3_BASE
-    [2] = {.dma = DMA1,
-           .hw_ch = DMA1_Channel3,
-           .ll_channel = LL_DMA_CHANNEL_3,
-           .irqn = DMA1_Channel3_IRQn},
+    [2] = {DMA1, DMA1_Channel3, LL_DMA_CHANNEL_3, DMA1_Channel3_IRQn},
 #endif
 #ifdef DMA1_Channel4_BASE
-    [3] = {.dma = DMA1,
-           .hw_ch = DMA1_Channel4,
-           .ll_channel = LL_DMA_CHANNEL_4,
-           .irqn = DMA1_Channel4_IRQn},
+    [3] = {DMA1, DMA1_Channel4, LL_DMA_CHANNEL_4, DMA1_Channel4_IRQn},
 #endif
 #ifdef DMA1_Channel5_BASE
-    [4] = {.dma = DMA1,
-           .hw_ch = DMA1_Channel5,
-           .ll_channel = LL_DMA_CHANNEL_5,
-           .irqn = DMA1_Channel5_IRQn},
+    [4] = {DMA1, DMA1_Channel5, LL_DMA_CHANNEL_5, DMA1_Channel5_IRQn},
 #endif
 #ifdef DMA1_Channel6_BASE
-    [5] = {.dma = DMA1,
-           .hw_ch = DMA1_Channel6,
-           .ll_channel = LL_DMA_CHANNEL_6,
-           .irqn = DMA1_Channel6_IRQn},
+    [5] = {DMA1, DMA1_Channel6, LL_DMA_CHANNEL_6, DMA1_Channel6_IRQn},
 #endif
 #ifdef DMA1_Channel7_BASE
-    [6] = {.dma = DMA1,
-           .hw_ch = DMA1_Channel7,
-           .ll_channel = LL_DMA_CHANNEL_7,
-           .irqn = DMA1_Channel7_IRQn},
+    [6] = {DMA1, DMA1_Channel7, LL_DMA_CHANNEL_7, DMA1_Channel7_IRQn},
 #endif
 #ifdef DMA1_Channel8_BASE
-    [7] = {.dma = DMA1,
-           .hw_ch = DMA1_Channel8,
-           .ll_channel = LL_DMA_CHANNEL_8,
-           .irqn = DMA1_Channel8_IRQn},
+    [7] = {DMA1, DMA1_Channel8, LL_DMA_CHANNEL_8, DMA1_Channel8_IRQn},
 #endif
 #ifdef DMA2_Channel1_BASE
-    [8] = {.dma = DMA2,
-           .hw_ch = DMA2_Channel1,
-           .ll_channel = LL_DMA_CHANNEL_1,
-           .irqn = DMA2_Channel1_IRQn},
+    [8] = {DMA2, DMA2_Channel1, LL_DMA_CHANNEL_1, DMA2_Channel1_IRQn},
 #endif
 #ifdef DMA2_Channel2_BASE
-    [9] = {.dma = DMA2,
-           .hw_ch = DMA2_Channel2,
-           .ll_channel = LL_DMA_CHANNEL_2,
-           .irqn = DMA2_Channel2_IRQn},
+    [9] = {DMA2, DMA2_Channel2, LL_DMA_CHANNEL_2, DMA2_Channel2_IRQn},
 #endif
 #ifdef DMA2_Channel3_BASE
-    [10] = {.dma = DMA2,
-            .hw_ch = DMA2_Channel3,
-            .ll_channel = LL_DMA_CHANNEL_3,
-            .irqn = DMA2_Channel3_IRQn},
+    [10] = {DMA2, DMA2_Channel3, LL_DMA_CHANNEL_3, DMA2_Channel3_IRQn},
 #endif
 #ifdef DMA2_Channel4_BASE
-    [11] = {.dma = DMA2,
-            .hw_ch = DMA2_Channel4,
-            .ll_channel = LL_DMA_CHANNEL_4,
-            .irqn = DMA2_Channel4_IRQn},
+    [11] = {DMA2, DMA2_Channel4, LL_DMA_CHANNEL_4, DMA2_Channel4_IRQn},
 #endif
 #ifdef DMA2_Channel5_BASE
-    [12] = {.dma = DMA2,
-            .hw_ch = DMA2_Channel5,
-            .ll_channel = LL_DMA_CHANNEL_5,
-            .irqn = DMA2_Channel5_IRQn},
+    [12] = {DMA2, DMA2_Channel5, LL_DMA_CHANNEL_5, DMA2_Channel5_IRQn},
 #endif
 #ifdef DMA2_Channel6_BASE
-    [13] = {.dma = DMA2,
-            .hw_ch = DMA2_Channel6,
-            .ll_channel = LL_DMA_CHANNEL_6,
-            .irqn = DMA2_Channel6_IRQn},
+    [13] = {DMA2, DMA2_Channel6, LL_DMA_CHANNEL_6, DMA2_Channel6_IRQn},
 #endif
 #ifdef DMA2_Channel7_BASE
-    [14] = {.dma = DMA2,
-            .hw_ch = DMA2_Channel7,
-            .ll_channel = LL_DMA_CHANNEL_7,
-            .irqn = DMA2_Channel7_IRQn},
+    [14] = {DMA2, DMA2_Channel7, LL_DMA_CHANNEL_7, DMA2_Channel7_IRQn},
 #endif
 #ifdef DMA2_Channel8_BASE
-    [15] = {.dma = DMA2,
-            .hw_ch = DMA2_Channel8,
-            .ll_channel = LL_DMA_CHANNEL_8,
-            .irqn = DMA2_Channel8_IRQn},
+    [15] = {DMA2, DMA2_Channel8, LL_DMA_CHANNEL_8, DMA2_Channel8_IRQn},
 #endif
 };
+
+/*
+ * Per-channel mutable state. Lives in .bss (zero-initialized). Only
+ * the fields we need in the IRQ dispatch hot path are kept; the rest
+ * of the rulos_dma_config_t passed to rulos_dma_alloc() is written
+ * to DMA hardware registers by init_channel() and then discarded.
+ *
+ * Opaque API handle: rulos_dma_channel_t* is a cast pointer into this
+ * array. The array index (and therefore the matching g_hw entry) is
+ * recovered by pointer subtraction.
+ */
+typedef struct {
+  bool allocated;
+  void (*tc_callback)(void *user_data);
+  void (*ht_callback)(void *user_data);
+  void (*error_callback)(void *user_data);
+  void *user_data;
+} dma_channel_state_t;
+
+static dma_channel_state_t g_state[DMA_CHANNEL_SLOTS];
+
+// Convert an opaque handle back to its slot index.
+static inline int state_to_idx(const rulos_dma_channel_t *ch) {
+  return (const dma_channel_state_t *)ch - g_state;
+}
 
 /*
  * RULOS request enum -> G4 DMAMUX request code. Designated initializers
@@ -315,12 +291,19 @@ static void ll_dma_clear_flag_te(DMA_TypeDef *dma, uint32_t ch) {
 
 // ----------------------------------------------------------------------------
 // Channel init (called from alloc and reconfigure)
+//
+// Programs the DMA hardware registers from `config`, and caches the
+// small set of fields the ISR dispatcher needs (callbacks + user_data)
+// into g_state[idx]. Everything else in `config` is applied to the
+// hardware and then dropped on the floor -- no per-channel copy of
+// the full rulos_dma_config_t is retained.
 // ----------------------------------------------------------------------------
 
-static void init_channel(dma_channel_state_t *s) {
-  const rulos_dma_config_t *c = &s->config;
+static void init_channel(int idx, const rulos_dma_config_t *c) {
+  const dma_channel_hw_t *hw = &g_hw[idx];
+  dma_channel_state_t *s = &g_state[idx];
 
-  LL_DMA_DisableChannel(s->dma, s->ll_channel);
+  LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
 
   // Build the CCR configuration word and apply it in one shot.
   uint32_t cfg =
@@ -329,17 +312,24 @@ static void init_channel(dma_channel_state_t *s) {
       (c->mem_increment ? LL_DMA_MEMORY_INCREMENT : LL_DMA_MEMORY_NOINCREMENT) |
       periph_width_to_ll(c->periph_width) | mem_width_to_ll(c->mem_width) |
       priority_to_ll(c->priority);
-  LL_DMA_ConfigTransfer(s->dma, s->ll_channel, cfg);
+  LL_DMA_ConfigTransfer(hw->dma, hw->ll_channel, cfg);
 
   // Route the peripheral request through DMAMUX.
-  LL_DMA_SetPeriphRequest(s->dma, s->ll_channel, g_dmamux_req[c->request]);
+  LL_DMA_SetPeriphRequest(hw->dma, hw->ll_channel, g_dmamux_req[c->request]);
 
   // Enable the interrupts corresponding to the callbacks we'll dispatch.
-  LL_DMA_EnableIT_TC(s->dma, s->ll_channel);
-  LL_DMA_EnableIT_TE(s->dma, s->ll_channel);
+  LL_DMA_EnableIT_TC(hw->dma, hw->ll_channel);
+  LL_DMA_EnableIT_TE(hw->dma, hw->ll_channel);
   if (c->mode == RULOS_DMA_MODE_CIRCULAR) {
-    LL_DMA_EnableIT_HT(s->dma, s->ll_channel);
+    LL_DMA_EnableIT_HT(hw->dma, hw->ll_channel);
   }
+
+  // Cache only the callbacks + user_data -- the rest of the config is
+  // in the hardware now.
+  s->tc_callback = c->tc_callback;
+  s->ht_callback = c->ht_callback;
+  s->error_callback = c->error_callback;
+  s->user_data = c->user_data;
 }
 
 // ----------------------------------------------------------------------------
@@ -357,79 +347,79 @@ rulos_dma_channel_t *rulos_dma_alloc(const rulos_dma_config_t *config) {
     return NULL;
   }
 
-  dma_channel_state_t *found = NULL;
+  int found_idx = -1;
   rulos_irq_state_t irq = hal_start_atomic();
-  for (size_t i = 0; i < DMA_CHANNEL_SLOTS; i++) {
-    if (g_channels[i].dma == NULL) continue;  // slot not populated
-    if (g_channels[i].allocated) continue;
-    g_channels[i].allocated = true;
-    found = &g_channels[i];
+  for (int i = 0; i < DMA_CHANNEL_SLOTS; i++) {
+    if (g_hw[i].dma == NULL) continue;  // slot not populated on this variant
+    if (g_state[i].allocated) continue;
+    g_state[i].allocated = true;
+    found_idx = i;
     break;
   }
   hal_end_atomic(irq);
 
-  if (found == NULL) {
+  if (found_idx < 0) {
     return NULL;
   }
 
-  found->config = *config;
-  init_channel(found);
+  init_channel(found_idx, config);
 
   // Priority 1 is the same priority RULOS already used for its DMA IRQs
   // (see the old uart.c init path). SysTick runs at the lowest priority
   // (15), so DMA ISRs can safely call schedule_now() via the RULOS
   // scheduler's ISR-safe path.
-  HAL_NVIC_SetPriority(found->irqn, 1, 0);
-  HAL_NVIC_EnableIRQ(found->irqn);
+  HAL_NVIC_SetPriority(g_hw[found_idx].irqn, 1, 0);
+  HAL_NVIC_EnableIRQ(g_hw[found_idx].irqn);
 
-  return (rulos_dma_channel_t *)found;
+  return (rulos_dma_channel_t *)&g_state[found_idx];
 }
 
 void rulos_dma_reconfigure(rulos_dma_channel_t *ch,
                            const rulos_dma_config_t *new_config) {
-  dma_channel_state_t *s = (dma_channel_state_t *)ch;
-  s->config = *new_config;
-  init_channel(s);
+  init_channel(state_to_idx(ch), new_config);
 }
 
 void rulos_dma_start(rulos_dma_channel_t *ch, volatile void *periph_addr,
                      void *mem_addr, uint32_t nitems) {
-  dma_channel_state_t *s = (dma_channel_state_t *)ch;
+  const dma_channel_hw_t *hw = &g_hw[state_to_idx(ch)];
 
-  LL_DMA_DisableChannel(s->dma, s->ll_channel);
-  LL_DMA_SetDataLength(s->dma, s->ll_channel, nitems);
+  LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
+  LL_DMA_SetDataLength(hw->dma, hw->ll_channel, nitems);
 
-  if (s->config.direction == RULOS_DMA_DIR_MEM_TO_PERIPH) {
-    LL_DMA_ConfigAddresses(s->dma, s->ll_channel, (uint32_t)mem_addr,
-                           (uint32_t)periph_addr,
-                           LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
+  // Direction was already written to CCR by init_channel; we only pick
+  // src/dst address ordering here based on what LL_DMA_ConfigAddresses
+  // expects for the current direction.
+  const uint32_t ccr_dir =
+      LL_DMA_GetDataTransferDirection(hw->dma, hw->ll_channel);
+  if (ccr_dir == LL_DMA_DIRECTION_MEMORY_TO_PERIPH) {
+    LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, (uint32_t)mem_addr,
+                           (uint32_t)periph_addr, ccr_dir);
   } else {
-    LL_DMA_ConfigAddresses(s->dma, s->ll_channel, (uint32_t)periph_addr,
-                           (uint32_t)mem_addr,
-                           LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
+    LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, (uint32_t)periph_addr,
+                           (uint32_t)mem_addr, ccr_dir);
   }
 
-  LL_DMA_EnableChannel(s->dma, s->ll_channel);
+  LL_DMA_EnableChannel(hw->dma, hw->ll_channel);
 }
 
 void rulos_dma_stop(rulos_dma_channel_t *ch) {
-  dma_channel_state_t *s = (dma_channel_state_t *)ch;
-  LL_DMA_DisableChannel(s->dma, s->ll_channel);
+  const dma_channel_hw_t *hw = &g_hw[state_to_idx(ch)];
+  LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
 }
 
 uint32_t rulos_dma_get_remaining(const rulos_dma_channel_t *ch) {
-  const dma_channel_state_t *s = (const dma_channel_state_t *)ch;
-  return LL_DMA_GetDataLength(s->dma, s->ll_channel);
+  const dma_channel_hw_t *hw = &g_hw[state_to_idx(ch)];
+  return LL_DMA_GetDataLength(hw->dma, hw->ll_channel);
 }
 
 void rulos_dma_free(rulos_dma_channel_t *ch) {
-  dma_channel_state_t *s = (dma_channel_state_t *)ch;
-  LL_DMA_DisableChannel(s->dma, s->ll_channel);
-  HAL_NVIC_DisableIRQ(s->irqn);
+  const int idx = state_to_idx(ch);
+  const dma_channel_hw_t *hw = &g_hw[idx];
+  LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
+  HAL_NVIC_DisableIRQ(hw->irqn);
 
   rulos_irq_state_t irq = hal_start_atomic();
-  s->allocated = false;
-  // Leave the other fields as-is; alloc will overwrite them.
+  g_state[idx] = (dma_channel_state_t){0};
   hal_end_atomic(irq);
 }
 
@@ -437,29 +427,31 @@ void rulos_dma_free(rulos_dma_channel_t *ch) {
 // IRQ dispatch
 // ----------------------------------------------------------------------------
 
-static inline void dispatch_channel_irq(dma_channel_state_t *s) {
-  if (s->dma == NULL || !s->allocated) {
+static inline void dispatch_channel_irq(int idx) {
+  const dma_channel_hw_t *hw = &g_hw[idx];
+  dma_channel_state_t *s = &g_state[idx];
+  if (hw->dma == NULL || !s->allocated) {
     return;
   }
 
-  if (LL_DMA_IsActiveFlag_TC(s->dma, s->ll_channel)) {
-    LL_DMA_ClearFlag_TC(s->dma, s->ll_channel);
-    if (s->config.tc_callback) {
-      s->config.tc_callback(s->config.user_data);
+  if (LL_DMA_IsActiveFlag_TC(hw->dma, hw->ll_channel)) {
+    LL_DMA_ClearFlag_TC(hw->dma, hw->ll_channel);
+    if (s->tc_callback) {
+      s->tc_callback(s->user_data);
     }
   }
 
-  if (LL_DMA_IsActiveFlag_HT(s->dma, s->ll_channel)) {
-    LL_DMA_ClearFlag_HT(s->dma, s->ll_channel);
-    if (s->config.ht_callback) {
-      s->config.ht_callback(s->config.user_data);
+  if (LL_DMA_IsActiveFlag_HT(hw->dma, hw->ll_channel)) {
+    LL_DMA_ClearFlag_HT(hw->dma, hw->ll_channel);
+    if (s->ht_callback) {
+      s->ht_callback(s->user_data);
     }
   }
 
-  if (ll_dma_is_active_flag_te(s->dma, s->ll_channel)) {
-    ll_dma_clear_flag_te(s->dma, s->ll_channel);
-    if (s->config.error_callback) {
-      s->config.error_callback(s->config.user_data);
+  if (ll_dma_is_active_flag_te(hw->dma, hw->ll_channel)) {
+    ll_dma_clear_flag_te(hw->dma, hw->ll_channel);
+    if (s->error_callback) {
+      s->error_callback(s->user_data);
     }
   }
 }
@@ -478,84 +470,84 @@ static inline void dispatch_channel_irq(dma_channel_state_t *s) {
 
 #ifdef DMA1_Channel1_BASE
 void DMA1_Channel1_IRQHandler(void) {
-  dispatch_channel_irq(&g_channels[0]);
+  dispatch_channel_irq(0);
 }
 #endif
 #ifdef DMA1_Channel2_BASE
 void DMA1_Channel2_IRQHandler(void) {
-  dispatch_channel_irq(&g_channels[1]);
+  dispatch_channel_irq(1);
 }
 #endif
 #if 0  // Phase 2: timestamper migration enables this
 #ifdef DMA1_Channel3_BASE
 void DMA1_Channel3_IRQHandler(void) {
-  dispatch_channel_irq(&g_channels[2]);
+  dispatch_channel_irq(2);
 }
 #endif
 #ifdef DMA1_Channel4_BASE
 void DMA1_Channel4_IRQHandler(void) {
-  dispatch_channel_irq(&g_channels[3]);
+  dispatch_channel_irq(3);
 }
 #endif
 #endif  // Phase 2 gate
 #ifdef DMA1_Channel5_BASE
 void DMA1_Channel5_IRQHandler(void) {
-  dispatch_channel_irq(&g_channels[4]);
+  dispatch_channel_irq(4);
 }
 #endif
 #ifdef DMA1_Channel6_BASE
 void DMA1_Channel6_IRQHandler(void) {
-  dispatch_channel_irq(&g_channels[5]);
+  dispatch_channel_irq(5);
 }
 #endif
 #ifdef DMA1_Channel7_BASE
 void DMA1_Channel7_IRQHandler(void) {
-  dispatch_channel_irq(&g_channels[6]);
+  dispatch_channel_irq(6);
 }
 #endif
 #ifdef DMA1_Channel8_BASE
 void DMA1_Channel8_IRQHandler(void) {
-  dispatch_channel_irq(&g_channels[7]);
+  dispatch_channel_irq(7);
 }
 #endif
 #ifdef DMA2_Channel1_BASE
 void DMA2_Channel1_IRQHandler(void) {
-  dispatch_channel_irq(&g_channels[8]);
+  dispatch_channel_irq(8);
 }
 #endif
 #ifdef DMA2_Channel2_BASE
 void DMA2_Channel2_IRQHandler(void) {
-  dispatch_channel_irq(&g_channels[9]);
+  dispatch_channel_irq(9);
 }
 #endif
 #ifdef DMA2_Channel3_BASE
 void DMA2_Channel3_IRQHandler(void) {
-  dispatch_channel_irq(&g_channels[10]);
+  dispatch_channel_irq(10);
 }
 #endif
 #ifdef DMA2_Channel4_BASE
 void DMA2_Channel4_IRQHandler(void) {
-  dispatch_channel_irq(&g_channels[11]);
+  dispatch_channel_irq(11);
 }
 #endif
 #ifdef DMA2_Channel5_BASE
 void DMA2_Channel5_IRQHandler(void) {
-  dispatch_channel_irq(&g_channels[12]);
+  dispatch_channel_irq(12);
 }
 #endif
 #ifdef DMA2_Channel6_BASE
 void DMA2_Channel6_IRQHandler(void) {
-  dispatch_channel_irq(&g_channels[13]);
+  dispatch_channel_irq(13);
 }
 #endif
 #ifdef DMA2_Channel7_BASE
 void DMA2_Channel7_IRQHandler(void) {
-  dispatch_channel_irq(&g_channels[14]);
+  dispatch_channel_irq(14);
 }
 #endif
 #ifdef DMA2_Channel8_BASE
 void DMA2_Channel8_IRQHandler(void) {
-  dispatch_channel_irq(&g_channels[15]);
+  dispatch_channel_irq(15);
 }
 #endif
 
