@@ -29,28 +29,15 @@
 #include "core/dma.h"
 
 /*
- * USE_RX_DMA_FOR_CHIP: chip has enough DMA channels to use DMA for RX
- *                      (vs. per-char RXNE interrupt).
- * USE_RULOS_DMA_FOR_UART: the new RULOS DMA abstraction owns this chip's
- *                         UART DMA channels (both TX and RX). Families
- *                         that haven't been migrated to the new API yet
- *                         keep the old hand-rolled HAL/LL DMA paths.
- *
- * G4 was migrated in the Phase 1 commit of the DMA refactor. G0 and the
- * F-family migrations land in later phases.
+ * USE_RX_DMA_FOR_CHIP: chip has enough DMA channels to dedicate one to
+ * UART RX (G0/G4). Smaller F-family chips use per-char RXNE interrupts
+ * because their fixed-map DMA controllers don't have a spare channel
+ * for every UART.
  */
 #if defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4)
 #define USE_RX_DMA_FOR_CHIP 1
 #else
 #define USE_RX_DMA_FOR_CHIP 0
-#endif
-
-#if defined(RULOS_ARM_stm32f0) || defined(RULOS_ARM_stm32f1) || \
-    defined(RULOS_ARM_stm32f3) || defined(RULOS_ARM_stm32g0) || \
-    defined(RULOS_ARM_stm32g4)
-#define USE_RULOS_DMA_FOR_UART 1
-#else
-#define USE_RULOS_DMA_FOR_UART 0
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -81,12 +68,9 @@ typedef struct {
   char *rx_curr_base_buf;  // points to rx_buf, or halfway into rx_buf
   size_t rx_bytes_stored;  // number of bytes received
 
-#if USE_RULOS_DMA_FOR_UART
-  // RULOS DMA abstraction channel handles (allocated in hal_uart_init).
-  // Replaces the HAL UART handle and HAL DMA handle on migrated
-  // families. rx_dma_ch only exists on families that actually use
-  // DMA for RX (USE_RX_DMA_FOR_CHIP = G0/G4); on F0/F1/F3 the field
-  // is compiled out.
+  // RULOS DMA channel handles (allocated in hal_uart_init). rx_dma_ch
+  // only exists on families that use DMA for RX (USE_RX_DMA_FOR_CHIP =
+  // G0/G4); on F0/F1/F3 the field is compiled out.
   rulos_dma_channel_t *tx_dma_ch;
 #if USE_RX_DMA_FOR_CHIP
   rulos_dma_channel_t *rx_dma_ch;
@@ -94,14 +78,6 @@ typedef struct {
   // Base address of the peripheral's TX data register. Cached so the
   // tc_callback can re-arm the next transfer from ISR context.
   volatile void *usart_tdr;
-#else
-  // UART handle from STM32's HAL (legacy, for families not yet migrated
-  // to the RULOS DMA abstraction)
-  UART_HandleTypeDef hal_uart_handle;
-
-  // Transmit and receive DMA buffers and DMA handles (legacy)
-  DMA_HandleTypeDef hal_dma_tx_handle;
-#endif
 
   // statistics
   uint32_t tot_ints;
@@ -129,23 +105,11 @@ typedef struct {
   // rx
   gpio_pin_t rx_pin;
   uint32_t rx_altfunc;
-#if !USE_RULOS_DMA_FOR_UART
-  DMA_TypeDef *rx_dma_instance;
-  int rx_dma_channel;
-  IRQn_Type rx_dma_irqn;
-  uint32_t rx_dma_request;
-#endif
 
   // tx
   gpio_pin_t tx_pin;
   uint32_t tx_altfunc;
-#if !USE_RULOS_DMA_FOR_UART
-  DMA_Channel_TypeDef *tx_dma_chan;
-  IRQn_Type tx_dma_irqn;
-  uint32_t tx_dma_request;
-#endif
 
-#if USE_RULOS_DMA_FOR_UART
   // Logical DMA request identifiers; the RULOS DMA core translates
   // these to hardware channel assignments at init time. rx_dma_req
   // is only meaningful on families that use DMA for RX.
@@ -153,18 +117,10 @@ typedef struct {
 #if USE_RX_DMA_FOR_CHIP
   rulos_dma_request_t rx_dma_req;
 #endif
-#endif
 } stm32_uart_config_t;
 
 static void on_usart_interrupt(uint8_t uart_id);
 static void config_gpio(const stm32_uart_config_t *config, bool rx);
-
-#if !USE_RULOS_DMA_FOR_UART
-static void dispatch_tx_dma(uint8_t uart_id);
-#if USE_RX_DMA_FOR_CHIP
-static void on_rx_dma_interrupt(uint8_t uart_id);
-#endif
-#endif
 
 ///// pin selections
 
@@ -471,17 +427,13 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 static stm32_uart_t g_stm32_uarts[NUM_UARTS] = {};
 
 /*
- * RX DMA is used when (a) the chip family has DMA capacity for it and
- * (b) this particular UART entry in stm32_uart_config is set up with a
- * DMA request/instance. On families that use the new RULOS DMA
- * abstraction, every configured UART always uses RX DMA (there's no
- * "polled RX on a family with DMA" mixed mode), so the macro short-
- * circuits to true. On legacy families the macro inspects the struct.
+ * RX DMA is used when the chip family has enough DMA channels to
+ * dedicate one to UART RX. On those families every configured UART
+ * uses RX DMA (there's no "polled RX on a family with DMA" mixed
+ * mode).
  */
-#if USE_RX_DMA_FOR_CHIP && USE_RULOS_DMA_FOR_UART
+#if USE_RX_DMA_FOR_CHIP
 #define USART_USING_RX_DMA(config) (true)
-#elif USE_RX_DMA_FOR_CHIP
-#define USART_USING_RX_DMA(config) ((config)->rx_dma_instance != NULL)
 #else
 #define USART_USING_RX_DMA(config) (false)
 #endif
@@ -493,13 +445,12 @@ static void on_rx_buffer_full(uint8_t uart_id, stm32_uart_t *u,
 
 //// Receiving: DMA Version
 
-#if USE_RX_DMA_FOR_CHIP && USE_RULOS_DMA_FOR_UART
+#if USE_RX_DMA_FOR_CHIP
 
 /*
- * G4 (and future migrated families) drive RX DMA through the RULOS DMA
- * abstraction. The channel is allocated once at hal_uart_init time;
- * each half-buffer rx restart just reprograms the addresses and
- * restarts via rulos_dma_start.
+ * The RX DMA channel is allocated once at hal_uart_init time; each
+ * half-buffer restart just reprograms the addresses and re-starts
+ * via rulos_dma_start.
  */
 static void hal_uart_on_rx_dma_tc(void *user_data);
 
@@ -531,71 +482,6 @@ static size_t get_rx_stored_chars_dma(uint8_t uart_id, stm32_uart_t *u,
   (void)c;
   rulos_dma_stop(u->rx_dma_ch);
   const size_t free_space = rulos_dma_get_remaining(u->rx_dma_ch);
-  const size_t rx_chars = u->rx_half_buflen - free_space;
-  u->tot_rx_bytes += rx_chars;
-  return rx_chars;
-}
-
-#elif USE_RX_DMA_FOR_CHIP  // legacy LL-direct RX DMA path (still used on G0)
-
-static void hal_uart_start_rx_dma(stm32_uart_t *u,
-                                  const stm32_uart_config_t *config) {
-  LL_DMA_DisableChannel(config->rx_dma_instance, config->rx_dma_channel);
-
-  // Enable DMA RX interrupts
-  NVIC_SetPriority(config->rx_dma_irqn, 1);
-  NVIC_EnableIRQ(config->rx_dma_irqn);
-
-  LL_DMA_ClearFlag_TC(config->rx_dma_instance, config->rx_dma_channel);
-  LL_DMA_ConfigTransfer(config->rx_dma_instance, config->rx_dma_channel,
-                        LL_DMA_DIRECTION_PERIPH_TO_MEMORY |
-                            LL_DMA_PRIORITY_MEDIUM | LL_DMA_MODE_NORMAL |
-                            LL_DMA_PERIPH_NOINCREMENT |
-                            LL_DMA_MEMORY_INCREMENT | LL_DMA_PDATAALIGN_BYTE |
-                            LL_DMA_MDATAALIGN_BYTE);
-
-  LL_DMA_ConfigAddresses(
-      config->rx_dma_instance, config->rx_dma_channel,
-      LL_USART_DMA_GetRegAddr(config->instance, LL_USART_DMA_REG_DATA_RECEIVE),
-      (uint32_t)u->rx_curr_base_buf,
-      LL_DMA_GetDataTransferDirection(config->rx_dma_instance,
-                                      config->rx_dma_channel));
-  LL_DMA_SetDataLength(config->rx_dma_instance, config->rx_dma_channel,
-                       u->rx_half_buflen);
-  LL_DMA_SetPeriphRequest(config->rx_dma_instance, config->rx_dma_channel,
-                          config->rx_dma_request);
-  LL_DMA_EnableIT_TC(config->rx_dma_instance, config->rx_dma_channel);
-  LL_USART_EnableDMAReq_RX(config->instance);
-  LL_DMA_EnableChannel(config->rx_dma_instance, config->rx_dma_channel);
-}
-
-// Called when a DMA interrupt arrives for a UART. Determine if it is a
-// completion interrupt, and if so, send an upcall.
-static void on_rx_dma_interrupt(uint8_t uart_id) {
-  stm32_uart_t *u = &g_stm32_uarts[uart_id];
-  const stm32_uart_config_t *config = &stm32_uart_config[uart_id];
-
-  if (!u->initted) {
-    return;
-  }
-
-  u->tot_ints++;
-
-  if (LL_DMA_IsActiveFlag_TC(config->rx_dma_instance, config->rx_dma_channel)) {
-    LL_DMA_ClearFlag_TC(config->rx_dma_instance, config->rx_dma_channel);
-    u->tot_rx_bytes += u->rx_half_buflen;
-    on_rx_buffer_full(uart_id, u, config);
-  }
-}
-
-static size_t get_rx_stored_chars_dma(uint8_t uart_id, stm32_uart_t *u,
-                                      const stm32_uart_config_t *c) {
-  // Disable DMA
-  LL_DMA_DisableChannel(c->rx_dma_instance, c->rx_dma_channel);
-
-  // Determine how many bytes are left to read, and thus how many were read
-  const size_t free_space =
-      LL_DMA_GetDataLength(c->rx_dma_instance, c->rx_dma_channel);
   const size_t rx_chars = u->rx_half_buflen - free_space;
   u->tot_rx_bytes += rx_chars;
   return rx_chars;
@@ -719,13 +605,15 @@ static void on_rx_buffer_full(uint8_t uart_id, stm32_uart_t *u,
 void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf,
                        size_t buflen) {
   /*
-   * Use the Low-Level libraries (not the HAL) to set up the RX interrupt. Yeah,
-   * it's a little weird to be using a mix of both HAL and LL. I wanted to use
-   * the HAL libraries for the TX DMA, since it's complex. For RX, the HAL
-   * libraries don't really do what we want - you have to give them a total
-   * length you want to read, and then it shuts everything down again. We want
-   * to just start receiving and never stop, with a simple interrupt every time
-   * we receive a character.
+   * RX is initialized lazily: TX-only users of a UART never pay the
+   * cost of an RX DMA channel or an RX GPIO setup. This function is
+   * the single entry point that flips a UART into receive mode --
+   * called once on first use, idempotent on subsequent calls.
+   *
+   * Note: we use the LL libraries (not the HAL) for the RX interrupt
+   * path. The HAL libraries don't fit the "receive forever, one
+   * character at a time" pattern RULOS wants -- they want a total
+   * length up front and shut down when it's reached.
    */
   assert(uart_id < NUM_UARTS);
   stm32_uart_t *u = &g_stm32_uarts[uart_id];
@@ -734,6 +622,31 @@ void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf,
     config_gpio(config, true);
     u->rx_gpio_initted = true;
   }
+
+#if USE_RX_DMA_FOR_CHIP
+  // Lazily allocate the RX DMA channel on first start_rx. Callers that
+  // only use TX never call this function and so never allocate an RX
+  // channel. Subsequent calls to hal_uart_start_rx (e.g. to swap the
+  // callback or buffer) reuse the existing channel.
+  if (u->rx_dma_ch == NULL) {
+    const rulos_dma_config_t rx_cfg = {
+        .request = config->rx_dma_req,
+        .direction = RULOS_DMA_DIR_PERIPH_TO_MEM,
+        .mode = RULOS_DMA_MODE_NORMAL,
+        .periph_width = RULOS_DMA_WIDTH_BYTE,
+        .mem_width = RULOS_DMA_WIDTH_BYTE,
+        .periph_increment = false,
+        .mem_increment = true,
+        .priority = RULOS_DMA_PRIORITY_MEDIUM,
+        .tc_callback = hal_uart_on_rx_dma_tc,
+        .user_data = (void *)(uintptr_t)uart_id,
+    };
+    u->rx_dma_ch = rulos_dma_alloc(&rx_cfg);
+    if (u->rx_dma_ch == NULL) {
+      __builtin_trap();
+    }
+  }
+#endif
 
   u->rx_cb = rx_cb;
   u->rx_buf = buf;
@@ -813,15 +726,6 @@ static void on_usart_interrupt(uint8_t uart_id) {
     u->overruns++;
   }
 
-#if !USE_RULOS_DMA_FOR_UART
-  // Dispatch the rest of the interrupt handling through the HAL. On
-  // families that use the RULOS DMA abstraction this call is dropped
-  // entirely -- the HAL UART handle no longer exists on those families,
-  // and every flag the HAL handler would act on is already cleared
-  // above (TXE/TC/RXFT are never enabled since TX is DMA-driven and
-  // RX is either DMA or RXNE-driven).
-  HAL_UART_IRQHandler(&u->hal_uart_handle);
-#endif
 }
 
 void hal_uart_rx_cb_done(uint8_t uart_id) {
@@ -837,22 +741,8 @@ void hal_uart_rx_cb_done(uint8_t uart_id) {
 
 /////// transmission
 
-#if !USE_RULOS_DMA_FOR_UART
-static void dispatch_tx_dma(uint8_t uart_id) {
-  const stm32_uart_t *u = &g_stm32_uarts[uart_id];
-  if (!u->initted) {
-    return;
-  }
-
-  HAL_DMA_IRQHandler(u->hal_uart_handle.hdmatx);
-}
-#endif
-
 static void maybe_launch_next_tx(stm32_uart_t *uart) {
   assert(uart->next_sendbuf_cb != NULL);
-#if !USE_RULOS_DMA_FOR_UART
-  assert(HAL_UART_GetState(&uart->hal_uart_handle) == HAL_UART_STATE_READY);
-#endif
 
   // Ask the layer above for the next buffer to send by calling the "send ready"
   // callback
@@ -865,14 +755,7 @@ static void maybe_launch_next_tx(stm32_uart_t *uart) {
     uart->next_sendbuf_cb = NULL;
   } else {
     // Start the transfer
-#if USE_RULOS_DMA_FOR_UART
     rulos_dma_start(uart->tx_dma_ch, uart->usart_tdr, (void *)buf, len);
-#else
-    if (HAL_UART_Transmit_DMA(&uart->hal_uart_handle, (uint8_t *)buf, len) !=
-        HAL_OK) {
-      __builtin_trap();
-    }
-#endif
     uart->tot_tx_bytes += len;
     if (len > uart->max_chars_per_tx_batch) {
       uart->max_chars_per_tx_batch = len;
@@ -880,7 +763,6 @@ static void maybe_launch_next_tx(stm32_uart_t *uart) {
   }
 }
 
-#if USE_RULOS_DMA_FOR_UART
 // TC callback from the RULOS DMA core. Runs in DMA IRQ context. The
 // user_data pointer encodes the RULOS uart_id.
 static void hal_uart_on_tx_dma_tc(void *user_data) {
@@ -894,17 +776,6 @@ static void hal_uart_on_tx_dma_tc(void *user_data) {
     maybe_launch_next_tx(u);
   }
 }
-#else
-// Callback called when TX is complete. This overrides a weak symbol in the HAL
-// implementation.
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *hal_uart_handle) {
-  for (unsigned int i = 0; i < NUM_UARTS; i++) {
-    if (&g_stm32_uarts[i].hal_uart_handle == hal_uart_handle) {
-      maybe_launch_next_tx(&g_stm32_uarts[i]);
-    }
-  }
-}
-#endif
 
 void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb) {
   stm32_uart_t *u = &g_stm32_uarts[uart_id];
@@ -1001,9 +872,7 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
       break;
   }
 
-#if USE_RULOS_DMA_FOR_UART
-  // Configure USART via the LL layer (no HAL UART dependency on
-  // migrated families).
+  // Configure USART via the LL layer.
   LL_USART_Disable(config->instance);
   LL_USART_InitTypeDef usart_init = {
 #if defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4)
@@ -1055,69 +924,16 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
     __builtin_trap();
   }
 
-#if USE_RX_DMA_FOR_CHIP
-  // Allocate a RULOS DMA channel for RX. Only on families that use
-  // DMA for receive (G0/G4). F0/F1/F3 use RXNE per-char interrupts
-  // because their fixed-map DMA controllers don't have spare
-  // channels to dedicate to UART RX.
-  const rulos_dma_config_t rx_cfg = {
-      .request = config->rx_dma_req,
-      .direction = RULOS_DMA_DIR_PERIPH_TO_MEM,
-      .mode = RULOS_DMA_MODE_NORMAL,
-      .periph_width = RULOS_DMA_WIDTH_BYTE,
-      .mem_width = RULOS_DMA_WIDTH_BYTE,
-      .periph_increment = false,
-      .mem_increment = true,
-      .priority = RULOS_DMA_PRIORITY_MEDIUM,
-      .tc_callback = hal_uart_on_rx_dma_tc,
-      .user_data = (void *)(uintptr_t)uart_id,
-  };
-  uart->rx_dma_ch = rulos_dma_alloc(&rx_cfg);
-  if (uart->rx_dma_ch == NULL) {
-    __builtin_trap();
-  }
-#endif  // USE_RX_DMA_FOR_CHIP
+  // RX DMA channel allocation (for families that use RX DMA) is
+  // deferred to hal_uart_start_rx so that TX-only users don't consume
+  // a DMA channel they'll never need. Small-pool families (G031, F1
+  // high-density) have only 5-7 DMA channels to share across every
+  // peripheral, so saving one per TX-only UART is material.
 
-  // Wire the UART's TX-empty signal to the DMA request line. The
-  // pre-refactor code set this bit on every HAL_UART_Transmit_DMA
-  // call; now we set it once at init and leave it on for the life of
-  // the UART.
+  // Wire the UART's TX-empty signal to the DMA request line. Set once
+  // at init and left on for the life of the UART; the DMA layer
+  // controls whether a transfer is active via channel enable.
   LL_USART_EnableDMAReq_TX(config->instance);
-#else
-  // Legacy HAL UART + HAL DMA init path (F0/F1/F3; migrated in
-  // a later phase of the DMA refactor). G0 and G4 have already moved
-  // to the LL/rulos_dma path above.
-  uart->hal_uart_handle.Instance = config->instance;
-  uart->hal_uart_handle.Init.BaudRate = baud;
-  uart->hal_uart_handle.Init.WordLength = UART_WORDLENGTH_8B;
-  uart->hal_uart_handle.Init.Parity = UART_PARITY_NONE;
-  uart->hal_uart_handle.Init.StopBits = UART_STOPBITS_1;
-  uart->hal_uart_handle.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  uart->hal_uart_handle.Init.Mode = UART_MODE_TX_RX;
-  if (HAL_UART_Init(&uart->hal_uart_handle) != HAL_OK) {
-    __builtin_trap();
-  }
-
-  // Configure the DMA controller for TX
-  uart->hal_dma_tx_handle.Instance = config->tx_dma_chan;
-  uart->hal_dma_tx_handle.Init.Direction = DMA_MEMORY_TO_PERIPH;
-  uart->hal_dma_tx_handle.Init.PeriphInc = DMA_PINC_DISABLE;
-  uart->hal_dma_tx_handle.Init.MemInc = DMA_MINC_ENABLE;
-  uart->hal_dma_tx_handle.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-  uart->hal_dma_tx_handle.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-  uart->hal_dma_tx_handle.Init.Mode = DMA_NORMAL;
-  uart->hal_dma_tx_handle.Init.Priority = DMA_PRIORITY_LOW;
-  if (HAL_DMA_Init(&uart->hal_dma_tx_handle) != HAL_OK) {
-    __builtin_trap();
-  }
-
-  // Associate the initialized DMA handle to the UART handle
-  __HAL_LINKDMA(&uart->hal_uart_handle, hdmatx, uart->hal_dma_tx_handle);
-
-  // Set up DMA interrupt
-  HAL_NVIC_SetPriority(config->tx_dma_irqn, 1, 0);
-  HAL_NVIC_EnableIRQ(config->tx_dma_irqn);
-#endif  // USE_RULOS_DMA_FOR_UART
 
   // Set up USART peripheral interrupt
   HAL_NVIC_SetPriority(config->instance_irqn, 1, 0);
