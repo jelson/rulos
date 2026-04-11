@@ -22,15 +22,23 @@ from build_tools import *
 
 platforms = []
 
-for chip in [
-        "stm32f103x8",
-        "stm32f031x6",
-        "stm32f303x8",
-        "stm32g031x8",
-        "stm32g0b1xe",
-        "stm32g431x8",
-]:
-    platforms.append(ArmStmPlatform(chip))
+# Build for every STM32 chip whose family is supported by the uart
+# driver (see src/lib/chip/arm/stm32/periph/uart/uart.c). C0 has no
+# uart driver branch and H5 has no peripheral ports yet, so those
+# are skipped. Everything else is exercised: this is the canary test
+# for the DMA refactor -- if you break uart on any supported family,
+# this SConstruct catches it.
+UART_SUPPORTED_FAMILIES = (
+    "STM32F0",
+    "STM32F1",
+    "STM32F3",
+    "STM32G0",
+    "STM32G4",
+)
+for chip_name in sorted(ArmStmPlatform.CHIPS):
+    chip = ArmStmPlatform.CHIPS[chip_name]
+    if chip.major_family_name in UART_SUPPORTED_FAMILIES:
+        platforms.append(ArmStmPlatform(chip_name))
 
 for chip in [
         "atmega328",

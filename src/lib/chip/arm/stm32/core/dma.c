@@ -35,11 +35,87 @@
 #include "stm32.h"
 
 // ============================================================================
-// STM32G4 backend
+// STM32G0 and STM32G4 backend (DMAMUX, classic DMA1/DMA2 controllers).
+//
+// Everything except the per-channel IRQ handler section is shared
+// between the two families: the channel pool, DMAMUX request table,
+// init_channel, and public API all use LL macros that are defined
+// identically on both. The only per-family piece is IRQ handler
+// naming -- G4 has one IRQ per DMA channel, G0 has merged handlers.
 // ============================================================================
-#if defined(RULOS_ARM_stm32g4)
+#if defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4)
 
+#if defined(RULOS_ARM_stm32g4)
 #include "stm32g4xx_ll_dma.h"
+#else
+#include "stm32g0xx_ll_dma.h"
+#endif
+
+/*
+ * Per-channel NVIC IRQ number. On G4 each channel has its own line.
+ * On G0 channels 2-3 share one line, and channels 4+ plus all of
+ * DMA2 share another "merged" line whose name depends on variant
+ * (DMA1_Ch4_5_DMAMUX1_OVR on G030/G031, DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR
+ * on G0B1). Multiple channels holding the same IRQ number is fine --
+ * NVIC_EnableIRQ is idempotent, so rulos_dma_alloc can call it once
+ * per slot without coordinating across slots.
+ */
+#if defined(RULOS_ARM_stm32g4)
+#define RULOS_DMA1_CH1_IRQN  DMA1_Channel1_IRQn
+#define RULOS_DMA1_CH2_IRQN  DMA1_Channel2_IRQn
+#define RULOS_DMA1_CH3_IRQN  DMA1_Channel3_IRQn
+#define RULOS_DMA1_CH4_IRQN  DMA1_Channel4_IRQn
+#define RULOS_DMA1_CH5_IRQN  DMA1_Channel5_IRQn
+#ifdef DMA1_Channel6_BASE
+#define RULOS_DMA1_CH6_IRQN  DMA1_Channel6_IRQn
+#endif
+#ifdef DMA1_Channel7_BASE
+#define RULOS_DMA1_CH7_IRQN  DMA1_Channel7_IRQn
+#endif
+#ifdef DMA1_Channel8_BASE
+#define RULOS_DMA1_CH8_IRQN  DMA1_Channel8_IRQn
+#endif
+#ifdef DMA2_Channel1_BASE
+#define RULOS_DMA2_CH1_IRQN  DMA2_Channel1_IRQn
+#define RULOS_DMA2_CH2_IRQN  DMA2_Channel2_IRQn
+#define RULOS_DMA2_CH3_IRQN  DMA2_Channel3_IRQn
+#define RULOS_DMA2_CH4_IRQN  DMA2_Channel4_IRQn
+#define RULOS_DMA2_CH5_IRQN  DMA2_Channel5_IRQn
+#ifdef DMA2_Channel6_BASE
+#define RULOS_DMA2_CH6_IRQN  DMA2_Channel6_IRQn
+#endif
+#ifdef DMA2_Channel7_BASE
+#define RULOS_DMA2_CH7_IRQN  DMA2_Channel7_IRQn
+#endif
+#ifdef DMA2_Channel8_BASE
+#define RULOS_DMA2_CH8_IRQN  DMA2_Channel8_IRQn
+#endif
+#endif  // DMA2_Channel1_BASE
+#else   // G0: merged IRQ lines
+#define RULOS_DMA1_CH1_IRQN  DMA1_Channel1_IRQn
+#define RULOS_DMA1_CH2_IRQN  DMA1_Channel2_3_IRQn
+#define RULOS_DMA1_CH3_IRQN  DMA1_Channel2_3_IRQn
+#if defined(STM32G0B1xx)
+#define RULOS_DMA_MERGED_IRQN  DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn
+#else
+#define RULOS_DMA_MERGED_IRQN  DMA1_Ch4_5_DMAMUX1_OVR_IRQn
+#endif
+#define RULOS_DMA1_CH4_IRQN  RULOS_DMA_MERGED_IRQN
+#define RULOS_DMA1_CH5_IRQN  RULOS_DMA_MERGED_IRQN
+#ifdef DMA1_Channel6_BASE
+#define RULOS_DMA1_CH6_IRQN  RULOS_DMA_MERGED_IRQN
+#endif
+#ifdef DMA1_Channel7_BASE
+#define RULOS_DMA1_CH7_IRQN  RULOS_DMA_MERGED_IRQN
+#endif
+#ifdef DMA2_Channel1_BASE
+#define RULOS_DMA2_CH1_IRQN  RULOS_DMA_MERGED_IRQN
+#define RULOS_DMA2_CH2_IRQN  RULOS_DMA_MERGED_IRQN
+#define RULOS_DMA2_CH3_IRQN  RULOS_DMA_MERGED_IRQN
+#define RULOS_DMA2_CH4_IRQN  RULOS_DMA_MERGED_IRQN
+#define RULOS_DMA2_CH5_IRQN  RULOS_DMA_MERGED_IRQN
+#endif
+#endif  // G4 vs G0 IRQ names
 
 /*
  * Per-channel hardware descriptor. Immutable, const, lives in .rodata
@@ -66,52 +142,52 @@ typedef struct {
 
 static const dma_channel_hw_t g_hw[DMA_CHANNEL_SLOTS] = {
 #ifdef DMA1_Channel1_BASE
-    [0] = {DMA1, DMA1_Channel1, LL_DMA_CHANNEL_1, DMA1_Channel1_IRQn},
+    [0] = {DMA1, DMA1_Channel1, LL_DMA_CHANNEL_1, RULOS_DMA1_CH1_IRQN},
 #endif
 #ifdef DMA1_Channel2_BASE
-    [1] = {DMA1, DMA1_Channel2, LL_DMA_CHANNEL_2, DMA1_Channel2_IRQn},
+    [1] = {DMA1, DMA1_Channel2, LL_DMA_CHANNEL_2, RULOS_DMA1_CH2_IRQN},
 #endif
 #ifdef DMA1_Channel3_BASE
-    [2] = {DMA1, DMA1_Channel3, LL_DMA_CHANNEL_3, DMA1_Channel3_IRQn},
+    [2] = {DMA1, DMA1_Channel3, LL_DMA_CHANNEL_3, RULOS_DMA1_CH3_IRQN},
 #endif
 #ifdef DMA1_Channel4_BASE
-    [3] = {DMA1, DMA1_Channel4, LL_DMA_CHANNEL_4, DMA1_Channel4_IRQn},
+    [3] = {DMA1, DMA1_Channel4, LL_DMA_CHANNEL_4, RULOS_DMA1_CH4_IRQN},
 #endif
 #ifdef DMA1_Channel5_BASE
-    [4] = {DMA1, DMA1_Channel5, LL_DMA_CHANNEL_5, DMA1_Channel5_IRQn},
+    [4] = {DMA1, DMA1_Channel5, LL_DMA_CHANNEL_5, RULOS_DMA1_CH5_IRQN},
 #endif
 #ifdef DMA1_Channel6_BASE
-    [5] = {DMA1, DMA1_Channel6, LL_DMA_CHANNEL_6, DMA1_Channel6_IRQn},
+    [5] = {DMA1, DMA1_Channel6, LL_DMA_CHANNEL_6, RULOS_DMA1_CH6_IRQN},
 #endif
 #ifdef DMA1_Channel7_BASE
-    [6] = {DMA1, DMA1_Channel7, LL_DMA_CHANNEL_7, DMA1_Channel7_IRQn},
+    [6] = {DMA1, DMA1_Channel7, LL_DMA_CHANNEL_7, RULOS_DMA1_CH7_IRQN},
 #endif
 #ifdef DMA1_Channel8_BASE
-    [7] = {DMA1, DMA1_Channel8, LL_DMA_CHANNEL_8, DMA1_Channel8_IRQn},
+    [7] = {DMA1, DMA1_Channel8, LL_DMA_CHANNEL_8, RULOS_DMA1_CH8_IRQN},
 #endif
 #ifdef DMA2_Channel1_BASE
-    [8] = {DMA2, DMA2_Channel1, LL_DMA_CHANNEL_1, DMA2_Channel1_IRQn},
+    [8] = {DMA2, DMA2_Channel1, LL_DMA_CHANNEL_1, RULOS_DMA2_CH1_IRQN},
 #endif
 #ifdef DMA2_Channel2_BASE
-    [9] = {DMA2, DMA2_Channel2, LL_DMA_CHANNEL_2, DMA2_Channel2_IRQn},
+    [9] = {DMA2, DMA2_Channel2, LL_DMA_CHANNEL_2, RULOS_DMA2_CH2_IRQN},
 #endif
 #ifdef DMA2_Channel3_BASE
-    [10] = {DMA2, DMA2_Channel3, LL_DMA_CHANNEL_3, DMA2_Channel3_IRQn},
+    [10] = {DMA2, DMA2_Channel3, LL_DMA_CHANNEL_3, RULOS_DMA2_CH3_IRQN},
 #endif
 #ifdef DMA2_Channel4_BASE
-    [11] = {DMA2, DMA2_Channel4, LL_DMA_CHANNEL_4, DMA2_Channel4_IRQn},
+    [11] = {DMA2, DMA2_Channel4, LL_DMA_CHANNEL_4, RULOS_DMA2_CH4_IRQN},
 #endif
 #ifdef DMA2_Channel5_BASE
-    [12] = {DMA2, DMA2_Channel5, LL_DMA_CHANNEL_5, DMA2_Channel5_IRQn},
+    [12] = {DMA2, DMA2_Channel5, LL_DMA_CHANNEL_5, RULOS_DMA2_CH5_IRQN},
 #endif
 #ifdef DMA2_Channel6_BASE
-    [13] = {DMA2, DMA2_Channel6, LL_DMA_CHANNEL_6, DMA2_Channel6_IRQn},
+    [13] = {DMA2, DMA2_Channel6, LL_DMA_CHANNEL_6, RULOS_DMA2_CH6_IRQN},
 #endif
 #ifdef DMA2_Channel7_BASE
-    [14] = {DMA2, DMA2_Channel7, LL_DMA_CHANNEL_7, DMA2_Channel7_IRQn},
+    [14] = {DMA2, DMA2_Channel7, LL_DMA_CHANNEL_7, RULOS_DMA2_CH7_IRQN},
 #endif
 #ifdef DMA2_Channel8_BASE
-    [15] = {DMA2, DMA2_Channel8, LL_DMA_CHANNEL_8, DMA2_Channel8_IRQn},
+    [15] = {DMA2, DMA2_Channel8, LL_DMA_CHANNEL_8, RULOS_DMA2_CH8_IRQN},
 #endif
 };
 
@@ -144,13 +220,26 @@ static inline int state_to_idx(const rulos_dma_channel_t *ch) {
  * RULOS request enum -> G4 DMAMUX request code. Designated initializers
  * leave unused slots at 0 (= LL_DMAMUX_REQ_MEM2MEM, safe sentinel).
  */
+// Every peripheral request entry is individually guarded because small
+// G0 variants (G030/G031) lack USART3+, TIM2 DMA, SPI2 DMA, etc. The
+// allocator checks for a zero entry and fails alloc if a driver asks
+// for a request the chip doesn't have.
 static const uint32_t g_dmamux_req[RULOS_DMA_REQ_COUNT_] = {
+#ifdef LL_DMAMUX_REQ_USART1_TX
     [RULOS_DMA_REQ_USART1_TX] = LL_DMAMUX_REQ_USART1_TX,
     [RULOS_DMA_REQ_USART1_RX] = LL_DMAMUX_REQ_USART1_RX,
+#endif
+#ifdef LL_DMAMUX_REQ_USART2_TX
     [RULOS_DMA_REQ_USART2_TX] = LL_DMAMUX_REQ_USART2_TX,
     [RULOS_DMA_REQ_USART2_RX] = LL_DMAMUX_REQ_USART2_RX,
+#endif
+#ifdef LL_DMAMUX_REQ_USART3_TX
     [RULOS_DMA_REQ_USART3_TX] = LL_DMAMUX_REQ_USART3_TX,
     [RULOS_DMA_REQ_USART3_RX] = LL_DMAMUX_REQ_USART3_RX,
+#endif
+// G4 calls these UART4/UART5; G0 calls them USART4..USART6. The two
+// naming conventions never coexist on the same chip, so the #ifdef
+// guards pick exactly one branch per family.
 #ifdef LL_DMAMUX_REQ_UART4_TX
     [RULOS_DMA_REQ_USART4_TX] = LL_DMAMUX_REQ_UART4_TX,
     [RULOS_DMA_REQ_USART4_RX] = LL_DMAMUX_REQ_UART4_RX,
@@ -159,13 +248,33 @@ static const uint32_t g_dmamux_req[RULOS_DMA_REQ_COUNT_] = {
     [RULOS_DMA_REQ_USART5_TX] = LL_DMAMUX_REQ_UART5_TX,
     [RULOS_DMA_REQ_USART5_RX] = LL_DMAMUX_REQ_UART5_RX,
 #endif
+#ifdef LL_DMAMUX_REQ_USART4_TX
+    [RULOS_DMA_REQ_USART4_TX] = LL_DMAMUX_REQ_USART4_TX,
+    [RULOS_DMA_REQ_USART4_RX] = LL_DMAMUX_REQ_USART4_RX,
+#endif
+#ifdef LL_DMAMUX_REQ_USART5_TX
+    [RULOS_DMA_REQ_USART5_TX] = LL_DMAMUX_REQ_USART5_TX,
+    [RULOS_DMA_REQ_USART5_RX] = LL_DMAMUX_REQ_USART5_RX,
+#endif
+#ifdef LL_DMAMUX_REQ_USART6_TX
+    [RULOS_DMA_REQ_USART6_TX] = LL_DMAMUX_REQ_USART6_TX,
+    [RULOS_DMA_REQ_USART6_RX] = LL_DMAMUX_REQ_USART6_RX,
+#endif
+#ifdef LL_DMAMUX_REQ_I2C1_TX
     [RULOS_DMA_REQ_I2C1_TX] = LL_DMAMUX_REQ_I2C1_TX,
     [RULOS_DMA_REQ_I2C1_RX] = LL_DMAMUX_REQ_I2C1_RX,
+#endif
+#ifdef LL_DMAMUX_REQ_SPI1_TX
     [RULOS_DMA_REQ_SPI1_TX] = LL_DMAMUX_REQ_SPI1_TX,
     [RULOS_DMA_REQ_SPI1_RX] = LL_DMAMUX_REQ_SPI1_RX,
+#endif
+#ifdef LL_DMAMUX_REQ_SPI2_TX
     [RULOS_DMA_REQ_SPI2_TX] = LL_DMAMUX_REQ_SPI2_TX,
+#endif
+#ifdef LL_DMAMUX_REQ_TIM2_CH1
     [RULOS_DMA_REQ_TIM2_CH1] = LL_DMAMUX_REQ_TIM2_CH1,
     [RULOS_DMA_REQ_TIM2_CH2] = LL_DMAMUX_REQ_TIM2_CH2,
+#endif
 };
 
 // ----------------------------------------------------------------------------
@@ -185,8 +294,10 @@ CCMRAM static bool ll_dma_is_active_flag_te(DMA_TypeDef *dma, uint32_t ch) {
       return LL_DMA_IsActiveFlag_TE4(dma);
     case LL_DMA_CHANNEL_5:
       return LL_DMA_IsActiveFlag_TE5(dma);
+#ifdef LL_DMA_CHANNEL_6
     case LL_DMA_CHANNEL_6:
       return LL_DMA_IsActiveFlag_TE6(dma);
+#endif
 #ifdef LL_DMA_CHANNEL_7
     case LL_DMA_CHANNEL_7:
       return LL_DMA_IsActiveFlag_TE7(dma);
@@ -216,9 +327,11 @@ CCMRAM static void ll_dma_clear_flag_te(DMA_TypeDef *dma, uint32_t ch) {
     case LL_DMA_CHANNEL_5:
       LL_DMA_ClearFlag_TE5(dma);
       break;
+#ifdef LL_DMA_CHANNEL_6
     case LL_DMA_CHANNEL_6:
       LL_DMA_ClearFlag_TE6(dma);
       break;
+#endif
 #ifdef LL_DMA_CHANNEL_7
     case LL_DMA_CHANNEL_7:
       LL_DMA_ClearFlag_TE7(dma);
@@ -429,10 +542,16 @@ CCMRAM static void dispatch_channel_irq(int idx) {
 }
 
 /*
- * Per-channel IRQ handlers. Each handler hardcodes the index into
- * g_channels[] it manages -- see the channel layout comment above the
- * array definition.
+ * Per-chip IRQ handlers. Each handler dispatches to one or more
+ * channel slots in g_state[]/g_hw[]. On G4 every DMA channel has its
+ * own dedicated IRQ, so handlers are one-to-one. On G0 many channels
+ * share an IRQ line and the shared handler loops over every slot in
+ * its group, calling dispatch_channel_irq() on each. The dispatcher
+ * early-exits on channels that didn't fire, so calling it on idle
+ * channels is essentially free (one load + one early return).
  */
+
+#if defined(RULOS_ARM_stm32g4)
 
 #ifdef DMA1_Channel1_BASE
 CCMRAM void DMA1_Channel1_IRQHandler(void) {
@@ -514,6 +633,45 @@ CCMRAM void DMA2_Channel8_IRQHandler(void) {
   dispatch_channel_irq(15);
 }
 #endif
+
+#else  // RULOS_ARM_stm32g0
+
+// DMA1 Channel 1 has its own dedicated interrupt.
+void DMA1_Channel1_IRQHandler(void) {
+  dispatch_channel_irq(0);
+}
+
+// DMA1 Channels 2 and 3 share one interrupt line.
+void DMA1_Channel2_3_IRQHandler(void) {
+  dispatch_channel_irq(1);  // DMA1 Channel 2
+  dispatch_channel_irq(2);  // DMA1 Channel 3
+}
+
+#if defined(STM32G0B1xx)
+// DMA1 Ch4-7 and DMA2 Ch1-5 share a single interrupt, along with
+// DMAMUX1 overrun. We ignore DMAMUX overrun entirely -- the dispatch
+// loop just checks every possible channel.
+void DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQHandler(void) {
+  dispatch_channel_irq(3);   // DMA1 Channel 4
+  dispatch_channel_irq(4);   // DMA1 Channel 5
+  dispatch_channel_irq(5);   // DMA1 Channel 6
+  dispatch_channel_irq(6);   // DMA1 Channel 7
+  dispatch_channel_irq(8);   // DMA2 Channel 1
+  dispatch_channel_irq(9);   // DMA2 Channel 2
+  dispatch_channel_irq(10);  // DMA2 Channel 3
+  dispatch_channel_irq(11);  // DMA2 Channel 4
+  dispatch_channel_irq(12);  // DMA2 Channel 5
+}
+#else
+// Smaller G0 variants (G030/G031) have only 5 DMA1 channels and no
+// DMA2. The merged handler name differs accordingly.
+void DMA1_Ch4_5_DMAMUX1_OVR_IRQHandler(void) {
+  dispatch_channel_irq(3);  // DMA1 Channel 4
+  dispatch_channel_irq(4);  // DMA1 Channel 5
+}
+#endif  // STM32G0B1xx
+
+#endif  // G4 vs G0 IRQ handlers
 
 // ============================================================================
 // Stub backend (non-G4 families for Phase 1 of the DMA refactor).

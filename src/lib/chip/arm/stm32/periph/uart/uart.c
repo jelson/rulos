@@ -45,7 +45,7 @@
 #define USE_RX_DMA_FOR_CHIP 0
 #endif
 
-#if defined(RULOS_ARM_stm32g4)
+#if defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4)
 #define USE_RULOS_DMA_FOR_UART 1
 #else
 #define USE_RULOS_DMA_FOR_UART 0
@@ -299,60 +299,27 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 
 #elif defined(RULOS_ARM_stm32g0)
 
-// Summary of stm32g0 uart DMA channels
-//
-// unit:channel
-
-// (rulos_id) stm32_id  dma_rx  dma_tx
-//      (0)      1        1:1     1:5
-//      (1)      2        1:4     1:2(*)
-//      (2)      3        2:1     1:3(*)
-//      (3)      4        2:2     1:6
-//      (4)      5        2:3     1:7
-//      (5)      6        2:4     2:5
-//
-// (*) might get surrendered if sd card in use,
-//     until dynamic dma allocation is implemented
+// G0 DMA channels are allocated dynamically by the RULOS DMA core
+// (core/dma.c). No more hand-maintained (uart, dma channel) mapping
+// tables or UART_SURRENDER_* hacks. The allocator picks the first
+// free DMA channel when each UART's hal_uart_init runs, and the
+// DMAMUX routes the peripheral request there.
 
 void USART1_IRQHandler() {
   on_usart_interrupt(0);
 }
 
-void DMA1_Channel1_IRQHandler() {
-  on_rx_dma_interrupt(0);  // DMA 1:1
-}
+// USART peripheral IRQ handlers below handle RXNE / IDLE / error flags
+// (see on_usart_interrupt). They are unrelated to DMA; DMA IRQs are
+// owned by core/dma.c. On G0B1, USART2 shares its IRQ line with LPUART2
+// and USART3/4/5/6 share with LPUART1, so the handlers dispatch to
+// all of them in one go -- on_usart_interrupt early-exits for UARTs
+// that aren't initialized.
 
-#ifndef UART_SURRENDER_DMA1_CHAN2_3
-
-void DMA1_Channel2_3_IRQHandler() {
-  dispatch_tx_dma(1);  // DMA 1:2
-#if STM32G0B1xx
-  dispatch_tx_dma(2);  // DMA 1:3
-#endif
-}
-
-#endif  // UART_SURRENDER_DMA1_CHAN2_3
-
-#if STM32G0B1xx
+#if defined(STM32G0B1xx)
 #define USART2_IRQn USART2_LPUART2_IRQn
 void USART2_LPUART2_IRQHandler() {
   on_usart_interrupt(1);
-}
-
-#define DMA1_Channel4_IRQn DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn
-#define DMA1_Channel5_IRQn DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn
-
-void DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQHandler() {
-  on_rx_dma_interrupt(1);  // DMA 1:4
-  dispatch_tx_dma(0);      // DMA 1:5
-  dispatch_tx_dma(3);      // DMA 1:6
-  dispatch_tx_dma(4);      // DMA 1:7
-
-  on_rx_dma_interrupt(2);  // DMA 2:1
-  on_rx_dma_interrupt(3);  // DMA 2:2
-  on_rx_dma_interrupt(4);  // DMA 2:3
-  on_rx_dma_interrupt(5);  // DMA 2:4
-  dispatch_tx_dma(5);      // DMA 2:5
 }
 
 void USART3_4_5_6_LPUART1_IRQHandler() {
@@ -361,21 +328,11 @@ void USART3_4_5_6_LPUART1_IRQHandler() {
   on_usart_interrupt(4);
   on_usart_interrupt(5);
 }
-
 #else
 void USART2_IRQHandler() {
   on_usart_interrupt(1);
 }
-
-#define DMA1_Channel4_IRQn DMA1_Ch4_5_DMAMUX1_OVR_IRQn
-#define DMA1_Channel5_IRQn DMA1_Ch4_5_DMAMUX1_OVR_IRQn
-
-void DMA1_Ch4_5_DMAMUX1_OVR_IRQHandler() {
-  on_rx_dma_interrupt(1);  // DMA 1:4
-  dispatch_tx_dma(0);      // DMA 1:5
-}
 #endif
-
 
 static const stm32_uart_config_t stm32_uart_config[] = {
     {
@@ -391,10 +348,6 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .rx_altfunc = GPIO_AF0_USART1,
 #endif
 #undef GPIO_A10
-        .rx_dma_instance = DMA1, // comment out to test interrupts
-        .rx_dma_channel = LL_DMA_CHANNEL_1,
-        .rx_dma_irqn = DMA1_Channel1_IRQn,
-        .rx_dma_request = DMA_REQUEST_USART1_RX,
 
         .tx_pin = RULOS_UART0_TX_PIN,
 #define GPIO_A9 123
@@ -404,9 +357,9 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .tx_altfunc = GPIO_AF0_USART1,
 #endif
 #undef GPIO_A9
-        .tx_dma_chan = DMA1_Channel5,
-        .tx_dma_irqn = DMA1_Channel5_IRQn,
-        .tx_dma_request = DMA_REQUEST_USART1_TX,
+
+        .rx_dma_req = RULOS_DMA_REQ_USART1_RX,
+        .tx_dma_req = RULOS_DMA_REQ_USART1_TX,
     },
     {
       // rulos uart 1
@@ -414,39 +367,22 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .instance_irqn = USART2_IRQn,
         .rx_pin = RULOS_UART1_RX_PIN,
         .rx_altfunc = GPIO_AF1_USART2,
-        .rx_dma_instance = DMA1,
-        .rx_dma_channel = LL_DMA_CHANNEL_4,
-        .rx_dma_irqn = DMA1_Channel4_IRQn,
-        .rx_dma_request = DMA_REQUEST_USART2_RX,
-
-#ifndef temp_disabled_UART_SURRENDER_DMA1_CHAN2_3
         .tx_pin = RULOS_UART1_TX_PIN,
         .tx_altfunc = GPIO_AF1_USART2,
-        .tx_dma_chan = DMA1_Channel2,
-        .tx_dma_irqn = DMA1_Channel2_3_IRQn,
-        .tx_dma_request = DMA_REQUEST_USART2_TX,
-#endif
+        .rx_dma_req = RULOS_DMA_REQ_USART2_RX,
+        .tx_dma_req = RULOS_DMA_REQ_USART2_TX,
     },
 #ifdef USART3
     {
       // rulos uart 2
         .instance = USART3,
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
-
         .rx_pin = RULOS_UART2_RX_PIN,
         .rx_altfunc = GPIO_AF4_USART3,
-        .rx_dma_instance = DMA2,
-        .rx_dma_channel = LL_DMA_CHANNEL_1,
-        .rx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
-        .rx_dma_request = DMA_REQUEST_USART3_RX,
-
         .tx_pin = RULOS_UART2_TX_PIN,
         .tx_altfunc = GPIO_AF4_USART3,
-#ifndef UART_SURRENDER_DMA1_CHAN2_3
-        .tx_dma_chan = DMA1_Channel3,
-        .tx_dma_irqn = DMA1_Channel2_3_IRQn,
-        .tx_dma_request = DMA_REQUEST_USART3_TX,
-#endif
+        .rx_dma_req = RULOS_DMA_REQ_USART3_RX,
+        .tx_dma_req = RULOS_DMA_REQ_USART3_TX,
     },
 #endif
 #ifdef USART4
@@ -456,16 +392,10 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
         .rx_pin = RULOS_UART3_RX_PIN,
         .rx_altfunc = GPIO_AF4_USART4,
-        .rx_dma_instance = DMA2,
-        .rx_dma_channel = LL_DMA_CHANNEL_2,
-        .rx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
-        .rx_dma_request = DMA_REQUEST_USART4_RX,
-
         .tx_pin = RULOS_UART3_TX_PIN,
         .tx_altfunc = GPIO_AF4_USART4,
-        .tx_dma_chan = DMA1_Channel6,
-        .tx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
-        .tx_dma_request = DMA_REQUEST_USART4_TX,
+        .rx_dma_req = RULOS_DMA_REQ_USART4_RX,
+        .tx_dma_req = RULOS_DMA_REQ_USART4_TX,
     },
 #endif
 #ifdef USART5
@@ -473,7 +403,6 @@ static const stm32_uart_config_t stm32_uart_config[] = {
       // rulos uart 4
         .instance = USART5,
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
-
         .rx_pin = RULOS_UART4_RX_PIN,
 #define GPIO_B1 123
 #if RULOS_UART4_RX_PIN == GPIO_B1
@@ -482,16 +411,10 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .rx_altfunc = GPIO_AF3_USART5,
 #endif
 #undef GPIO_B1
-        .rx_dma_instance = DMA2,
-        .rx_dma_channel = LL_DMA_CHANNEL_3,
-        .rx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
-        .rx_dma_request = DMA_REQUEST_USART5_RX,
-
         .tx_pin = RULOS_UART4_TX_PIN,
-        .rx_altfunc = GPIO_AF3_USART5,
-        .tx_dma_chan = DMA1_Channel7,
-        .tx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
-        .tx_dma_request = DMA_REQUEST_USART5_TX,
+        .tx_altfunc = GPIO_AF3_USART5,
+        .rx_dma_req = RULOS_DMA_REQ_USART5_RX,
+        .tx_dma_req = RULOS_DMA_REQ_USART5_TX,
     },
 #endif
 #ifdef USART6
@@ -501,16 +424,10 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
         .rx_pin = RULOS_UART5_RX_PIN,
         .rx_altfunc = GPIO_AF3_USART6,
-        .rx_dma_instance = DMA2,
-        .rx_dma_channel = LL_DMA_CHANNEL_4,
-        .rx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
-        .rx_dma_request = DMA_REQUEST_USART6_RX,
-
         .tx_pin = RULOS_UART5_TX_PIN,
         .tx_altfunc = GPIO_AF3_USART6,
-        .tx_dma_chan = DMA2_Channel5,
-        .tx_dma_irqn = DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn,
-        .tx_dma_request = DMA_REQUEST_USART6_TX,
+        .rx_dma_req = RULOS_DMA_REQ_USART6_RX,
+        .tx_dma_req = RULOS_DMA_REQ_USART6_TX,
     },
 #endif
 };
@@ -1151,8 +1068,9 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
   // the UART.
   LL_USART_EnableDMAReq_TX(config->instance);
 #else
-  // Legacy HAL UART + HAL DMA init path (F0/F1/F3/G0; migrated in
-  // later phases of the DMA refactor).
+  // Legacy HAL UART + HAL DMA init path (F0/F1/F3; migrated in
+  // a later phase of the DMA refactor). G0 and G4 have already moved
+  // to the LL/rulos_dma path above.
   uart->hal_uart_handle.Instance = config->instance;
   uart->hal_uart_handle.Init.BaudRate = baud;
   uart->hal_uart_handle.Init.WordLength = UART_WORDLENGTH_8B;
@@ -1160,21 +1078,12 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
   uart->hal_uart_handle.Init.StopBits = UART_STOPBITS_1;
   uart->hal_uart_handle.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   uart->hal_uart_handle.Init.Mode = UART_MODE_TX_RX;
-#if defined(RULOS_ARM_stm32g0)
-  uart->hal_uart_handle.Init.OverSampling = UART_OVERSAMPLING_16;
-  uart->hal_uart_handle.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  uart->hal_uart_handle.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-  uart->hal_uart_handle.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-#endif
   if (HAL_UART_Init(&uart->hal_uart_handle) != HAL_OK) {
     __builtin_trap();
   }
 
   // Configure the DMA controller for TX
   uart->hal_dma_tx_handle.Instance = config->tx_dma_chan;
-#if defined(RULOS_ARM_stm32g0)
-  uart->hal_dma_tx_handle.Init.Request = config->tx_dma_request;
-#endif
   uart->hal_dma_tx_handle.Init.Direction = DMA_MEMORY_TO_PERIPH;
   uart->hal_dma_tx_handle.Init.PeriphInc = DMA_PINC_DISABLE;
   uart->hal_dma_tx_handle.Init.MemInc = DMA_MINC_ENABLE;
