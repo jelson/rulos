@@ -37,36 +37,25 @@
 // ============================================================================
 // Classic DMA backend (DMA1/DMA2 with CCR register layout).
 //
-// Covers every STM32 family RULOS supports except C0 and H5:
+// Covers every STM32 family RULOS supports except H5:
 //   - Fixed-map families (no DMAMUX): F0, F1, F3
-//   - DMAMUX families (dynamic peripheral→channel routing): G0, G4
+//   - DMAMUX families (dynamic peripheral→channel routing): C0, G0, G4
 //
 // Everything except the allocator, init_channel's DMAMUX step, and
 // the per-chip IRQ handlers is shared. The pool, request translation
 // (either DMAMUX constant or fixed slot), public API, and IRQ
 // dispatcher use LL macros that are defined identically across all
-// five families.
+// six families.
 // ============================================================================
-#if defined(RULOS_ARM_stm32f0) || defined(RULOS_ARM_stm32f1) || \
-    defined(RULOS_ARM_stm32f3) || defined(RULOS_ARM_stm32g0) || \
-    defined(RULOS_ARM_stm32g4)
+#if defined(RULOS_ARM_stm32c0) || defined(RULOS_ARM_stm32f0) || \
+    defined(RULOS_ARM_stm32f1) || defined(RULOS_ARM_stm32f3) || \
+    defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4)
 
-#if defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4)
+#if defined(RULOS_ARM_stm32c0) || defined(RULOS_ARM_stm32g0) || \
+    defined(RULOS_ARM_stm32g4)
 #define RULOS_DMA_HAS_DMAMUX 1
 #else
 #define RULOS_DMA_HAS_DMAMUX 0
-#endif
-
-#if defined(RULOS_ARM_stm32f0)
-#include "stm32f0xx_ll_dma.h"
-#elif defined(RULOS_ARM_stm32f1)
-#include "stm32f1xx_ll_dma.h"
-#elif defined(RULOS_ARM_stm32f3)
-#include "stm32f3xx_ll_dma.h"
-#elif defined(RULOS_ARM_stm32g0)
-#include "stm32g0xx_ll_dma.h"
-#else
-#include "stm32g4xx_ll_dma.h"
 #endif
 
 /*
@@ -75,11 +64,12 @@
  *   Per-channel IRQs (G4, F1, F3): every DMA channel has its own
  *     dedicated IRQ line and handler.
  *
- *   Merged IRQs (F0, G0): multiple channels share an IRQ line.
- *     Channels 2-3 share one line on both F0 and G0. Channels 4+
+ *   Merged IRQs (C0, F0, G0): multiple channels share an IRQ line.
+ *     Channels 2-3 share one line on C0, F0, and G0. Channels 4+
  *     (plus DMA2 on G0B1) share another "merged" line whose name
- *     depends on the chip variant. Multiple slots holding the same
- *     IRQ number is fine -- NVIC_EnableIRQ is idempotent.
+ *     depends on the chip variant. C0 only has three DMA channels
+ *     so it doesn't need a Ch4+ merged line. Multiple slots holding
+ *     the same IRQ number is fine -- NVIC_EnableIRQ is idempotent.
  */
 #if defined(RULOS_ARM_stm32g4) || defined(RULOS_ARM_stm32f1) || \
     defined(RULOS_ARM_stm32f3)
@@ -148,6 +138,11 @@
 #define RULOS_DMA2_CH4_IRQN  RULOS_DMA_MERGED_IRQN
 #define RULOS_DMA2_CH5_IRQN  RULOS_DMA_MERGED_IRQN
 #endif
+#elif defined(RULOS_ARM_stm32c0)
+// C0: Channel1 standalone, Ch2-3 merged. Only 3 channels total.
+#define RULOS_DMA1_CH1_IRQN  DMA1_Channel1_IRQn
+#define RULOS_DMA1_CH2_IRQN  DMA1_Channel2_3_IRQn
+#define RULOS_DMA1_CH3_IRQN  DMA1_Channel2_3_IRQn
 #else  // F0: Channel1 standalone, Ch2-3 and Ch4-5 merged.
 #define RULOS_DMA1_CH1_IRQN  DMA1_Channel1_IRQn
 #define RULOS_DMA1_CH2_IRQN  DMA1_Channel2_3_IRQn
@@ -376,10 +371,14 @@ CCMRAM static bool ll_dma_is_active_flag_tc(DMA_TypeDef *dma, uint32_t ch) {
       return LL_DMA_IsActiveFlag_TC2(dma);
     case LL_DMA_CHANNEL_3:
       return LL_DMA_IsActiveFlag_TC3(dma);
+#ifdef LL_DMA_CHANNEL_4
     case LL_DMA_CHANNEL_4:
       return LL_DMA_IsActiveFlag_TC4(dma);
+#endif
+#ifdef LL_DMA_CHANNEL_5
     case LL_DMA_CHANNEL_5:
       return LL_DMA_IsActiveFlag_TC5(dma);
+#endif
 #ifdef LL_DMA_CHANNEL_6
     case LL_DMA_CHANNEL_6:
       return LL_DMA_IsActiveFlag_TC6(dma);
@@ -407,12 +406,16 @@ CCMRAM static void ll_dma_clear_flag_tc(DMA_TypeDef *dma, uint32_t ch) {
     case LL_DMA_CHANNEL_3:
       LL_DMA_ClearFlag_TC3(dma);
       break;
+#ifdef LL_DMA_CHANNEL_4
     case LL_DMA_CHANNEL_4:
       LL_DMA_ClearFlag_TC4(dma);
       break;
+#endif
+#ifdef LL_DMA_CHANNEL_5
     case LL_DMA_CHANNEL_5:
       LL_DMA_ClearFlag_TC5(dma);
       break;
+#endif
 #ifdef LL_DMA_CHANNEL_6
     case LL_DMA_CHANNEL_6:
       LL_DMA_ClearFlag_TC6(dma);
@@ -439,10 +442,14 @@ CCMRAM static bool ll_dma_is_active_flag_ht(DMA_TypeDef *dma, uint32_t ch) {
       return LL_DMA_IsActiveFlag_HT2(dma);
     case LL_DMA_CHANNEL_3:
       return LL_DMA_IsActiveFlag_HT3(dma);
+#ifdef LL_DMA_CHANNEL_4
     case LL_DMA_CHANNEL_4:
       return LL_DMA_IsActiveFlag_HT4(dma);
+#endif
+#ifdef LL_DMA_CHANNEL_5
     case LL_DMA_CHANNEL_5:
       return LL_DMA_IsActiveFlag_HT5(dma);
+#endif
 #ifdef LL_DMA_CHANNEL_6
     case LL_DMA_CHANNEL_6:
       return LL_DMA_IsActiveFlag_HT6(dma);
@@ -470,12 +477,16 @@ CCMRAM static void ll_dma_clear_flag_ht(DMA_TypeDef *dma, uint32_t ch) {
     case LL_DMA_CHANNEL_3:
       LL_DMA_ClearFlag_HT3(dma);
       break;
+#ifdef LL_DMA_CHANNEL_4
     case LL_DMA_CHANNEL_4:
       LL_DMA_ClearFlag_HT4(dma);
       break;
+#endif
+#ifdef LL_DMA_CHANNEL_5
     case LL_DMA_CHANNEL_5:
       LL_DMA_ClearFlag_HT5(dma);
       break;
+#endif
 #ifdef LL_DMA_CHANNEL_6
     case LL_DMA_CHANNEL_6:
       LL_DMA_ClearFlag_HT6(dma);
@@ -502,10 +513,14 @@ CCMRAM static bool ll_dma_is_active_flag_te(DMA_TypeDef *dma, uint32_t ch) {
       return LL_DMA_IsActiveFlag_TE2(dma);
     case LL_DMA_CHANNEL_3:
       return LL_DMA_IsActiveFlag_TE3(dma);
+#ifdef LL_DMA_CHANNEL_4
     case LL_DMA_CHANNEL_4:
       return LL_DMA_IsActiveFlag_TE4(dma);
+#endif
+#ifdef LL_DMA_CHANNEL_5
     case LL_DMA_CHANNEL_5:
       return LL_DMA_IsActiveFlag_TE5(dma);
+#endif
 #ifdef LL_DMA_CHANNEL_6
     case LL_DMA_CHANNEL_6:
       return LL_DMA_IsActiveFlag_TE6(dma);
@@ -533,12 +548,16 @@ CCMRAM static void ll_dma_clear_flag_te(DMA_TypeDef *dma, uint32_t ch) {
     case LL_DMA_CHANNEL_3:
       LL_DMA_ClearFlag_TE3(dma);
       break;
+#ifdef LL_DMA_CHANNEL_4
     case LL_DMA_CHANNEL_4:
       LL_DMA_ClearFlag_TE4(dma);
       break;
+#endif
+#ifdef LL_DMA_CHANNEL_5
     case LL_DMA_CHANNEL_5:
       LL_DMA_ClearFlag_TE5(dma);
       break;
+#endif
 #ifdef LL_DMA_CHANNEL_6
     case LL_DMA_CHANNEL_6:
       LL_DMA_ClearFlag_TE6(dma);
@@ -935,6 +954,20 @@ void DMA1_Ch4_5_DMAMUX1_OVR_IRQHandler(void) {
 }
 #endif  // STM32G0B1xx
 
+#elif defined(RULOS_ARM_stm32c0)
+
+// C0 has 3 DMA channels. Ch1 is standalone, Ch2-3 share a line.
+// The DMAMUX1 overrun IRQ is separate (and unused -- we don't enable
+// DMAMUX sync-overrun interrupts anywhere, so that vector stays
+// at the default weak handler).
+void DMA1_Channel1_IRQHandler(void) {
+  dispatch_channel_irq(0);
+}
+void DMA1_Channel2_3_IRQHandler(void) {
+  dispatch_channel_irq(1);  // DMA1 Channel 2
+  dispatch_channel_irq(2);  // DMA1 Channel 3
+}
+
 #else  // F0
 
 // F0 has the same three-handler layout as G0 but different names
@@ -954,12 +987,7 @@ void DMA1_Channel4_5_IRQHandler(void) {
 #endif  // per-chip IRQ handlers
 
 // ============================================================================
-// Stub backend -- C0 and H5.
-//
-// C0 has a classic DMA1 controller but no DMAMUX and a peripheral-to-
-// channel mapping that differs from F0/F1/F3; no driver currently
-// uses DMA on C0, so the stub is sufficient until the first caller
-// lands (the UART DMA path for C0 is the intended first user).
+// Stub backend -- H5.
 //
 // H5 has GPDMA -- a completely different controller architecture
 // (linked-list descriptors, per-channel built-in request mux, no

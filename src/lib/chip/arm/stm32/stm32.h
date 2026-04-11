@@ -2,7 +2,9 @@
 
 #if defined(RULOS_ARM_stm32c0)
 #include "stm32c0xx.h"
+#include "stm32c0xx_ll_dma.h"
 #include "stm32c0xx_ll_gpio.h"
+#include "stm32c0xx_ll_usart.h"
 #elif defined(RULOS_ARM_stm32f0)
 #include "stm32f0xx.h"
 #include "stm32f0xx_ll_dma.h"

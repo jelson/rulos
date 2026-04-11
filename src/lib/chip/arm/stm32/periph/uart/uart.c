@@ -180,9 +180,33 @@ static void config_gpio(const stm32_uart_config_t *config, bool rx);
 
 
 
+///////////// stm32c0
+
+#if defined(RULOS_ARM_stm32c0)
+
+// DMA IRQ handlers are owned by the RULOS DMA core (core/dma.c).
+void USART1_IRQHandler() {
+  on_usart_interrupt(0);
+}
+
+static const stm32_uart_config_t stm32_uart_config[] = {
+    {
+        .instance = USART1,
+        .instance_irqn = USART1_IRQn,
+
+        .rx_pin = RULOS_UART0_RX_PIN,
+        .rx_altfunc = GPIO_AF1_USART1,
+
+        .tx_pin = RULOS_UART0_TX_PIN,
+        .tx_altfunc = GPIO_AF1_USART1,
+
+        .tx_dma_req = RULOS_DMA_REQ_USART1_TX,
+    },
+};
+
 ///////////// stm32f0
 
-#if defined(RULOS_ARM_stm32f0)
+#elif defined(RULOS_ARM_stm32f0)
 
 // DMA IRQ handlers are owned by the RULOS DMA core (core/dma.c).
 void USART1_IRQHandler() {
@@ -872,8 +896,9 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
   // Configure USART via the LL layer.
   LL_USART_Disable(config->instance);
   LL_USART_InitTypeDef usart_init = {
-#if defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4)
-      // PrescalerValue is a G0/G4-era field. F0/F1/F3 predate the
+#if defined(RULOS_ARM_stm32c0) || defined(RULOS_ARM_stm32g0) || \
+    defined(RULOS_ARM_stm32g4)
+      // PrescalerValue is a modern-era field. F0/F1/F3 predate the
       // USART prescaler and don't have it in LL_USART_InitTypeDef.
       .PrescalerValue = LL_USART_PRESCALER_DIV1,
 #endif
