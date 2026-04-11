@@ -35,32 +35,55 @@
 #include "stm32.h"
 
 // ============================================================================
-// STM32G0 and STM32G4 backend (DMAMUX, classic DMA1/DMA2 controllers).
+// Classic DMA backend (DMA1/DMA2 with CCR register layout).
 //
-// Everything except the per-channel IRQ handler section is shared
-// between the two families: the channel pool, DMAMUX request table,
-// init_channel, and public API all use LL macros that are defined
-// identically on both. The only per-family piece is IRQ handler
-// naming -- G4 has one IRQ per DMA channel, G0 has merged handlers.
+// Covers every STM32 family RULOS supports except C0 and H5:
+//   - Fixed-map families (no DMAMUX): F0, F1, F3
+//   - DMAMUX families (dynamic peripheral→channel routing): G0, G4
+//
+// Everything except the allocator, init_channel's DMAMUX step, and
+// the per-chip IRQ handlers is shared. The pool, request translation
+// (either DMAMUX constant or fixed slot), public API, and IRQ
+// dispatcher use LL macros that are defined identically across all
+// five families.
 // ============================================================================
-#if defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4)
+#if defined(RULOS_ARM_stm32f0) || defined(RULOS_ARM_stm32f1) || \
+    defined(RULOS_ARM_stm32f3) || defined(RULOS_ARM_stm32g0) || \
+    defined(RULOS_ARM_stm32g4)
 
-#if defined(RULOS_ARM_stm32g4)
-#include "stm32g4xx_ll_dma.h"
+#if defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4)
+#define RULOS_DMA_HAS_DMAMUX 1
 #else
+#define RULOS_DMA_HAS_DMAMUX 0
+#endif
+
+#if defined(RULOS_ARM_stm32f0)
+#include "stm32f0xx_ll_dma.h"
+#elif defined(RULOS_ARM_stm32f1)
+#include "stm32f1xx_ll_dma.h"
+#elif defined(RULOS_ARM_stm32f3)
+#include "stm32f3xx_ll_dma.h"
+#elif defined(RULOS_ARM_stm32g0)
 #include "stm32g0xx_ll_dma.h"
+#else
+#include "stm32g4xx_ll_dma.h"
 #endif
 
 /*
- * Per-channel NVIC IRQ number. On G4 each channel has its own line.
- * On G0 channels 2-3 share one line, and channels 4+ plus all of
- * DMA2 share another "merged" line whose name depends on variant
- * (DMA1_Ch4_5_DMAMUX1_OVR on G030/G031, DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR
- * on G0B1). Multiple channels holding the same IRQ number is fine --
- * NVIC_EnableIRQ is idempotent, so rulos_dma_alloc can call it once
- * per slot without coordinating across slots.
+ * Per-channel NVIC IRQ number. Two flavors:
+ *
+ *   Per-channel IRQs (G4, F1, F3): every DMA channel has its own
+ *     dedicated IRQ line and handler.
+ *
+ *   Merged IRQs (F0, G0): multiple channels share an IRQ line.
+ *     Channels 2-3 share one line on both F0 and G0. Channels 4+
+ *     (plus DMA2 on G0B1) share another "merged" line whose name
+ *     depends on the chip variant. Multiple slots holding the same
+ *     IRQ number is fine -- NVIC_EnableIRQ is idempotent.
  */
-#if defined(RULOS_ARM_stm32g4)
+#if defined(RULOS_ARM_stm32g4) || defined(RULOS_ARM_stm32f1) || \
+    defined(RULOS_ARM_stm32f3)
+// Per-channel IRQ families.
 #define RULOS_DMA1_CH1_IRQN  DMA1_Channel1_IRQn
 #define RULOS_DMA1_CH2_IRQN  DMA1_Channel2_IRQn
 #define RULOS_DMA1_CH3_IRQN  DMA1_Channel3_IRQn
@@ -79,8 +102,17 @@
 #define RULOS_DMA2_CH1_IRQN  DMA2_Channel1_IRQn
 #define RULOS_DMA2_CH2_IRQN  DMA2_Channel2_IRQn
 #define RULOS_DMA2_CH3_IRQN  DMA2_Channel3_IRQn
+#if defined(RULOS_ARM_stm32f1)
+// F1 high/XL-density merges DMA2 Ch4-5. CMSIS aliases DMA2_Channel4_IRQn
+// to DMA2_Channel4_5_IRQn via a macro, so the Ch4 line below already
+// points at the merged IRQn; we just have to use that same macro for
+// Ch5 since DMA2_Channel5_IRQn doesn't exist on F1.
+#define RULOS_DMA2_CH4_IRQN  DMA2_Channel4_IRQn
+#define RULOS_DMA2_CH5_IRQN  DMA2_Channel4_IRQn
+#else
 #define RULOS_DMA2_CH4_IRQN  DMA2_Channel4_IRQn
 #define RULOS_DMA2_CH5_IRQN  DMA2_Channel5_IRQn
+#endif
 #ifdef DMA2_Channel6_BASE
 #define RULOS_DMA2_CH6_IRQN  DMA2_Channel6_IRQn
 #endif
@@ -91,7 +123,8 @@
 #define RULOS_DMA2_CH8_IRQN  DMA2_Channel8_IRQn
 #endif
 #endif  // DMA2_Channel1_BASE
-#else   // G0: merged IRQ lines
+#elif defined(RULOS_ARM_stm32g0)
+// G0: merged IRQ lines.
 #define RULOS_DMA1_CH1_IRQN  DMA1_Channel1_IRQn
 #define RULOS_DMA1_CH2_IRQN  DMA1_Channel2_3_IRQn
 #define RULOS_DMA1_CH3_IRQN  DMA1_Channel2_3_IRQn
@@ -115,7 +148,13 @@
 #define RULOS_DMA2_CH4_IRQN  RULOS_DMA_MERGED_IRQN
 #define RULOS_DMA2_CH5_IRQN  RULOS_DMA_MERGED_IRQN
 #endif
-#endif  // G4 vs G0 IRQ names
+#else  // F0: Channel1 standalone, Ch2-3 and Ch4-5 merged.
+#define RULOS_DMA1_CH1_IRQN  DMA1_Channel1_IRQn
+#define RULOS_DMA1_CH2_IRQN  DMA1_Channel2_3_IRQn
+#define RULOS_DMA1_CH3_IRQN  DMA1_Channel2_3_IRQn
+#define RULOS_DMA1_CH4_IRQN  DMA1_Channel4_5_IRQn
+#define RULOS_DMA1_CH5_IRQN  DMA1_Channel4_5_IRQn
+#endif  // per-channel vs merged IRQ naming
 
 /*
  * Per-channel hardware descriptor. Immutable, const, lives in .rodata
@@ -216,10 +255,46 @@ static inline int state_to_idx(const rulos_dma_channel_t *ch) {
   return (const dma_channel_state_t *)ch - g_state;
 }
 
+#if !RULOS_DMA_HAS_DMAMUX
+/*
+ * Fixed-map families (F0/F1/F3) wire each DMA-capable peripheral to a
+ * specific hardware channel at manufacturing time (see the chip RM's
+ * DMA request mapping table). There's no dynamic routing -- if two
+ * peripherals happen to share a channel, they can't coexist.
+ *
+ * Values are stored as `slot_index + 1` so that an unset entry
+ * (left at zero by designated initializers) unambiguously means
+ * "this request has no fixed mapping on this chip". Lookup subtracts
+ * one to recover the real slot index.
+ *
+ * Sourced from the DMA request-to-channel tables in the vendor
+ * reference manuals:
+ *   F0: RM0360 Table 33 ("DMA1 requests for each channel")
+ *   F1: RM0008 Table 78 ("Summary of DMA1 requests for each channel")
+ *   F3: RM0316 Table 29 ("Summary of the DMA1 requests for each channel")
+ */
+static const uint8_t g_fixed_slot_plus_one[RULOS_DMA_REQ_COUNT_] = {
+#if defined(RULOS_ARM_stm32f0)
+    [RULOS_DMA_REQ_USART1_TX] = 1 + 1,  // DMA1 Ch2 (conflicts with I2C1_TX)
+    [RULOS_DMA_REQ_USART1_RX] = 2 + 1,  // DMA1 Ch3 (conflicts with I2C1_RX)
+    [RULOS_DMA_REQ_I2C1_TX]   = 1 + 1,  // DMA1 Ch2 (conflicts with USART1_TX)
+    [RULOS_DMA_REQ_I2C1_RX]   = 2 + 1,  // DMA1 Ch3 (conflicts with USART1_RX)
+    [RULOS_DMA_REQ_SPI2_TX]   = 4 + 1,  // DMA1 Ch5
+#elif defined(RULOS_ARM_stm32f1) || defined(RULOS_ARM_stm32f3)
+    [RULOS_DMA_REQ_USART1_TX] = 3 + 1,  // DMA1 Ch4
+    [RULOS_DMA_REQ_USART1_RX] = 4 + 1,  // DMA1 Ch5 (conflicts with SPI2_TX)
+    [RULOS_DMA_REQ_I2C1_TX]   = 5 + 1,  // DMA1 Ch6
+    [RULOS_DMA_REQ_I2C1_RX]   = 6 + 1,  // DMA1 Ch7
+    [RULOS_DMA_REQ_SPI2_TX]   = 4 + 1,  // DMA1 Ch5 (conflicts with USART1_RX)
+#endif
+};
+#endif  // !RULOS_DMA_HAS_DMAMUX
+
 /*
  * RULOS request enum -> G4 DMAMUX request code. Designated initializers
  * leave unused slots at 0 (= LL_DMAMUX_REQ_MEM2MEM, safe sentinel).
  */
+#if RULOS_DMA_HAS_DMAMUX
 // Every peripheral request entry is individually guarded because small
 // G0 variants (G030/G031) lack USART3+, TIM2 DMA, SPI2 DMA, etc. The
 // allocator checks for a zero entry and fails alloc if a driver asks
@@ -276,6 +351,7 @@ static const uint32_t g_dmamux_req[RULOS_DMA_REQ_COUNT_] = {
     [RULOS_DMA_REQ_TIM2_CH2] = LL_DMAMUX_REQ_TIM2_CH2,
 #endif
 };
+#endif  // RULOS_DMA_HAS_DMAMUX
 
 // ----------------------------------------------------------------------------
 // Private TE flag dispatch helpers (the LL_DMA_*_TE variants aren't wrapped
@@ -399,8 +475,12 @@ static void init_channel(int idx, const rulos_dma_config_t *c) {
       c->priority;
   LL_DMA_ConfigTransfer(hw->dma, hw->ll_channel, cfg);
 
-  // Route the peripheral request through DMAMUX.
+#if RULOS_DMA_HAS_DMAMUX
+  // Route the peripheral request through DMAMUX. Fixed-map families
+  // skip this step entirely -- the channel is hardwired to the
+  // peripheral at manufacturing time.
   LL_DMA_SetPeriphRequest(hw->dma, hw->ll_channel, g_dmamux_req[c->request]);
+#endif
 
   // Enable the interrupts corresponding to the callbacks we'll dispatch.
   LL_DMA_EnableIT_TC(hw->dma, hw->ll_channel);
@@ -426,14 +506,17 @@ rulos_dma_channel_t *rulos_dma_alloc(const rulos_dma_config_t *config) {
       config->request >= RULOS_DMA_REQ_COUNT_) {
     return NULL;
   }
-  if (g_dmamux_req[config->request] == 0 &&
-      config->request != RULOS_DMA_REQ_NONE) {
-    // The request enum value has no DMAMUX mapping on this family.
-    return NULL;
-  }
 
   int found_idx = -1;
   rulos_irq_state_t irq = hal_start_atomic();
+
+#if RULOS_DMA_HAS_DMAMUX
+  if (g_dmamux_req[config->request] == 0) {
+    // The request enum value has no DMAMUX mapping on this family.
+    hal_end_atomic(irq);
+    return NULL;
+  }
+  // First-fit scan: any free channel can serve any peripheral.
   for (int i = 0; i < DMA_CHANNEL_SLOTS; i++) {
     if (g_hw[i].dma == NULL) continue;  // slot not populated on this variant
     if (g_state[i].allocated) continue;
@@ -441,6 +524,19 @@ rulos_dma_channel_t *rulos_dma_alloc(const rulos_dma_config_t *config) {
     found_idx = i;
     break;
   }
+#else
+  // Fixed-map lookup: each peripheral request has exactly one channel
+  // it's allowed to use.
+  uint8_t slot_plus_one = g_fixed_slot_plus_one[config->request];
+  if (slot_plus_one != 0) {
+    int slot = slot_plus_one - 1;
+    if (g_hw[slot].dma != NULL && !g_state[slot].allocated) {
+      g_state[slot].allocated = true;
+      found_idx = slot;
+    }
+  }
+#endif
+
   hal_end_atomic(irq);
 
   if (found_idx < 0) {
@@ -551,7 +647,8 @@ CCMRAM static void dispatch_channel_irq(int idx) {
  * channels is essentially free (one load + one early return).
  */
 
-#if defined(RULOS_ARM_stm32g4)
+#if defined(RULOS_ARM_stm32g4) || defined(RULOS_ARM_stm32f1) || \
+    defined(RULOS_ARM_stm32f3)
 
 #ifdef DMA1_Channel1_BASE
 CCMRAM void DMA1_Channel1_IRQHandler(void) {
@@ -573,11 +670,13 @@ CCMRAM void DMA1_Channel4_IRQHandler(void) {
   dispatch_channel_irq(3);
 }
 #endif
+#if 0  // Phase 6: i2s.c still owns DMA1_Channel5_IRQHandler on F1/F3
 #ifdef DMA1_Channel5_BASE
 CCMRAM void DMA1_Channel5_IRQHandler(void) {
   dispatch_channel_irq(4);
 }
 #endif
+#endif  // Phase 6 gate
 #ifdef DMA1_Channel6_BASE
 CCMRAM void DMA1_Channel6_IRQHandler(void) {
   dispatch_channel_irq(5);
@@ -634,7 +733,7 @@ CCMRAM void DMA2_Channel8_IRQHandler(void) {
 }
 #endif
 
-#else  // RULOS_ARM_stm32g0
+#elif defined(RULOS_ARM_stm32g0)
 
 // DMA1 Channel 1 has its own dedicated interrupt.
 void DMA1_Channel1_IRQHandler(void) {
@@ -671,7 +770,23 @@ void DMA1_Ch4_5_DMAMUX1_OVR_IRQHandler(void) {
 }
 #endif  // STM32G0B1xx
 
-#endif  // G4 vs G0 IRQ handlers
+#else  // F0
+
+// F0 has the same three-handler layout as G0 but different names
+// (no DMAMUX, so no DMAMUX1_OVR suffix).
+void DMA1_Channel1_IRQHandler(void) {
+  dispatch_channel_irq(0);
+}
+void DMA1_Channel2_3_IRQHandler(void) {
+  dispatch_channel_irq(1);  // DMA1 Channel 2
+  dispatch_channel_irq(2);  // DMA1 Channel 3
+}
+// Phase 6 gated: i2s.c owns this handler via its SPI2_TX DMA path
+// (the merged handler would include Channel 5). Leave it to i2s.c
+// until Phase 6 migrates that driver.
+// void DMA1_Channel4_5_IRQHandler(void) { ... }
+
+#endif  // per-chip IRQ handlers
 
 // ============================================================================
 // Stub backend (non-G4 families for Phase 1 of the DMA refactor).

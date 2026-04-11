@@ -22,53 +22,40 @@
 
 #include <string.h>
 
+#include "core/dma.h"
 #include "core/hardware.h"
 #include "core/hardware_types.h"
 #include "core/rulos.h"
 
 #if defined(RULOS_ARM_stm32f0)
 #define RULOS_I2C_V2
-#include "stm32f0xx_ll_dma.h"
 #include "stm32f0xx_ll_i2c.h"
 #include "stm32f0xx_ll_rcc.h"
 
 #elif defined(RULOS_ARM_stm32f1)
 #define RULOS_I2C_V1
-#include "stm32f1xx_ll_dma.h"
 #include "stm32f1xx_ll_i2c.h"
 #include "stm32f1xx_ll_rcc.h"
 
 #define rI2C1_CLK_ENABLE() __HAL_RCC_I2C1_CLK_ENABLE()
 #define rI2C1_SDA_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
 #define rI2C1_SCL_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
-#define rI2C1_DMA_CLK_ENABLE() __HAL_RCC_DMA1_CLK_ENABLE()
 #define rI2C1_FORCE_RESET() __HAL_RCC_I2C1_FORCE_RESET()
 #define rI2C1_RELEASE_RESET() __HAL_RCC_I2C1_RELEASE_RESET()
 #define rI2C1_SCL_PIN GPIO_PIN_6
 #define rI2C1_SCL_GPIO_PORT GPIOB
 #define rI2C1_SDA_PIN GPIO_PIN_7
 #define rI2C1_SDA_GPIO_PORT GPIOB
-#define rI2C1_DMA DMA1
-#define rI2C1_DMA_TX_CHAN LL_DMA_CHANNEL_6
-#define rI2C1_DMA_TX_IRQn DMA1_Channel6_IRQn
-#define rI2C1_DMA_TX_IRQHandler DMA1_Channel6_IRQHandler
-#define rI2C1_DMA_TX_ClearTCFlag() LL_DMA_ClearFlag_TC6(DMA1)
-#define rI2C1_DMA_RX_CHAN LL_DMA_CHANNEL_7
-#define rI2C1_DMA_RX_IRQn DMA1_Channel7_IRQn
-#define rI2C1_DMA_RX_IRQHandler DMA1_Channel7_IRQHandler
-#define rI2C1_DMA_RX_ClearTCFlag() LL_DMA_ClearFlag_TC7(DMA1)
 
 #elif defined(RULOS_ARM_stm32f3)
 #define RULOS_I2C_V2
 #include "stm32f3xx_ll_bus.h"
-#include "stm32f3xx_ll_dma.h"
 #include "stm32f3xx_ll_i2c.h"
 #include "stm32f3xx_ll_rcc.h"
 
 #define rI2C1_CLK_ENABLE() __HAL_RCC_I2C1_CLK_ENABLE()
 #define rI2C1_SDA_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
 #define rI2C1_SCL_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
-#define rI2C1_DMA_CLK_ENABLE() __HAL_RCC_DMA1_CLK_ENABLE()
 #define rI2C1_FORCE_RESET() __HAL_RCC_I2C1_FORCE_RESET()
 #define rI2C1_RELEASE_RESET() __HAL_RCC_I2C1_RELEASE_RESET()
 
@@ -84,27 +71,16 @@
 #define rI2C1_SDA_GPIO_PORT GPIOB
 #endif
 #define rI2C1_GPIO_ALTFUNC GPIO_AF4_I2C1
-#define rI2C1_DMA DMA1
-#define rI2C1_DMA_TX_CHAN LL_DMA_CHANNEL_6
-#define rI2C1_DMA_TX_IRQn DMA1_Channel6_IRQn
-#define rI2C1_DMA_TX_IRQHandler DMA1_Channel6_IRQHandler
-#define rI2C1_DMA_TX_ClearTCFlag() LL_DMA_ClearFlag_TC6(DMA1)
-#define rI2C1_DMA_RX_CHAN LL_DMA_CHANNEL_7
-#define rI2C1_DMA_RX_IRQn DMA1_Channel7_IRQn
-#define rI2C1_DMA_RX_IRQHandler DMA1_Channel7_IRQHandler
-#define rI2C1_DMA_RX_ClearTCFlag() LL_DMA_ClearFlag_TC7(DMA1)
 
 #elif defined(RULOS_ARM_stm32g0)
 #define RULOS_I2C_V2
 #include "stm32g0xx_ll_bus.h"
-#include "stm32g0xx_ll_dma.h"
 #include "stm32g0xx_ll_i2c.h"
 #include "stm32g0xx_ll_rcc.h"
 
 #define rI2C1_CLK_ENABLE() __HAL_RCC_I2C1_CLK_ENABLE()
 #define rI2C1_SDA_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
 #define rI2C1_SCL_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
-#define rI2C1_DMA_CLK_ENABLE() __HAL_RCC_DMA1_CLK_ENABLE()
 #define rI2C1_FORCE_RESET() __HAL_RCC_I2C1_FORCE_RESET()
 #define rI2C1_RELEASE_RESET() __HAL_RCC_I2C1_RELEASE_RESET()
 
@@ -113,24 +89,39 @@
 #define rI2C1_SDA_PIN GPIO_PIN_7
 #define rI2C1_SDA_GPIO_PORT GPIOB
 #define rI2C1_GPIO_ALTFUNC GPIO_AF4_I2C1
-#define rI2C1_DMA DMA1
-#define rI2C1_DMA_TX_CHAN LL_DMA_CHANNEL_6
-#define rI2C1_DMA_TX_IRQn DMA1_Channel6_IRQn
-#define rI2C1_DMA_TX_IRQHandler DMA1_Channel6_IRQHandler
-#define rI2C1_DMA_TX_ClearTCFlag() LL_DMA_ClearFlag_TC6(DMA1)
-#define rI2C1_DMA_RX_CHAN LL_DMA_CHANNEL_7
-#define rI2C1_DMA_RX_IRQn DMA1_Channel7_IRQn
-#define rI2C1_DMA_RX_IRQHandler DMA1_Channel7_IRQHandler
-#define rI2C1_DMA_RX_ClearTCFlag() LL_DMA_ClearFlag_TC7(DMA1)
 
 #else
 #error "Your chip's definitions for I2C registers could use some help."
 #include <stophere>
 #endif
 
+/*
+ * LL_I2C_DMA_GetRegAddr has a different signature on V1 vs V2: V1 has
+ * one DR register for both send and receive, V2 has separate TXDR/RXDR
+ * and wants a selector. Wrap the difference here so the call sites
+ * don't need to care.
+ */
+#if defined(RULOS_I2C_V1)
+#define rI2C1_DMA_TX_REG_ADDR() \
+  ((volatile void *)(uintptr_t)LL_I2C_DMA_GetRegAddr(I2C1))
+#define rI2C1_DMA_RX_REG_ADDR() \
+  ((volatile void *)(uintptr_t)LL_I2C_DMA_GetRegAddr(I2C1))
+#else
+#define rI2C1_DMA_TX_REG_ADDR()                        \
+  ((volatile void *)(uintptr_t)LL_I2C_DMA_GetRegAddr(  \
+      I2C1, LL_I2C_DMA_REG_DATA_TRANSMIT))
+#define rI2C1_DMA_RX_REG_ADDR()                        \
+  ((volatile void *)(uintptr_t)LL_I2C_DMA_GetRegAddr(  \
+      I2C1, LL_I2C_DMA_REG_DATA_RECEIVE))
+#endif
+
 typedef struct {
   MediaStateIfc media;
   I2C_TypeDef *handle;
+
+  // DMA channels for TX/RX (allocated via rulos_dma in hal_twi_init).
+  rulos_dma_channel_t *tx_dma_ch;
+  rulos_dma_channel_t *rx_dma_ch;
 
   // sending
   MediaSendDoneFunc send_done_cb;
@@ -171,7 +162,7 @@ static void twi_recv_done(TwiState *twi) {
   // Real packet received!
   assert(twi->slaveRecvSlot != NULL);
   int packet_len = twi->slaveRecvSlot->capacity -
-                   LL_DMA_GetDataLength(rI2C1_DMA, rI2C1_DMA_RX_CHAN);
+                   rulos_dma_get_remaining(twi->rx_dma_ch);
 
   if (packet_len > 0) {
     twi->slaveRecvSlot->packet_len = packet_len;
@@ -185,27 +176,16 @@ static void twi_recv_event_interrupt(TwiState *twi) {
   // second TWI interface
   if (LL_I2C_IsActiveFlag_ADDR(I2C1)) {
     // New packet has arrived. Set up a DMA transfer and ack the packet.
-    LL_DMA_ConfigAddresses(
-        rI2C1_DMA, rI2C1_DMA_RX_CHAN,
-#if defined(RULOS_I2C_V1)
-        LL_I2C_DMA_GetRegAddr(I2C1),
-#elif defined(RULOS_I2C_V2)
-        LL_I2C_DMA_GetRegAddr(I2C1, LL_I2C_DMA_REG_DATA_RECEIVE),
-#else
-#include <stophere>
-#endif
-        (uint32_t)&twi->slaveRecvSlot->data[0],
-        LL_DMA_GetDataTransferDirection(rI2C1_DMA, rI2C1_DMA_RX_CHAN));
-    LL_DMA_SetDataLength(rI2C1_DMA, rI2C1_DMA_RX_CHAN,
-                         twi->slaveRecvSlot->capacity);
-    LL_DMA_EnableChannel(rI2C1_DMA, rI2C1_DMA_RX_CHAN);
+    rulos_dma_start(twi->rx_dma_ch, rI2C1_DMA_RX_REG_ADDR(),
+                    &twi->slaveRecvSlot->data[0],
+                    twi->slaveRecvSlot->capacity);
     LL_I2C_EnableDMAReq_RX(I2C1);
     LL_I2C_ClearFlag_ADDR(I2C1);
   } else if (LL_I2C_IsActiveFlag_STOP(I2C1)) {
     // Stop detected. Clear the stop flag and run the receive handler.
     LL_I2C_ClearFlag_STOP(I2C1);
     LL_I2C_DisableDMAReq_RX(I2C1);
-    LL_DMA_DisableChannel(rI2C1_DMA, rI2C1_DMA_RX_CHAN);
+    rulos_dma_stop(twi->rx_dma_ch);
     twi_recv_done(twi);
   }
 }
@@ -215,12 +195,11 @@ static void twi_recv_error_interrupt(TwiState *twi) {
   LL_I2C_DisableDMAReq_RX(I2C1);
 }
 
-void I2C1_DMA_RX_IRQHandler(void) {
-  // The only time we should ever get an interrupt from the RX channel
-  // of the DMA controller is if the receive buffer fills or there's
-  // an error. Either way, we should stop DMA and no longer ACK any
-  // futher data that's received.
-  rI2C1_DMA_RX_ClearTCFlag();
+// DMA TC callback: the RX channel fires TC only if the receive buffer
+// fills (the normal stop path uses the I2C EV IRQ + STOP detect, not
+// DMA TC). Stop accepting data.
+static void twi_rx_dma_tc_callback(void *user_data) {
+  (void)user_data;
   LL_I2C_DisableDMAReq_RX(I2C1);
   LL_I2C_AcknowledgeNextData(I2C1, LL_I2C_NACK);
 }
@@ -319,11 +298,11 @@ static void twi_send_error_interrupt(TwiState *twi) {
 #include <stophere>
 #endif
 
-// Interrupt called when either the transmit-side DMA is complete or
-// encountered an error. Disable DMA for I2C so that a BTF event is
-// generated.
-void rI2C1_DMA_TX_IRQHandler(void) {
-  rI2C1_DMA_TX_ClearTCFlag();
+// DMA TC callback for the I2C TX channel. Disables the peripheral's
+// DMA request so that a BTF event is generated (V1) or the autostop
+// sequence completes (V2).
+static void twi_tx_dma_tc_callback(void *user_data) {
+  (void)user_data;
   LL_I2C_DisableDMAReq_TX(I2C1);
 }
 
@@ -340,17 +319,7 @@ static void twi_send(MediaStateIfc *media, Addr dest_addr, const void *data,
 
   assert(!MASTER_ACTIVE(twi));
 
-  LL_DMA_DisableChannel(rI2C1_DMA, rI2C1_DMA_TX_CHAN);
-  LL_DMA_ConfigAddresses(
-      rI2C1_DMA, rI2C1_DMA_TX_CHAN, (uint32_t)data,
-#if defined(RULOS_I2C_V1)
-      LL_I2C_DMA_GetRegAddr(I2C1),
-#elif defined(RULOS_I2C_V2)
-      LL_I2C_DMA_GetRegAddr(I2C1, LL_I2C_DMA_REG_DATA_TRANSMIT),
-#endif
-      LL_DMA_GetDataTransferDirection(rI2C1_DMA, rI2C1_DMA_TX_CHAN));
-  LL_DMA_SetDataLength(rI2C1_DMA, rI2C1_DMA_TX_CHAN, len);
-  LL_DMA_EnableChannel(rI2C1_DMA, rI2C1_DMA_TX_CHAN);
+  rulos_dma_start(twi->tx_dma_ch, rI2C1_DMA_TX_REG_ADDR(), (void *)data, len);
 #ifdef RULOS_I2C_V2
   // V2 enables DMA immediately because it auto-transmits the
   // address. V1 only enables DMA once address has been transmitted.
@@ -407,11 +376,10 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
   twi->media.send = &twi_send;
   twi->slaveRecvSlot = slaveRecvSlot;
 
-  // Enable clocks
+  // Enable clocks (DMA clock is already enabled by core/stm32-hardware.c).
   rI2C1_SCL_GPIO_CLK_ENABLE();
   rI2C1_SDA_GPIO_CLK_ENABLE();
   rI2C1_CLK_ENABLE();
-  rI2C1_DMA_CLK_ENABLE();
 
   reset_bus(twi);
 
@@ -429,31 +397,37 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
   GPIO_InitStruct.Pin = rI2C1_SDA_PIN;
   HAL_GPIO_Init(rI2C1_SDA_GPIO_PORT, &GPIO_InitStruct);
 
-  // Configure DMA TX channel
-  LL_DMA_ConfigTransfer(rI2C1_DMA, rI2C1_DMA_TX_CHAN,
-                        LL_DMA_DIRECTION_MEMORY_TO_PERIPH |
-                            LL_DMA_PRIORITY_LOW | LL_DMA_MODE_NORMAL |
-                            LL_DMA_PERIPH_NOINCREMENT |
-                            LL_DMA_MEMORY_INCREMENT | LL_DMA_PDATAALIGN_BYTE |
-                            LL_DMA_MDATAALIGN_BYTE);
-  NVIC_SetPriority(rI2C1_DMA_TX_IRQn, 0x4);
-  NVIC_EnableIRQ(rI2C1_DMA_TX_IRQn);
+  // Allocate DMA TX channel
+  rulos_dma_config_t tx_cfg = {
+      .request = RULOS_DMA_REQ_I2C1_TX,
+      .direction = RULOS_DMA_DIR_MEM_TO_PERIPH,
+      .mode = RULOS_DMA_MODE_NORMAL,
+      .periph_width = RULOS_DMA_WIDTH_BYTE,
+      .mem_width = RULOS_DMA_WIDTH_BYTE,
+      .periph_increment = false,
+      .mem_increment = true,
+      .priority = RULOS_DMA_PRIORITY_LOW,
+      .tc_callback = twi_tx_dma_tc_callback,
+      .user_data = twi,
+  };
+  twi->tx_dma_ch = rulos_dma_alloc(&tx_cfg);
+  assert(twi->tx_dma_ch != NULL);
 
-  // Enable transfer-complete and transfer-error interrupt generation for DMA.
-  LL_DMA_EnableIT_TC(rI2C1_DMA, rI2C1_DMA_TX_CHAN);
-  LL_DMA_EnableIT_TE(rI2C1_DMA, rI2C1_DMA_TX_CHAN);
-
-  // Configure DMA RX channel
-  LL_DMA_ConfigTransfer(rI2C1_DMA, rI2C1_DMA_RX_CHAN,
-                        LL_DMA_DIRECTION_PERIPH_TO_MEMORY |
-                            LL_DMA_PRIORITY_HIGH | LL_DMA_MODE_NORMAL |
-                            LL_DMA_PERIPH_NOINCREMENT |
-                            LL_DMA_MEMORY_INCREMENT | LL_DMA_PDATAALIGN_BYTE |
-                            LL_DMA_MDATAALIGN_BYTE);
-  NVIC_SetPriority(rI2C1_DMA_RX_IRQn, 0x1);
-  NVIC_EnableIRQ(rI2C1_DMA_RX_IRQn);
-  LL_DMA_EnableIT_TC(rI2C1_DMA, rI2C1_DMA_RX_CHAN);
-  LL_DMA_EnableIT_TE(rI2C1_DMA, rI2C1_DMA_RX_CHAN);
+  // Allocate DMA RX channel
+  rulos_dma_config_t rx_cfg = {
+      .request = RULOS_DMA_REQ_I2C1_RX,
+      .direction = RULOS_DMA_DIR_PERIPH_TO_MEM,
+      .mode = RULOS_DMA_MODE_NORMAL,
+      .periph_width = RULOS_DMA_WIDTH_BYTE,
+      .mem_width = RULOS_DMA_WIDTH_BYTE,
+      .periph_increment = false,
+      .mem_increment = true,
+      .priority = RULOS_DMA_PRIORITY_HIGH,
+      .tc_callback = twi_rx_dma_tc_callback,
+      .user_data = twi,
+  };
+  twi->rx_dma_ch = rulos_dma_alloc(&rx_cfg);
+  assert(twi->rx_dma_ch != NULL);
 
   // Set up I2C
   LL_I2C_Disable(I2C1);

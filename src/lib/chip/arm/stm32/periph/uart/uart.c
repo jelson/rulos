@@ -45,7 +45,9 @@
 #define USE_RX_DMA_FOR_CHIP 0
 #endif
 
-#if defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4)
+#if defined(RULOS_ARM_stm32f0) || defined(RULOS_ARM_stm32f1) || \
+    defined(RULOS_ARM_stm32f3) || defined(RULOS_ARM_stm32g0) || \
+    defined(RULOS_ARM_stm32g4)
 #define USE_RULOS_DMA_FOR_UART 1
 #else
 #define USE_RULOS_DMA_FOR_UART 0
@@ -81,10 +83,14 @@ typedef struct {
 
 #if USE_RULOS_DMA_FOR_UART
   // RULOS DMA abstraction channel handles (allocated in hal_uart_init).
-  // Drives both TX and RX DMA. Replaces the HAL UART handle and HAL DMA
-  // handle on migrated families.
+  // Replaces the HAL UART handle and HAL DMA handle on migrated
+  // families. rx_dma_ch only exists on families that actually use
+  // DMA for RX (USE_RX_DMA_FOR_CHIP = G0/G4); on F0/F1/F3 the field
+  // is compiled out.
   rulos_dma_channel_t *tx_dma_ch;
+#if USE_RX_DMA_FOR_CHIP
   rulos_dma_channel_t *rx_dma_ch;
+#endif
   // Base address of the peripheral's TX data register. Cached so the
   // tc_callback can re-arm the next transfer from ISR context.
   volatile void *usart_tdr;
@@ -141,9 +147,12 @@ typedef struct {
 
 #if USE_RULOS_DMA_FOR_UART
   // Logical DMA request identifiers; the RULOS DMA core translates
-  // these to hardware channel assignments at init time.
-  rulos_dma_request_t rx_dma_req;
+  // these to hardware channel assignments at init time. rx_dma_req
+  // is only meaningful on families that use DMA for RX.
   rulos_dma_request_t tx_dma_req;
+#if USE_RX_DMA_FOR_CHIP
+  rulos_dma_request_t rx_dma_req;
+#endif
 #endif
 } stm32_uart_config_t;
 
@@ -220,6 +229,11 @@ static void on_rx_dma_interrupt(uint8_t uart_id);
 #if defined(RULOS_ARM_stm32f0)
 
 #include "stm32f0xx_ll_usart.h"
+// DMA IRQ handlers are owned by the RULOS DMA core (core/dma.c).
+void USART1_IRQHandler() {
+  on_usart_interrupt(0);
+}
+
 static const stm32_uart_config_t stm32_uart_config[] = {
     {
         .instance = USART1,
@@ -230,56 +244,42 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 
         .tx_pin = RULOS_UART0_TX_PIN,
         .tx_altfunc = GPIO_AF1_USART1,
-        .tx_dma_chan = DMA1_Channel2,
-        .tx_dma_irqn = DMA1_Channel2_3_IRQn,
+
+        .tx_dma_req = RULOS_DMA_REQ_USART1_TX,
     },
 };
-
-void USART1_IRQHandler() {
-  on_usart_interrupt(0);
-}
-
-void DMA1_Channel2_3_IRQHandler() {
-  dispatch_tx_dma(0);
-}
 
 ///////////// stm32f1
 
 #elif defined(RULOS_ARM_stm32f1)
 
 #include "stm32f1xx_ll_usart.h"
+// DMA IRQ handlers are owned by the RULOS DMA core (core/dma.c).
+void USART1_IRQHandler() {
+  on_usart_interrupt(0);
+}
+
 static const stm32_uart_config_t stm32_uart_config[] = {
     {
         .instance = USART1,
         .instance_irqn = USART1_IRQn,
         .rx_pin = RULOS_UART0_RX_PIN,
         .tx_pin = RULOS_UART0_TX_PIN,
-        .tx_dma_chan = DMA1_Channel4,
-        .tx_dma_irqn = DMA1_Channel4_IRQn,
+
+        .tx_dma_req = RULOS_DMA_REQ_USART1_TX,
     },
 };
-
-void USART1_IRQHandler() {
-  on_usart_interrupt(0);
-}
-
-void DMA1_Channel4_IRQHandler() {
-  dispatch_tx_dma(0);
-}
 
 ///////////// stm32f3
 
 #elif defined(RULOS_ARM_stm32f3)
 
+#include "stm32f3xx_ll_usart.h"
+// DMA IRQ handlers are owned by the RULOS DMA core (core/dma.c).
 void USART1_IRQHandler() {
   on_usart_interrupt(0);
 }
 
-void DMA1_Channel4_IRQHandler() {
-  dispatch_tx_dma(0);
-}
-
-#include "stm32f3xx_ll_usart.h"
 static const stm32_uart_config_t stm32_uart_config[] = {
     {
         .instance = USART1,
@@ -290,8 +290,8 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 
         .tx_pin = RULOS_UART0_TX_PIN,
         .tx_altfunc = GPIO_AF7_USART1,
-        .tx_dma_chan = DMA1_Channel4,
-        .tx_dma_irqn = DMA1_Channel4_IRQn,
+
+        .tx_dma_req = RULOS_DMA_REQ_USART1_TX,
     },
 };
 
@@ -1006,7 +1006,11 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
   // migrated families).
   LL_USART_Disable(config->instance);
   LL_USART_InitTypeDef usart_init = {
+#if defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4)
+      // PrescalerValue is a G0/G4-era field. F0/F1/F3 predate the
+      // USART prescaler and don't have it in LL_USART_InitTypeDef.
       .PrescalerValue = LL_USART_PRESCALER_DIV1,
+#endif
       .BaudRate = baud,
       .DataWidth = LL_USART_DATAWIDTH_8B,
       .StopBits = LL_USART_STOPBITS_1,
@@ -1021,9 +1025,16 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
   LL_USART_Enable(config->instance);
 
   // Cache the TDR address so the TX DMA path can reach it without a
-  // config struct lookup on every transmit.
+  // config struct lookup on every transmit. F1 is the odd one out:
+  // its USART has a single DR register for both TX and RX, so
+  // LL_USART_DMA_GetRegAddr() takes no direction argument.
+#if defined(RULOS_ARM_stm32f1)
+  uart->usart_tdr =
+      (volatile void *)LL_USART_DMA_GetRegAddr(config->instance);
+#else
   uart->usart_tdr = (volatile void *)LL_USART_DMA_GetRegAddr(
       config->instance, LL_USART_DMA_REG_DATA_TRANSMIT);
+#endif
 
   // Allocate a RULOS DMA channel for TX. The core layer handles
   // channel selection, DMAMUX programming, and IRQ wiring.
@@ -1044,7 +1055,11 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
     __builtin_trap();
   }
 
-  // Allocate a RULOS DMA channel for RX.
+#if USE_RX_DMA_FOR_CHIP
+  // Allocate a RULOS DMA channel for RX. Only on families that use
+  // DMA for receive (G0/G4). F0/F1/F3 use RXNE per-char interrupts
+  // because their fixed-map DMA controllers don't have spare
+  // channels to dedicate to UART RX.
   const rulos_dma_config_t rx_cfg = {
       .request = config->rx_dma_req,
       .direction = RULOS_DMA_DIR_PERIPH_TO_MEM,
@@ -1061,6 +1076,7 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
   if (uart->rx_dma_ch == NULL) {
     __builtin_trap();
   }
+#endif  // USE_RX_DMA_FOR_CHIP
 
   // Wire the UART's TX-empty signal to the DMA request line. The
   // pre-refactor code set this bit on every HAL_UART_Transmit_DMA

@@ -199,22 +199,22 @@ void rulos_dma_free(rulos_dma_channel_t *ch);
 
 /*
  * --------------------------------------------------------------------
- * LEGACY helpers (to be deleted in Phase 7 of the DMA refactor).
+ * Channel-indexed TC/HT flag helpers used by dma.c's IRQ dispatcher.
+ * (These used to be the sole contents of core/dma.h before the DMA
+ * refactor began; they've since become internal helpers for dma.c
+ * itself, not anything drivers call directly.)
  *
- * These were the only contents of the old core/dma.h. uart.c still
- * includes core/dma.h and uses these until its own migration lands.
- * Once uart.c stops calling them, delete this block.
- *
- * Guarded to G0/G4 only because (a) those are the only families where
- * uart.c actually includes this header, and (b) the stm32xxxx_ll_dma.h
- * header that defines LL_DMA_CHANNEL_N and LL_DMA_ClearFlag_TCn is only
- * pulled in transitively on those families (see src/lib/chip/arm/stm32/
- * stm32.h). Parsing these static inlines on e.g. C0 fails because the
- * LL DMA header isn't included there.
+ * Guarded to the classic-DMA families (F0/F1/F3/G0/G4) because those
+ * are the only families where core/dma.h pulls in a stm32xxxx_ll_dma.h
+ * header that defines LL_DMA_CHANNEL_N and LL_DMA_{Clear,IsActive}Flag_TCn.
+ * On families without classic DMA (C0, H5 GPDMA), these identifiers
+ * don't exist and the switch statements wouldn't parse.
  * --------------------------------------------------------------------
  */
 
-#if defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4)
+#if defined(RULOS_ARM_stm32f0) || defined(RULOS_ARM_stm32f1) || \
+    defined(RULOS_ARM_stm32f3) || defined(RULOS_ARM_stm32g0) || \
+    defined(RULOS_ARM_stm32g4)
 
 static inline bool LL_DMA_IsActiveFlag_TC(DMA_TypeDef *DMAx,
                                           int channel_index) {
@@ -346,4 +346,4 @@ static inline void LL_DMA_ClearFlag_HT(DMA_TypeDef *DMAx, int channel_index) {
   }
 }
 
-#endif  // RULOS_ARM_stm32g0 || RULOS_ARM_stm32g4 (legacy helper guard)
+#endif  // classic-DMA family guard for dispatch flag helpers
