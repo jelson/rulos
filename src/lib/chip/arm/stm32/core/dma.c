@@ -31,6 +31,7 @@
 #include <stddef.h>
 
 #include "core/hal.h"
+#include "core/hardware.h"  // for CCMRAM
 #include "stm32.h"
 
 // ============================================================================
@@ -172,7 +173,7 @@ static const uint32_t g_dmamux_req[RULOS_DMA_REQ_COUNT_] = {
 // into channel-indexed helpers by stm32g4xx_ll_dma.h; we do it here).
 // ----------------------------------------------------------------------------
 
-static bool ll_dma_is_active_flag_te(DMA_TypeDef *dma, uint32_t ch) {
+CCMRAM static bool ll_dma_is_active_flag_te(DMA_TypeDef *dma, uint32_t ch) {
   switch (ch) {
     case LL_DMA_CHANNEL_1:
       return LL_DMA_IsActiveFlag_TE1(dma);
@@ -198,7 +199,7 @@ static bool ll_dma_is_active_flag_te(DMA_TypeDef *dma, uint32_t ch) {
   return false;
 }
 
-static void ll_dma_clear_flag_te(DMA_TypeDef *dma, uint32_t ch) {
+CCMRAM static void ll_dma_clear_flag_te(DMA_TypeDef *dma, uint32_t ch) {
   switch (ch) {
     case LL_DMA_CHANNEL_1:
       LL_DMA_ClearFlag_TE1(dma);
@@ -398,7 +399,7 @@ void rulos_dma_free(rulos_dma_channel_t *ch) {
 // IRQ dispatch
 // ----------------------------------------------------------------------------
 
-static inline void dispatch_channel_irq(int idx) {
+CCMRAM static void dispatch_channel_irq(int idx) {
   const dma_channel_hw_t *hw = &g_hw[idx];
   dma_channel_state_t *s = &g_state[idx];
   if (hw->dma == NULL || !s->allocated) {
@@ -431,93 +432,85 @@ static inline void dispatch_channel_irq(int idx) {
  * Per-channel IRQ handlers. Each handler hardcodes the index into
  * g_channels[] it manages -- see the channel layout comment above the
  * array definition.
- *
- * DMA1_Channel3_IRQHandler and DMA1_Channel4_IRQHandler are NOT defined
- * here during the refactor: timestamper.c still owns them via its
- * pre-refactor code path and defines them as strong symbols. Phase 2
- * (timestamper migration) deletes timestamper's handlers and the
- * matching `#if 0` blocks below are enabled.
  */
 
 #ifdef DMA1_Channel1_BASE
-void DMA1_Channel1_IRQHandler(void) {
+CCMRAM void DMA1_Channel1_IRQHandler(void) {
   dispatch_channel_irq(0);
 }
 #endif
 #ifdef DMA1_Channel2_BASE
-void DMA1_Channel2_IRQHandler(void) {
+CCMRAM void DMA1_Channel2_IRQHandler(void) {
   dispatch_channel_irq(1);
 }
 #endif
-#if 0  // Phase 2: timestamper migration enables this
 #ifdef DMA1_Channel3_BASE
-void DMA1_Channel3_IRQHandler(void) {
+CCMRAM void DMA1_Channel3_IRQHandler(void) {
   dispatch_channel_irq(2);
 }
 #endif
 #ifdef DMA1_Channel4_BASE
-void DMA1_Channel4_IRQHandler(void) {
+CCMRAM void DMA1_Channel4_IRQHandler(void) {
   dispatch_channel_irq(3);
 }
 #endif
-#endif  // Phase 2 gate
 #ifdef DMA1_Channel5_BASE
-void DMA1_Channel5_IRQHandler(void) {
+CCMRAM void DMA1_Channel5_IRQHandler(void) {
   dispatch_channel_irq(4);
 }
 #endif
 #ifdef DMA1_Channel6_BASE
-void DMA1_Channel6_IRQHandler(void) {
+CCMRAM void DMA1_Channel6_IRQHandler(void) {
   dispatch_channel_irq(5);
 }
 #endif
 #ifdef DMA1_Channel7_BASE
-void DMA1_Channel7_IRQHandler(void) {
+CCMRAM void DMA1_Channel7_IRQHandler(void) {
   dispatch_channel_irq(6);
 }
 #endif
 #ifdef DMA1_Channel8_BASE
-void DMA1_Channel8_IRQHandler(void) {
+CCMRAM void DMA1_Channel8_IRQHandler(void) {
   dispatch_channel_irq(7);
 }
 #endif
 #ifdef DMA2_Channel1_BASE
-void DMA2_Channel1_IRQHandler(void) {
+CCMRAM void DMA2_Channel1_IRQHandler(void) {
   dispatch_channel_irq(8);
 }
 #endif
 #ifdef DMA2_Channel2_BASE
-void DMA2_Channel2_IRQHandler(void) {
+CCMRAM void DMA2_Channel2_IRQHandler(void) {
   dispatch_channel_irq(9);
 }
 #endif
 #ifdef DMA2_Channel3_BASE
-void DMA2_Channel3_IRQHandler(void) {
+CCMRAM void DMA2_Channel3_IRQHandler(void) {
   dispatch_channel_irq(10);
 }
 #endif
 #ifdef DMA2_Channel4_BASE
-void DMA2_Channel4_IRQHandler(void) {
+CCMRAM void DMA2_Channel4_IRQHandler(void) {
   dispatch_channel_irq(11);
 }
 #endif
 #ifdef DMA2_Channel5_BASE
-void DMA2_Channel5_IRQHandler(void) {
+CCMRAM void DMA2_Channel5_IRQHandler(void) {
   dispatch_channel_irq(12);
 }
 #endif
 #ifdef DMA2_Channel6_BASE
-void DMA2_Channel6_IRQHandler(void) {
+CCMRAM void DMA2_Channel6_IRQHandler(void) {
   dispatch_channel_irq(13);
 }
 #endif
 #ifdef DMA2_Channel7_BASE
-void DMA2_Channel7_IRQHandler(void) {
+CCMRAM void DMA2_Channel7_IRQHandler(void) {
   dispatch_channel_irq(14);
 }
 #endif
 #ifdef DMA2_Channel8_BASE
-void DMA2_Channel8_IRQHandler(void) {
+CCMRAM void DMA2_Channel8_IRQHandler(void) {
   dispatch_channel_irq(15);
 }
 #endif

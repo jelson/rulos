@@ -131,8 +131,15 @@ static inline int gpio_is_set(const gpio_pin_t gpio_pin) {
 
 // Place a function in CCM SRAM for zero-wait-state execution (STM32F3/G4).
 // The function is stored in flash and copied to CCM RAM at boot by
-// rulos_hal_init(). On chips without CCM, this is a no-op.
+// rulos_hal_init(). On chips without CCM RAM, this expands to nothing
+// and the function lands in the normal .text section; the `.ccmram`
+// output section on those chips has zero length, so placing anything
+// in it would be a link error.
+#if defined(CCMSRAM_BASE) /* G4 */ || defined(CCMDATARAM_BASE) /* F3 */
 #define CCMRAM __attribute__((section(".ccmram")))
+#else
+#define CCMRAM
+#endif
 
 #ifdef RULOS_USE_HSE
 // Set to true if HSE failed at boot or was lost during operation (CSS).

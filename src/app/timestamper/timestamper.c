@@ -87,13 +87,13 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "core/dma.h"
 #include "core/hardware.h"
 #include "core/rulos.h"
 #include "periph/uart/uart.h"
 #include "periph/usb_cdc/usb_cdc.h"
 #include "stm32g4xx_ll_bus.h"
 #include "stm32g4xx_ll_dma.h"
-#include "stm32g4xx_ll_dmamux.h"
 #include "stm32g4xx_ll_gpio.h"
 #include "stm32g4xx_ll_rcc.h"
 #include "stm32g4xx_ll_tim.h"
@@ -142,6 +142,11 @@ static volatile uint32_t dma_buf_ch2[DMA_CAPTURE_BUFLEN];
 // Tracks how far we've processed for the periodic flush of slow pulses
 static uint32_t dma_processed_pos_ch1 = 0;
 static uint32_t dma_processed_pos_ch2 = 0;
+// RULOS DMA channel handles (allocated in init_timers). The HT/TC
+// callbacks on these channels do the work that DMA1_Channel3/4_IRQHandler
+// used to do directly.
+static rulos_dma_channel_t *dma_ch_ts1 = NULL;
+static rulos_dma_channel_t *dma_ch_ts2 = NULL;
 
 // total seconds elapsed since boot -- for details, see comment at top
 uint32_t seconds_A = 0;
@@ -229,48 +234,50 @@ CCMRAM static void process_dma_captures(uint8_t channel_num,
   ts_head = head;
 }
 
-// DMA ISRs for TIM2 input capture. HT fires when the first half of the
-// circular buffer is full; TC fires when the second half is full.
-// Both start from dma_processed_pos rather than fixed offsets, so they
-// don't reprocess entries the periodic flush already handled.
-CCMRAM void DMA1_Channel3_IRQHandler() {
+// DMA HT/TC callbacks for TIM2 input capture. HT fires when the first
+// half of the circular buffer is full; TC fires when the second half
+// is full (i.e. at each buffer wrap). The core DMA layer has already
+// cleared the hardware flag before calling us.
+//
+// Each callback starts from dma_processed_pos rather than a fixed
+// offset, so it doesn't reprocess entries the periodic flush already
+// handled.
+CCMRAM static void on_dma_ht_ch1(void *user_data) {
+  (void)user_data;
   const uint32_t half = DMA_CAPTURE_BUFLEN / 2;
-  if (LL_DMA_IsActiveFlag_HT3(DMA1)) {
-    LL_DMA_ClearFlag_HT3(DMA1);
-    uint32_t last = dma_processed_pos_ch1;
-    if (last < half) {
-      process_dma_captures(0, dma_buf_ch1, last, half - last);
-      dma_processed_pos_ch1 = half;
-    }
-  }
-  if (LL_DMA_IsActiveFlag_TC3(DMA1)) {
-    LL_DMA_ClearFlag_TC3(DMA1);
-    uint32_t last = dma_processed_pos_ch1;
-    if (last >= half) {
-      process_dma_captures(0, dma_buf_ch1, last, DMA_CAPTURE_BUFLEN - last);
-    }
-    dma_processed_pos_ch1 = 0;
+  uint32_t last = dma_processed_pos_ch1;
+  if (last < half) {
+    process_dma_captures(0, dma_buf_ch1, last, half - last);
+    dma_processed_pos_ch1 = half;
   }
 }
 
-CCMRAM void DMA1_Channel4_IRQHandler() {
+CCMRAM static void on_dma_tc_ch1(void *user_data) {
+  (void)user_data;
+  uint32_t last = dma_processed_pos_ch1;
+  if (last >= DMA_CAPTURE_BUFLEN / 2) {
+    process_dma_captures(0, dma_buf_ch1, last, DMA_CAPTURE_BUFLEN - last);
+  }
+  dma_processed_pos_ch1 = 0;
+}
+
+CCMRAM static void on_dma_ht_ch2(void *user_data) {
+  (void)user_data;
   const uint32_t half = DMA_CAPTURE_BUFLEN / 2;
-  if (LL_DMA_IsActiveFlag_HT4(DMA1)) {
-    LL_DMA_ClearFlag_HT4(DMA1);
-    uint32_t last = dma_processed_pos_ch2;
-    if (last < half) {
-      process_dma_captures(1, dma_buf_ch2, last, half - last);
-      dma_processed_pos_ch2 = half;
-    }
+  uint32_t last = dma_processed_pos_ch2;
+  if (last < half) {
+    process_dma_captures(1, dma_buf_ch2, last, half - last);
+    dma_processed_pos_ch2 = half;
   }
-  if (LL_DMA_IsActiveFlag_TC4(DMA1)) {
-    LL_DMA_ClearFlag_TC4(DMA1);
-    uint32_t last = dma_processed_pos_ch2;
-    if (last >= half) {
-      process_dma_captures(1, dma_buf_ch2, last, DMA_CAPTURE_BUFLEN - last);
-    }
-    dma_processed_pos_ch2 = 0;
+}
+
+CCMRAM static void on_dma_tc_ch2(void *user_data) {
+  (void)user_data;
+  uint32_t last = dma_processed_pos_ch2;
+  if (last >= DMA_CAPTURE_BUFLEN / 2) {
+    process_dma_captures(1, dma_buf_ch2, last, DMA_CAPTURE_BUFLEN - last);
   }
+  dma_processed_pos_ch2 = 0;
 }
 
 // Format a timestamp into buf, returning the number of bytes written.
@@ -363,13 +370,13 @@ static void usb_tx_complete(usbd_cdc_state_t *cdc, void *user_data) {
 // periodic_task.
 static void flush_dma_captures(void) {
   struct {
-    uint32_t dma_channel;
+    rulos_dma_channel_t *dma_ch;
     volatile uint32_t *buf;
     uint32_t *processed_pos;
     uint8_t channel_num;
   } chans[] = {
-    {LL_DMA_CHANNEL_3, dma_buf_ch1, &dma_processed_pos_ch1, 0},
-    {LL_DMA_CHANNEL_4, dma_buf_ch2, &dma_processed_pos_ch2, 1},
+    {dma_ch_ts1, dma_buf_ch1, &dma_processed_pos_ch1, 0},
+    {dma_ch_ts2, dma_buf_ch2, &dma_processed_pos_ch2, 1},
   };
 
   const uint32_t half = DMA_CAPTURE_BUFLEN / 2;
@@ -381,7 +388,7 @@ static void flush_dma_captures(void) {
 
     // DMA counts DOWN from DMA_CAPTURE_BUFLEN; current write position is
     // DMA_CAPTURE_BUFLEN minus the remaining count.
-    uint32_t remaining = LL_DMA_GetDataLength(DMA1, chans[i].dma_channel);
+    uint32_t remaining = rulos_dma_get_remaining(chans[i].dma_ch);
     uint32_t current_pos = DMA_CAPTURE_BUFLEN - remaining;
     if (current_pos == DMA_CAPTURE_BUFLEN) {
       current_pos = 0;  // DMA counter reads 0 right at wrap
@@ -414,8 +421,8 @@ static void periodic_task(void *data) {
   if (g_rulos_hse_failed) {
     LL_TIM_DisableCounter(TIM2);
     LL_TIM_DisableCounter(TIM15);
-    LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
-    LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_4);
+    rulos_dma_stop(dma_ch_ts1);
+    rulos_dma_stop(dma_ch_ts2);
     LL_TIM_DisableIT_UPDATE(TIM15);
 
     // quick flash showing clock failure
@@ -514,49 +521,47 @@ static void init_timers() {
   LL_TIM_CC_EnableChannel(TIM2, LL_TIM_CHANNEL_CH2);
 
   // Set up DMA for input capture. Each capture channel gets its own DMA
-  // channel in circular mode. HT/TC interrupts fire at each half-buffer
-  // boundary so we can process captures while the other half fills.
-  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMAMUX1);
-  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
-
-  // DMA1 Channel 3: TIM2_CH1 capture -> dma_buf_ch1
-  LL_DMA_SetPeriphRequest(DMA1, LL_DMA_CHANNEL_3, LL_DMAMUX_REQ_TIM2_CH1);
-  LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_3, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
-  LL_DMA_SetChannelPriorityLevel(DMA1, LL_DMA_CHANNEL_3, LL_DMA_PRIORITY_VERYHIGH);
-  LL_DMA_SetMode(DMA1, LL_DMA_CHANNEL_3, LL_DMA_MODE_CIRCULAR);
-  LL_DMA_SetPeriphIncMode(DMA1, LL_DMA_CHANNEL_3, LL_DMA_PERIPH_NOINCREMENT);
-  LL_DMA_SetMemoryIncMode(DMA1, LL_DMA_CHANNEL_3, LL_DMA_MEMORY_INCREMENT);
-  LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_3, LL_DMA_PDATAALIGN_WORD);
-  LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_3, LL_DMA_MDATAALIGN_WORD);
-  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_3,
-      (uint32_t)&TIM2->CCR1, (uint32_t)dma_buf_ch1,
-      LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
-  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, DMA_CAPTURE_BUFLEN);
-  LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_3);
-  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_3);
-  NVIC_SetPriority(DMA1_Channel3_IRQn, 1);
-  NVIC_EnableIRQ(DMA1_Channel3_IRQn);
-  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
+  // channel in circular mode via the RULOS DMA abstraction. HT/TC
+  // callbacks fire at each half-buffer boundary so we can process
+  // captures while the other half fills.
+  const rulos_dma_config_t ch1_cfg = {
+      .request = RULOS_DMA_REQ_TIM2_CH1,
+      .direction = RULOS_DMA_DIR_PERIPH_TO_MEM,
+      .mode = RULOS_DMA_MODE_CIRCULAR,
+      .periph_width = RULOS_DMA_WIDTH_WORD,
+      .mem_width = RULOS_DMA_WIDTH_WORD,
+      .periph_increment = false,
+      .mem_increment = true,
+      .priority = RULOS_DMA_PRIORITY_VERYHIGH,
+      .tc_callback = on_dma_tc_ch1,
+      .ht_callback = on_dma_ht_ch1,
+  };
+  dma_ch_ts1 = rulos_dma_alloc(&ch1_cfg);
+  if (dma_ch_ts1 == NULL) {
+    __builtin_trap();
+  }
+  rulos_dma_start(dma_ch_ts1, &TIM2->CCR1, (void *)dma_buf_ch1,
+                  DMA_CAPTURE_BUFLEN);
   LL_TIM_EnableDMAReq_CC1(TIM2);
 
-  // DMA1 Channel 4: TIM2_CH2 capture -> dma_buf_ch2
-  LL_DMA_SetPeriphRequest(DMA1, LL_DMA_CHANNEL_4, LL_DMAMUX_REQ_TIM2_CH2);
-  LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_4, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
-  LL_DMA_SetChannelPriorityLevel(DMA1, LL_DMA_CHANNEL_4, LL_DMA_PRIORITY_VERYHIGH);
-  LL_DMA_SetMode(DMA1, LL_DMA_CHANNEL_4, LL_DMA_MODE_CIRCULAR);
-  LL_DMA_SetPeriphIncMode(DMA1, LL_DMA_CHANNEL_4, LL_DMA_PERIPH_NOINCREMENT);
-  LL_DMA_SetMemoryIncMode(DMA1, LL_DMA_CHANNEL_4, LL_DMA_MEMORY_INCREMENT);
-  LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_4, LL_DMA_PDATAALIGN_WORD);
-  LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_4, LL_DMA_MDATAALIGN_WORD);
-  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_4,
-      (uint32_t)&TIM2->CCR2, (uint32_t)dma_buf_ch2,
-      LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
-  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_4, DMA_CAPTURE_BUFLEN);
-  LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_4);
-  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_4);
-  NVIC_SetPriority(DMA1_Channel4_IRQn, 1);
-  NVIC_EnableIRQ(DMA1_Channel4_IRQn);
-  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_4);
+  const rulos_dma_config_t ch2_cfg = {
+      .request = RULOS_DMA_REQ_TIM2_CH2,
+      .direction = RULOS_DMA_DIR_PERIPH_TO_MEM,
+      .mode = RULOS_DMA_MODE_CIRCULAR,
+      .periph_width = RULOS_DMA_WIDTH_WORD,
+      .mem_width = RULOS_DMA_WIDTH_WORD,
+      .periph_increment = false,
+      .mem_increment = true,
+      .priority = RULOS_DMA_PRIORITY_VERYHIGH,
+      .tc_callback = on_dma_tc_ch2,
+      .ht_callback = on_dma_ht_ch2,
+  };
+  dma_ch_ts2 = rulos_dma_alloc(&ch2_cfg);
+  if (dma_ch_ts2 == NULL) {
+    __builtin_trap();
+  }
+  rulos_dma_start(dma_ch_ts2, &TIM2->CCR2, (void *)dma_buf_ch2,
+                  DMA_CAPTURE_BUFLEN);
   LL_TIM_EnableDMAReq_CC2(TIM2);
 
 
