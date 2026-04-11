@@ -168,64 +168,6 @@ static const uint32_t g_dmamux_req[RULOS_DMA_REQ_COUNT_] = {
 };
 
 // ----------------------------------------------------------------------------
-// Enum -> LL constant translation helpers
-// ----------------------------------------------------------------------------
-
-static uint32_t direction_to_ll(rulos_dma_direction_t d) {
-  switch (d) {
-    case RULOS_DMA_DIR_PERIPH_TO_MEM:
-      return LL_DMA_DIRECTION_PERIPH_TO_MEMORY;
-    case RULOS_DMA_DIR_MEM_TO_PERIPH:
-      return LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
-    case RULOS_DMA_DIR_MEM_TO_MEM:
-      return LL_DMA_DIRECTION_MEMORY_TO_MEMORY;
-  }
-  return LL_DMA_DIRECTION_PERIPH_TO_MEMORY;
-}
-
-static uint32_t periph_width_to_ll(rulos_dma_width_t w) {
-  switch (w) {
-    case RULOS_DMA_WIDTH_BYTE:
-      return LL_DMA_PDATAALIGN_BYTE;
-    case RULOS_DMA_WIDTH_HALFWORD:
-      return LL_DMA_PDATAALIGN_HALFWORD;
-    case RULOS_DMA_WIDTH_WORD:
-      return LL_DMA_PDATAALIGN_WORD;
-  }
-  return LL_DMA_PDATAALIGN_BYTE;
-}
-
-static uint32_t mem_width_to_ll(rulos_dma_width_t w) {
-  switch (w) {
-    case RULOS_DMA_WIDTH_BYTE:
-      return LL_DMA_MDATAALIGN_BYTE;
-    case RULOS_DMA_WIDTH_HALFWORD:
-      return LL_DMA_MDATAALIGN_HALFWORD;
-    case RULOS_DMA_WIDTH_WORD:
-      return LL_DMA_MDATAALIGN_WORD;
-  }
-  return LL_DMA_MDATAALIGN_BYTE;
-}
-
-static uint32_t mode_to_ll(rulos_dma_mode_t m) {
-  return (m == RULOS_DMA_MODE_CIRCULAR) ? LL_DMA_MODE_CIRCULAR
-                                        : LL_DMA_MODE_NORMAL;
-}
-
-static uint32_t priority_to_ll(uint8_t p) {
-  switch (p) {
-    case 0:
-      return LL_DMA_PRIORITY_LOW;
-    case 1:
-      return LL_DMA_PRIORITY_MEDIUM;
-    case 2:
-      return LL_DMA_PRIORITY_HIGH;
-    default:
-      return LL_DMA_PRIORITY_VERYHIGH;
-  }
-}
-
-// ----------------------------------------------------------------------------
 // Private TE flag dispatch helpers (the LL_DMA_*_TE variants aren't wrapped
 // into channel-indexed helpers by stm32g4xx_ll_dma.h; we do it here).
 // ----------------------------------------------------------------------------
@@ -299,6 +241,30 @@ static void ll_dma_clear_flag_te(DMA_TypeDef *dma, uint32_t ch) {
 // the full rulos_dma_config_t is retained.
 // ----------------------------------------------------------------------------
 
+static uint32_t periph_width_to_ll(rulos_dma_width_t w) {
+  switch (w) {
+    case RULOS_DMA_WIDTH_BYTE:
+      return LL_DMA_PDATAALIGN_BYTE;
+    case RULOS_DMA_WIDTH_HALFWORD:
+      return LL_DMA_PDATAALIGN_HALFWORD;
+    case RULOS_DMA_WIDTH_WORD:
+      return LL_DMA_PDATAALIGN_WORD;
+  }
+  return LL_DMA_PDATAALIGN_BYTE;
+}
+
+static uint32_t mem_width_to_ll(rulos_dma_width_t w) {
+  switch (w) {
+    case RULOS_DMA_WIDTH_BYTE:
+      return LL_DMA_MDATAALIGN_BYTE;
+    case RULOS_DMA_WIDTH_HALFWORD:
+      return LL_DMA_MDATAALIGN_HALFWORD;
+    case RULOS_DMA_WIDTH_WORD:
+      return LL_DMA_MDATAALIGN_WORD;
+  }
+  return LL_DMA_MDATAALIGN_BYTE;
+}
+
 static void init_channel(int idx, const rulos_dma_config_t *c) {
   const dma_channel_hw_t *hw = &g_hw[idx];
   dma_channel_state_t *s = &g_state[idx];
@@ -306,12 +272,17 @@ static void init_channel(int idx, const rulos_dma_config_t *c) {
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
 
   // Build the CCR configuration word and apply it in one shot.
+  // Direction, mode, and priority come straight from the caller's
+  // config (the RULOS_DMA_* constants for those three are just
+  // #defines that expand to the vendor LL constants). Width needs a
+  // small conversion because LL_DMA_PDATAALIGN_* and LL_DMA_MDATAALIGN_*
+  // land in different CCR bit fields.
   uint32_t cfg =
-      direction_to_ll(c->direction) | mode_to_ll(c->mode) |
+      c->direction | c->mode |
       (c->periph_increment ? LL_DMA_PERIPH_INCREMENT : LL_DMA_PERIPH_NOINCREMENT) |
       (c->mem_increment ? LL_DMA_MEMORY_INCREMENT : LL_DMA_MEMORY_NOINCREMENT) |
       periph_width_to_ll(c->periph_width) | mem_width_to_ll(c->mem_width) |
-      priority_to_ll(c->priority);
+      c->priority;
   LL_DMA_ConfigTransfer(hw->dma, hw->ll_channel, cfg);
 
   // Route the peripheral request through DMAMUX.

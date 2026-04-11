@@ -58,22 +58,41 @@
 
 typedef struct rulos_dma_channel rulos_dma_channel_t;  // opaque
 
-typedef enum {
-  RULOS_DMA_DIR_PERIPH_TO_MEM,
-  RULOS_DMA_DIR_MEM_TO_PERIPH,
-  RULOS_DMA_DIR_MEM_TO_MEM,
-} rulos_dma_direction_t;
+/*
+ * Direction, mode, and priority are pass-through wrappers around the
+ * vendor LL constants. init_channel can OR them directly into the DMA
+ * CCR register with no runtime conversion. Every supported LL header
+ * defines LL_DMA_DIRECTION_*, LL_DMA_MODE_*, and LL_DMA_PRIORITY_*
+ * with family-native values.
+ */
+typedef uint32_t rulos_dma_direction_t;
+#define RULOS_DMA_DIR_PERIPH_TO_MEM LL_DMA_DIRECTION_PERIPH_TO_MEMORY
+#define RULOS_DMA_DIR_MEM_TO_PERIPH LL_DMA_DIRECTION_MEMORY_TO_PERIPH
+#define RULOS_DMA_DIR_MEM_TO_MEM    LL_DMA_DIRECTION_MEMORY_TO_MEMORY
 
+typedef uint32_t rulos_dma_mode_t;
+#define RULOS_DMA_MODE_NORMAL   LL_DMA_MODE_NORMAL
+#define RULOS_DMA_MODE_CIRCULAR LL_DMA_MODE_CIRCULAR
+
+typedef uint32_t rulos_dma_priority_t;
+#define RULOS_DMA_PRIORITY_LOW       LL_DMA_PRIORITY_LOW
+#define RULOS_DMA_PRIORITY_MEDIUM    LL_DMA_PRIORITY_MEDIUM
+#define RULOS_DMA_PRIORITY_HIGH      LL_DMA_PRIORITY_HIGH
+#define RULOS_DMA_PRIORITY_VERYHIGH  LL_DMA_PRIORITY_VERYHIGH
+
+/*
+ * Width is the one case where pass-through doesn't work: classic DMA
+ * uses DIFFERENT bit positions in CCR for peripheral width (PSIZE,
+ * bits [9:8]) and memory width (MSIZE, bits [11:10]), so a single
+ * LL_DMA_* constant can't serve both periph_width and mem_width
+ * fields. We keep an abstract enum and a small conversion helper
+ * in dma.c.
+ */
 typedef enum {
   RULOS_DMA_WIDTH_BYTE,
   RULOS_DMA_WIDTH_HALFWORD,
   RULOS_DMA_WIDTH_WORD,
 } rulos_dma_width_t;
-
-typedef enum {
-  RULOS_DMA_MODE_NORMAL,
-  RULOS_DMA_MODE_CIRCULAR,
-} rulos_dma_mode_t;
 
 /*
  * Family-agnostic request enum. Same values across every family; the
@@ -113,7 +132,7 @@ typedef struct {
   rulos_dma_width_t mem_width;
   bool periph_increment;
   bool mem_increment;
-  uint8_t priority;  // 0=low ... 3=very high
+  rulos_dma_priority_t priority;  // RULOS_DMA_PRIORITY_*
 
   /*
    * Callbacks fire in DMA ISR context. Contract:

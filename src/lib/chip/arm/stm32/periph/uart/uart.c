@@ -1118,7 +1118,7 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
       .mem_width = RULOS_DMA_WIDTH_BYTE,
       .periph_increment = false,
       .mem_increment = true,
-      .priority = 0,  // low (matches pre-refactor DMA_PRIORITY_LOW)
+      .priority = RULOS_DMA_PRIORITY_LOW,
       .tc_callback = hal_uart_on_tx_dma_tc,
       .user_data = (void *)(uintptr_t)uart_id,
   };
@@ -1136,7 +1136,7 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
       .mem_width = RULOS_DMA_WIDTH_BYTE,
       .periph_increment = false,
       .mem_increment = true,
-      .priority = 1,  // medium (matches pre-refactor LL_DMA_PRIORITY_MEDIUM)
+      .priority = RULOS_DMA_PRIORITY_MEDIUM,
       .tc_callback = hal_uart_on_rx_dma_tc,
       .user_data = (void *)(uintptr_t)uart_id,
   };
