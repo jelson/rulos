@@ -17,7 +17,11 @@
  */
 
 /*
- * STM32 TWI support
+ * STM32 TWI (I2C) support.
+ *
+ * Targets the "I2C v2" flavor of the STM32 I2C peripheral (F0/F3/G0/G4
+ * and later). The older "I2C v1" peripheral that shipped on F1/F2/F4/L1
+ * is no longer supported.
  */
 
 #include <string.h>
@@ -28,27 +32,10 @@
 #include "core/rulos.h"
 
 #if defined(RULOS_ARM_stm32f0)
-#define RULOS_I2C_V2
 #include "stm32f0xx_ll_i2c.h"
 #include "stm32f0xx_ll_rcc.h"
 
-#elif defined(RULOS_ARM_stm32f1)
-#define RULOS_I2C_V1
-#include "stm32f1xx_ll_i2c.h"
-#include "stm32f1xx_ll_rcc.h"
-
-#define rI2C1_CLK_ENABLE() __HAL_RCC_I2C1_CLK_ENABLE()
-#define rI2C1_SDA_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
-#define rI2C1_SCL_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
-#define rI2C1_FORCE_RESET() __HAL_RCC_I2C1_FORCE_RESET()
-#define rI2C1_RELEASE_RESET() __HAL_RCC_I2C1_RELEASE_RESET()
-#define rI2C1_SCL_PIN GPIO_PIN_6
-#define rI2C1_SCL_GPIO_PORT GPIOB
-#define rI2C1_SDA_PIN GPIO_PIN_7
-#define rI2C1_SDA_GPIO_PORT GPIOB
-
 #elif defined(RULOS_ARM_stm32f3)
-#define RULOS_I2C_V2
 #include "stm32f3xx_ll_bus.h"
 #include "stm32f3xx_ll_i2c.h"
 #include "stm32f3xx_ll_rcc.h"
@@ -73,7 +60,6 @@
 #define rI2C1_GPIO_ALTFUNC GPIO_AF4_I2C1
 
 #elif defined(RULOS_ARM_stm32g0)
-#define RULOS_I2C_V2
 #include "stm32g0xx_ll_bus.h"
 #include "stm32g0xx_ll_i2c.h"
 #include "stm32g0xx_ll_rcc.h"
@@ -95,25 +81,12 @@
 #include <stophere>
 #endif
 
-/*
- * LL_I2C_DMA_GetRegAddr has a different signature on V1 vs V2: V1 has
- * one DR register for both send and receive, V2 has separate TXDR/RXDR
- * and wants a selector. Wrap the difference here so the call sites
- * don't need to care.
- */
-#if defined(RULOS_I2C_V1)
-#define rI2C1_DMA_TX_REG_ADDR() \
-  ((volatile void *)(uintptr_t)LL_I2C_DMA_GetRegAddr(I2C1))
-#define rI2C1_DMA_RX_REG_ADDR() \
-  ((volatile void *)(uintptr_t)LL_I2C_DMA_GetRegAddr(I2C1))
-#else
-#define rI2C1_DMA_TX_REG_ADDR()                        \
-  ((volatile void *)(uintptr_t)LL_I2C_DMA_GetRegAddr(  \
+#define rI2C1_DMA_TX_REG_ADDR()                       \
+  ((volatile void *)(uintptr_t)LL_I2C_DMA_GetRegAddr( \
       I2C1, LL_I2C_DMA_REG_DATA_TRANSMIT))
-#define rI2C1_DMA_RX_REG_ADDR()                        \
-  ((volatile void *)(uintptr_t)LL_I2C_DMA_GetRegAddr(  \
+#define rI2C1_DMA_RX_REG_ADDR()                       \
+  ((volatile void *)(uintptr_t)LL_I2C_DMA_GetRegAddr( \
       I2C1, LL_I2C_DMA_REG_DATA_RECEIVE))
-#endif
 
 typedef struct {
   MediaStateIfc media;
@@ -128,14 +101,13 @@ typedef struct {
   void *send_done_cb_data;
   uint8_t send_addr;
   // send_data and send_len are stashed on the initial twi_send so
-  // that V2 ARLO retries can re-arm the TX DMA from the same buffer
+  // that ARLO retries can re-arm the TX DMA from the same buffer
   // without needing the caller to re-submit.
   const void *send_data;
   uint8_t send_len;
   uint32_t packets_sent;
   uint32_t packets_nacked;
   uint32_t send_errors;
-#ifdef RULOS_I2C_V2
   // When set, an earlier master-send attempt lost arbitration and is
   // waiting to be re-launched. send_done_cb stays non-null (so the
   // user can't queue another send) but the EV/ER dispatch gates off
@@ -143,7 +115,6 @@ typedef struct {
   // master's packet in the meantime.
   bool send_retry_pending;
   uint32_t send_arlo_retries;
-#endif
 
   // receiving
   MediaRecvSlot *slaveRecvSlot;
@@ -158,15 +129,9 @@ static TwiState g_twi[NUM_TWI];
 /// util ////
 
 static void reset_bus(TwiState *twi) {
-#if defined(RULOS_I2C_V1)
-  LL_I2C_EnableReset(I2C1);
-  LL_I2C_DisableReset(I2C1);
-#elif defined(RULOS_I2C_V2)
+  (void)twi;
   LL_I2C_Disable(I2C1);
   LL_I2C_Enable(I2C1);
-#else
-#include <stophere>
-#endif
 }
 
 /////////////////////// receiving /////////////////////////////////////////
@@ -206,6 +171,7 @@ static void twi_recv_event_interrupt(TwiState *twi) {
 
 // Warning: runs in interrupt context.
 static void twi_recv_error_interrupt(TwiState *twi) {
+  (void)twi;
   LL_I2C_DisableDMAReq_RX(I2C1);
 }
 
@@ -235,55 +201,7 @@ static void twi_send_done_upcall(TwiState *twi) {
   twi->send_done_cb_data = NULL;
 }
 
-#if defined(RULOS_I2C_V1)
-static void twi_generate_stop(TwiState *twi) {
-  LL_I2C_GenerateStopCondition(I2C1);
-
-  // The ST I2C application note AN2824 says you're supposed to wait
-  // for STOP to be cleared by the hardware after setting it.
-  // https://www.st.com/content/ccc/resource/technical/document/application_note/5d/ae/a3/6f/08/69/4e/9b/CD00209826.pdf/files/CD00209826.pdf/jcr:content/translations/en.CD00209826.pdf
-  // I've noticed that sometimes, under heavy load, this waits
-  // forever. I'm not sure why. So we time out.
-  int timeout = 1000;
-  while (timeout > 0 && READ_BIT(I2C1->CR1, I2C_CR1_STOP)) {
-    timeout--;
-  }
-  if (timeout == 0) {
-    reset_bus(twi);
-  }
-
-  twi_send_done_upcall(twi);
-}
-
-// Send event interrupts for I2C V1. Warning: runs in interrupt context.
-static void twi_send_event_interrupt(TwiState *twi) {
-  // TODO: make I2C1 a constant inside TwiState if we ever have a
-  // second TWI interface
-  if (LL_I2C_IsActiveFlag_SB(I2C1)) {
-    // Start has been transmitted. Transmit the target address.
-    LL_I2C_TransmitData8(I2C1, twi->send_addr);
-  } else if (LL_I2C_IsActiveFlag_ADDR(I2C1)) {
-    // Address has been acknowledged. Enable the DMA transfer for the
-    // outgoing data.
-    LL_I2C_EnableDMAReq_TX(I2C1);
-    LL_I2C_ClearFlag_ADDR(I2C1);
-  } else if (LL_I2C_IsActiveFlag_BTF(I2C1) || LL_I2C_IsActiveFlag_TXE(I2C1)) {
-    // After DMA has been disabled, BTF or TXE indicates the hardware
-    // is ready for the next outgoing byte. We can either respond with
-    // data or a STOP to indicate there's no more. We send a stop.
-    twi_generate_stop(twi);
-  }
-}
-
-// Send error interrupts for I2C V1. Warning: runs in interrupt context.
-static void twi_send_error_interrupt(TwiState *twi) {
-  // Generate a stop in case of any error.
-  twi_generate_stop(twi);
-}
-
-#elif defined(RULOS_I2C_V2)
-
-// Send event interrupts for I2C V2. Warning: runs in interrupt context.
+// Warning: runs in interrupt context.
 static void twi_send_event_interrupt(TwiState *twi) {
   // Transmit-complete: successful transmission.
   if (LL_I2C_IsActiveFlag_STOP(I2C1)) {
@@ -303,18 +221,14 @@ static void twi_send_event_interrupt(TwiState *twi) {
 
 // Warning: runs in interrupt context.
 static void twi_send_error_interrupt(TwiState *twi) {
-  // V2 uses autostop, so generate send-done upcall; no need to
-  // generate a stop.
+  // AUTOEND means the hardware has already generated STOP; we just
+  // need to upcall the user.
   twi->send_errors++;
   twi_send_done_upcall(twi);
 }
-#else
-#include <stophere>
-#endif
 
 // DMA TC callback for the I2C TX channel. Disables the peripheral's
-// DMA request so that a BTF event is generated (V1) or the autostop
-// sequence completes (V2).
+// DMA request so the autostop sequence can complete.
 static void twi_tx_dma_tc_callback(void *user_data) {
   (void)user_data;
   LL_I2C_DisableDMAReq_TX(I2C1);
@@ -329,37 +243,19 @@ static void twi_tx_dma_tc_callback(void *user_data) {
 // for BUSY to clear before calling this; on retries, the caller has
 // either just observed STOP on a slave-receive or confirmed BUSY is
 // clear via poll. Even if the bus goes busy between the check and
-// here, HandleTransfer's START-bit pattern on V2 (and the equivalent
-// on V1) causes the hardware to wait for bus idle before actually
-// issuing START, so we either win the next arbitration or ARLO and
-// retry again.
+// here, HandleTransfer's START-bit pattern causes the hardware to
+// wait for bus idle before actually issuing START, so we either win
+// the next arbitration or ARLO and retry again.
 static void twi_launch_send(TwiState *twi) {
   rulos_dma_start(twi->tx_dma_ch, rI2C1_DMA_TX_REG_ADDR(),
                   (void *)twi->send_data, twi->send_len);
-#ifdef RULOS_I2C_V2
-  // V2 enables DMA immediately because it auto-transmits the
-  // address. V1 only enables DMA once address has been transmitted.
   LL_I2C_EnableDMAReq_TX(I2C1);
-#endif
-
-#ifdef RULOS_I2C_V1
-  LL_I2C_DisableBitPOS(I2C1);
-#endif
-
   LL_I2C_AcknowledgeNextData(I2C1, LL_I2C_ACK);
-
-#if defined(RULOS_I2C_V1)
-  LL_I2C_GenerateStartCondition(I2C1);
-#elif defined(RULOS_I2C_V2)
   LL_I2C_HandleTransfer(I2C1, twi->send_addr, LL_I2C_ADDRSLAVE_7BIT,
                         twi->send_len, LL_I2C_MODE_AUTOEND,
                         LL_I2C_GENERATE_START_WRITE);
-#else
-#include <stophere>
-#endif
 }
 
-#ifdef RULOS_I2C_V2
 // Scheduled polling activation for the "pure ARLO" retry path: we
 // lost arbitration but weren't addressed ourselves, so no EV IRQ
 // (ADDR/STOP) will ever arrive to tell us the bus is idle again.
@@ -390,7 +286,6 @@ static void twi_arlo_retry_poll(void *data) {
   twi_launch_send(twi);
   hal_end_atomic(old_interrupts);
 }
-#endif
 
 static void twi_send(MediaStateIfc *media, Addr dest_addr, const void *data,
                      uint8_t len, MediaSendDoneFunc send_done_cb,
@@ -407,11 +302,6 @@ static void twi_send(MediaStateIfc *media, Addr dest_addr, const void *data,
   // is only ever set when send_done_cb is non-null, and is cleared by
   // the retry launch path before send_done_cb itself is nulled.
   assert(!MASTER_ACTIVE(twi));
-
-#if 0
-  // Hardware bug fix? Sometimes stop isn't cleared.
-  CLEAR_BIT(I2C1->CR1, I2C_CR1_STOP);
-#endif
 
   // Wait for the current transaction to be complete, if any. Then,
   // atomically enable master mode. Bound the wait so a wedged BUSY
@@ -513,17 +403,11 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
 
   // Set up I2C
   LL_I2C_Disable(I2C1);
-#if defined(RULOS_I2C_V1)
-  LL_RCC_ClocksTypeDef rcc_clocks;
-  LL_RCC_GetSystemClocksFreq(&rcc_clocks);
-  LL_I2C_ConfigSpeed(I2C1, rcc_clocks.PCLK1_Frequency, speed_khz * 1000,
-                     LL_I2C_DUTYCYCLE_2);
-#elif defined(RULOS_I2C_V2)
   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_I2C1);
   LL_RCC_SetI2CClockSource(LL_RCC_I2C1_CLKSOURCE_SYSCLK);
   // I can't figure out from the datasheet how to adjust these numbers
   // from first principles to make them correct. I'm kinda unhappy
-  // with the STM32 I2C V2 peripheral's timing setup; the datasheet is
+  // with the STM32 I2C peripheral's timing setup; the datasheet is
   // extremely hard to understand and there are no helper functions in
   // the code. They say "just ask our configuration tool", which you
   // can't translate to runtime code. The constants below are manually
@@ -555,15 +439,9 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
     __builtin_trap();
   }
   LL_I2C_SetTiming(I2C1, timingr);
-#else
-#include <stophere>
-#error "timing for i2c needed"
-#endif
 
   LL_I2C_SetOwnAddress1(I2C1, local_addr << 1, LL_I2C_OWNADDRESS1_7BIT);
-#ifdef RULOS_I2C_V2
   LL_I2C_EnableOwnAddress1(I2C1);
-#endif
   LL_I2C_EnableClockStretching(I2C1);
   LL_I2C_SetMode(I2C1, LL_I2C_MODE_I2C);
 
@@ -573,14 +451,8 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
   NVIC_SetPriority(I2C1_EV_IRQn, 0x2);
   NVIC_EnableIRQ(I2C1_EV_IRQn);
 
-#if defined(RULOS_I2C_V1)
-  LL_I2C_EnableIT_EVT(I2C1);
-#elif defined(RULOS_I2C_V2)
   LL_I2C_EnableIT_STOP(I2C1);
   LL_I2C_EnableIT_ADDR(I2C1);
-#else
-#include <stophere>
-#endif
   LL_I2C_EnableIT_ERR(I2C1);
 
   // Enable!
@@ -601,54 +473,48 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
 void I2C1_EV_IRQHandler(void) {
   TwiState *twi = &g_twi[0];
 
-#if defined(RULOS_I2C_V2)
-  // Multimaster race handling: on V2, ADDR can fire while MASTER_ACTIVE
-  // is still true if we just lost arbitration to a master that happens
-  // to be addressing us as slave. The ER IRQ for the accompanying ARLO
-  // would normally null send_done_cb and let the dispatch below route
-  // ADDR to the slave-receive path, but EV and ER are both configured
-  // at NVIC priority 0x2, and EV has the lower IRQ number (31 vs 32 on
-  // F303), so ER cannot preempt us here. If we return without touching
-  // ADDR, NVIC tail-chains back into this handler immediately and we
-  // live-lock while ER is starved. Mark the send as retry-pending and
-  // fall through to the slave-receive path; the retry will be kicked
-  // once the winning master's transaction completes.
+  // Multimaster race handling: ADDR can fire while MASTER_ACTIVE is
+  // still true if we just lost arbitration to a master that happens
+  // to be addressing us as slave. The ER IRQ for the accompanying
+  // ARLO would normally clean up master state and let the dispatch
+  // below route ADDR to the slave-receive path, but EV and ER are
+  // both configured at NVIC priority 0x2, and EV has the lower IRQ
+  // number (31 vs 32 on F303), so ER cannot preempt us here. If we
+  // return without touching ADDR, NVIC tail-chains back into this
+  // handler immediately and we live-lock while ER is starved. Mark
+  // the send as retry-pending and fall through to the slave-receive
+  // path; the retry will be kicked once the winning master's
+  // transaction completes.
   if (LL_I2C_IsActiveFlag_ADDR(I2C1) && MASTER_ACTIVE(twi) &&
       !twi->send_retry_pending) {
-    // Clear ARLO ourselves if it's set; otherwise, when ER does finally
-    // run (after we clear ADDR), it would find no error flags set and
-    // would misdispatch to twi_recv_error_interrupt, which disables the
-    // RX DMA we're about to enable. (The ER handler is also tightened
-    // below to skip dispatch when no flag was actually handled, as a
-    // belt-and-suspenders.)
+    // Clear ARLO ourselves if it's set; otherwise, when ER does
+    // finally run (after we clear ADDR), it would find no error
+    // flags set and would misdispatch to twi_recv_error_interrupt,
+    // which disables the RX DMA we're about to enable. (The ER
+    // handler is also tightened below to skip dispatch when no flag
+    // was actually handled, as a belt-and-suspenders.)
     if (LL_I2C_IsActiveFlag_ARLO(I2C1)) {
       LL_I2C_ClearFlag_ARLO(I2C1);
     }
     twi->send_retry_pending = true;
     twi->send_arlo_retries++;
-    // Primary retry kick: after the slave-receive below completes with
-    // STOP, the tail of this handler re-launches the send. The poll
-    // activation is a belt-and-suspenders fallback in case that STOP
-    // path doesn't fire.
+    // Primary retry kick: after the slave-receive below completes
+    // with STOP, the tail of this handler re-launches the send. The
+    // poll activation is a belt-and-suspenders fallback in case that
+    // STOP path doesn't fire.
     schedule_us(1000, twi_arlo_retry_poll, twi);
     // send_done_cb is intentionally NOT nulled: we want the retry to
     // be transparent to the caller. The dispatch below gates the
     // master-send path on !send_retry_pending so the slave-receive
     // path gets to run.
   }
-#endif
 
-  if (MASTER_ACTIVE(twi)
-#ifdef RULOS_I2C_V2
-      && !twi->send_retry_pending
-#endif
-  ) {
+  if (MASTER_ACTIVE(twi) && !twi->send_retry_pending) {
     twi_send_event_interrupt(twi);
   } else {
     twi_recv_event_interrupt(twi);
   }
 
-#ifdef RULOS_I2C_V2
   // If we're holding a retry from an ARLO'd send and the slave-receive
   // path above just drained the bus (STOP detected, BUSY cleared),
   // re-launch immediately. This covers the common ADDR+ARLO case
@@ -657,7 +523,6 @@ void I2C1_EV_IRQHandler(void) {
     twi->send_retry_pending = false;
     twi_launch_send(twi);
   }
-#endif
 }
 
 void I2C1_ER_IRQHandler(void) {
@@ -677,9 +542,8 @@ void I2C1_ER_IRQHandler(void) {
     // Arbitration lost, meaning we couldn't acquire the bus.
     LL_I2C_ClearFlag_ARLO(I2C1);
     handled_any = true;
-#ifdef RULOS_I2C_V2
-    // Pure ARLO on V2 (not accompanied by ADDR -- the ADDR+ARLO case
-    // is handled by I2C1_EV_IRQHandler before ER can run). We lost to
+    // Pure ARLO (not accompanied by ADDR -- the ADDR+ARLO case is
+    // handled by I2C1_EV_IRQHandler before ER can run). We lost to
     // a master that isn't addressing us, so no slave-receive STOP
     // will kick us when the bus clears. Schedule a poll task to
     // re-launch the send once BUSY drops.
@@ -688,15 +552,7 @@ void I2C1_ER_IRQHandler(void) {
       twi->send_arlo_retries++;
       schedule_us(1000, twi_arlo_retry_poll, twi);
     }
-#endif
   }
-#ifdef RULOS_I2C_V1
-  if (LL_I2C_IsActiveFlag_AF(I2C1)) {
-    // Destination address didn't ack when we sent their address.
-    LL_I2C_ClearFlag_AF(I2C1);
-    handled_any = true;
-  }
-#endif
   if (LL_I2C_IsActiveFlag_OVR(I2C1)) {
     LL_I2C_ClearFlag_OVR(I2C1);
     handled_any = true;
@@ -711,14 +567,10 @@ void I2C1_ER_IRQHandler(void) {
     return;
   }
 
-  // If a V2 retry is pending, skip the send_error_interrupt path --
+  // If a retry is pending, skip the send_error_interrupt path --
   // it would null send_done_cb and upcall the user, dropping the
   // packet we're trying to transparently retry.
-  if (MASTER_ACTIVE(twi)
-#ifdef RULOS_I2C_V2
-      && !twi->send_retry_pending
-#endif
-  ) {
+  if (MASTER_ACTIVE(twi) && !twi->send_retry_pending) {
     twi_send_error_interrupt(twi);
   } else {
     twi_recv_error_interrupt(twi);

@@ -27,8 +27,9 @@ from build_tools import *
 # F0 and G0 are excluded: twi.c's F0/G0 branches have always had
 # dead chip-specific stubs (wrong GPIO alt-func, missing IRQn macros)
 # and no RULOS app has ever compiled twi on those families.
+# F1 was dropped when the V1 peripheral code was excised; twi.c now
+# only targets the V2 I2C peripheral (F0/F3/G0/G4/...).
 TWI_SUPPORTED_STM32_FAMILIES = (
-    "STM32F1",
     "STM32F3",
 )
 stm32_twi_platforms = [
