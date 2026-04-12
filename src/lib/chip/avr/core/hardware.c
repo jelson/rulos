@@ -62,6 +62,15 @@ void hal_end_atomic(rulos_irq_state_t interrupt_flag) {
   }
 }
 
+bool hal_is_in_isr(void) {
+  // AVR doesn't have a direct "am I in an ISR" register like ARM's
+  // IPSR. The global interrupt flag (SREG.I) is cleared on ISR entry,
+  // so if interrupts are disabled we're *likely* in an ISR — but this
+  // also returns true inside hal_start_atomic critical sections.
+  // Conservative: better to drop a log message than to hang.
+  return (SREG & _BV(SREG_I)) == 0;
+}
+
 void hal_idle() {
   // just busy-wait on microcontroller.
 }

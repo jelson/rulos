@@ -119,6 +119,10 @@ void hal_end_atomic(rulos_irq_state_t old_interrupts) {
   taskEXIT_CRITICAL(&mux);
 }
 
+bool hal_is_in_isr(void) {
+  return xPortInIsrContext();
+}
+
 void hal_idle() {
   // yield to other freeRTOS tasks running on the esp32
   vTaskDelay(1);

@@ -158,6 +158,13 @@ void hal_end_atomic(rulos_irq_state_t blocked) {
   }
 }
 
+bool hal_is_in_isr(void) {
+  // Simulator doesn't have real ISRs; signal handlers are the
+  // closest equivalent. Return false — the simulator can't deadlock
+  // on the delay_us path since signals aren't masked during it.
+  return false;
+}
+
 void hal_idle() {
   // turns out 'man sleep' says sleep & sigalrm don't mix. yield is what we
   // want. No, sched_yield doesn't wait ANY time. libc suggests select()

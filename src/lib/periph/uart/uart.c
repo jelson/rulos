@@ -130,14 +130,17 @@ void uart_write(UartState_t *u, const void *buf, size_t len) {
         r_min((size_t)len, CharQueue_free_space(&u->tx_queue.q));
 
     if (write_size == 0) {
-      // If there's more data that did not fit in the queue, block until there's
-      // free space. This is a policy choice: if dropping data is better for
-      // some application than blocking, there could be two variants of
-      // uart_write with different behavior here.
       hal_end_atomic(old_interrupts);
 
-      // Note that we should *not* just call hal_idle here: we end up spinning
-      // too quickly, disable interrupts for too long
+      // Queue is full. In ISR context we can't spin-wait for DMA to
+      // drain (the DMA TC ISR can't fire while we're in an ISR) — so
+      // drop the remaining data to avoid a deadlock.
+      if (hal_is_in_isr()) {
+        return;
+      }
+
+      // In main-thread context, block briefly and retry. DMA will
+      // drain space in the background.
       delay_us(20000);
       continue;
     }

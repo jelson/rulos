@@ -41,6 +41,10 @@ void hal_end_atomic(rulos_irq_state_t old_interrupts) {
   __set_PRIMASK(old_interrupts);
 }
 
+bool hal_is_in_isr(void) {
+  return __get_IPSR() != 0;
+}
+
 void hal_idle() {
   __WFI();
 }
