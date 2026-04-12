@@ -135,18 +135,18 @@ typedef struct {
 
 static channel_t channels[NUM_CHANNELS];
 
-// DMA circular buffers for input capture — one per channel.
-// DMA writes raw CCR values here; HT/TC interrupts process each half.
-static volatile uint32_t dma_buf_ch1[DMA_CAPTURE_BUFLEN];
-static volatile uint32_t dma_buf_ch2[DMA_CAPTURE_BUFLEN];
-// Tracks how far we've processed for the periodic flush of slow pulses
-static uint32_t dma_processed_pos_ch1 = 0;
-static uint32_t dma_processed_pos_ch2 = 0;
-// RULOS DMA channel handles (allocated in init_timers). The HT/TC
-// callbacks on these channels do the work that DMA1_Channel3/4_IRQHandler
-// used to do directly.
-static rulos_dma_channel_t *dma_ch_ts1 = NULL;
-static rulos_dma_channel_t *dma_ch_ts2 = NULL;
+// Per-channel DMA state: buffer, progress cursor, and handle. Used
+// by the HT/TC callbacks and the periodic flush. Indexed by channel
+// number (0..NUM_CHANNELS-1); passed to the DMA callbacks via
+// user_data so a single pair of callback functions serves all channels.
+typedef struct {
+  volatile uint32_t buf[DMA_CAPTURE_BUFLEN];
+  uint32_t processed_pos;
+  rulos_dma_channel_t *dma_ch;
+  uint8_t channel_num;
+} ts_dma_channel_t;
+
+static ts_dma_channel_t ts_dma[NUM_CHANNELS];
 
 // total seconds elapsed since boot -- for details, see comment at top
 uint32_t seconds_A = 0;
@@ -242,42 +242,24 @@ CCMRAM static void process_dma_captures(uint8_t channel_num,
 // Each callback starts from dma_processed_pos rather than a fixed
 // offset, so it doesn't reprocess entries the periodic flush already
 // handled.
-CCMRAM static void on_dma_ht_ch1(void *user_data) {
-  (void)user_data;
+CCMRAM static void on_dma_ht(void *user_data) {
+  ts_dma_channel_t *ch = (ts_dma_channel_t *)user_data;
   const uint32_t half = DMA_CAPTURE_BUFLEN / 2;
-  uint32_t last = dma_processed_pos_ch1;
+  uint32_t last = ch->processed_pos;
   if (last < half) {
-    process_dma_captures(0, dma_buf_ch1, last, half - last);
-    dma_processed_pos_ch1 = half;
+    process_dma_captures(ch->channel_num, ch->buf, last, half - last);
+    ch->processed_pos = half;
   }
 }
 
-CCMRAM static void on_dma_tc_ch1(void *user_data) {
-  (void)user_data;
-  uint32_t last = dma_processed_pos_ch1;
+CCMRAM static void on_dma_tc(void *user_data) {
+  ts_dma_channel_t *ch = (ts_dma_channel_t *)user_data;
+  uint32_t last = ch->processed_pos;
   if (last >= DMA_CAPTURE_BUFLEN / 2) {
-    process_dma_captures(0, dma_buf_ch1, last, DMA_CAPTURE_BUFLEN - last);
+    process_dma_captures(ch->channel_num, ch->buf, last,
+                         DMA_CAPTURE_BUFLEN - last);
   }
-  dma_processed_pos_ch1 = 0;
-}
-
-CCMRAM static void on_dma_ht_ch2(void *user_data) {
-  (void)user_data;
-  const uint32_t half = DMA_CAPTURE_BUFLEN / 2;
-  uint32_t last = dma_processed_pos_ch2;
-  if (last < half) {
-    process_dma_captures(1, dma_buf_ch2, last, half - last);
-    dma_processed_pos_ch2 = half;
-  }
-}
-
-CCMRAM static void on_dma_tc_ch2(void *user_data) {
-  (void)user_data;
-  uint32_t last = dma_processed_pos_ch2;
-  if (last >= DMA_CAPTURE_BUFLEN / 2) {
-    process_dma_captures(1, dma_buf_ch2, last, DMA_CAPTURE_BUFLEN - last);
-  }
-  dma_processed_pos_ch2 = 0;
+  ch->processed_pos = 0;
 }
 
 // Format a timestamp into buf, returning the number of bytes written.
@@ -369,26 +351,18 @@ static void usb_tx_complete(usbd_cdc_state_t *cdc, void *user_data) {
 // DMA_CAPTURE_BUFLEN/2 more captures to fill the half-buffer. Called from
 // periodic_task.
 static void flush_dma_captures(void) {
-  struct {
-    rulos_dma_channel_t *dma_ch;
-    volatile uint32_t *buf;
-    uint32_t *processed_pos;
-    uint8_t channel_num;
-  } chans[] = {
-    {dma_ch_ts1, dma_buf_ch1, &dma_processed_pos_ch1, 0},
-    {dma_ch_ts2, dma_buf_ch2, &dma_processed_pos_ch2, 1},
-  };
-
   const uint32_t half = DMA_CAPTURE_BUFLEN / 2;
 
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < NUM_CHANNELS; i++) {
+    ts_dma_channel_t *ch = &ts_dma[i];
+
     // Disable interrupts to coordinate with the DMA HT/TC ISR — both
     // read and update the same processed_pos, so we must not race.
     __disable_irq();
 
     // DMA counts DOWN from DMA_CAPTURE_BUFLEN; current write position is
     // DMA_CAPTURE_BUFLEN minus the remaining count.
-    uint32_t remaining = rulos_dma_get_remaining(chans[i].dma_ch);
+    uint32_t remaining = rulos_dma_get_remaining(ch->dma_ch);
     uint32_t current_pos = DMA_CAPTURE_BUFLEN - remaining;
     if (current_pos == DMA_CAPTURE_BUFLEN) {
       current_pos = 0;  // DMA counter reads 0 right at wrap
@@ -397,16 +371,16 @@ static void flush_dma_captures(void) {
     // Only process within the current half — never cross a half-boundary.
     // The DMA HT/TC ISR handles boundary transitions. Clamp current_pos
     // to the next boundary so we don't step on the ISR's territory.
-    uint32_t last = *chans[i].processed_pos;
+    uint32_t last = ch->processed_pos;
     uint32_t limit = (last < half) ? half : DMA_CAPTURE_BUFLEN;
     if (current_pos > limit) {
       current_pos = limit;
     }
 
     if (current_pos > last) {
-      process_dma_captures(chans[i].channel_num, chans[i].buf,
-                           last, current_pos - last);
-      *chans[i].processed_pos = current_pos;
+      process_dma_captures(ch->channel_num, ch->buf, last,
+                           current_pos - last);
+      ch->processed_pos = current_pos;
     }
 
     __enable_irq();
@@ -421,8 +395,9 @@ static void periodic_task(void *data) {
   if (g_rulos_hse_failed) {
     LL_TIM_DisableCounter(TIM2);
     LL_TIM_DisableCounter(TIM15);
-    rulos_dma_stop(dma_ch_ts1);
-    rulos_dma_stop(dma_ch_ts2);
+    for (int i = 0; i < NUM_CHANNELS; i++) {
+      rulos_dma_stop(ts_dma[i].dma_ch);
+    }
     LL_TIM_DisableIT_UPDATE(TIM15);
 
     // quick flash showing clock failure
@@ -524,45 +499,38 @@ static void init_timers() {
   // channel in circular mode via the RULOS DMA abstraction. HT/TC
   // callbacks fire at each half-buffer boundary so we can process
   // captures while the other half fills.
-  const rulos_dma_config_t ch1_cfg = {
-      .request = RULOS_DMA_REQ_TIM2_CH1,
-      .direction = RULOS_DMA_DIR_PERIPH_TO_MEM,
-      .mode = RULOS_DMA_MODE_CIRCULAR,
-      .periph_width = RULOS_DMA_WIDTH_WORD,
-      .mem_width = RULOS_DMA_WIDTH_WORD,
-      .periph_increment = false,
-      .mem_increment = true,
-      .priority = RULOS_DMA_PRIORITY_VERYHIGH,
-      .tc_callback = on_dma_tc_ch1,
-      .ht_callback = on_dma_ht_ch1,
+  static const struct {
+    rulos_dma_request_t request;
+    volatile uint32_t *ccr;
+    uint32_t ll_dma_req_flag;  // LL_TIM_EnableDMAReq_CCn macro arg
+  } dma_setup[NUM_CHANNELS] = {
+      {RULOS_DMA_REQ_TIM2_CH1, &TIM2->CCR1, TIM_DIER_CC1DE},
+      {RULOS_DMA_REQ_TIM2_CH2, &TIM2->CCR2, TIM_DIER_CC2DE},
   };
-  dma_ch_ts1 = rulos_dma_alloc(&ch1_cfg);
-  if (dma_ch_ts1 == NULL) {
-    __builtin_trap();
-  }
-  rulos_dma_start(dma_ch_ts1, &TIM2->CCR1, (void *)dma_buf_ch1,
-                  DMA_CAPTURE_BUFLEN);
-  LL_TIM_EnableDMAReq_CC1(TIM2);
 
-  const rulos_dma_config_t ch2_cfg = {
-      .request = RULOS_DMA_REQ_TIM2_CH2,
-      .direction = RULOS_DMA_DIR_PERIPH_TO_MEM,
-      .mode = RULOS_DMA_MODE_CIRCULAR,
-      .periph_width = RULOS_DMA_WIDTH_WORD,
-      .mem_width = RULOS_DMA_WIDTH_WORD,
-      .periph_increment = false,
-      .mem_increment = true,
-      .priority = RULOS_DMA_PRIORITY_VERYHIGH,
-      .tc_callback = on_dma_tc_ch2,
-      .ht_callback = on_dma_ht_ch2,
-  };
-  dma_ch_ts2 = rulos_dma_alloc(&ch2_cfg);
-  if (dma_ch_ts2 == NULL) {
-    __builtin_trap();
+  for (int i = 0; i < NUM_CHANNELS; i++) {
+    ts_dma[i].channel_num = i;
+    const rulos_dma_config_t cfg = {
+        .request = dma_setup[i].request,
+        .direction = RULOS_DMA_DIR_PERIPH_TO_MEM,
+        .mode = RULOS_DMA_MODE_CIRCULAR,
+        .periph_width = RULOS_DMA_WIDTH_WORD,
+        .mem_width = RULOS_DMA_WIDTH_WORD,
+        .periph_increment = false,
+        .mem_increment = true,
+        .priority = RULOS_DMA_PRIORITY_VERYHIGH,
+        .tc_callback = on_dma_tc,
+        .ht_callback = on_dma_ht,
+        .user_data = &ts_dma[i],
+    };
+    ts_dma[i].dma_ch = rulos_dma_alloc(&cfg);
+    if (ts_dma[i].dma_ch == NULL) {
+      __builtin_trap();
+    }
+    rulos_dma_start(ts_dma[i].dma_ch, (volatile void *)dma_setup[i].ccr,
+                    (void *)ts_dma[i].buf, DMA_CAPTURE_BUFLEN);
+    SET_BIT(TIM2->DIER, dma_setup[i].ll_dma_req_flag);
   }
-  rulos_dma_start(dma_ch_ts2, &TIM2->CCR2, (void *)dma_buf_ch2,
-                  DMA_CAPTURE_BUFLEN);
-  LL_TIM_EnableDMAReq_CC2(TIM2);
 
 
   // Configure TIM15: fires twice per TIM2 rollover to increment the high bits
