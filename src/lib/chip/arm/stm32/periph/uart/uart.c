@@ -34,7 +34,8 @@
  * because their fixed-map DMA controllers don't have a spare channel
  * for every UART.
  */
-#if defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4)
+#if defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4) || \
+    defined(RULOS_ARM_stm32h5)
 #define USE_RX_DMA_FOR_CHIP 1
 #else
 #define USE_RX_DMA_FOR_CHIP 0
@@ -201,6 +202,7 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .tx_pin = RULOS_UART0_TX_PIN,
         .tx_altfunc = GPIO_AF7_USART1,
 
+        .rx_dma_req = RULOS_DMA_REQ_USART1_RX,
         .tx_dma_req = RULOS_DMA_REQ_USART1_TX,
     },
 };

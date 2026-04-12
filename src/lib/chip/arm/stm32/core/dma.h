@@ -74,9 +74,9 @@ typedef uint32_t rulos_dma_direction_t;
 typedef uint32_t rulos_dma_mode_t;
 #if defined(RULOS_ARM_stm32h5)
 // GPDMA. Normal exists as LL_DMA_NORMAL (no _MODE_ infix). Circular
-// mode on GPDMA requires linked-list descriptors which the H5 backend
-// doesn't implement yet -- use a sentinel so init_channel can reject
-// RULOS_DMA_MODE_CIRCULAR loudly if a caller asks for it.
+// mode on GPDMA is implemented via a self-referencing linked-list
+// descriptor — the value here is a sentinel that init_channel
+// detects; the actual hardware setup happens in rulos_dma_start.
 #define RULOS_DMA_MODE_NORMAL   LL_DMA_NORMAL
 #define RULOS_DMA_MODE_CIRCULAR 0xFFFFFFFFU
 #else

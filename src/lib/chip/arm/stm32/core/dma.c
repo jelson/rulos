@@ -1045,10 +1045,18 @@ static const dma_channel_hw_t g_hw[DMA_CHANNEL_SLOTS] = {
 
 typedef struct {
   bool allocated;
+  bool circular;  // true if this channel uses linked-list circular mode
   void (*tc_callback)(void *user_data);
   void (*ht_callback)(void *user_data);
   void (*error_callback)(void *user_data);
   void *user_data;
+  // Saved config for circular channels — needed by rulos_dma_start to
+  // build the linked-list node (which requires direction, request,
+  // widths, and increments that were specified at alloc time).
+  rulos_dma_config_t saved_config;
+  // Linked-list descriptor for circular mode. GPDMA reads this on
+  // every wrap, so it must persist for the lifetime of the channel.
+  LL_DMA_LinkNodeTypeDef lld_node;
 } dma_channel_state_t;
 
 static dma_channel_state_t g_state[DMA_CHANNEL_SLOTS];
@@ -1122,64 +1130,66 @@ static uint32_t width_to_gpdma_dest(rulos_dma_width_t w) {
   return LL_DMA_DEST_DATAWIDTH_BYTE;
 }
 
+// Map rulos_dma_config_t's mem/periph fields to GPDMA src/dest based
+// on the transfer direction. Used by both init_channel (for NORMAL
+// mode register writes) and setup_circular_node (for linked-list
+// node creation). DRY: one place for the direction-dependent swap.
+static void gpdma_get_src_dest_params(
+    const rulos_dma_config_t *c,
+    uint32_t *src_inc, uint32_t *dest_inc,
+    uint32_t *src_width, uint32_t *dest_width) {
+  if (c->direction == RULOS_DMA_DIR_MEM_TO_PERIPH) {
+    *src_inc = c->mem_increment ? LL_DMA_SRC_INCREMENT : LL_DMA_SRC_FIXED;
+    *dest_inc = c->periph_increment ? LL_DMA_DEST_INCREMENT : LL_DMA_DEST_FIXED;
+    *src_width = width_to_gpdma_src(c->mem_width);
+    *dest_width = width_to_gpdma_dest(c->periph_width);
+  } else {
+    *src_inc = c->periph_increment ? LL_DMA_SRC_INCREMENT : LL_DMA_SRC_FIXED;
+    *dest_inc = c->mem_increment ? LL_DMA_DEST_INCREMENT : LL_DMA_DEST_FIXED;
+    *src_width = width_to_gpdma_src(c->periph_width);
+    *dest_width = width_to_gpdma_dest(c->mem_width);
+  }
+}
+
 static void init_channel(int idx, const rulos_dma_config_t *c) {
   const dma_channel_hw_t *hw = &g_hw[idx];
   dma_channel_state_t *s = &g_state[idx];
 
-  // CIRCULAR mode on GPDMA requires linked-list descriptors which we
-  // don't implement here. Trap loudly so a future caller that asks
-  // for CIRCULAR notices immediately rather than getting a silently
-  // broken channel.
-  if (c->mode != RULOS_DMA_MODE_NORMAL) {
-    __builtin_trap();
-  }
+  s->circular = (c->mode == RULOS_DMA_MODE_CIRCULAR);
 
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
 
-  // Clear any stale flags from a previous owner of this slot. See
-  // the matching clear in the classic init_channel above for the
-  // full rationale; the same hazard exists on GPDMA.
+  // Clear any stale flags from a previous owner of this slot.
   LL_DMA_ClearFlag_TC(hw->dma, hw->ll_channel);
   LL_DMA_ClearFlag_HT(hw->dma, hw->ll_channel);
   LL_DMA_ClearFlag_DTE(hw->dma, hw->ll_channel);
 
-  // Direction + peripheral request (CTR2 bits).
+  // Write transfer config to channel registers for both NORMAL and
+  // CIRCULAR. For CIRCULAR the linked-list node will reload them on
+  // every wrap, but having them in the registers lets the first
+  // block transfer start correctly.
   LL_DMA_SetDataTransferDirection(hw->dma, hw->ll_channel, c->direction);
   LL_DMA_SetPeriphRequest(hw->dma, hw->ll_channel, g_gpdma_req[c->request]);
 
-  // Classic DMA uses "memory" / "peripheral" labels; GPDMA uses
-  // "source" / "destination" and picks which is which based on the
-  // direction bit. Translate accordingly:
-  //   MEM_TO_PERIPH: src = memory,    dest = peripheral
-  //   PERIPH_TO_MEM: src = peripheral, dest = memory
-  if (c->direction == RULOS_DMA_DIR_MEM_TO_PERIPH) {
-    LL_DMA_SetSrcIncMode(hw->dma, hw->ll_channel,
-                         c->mem_increment ? LL_DMA_SRC_INCREMENT
-                                          : LL_DMA_SRC_FIXED);
-    LL_DMA_SetDestIncMode(hw->dma, hw->ll_channel,
-                          c->periph_increment ? LL_DMA_DEST_INCREMENT
-                                              : LL_DMA_DEST_FIXED);
-    LL_DMA_SetSrcDataWidth(hw->dma, hw->ll_channel,
-                           width_to_gpdma_src(c->mem_width));
-    LL_DMA_SetDestDataWidth(hw->dma, hw->ll_channel,
-                            width_to_gpdma_dest(c->periph_width));
-  } else {
-    LL_DMA_SetSrcIncMode(hw->dma, hw->ll_channel,
-                         c->periph_increment ? LL_DMA_SRC_INCREMENT
-                                             : LL_DMA_SRC_FIXED);
-    LL_DMA_SetDestIncMode(hw->dma, hw->ll_channel,
-                          c->mem_increment ? LL_DMA_DEST_INCREMENT
-                                           : LL_DMA_DEST_FIXED);
-    LL_DMA_SetSrcDataWidth(hw->dma, hw->ll_channel,
-                           width_to_gpdma_src(c->periph_width));
-    LL_DMA_SetDestDataWidth(hw->dma, hw->ll_channel,
-                            width_to_gpdma_dest(c->mem_width));
+  uint32_t si, di, sw, dw;
+  gpdma_get_src_dest_params(c, &si, &di, &sw, &dw);
+  LL_DMA_SetSrcIncMode(hw->dma, hw->ll_channel, si);
+  LL_DMA_SetDestIncMode(hw->dma, hw->ll_channel, di);
+  LL_DMA_SetSrcDataWidth(hw->dma, hw->ll_channel, sw);
+  LL_DMA_SetDestDataWidth(hw->dma, hw->ll_channel, dw);
+
+  if (s->circular) {
+    // Save config so rulos_dma_start can build the linked-list node.
+    s->saved_config = *c;
   }
 
   LL_DMA_SetChannelPriorityLevel(hw->dma, hw->ll_channel, c->priority);
 
   LL_DMA_EnableIT_TC(hw->dma, hw->ll_channel);
   LL_DMA_EnableIT_DTE(hw->dma, hw->ll_channel);
+  if (s->circular) {
+    LL_DMA_EnableIT_HT(hw->dma, hw->ll_channel);
+  }
 
   s->tc_callback = c->tc_callback;
   s->ht_callback = c->ht_callback;
@@ -1238,25 +1248,99 @@ void rulos_dma_reconfigure(rulos_dma_channel_t *ch,
 
 void rulos_dma_start(rulos_dma_channel_t *ch, volatile void *periph_addr,
                      void *mem_addr, uint32_t nitems) {
-  const dma_channel_hw_t *hw = &g_hw[state_to_idx(ch)];
+  const int idx = state_to_idx(ch);
+  const dma_channel_hw_t *hw = &g_hw[idx];
+  dma_channel_state_t *s = &g_state[idx];
 
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
-  LL_DMA_SetBlkDataLength(hw->dma, hw->ll_channel, nitems);
 
-  // LL_DMA_ConfigAddresses on GPDMA takes (src, dst) in that order,
-  // not (src_or_periph, dst_or_mem, dir) like classic. Pick the
-  // order based on the direction we configured in init_channel.
-  const uint32_t dir =
-      LL_DMA_GetDataTransferDirection(hw->dma, hw->ll_channel);
-  if (dir == LL_DMA_DIRECTION_MEMORY_TO_PERIPH) {
-    LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, (uint32_t)mem_addr,
-                           (uint32_t)periph_addr);
+  if (s->circular) {
+    // CIRCULAR mode: build a linked-list node that points to itself.
+    // GPDMA reloads the channel registers from this node at the end
+    // of each block, creating continuous circular transfer. The node
+    // persists in g_state[].lld_node. Based on the NUCLEO-H563ZI
+    // ADC circular DMA example in STM32CubeH5.
+    const rulos_dma_config_t *c = &s->saved_config;
+
+    uint32_t si, di, sw, dw;
+    gpdma_get_src_dest_params(c, &si, &di, &sw, &dw);
+
+    uint32_t src_addr, dst_addr;
+    if (c->direction == RULOS_DMA_DIR_MEM_TO_PERIPH) {
+      src_addr = (uint32_t)mem_addr;
+      dst_addr = (uint32_t)periph_addr;
+    } else {
+      src_addr = (uint32_t)periph_addr;
+      dst_addr = (uint32_t)mem_addr;
+    }
+
+    // Build the node descriptor.
+    LL_DMA_InitNodeTypeDef node_cfg = {0};
+    node_cfg.NodeType = LL_DMA_GPDMA_LINEAR_NODE;
+    node_cfg.Mode = LL_DMA_NORMAL;  // each node runs one block
+    node_cfg.Request = g_gpdma_req[c->request];
+    node_cfg.BlkHWRequest = LL_DMA_HWREQUEST_SINGLEBURST;
+    node_cfg.Direction = c->direction;
+    node_cfg.SrcIncMode = si;
+    node_cfg.DestIncMode = di;
+    node_cfg.SrcDataWidth = sw;
+    node_cfg.DestDataWidth = dw;
+    node_cfg.SrcBurstLength = 1;
+    node_cfg.DestBurstLength = 1;
+    node_cfg.TransferEventMode = LL_DMA_TCEM_BLK_TRANSFER;
+    node_cfg.TriggerPolarity = LL_DMA_TRIG_POLARITY_MASKED;
+    node_cfg.DataAlignment = LL_DMA_DATA_ALIGN_ZEROPADD;
+    node_cfg.SrcAddress = src_addr;
+    node_cfg.DestAddress = dst_addr;
+    node_cfg.BlkDataLength = nitems;
+    node_cfg.UpdateRegisters =
+        LL_DMA_UPDATE_CTR1 | LL_DMA_UPDATE_CTR2 |
+        LL_DMA_UPDATE_CBR1 | LL_DMA_UPDATE_CSAR |
+        LL_DMA_UPDATE_CDAR | LL_DMA_UPDATE_CLLR;
+
+    LL_DMA_CreateLinkNode(&node_cfg, &s->lld_node);
+
+    // Self-connect: node points to itself → circular.
+    LL_DMA_ConnectLinkNode(&s->lld_node, LL_DMA_CLLR_OFFSET5,
+                           &s->lld_node, LL_DMA_CLLR_OFFSET5);
+
+    // Initialize channel for linked-list operation.
+    LL_DMA_InitLinkedListTypeDef ll_cfg = {0};
+    ll_cfg.Priority = c->priority;
+    ll_cfg.LinkStepMode = LL_DMA_LSM_FULL_EXECUTION;
+    ll_cfg.TransferEventMode = LL_DMA_TCEM_BLK_TRANSFER;
+    ll_cfg.LinkAllocatedPort = LL_DMA_LINK_ALLOCATED_PORT1;
+    LL_DMA_List_Init(hw->dma, hw->ll_channel, &ll_cfg);
+
+    // Point the channel at our self-referencing node.
+    LL_DMA_SetLinkedListBaseAddr(hw->dma, hw->ll_channel,
+                                (uint32_t)&s->lld_node);
+    LL_DMA_ConfigLinkUpdate(hw->dma, hw->ll_channel,
+                            node_cfg.UpdateRegisters,
+                            (uint32_t)&s->lld_node);
+
+    // Set addresses and block length for the first iteration (the
+    // linked-list reload handles subsequent iterations).
+    LL_DMA_SetBlkDataLength(hw->dma, hw->ll_channel, nitems);
+    LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, src_addr, dst_addr);
+
+    LL_DMA_EnableChannel(hw->dma, hw->ll_channel);
   } else {
-    LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, (uint32_t)periph_addr,
-                           (uint32_t)mem_addr);
-  }
+    // NORMAL mode: direct register programming.
+    LL_DMA_SetBlkDataLength(hw->dma, hw->ll_channel, nitems);
 
-  LL_DMA_EnableChannel(hw->dma, hw->ll_channel);
+    const uint32_t dir =
+        LL_DMA_GetDataTransferDirection(hw->dma, hw->ll_channel);
+    if (dir == LL_DMA_DIRECTION_MEMORY_TO_PERIPH) {
+      LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, (uint32_t)mem_addr,
+                             (uint32_t)periph_addr);
+    } else {
+      LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, (uint32_t)periph_addr,
+                             (uint32_t)mem_addr);
+    }
+
+    LL_DMA_EnableChannel(hw->dma, hw->ll_channel);
+  }
 }
 
 void rulos_dma_stop(rulos_dma_channel_t *ch) {
