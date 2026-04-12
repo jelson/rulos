@@ -24,6 +24,7 @@
 #include "autogen-pins-esp32.h"
 #include "core/hal.h"
 #include "hal/gpio_ll.h"
+#include "soc/gpio_periph.h"
 #include "soc/gpio_struct.h"
 #include "soc/io_mux_reg.h"
 
@@ -43,7 +44,16 @@ typedef uint32_t gpio_pin_t;
 static inline void gpio_make_output(const gpio_pin_t pin) {
   if (pin > 33) {
     // do nothing -- pins above 33 can only be inputs
-  } else if (pin < 32) {
+    return;
+  }
+
+  // Switch the IO_MUX for this pin to plain GPIO function. Without
+  // this, pins that boot with a peripheral function (e.g. pins 12-15
+  // are JTAG at reset) ignore the output enable bit because the mux
+  // is still routing the pin to the peripheral, not the GPIO matrix.
+  PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[pin], PIN_FUNC_GPIO);
+
+  if (pin < 32) {
     GPIO.enable_w1ts = ((uint32_t)1 << pin);
   } else {
     GPIO.enable1_w1ts.val = ((uint32_t)1 << (pin - 32));
