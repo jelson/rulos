@@ -68,7 +68,6 @@ static const char *makeFileName() {
         LOG("File count updated.");
       }
       f_sync(&fp);
-      f_close(&fp);
     }
     f_close(&fp);
   } else if ((open_res == FR_NO_FILE) || (open_res == FR_NO_PATH)) {
@@ -177,6 +176,7 @@ void flash_dumper_write(flash_dumper_t *fd, const void *buf, uint32_t len,
     va_start(ap, prefix_fmt);
     prefix_len += vsnprintf(prefix_buf + prefix_len,
                             sizeof(prefix_buf) - prefix_len, prefix_fmt, ap);
+    va_end(ap);
   }
 
   // write the header to the file

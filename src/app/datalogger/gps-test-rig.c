@@ -138,7 +138,8 @@ static void enable_ublox(void *data) {
   schedule_us(5000000, enable_ublox, data);
 }
 
-static void ublox_data_received(serial_reader_t *sr, const char *line) {
+static void ublox_data_received(serial_reader_t *sr, const char *line,
+                                void *data) {
   if (!strncmp(line, "$GLGSV", strlen("$GLGSV"))) {
     ublox_glonass_active = true;
   }
@@ -233,10 +234,11 @@ int main() {
   currmeas_init(&cms2, DUT2_POWERMEASURE_ADDR, VOLT_PRESCALE_DIV1, 40960,
                 10,  // we read in 10 microamps
                 DUT2_UART_NUM, &flash_dumper);
-#endif
+#else
   currmeas_init(&cms2, DUT2_POWERMEASURE_ADDR, VOLT_PRESCALE_DIV1, 8761,
                 1,  // we read in microamps
                 DUT2_UART_NUM, &flash_dumper);
+#endif
 
   // enable periodic blink to indicate liveness
   schedule_now(indicate_alive, NULL);
