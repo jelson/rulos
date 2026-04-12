@@ -282,7 +282,7 @@ static void twi_update(TwiState *const twi, uint8_t status) {
         mark_packet_invalid(masterRecvSlot);
       } else {
         // store next byte
-        slaveRecvSlot->data[slaveRecvSlot->packet_len++] = TWDR;
+        masterRecvSlot->data[masterRecvSlot->packet_len++] = TWDR;
 
         // if this was the next-to-the-last byte, don't ack
         mr_maybe_dont_ack(twi);
