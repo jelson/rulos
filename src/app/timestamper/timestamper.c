@@ -144,14 +144,16 @@ typedef struct {
   uint32_t prev_seconds;
   uint32_t prev_counter;
 
-  bool recent_pulse;
+  volatile bool recent_pulse;
 } channel_t;
 
 static channel_t channels[NUM_CHANNELS];
 
-// total seconds elapsed since boot -- for details, see comment at top
-uint32_t seconds_A = 0;
-uint32_t seconds_B = 0;
+// total seconds elapsed since boot -- for details, see comment at top.
+// volatile because TIM15 ISR writes these and process_dma_captures
+// reads them from both DMA ISR and main-thread (flush) context.
+volatile uint32_t seconds_A = 0;
+volatile uint32_t seconds_B = 0;
 
 // Circular buffer for timestamps not yet written to USB
 typedef struct {
@@ -291,7 +293,7 @@ static int format_timestamp(timestamp_t *t, char *buf, int buf_size) {
   uint32_t microseconds = picoseconds / 1000000;
   uint32_t sub_microseconds = picoseconds % 1000000;
 
-  return snprintf(buf, buf_size, "%d %ld.%06ld%06ld\n",
+  return snprintf(buf, buf_size, "%d %lu.%06lu%06lu\n",
                   channel + 1, t->seconds, microseconds, sub_microseconds);
 }
 
@@ -457,7 +459,7 @@ static void periodic_task(void *data) {
         channels[i].num_missed = 0;
         channels[i].buf_overflows = 0;
         int len = snprintf(usb_tx_bufs[tx_filling], USB_TX_BUFLEN,
-                           "# ch%d: %ld overcaptures, %ld buf overflows\n",
+                           "# ch%d: %lu overcaptures, %lu buf overflows\n",
                            i + 1, missed, overflows);
         usbd_cdc_write(&usb_cdc, usb_tx_bufs[tx_filling], len);
         tx_filling = 1 - tx_filling;
