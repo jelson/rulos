@@ -116,9 +116,19 @@
 #define LED_CHAN0 GPIO_A4
 #define LED_CHAN1 GPIO_A5
 
-// channel configurations and state
+// Per-channel state: statistics, divider, previous timestamp, and DMA.
+// Passed to the DMA callbacks via user_data so a single pair of
+// callback functions serves all channels.
 typedef struct {
-  // number of missed pulses
+  // DMA circular buffer and progress cursor
+  volatile uint32_t dma_buf[DMA_CAPTURE_BUFLEN];
+  uint32_t dma_processed_pos;
+  rulos_dma_channel_t *dma_ch;
+
+  // channel identity (index into this array)
+  uint8_t channel_num;
+
+  // statistics
   uint32_t num_missed;
   uint32_t buf_overflows;
 
@@ -134,19 +144,6 @@ typedef struct {
 } channel_t;
 
 static channel_t channels[NUM_CHANNELS];
-
-// Per-channel DMA state: buffer, progress cursor, and handle. Used
-// by the HT/TC callbacks and the periodic flush. Indexed by channel
-// number (0..NUM_CHANNELS-1); passed to the DMA callbacks via
-// user_data so a single pair of callback functions serves all channels.
-typedef struct {
-  volatile uint32_t buf[DMA_CAPTURE_BUFLEN];
-  uint32_t processed_pos;
-  rulos_dma_channel_t *dma_ch;
-  uint8_t channel_num;
-} ts_dma_channel_t;
-
-static ts_dma_channel_t ts_dma[NUM_CHANNELS];
 
 // total seconds elapsed since boot -- for details, see comment at top
 uint32_t seconds_A = 0;
@@ -243,23 +240,23 @@ CCMRAM static void process_dma_captures(uint8_t channel_num,
 // offset, so it doesn't reprocess entries the periodic flush already
 // handled.
 CCMRAM static void on_dma_ht(void *user_data) {
-  ts_dma_channel_t *ch = (ts_dma_channel_t *)user_data;
+  channel_t *ch = (channel_t *)user_data;
   const uint32_t half = DMA_CAPTURE_BUFLEN / 2;
-  uint32_t last = ch->processed_pos;
+  uint32_t last = ch->dma_processed_pos;
   if (last < half) {
-    process_dma_captures(ch->channel_num, ch->buf, last, half - last);
-    ch->processed_pos = half;
+    process_dma_captures(ch->channel_num, ch->dma_buf, last, half - last);
+    ch->dma_processed_pos = half;
   }
 }
 
 CCMRAM static void on_dma_tc(void *user_data) {
-  ts_dma_channel_t *ch = (ts_dma_channel_t *)user_data;
-  uint32_t last = ch->processed_pos;
+  channel_t *ch = (channel_t *)user_data;
+  uint32_t last = ch->dma_processed_pos;
   if (last >= DMA_CAPTURE_BUFLEN / 2) {
-    process_dma_captures(ch->channel_num, ch->buf, last,
+    process_dma_captures(ch->channel_num, ch->dma_buf, last,
                          DMA_CAPTURE_BUFLEN - last);
   }
-  ch->processed_pos = 0;
+  ch->dma_processed_pos = 0;
 }
 
 // Format a timestamp into buf, returning the number of bytes written.
@@ -354,7 +351,7 @@ static void flush_dma_captures(void) {
   const uint32_t half = DMA_CAPTURE_BUFLEN / 2;
 
   for (int i = 0; i < NUM_CHANNELS; i++) {
-    ts_dma_channel_t *ch = &ts_dma[i];
+    channel_t *ch = &channels[i];
 
     // Disable interrupts to coordinate with the DMA HT/TC ISR — both
     // read and update the same processed_pos, so we must not race.
@@ -371,16 +368,16 @@ static void flush_dma_captures(void) {
     // Only process within the current half — never cross a half-boundary.
     // The DMA HT/TC ISR handles boundary transitions. Clamp current_pos
     // to the next boundary so we don't step on the ISR's territory.
-    uint32_t last = ch->processed_pos;
+    uint32_t last = ch->dma_processed_pos;
     uint32_t limit = (last < half) ? half : DMA_CAPTURE_BUFLEN;
     if (current_pos > limit) {
       current_pos = limit;
     }
 
     if (current_pos > last) {
-      process_dma_captures(ch->channel_num, ch->buf, last,
+      process_dma_captures(ch->channel_num, ch->dma_buf, last,
                            current_pos - last);
-      ch->processed_pos = current_pos;
+      ch->dma_processed_pos = current_pos;
     }
 
     __enable_irq();
@@ -396,7 +393,7 @@ static void periodic_task(void *data) {
     LL_TIM_DisableCounter(TIM2);
     LL_TIM_DisableCounter(TIM15);
     for (int i = 0; i < NUM_CHANNELS; i++) {
-      rulos_dma_stop(ts_dma[i].dma_ch);
+      rulos_dma_stop(channels[i].dma_ch);
     }
     LL_TIM_DisableIT_UPDATE(TIM15);
 
@@ -509,7 +506,7 @@ static void init_timers() {
   };
 
   for (int i = 0; i < NUM_CHANNELS; i++) {
-    ts_dma[i].channel_num = i;
+    channels[i].channel_num = i;
     const rulos_dma_config_t cfg = {
         .request = dma_setup[i].request,
         .direction = RULOS_DMA_DIR_PERIPH_TO_MEM,
@@ -521,14 +518,14 @@ static void init_timers() {
         .priority = RULOS_DMA_PRIORITY_VERYHIGH,
         .tc_callback = on_dma_tc,
         .ht_callback = on_dma_ht,
-        .user_data = &ts_dma[i],
+        .user_data = &channels[i],
     };
-    ts_dma[i].dma_ch = rulos_dma_alloc(&cfg);
-    if (ts_dma[i].dma_ch == NULL) {
+    channels[i].dma_ch = rulos_dma_alloc(&cfg);
+    if (channels[i].dma_ch == NULL) {
       __builtin_trap();
     }
-    rulos_dma_start(ts_dma[i].dma_ch, (volatile void *)dma_setup[i].ccr,
-                    (void *)ts_dma[i].buf, DMA_CAPTURE_BUFLEN);
+    rulos_dma_start(channels[i].dma_ch, (volatile void *)dma_setup[i].ccr,
+                    (void *)channels[i].dma_buf, DMA_CAPTURE_BUFLEN);
     SET_BIT(TIM2->DIER, dma_setup[i].ll_dma_req_flag);
   }
 
