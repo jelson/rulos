@@ -10,5 +10,6 @@
   },
   "cSpell.words": [
     "usbd"
-  ]
+  ],
+  "git.detectSubmodules": false
 }
