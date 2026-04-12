@@ -104,7 +104,11 @@
 #define TIMESTAMP_PRINT_PERIOD_USEC 100000
 #define TIMESTAMP_BUFLEN            1024  // should be power of 2 for fast modulo ops
 #define DMA_CAPTURE_BUFLEN          256
-#define USB_TX_BUFLEN               1024
+// USB FS bulk IN can transfer up to 19 packets (19*64 = 1216 bytes)
+// per 1ms frame. 1280 bytes gives headroom to fill a full frame
+// without cutting off mid-timestamp.
+#define USB_TX_BUFLEN               1280
+#define NUM_TX_BUFS                 2
 #define MONOTONICITY_CHECK          0
 
 // Channel number is packed into the top 2 bits of the counter field.
@@ -159,12 +163,17 @@ timestamp_t timestamp_buffer[TIMESTAMP_BUFLEN];
 static volatile uint32_t ts_head = 0;  // next write position (ISR)
 static volatile uint32_t ts_tail = 0;  // next read position (USB output)
 
-// Output device state. USB packets carry at most 64 bytes of payload, but we
-// want the buffer to be big enough that the USB stack can complete multiple
-// transactions per frame, maximizing throughput.
+// Output devices.
 static UartState_t uart;
 static usbd_cdc_state_t usb_cdc;
-static char usb_tx_buf[USB_TX_BUFLEN];
+
+// Ping-pong USB TX buffers. While USB is sending one buffer, the
+// periodic task fills the other with formatted timestamps. When the
+// TX complete callback fires, the pre-filled buffer is handed to USB
+// immediately — no formatting delay, so we never miss a USB frame.
+static char usb_tx_bufs[NUM_TX_BUFS][USB_TX_BUFLEN];
+static int tx_filling = 0;   // index of buffer currently being filled
+static int tx_fill_pos = 0;  // bytes written into the filling buffer
 
 
 // TIM15 fires twice per rollover of TIM2, the input capture timer. It is used
@@ -318,25 +327,39 @@ static void update_leds(void) {
   }
 }
 
-static void try_send_timestamps(void) {
-  if (ts_tail == ts_head || !usbd_cdc_tx_ready(&usb_cdc)) {
-    return;
-  }
-  // Pack as many timestamps as fit into the USB TX buffer. The HAL
-  // handles splitting into 64-byte USB packets automatically, sending
-  // multiple packets per 1ms USB frame for ~16x higher throughput.
-  int pos = 0;
+// Format timestamps from the ring buffer into the current filling
+// buffer until it's full or the ring is empty. Called eagerly from
+// periodic_task so the buffer is pre-filled by the time USB finishes
+// the previous send.
+static void fill_tx_buf(void) {
   while (ts_tail != ts_head) {
     // Max formatted length: "2 4294967295.999999999999\n" = 26 bytes.
-    // Stop if there's not enough room for the largest possible timestamp.
-    if (pos + 26 > USB_TX_BUFLEN) {
+    if (tx_fill_pos + 26 > USB_TX_BUFLEN) {
       break;
     }
     timestamp_t t = timestamp_buffer[ts_tail];
     ts_tail = (ts_tail + 1) % TIMESTAMP_BUFLEN;
-    pos += format_timestamp(&t, usb_tx_buf + pos, USB_TX_BUFLEN - pos);
+    tx_fill_pos += format_timestamp(
+        &t, usb_tx_bufs[tx_filling] + tx_fill_pos,
+        USB_TX_BUFLEN - tx_fill_pos);
   }
-  usbd_cdc_write(&usb_cdc, usb_tx_buf, pos);
+}
+
+// If the filling buffer has data and USB is idle, hand it off and
+// swap to the other buffer. Then eagerly start filling the new
+// buffer so it's ready when USB finishes.
+static void try_send_timestamps(void) {
+  if (tx_fill_pos == 0 || !usbd_cdc_tx_ready(&usb_cdc)) {
+    return;
+  }
+
+  usbd_cdc_write(&usb_cdc, usb_tx_bufs[tx_filling], tx_fill_pos);
+
+  // Swap: the buffer we just handed to USB is now "sending" (owned
+  // by the USB stack). Start filling the other one.
+  tx_filling = 1 - tx_filling;
+  tx_fill_pos = 0;
+  fill_tx_buf();
 }
 
 static void usb_tx_complete(usbd_cdc_state_t *cdc, void *user_data) {
@@ -422,23 +445,28 @@ static void periodic_task(void *data) {
   flush_dma_captures();
   update_leds();
 
-  // Report missed pulses when USB is idle
-  if (ts_tail == ts_head && usbd_cdc_tx_ready(&usb_cdc)) {
+  // Report missed pulses when USB is idle and no timestamps pending.
+  // Use the filling buffer for one-off messages since nothing else is
+  // writing to it in this path.
+  if (ts_tail == ts_head && tx_fill_pos == 0 &&
+      usbd_cdc_tx_ready(&usb_cdc)) {
     for (int i = 0; i < NUM_CHANNELS; i++) {
       uint32_t missed = channels[i].num_missed;
       uint32_t overflows = channels[i].buf_overflows;
       if (missed || overflows) {
         channels[i].num_missed = 0;
         channels[i].buf_overflows = 0;
-        int len = snprintf(usb_tx_buf, sizeof(usb_tx_buf),
+        int len = snprintf(usb_tx_bufs[tx_filling], USB_TX_BUFLEN,
                            "# ch%d: %ld overcaptures, %ld buf overflows\n",
                            i + 1, missed, overflows);
-        usbd_cdc_write(&usb_cdc, usb_tx_buf, len);
+        usbd_cdc_write(&usb_cdc, usb_tx_bufs[tx_filling], len);
+        tx_filling = 1 - tx_filling;
         return;  // one message per period; USB will drain the rest
       }
     }
   }
 
+  fill_tx_buf();
   try_send_timestamps();
 }
 
