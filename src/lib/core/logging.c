@@ -56,8 +56,14 @@ void log_format_and_write(const char *fmt, ...) {
 #else
   int len = vsnprintf(message, sizeof(message), fmt, ap);
 #endif
-  message[sizeof(message) - 1] = '\0';
   va_end(ap);
+
+  // vsnprintf returns the number of characters that *would have been
+  // written* if the buffer were large enough. Clamp to the actual
+  // buffer size so log_write doesn't read past the end of the stack.
+  if (len >= (int)sizeof(message)) {
+    len = sizeof(message) - 1;
+  }
 
   log_write(message, len);
 }
