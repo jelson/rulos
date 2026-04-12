@@ -74,6 +74,7 @@ typedef struct {
   rulos_dma_channel_t *tx_dma_ch;
 #if USE_RX_DMA_FOR_CHIP
   rulos_dma_channel_t *rx_dma_ch;
+  uint32_t rx_dma_processed_pos;  // cursor into circular RX buffer
 #endif
   // Base address of the peripheral's TX data register. Cached so the
   // tc_callback can re-arm the next transfer from ISR context.
@@ -487,60 +488,81 @@ static stm32_uart_t g_stm32_uarts[NUM_UARTS] = {};
 
 static void on_rx_buffer_full(uint8_t uart_id, stm32_uart_t *u,
                               const stm32_uart_config_t *c);
+static char *switch_rx_buffers(stm32_uart_t *u);
+static void rx_send_up(uint8_t uart_id, stm32_uart_t *u, char *buf,
+                       size_t len);
 
 //// Receiving: DMA Version
 
 #if USE_RX_DMA_FOR_CHIP
 
 /*
- * The RX DMA channel is allocated once at hal_uart_init time; each
- * half-buffer restart just reprograms the addresses and re-starts
- * via rulos_dma_start.
+ * CIRCULAR-mode RX DMA. DMA runs continuously over the full RX buffer
+ * (2 * rx_half_buflen bytes), wrapping automatically. HT fires at the
+ * halfway point, TC fires at the wrap. The IDLE interrupt reads partial
+ * progress without stopping DMA. No gap, no lost bytes.
+ *
+ * Mirrors the timestamper's circular input-capture DMA architecture
+ * (see on_dma_ht / on_dma_tc / flush_dma_captures in timestamper.c).
  */
+static void hal_uart_on_rx_dma_ht(void *user_data);
 static void hal_uart_on_rx_dma_tc(void *user_data);
 
 static void hal_uart_start_rx_dma(stm32_uart_t *u,
                                   const stm32_uart_config_t *config) {
+  u->rx_dma_processed_pos = 0;
   LL_USART_EnableDMAReq_RX(config->instance);
   rulos_dma_start(u->rx_dma_ch,
                   (volatile void *)LL_USART_DMA_GetRegAddr(
                       config->instance, LL_USART_DMA_REG_DATA_RECEIVE),
-                  u->rx_curr_base_buf, u->rx_half_buflen);
+                  u->rx_buf, 2 * u->rx_half_buflen);
 }
 
-// TC callback from the RULOS DMA core. Runs in DMA IRQ context. The
-// user_data pointer encodes the RULOS uart_id.
-static void hal_uart_on_rx_dma_tc(void *user_data) {
-  uint8_t uart_id = (uint8_t)(uintptr_t)user_data;
+// Shared helper for HT and TC callbacks: deliver bytes from
+// rx_dma_processed_pos up to `boundary`, then advance the cursor
+// to `next_pos`. Runs in DMA ISR context; DMA never stops.
+static void rx_dma_deliver(uint8_t uart_id, uint32_t boundary,
+                           uint32_t next_pos) {
   stm32_uart_t *u = &g_stm32_uarts[uart_id];
-  const stm32_uart_config_t *config = &stm32_uart_config[uart_id];
   if (!u->initted) {
     return;
   }
   u->tot_ints++;
-  u->tot_rx_bytes += u->rx_half_buflen;
-  on_rx_buffer_full(uart_id, u, config);
+
+  uint32_t last = u->rx_dma_processed_pos;
+  if (last >= boundary) {
+    // Already processed (periodic flush got here first). Just advance.
+    u->rx_dma_processed_pos = next_pos;
+    return;
+  }
+
+  size_t len = boundary - last;
+  u->tot_rx_bytes += len;
+  u->rx_dma_processed_pos = next_pos;
+
+  if (u->rx_cb_ready) {
+    rx_send_up(uart_id, u, u->rx_buf + last, len);
+  } else {
+    u->dropped_rx_bytes += len;
+  }
 }
 
-static size_t get_rx_stored_chars_dma(uint8_t uart_id, stm32_uart_t *u,
-                                      const stm32_uart_config_t *c) {
-  (void)c;
-  rulos_dma_stop(u->rx_dma_ch);
-  const size_t free_space = rulos_dma_get_remaining(u->rx_dma_ch);
-  const size_t rx_chars = u->rx_half_buflen - free_space;
-  u->tot_rx_bytes += rx_chars;
-  return rx_chars;
+static void hal_uart_on_rx_dma_ht(void *user_data) {
+  uint8_t uart_id = (uint8_t)(uintptr_t)user_data;
+  stm32_uart_t *u = &g_stm32_uarts[uart_id];
+  rx_dma_deliver(uart_id, u->rx_half_buflen, u->rx_half_buflen);
+}
+
+static void hal_uart_on_rx_dma_tc(void *user_data) {
+  uint8_t uart_id = (uint8_t)(uintptr_t)user_data;
+  stm32_uart_t *u = &g_stm32_uarts[uart_id];
+  rx_dma_deliver(uart_id, 2 * u->rx_half_buflen, 0);
 }
 
 #else  // USE_RX_DMA_FOR_CHIP
 
 static void hal_uart_start_rx_dma(stm32_uart_t *u,
                                   const stm32_uart_config_t *config) {
-}
-
-static size_t get_rx_stored_chars_dma(uint8_t uart_id, stm32_uart_t *u,
-                                      const stm32_uart_config_t *c) {
-  return 0;
 }
 
 #endif  // USE_RX_DMA_FOR_CHIP
@@ -617,15 +639,45 @@ static void maybe_flush_rx_buf(uint8_t uart_id, stm32_uart_t *u,
     return;
   }
 
-  size_t len = 0;
+#if USE_RX_DMA_FOR_CHIP
   if (USART_USING_RX_DMA(c)) {
-    len = get_rx_stored_chars_dma(uart_id, u, c);
-    //LOG("dma uart %d: got %u", uart_id, len);
-  } else {
-    len = get_rx_stored_chars_int(uart_id, u, c);
-    //LOG("int uart %d: got %u", uart_id, len);
-  }
+    // Circular-mode DMA flush: read the current write position without
+    // stopping DMA, clamp to the current half-boundary (HT/TC own
+    // transitions), and deliver whatever's new. Mirrors the timestamper's
+    // flush_dma_captures pattern.
+    __disable_irq();
+    uint32_t buflen = 2 * u->rx_half_buflen;
+    uint32_t remaining = rulos_dma_get_remaining(u->rx_dma_ch);
+    uint32_t current_pos = buflen - remaining;
+    if (current_pos >= buflen) {
+      current_pos = 0;  // CNDTR reads 0 right at wrap
+    }
 
+    // Never cross a half-boundary — HT/TC callbacks handle those.
+    uint32_t last = u->rx_dma_processed_pos;
+    uint32_t limit = (last < u->rx_half_buflen) ? u->rx_half_buflen : buflen;
+    if (current_pos > limit) {
+      current_pos = limit;
+    }
+
+    size_t len = 0;
+    if (current_pos > last) {
+      len = current_pos - last;
+      u->tot_rx_bytes += len;
+      u->rx_dma_processed_pos = current_pos;
+    }
+    __enable_irq();
+
+    u->rx_data_ready = false;
+    if (len > 0) {
+      rx_send_up(uart_id, u, u->rx_buf + last, len);
+    }
+    return;
+  }
+#endif
+
+  // Per-char interrupt path (F0/F1/F3/C0/H5).
+  size_t len = get_rx_stored_chars_int(uart_id, u, c);
   char *oldbuf = switch_rx_buffers(u);
   launch_next_rx(u, c);
   rx_send_up(uart_id, u, oldbuf, len);
@@ -677,13 +729,14 @@ void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf,
     const rulos_dma_config_t rx_cfg = {
         .request = config->rx_dma_req,
         .direction = RULOS_DMA_DIR_PERIPH_TO_MEM,
-        .mode = RULOS_DMA_MODE_NORMAL,
+        .mode = RULOS_DMA_MODE_CIRCULAR,
         .periph_width = RULOS_DMA_WIDTH_BYTE,
         .mem_width = RULOS_DMA_WIDTH_BYTE,
         .periph_increment = false,
         .mem_increment = true,
         .priority = RULOS_DMA_PRIORITY_MEDIUM,
         .tc_callback = hal_uart_on_rx_dma_tc,
+        .ht_callback = hal_uart_on_rx_dma_ht,
         .user_data = (void *)(uintptr_t)uart_id,
     };
     u->rx_dma_ch = rulos_dma_alloc(&rx_cfg);
