@@ -17,6 +17,7 @@
 from .ArmBuildRules import ArmStmPlatform
 from .AvrBuildRules import AvrPlatform
 from .Esp32BuildRules import Esp32Platform
+from .SimBuildRules import SimulatorPlatform
 
 # One representative per AVR family RULOS has apps for. Different chips
 # within the same family (e.g. atmega328 vs atmega328p, attiny84 vs
@@ -49,6 +50,7 @@ def canary_platforms(
     include_atmega=True,
     include_attiny=True,
     include_esp32=True,
+    include_sim=True,
     extras=(),
 ):
     """Return a list of Platform instances for canary builds: one
@@ -58,10 +60,10 @@ def canary_platforms(
 
     stm32_families: iterable of STM32 major family names (e.g. "STM32G4")
         to include. None means every family.
-    include_atmega, include_attiny, include_esp32: toggle each AVR
-        subfamily and ESP32. Turn off the ones a particular driver
-        doesn't support (e.g. UART doesn't build on ATtiny since those
-        chips have USI, not USART).
+    include_atmega, include_attiny, include_esp32, include_sim: toggle
+        each AVR subfamily, ESP32, and the host simulator. Turn off the
+        ones a particular driver doesn't support (e.g. UART doesn't
+        build on ATtiny since those chips have USI, not USART).
     extras: additional Platform instances to append — typically the
         specific chip used in a hardware test jig.
     """
@@ -76,5 +78,7 @@ def canary_platforms(
             platforms.append(AvrPlatform(chip_name))
     if include_esp32:
         platforms.append(Esp32Platform())
+    if include_sim:
+        platforms.append(SimulatorPlatform())
     platforms.extend(extras)
     return platforms

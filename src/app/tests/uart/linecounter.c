@@ -32,7 +32,6 @@
 
 #include <string.h>
 
-#include "core/hardware.h"
 #include "core/rulos.h"
 #include "periph/uart/linereader.h"
 #include "periph/uart/uart.h"

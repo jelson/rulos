@@ -16,7 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "core/hardware.h"
 #include "core/rulos.h"
 
 #define FREQ_USEC 500000
@@ -38,8 +37,8 @@ static void test_func(void *data) {
   gpio_set(TEST_PIN);
   schedule_us(FREQ_USEC * NUM_TASKS, test_func, data);
   gpio_clr(TEST_PIN);
-  LOG("line %d printed by task %d at time %" PRId32, i++, (int)data,
-      clock_time_us());
+  LOG("line %d printed by task %d at time %" PRId32, i++,
+      (int)(intptr_t)data, clock_time_us());
 }
 #endif
 
@@ -70,10 +69,10 @@ int main() {
   init_clock(FREQ_USEC, TIMER1);
 
   for (int i = 0; i < NUM_TASKS; i++) {
-    schedule_us(FREQ_USEC * (i + 1), test_func, (void *)i);
+    schedule_us(FREQ_USEC * (i + 1), test_func, (void *)(intptr_t)i);
   }
 
-  schedule_now(test_func, (void *)-1);
+  schedule_now(test_func, (void *)(intptr_t)-1);
 
   scheduler_run();
 #endif

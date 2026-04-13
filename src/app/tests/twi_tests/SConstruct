@@ -79,6 +79,7 @@ RulosBuildTarget(
         stm32_families = TWI_SUPPORTED_STM32_FAMILIES,
         include_attiny = False,
         include_esp32 = False,
+        include_sim = False,
     ),
     peripherals = "twi",
 ).build()

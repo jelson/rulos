@@ -16,7 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "core/hardware.h"
 #include "core/rulos.h"
 #include "periph/uart/uart.h"
 
@@ -26,7 +25,7 @@ void char_received(UartState_t *s, void *user_data, char *buf, size_t len) {
   char termbuf[UART_RX_QUEUE_LEN+1];
   memcpy(termbuf, buf, len);
   termbuf[len] = '\0';
-  LOG("got %d chars: %s", len, termbuf);
+  LOG("got %zu chars: %s", len, termbuf);
 }
 
 int main() {

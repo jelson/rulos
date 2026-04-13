@@ -23,7 +23,6 @@
  */
 
 #include "core/bss_canary.h"
-#include "core/hardware.h"
 #include "core/rulos.h"
 
 #define FREQ_USEC 50000
