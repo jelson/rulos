@@ -20,27 +20,10 @@ import sys
 sys.path.insert(0, "../../../util")
 from build_tools import *
 
-platforms = []
-
-for chip in [
-        "stm32g0b1xe",
-        "stm32g431x8",
-]:
-    platforms.append(ArmStmPlatform(chip))
-
-for chip in [
-        "atmega328",
-        "atmega328p",
-        "atmega1284",
-]:
-    platforms.append(AvrPlatform(chip))
-
-platforms.append(Esp32Platform())
-
 RulosBuildTarget(
     name = "delaytest",
     sources = [f"delaytest.c"],
-    platforms = platforms,
+    platforms = canary_platforms(),
     peripherals = ["uart"],
     extra_cflags = [
         "-DLOG_TO_SERIAL",

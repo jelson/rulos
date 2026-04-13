@@ -20,22 +20,8 @@ import sys
 sys.path.insert(0, "../../../util")
 from build_tools import *
 
-platforms = []
-
-# Test on STM32
-for chip in ArmStmPlatform.CHIPS:
-    platforms.append(ArmStmPlatform(chip))
-
-# Test on AVR
-for chip in ["atmega8", "atmega328", "atmega328p", "atmega1284", "atmega1284p",
-             "attiny84", "attiny84a", "attiny85"]:
-    platforms.append(AvrPlatform(chip))
-
-# Test on ESP32
-platforms.append(Esp32Platform())
-
 RulosBuildTarget(
     name = "nulltest",
     sources = ["nulltest.c"],
-    platforms = platforms,
+    platforms = canary_platforms(),
 ).build()

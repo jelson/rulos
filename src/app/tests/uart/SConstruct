@@ -20,36 +20,12 @@ import sys
 sys.path.insert(0, "../../../util")
 from build_tools import *
 
-platforms = []
-
-# Build for every STM32 chip whose family is supported by the uart
-# driver (see src/lib/chip/arm/stm32/periph/uart/uart.c). Every
-# family RULOS knows about is covered: break uart on any of them
-# and this SConstruct catches it.
-UART_SUPPORTED_FAMILIES = (
-    "STM32C0",
-    "STM32F0",
-    "STM32F1",
-    "STM32F3",
-    "STM32G0",
-    "STM32G4",
-    "STM32H5",
+# UART driver uses USART hardware, so skip ATtiny (USI-only). Include
+# stm32g431x8 explicitly — that's the chip on the hardware test jig.
+platforms = canary_platforms(
+    include_attiny=False,
+    extras=[ArmStmPlatform("stm32g431x8")],
 )
-for chip_name in sorted(ArmStmPlatform.CHIPS):
-    chip = ArmStmPlatform.CHIPS[chip_name]
-    if chip.major_family_name in UART_SUPPORTED_FAMILIES:
-        platforms.append(ArmStmPlatform(chip_name))
-
-for chip in [
-        "atmega328",
-        "atmega328p",
-        "atmega1284",
-#        "attiny84",
-#        "attiny85",
-]:
-    platforms.append(AvrPlatform(chip))
-
-platforms.append(Esp32Platform())
 
 for testprog in ["recv", "send", "charecho", "lineecho"]:
     RulosBuildTarget(

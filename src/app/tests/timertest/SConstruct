@@ -27,11 +27,5 @@ RulosBuildTarget(
         "-DLOG_TO_SERIAL",
     ],
     peripherals = ["uart"],
-    platforms = [
-        AvrPlatform("attiny85"),
-        AvrPlatform("atmega328p"),
-        ArmStmPlatform("stm32g031x8"),
-        #ArmNxpPlatform("lpc1114-102"),
-        Esp32Platform(),
-    ],
+    platforms = canary_platforms(),
 ).build()

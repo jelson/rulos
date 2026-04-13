@@ -20,6 +20,7 @@ from .ArmBuildRules import ArmPlatform, ArmStmPlatform
 from .AvrBuildRules import AvrPlatform
 from .SimBuildRules import SimulatorPlatform
 from .Esp32BuildRules import Esp32Platform
+from .Canary import canary_platforms
 
 if not os.path.exists(BUILD_ROOT):
     os.makedirs(BUILD_ROOT)

@@ -21,9 +21,7 @@ sys.path.insert(0, "../../../util")
 from build_tools import *
 
 # STM32 families on which RULOS has implemented a TWI driver (see
-# src/lib/chip/arm/stm32/periph/twi/twi.c). twisendtest.c is the only
-# self-contained test (it calls hal_twi_init directly) so it's the
-# one built against stm32.
+# src/lib/chip/arm/stm32/periph/twi/twi.c).
 # F0 and G0 are excluded: twi.c's F0/G0 branches have always had
 # dead chip-specific stubs (wrong GPIO alt-func, missing IRQn macros)
 # and no RULOS app has ever compiled twi on those families.
@@ -32,12 +30,6 @@ from build_tools import *
 TWI_SUPPORTED_STM32_FAMILIES = (
     "STM32F3",
 )
-stm32_twi_platforms = [
-    ArmStmPlatform(chip_name)
-    for chip_name in sorted(ArmStmPlatform.CHIPS)
-    if ArmStmPlatform.CHIPS[chip_name].major_family_name
-    in TWI_SUPPORTED_STM32_FAMILIES
-]
 
 RulosBuildTarget(
     name = "twirecvtest",
@@ -74,12 +66,19 @@ RulosBuildTarget(
     ],
 ).build()
 
-# STM32 canary build: twisendtest without the 7seg_panel status hack.
-# twirecvtest depends on network-layer reassembly that's not wired up
-# on stm32 here; twisendtest just needs hal_twi_init + send.
+# Canary build: twisendtest without the 7seg_panel status hack, across
+# every STM32 family TWI supports and the atmega canary set. twirecvtest
+# depends on network-layer reassembly that's not wired up on stm32 here;
+# twisendtest just needs hal_twi_init + send. ATtiny excluded since
+# those parts use USI, not the TWI peripheral. ESP32 excluded — twi.c
+# is AVR/STM32-only.
 RulosBuildTarget(
-    name = "twisendtest_stm32",
+    name = "twisendtest_canary",
     sources = [ "twisendtest.c" ],
-    platforms = stm32_twi_platforms,
+    platforms = canary_platforms(
+        stm32_families = TWI_SUPPORTED_STM32_FAMILIES,
+        include_attiny = False,
+        include_esp32 = False,
+    ),
     peripherals = "twi",
 ).build()
