@@ -137,6 +137,7 @@ class Platform:
             toolpath = [scons_tools],
             SPINNER_DISABLE = GetOption('verbose'),
         )
+        env.Decider('MD5-timestamp')
 
         # We're pretending the sources appear in build_obj_dir, so they look
         # adjacent to the build output.

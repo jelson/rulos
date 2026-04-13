@@ -14,8 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import functools
 import glob
 import os
+import shutil
 import subprocess
 import sys
 
@@ -71,19 +73,14 @@ def get_shell_output(args):
         raise Exception(f"Running '{args}' gave non-zero exit code {retval.returncode}")
     return retval.stdout.decode('utf-8').rstrip()
 
+@functools.cache
 def repo_is_dirty():
     return len(get_shell_output(["git", "status", "--porcelain"])) > 0
 
+@functools.cache
 def commit_hash():
     return get_shell_output(["git", "describe", "--dirty", "--always", "--tags"])
 
+@functools.cache
 def which(bin_name):
-    try:
-        binpath = get_shell_output(['which', bin_name]).strip()
-    except:
-        binpath = None
-
-    if binpath:
-        return binpath
-    else:
-        return None
+    return shutil.which(bin_name)
