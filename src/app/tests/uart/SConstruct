@@ -27,7 +27,7 @@ platforms = canary_platforms(
     extras=[ArmStmPlatform("stm32g431x8")],
 )
 
-for testprog in ["recv", "send", "charecho", "lineecho"]:
+for testprog in ["recv", "send", "charecho", "lineecho", "linecounter"]:
     RulosBuildTarget(
         name = testprog,
         sources = [f"{testprog}.c"],
@@ -35,7 +35,9 @@ for testprog in ["recv", "send", "charecho", "lineecho"]:
         peripherals = ["uart"],
         extra_cflags = [
             "-DLOG_TO_SERIAL",
+            "-DSCHEDULER_CAPACITY=4",
             "-DUART_TX_QUEUE_LEN=256",
             "-DUART_RX_QUEUE_LEN=256",
+            "-DLINEREADER_MAX_LINE_LEN=512",
         ],
     ).build()

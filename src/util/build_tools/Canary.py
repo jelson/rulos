@@ -29,19 +29,19 @@ _ATTINY_REPRESENTATIVES = ("attiny84", "attiny85")
 def _stm32_line_representatives(families):
     """One chip per STM32 chip line (e.g. stm32g431, stm32g474, stm32f103)
     — coarser than per-density/package but finer than per-major-family, so
-    that e.g. G431 and G474 both get exercised even though both are G4."""
-    seen = set()
-    reps = []
-    for chip_name in sorted(ArmStmPlatform.CHIPS):
+    that e.g. G431 and G474 both get exercised even though both are G4.
+    Picks the highest-RAM (ties broken by highest-flash) variant of each
+    line so tests with nontrivial memory needs fit."""
+    by_line = {}  # chip_line -> chip object with the most RAM/flash seen
+    for chip_name in ArmStmPlatform.CHIPS:
         chip = ArmStmPlatform.CHIPS[chip_name]
         if families is not None and chip.major_family_name not in families:
             continue
         chip_line = chip_name[:9]  # e.g. "stm32g431" from "stm32g431x8"
-        if chip_line in seen:
-            continue
-        seen.add(chip_line)
-        reps.append(chip_name)
-    return reps
+        current = by_line.get(chip_line)
+        if current is None or (chip.ramk, chip.flashk) > (current.ramk, current.flashk):
+            by_line[chip_line] = chip
+    return [chip.name for chip in sorted(by_line.values(), key=lambda c: c.name)]
 
 
 def canary_platforms(
