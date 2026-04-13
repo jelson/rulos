@@ -14,13 +14,15 @@ LINE_LEN = 100
 PREFIX = "hello there number "
 num_width = LINE_LEN - len(PREFIX)
 
-# Build the whole payload in memory, then write in large chunks.
-# Line-by-line writes hit line-buffered TTY flushing on every '\n',
-# which caps throughput well below the wire rate.
-payload = "".join(f"{PREFIX}{i:0{num_width}d}\n" for i in range(num_lines))
+# Stream lines out in 4KB chunks. Binary mode + buffering=0 skips
+# Python's text-layer line buffering, which would otherwise flush on
+# every '\n' and cap throughput well below wire rate.
+CHUNK_LINES = max(1, 4096 // (LINE_LEN + 1))
 
 with open(port, "wb", buffering=0) as f:
-    data = payload.encode("ascii")
-    CHUNK = 4096
-    for off in range(0, len(data), CHUNK):
-        f.write(data[off:off + CHUNK])
+    i = 0
+    while i < num_lines:
+        end = min(i + CHUNK_LINES, num_lines)
+        chunk = "".join(f"{PREFIX}{j:0{num_width}d}\n" for j in range(i, end))
+        f.write(chunk.encode("ascii"))
+        i = end
