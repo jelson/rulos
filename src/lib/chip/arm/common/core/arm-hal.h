@@ -28,4 +28,5 @@
 uint32_t arm_hal_get_clock_rate();
 
 void arm_hal_start_clock_us(uint32_t ticks_per_interrupt,
-                            clock_handler_t handler, void *data);
+                            uint32_t us_per_period, clock_handler_t handler,
+                            void *data);

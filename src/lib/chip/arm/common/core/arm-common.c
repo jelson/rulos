@@ -80,16 +80,17 @@ uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
   // crystal the maximum allowable jiffy clock is about 349ms.
   assert(ticks_per_interrupt < (1 << 24));
 
-  arm_hal_start_clock_us(ticks_per_interrupt, handler, data);
-
-  // Enable interrupts
-  __enable_irq();
-
   // Reverse the process to get the (possibly rounded off)
   // microseconds per tick.
   uint32_t us_per_tick = ticks_per_interrupt;
   us_per_tick *= 100;
   us_per_tick /= clock_rate_div_10k;
+
+  arm_hal_start_clock_us(ticks_per_interrupt, us_per_tick, handler, data);
+
+  // Enable interrupts
+  __enable_irq();
+
   return us_per_tick;
 }
 

@@ -61,8 +61,9 @@ typedef void (*clock_handler_t)(void *data);
 uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
                             uint8_t timer_id);
 bool hal_clock_interrupt_is_pending();
-// how far is the clock into its current tick, out of 10,000?
-uint16_t hal_elapsed_tenthou_intervals();
+// microseconds elapsed since the last clock interrupt; range
+// 0..(us_per_period - 1). Must be called from within hal_start_atomic.
+uint32_t hal_elapsed_us_in_tick();
 void hal_speedup_clock_ppm(int32_t ratio);
 void hal_delay_ms(uint16_t ms);
 

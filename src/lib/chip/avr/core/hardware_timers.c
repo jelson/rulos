@@ -40,11 +40,20 @@ uint32_t hardware_f_cpu;
 #include <avr/io.h>
 #include <util/delay_basic.h>
 
+#include "core/clock_split.h"
 #include "core/hardware.h"
 #include "core/rulos.h"
 
 static void null_handler(void *data) {
 }
+
+// Split factor (see core/clock_split.h) chosen at init so the multiply
+// in hal_elapsed_us_in_tick stays within u32. k_num and k_denom are
+// fixed after init (derived from us_per_period); ocr_scaled tracks
+// OCR1A across PPM-trim adjustments.
+static uint16_t g_timer1_k_num;
+static uint16_t g_timer1_k_denom;
+static uint16_t g_timer1_ocr_scaled;
 
 ///// timer0
 
@@ -298,6 +307,16 @@ uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
       TCCR1A = 0;
       TCCR1B = tccr1b;
 
+      // Precompute split factor for hal_elapsed_us_in_tick. k_num and
+      // k_denom are derived from actual_us_per_period (fixed after init)
+      // so a later PPM trim of OCR1A only needs to refresh ocr_scaled.
+      {
+        clock_split_t sf = clock_split(actual_us_per_period, OCR1A);
+        g_timer1_k_num = sf.k_num;
+        g_timer1_k_denom = sf.k_denom;
+        g_timer1_ocr_scaled = OCR1A / sf.k_denom;
+      }
+
       /* enable output-compare int. */
 #if defined(MCU8_line)
       TIMSK |= _BV(OCIE1A);
@@ -355,13 +374,12 @@ uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
   return actual_us_per_period;
 }
 
-/*
- * How long since the last interval timer?
- * 0 == the current interval just started.
- * 9999 = the next interval is about to start.
- */
-uint16_t hal_elapsed_tenthou_intervals() {
-  return (10000 * (uint32_t)TCNT1) / OCR1A;
+uint32_t hal_elapsed_us_in_tick() {
+  // Equivalent (in exact math) to
+  //   us_per_period × TCNT1 / OCR1A
+  // but with us_per_period pre-factored into k_num × k_denom at init
+  // so k_num × TCNT1 stays within u32 for any tick interval.
+  return ((uint32_t)g_timer1_k_num * (uint32_t)TCNT1) / g_timer1_ocr_scaled;
 }
 
 bool hal_clock_interrupt_is_pending() {
@@ -394,6 +412,10 @@ void hal_speedup_clock_ppm(int32_t ratio) {
   OCR1A = new_ocr1a;
   if (TCNT1 >= new_ocr1a)
     TCNT1 = new_ocr1a - 1;
+
+  // k_num and k_denom derive from us_per_period (stable across trim),
+  // but ocr_scaled depends on OCR1A and must track it.
+  g_timer1_ocr_scaled = new_ocr1a / g_timer1_k_denom;
 
   hal_end_atomic(old_interrupts);
 }

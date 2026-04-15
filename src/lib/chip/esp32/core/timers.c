@@ -31,6 +31,7 @@ typedef struct {
   clock_handler_t cb;
   void *cb_data;
   uint64_t alarm_value;
+  uint32_t us_per_period;
 
   // pointers to underlying hardware registers
   timer_group_t group;
@@ -118,15 +119,19 @@ uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
 
   // return the exact timer period, in microseconds, accounting for
   // any rouding that might have happened
-  return (eu->alarm_value * config.divider * 1000000) / getApbFrequency();
+  eu->us_per_period =
+      (eu->alarm_value * config.divider * 1000000) / getApbFrequency();
+  return eu->us_per_period;
 }
 
-uint16_t hal_elapsed_tenthou_intervals() {
+uint32_t hal_elapsed_us_in_tick() {
   uint8_t timer_id = 0;
   esp32_timer_t *const eu = get_timer(timer_id);
   uint64_t val;
   timer_get_counter_value(eu->group, eu->index, &val);
-  return (val * 10000) / eu->alarm_value;
+  // ESP32 has hardware 64-bit multiply, so no need for the split-factor
+  // dance the other families use.
+  return (uint32_t)((val * eu->us_per_period) / eu->alarm_value);
 }
 
 bool hal_clock_interrupt_is_pending() {

@@ -68,8 +68,10 @@ uint32_t arm_hal_get_clock_rate() {
 }
 
 // LPC-specific way of
-void arm_hal_start_clock_us(uint32_t ticks_per_interrupt, Handler handler,
+void arm_hal_start_clock_us(uint32_t ticks_per_interrupt,
+                            uint32_t us_per_period, Handler handler,
                             void* data) {
+  (void)us_per_period;  // LPC HAL is dormant; not implementing elapsed_us
   g_timer_handler = handler;
   g_timer_data = data;
 

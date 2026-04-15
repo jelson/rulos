@@ -17,6 +17,7 @@
  */
 
 #include "core/arm-hal.h"
+#include "core/clock_split.h"
 #include "core/hal.h"
 #include "core/hardware.h"
 
@@ -546,8 +547,14 @@ void SysTick_Handler() {
   }
 }
 
+// Split factor (see core/clock_split.h) chosen at init so the hot
+// path's multiply stays within u32 without 64-bit math.
+static uint32_t g_systick_k_num;
+static uint32_t g_systick_load_scaled;
+
 void arm_hal_start_clock_us(uint32_t ticks_per_interrupt,
-                            clock_handler_t handler, void* data) {
+                            uint32_t us_per_period, clock_handler_t handler,
+                            void* data) {
   g_timer_handler = handler;
   g_timer_data = data;
 
@@ -564,23 +571,25 @@ void arm_hal_start_clock_us(uint32_t ticks_per_interrupt,
     ms_per_tick = 1;
   }
   uwTickFreq = ms_per_tick;
+
+  // Precompute the split factor for hal_elapsed_us_in_tick.
+  // elapsed_ticks is bounded by SysTick->LOAD (24-bit, up to ~16M).
+  clock_split_t sf = clock_split(us_per_period, SysTick->LOAD);
+  g_systick_k_num = sf.k_num;
+  g_systick_load_scaled = SysTick->LOAD / sf.k_denom;
 }
 
-uint16_t hal_elapsed_tenthou_intervals() {
+uint32_t hal_elapsed_us_in_tick() {
   // The systick timer counts down.
   //
-  // elapsed_ticks might be up to 2^24, so multiplying it by 10k can cause
-  // 32-bit overflow.
+  // Equivalent (in exact math) to
+  //   us_per_period × elapsed_ticks / SysTick->LOAD
+  // but with us_per_period pre-factored into k_num × k_denom at init
+  // time so k_num × elapsed_ticks stays within u32. All precision loss
+  // is absorbed by pre-dividing LOAD by k_denom (see clock_split.h).
   //
-  // It would be more straightforward to just use a 64-bit intermediate value
-  // here, but I was hoping to keep 64 bit math out of simply reading the
-  // clock. On a CortexM0p running at 64mhz, precise_clock_time_us(), which
-  // calls this, takes about 14 usec using 64 bit math and 8 usec doing this One
-  // Simple Trick.
+  // We avoid 64-bit math here deliberately: on CortexM0+ the u64 form
+  // takes about 14μs vs 8μs for this split (measured at 64MHz).
   uint32_t elapsed_ticks = SysTick->LOAD - SysTick->VAL;
-  if (elapsed_ticks <= 400000) {
-    return (10000 * elapsed_ticks) / SysTick->LOAD;
-  } else {
-    return (100 * elapsed_ticks) / (SysTick->LOAD / 100);
-  }
+  return (g_systick_k_num * elapsed_ticks) / g_systick_load_scaled;
 }
