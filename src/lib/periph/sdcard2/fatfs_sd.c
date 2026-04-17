@@ -131,8 +131,8 @@ static void deselect_card (void)
 
 static int select_card (void)	/* 1:OK, 0:Timeout */
 {
-	TM_SPI_Send(FATFS_SPI, 0xFF);	/* Dummy clock (force DO enabled) */
 	FATFS_CS_LOW;
+	TM_SPI_Send(FATFS_SPI, 0xFF);	/* Dummy clock (force DO enabled) */
 
 	if (wait_ready(2000)) {
 		return 1;	/* OK */
@@ -234,6 +234,7 @@ static BYTE send_cmd(		/* Return value: R1 resp (bit7==1:Failed to send) */
 
 	/* Select the card and wait for ready except to stop multiple block read */
 	if (cmd != CMD12) {
+		deselect_card();
 		if (!select_card()) {
 			LOG("card-select failed in send_cmd!");
 			return 0xFF;
