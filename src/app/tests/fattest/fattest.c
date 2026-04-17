@@ -48,7 +48,7 @@ static void read_4meg_file(bool validate) {
       __builtin_trap();
     }
     if (bytes_read < sizeof(fatbuf)) {
-      LOG("unexpected EOF, read %lu bytes", bytes_read);
+      LOG("unexpected EOF, read %u bytes", bytes_read);
       __builtin_trap();
     }
     total += bytes_read;
@@ -91,7 +91,7 @@ static void read_4meg_file(bool validate) {
     __builtin_trap();
   }
   if (bytes_read != 0) {
-    LOG("expected an EOF on final read, but instead got %lu bytes", bytes_read);
+    LOG("expected an EOF on final read, but instead got %u bytes", bytes_read);
     __builtin_trap();
   }
 

@@ -37,7 +37,8 @@ static void try_write(void *data) {
 
 #if SIM
   LOG("trying to format");
-  if (f_mkfs("", FM_FAT32, 1024, fatbuf, sizeof(fatbuf)) != FR_OK) {
+  const MKFS_PARM mkfs_opt = { .fmt = FM_FAT32, .au_size = 1024 };
+  if (f_mkfs("", &mkfs_opt, fatbuf, sizeof(fatbuf)) != FR_OK) {
     LOG("couldn't format");
     return;
   }
