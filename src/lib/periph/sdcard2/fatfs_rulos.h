@@ -157,8 +157,8 @@ static __INLINE uint8_t TM_SPI_Send(SPI_TypeDef* SPIx, uint8_t data) {
   /* Wait for transmission to complete */
   SPI_WAIT(SPIx);
 
-  /* Return data from buffer */
-  return SPIx->DR;
+  /* 8-bit read to avoid draining extra bytes from the STM32F3 RX FIFO */
+  return LL_SPI_ReceiveData8(SPIx);
 }
 
 /**

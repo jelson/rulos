@@ -91,6 +91,7 @@ static int wait_ready (	/* 1:Ready, 0:Timeout */
 )
 {
 	BYTE d;
+	Time start = clock_time_us();
 
 	/* Set down counter */
 	TM_DELAY_SetTime2(wt);
@@ -101,7 +102,8 @@ static int wait_ready (	/* 1:Ready, 0:Timeout */
 	if (d == 0xFF) {
 		FATFS_DEBUG_SEND_USART("wait_ready: OK");
 	} else {
-		FATFS_DEBUG_SEND_USART("wait_ready: timeout");
+		Time elapsed = (clock_time_us() - start) / 1000;
+		LOG("wait_ready: timeout after %ldms (last byte: 0x%02x)", elapsed, d);
 	}
 	return (d == 0xFF) ? 1 : 0;
 }
@@ -131,18 +133,12 @@ static int select_card (void)	/* 1:OK, 0:Timeout */
 {
 	TM_SPI_Send(FATFS_SPI, 0xFF);	/* Dummy clock (force DO enabled) */
 	FATFS_CS_LOW;
-	return 1;
 
-#if 0
-	if (wait_ready(500)) {
-		FATFS_DEBUG_SEND_USART("select: OK");
+	if (wait_ready(2000)) {
 		return 1;	/* OK */
 	}
-	FATFS_DEBUG_SEND_USART("select: no");
 	deselect_card();
-
 	return 0;	/* Timeout */
-#endif
 }
 
 
@@ -166,8 +162,8 @@ static int rcvr_datablock (	/* 1:OK, 0:Error */
 		token = TM_SPI_Send(FATFS_SPI, 0xFF);
 		// This loop will take a time. Insert rot_rdq() here for multitask envilonment.
 	} while ((token == 0xFF) && TM_DELAY_Time2());
-	if (token == 0xFF) {
-		FATFS_DEBUG_SEND_USART("rcvr_datablock: timed out");
+	if (token != 0xFE) {
+		FATFS_DEBUG_SEND_USART("rcvr_datablock: bad token or timeout");
 		return 0;		// Function fails if invalid DataStart token or timeout
 	}
 
@@ -193,13 +189,10 @@ static int xmit_datablock (	/* 1:OK, 0:Failed */
 
 	FATFS_DEBUG_SEND_USART("xmit_datablock: inside");
 
-#if 0
 	if (!wait_ready(500)) {
 		FATFS_DEBUG_SEND_USART("xmit_datablock: not ready");
 		return 0;		/* Wait for card ready */
 	}
-#endif
-
 
 	TM_SPI_Send(FATFS_SPI, token);					/* Send token */
 	xmit_spi_multi(buff, 512);		/* Data */
@@ -256,7 +249,6 @@ static BYTE send_cmd(		/* Return value: R1 resp (bit7==1:Failed to send) */
 	n = 0x01;										/* Dummy CRC + Stop */
 	if (cmd == CMD0) n = 0x95;						/* Valid CRC for CMD0(0) */
 	if (cmd == CMD8) n = 0x87;						/* Valid CRC for CMD8(0x1AA) */
-	if (cmd == 41) n = 0x77;
 	TM_SPI_Send(FATFS_SPI, n);
 
 	/* Receive command resp */
@@ -353,7 +345,7 @@ DSTATUS TM_FATFS_SD_disk_initialize (void) {
 				ty = CT_MMC; cmd = CMD1;	/* MMCv3 (CMD1(0)) */
 			}
 			while (TM_DELAY_Time2() && send_cmd(cmd, 0));			/* Wait for end of initialization */
-			if (TM_DELAY_Time2() || send_cmd(CMD16, 512) != 0) {	/* Set block length: 512 */
+			if (!TM_DELAY_Time2() || send_cmd(CMD16, 512) != 0) {	/* Set block length: 512 */
 				ty = 0;
 			}
 		}
@@ -522,7 +514,7 @@ DRESULT TM_FATFS_SD_disk_write (
 				}
 				buff += 512;
 
-				if (!wait_ready(250)) {
+				if (!wait_ready(5000)) {
 					LOG("timed out waiting for multiblock ack");
 					goto done;
 				}
@@ -535,7 +527,7 @@ DRESULT TM_FATFS_SD_disk_write (
 	}
 
 	// wait for the write to complete
-	if (!wait_ready(250)) {
+	if (!wait_ready(5000)) {
 		LOG("timed out waiting for block ack");
 	}
 

@@ -71,7 +71,7 @@ void TM_SPI_Init() {
   LL_GPIO_SetPinMode(SD_LL_MISO_PORT, SD_LL_MISO_PIN, LL_GPIO_MODE_ALTERNATE);
   LL_GPIO_SetAFPin_0_7(SD_LL_MISO_PORT, SD_LL_MISO_PIN, SD_LL_ALTFUNC);
   LL_GPIO_SetPinSpeed(SD_LL_MISO_PORT, SD_LL_MISO_PIN, LL_GPIO_SPEED_FREQ_HIGH);
-  LL_GPIO_SetPinPull(SD_LL_MISO_PORT, SD_LL_MISO_PIN, LL_GPIO_PULL_DOWN);
+  LL_GPIO_SetPinPull(SD_LL_MISO_PORT, SD_LL_MISO_PIN, LL_GPIO_PULL_UP);
 
   // Configure MOSI Pin
   LL_GPIO_SetPinMode(SD_LL_MOSI_PORT, SD_LL_MOSI_PIN, LL_GPIO_MODE_ALTERNATE);
@@ -115,7 +115,7 @@ void TM_SPI_SetSlow() {
 }
 
 void TM_SPI_SetFast() {
-  LL_SPI_SetBaudRatePrescaler(SD_SPI_PERIPH, LL_SPI_BAUDRATEPRESCALER_DIV2);
+  LL_SPI_SetBaudRatePrescaler(SD_SPI_PERIPH, LL_SPI_BAUDRATEPRESCALER_DIV4);
 }
 
 //#define DO_NOT_USE_DMA
@@ -253,6 +253,12 @@ static void dma_enable_and_wait(void* rx_mem, void* tx_mem, uint32_t count) {
   LL_SPI_DisableDMAReq_TX(SD_SPI_PERIPH);
   rulos_dma_stop(rx_dma_ch);
   rulos_dma_stop(tx_dma_ch);
+
+  // Drain any residual bytes from the SPI RX FIFO so they don't
+  // contaminate subsequent TM_SPI_Send byte-at-a-time reads.
+  while (LL_SPI_IsActiveFlag_RXNE(SD_SPI_PERIPH)) {
+    (void)LL_SPI_ReceiveData8(SD_SPI_PERIPH);
+  }
 }
 
 void TM_SPI_WriteMulti(SPI_TypeDef* SPIx, uint8_t* dataOut, uint32_t count) {
