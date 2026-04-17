@@ -39,7 +39,7 @@ static const char *makeFileName() {
   // try to open the counter file
   int open_res = f_open(&fp, counter_fname, FA_READ | FA_WRITE);
   if (open_res == FR_OK) {
-    uint32_t bytes_count = 0;
+    UINT bytes_count = 0;
     int file_size = f_size(&fp);
     // if the size of the file is not exactly four bytes,
     // then initialize it with four bytes of zeroes,
@@ -137,7 +137,7 @@ void flash_dumper_init(flash_dumper_t *fd) {
 
 static bool _write_to_file(flash_dumper_t *fd, const void *buf, uint32_t len) {
   // attempt to write to the SD card
-  uint32_t written;
+  UINT written;
   int retval = f_write(&fd->fp, buf, len, &written);
   if (retval != FR_OK) {
     LOG("couldn't write to sd card: got retval of %d", retval);
@@ -150,7 +150,7 @@ static bool _write_to_file(flash_dumper_t *fd, const void *buf, uint32_t len) {
     return false;
   }
   if (written != len) {
-    LOG("tried to write %ld, but wrote %ld!?", len, written);
+    LOG("tried to write %lu, but wrote %u!?", (unsigned long)len, written);
     return false;
   }
 
