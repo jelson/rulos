@@ -1,3 +1,4 @@
+# Prerequisites: sudo apt install sox libsox-fmt-all
 all: sdcard.img audio_sim2
 
 sdcard: compile_audio.py ../../lib/periph/audio/sound.def ../../../ext/Media/audio/fx/* ../../../ext/Media/audio/disco/*

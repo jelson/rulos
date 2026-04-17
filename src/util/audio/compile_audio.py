@@ -193,12 +193,11 @@ class ParseAudioFilenames:
             if (l==""): break
             l = l.strip()
 
-            mo = re.compile('SOUND\((.*)\)').search(l)
+            mo = re.compile(r'SOUND\((.*)\)').search(l)
             if (mo==None):
                 continue
             args = mo.groups(1)[0]
-            words = map(lambda s: s.strip(), args.split(','))
-            print(words)
+            words = [s.strip() for s in args.split(',')]
             (symbol, source_file_name, filter_name, label) = words
             self._tokens.append(Token(outdir, idx, os.path.join(fx_root, source_file_name),
                 symbol, source_file_name, filter_name, label))

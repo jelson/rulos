@@ -98,6 +98,8 @@ void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id) {
   // here.
   init_audio_streamer(&aserv->audio_streamer);
 
+  aserv->active_stream = 0;
+
   // Initialize the streams to all play silence.
   for (uint8_t stream_idx = 0; stream_idx < AUDIO_NUM_STREAMS; stream_idx++) {
     aserv->audio_stream[stream_idx].skip_effect_id = sound_silence;
@@ -119,8 +121,10 @@ void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id) {
 // Concatenate onto dst, without overflowing capacity, and
 // enforcing that dst stays nul-terminated.
 void safecat(char *dst, int capacity, const char *src) {
-  strncat(dst, src, capacity - strlen(dst));
-  dst[capacity - 1] = '\0';
+  int remaining = capacity - strlen(dst) - 1;
+  if (remaining > 0) {
+    strncat(dst, src, remaining);
+  }
 }
 
 // Count all the music (with a huge limit), or count up to a particular
