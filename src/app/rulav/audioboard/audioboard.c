@@ -51,7 +51,7 @@ int main() {
 
 #ifdef LOG_TO_SERIAL
   UartState_t uart;
-  uart_init(&uart, /* uart_id= */ 0, 115200);
+  uart_init(&uart, /* uart_id= */ 0, 1000000);
   log_bind_uart(&uart);
   LOG("Log output running");
 #endif
