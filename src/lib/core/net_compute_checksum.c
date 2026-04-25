@@ -22,7 +22,9 @@ uint8_t net_compute_checksum(const unsigned char *buf, int size) {
   int i;
   uint8_t cksum = 0x67;
   for (i = 0; i < size; i++) {
-    cksum = cksum * 131 + buf[i];
+    // Cast to unsigned to avoid signed-int overflow on AVR, where int
+    // is 16 bits and 255*131+255 = 33660 exceeds INT16_MAX.
+    cksum = (uint8_t)((unsigned)cksum * 131U + buf[i]);
   }
   return cksum;
 }

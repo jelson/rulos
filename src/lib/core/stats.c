@@ -48,6 +48,10 @@ void minmax_add_sample(MinMaxMean_t *mmm, const int32_t sample) {
 }
 
 void minmax_log(MinMaxMean_t *mmm, const char *label) {
+  if (mmm->count == 0) {
+    LOG("%s stats: no stats", label);
+    return;
+  }
   LOG("%s stats: min=%" PRIi32 ", mean=%" PRIi32 ", max=%" PRIi32 "(n=%" PRIu32
       ")",
       label, mmm->min, mmm->sum / mmm->count, mmm->max, mmm->count);
