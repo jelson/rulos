@@ -98,8 +98,6 @@ def count_pulses(port, settle_time_s=2.0, measure_time_s=3.0, verbose=True):
         ser.close()
 
 
-
-
 def test_spacing(sg, port, ns, ncyc=3, verbose=True):
     """Set the signal generator to the given spacing and check results.
 
@@ -118,7 +116,6 @@ def test_spacing(sg, port, ns, ncyc=3, verbose=True):
     # "fail" = any burst is missing pulses, or overcaptures/overflows reported.
     # Ignore partial bursts at measurement window boundaries
     complete = [sz for sz in result.burst_sizes if sz >= ncyc]
-    partial = [sz for sz in result.burst_sizes if sz < ncyc]
 
     if len(complete) < 2:
         passed = False
@@ -171,11 +168,18 @@ def main():
         print(f"Connected to: {sg.idn()}")
         print()
 
-        # Verify endpoints: top should pass, bottom should fail
+        # Verify endpoints: top should pass, bottom should fail.
+        # If --bottom == --top, the upper-bound test answers both questions.
         print("Verifying upper bound...")
         if not test_spacing(sg, args.port, hi, ncyc=ncyc, verbose=verbose):
             print(f"ERROR: Upper bound {hi:.0f} ns fails -- increase --top")
             sys.exit(1)
+
+        if lo == hi:
+            print(f"NOTE: --bottom == --top == {lo:.0f} ns; that spacing passes "
+                  f"-- dead time is at or below {lo:.0f} ns")
+            sg.output_off()
+            sys.exit(0)
 
         print("Verifying lower bound...")
         if test_spacing(sg, args.port, lo, ncyc=ncyc, verbose=verbose):
