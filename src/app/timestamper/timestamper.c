@@ -105,8 +105,10 @@ _Static_assert(CLOCK_FREQ_HZ == 1000000000 / NS_PER_TICK,
                "format_timestamp's tick->ns conversion assumes 4 ns/tick");
 
 #define TIMESTAMP_PRINT_PERIOD_USEC 100000
-#define TIMESTAMP_BUFLEN            1024  // should be power of 2 for fast modulo ops
-#define DMA_CAPTURE_BUFLEN          256
+// H523 has 256 KB SRAM. Sized to use ~192 KB for capture buffers,
+// leaving ~64 KB for stack, USB buffers, and globals.
+#define TIMESTAMP_BUFLEN            16384  // 16384 * 8 bytes = 128 KB; power of 2 for fast modulo
+#define DMA_CAPTURE_BUFLEN          4096   // 4 channels * 4096 * 4 bytes = 64 KB
 // USB FS bulk IN can transfer up to 19 packets (19*64 = 1216 bytes)
 // per 1ms frame. 1280 bytes gives headroom to fill a full frame
 // without cutting off mid-timestamp.
