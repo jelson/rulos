@@ -20,19 +20,28 @@ import sys
 sys.path.insert(0, "../../util")
 from build_tools import *
 
+# Target: STM32H523xC (Cortex-M33 @ 250 MHz, 4 input-capture channels).
+#
+# Clock: 10 MHz active oscillator (rubidium / GPS-disciplined) on OSC_IN
+# via HSE bypass, multiplied by PLL to 250 MHz SYSCLK.
+#   HSE 10 MHz / PLLM=1 = 10 MHz VCI
+#   10 MHz * PLLN=50    = 500 MHz VCO
+#   500 MHz / PLLP=2    = 250 MHz SYSCLK    (PLLP is hardcoded to 2)
+# On H5 the PLLM/PLLN fields are raw integers, unlike G4 which wants
+# RCC_PLLM_DIVn macros.
 RulosBuildTarget(
     name = "timestamper",
     sources = ["timestamper.c"],
     peripherals = "uart usb-cdc-stm32",
     platforms = [
         ArmStmPlatform(
-            "stm32g431x8",
+            "stm32h523xc",
             extra_cflags = [
                 '-DHSE_VALUE=10000000',
                 '-DRULOS_USE_HSE',
                 '-DRULOS_HSE_BYPASS',
-                '-DRULOS_PLLM=RCC_PLLM_DIV1',
-                '-DRULOS_PLLN=34',
+                '-DRULOS_PLLM=1',
+                '-DRULOS_PLLN=50',
                 '-DSCHEDULER_CAPACITY=4',
             ],
         ),

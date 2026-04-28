@@ -41,7 +41,7 @@ static const gpio_pin_t GPIO_{port}{pin} = {{
 
 
 def stm32():
-    for port in ['A', 'B', 'C', 'D', 'F']:
+    for port in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
         print(f'\n\n#if defined(GPIO{port})')
         for pin in range(16):
             print(STM32_FMT.format(port=port, pin=pin))

@@ -402,6 +402,106 @@ static const gpio_pin_t GPIO_D15 = {
 #endif
 
 
+#if defined(GPIOE)
+
+static const gpio_pin_t GPIO_E0 = {
+   .port = GPIOE,
+   .pin = LL_GPIO_PIN_0,
+};
+
+
+static const gpio_pin_t GPIO_E1 = {
+   .port = GPIOE,
+   .pin = LL_GPIO_PIN_1,
+};
+
+
+static const gpio_pin_t GPIO_E2 = {
+   .port = GPIOE,
+   .pin = LL_GPIO_PIN_2,
+};
+
+
+static const gpio_pin_t GPIO_E3 = {
+   .port = GPIOE,
+   .pin = LL_GPIO_PIN_3,
+};
+
+
+static const gpio_pin_t GPIO_E4 = {
+   .port = GPIOE,
+   .pin = LL_GPIO_PIN_4,
+};
+
+
+static const gpio_pin_t GPIO_E5 = {
+   .port = GPIOE,
+   .pin = LL_GPIO_PIN_5,
+};
+
+
+static const gpio_pin_t GPIO_E6 = {
+   .port = GPIOE,
+   .pin = LL_GPIO_PIN_6,
+};
+
+
+static const gpio_pin_t GPIO_E7 = {
+   .port = GPIOE,
+   .pin = LL_GPIO_PIN_7,
+};
+
+
+static const gpio_pin_t GPIO_E8 = {
+   .port = GPIOE,
+   .pin = LL_GPIO_PIN_8,
+};
+
+
+static const gpio_pin_t GPIO_E9 = {
+   .port = GPIOE,
+   .pin = LL_GPIO_PIN_9,
+};
+
+
+static const gpio_pin_t GPIO_E10 = {
+   .port = GPIOE,
+   .pin = LL_GPIO_PIN_10,
+};
+
+
+static const gpio_pin_t GPIO_E11 = {
+   .port = GPIOE,
+   .pin = LL_GPIO_PIN_11,
+};
+
+
+static const gpio_pin_t GPIO_E12 = {
+   .port = GPIOE,
+   .pin = LL_GPIO_PIN_12,
+};
+
+
+static const gpio_pin_t GPIO_E13 = {
+   .port = GPIOE,
+   .pin = LL_GPIO_PIN_13,
+};
+
+
+static const gpio_pin_t GPIO_E14 = {
+   .port = GPIOE,
+   .pin = LL_GPIO_PIN_14,
+};
+
+
+static const gpio_pin_t GPIO_E15 = {
+   .port = GPIOE,
+   .pin = LL_GPIO_PIN_15,
+};
+
+#endif
+
+
 #if defined(GPIOF)
 
 static const gpio_pin_t GPIO_F0 = {
@@ -496,6 +596,206 @@ static const gpio_pin_t GPIO_F14 = {
 
 static const gpio_pin_t GPIO_F15 = {
    .port = GPIOF,
+   .pin = LL_GPIO_PIN_15,
+};
+
+#endif
+
+
+#if defined(GPIOG)
+
+static const gpio_pin_t GPIO_G0 = {
+   .port = GPIOG,
+   .pin = LL_GPIO_PIN_0,
+};
+
+
+static const gpio_pin_t GPIO_G1 = {
+   .port = GPIOG,
+   .pin = LL_GPIO_PIN_1,
+};
+
+
+static const gpio_pin_t GPIO_G2 = {
+   .port = GPIOG,
+   .pin = LL_GPIO_PIN_2,
+};
+
+
+static const gpio_pin_t GPIO_G3 = {
+   .port = GPIOG,
+   .pin = LL_GPIO_PIN_3,
+};
+
+
+static const gpio_pin_t GPIO_G4 = {
+   .port = GPIOG,
+   .pin = LL_GPIO_PIN_4,
+};
+
+
+static const gpio_pin_t GPIO_G5 = {
+   .port = GPIOG,
+   .pin = LL_GPIO_PIN_5,
+};
+
+
+static const gpio_pin_t GPIO_G6 = {
+   .port = GPIOG,
+   .pin = LL_GPIO_PIN_6,
+};
+
+
+static const gpio_pin_t GPIO_G7 = {
+   .port = GPIOG,
+   .pin = LL_GPIO_PIN_7,
+};
+
+
+static const gpio_pin_t GPIO_G8 = {
+   .port = GPIOG,
+   .pin = LL_GPIO_PIN_8,
+};
+
+
+static const gpio_pin_t GPIO_G9 = {
+   .port = GPIOG,
+   .pin = LL_GPIO_PIN_9,
+};
+
+
+static const gpio_pin_t GPIO_G10 = {
+   .port = GPIOG,
+   .pin = LL_GPIO_PIN_10,
+};
+
+
+static const gpio_pin_t GPIO_G11 = {
+   .port = GPIOG,
+   .pin = LL_GPIO_PIN_11,
+};
+
+
+static const gpio_pin_t GPIO_G12 = {
+   .port = GPIOG,
+   .pin = LL_GPIO_PIN_12,
+};
+
+
+static const gpio_pin_t GPIO_G13 = {
+   .port = GPIOG,
+   .pin = LL_GPIO_PIN_13,
+};
+
+
+static const gpio_pin_t GPIO_G14 = {
+   .port = GPIOG,
+   .pin = LL_GPIO_PIN_14,
+};
+
+
+static const gpio_pin_t GPIO_G15 = {
+   .port = GPIOG,
+   .pin = LL_GPIO_PIN_15,
+};
+
+#endif
+
+
+#if defined(GPIOH)
+
+static const gpio_pin_t GPIO_H0 = {
+   .port = GPIOH,
+   .pin = LL_GPIO_PIN_0,
+};
+
+
+static const gpio_pin_t GPIO_H1 = {
+   .port = GPIOH,
+   .pin = LL_GPIO_PIN_1,
+};
+
+
+static const gpio_pin_t GPIO_H2 = {
+   .port = GPIOH,
+   .pin = LL_GPIO_PIN_2,
+};
+
+
+static const gpio_pin_t GPIO_H3 = {
+   .port = GPIOH,
+   .pin = LL_GPIO_PIN_3,
+};
+
+
+static const gpio_pin_t GPIO_H4 = {
+   .port = GPIOH,
+   .pin = LL_GPIO_PIN_4,
+};
+
+
+static const gpio_pin_t GPIO_H5 = {
+   .port = GPIOH,
+   .pin = LL_GPIO_PIN_5,
+};
+
+
+static const gpio_pin_t GPIO_H6 = {
+   .port = GPIOH,
+   .pin = LL_GPIO_PIN_6,
+};
+
+
+static const gpio_pin_t GPIO_H7 = {
+   .port = GPIOH,
+   .pin = LL_GPIO_PIN_7,
+};
+
+
+static const gpio_pin_t GPIO_H8 = {
+   .port = GPIOH,
+   .pin = LL_GPIO_PIN_8,
+};
+
+
+static const gpio_pin_t GPIO_H9 = {
+   .port = GPIOH,
+   .pin = LL_GPIO_PIN_9,
+};
+
+
+static const gpio_pin_t GPIO_H10 = {
+   .port = GPIOH,
+   .pin = LL_GPIO_PIN_10,
+};
+
+
+static const gpio_pin_t GPIO_H11 = {
+   .port = GPIOH,
+   .pin = LL_GPIO_PIN_11,
+};
+
+
+static const gpio_pin_t GPIO_H12 = {
+   .port = GPIOH,
+   .pin = LL_GPIO_PIN_12,
+};
+
+
+static const gpio_pin_t GPIO_H13 = {
+   .port = GPIOH,
+   .pin = LL_GPIO_PIN_13,
+};
+
+
+static const gpio_pin_t GPIO_H14 = {
+   .port = GPIOH,
+   .pin = LL_GPIO_PIN_14,
+};
+
+
+static const gpio_pin_t GPIO_H15 = {
+   .port = GPIOH,
    .pin = LL_GPIO_PIN_15,
 };
 

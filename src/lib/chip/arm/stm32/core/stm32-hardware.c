@@ -397,25 +397,49 @@ void HAL_RCC_CSSCallback(void) {
 }
 #endif
 #elif defined(RULOS_ARM_stm32h5)
+#ifdef RULOS_USE_HSE
+// True if HSE failed at boot or was lost during operation. Mirrors the
+// G4 path. Apps that require HSE accuracy (e.g. timestamper) check this
+// after rulos_hal_init().
+bool g_rulos_hse_failed = false;
+#endif
+
 /*
- * STM32H5 clock: HSI (64 MHz) -> PLL1 -> 250 MHz SYSCLK.
+ * STM32H5 clock: PLL1 -> 250 MHz SYSCLK, sourced from HSE (preferred)
+ * or HSI (fallback).
  *
- * Copied verbatim from ST's NUCLEO-H503RB/Examples_MIX/PWR/PWR_STOP/Src/main.c
- * (same config appears in NUCLEO-H563ZI PWR_STOP). Chosen because it is
- * ST's only HSI->250 MHz reference in STM32CubeH5 -- other HSI-based
- * examples use PLLM=8/PLLN=60 for 240 MHz. The H5's PLL1 phase detector
- * prefers higher input frequencies (16 MHz here, via VCIRANGE_3) for
- * lower jitter, so we accept a nonzero PLLFRACN rather than dividing
- * HSI further for integer-only math.
+ * HSE path (RULOS_USE_HSE): HSE_VALUE / RULOS_PLLM gives the VCI ref;
+ * VCI * RULOS_PLLN / RULOS_PLLP gives SYSCLK. For a 10 MHz HSE feeding
+ * 250 MHz: PLLM=1, PLLN=50, PLLP=2 (10/1*50/2 = 250). PLLFRACN=0 keeps
+ * the math integer. PLLRGE_3 (8-16 MHz VCI) and VCORANGE_WIDE
+ * (192-836 MHz VCO) accommodate the resulting 10 MHz / 500 MHz pair.
  *
- *   HSI=64 MHz / PLLM=4        = 16 MHz ref  (RCC_PLL1_VCIRANGE_3: 8-16 MHz)
- *   16 MHz * (31 + 2048/8192)  = 500 MHz VCO (RCC_PLL1_VCORANGE_WIDE)
- *   500 MHz / PLLP=2           = 250 MHz SYSCLK
+ * HSI fallback / non-HSE path: HSI=64 MHz divided to 16 MHz VCI then
+ * multiplied to 500 MHz VCO via PLLN=31 + PLLFRACN=2048
+ * (16 * 31.25 = 500). Copied from ST's NUCLEO-H503RB PWR_STOP example
+ * (the only HSI->250 MHz reference in STM32CubeH5).
  *
- * VOS0 is required for SYSCLK > 200 MHz. FLASH_LATENCY_5 is correct for
- * 250 MHz at VOS0 per RM0481. FLASH_PROGRAMMING_DELAY_2 sets WRHIGHFREQ
- * to the 168+ MHz band.
+ * VOS0 is required for SYSCLK > 200 MHz. FLASH_LATENCY_5 is correct
+ * for 250 MHz at VOS0 per RM0481. FLASH_PROGRAMMING_DELAY_2 sets
+ * WRHIGHFREQ to the 168+ MHz band.
  */
+static void config_hsi_pll_h5(RCC_OscInitTypeDef *osc) {
+  osc->OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  osc->HSIState = RCC_HSI_ON;
+  osc->HSIDiv = RCC_HSI_DIV1;
+  osc->HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  osc->PLL.PLLState = RCC_PLL_ON;
+  osc->PLL.PLLSource = RCC_PLL1_SOURCE_HSI;
+  osc->PLL.PLLM = 4;
+  osc->PLL.PLLN = 31;
+  osc->PLL.PLLP = 2;
+  osc->PLL.PLLQ = 2;
+  osc->PLL.PLLR = 2;
+  osc->PLL.PLLRGE = RCC_PLL1_VCIRANGE_3;
+  osc->PLL.PLLVCOSEL = RCC_PLL1_VCORANGE_WIDE;
+  osc->PLL.PLLFRACN = 2048;
+}
+
 static void SystemClock_Config(void) {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
@@ -426,23 +450,48 @@ static void SystemClock_Config(void) {
   while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {
   }
 
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSIDiv = RCC_HSI_DIV1;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+#ifdef RULOS_USE_HSE
+  /* Try HSE + PLL first */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+#ifdef RULOS_HSE_BYPASS
+  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
+#else
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+#endif
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLL1_SOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 31;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLL1_SOURCE_HSE;
+  /* On H5, PLLM/PLLN/PLLP are raw integers (vs G4's RCC_PLLM_DIVn
+   * macros). Caller passes the integers via -DRULOS_PLLM=N etc. */
+  RCC_OscInitStruct.PLL.PLLM = RULOS_PLLM;
+  RCC_OscInitStruct.PLL.PLLN = RULOS_PLLN;
   RCC_OscInitStruct.PLL.PLLP = 2;
   RCC_OscInitStruct.PLL.PLLQ = 2;
   RCC_OscInitStruct.PLL.PLLR = 2;
   RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1_VCIRANGE_3;
   RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1_VCORANGE_WIDE;
-  RCC_OscInitStruct.PLL.PLLFRACN = 2048;
+  RCC_OscInitStruct.PLL.PLLFRACN = 0;
+
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) == HAL_OK) {
+    /* HSE started. Enable CSS so a mid-stream HSE failure fires NMI;
+     * see HAL_RCC_CSSCallback below. */
+    HAL_RCC_EnableCSS();
+  } else {
+    /* HSE failed to start; fall back to HSI but flag the failure so
+     * apps that require HSE accuracy (e.g. the timestamper) can refuse
+     * to operate and surface the error. */
+    g_rulos_hse_failed = true;
+    RCC_OscInitStruct = (RCC_OscInitTypeDef){0};
+    config_hsi_pll_h5(&RCC_OscInitStruct);
+    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+      __builtin_trap();
+    }
+  }
+#else
+  config_hsi_pll_h5(&RCC_OscInitStruct);
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
     __builtin_trap();
   }
+#endif
 
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
                                 RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2 |
@@ -458,6 +507,18 @@ static void SystemClock_Config(void) {
 
   __HAL_FLASH_SET_PROGRAM_DELAY(FLASH_PROGRAMMING_DELAY_2);
 }
+
+#ifdef RULOS_USE_HSE
+/* NMI default handler + CSS callback shared with the G4 path.
+ * Defined again here under the H5 elif so both families compile
+ * the same way. */
+__attribute__((weak)) void NMI_Handler(void) {
+  HAL_RCC_NMI_IRQHandler();
+}
+void HAL_RCC_CSSCallback(void) {
+  g_rulos_hse_failed = true;
+}
+#endif
 
 // The H5's flash OTP and read-only data regions live at 0x08FFF000-0x08FFFFFF
 // (UID, package code, flash size, calibration values). These addresses fall
@@ -556,6 +617,9 @@ void rulos_hal_init() {
 #endif
 #ifdef __HAL_RCC_GPIOG_CLK_ENABLE
   __HAL_RCC_GPIOG_CLK_ENABLE();
+#endif
+#ifdef __HAL_RCC_GPIOH_CLK_ENABLE
+  __HAL_RCC_GPIOH_CLK_ENABLE();
 #endif
 #ifdef __HAL_RCC_DMA1_CLK_ENABLE
   __HAL_RCC_DMA1_CLK_ENABLE();

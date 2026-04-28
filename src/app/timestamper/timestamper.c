@@ -19,40 +19,36 @@
 /*
  * This program timestamps pulses that it sees on its input capture pins and
  * prints a list of those timestamps (relative to program start) to its USB
- * serial interface. It has a resolution of 6 nanoseconds.
+ * serial interface. It has a resolution of 4 nanoseconds.
  *
- * It is based on the STM32G431x8, a wonderful little CPU that costs $5 but can
- * run at 170Mhz. The software assumes that a 10Mhz clock reference is provided
- * on OSC_IN pin (pin 2). In my testing, I used a surplus rubidium oscillator
- * with an unbiased [diode clamper]
- * (https://en.wikipedia.org/wiki/Clamper_(electronics)) used to shift the
- * zero-centered signal up so that it does not go much below ground. A Schottky
- * diode is crucial to keep the voltage from dipping too far below ground; the
- * size of the diode drop will be about how far below ground the shifted signal
- * goes.
+ * It is based on the STM32H523, a Cortex-M33 running at 250 MHz with four
+ * input-capture channels on TIM2. A 10 MHz active oscillator (rubidium or
+ * GPS-disciplined) is expected on OSC_IN via HSE bypass mode; the PLL
+ * multiplies to 250 MHz SYSCLK. If HSE fails to start, rulos_hal_init
+ * falls back to HSI (~1% accuracy) and sets g_rulos_hse_failed -- the
+ * periodic task below detects this and refuses to emit timestamps,
+ * since HSI accuracy is meaningless for measurement-grade work.
  *
  * Output is simply a list of channel numbers and timestamps, one per line:
  *
- * 1 5293.585203495384
+ * 1 5293.585203496
  *
- * Timestamps are decimal seconds, with 12 digits following the decimal point
- * representing picoseconds. Timestamps are relative to the time the program
+ * Timestamps are decimal seconds, with 9 digits following the decimal point
+ * representing nanoseconds. Timestamps are relative to the time the program
  * started.
  *
- * The implementation uses input-capture feature of TIM2, a 32-bit timer of the
- * STM32G431. Input capture waits for the rising edge of the input signal and
- * then latches the timer value at the moment of the signal's edge. The timer
- * runs at the system clock rate of 170MHz. The 170MHz clock is achieved by
- * using the STM32's PLL to multiply the 10MHz reference frequency by 17. The
- * timer is configured to roll over once per second, i.e. every 170 million
- * clock ticks.
+ * The implementation uses the input-capture feature of TIM2, a 32-bit timer of
+ * the STM32H523. Input capture waits for the rising edge of the input signal
+ * and then latches the timer value at the moment of the signal's edge. The
+ * timer runs at the system clock rate of 250 MHz. The timer is configured to
+ * roll over once per second, i.e. every 250 million clock ticks.
  *
  * RACE CONDITION AVOIDANCE WITH seconds_A / seconds_B:
  *
  * A timestamp consists of two parts: the high-order "seconds" counter
  * (maintained in software) and the low-order timer value (latched in hardware
  * at the moment of input capture). A naive implementation would increment the
- * seconds counter every time we get an interrupt indicating the 170MHz counter
+ * seconds counter every time we get an interrupt indicating the 250MHz counter
  * has rolled over. But there's a potential race condition: if the timer rolls
  * over between when an input capture occurs and when the ISR reads the seconds
  * counter, the wrong seconds value could be paired with the timer value.
@@ -92,14 +88,21 @@
 #include "core/rulos.h"
 #include "periph/uart/uart.h"
 #include "periph/usb_cdc/usb_cdc.h"
-#include "stm32g4xx_ll_bus.h"
-#include "stm32g4xx_ll_dma.h"
-#include "stm32g4xx_ll_gpio.h"
-#include "stm32g4xx_ll_rcc.h"
-#include "stm32g4xx_ll_tim.h"
+#include "stm32h5xx_ll_tim.h"
 
-#define NUM_CHANNELS  2
-#define CLOCK_FREQ_HZ 170000000
+#ifndef RULOS_USE_HSE
+#error "timestamper requires RULOS_USE_HSE"
+#endif
+
+#define NUM_CHANNELS  4
+#define CLOCK_FREQ_HZ 250000000
+
+// 250 MHz exactly = 4 ns per tick. Used by format_timestamp to convert
+// counter ticks to nanoseconds; static_assert below guards against silent
+// breakage if CLOCK_FREQ_HZ changes.
+#define NS_PER_TICK 4
+_Static_assert(CLOCK_FREQ_HZ == 1000000000 / NS_PER_TICK,
+               "format_timestamp's tick->ns conversion assumes 4 ns/tick");
 
 #define TIMESTAMP_PRINT_PERIOD_USEC 100000
 #define TIMESTAMP_BUFLEN            1024  // should be power of 2 for fast modulo ops
@@ -112,13 +115,20 @@
 #define MONOTONICITY_CHECK          0
 
 // Channel number is packed into the top 2 bits of the counter field.
-// Counter maxes out at 170,000,000 (0x0A21FE80), well within 30 bits.
+// Counter maxes out at 250,000,000 (0x0EE6_B280), well within 28 bits.
+// 2 bits encode exactly 4 channels (0..3) -- no headroom needed since
+// NUM_CHANNELS is at the hardware limit of TIM2's input-capture channels.
 #define COUNTER_CHAN_SHIFT 30
 #define COUNTER_CHAN_MASK  0x3FFFFFFFU
 
-#define LED_CLOCK GPIO_F1
-#define LED_CHAN0 GPIO_A4
-#define LED_CHAN1 GPIO_A5
+// PH1 is freed by HSE bypass (the otherwise-OSC_OUT pin on H5, same
+// trick as the G4 board freeing PF1).
+#define LED_CHAN0 GPIO_H1  // channel 1
+#define LED_CHAN1 GPIO_A4  // channel 2
+#define LED_CHAN2 GPIO_A5  // channel 3
+#define LED_CHAN3 GPIO_A6  // channel 4
+#define LED_CLOCK GPIO_B5  // 10 MHz HSE health
+#define LED_USB   GPIO_A7  // USB state
 
 // Per-channel state: statistics, divider, previous timestamp, and DMA.
 // Passed to the DMA callbacks via user_data so a single pair of
@@ -180,7 +190,7 @@ static int tx_fill_pos = 0;  // bytes written into the filling buffer
 
 // TIM15 fires twice per rollover of TIM2, the input capture timer. It is used
 // to update the high order bits. For details, see comment at top.
-CCMRAM void TIM1_BRK_TIM15_IRQHandler() {
+CCMRAM void TIM15_IRQHandler() {
   if (LL_TIM_IsActiveFlag_UPDATE(TIM15)) {
     LL_TIM_ClearFlag_UPDATE(TIM15);
 
@@ -271,30 +281,16 @@ CCMRAM static void on_dma_tc(void *user_data) {
 }
 
 // Format a timestamp into buf, returning the number of bytes written.
+//
+// At 250 MHz exactly, each tick is 4 ns. Counter ranges 0..249,999,999;
+// counter * 4 yields nanoseconds in 0..999,999,996, well within uint32_t.
+// 9 fractional digits give nanosecond resolution.
 static int format_timestamp(timestamp_t *t, char *buf, int buf_size) {
-  // Conversion from ticks to picoseconds:
-  //
-  // The clock frequency is 170 mhz, and we have the timer/counter configured to
-  // roll over once per second, meaning a full second has 170,000,000 ticks.
-  // There are 1T picoseconds in a second, so about 5,882 picoseconds per
-  // tick. We can achieve this by multiplying by 100,000 and then dividing by
-  // 17. 170M * 100,000 is more than 32 bits, so we use 64-bit math for the
-  // conversion.
   uint8_t channel = t->counter >> COUNTER_CHAN_SHIFT;
   uint32_t counter = t->counter & COUNTER_CHAN_MASK;
-
-  uint64_t picoseconds = counter;
-  picoseconds *= 100000;
-  picoseconds /= 17;
-
-  // Now we have picoseconds in a 64-bit int. Alas, nanolibc can not print 64
-  // bit integers, so we'll break it into the high 6 digits (microseconds) and
-  // the low 6 digits (picoseconds minus microseconds).
-  uint32_t microseconds = picoseconds / 1000000;
-  uint32_t sub_microseconds = picoseconds % 1000000;
-
-  return snprintf(buf, buf_size, "%d %lu.%06lu%06lu\n",
-                  channel + 1, t->seconds, microseconds, sub_microseconds);
+  uint32_t nanoseconds = counter * NS_PER_TICK;
+  return snprintf(buf, buf_size, "%d %lu.%09lu\n",
+                  channel + 1, t->seconds, nanoseconds);
 }
 
 static bool received_recent_pulse(uint8_t channel_num) {
@@ -306,27 +302,52 @@ static bool received_recent_pulse(uint8_t channel_num) {
   return false;
 }
 
+// Set whenever a USB CDC write is initiated; consumed by update_leds
+// to flash the USB LED on traffic.
+static volatile bool recent_usb_activity = false;
+
+static bool received_recent_usb_activity(void) {
+  if (recent_usb_activity) {
+    recent_usb_activity = false;
+    return true;
+  }
+  return false;
+}
+
+// Populated at startup by main(). Can't be a static const initializer
+// because GPIO_An are themselves `static const gpio_pin_t` and so not
+// constant expressions in the C sense.
+static gpio_pin_t led_chan_pins[NUM_CHANNELS];
+
 static void update_leds(void) {
   static bool on_phase = false;
-
   on_phase = !on_phase;
 
-  if (on_phase) {
-    // blink the clock LED unconditionally
-    gpio_set(LED_CLOCK);
-
-    // blink the channel LEDs only if they've received recent pulses
-    if (received_recent_pulse(0)) {
-        gpio_set(LED_CHAN0);
-    }
-    if (received_recent_pulse(1)) {
-      gpio_set(LED_CHAN1);
-    }
-  } else {
+  // 10 MHz HSE health: a steady heartbeat regardless of input activity.
+  // Off when HSE has failed.
+  if (g_rulos_hse_failed) {
     gpio_clr(LED_CLOCK);
-    gpio_clr(LED_CHAN0);
-    gpio_clr(LED_CHAN1);
+  } else {
+    gpio_set_or_clr(LED_CLOCK, on_phase);
   }
+
+  // Each activity LED has an idle state and a "blink" state opposite to
+  // idle. The blink shows up during whichever phase is opposite the
+  // idle level: on_phase for channels (idle off), off_phase for USB
+  // (idle on). During the other phase the LED rests at idle.
+  //
+  // Continuous activity sets the LED's "blink" state every cycle, so
+  // both lights flash 5 Hz in phase with the clock LED. A single pulse
+  // produces one visible 100 ms blink the next time the LED's active
+  // phase comes around.
+
+  for (int i = 0; i < NUM_CHANNELS; i++) {
+    gpio_set_or_clr(led_chan_pins[i],
+                    on_phase && received_recent_pulse(i));
+  }
+
+  const bool usb_blink_off = !on_phase && received_recent_usb_activity();
+  gpio_set_or_clr(LED_USB, usb_cdc.usb_ready && !usb_blink_off);
 }
 
 // Format timestamps from the ring buffer into the current filling
@@ -335,8 +356,8 @@ static void update_leds(void) {
 // the previous send.
 static void fill_tx_buf(void) {
   while (ts_tail != ts_head) {
-    // Max formatted length: "2 4294967295.999999999999\n" = 26 bytes.
-    if (tx_fill_pos + 26 > USB_TX_BUFLEN) {
+    // Max formatted length: "4 4294967295.999999996\n" = 23 bytes.
+    if (tx_fill_pos + 23 > USB_TX_BUFLEN) {
       break;
     }
     timestamp_t t = timestamp_buffer[ts_tail];
@@ -365,6 +386,7 @@ static void try_send_timestamps(void) {
 }
 
 static void usb_tx_complete(usbd_cdc_state_t *cdc, void *user_data) {
+  recent_usb_activity = true;
   try_send_timestamps();
 }
 
@@ -412,8 +434,12 @@ static void flush_dma_captures(void) {
 static void periodic_task(void *data) {
   schedule_us(TIMESTAMP_PRINT_PERIOD_USEC, periodic_task, NULL);
 
-  // Check for mid-stream clock failure detected by CSS via the generic
-  // NMI handler in stm32-hardware.c
+  // HSE failed at boot or mid-stream (the latter detected by CSS via
+  // the NMI handler in stm32-hardware.c). HSI fallback can't produce
+  // measurement-accurate timestamps, so refuse to operate and surface
+  // the error to the user. Per LED policy, LED_CLOCK is now off
+  // (handled by update_leds), and we flash the channel LEDs in unison
+  // as a "this device is broken" indicator.
   if (g_rulos_hse_failed) {
     LL_TIM_DisableCounter(TIM2);
     LL_TIM_DisableCounter(TIM15);
@@ -422,12 +448,11 @@ static void periodic_task(void *data) {
     }
     LL_TIM_DisableIT_UPDATE(TIM15);
 
-    // quick flash showing clock failure
     static bool on = false;
     on = !on;
-    gpio_set_or_clr(LED_CLOCK, on);
-    gpio_set_or_clr(LED_CHAN0, on);
-    gpio_set_or_clr(LED_CHAN1, on);
+    for (int i = 0; i < NUM_CHANNELS; i++) {
+      gpio_set_or_clr(led_chan_pins[i], on);
+    }
 
     static bool error_printed = false;
     if (!error_printed && usbd_cdc_tx_ready(&usb_cdc)) {
@@ -489,38 +514,41 @@ static void init_timers() {
   LL_TIM_SetTriggerOutput(TIM2, LL_TIM_TRGO_UPDATE);
   LL_TIM_DisableMasterSlaveMode(TIM2);
 
-  // Configure port A, pin 0 GPIO to "alternate function 1" mode, which on the
-  // G4 is TIM2, channel 1. On the 32-pin QFP package of the STM32G431, PA0 is
-  // on pin 5.
+  // PA0..PA3 carry TIM2_CH1..CH4 input-capture signals on AF1 (same
+  // alternate-function mapping on G4 and H5). Mode must be ALTERNATE
+  // so the AF mux routes the pin to TIM2; OutputType / Speed don't
+  // apply since the pin is sensed, not driven.
   LL_GPIO_InitTypeDef gpio_init = {0};
-  gpio_init.Pin = LL_GPIO_PIN_0;
   gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
-  gpio_init.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpio_init.Pull = LL_GPIO_PULL_NO;
+  gpio_init.Pull = LL_GPIO_PULL_DOWN;
   gpio_init.Alternate = LL_GPIO_AF_1;
-  LL_GPIO_Init(GPIOA, &gpio_init);
 
-  // Configure input capture to be the rising edge of timer 2, channel 1
-  LL_TIM_IC_SetActiveInput(TIM2, LL_TIM_CHANNEL_CH1,
-                           LL_TIM_ACTIVEINPUT_DIRECTTI);
-  LL_TIM_IC_SetPrescaler(TIM2, LL_TIM_CHANNEL_CH1, LL_TIM_ICPSC_DIV1);
-  LL_TIM_IC_SetFilter(TIM2, LL_TIM_CHANNEL_CH1, LL_TIM_IC_FILTER_FDIV1);
-  LL_TIM_IC_SetPolarity(TIM2, LL_TIM_CHANNEL_CH1, LL_TIM_IC_POLARITY_RISING);
+  static const struct {
+    uint32_t pin;          // LL_GPIO_PIN_n
+    uint32_t ll_channel;   // LL_TIM_CHANNEL_CHn
+  } cap_pins[NUM_CHANNELS] = {
+      {LL_GPIO_PIN_0, LL_TIM_CHANNEL_CH1},
+      {LL_GPIO_PIN_1, LL_TIM_CHANNEL_CH2},
+      {LL_GPIO_PIN_2, LL_TIM_CHANNEL_CH3},
+      {LL_GPIO_PIN_3, LL_TIM_CHANNEL_CH4},
+  };
 
-  // Configure input capture to be the rising edge of timer 2, channel 2
-  gpio_init.Pin = LL_GPIO_PIN_1;
-  LL_GPIO_Init(GPIOA, &gpio_init);
-  LL_TIM_IC_SetActiveInput(TIM2, LL_TIM_CHANNEL_CH2,
-                           LL_TIM_ACTIVEINPUT_DIRECTTI);
-  LL_TIM_IC_SetPrescaler(TIM2, LL_TIM_CHANNEL_CH2, LL_TIM_ICPSC_DIV1);
-  LL_TIM_IC_SetFilter(TIM2, LL_TIM_CHANNEL_CH2, LL_TIM_IC_FILTER_FDIV1);
-  LL_TIM_IC_SetPolarity(TIM2, LL_TIM_CHANNEL_CH2, LL_TIM_IC_POLARITY_RISING);
+  for (int i = 0; i < NUM_CHANNELS; i++) {
+    gpio_init.Pin = cap_pins[i].pin;
+    LL_GPIO_Init(GPIOA, &gpio_init);
+    LL_TIM_IC_SetActiveInput(TIM2, cap_pins[i].ll_channel,
+                             LL_TIM_ACTIVEINPUT_DIRECTTI);
+    LL_TIM_IC_SetPrescaler(TIM2, cap_pins[i].ll_channel, LL_TIM_ICPSC_DIV1);
+    LL_TIM_IC_SetFilter(TIM2, cap_pins[i].ll_channel, LL_TIM_IC_FILTER_FDIV1);
+    LL_TIM_IC_SetPolarity(TIM2, cap_pins[i].ll_channel,
+                          LL_TIM_IC_POLARITY_RISING);
+  }
 
   /// Start the counter running and enable the input capture channels
   LL_TIM_EnableCounter(TIM2);
-  LL_TIM_CC_EnableChannel(TIM2, LL_TIM_CHANNEL_CH1);
-  LL_TIM_CC_EnableChannel(TIM2, LL_TIM_CHANNEL_CH2);
+  for (int i = 0; i < NUM_CHANNELS; i++) {
+    LL_TIM_CC_EnableChannel(TIM2, cap_pins[i].ll_channel);
+  }
 
   // Set up DMA for input capture. Each capture channel gets its own DMA
   // channel in circular mode via the RULOS DMA abstraction. HT/TC
@@ -533,6 +561,8 @@ static void init_timers() {
   } dma_setup[NUM_CHANNELS] = {
       {RULOS_DMA_REQ_TIM2_CH1, &TIM2->CCR1, TIM_DIER_CC1DE},
       {RULOS_DMA_REQ_TIM2_CH2, &TIM2->CCR2, TIM_DIER_CC2DE},
+      {RULOS_DMA_REQ_TIM2_CH3, &TIM2->CCR3, TIM_DIER_CC3DE},
+      {RULOS_DMA_REQ_TIM2_CH4, &TIM2->CCR4, TIM_DIER_CC4DE},
   };
 
   for (int i = 0; i < NUM_CHANNELS; i++) {
@@ -563,14 +593,14 @@ static void init_timers() {
   // Configure TIM15: fires twice per TIM2 rollover to increment the high bits
   // of the counter.
   __HAL_RCC_TIM15_CLK_ENABLE();
-  HAL_NVIC_SetPriority(TIM1_BRK_TIM15_IRQn, 4, 0);
-  HAL_NVIC_EnableIRQ(TIM1_BRK_TIM15_IRQn);
+  HAL_NVIC_SetPriority(TIM15_IRQn, 4, 0);
+  HAL_NVIC_EnableIRQ(TIM15_IRQn);
   #define SMALLCOUNTER_MAX 10000
   LL_TIM_InitTypeDef timer15_init = {
-    // The main counter counts to the clock frequency (170MHz), but TIM15 is
+    // The main counter counts to the clock frequency (250MHz), but TIM15 is
     // only a 16-bit counter which can't count that high. We scale everything
     // down so it counts up to 10,000 in the time it takes the main counter
-    // counts to 170M.
+    // counts to 250M.
     .Prescaler = (CLOCK_FREQ_HZ / SMALLCOUNTER_MAX) - 1,
     .CounterMode = LL_TIM_COUNTERMODE_UP,
 
@@ -610,9 +640,15 @@ int main() {
   log_bind_uart(&uart);
 
   // initialize the output LEDs
+  led_chan_pins[0] = LED_CHAN0;
+  led_chan_pins[1] = LED_CHAN1;
+  led_chan_pins[2] = LED_CHAN2;
+  led_chan_pins[3] = LED_CHAN3;
   gpio_make_output(LED_CLOCK);
-  gpio_make_output(LED_CHAN0);
-  gpio_make_output(LED_CHAN1);
+  gpio_make_output(LED_USB);
+  for (int i = 0; i < NUM_CHANNELS; i++) {
+    gpio_make_output(led_chan_pins[i]);
+  }
 
   // initialize USB CDC for timestamp output
   usb_cdc = (usbd_cdc_state_t){

@@ -141,6 +141,8 @@ typedef enum {
   RULOS_DMA_REQ_SPI2_TX,
   RULOS_DMA_REQ_TIM2_CH1,
   RULOS_DMA_REQ_TIM2_CH2,
+  RULOS_DMA_REQ_TIM2_CH3,
+  RULOS_DMA_REQ_TIM2_CH4,
   RULOS_DMA_REQ_COUNT_  // keep last
 } rulos_dma_request_t;
 
