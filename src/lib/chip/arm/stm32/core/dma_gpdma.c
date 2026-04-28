@@ -182,6 +182,27 @@ static void gpdma_get_src_dest_params(
   }
 }
 
+// Map RULOS_DMA_WIDTH_* to bytes per item, used to convert between the
+// item-count API contract and GPDMA's CBR1.BNDT byte-count register.
+static uint32_t width_bytes(rulos_dma_width_t w) {
+  switch (w) {
+    case RULOS_DMA_WIDTH_BYTE:     return 1;
+    case RULOS_DMA_WIDTH_HALFWORD: return 2;
+    case RULOS_DMA_WIDTH_WORD:     return 4;
+  }
+  return 1;  // unreachable
+}
+
+// Source-side bytes per transfer item, derived from direction. CBR1.BNDT
+// counts source-side bytes -- it decrements by one source item each
+// transfer, multiplied by that item's width.
+static uint32_t source_bytes_per_item(const rulos_dma_config_t *c) {
+  if (c->direction == RULOS_DMA_DIR_MEM_TO_PERIPH) {
+    return width_bytes(c->mem_width);
+  }
+  return width_bytes(c->periph_width);
+}
+
 static void init_channel(int idx, const rulos_dma_config_t *c) {
   const dma_channel_hw_t *hw = &g_hw[idx];
   dma_channel_state_t *s = &g_state[idx];
@@ -209,10 +230,10 @@ static void init_channel(int idx, const rulos_dma_config_t *c) {
   LL_DMA_SetSrcDataWidth(hw->dma, hw->ll_channel, sw);
   LL_DMA_SetDestDataWidth(hw->dma, hw->ll_channel, dw);
 
-  if (s->circular) {
-    // Save config so rulos_dma_start can build the linked-list node.
-    s->saved_config = *c;
-  }
+  // Always save the config -- rulos_dma_start needs it for circular's
+  // linked-list node, and rulos_dma_get_remaining needs the source
+  // data width to convert BNDT bytes to caller-visible item count.
+  s->saved_config = *c;
 
   LL_DMA_SetChannelPriorityLevel(hw->dma, hw->ll_channel, c->priority);
 
@@ -323,7 +344,9 @@ void rulos_dma_start(rulos_dma_channel_t *ch, volatile void *periph_addr,
     node_cfg.DataAlignment = LL_DMA_DATA_ALIGN_ZEROPADD;
     node_cfg.SrcAddress = src_addr;
     node_cfg.DestAddress = dst_addr;
-    node_cfg.BlkDataLength = nitems;
+    // BNDT (block data length) is in BYTES regardless of transfer width;
+    // convert from caller's item count.
+    node_cfg.BlkDataLength = nitems * source_bytes_per_item(c);
     node_cfg.UpdateRegisters =
         LL_DMA_UPDATE_CTR1 | LL_DMA_UPDATE_CTR2 |
         LL_DMA_UPDATE_CBR1 | LL_DMA_UPDATE_CSAR |
@@ -351,14 +374,18 @@ void rulos_dma_start(rulos_dma_channel_t *ch, volatile void *periph_addr,
                             (uint32_t)&s->lld_node);
 
     // Set addresses and block length for the first iteration (the
-    // linked-list reload handles subsequent iterations).
-    LL_DMA_SetBlkDataLength(hw->dma, hw->ll_channel, nitems);
+    // linked-list reload handles subsequent iterations). BNDT is in
+    // bytes; convert from item count.
+    LL_DMA_SetBlkDataLength(hw->dma, hw->ll_channel,
+                            nitems * source_bytes_per_item(c));
     LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, src_addr, dst_addr);
 
     LL_DMA_EnableChannel(hw->dma, hw->ll_channel);
   } else {
-    // NORMAL mode: direct register programming.
-    LL_DMA_SetBlkDataLength(hw->dma, hw->ll_channel, nitems);
+    // NORMAL mode: direct register programming. BNDT is in bytes;
+    // convert from item count.
+    LL_DMA_SetBlkDataLength(hw->dma, hw->ll_channel,
+                            nitems * source_bytes_per_item(&s->saved_config));
 
     const uint32_t dir =
         LL_DMA_GetDataTransferDirection(hw->dma, hw->ll_channel);
@@ -386,8 +413,12 @@ void rulos_dma_stop(rulos_dma_channel_t *ch) {
 }
 
 uint32_t rulos_dma_get_remaining(const rulos_dma_channel_t *ch) {
-  const dma_channel_hw_t *hw = &g_hw[state_to_idx(ch)];
-  return LL_DMA_GetBlkDataLength(hw->dma, hw->ll_channel);
+  const int idx = state_to_idx(ch);
+  const dma_channel_hw_t *hw = &g_hw[idx];
+  // BNDT counts bytes remaining; the API contract is items remaining.
+  // Convert using the saved source-side item width.
+  return LL_DMA_GetBlkDataLength(hw->dma, hw->ll_channel) /
+         source_bytes_per_item(&g_state[idx].saved_config);
 }
 
 void rulos_dma_free(rulos_dma_channel_t *ch) {
