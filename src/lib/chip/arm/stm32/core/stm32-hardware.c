@@ -458,6 +458,46 @@ static void SystemClock_Config(void) {
 
   __HAL_FLASH_SET_PROGRAM_DELAY(FLASH_PROGRAMMING_DELAY_2);
 }
+
+// The H5's flash OTP and read-only data regions live at 0x08FFF000-0x08FFFFFF
+// (UID, package code, flash size, calibration values). These addresses fall
+// inside the ICACHE-cacheable flash window, but the flash controller doesn't
+// service cache-line fills from them -- reads bus-fault. The fix is to mark
+// the 4 KiB region as non-cacheable via the MPU so accesses bypass the cache
+// and go directly to the flash controller.
+//
+// See: ST community post "STM32H563 hard fault when trying to read UID"
+// (community.st.com tid=584571) and the FLASH_EDATA / ADC calibration MPU
+// examples in CubeH5.
+static void mpu_make_h5_otp_ro_noncacheable(void) {
+  // Attribute slot 0: device-nGnRnE / non-cacheable. The MAIR encoding
+  // for "device memory" is 0x00, which is what the Cube examples use for
+  // this exact problem.
+  MPU_Attributes_InitTypeDef attr = {
+      .Number = MPU_ATTRIBUTES_NUMBER0,
+      .Attributes = 0,
+  };
+  HAL_MPU_ConfigMemoryAttributes(&attr);
+
+  MPU_Region_InitTypeDef region = {
+      .Enable = MPU_REGION_ENABLE,
+      .Number = MPU_REGION_NUMBER0,
+      .AttributesIndex = MPU_ATTRIBUTES_NUMBER0,
+      .BaseAddress = 0x08FFF000UL,
+      .LimitAddress = 0x08FFFFFFUL,
+      .AccessPermission = MPU_REGION_ALL_RW,
+      .DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE,
+      .IsShareable = MPU_ACCESS_NOT_SHAREABLE,
+  };
+
+  HAL_MPU_Disable();
+  HAL_MPU_ConfigRegion(&region);
+  // PRIVILEGED_DEFAULT: privileged code keeps default-memory-map access
+  // for any address not covered by an explicit region. RULOS runs at
+  // privileged level, so this is what we want -- only the configured
+  // region's attributes change, everything else behaves as before.
+  HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
+}
 #else
 #error "Your chip needs to know how to init its clock!"
 #include <stophere>
@@ -482,6 +522,13 @@ void rulos_hal_init() {
 
   SystemClock_Config();
   SystemCoreClockUpdate();
+
+#if defined(RULOS_ARM_stm32h5)
+  // Must run before ICACHE_Enable so that the cache never tries to fill a
+  // line from the OTP/RO region -- which would bus-fault and lock up the
+  // chip the first time anyone read e.g. the UID for a USB serial number.
+  mpu_make_h5_otp_ro_noncacheable();
+#endif
 
 #ifdef HAL_ICACHE_MODULE_ENABLED
   // Enable the instruction cache on chips that have one (STM32H5). ART on

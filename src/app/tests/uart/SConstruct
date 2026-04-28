@@ -21,10 +21,14 @@ sys.path.insert(0, "../../../util")
 from build_tools import *
 
 # UART driver uses USART hardware, so skip ATtiny (USI-only). Include
-# stm32g431x8 explicitly — that's the chip on the hardware test jig.
+# stm32g431x8 and stm32h523xc explicitly — those are the chips on the
+# hardware test jigs.
 platforms = canary_platforms(
     include_attiny=False,
-    extras=[ArmStmPlatform("stm32g431x8")],
+    extras=[
+        ArmStmPlatform("stm32g431x8"),
+        ArmStmPlatform("stm32h523xc"),
+    ],
 )
 
 for testprog in ["recv", "send", "charecho", "lineecho", "linecounter"]:
