@@ -301,13 +301,6 @@ static void SystemClock_Config(void) {
 #define RULOS_PLLN HSI_PLLN
 #endif
 
-#ifdef RULOS_USE_HSE
-// True if HSE (external oscillator) failed at boot or was lost during
-// operation. Applications can check this after rulos_hal_init() to detect
-// oscillator failure.
-bool g_rulos_hse_failed = false;
-#endif
-
 static void config_hsi_pll(RCC_OscInitTypeDef *osc) {
   osc->OscillatorType = RCC_OSCILLATORTYPE_HSI;
   osc->HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
@@ -333,7 +326,7 @@ static void SystemClock_Config(void) {
   /* Try HSE + PLL first */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
 #ifdef RULOS_HSE_BYPASS
-  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
+  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;  // sets BYPASS + ON bits
 #else
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
 #endif
@@ -344,21 +337,7 @@ static void SystemClock_Config(void) {
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
-
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) == HAL_OK) {
-    /* HSE started successfully. Enable Clock Security System to detect
-     * mid-stream HSE failure. On failure, hardware auto-switches to HSI
-     * and fires NMI. */
-    HAL_RCC_EnableCSS();
-  } else {
-    /* HSE failed to start. Fall back to HSI + PLL.
-     * HSI(16MHz) / 4 * 85 / 2 = 170MHz -- same speed, less accurate. */
-    g_rulos_hse_failed = true;
-    config_hsi_pll(&RCC_OscInitStruct);
-    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-      __builtin_trap();
-    }
-  }
+  rulos_hse_try_pll(&RCC_OscInitStruct, config_hsi_pll);
 #else
   config_hsi_pll(&RCC_OscInitStruct);
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
@@ -379,31 +358,7 @@ static void SystemClock_Config(void) {
   }
 }
 
-#ifdef RULOS_USE_HSE
-// Default NMI handler for CSS. The startup file defines NMI_Handler as a weak
-// alias to Default_Handler. This weak definition overrides it but can itself be
-// overridden by applications that need custom NMI behavior.
-__attribute__((weak))
-void NMI_Handler(void) {
-  HAL_RCC_NMI_IRQHandler();
-}
-
-// CSS callback invoked by HAL_RCC_NMI_IRQHandler when HSE failure is detected.
-// Overrides the HAL's weak default. Sets the generic failure flag; apps needing
-// additional behavior should override NMI_Handler and act after calling
-// HAL_RCC_NMI_IRQHandler().
-void HAL_RCC_CSSCallback(void) {
-  g_rulos_hse_failed = true;
-}
-#endif
 #elif defined(RULOS_ARM_stm32h5)
-#ifdef RULOS_USE_HSE
-// True if HSE failed at boot or was lost during operation. Mirrors the
-// G4 path. Apps that require HSE accuracy (e.g. timestamper) check this
-// after rulos_hal_init().
-bool g_rulos_hse_failed = false;
-#endif
-
 /*
  * STM32H5 clock: PLL1 -> 250 MHz SYSCLK, sourced from HSE (preferred)
  * or HSI (fallback).
@@ -454,7 +409,7 @@ static void SystemClock_Config(void) {
   /* Try HSE + PLL first */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
 #ifdef RULOS_HSE_BYPASS
-  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
+  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;  // sets BYPASS + ON bits
 #else
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
 #endif
@@ -470,22 +425,7 @@ static void SystemClock_Config(void) {
   RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1_VCIRANGE_3;
   RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1_VCORANGE_WIDE;
   RCC_OscInitStruct.PLL.PLLFRACN = 0;
-
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) == HAL_OK) {
-    /* HSE started. Enable CSS so a mid-stream HSE failure fires NMI;
-     * see HAL_RCC_CSSCallback below. */
-    HAL_RCC_EnableCSS();
-  } else {
-    /* HSE failed to start; fall back to HSI but flag the failure so
-     * apps that require HSE accuracy (e.g. the timestamper) can refuse
-     * to operate and surface the error. */
-    g_rulos_hse_failed = true;
-    RCC_OscInitStruct = (RCC_OscInitTypeDef){0};
-    config_hsi_pll_h5(&RCC_OscInitStruct);
-    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-      __builtin_trap();
-    }
-  }
+  rulos_hse_try_pll(&RCC_OscInitStruct, config_hsi_pll_h5);
 #else
   config_hsi_pll_h5(&RCC_OscInitStruct);
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
@@ -507,18 +447,6 @@ static void SystemClock_Config(void) {
 
   __HAL_FLASH_SET_PROGRAM_DELAY(FLASH_PROGRAMMING_DELAY_2);
 }
-
-#ifdef RULOS_USE_HSE
-/* NMI default handler + CSS callback shared with the G4 path.
- * Defined again here under the H5 elif so both families compile
- * the same way. */
-__attribute__((weak)) void NMI_Handler(void) {
-  HAL_RCC_NMI_IRQHandler();
-}
-void HAL_RCC_CSSCallback(void) {
-  g_rulos_hse_failed = true;
-}
-#endif
 
 // The H5's flash OTP and read-only data regions live at 0x08FFF000-0x08FFFFFF
 // (UID, package code, flash size, calibration values). These addresses fall
