@@ -71,10 +71,7 @@ static void _parse_lines(LineReader_t *l) {
   // LOG("%d consumed, %d remaining", consumed, remaining);
 }
 
-// Called at task time
-static void _buf_received(UartState_t *s, void *user_data, char *buf,
-                          size_t len) {
-  LineReader_t *l = (LineReader_t *)user_data;
+void linereader_feed(LineReader_t *l, const char *buf, size_t len) {
   while (len > 0) {
     size_t free_space = CharQueue_free_space(&l->line_queue.q);
     if (free_space == 0) {
@@ -91,13 +88,24 @@ static void _buf_received(UartState_t *s, void *user_data, char *buf,
   }
 }
 
-void linereader_init(LineReader_t *l, UartState_t *uart, linereader_cb cb,
-                     void *user_data) {
+// Called at task time
+static void _buf_received(UartState_t *s, void *user_data, char *buf,
+                          size_t len) {
+  linereader_feed((LineReader_t *)user_data, buf, len);
+}
+
+void linereader_init_unbound(LineReader_t *l, UartState_t *uart,
+                             linereader_cb cb, void *user_data) {
   assert(cb != NULL);
   memset(l, 0, sizeof(*l));
   l->uart = uart;
   l->cb = cb;
   l->user_data = user_data;
   CharQueue_init(&l->line_queue.q, sizeof(l->line_queue));
+}
+
+void linereader_init(LineReader_t *l, UartState_t *uart, linereader_cb cb,
+                     void *user_data) {
+  linereader_init_unbound(l, uart, cb, user_data);
   uart_start_rx(uart, _buf_received, l);
 }

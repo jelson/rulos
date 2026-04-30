@@ -46,5 +46,17 @@ typedef struct {
   uint32_t overflows;
 } LineReader_t;
 
+// Wires the linereader to a UART: on each batch of received bytes, the
+// linereader splits them into lines and produces one upcall per line.
 void linereader_init(LineReader_t *linereader, UartState_t *uart,
                      linereader_cb cb, void *user_data);
+
+// Same as linereader_init but does not bind to a UART. Use linereader_feed
+// to push bytes from another source (e.g. USB CDC RX). Upcalls receive the
+// uart pointer set here -- pass NULL if there isn't one.
+void linereader_init_unbound(LineReader_t *linereader, UartState_t *uart,
+                             linereader_cb cb, void *user_data);
+
+// Feed received bytes into the linereader. Upcalls fire synchronously for
+// each complete line found. Safe to call from USB CDC RX callbacks.
+void linereader_feed(LineReader_t *linereader, const char *buf, size_t len);

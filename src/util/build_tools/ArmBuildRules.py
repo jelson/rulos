@@ -239,6 +239,9 @@ class ArmStmPlatform(ArmPlatform):
         Chip("stm32g431x6", "STM32G431xx", flashk=  32, ramk= 22, ccmramk=10),
         Chip("stm32g431x8", "STM32G431xx", flashk=  64, ramk= 22, ccmramk=10),
         Chip("stm32g431xb", "STM32G431xx", flashk= 128, ramk= 22, ccmramk=10),
+        Chip("stm32g474xb", "STM32G474xx", flashk= 128, ramk= 96, ccmramk=32),
+        Chip("stm32g474xc", "STM32G474xx", flashk= 256, ramk= 96, ccmramk=32),
+        Chip("stm32g474xe", "STM32G474xx", flashk= 512, ramk= 96, ccmramk=32),
 
         # stm32h5
         Chip("stm32h523xc", "STM32H523xx", flashk= 256, ramk=272),
