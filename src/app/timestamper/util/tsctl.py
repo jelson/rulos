@@ -26,10 +26,17 @@ As a library, open a Timestamper instance and call methods on it:
 """
 
 import argparse
+from collections import namedtuple
 import serial
 import serial.tools.list_ports
 import sys
 import time
+
+# Yielded by Timestamper.iter_records / read_for. Exactly one of
+#   * (kind="ts", channel, time, comment=None)
+#   * (kind="comment", channel=None, time=None, comment)
+# is populated. `time` is float seconds since the device booted.
+Record = namedtuple("Record", "kind channel time comment")
 
 TIMESTAMPER_VID = 0x1209  # pid.codes
 TIMESTAMPER_PID = 0x71C4  # LectroTIC-4
@@ -198,7 +205,8 @@ class Timestamper:
                 cnt = int.from_bytes(buf[off + 4:off + 8], "little")
                 chan = (cnt >> _COUNTER_CHAN_SHIFT) + 1
                 ticks = cnt & _COUNTER_CHAN_MASK
-                yield ("ts", chan, sec, ticks * _NS_PER_TICK)
+                yield Record("ts", chan,
+                             sec + ticks * _NS_PER_TICK * 1e-9, None)
             leftover = buf[n * _BINARY_RECORD_LEN:]
 
     def _iter_text(self, deadline):
@@ -209,17 +217,17 @@ class Timestamper:
             if not line:
                 continue
             if line.startswith("#"):
-                yield ("comment", line)
+                yield Record("comment", None, None, line)
                 continue
             parts = line.split()
             if len(parts) != 2:
                 continue
             try:
                 chan = int(parts[0])
-                sec_str, ns_str = parts[1].split(".")
-                yield ("ts", chan, int(sec_str), int(ns_str))
-            except (ValueError, IndexError):
+                t = float(parts[1])
+            except ValueError:
                 continue
+            yield Record("ts", chan, t, None)
 
     def iter_records(self, binary):
         """Generator yielding records from a streaming device. Yields:
@@ -288,12 +296,15 @@ def cmd_stream(ts, args):
     ts.set_stream_enabled(True)
     args.final_output_state = "ON"
     try:
-        for rec in ts.iter_records(binary):
-            if rec[0] == "ts":
-                _, chan, sec, ns = rec
-                sys.stdout.write(f"{chan} {sec}.{ns:09d}\n")
+        for r in ts.iter_records(binary):
+            if r.kind == "ts":
+                # Reproduce the device's TEXT format precisely so
+                # downstream tooling can't tell the difference.
+                sec = int(r.time)
+                ns = round((r.time - sec) * 1e9)
+                sys.stdout.write(f"{r.channel} {sec}.{ns:09d}\n")
             else:
-                sys.stdout.write(rec[1] + "\n")
+                sys.stdout.write(r.comment + "\n")
             sys.stdout.flush()
     except KeyboardInterrupt:
         pass

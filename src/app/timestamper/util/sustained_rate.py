@@ -38,15 +38,14 @@ def measure_rate(ts, settle_s, measure_s, binary, verbose):
 
     timestamps = []
     overflows = 0
-    for rec in ts.read_for(measure_s, binary):
-        if rec[0] == "comment":
-            if "overflow" in rec[1].lower():
+    for r in ts.read_for(measure_s, binary):
+        if r.kind == "comment":
+            if "overflow" in r.comment.lower():
                 overflows += 1
             if verbose:
-                print(f"    | {rec[1]}")
+                print(f"    | {r.comment}")
             continue
-        _, _ch, sec, ns = rec
-        timestamps.append(sec + ns * 1e-9)
+        timestamps.append(r.time)
     return timestamps, overflows
 
 

@@ -33,27 +33,26 @@ class PulseCount:
 def count_pulses(ts, settle_time_s=2.0, measure_time_s=3.0,
                  binary=False, verbose=True):
     """Read records via the Timestamper, classify, and group into bursts."""
-    for rec in ts.read_for(settle_time_s, binary):
-        if verbose and rec[0] == "comment":
-            print(f"    | {rec[1]}")
+    for r in ts.read_for(settle_time_s, binary):
+        if verbose and r.kind == "comment":
+            print(f"    | {r.comment}")
 
     timestamps = []  # list of float seconds-since-boot
     overcaptures = 0
     overflows = 0
-    for rec in ts.read_for(measure_time_s, binary):
-        if rec[0] == "comment":
+    for r in ts.read_for(measure_time_s, binary):
+        if r.kind == "comment":
             if verbose:
-                print(f"    | {rec[1]}")
-            text = rec[1].lower()
+                print(f"    | {r.comment}")
+            text = r.comment.lower()
             if "overcapture" in text:
                 overcaptures += 1
             if "overflow" in text:
                 overflows += 1
             continue
-        _, ch, sec, ns = rec
-        timestamps.append(sec + ns * 1e-9)
+        timestamps.append(r.time)
         if verbose:
-            print(f"    | {ch} {sec}.{ns:09d}")
+            print(f"    | {r.channel} {r.time:.9f}")
 
     # Group timestamps into bursts. Bursts repeat 1/sec, so timestamps
     # within 0.5s of each other belong to the same burst.

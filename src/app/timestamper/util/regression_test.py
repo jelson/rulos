@@ -72,16 +72,15 @@ def capture(ts, channel, duration_s, binary):
     times = []
     other_chans = set()
     overflows = 0
-    for rec in ts.read_for(duration_s, binary):
-        if rec[0] == "comment":
-            if "overflow" in rec[1].lower():
+    for r in ts.read_for(duration_s, binary):
+        if r.kind == "comment":
+            if "overflow" in r.comment.lower():
                 overflows += 1
             continue
-        _, ch, sec, ns = rec
-        if ch == channel:
-            times.append(sec + ns * 1e-9)
+        if r.channel == channel:
+            times.append(r.time)
         else:
-            other_chans.add(ch)
+            other_chans.add(r.channel)
     return times, other_chans, overflows
 
 
