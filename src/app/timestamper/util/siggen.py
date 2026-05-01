@@ -63,15 +63,20 @@ class Siggen:
         for q in queries:
             print(f"  {q:30s} {self.query(q)}")
 
-    def periodic(self, hz):
-        """Configure continuous pulse output at the given frequency in Hz."""
+    def periodic(self, hz, pulse_width_s=0.001):
+        """Configure continuous pulse output at the given frequency in Hz.
+
+        pulse_width_s must be smaller than the period (1/hz); the default
+        of 1 ms is fine up to a few hundred Hz, but high-rate callers must
+        pick a shorter width.
+        """
         self.output_off()
         self.cmd(":SOUR1:BURS:STAT OFF")
         self.cmd(":SOUR1:FUNC PULS")
         self.cmd(f":SOUR1:FREQ {hz}")
         self.cmd(":SOUR1:VOLT:HIGH 3.3")
         self.cmd(":SOUR1:VOLT:LOW 0")
-        self.cmd(":SOUR1:PULS:WIDT 0.001")
+        self.cmd(f":SOUR1:PULS:WIDT {pulse_width_s}")
         self.output_on()
 
         self.verify([

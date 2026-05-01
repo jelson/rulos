@@ -52,8 +52,28 @@ uint32_t timestamper_get_divider(int ch);
 void timestamper_set_stream_enabled(bool enabled);
 bool timestamper_get_stream_enabled(void);
 
-// *RST: restore all channels to defaults (rising-edge, divider=1) and
-// re-enable streaming.
+// Output stream format. TEXT is the documented default (ASCII
+// "<chan> <sec>.<ns>\n" per timestamp); BINARY emits a fixed
+// TIMESTAMPER_BINARY_RECORD_LEN-byte record per timestamp -- the same
+// 8-byte representation used in the device's internal ring buffer:
+//   bytes 0-3: seconds (uint32 LE)
+//   bytes 4-7: counter (uint32 LE), where the top 2 bits are the
+//              channel (0..NUM_CHANNELS-1) and the low 30 bits are
+//              the raw tick count (0..249,999,999 at 250 MHz, i.e.
+//              4 ns per tick).
+// Comments / overcapture / overflow lines are suppressed in binary
+// mode (the host should switch back to TEXT to read them).
+typedef enum {
+  TIMESTAMPER_FORMAT_TEXT,
+  TIMESTAMPER_FORMAT_BINARY,
+} timestamper_format_t;
+#define TIMESTAMPER_BINARY_RECORD_LEN 8
+
+void timestamper_set_format(timestamper_format_t fmt);
+timestamper_format_t timestamper_get_format(void);
+
+// *RST: restore all channels to defaults (rising-edge, divider=1),
+// switch back to TEXT format, and re-enable streaming.
 void timestamper_reset_all(void);
 
 // Identity string returned for *IDN?.

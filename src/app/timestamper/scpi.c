@@ -98,6 +98,30 @@ static bool handle_divider(int ch, const char *arg) {
   return true;
 }
 
+// FORMat[:DATA] TEXT|BINary | FORMat[:DATA]?
+static bool handle_format(const char *arg) {
+  if (*arg == '?' && (arg[1] == 0 || arg[1] == ' ')) {
+    scpi_print(timestamper_get_format() == TIMESTAMPER_FORMAT_BINARY
+               ? "BIN" : "TEXT");
+    return true;
+  }
+  if (*arg != ' ') return false;
+  arg++;
+  while (*arg == ' ' || *arg == '\t') arg++;
+  if (scpi_match_kw(arg, "TEXT", "TEXT")) {
+    timestamper_set_format(TIMESTAMPER_FORMAT_TEXT);
+    scpi_clear_error();
+    return true;
+  }
+  if (scpi_match_kw(arg, "BINARY", "BIN")) {
+    timestamper_set_format(TIMESTAMPER_FORMAT_BINARY);
+    scpi_clear_error();
+    return true;
+  }
+  scpi_set_error("-104,\"Bad format\"");
+  return true;
+}
+
 // OUTPut:STATe ON|OFF | OUTPut:STATe?
 static bool handle_output_state(const char *arg) {
   if (*arg == '?' && (arg[1] == 0 || arg[1] == ' ')) {
@@ -124,6 +148,21 @@ static bool dispatch_line(const char *line) {
       p++;
       const char *q = scpi_match_kw(p, "STATE", "STAT");
       if (q) return handle_output_state(q);
+    }
+  }
+
+  // FORMat[:DATA] -- selects ASCII vs binary output stream.
+  {
+    const char *p = scpi_match_kw(line, "FORMAT", "FORM");
+    if (p) {
+      // Accept "FORM <arg>", "FORM?" and "FORM:DATA <arg>", "FORM:DATA?".
+      if (*p == ':') {
+        p++;
+        const char *q = scpi_match_kw(p, "DATA", "DATA");
+        if (q) return handle_format(q);
+      } else {
+        return handle_format(p);
+      }
     }
   }
 

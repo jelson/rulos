@@ -172,6 +172,7 @@ static channel_t channels[NUM_CHANNELS];
 // Continuous timestamp output enable (settable via SCPI OUTPut:STATe).
 // Default ON so a freshly-plugged-in device behaves as the user expects.
 static bool stream_enabled = true;
+static timestamper_format_t format_mode = TIMESTAMPER_FORMAT_TEXT;
 
 // PA0..PA3 carry TIM2_CH1..CH4 input-capture signals. The TIM2 channel
 // codes are also used at runtime by the slope-setter, hence file scope.
@@ -308,11 +309,24 @@ CCMRAM static void on_dma_tc(void *user_data) {
 }
 
 // Format a timestamp into buf, returning the number of bytes written.
+// Branches on format_mode set by SCPI.
 //
-// At 250 MHz exactly, each tick is 4 ns. Counter ranges 0..249,999,999;
-// counter * 4 yields nanoseconds in 0..999,999,996, well within uint32_t.
+// TEXT: at 250 MHz, each tick is 4 ns. Counter ranges 0..249,999,999;
+// counter * 4 yields nanoseconds in 0..999,999,996, within uint32_t.
 // 9 fractional digits give nanosecond resolution.
+//
+// BINARY: 8 bytes -- the on-device timestamp_t layout (4 bytes seconds
+// LE, then 4 bytes counter LE with channel in the top 2 bits) is the
+// wire format. memcpy straight out, skipping the 9-digit divmod chain
+// in snprintf entirely.
 static int format_timestamp(timestamp_t *t, char *buf, int buf_size) {
+  if (format_mode == TIMESTAMPER_FORMAT_BINARY) {
+    _Static_assert(sizeof(timestamp_t) == TIMESTAMPER_BINARY_RECORD_LEN,
+                   "binary wire format mirrors timestamp_t layout");
+    if (buf_size < (int)sizeof(timestamp_t)) return 0;
+    memcpy(buf, t, sizeof(timestamp_t));
+    return sizeof(timestamp_t);
+  }
   uint8_t channel = t->counter >> COUNTER_CHAN_SHIFT;
   uint32_t counter = t->counter & COUNTER_CHAN_MASK;
   uint32_t nanoseconds = counter * NS_PER_TICK;
@@ -485,7 +499,8 @@ static void periodic_task(void *data) {
 
   // If USB has just come up for the first time, print a welcome message
   static bool welcome_printed = false;
-  if (!welcome_printed && usbd_cdc_tx_ready(scpi_usb_cdc_handle())) {
+  if (!welcome_printed && format_mode == TIMESTAMPER_FORMAT_TEXT &&
+      usbd_cdc_tx_ready(scpi_usb_cdc_handle())) {
      usbd_cdc_print(scpi_usb_cdc_handle(), "# Starting timestamper, version " STRINGIFY(GIT_COMMIT) "\n");
      welcome_printed = true;
   }
@@ -497,7 +512,8 @@ static void periodic_task(void *data) {
   // Use the filling buffer for one-off messages since nothing else is
   // writing to it in this path. Suppressed while streaming is disabled
   // so SCPI query responses aren't interleaved with overflow noise.
-  if (stream_enabled && ts_tail == ts_head && tx_fill_pos == 0 &&
+  if (stream_enabled && format_mode == TIMESTAMPER_FORMAT_TEXT &&
+      ts_tail == ts_head && tx_fill_pos == 0 &&
       usbd_cdc_tx_ready(scpi_usb_cdc_handle())) {
     for (int i = 0; i < NUM_CHANNELS; i++) {
       uint32_t missed = channels[i].num_missed;
@@ -684,6 +700,14 @@ bool timestamper_get_stream_enabled(void) {
   return stream_enabled;
 }
 
+void timestamper_set_format(timestamper_format_t fmt) {
+  format_mode = fmt;
+}
+
+timestamper_format_t timestamper_get_format(void) {
+  return format_mode;
+}
+
 void timestamper_reset_all(void) {
   for (int i = 0; i < NUM_CHANNELS; i++) {
     timestamper_set_slope(i, TIMESTAMPER_SLOPE_RISING);
@@ -692,6 +716,7 @@ void timestamper_reset_all(void) {
     channels[i].buf_overflows = 0;
   }
   timestamper_set_stream_enabled(true);
+  timestamper_set_format(TIMESTAMPER_FORMAT_TEXT);
 }
 
 int main() {
