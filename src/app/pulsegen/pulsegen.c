@@ -77,6 +77,7 @@
 
 #include "core/hardware.h"
 #include "core/rulos.h"
+#include "periph/scpi/scpi.h"
 #include "periph/uart/uart.h"
 #include "pulsegen.h"
 #include "scpi.h"
@@ -623,7 +624,7 @@ int main(void) {
 
   init_gpio();
 
-  scpi_init();
+  pulsegen_scpi_init();
 
   init_hrtim();
   init_tim2();

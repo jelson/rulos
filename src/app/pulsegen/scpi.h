@@ -19,13 +19,13 @@
 #pragma once
 
 /*
- * SCPI front-end for pulsegen. Owns the USB CDC port, the linereader that
- * splits incoming bytes into lines, and the parser that dispatches each line.
+ * Pulsegen SCPI dispatcher. The generic SCPI library
+ * (src/lib/periph/scpi) handles USB CDC, the linereader, and the IEEE
+ * 488.2 mandatory commands. Use scpi_print, scpi_set_error,
+ * scpi_clear_error, scpi_usb_ready, and scpi_consume_recent_activity
+ * directly from periph/scpi/scpi.h for runtime interaction.
  *
- * Supported commands (long and short forms):
- *   *IDN?
- *   *RST
- *   SYSTem:ERRor?
+ * Pulsegen-specific commands handled here:
  *   OUTPut[n]:STATe ON|OFF|1|0
  *   SOURce[n]:PULSe:PERiod  <seconds>
  *   SOURce[n]:PULSe:WIDTh   <seconds>
@@ -36,19 +36,5 @@
  * declared in pulsegen.h.
  */
 
-#include <stdbool.h>
-
-// One-time setup: USB CDC + linereader. Call after rulos_hal_init().
-void scpi_init(void);
-
-// Send a single line to the host (USB CDC). Newline is appended. No-op if
-// USB is not enumerated or a previous transmission is still in flight, so
-// callers should only emit lines they are willing to drop.
-void scpi_print(const char *line);
-
-// True iff USB CDC has finished enumeration.
-bool scpi_usb_ready(void);
-
-// One-shot: returns true if any RX or TX traffic has happened since the
-// last call. Used by the LED blinker.
-bool scpi_consume_recent_activity(void);
+// One-time setup. Call after rulos_hal_init().
+void pulsegen_scpi_init(void);

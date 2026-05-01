@@ -31,8 +31,8 @@ from build_tools import *
 # RCC_PLLM_DIVn macros.
 RulosBuildTarget(
     name = "timestamper",
-    sources = ["timestamper.c"],
-    peripherals = "uart usb-cdc-stm32",
+    sources = ["timestamper.c", "scpi.c"],
+    peripherals = "uart usb-cdc-stm32 scpi",
     platforms = [
         ArmStmPlatform(
             "stm32h523xc",
@@ -43,6 +43,14 @@ RulosBuildTarget(
                 '-DRULOS_PLLM=1',
                 '-DRULOS_PLLN=50',
                 '-DSCHEDULER_CAPACITY=4',
+                # USB identity (pid.codes registration pending; see
+                # https://github.com/pidcodes/pidcodes.github.com/pull/1201).
+                # Note: this drops the cdc_acm DISABLE_ECHO quirk that the
+                # default 0x0424:0x274e gets on Linux. Re-test if echo issues
+                # reappear.
+                '-DUSBD_VID=0x1209',
+                '-DUSBD_PID=0x71C4',
+                '-DUSBD_PRODUCT_STRING=\\"LectroTIC-4\\"',
             ],
         ),
     ],

@@ -86,15 +86,18 @@
 #include "core/dma.h"
 #include "core/hardware.h"
 #include "core/rulos.h"
+#include "periph/scpi/scpi.h"
 #include "periph/uart/uart.h"
 #include "periph/usb_cdc/usb_cdc.h"
+#include "scpi.h"
 #include "stm32h5xx_ll_tim.h"
+#include "timestamper.h"
 
 #ifndef RULOS_USE_HSE
 #error "timestamper requires RULOS_USE_HSE"
 #endif
 
-#define NUM_CHANNELS  4
+// NUM_CHANNELS comes from timestamper.h, shared with scpi.c.
 #define CLOCK_FREQ_HZ 250000000
 
 // 250 MHz exactly = 4 ns per tick. Used by format_timestamp to convert
@@ -148,7 +151,12 @@ typedef struct {
   uint32_t num_missed;
   uint32_t buf_overflows;
 
-  // divider state
+  // Input-capture slope. Default RISING at boot; configurable via SCPI
+  // INPut<n>:SLOPe.
+  timestamper_slope_t slope;
+
+  // divider state -- report only every Nth pulse. divider == 1 reports
+  // every pulse. Configurable via SCPI INPut<n>:DIVider.
   uint32_t divider;
   uint32_t count;
 
@@ -160,6 +168,22 @@ typedef struct {
 } channel_t;
 
 static channel_t channels[NUM_CHANNELS];
+
+// Continuous timestamp output enable (settable via SCPI OUTPut:STATe).
+// Default ON so a freshly-plugged-in device behaves as the user expects.
+static bool stream_enabled = true;
+
+// PA0..PA3 carry TIM2_CH1..CH4 input-capture signals. The TIM2 channel
+// codes are also used at runtime by the slope-setter, hence file scope.
+static const struct {
+  uint32_t pin;         // LL_GPIO_PIN_n
+  uint32_t ll_channel;  // LL_TIM_CHANNEL_CHn
+} cap_pins[NUM_CHANNELS] = {
+    {LL_GPIO_PIN_0, LL_TIM_CHANNEL_CH1},
+    {LL_GPIO_PIN_1, LL_TIM_CHANNEL_CH2},
+    {LL_GPIO_PIN_2, LL_TIM_CHANNEL_CH3},
+    {LL_GPIO_PIN_3, LL_TIM_CHANNEL_CH4},
+};
 
 // total seconds elapsed since boot -- for details, see comment at top.
 // volatile because TIM15 ISR writes these and process_dma_captures
@@ -177,9 +201,10 @@ timestamp_t timestamp_buffer[TIMESTAMP_BUFLEN];
 static volatile uint32_t ts_head = 0;  // next write position (ISR)
 static volatile uint32_t ts_tail = 0;  // next read position (USB output)
 
-// Output devices.
+// Output devices. The USB CDC connection is owned by the SCPI library
+// (src/lib/periph/scpi); this app shares the same connection for
+// streaming timestamps using scpi_usb_cdc_handle().
 static UartState_t uart;
-static usbd_cdc_state_t usb_cdc;
 
 // Ping-pong USB TX buffers. While USB is sending one buffer, the
 // periodic task fills the other with formatted timestamps. When the
@@ -304,17 +329,8 @@ static bool received_recent_pulse(uint8_t channel_num) {
   return false;
 }
 
-// Set whenever a USB CDC write is initiated; consumed by update_leds
-// to flash the USB LED on traffic.
-static volatile bool recent_usb_activity = false;
-
-static bool received_recent_usb_activity(void) {
-  if (recent_usb_activity) {
-    recent_usb_activity = false;
-    return true;
-  }
-  return false;
-}
+// USB activity for the LED is tracked inside the SCPI library; we just
+// drain its sticky bit each LED update via scpi_consume_recent_activity.
 
 // Populated at startup by main(). Can't be a static const initializer
 // because GPIO_An are themselves `static const gpio_pin_t` and so not
@@ -348,8 +364,8 @@ static void update_leds(void) {
                     on_phase && received_recent_pulse(i));
   }
 
-  const bool usb_blink_off = !on_phase && received_recent_usb_activity();
-  gpio_set_or_clr(LED_USB, usb_cdc.usb_ready && !usb_blink_off);
+  const bool usb_blink_off = !on_phase && scpi_consume_recent_activity();
+  gpio_set_or_clr(LED_USB, scpi_usb_ready() && !usb_blink_off);
 }
 
 // Format timestamps from the ring buffer into the current filling
@@ -374,11 +390,12 @@ static void fill_tx_buf(void) {
 // swap to the other buffer. Then eagerly start filling the new
 // buffer so it's ready when USB finishes.
 static void try_send_timestamps(void) {
-  if (tx_fill_pos == 0 || !usbd_cdc_tx_ready(&usb_cdc)) {
+  if (!stream_enabled) return;
+  if (tx_fill_pos == 0 || !usbd_cdc_tx_ready(scpi_usb_cdc_handle())) {
     return;
   }
 
-  usbd_cdc_write(&usb_cdc, usb_tx_bufs[tx_filling], tx_fill_pos);
+  usbd_cdc_write(scpi_usb_cdc_handle(), usb_tx_bufs[tx_filling], tx_fill_pos);
 
   // Swap: the buffer we just handed to USB is now "sending" (owned
   // by the USB stack). Start filling the other one.
@@ -387,8 +404,10 @@ static void try_send_timestamps(void) {
   fill_tx_buf();
 }
 
-static void usb_tx_complete(usbd_cdc_state_t *cdc, void *user_data) {
-  recent_usb_activity = true;
+// Forwarded by the SCPI library after each USB CDC TX completes. Drives
+// the ping-pong handoff: as soon as the in-flight buffer drains, we
+// pre-arm the freshly-filled one.
+static void on_usb_tx_complete(void) {
   try_send_timestamps();
 }
 
@@ -457,17 +476,17 @@ static void periodic_task(void *data) {
     }
 
     static bool error_printed = false;
-    if (!error_printed && usbd_cdc_tx_ready(&usb_cdc)) {
+    if (!error_printed && usbd_cdc_tx_ready(scpi_usb_cdc_handle())) {
       error_printed = true;
-      usbd_cdc_print(&usb_cdc, "# FATAL: External oscillator failure. Connect a 10MHz source and press reset.\n");
+      usbd_cdc_print(scpi_usb_cdc_handle(), "# FATAL: External oscillator failure. Connect a 10MHz source and press reset.\n");
     }
     return;
   }
 
   // If USB has just come up for the first time, print a welcome message
   static bool welcome_printed = false;
-  if (!welcome_printed && usbd_cdc_tx_ready(&usb_cdc)) {
-     usbd_cdc_print(&usb_cdc, "# Starting timestamper, version " STRINGIFY(GIT_COMMIT) "\n");
+  if (!welcome_printed && usbd_cdc_tx_ready(scpi_usb_cdc_handle())) {
+     usbd_cdc_print(scpi_usb_cdc_handle(), "# Starting timestamper, version " STRINGIFY(GIT_COMMIT) "\n");
      welcome_printed = true;
   }
 
@@ -476,9 +495,10 @@ static void periodic_task(void *data) {
 
   // Report missed pulses when USB is idle and no timestamps pending.
   // Use the filling buffer for one-off messages since nothing else is
-  // writing to it in this path.
-  if (ts_tail == ts_head && tx_fill_pos == 0 &&
-      usbd_cdc_tx_ready(&usb_cdc)) {
+  // writing to it in this path. Suppressed while streaming is disabled
+  // so SCPI query responses aren't interleaved with overflow noise.
+  if (stream_enabled && ts_tail == ts_head && tx_fill_pos == 0 &&
+      usbd_cdc_tx_ready(scpi_usb_cdc_handle())) {
     for (int i = 0; i < NUM_CHANNELS; i++) {
       uint32_t missed = channels[i].num_missed;
       uint32_t overflows = channels[i].buf_overflows;
@@ -488,7 +508,7 @@ static void periodic_task(void *data) {
         int len = snprintf(usb_tx_bufs[tx_filling], USB_TX_BUFLEN,
                            "# ch%d: %lu overcaptures, %lu buf overflows\n",
                            i + 1, missed, overflows);
-        usbd_cdc_write(&usb_cdc, usb_tx_bufs[tx_filling], len);
+        usbd_cdc_write(scpi_usb_cdc_handle(), usb_tx_bufs[tx_filling], len);
         tx_filling = 1 - tx_filling;
         return;  // one message per period; USB will drain the rest
       }
@@ -525,16 +545,8 @@ static void init_timers() {
   gpio_init.Pull = LL_GPIO_PULL_DOWN;
   gpio_init.Alternate = LL_GPIO_AF_1;
 
-  static const struct {
-    uint32_t pin;          // LL_GPIO_PIN_n
-    uint32_t ll_channel;   // LL_TIM_CHANNEL_CHn
-  } cap_pins[NUM_CHANNELS] = {
-      {LL_GPIO_PIN_0, LL_TIM_CHANNEL_CH1},
-      {LL_GPIO_PIN_1, LL_TIM_CHANNEL_CH2},
-      {LL_GPIO_PIN_2, LL_TIM_CHANNEL_CH3},
-      {LL_GPIO_PIN_3, LL_TIM_CHANNEL_CH4},
-  };
-
+  // cap_pins is at file scope so the slope-setter API can also reference
+  // each channel's TIM2 channel code at runtime.
   for (int i = 0; i < NUM_CHANNELS; i++) {
     gpio_init.Pin = cap_pins[i].pin;
     LL_GPIO_Init(GPIOA, &gpio_init);
@@ -542,8 +554,7 @@ static void init_timers() {
                              LL_TIM_ACTIVEINPUT_DIRECTTI);
     LL_TIM_IC_SetPrescaler(TIM2, cap_pins[i].ll_channel, LL_TIM_ICPSC_DIV1);
     LL_TIM_IC_SetFilter(TIM2, cap_pins[i].ll_channel, LL_TIM_IC_FILTER_FDIV1);
-    LL_TIM_IC_SetPolarity(TIM2, cap_pins[i].ll_channel,
-                          LL_TIM_IC_POLARITY_RISING);
+    timestamper_set_slope(i, channels[i].slope);
   }
 
   /// Start the counter running and enable the input capture channels
@@ -624,17 +635,77 @@ static void init_timers() {
   LL_TIM_EnableCounter(TIM15);
 }
 
+// ---------------------------------------------------------------------------
+// Public API for the SCPI dispatcher in scpi.c. Declared in timestamper.h.
+
+// IEEE 488.2 *IDN? response: <vendor>,<model>,<serial>,<firmware>.
+// Serial is a placeholder for now; the chip UID could replace it once
+// Get_SerialNum's output is plumbed up here.
+const char *const timestamper_idn =
+    "Lectrobox,Timestamper,0," STRINGIFY(GIT_COMMIT);
+
+void timestamper_set_slope(int ch, timestamper_slope_t slope) {
+  if (ch < 0 || ch >= NUM_CHANNELS) return;
+  uint32_t pol;
+  switch (slope) {
+    case TIMESTAMPER_SLOPE_FALLING: pol = LL_TIM_IC_POLARITY_FALLING; break;
+    case TIMESTAMPER_SLOPE_BOTH:    pol = LL_TIM_IC_POLARITY_BOTHEDGE; break;
+    case TIMESTAMPER_SLOPE_RISING:
+    default:                        pol = LL_TIM_IC_POLARITY_RISING; break;
+  }
+  channels[ch].slope = slope;
+  LL_TIM_IC_SetPolarity(TIM2, cap_pins[ch].ll_channel, pol);
+}
+
+timestamper_slope_t timestamper_get_slope(int ch) {
+  if (ch < 0 || ch >= NUM_CHANNELS) return TIMESTAMPER_SLOPE_RISING;
+  return channels[ch].slope;
+}
+
+void timestamper_set_divider(int ch, uint32_t n) {
+  if (ch < 0 || ch >= NUM_CHANNELS || n == 0) return;
+  // Reset count first so the next pulse starts a fresh group at the new
+  // divider; the DMA ISR reads divider/count atomically enough on M33
+  // (single-word loads) that a brief in-flight overlap is harmless.
+  channels[ch].count = 0;
+  channels[ch].divider = n;
+}
+
+uint32_t timestamper_get_divider(int ch) {
+  if (ch < 0 || ch >= NUM_CHANNELS) return 1;
+  return channels[ch].divider;
+}
+
+void timestamper_set_stream_enabled(bool enabled) {
+  stream_enabled = enabled;
+}
+
+bool timestamper_get_stream_enabled(void) {
+  return stream_enabled;
+}
+
+void timestamper_reset_all(void) {
+  for (int i = 0; i < NUM_CHANNELS; i++) {
+    timestamper_set_slope(i, TIMESTAMPER_SLOPE_RISING);
+    timestamper_set_divider(i, 1);
+    channels[i].num_missed = 0;
+    channels[i].buf_overflows = 0;
+  }
+  timestamper_set_stream_enabled(true);
+}
+
 int main() {
   rulos_hal_init();
 
   // initialize scheduler with 10msec jiffy clock
   init_clock(10000, TIMER1);
 
-  // initialize channel configs. TODO: Add command-line interface so divider
-  // values can be configured dynamically
+  // Initial channel state. Slope and divider are runtime-configurable
+  // via SCPI; defaults match what *RST also restores.
   memset(&channels, 0, sizeof(channels));
   for (int i = 0; i < NUM_CHANNELS; i++) {
     channels[i].divider = 1;
+    channels[i].slope = TIMESTAMPER_SLOPE_RISING;
   }
 
   // initialize uart for debug logging
@@ -652,13 +723,10 @@ int main() {
     gpio_make_output(led_chan_pins[i]);
   }
 
-  // initialize USB CDC for timestamp output
-  usb_cdc = (usbd_cdc_state_t){
-      .rx_cb = NULL,
-      .tx_complete_cb = usb_tx_complete,
-      .user_data = NULL,
-  };
-  usbd_cdc_init(&usb_cdc);
+  // Initialise the SCPI front-end. This also brings up the USB CDC
+  // connection used both for incoming SCPI commands and for outgoing
+  // timestamp streams.
+  timestamper_scpi_init(on_usb_tx_complete);
 
   // initialize the main timer and its input capture pin
   init_timers();

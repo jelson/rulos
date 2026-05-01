@@ -19,6 +19,11 @@ class Siggen:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(timeout)
         self.sock.connect((host, port))
+        # Force 50 Ω output mode so VOLT:HIGH/LOW reflect what the
+        # cable actually delivers (default is HighZ, which would
+        # double the programmed voltage into a 50 Ω load).
+        self.cmd(":OUTP1:LOAD 50")
+        self.cmd(":OUTP2:LOAD 50")
 
     def close(self):
         self.sock.close()

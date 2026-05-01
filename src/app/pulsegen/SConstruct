@@ -32,7 +32,7 @@ from build_tools import *
 RulosBuildTarget(
     name = "pulsegen",
     sources = ["pulsegen.c", "scpi.c"],
-    peripherals = "uart usb-cdc-stm32",
+    peripherals = "uart usb-cdc-stm32 scpi",
     platforms = [
         ArmStmPlatform(
             "stm32g474xb",
