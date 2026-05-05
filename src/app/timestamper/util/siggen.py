@@ -78,13 +78,12 @@ class Siggen:
         self.cmd(f":SOUR1:PULS:WIDT {pulse_width_s}")
         self.output_on()
 
-        return float(self.query(":SOUR1:FREQ?"))
-
         self.verify([
             ":SOUR1:FUNC?", ":SOUR1:FREQ?", ":SOUR1:VOLT:HIGH?",
             ":SOUR1:VOLT:LOW?", ":SOUR1:PULS:WIDT?", ":SOUR1:BURS:STAT?",
-            ":SYST:ERR?",
+            ":OUTP1?", ":SYST:ERR?",
         ])
+        return float(self.query(":SOUR1:FREQ?"))
 
     def pulse_burst(self, ns, ncyc=3):
         """Configure burst of <ncyc> pulses separated by <ns> ns,
@@ -109,16 +108,15 @@ class Siggen:
         self.cmd(":SOUR1:BURS:TRIG:SOUR INT")
         self.output_on()
 
-        actual_freq = float(self.query(":SOUR1:FREQ?"))
-        return 1e9 / actual_freq
-
         self.verify([
             ":SOUR1:FUNC?", ":SOUR1:FREQ?", ":SOUR1:VOLT:HIGH?",
             ":SOUR1:VOLT:LOW?", ":SOUR1:PULS:WIDT?",
             ":SOUR1:BURS:STAT?", ":SOUR1:BURS:MODE?",
             ":SOUR1:BURS:NCYC?", ":SOUR1:BURS:INT:PER?",
-            ":SYST:ERR?",
+            ":OUTP1?", ":SYST:ERR?",
         ])
+        actual_freq = float(self.query(":SOUR1:FREQ?"))
+        return 1e9 / actual_freq
 
 
 def cmd_periodic(sg, args):

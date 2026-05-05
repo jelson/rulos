@@ -32,7 +32,11 @@ from siggen import Siggen
 def measure_rate(ts, settle_s, measure_s, verbose):
     """Discard records for settle_s seconds, then collect timestamps
     for measure_s. Returns (timestamps_float_seconds, overflow_count)."""
-    ts.reset_input_buffer()
+    # Configuring siggen takes a few hundred ms (output_off, set the
+    # rate, output_on, run verify queries); during that time the ring
+    # may have filled and lost records. Drop everything pending so the
+    # measurement window starts clean.
+    ts.discard_pending()
 
     timestamps = []
     overflows = 0

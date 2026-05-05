@@ -174,6 +174,13 @@ static channel_t channels[NUM_CHANNELS];
 static bool stream_enabled = true;
 static timestamper_format_t format_mode = TIMESTAMPER_FORMAT_TEXT;
 
+// Set by timestamper_discard_pending(); cleared in try_send_timestamps
+// once the marker has been written to USB. The marker emission has to
+// bypass stream_enabled because discard_pending always silences the
+// stream around the clear.
+static volatile bool marker_pending = false;
+static const char marker_msg[] = "# output discarded\n";
+
 // PA0..PA3 carry TIM2_CH1..CH4 input-capture signals. The TIM2 channel
 // codes are also used at runtime by the slope-setter, hence file scope.
 static const struct {
@@ -404,6 +411,14 @@ static void fill_tx_buf(void) {
 // swap to the other buffer. Then eagerly start filling the new
 // buffer so it's ready when USB finishes.
 static void try_send_timestamps(void) {
+  // ABOR's marker bypasses stream_enabled so the host can synchronize
+  // even after silencing the stream during a discard_pending() dance.
+  if (marker_pending && usbd_cdc_tx_ready(scpi_usb_cdc_handle())) {
+    marker_pending = false;
+    usbd_cdc_write(scpi_usb_cdc_handle(), (uint8_t *)marker_msg,
+                   sizeof(marker_msg) - 1);
+    return;
+  }
   if (!stream_enabled) return;
   if (tx_fill_pos == 0 || !usbd_cdc_tx_ready(scpi_usb_cdc_handle())) {
     return;
@@ -712,11 +727,28 @@ void timestamper_reset_all(void) {
   for (int i = 0; i < NUM_CHANNELS; i++) {
     timestamper_set_slope(i, TIMESTAMPER_SLOPE_RISING);
     timestamper_set_divider(i, 1);
-    channels[i].num_missed = 0;
-    channels[i].buf_overflows = 0;
   }
   timestamper_set_stream_enabled(true);
   timestamper_set_format(TIMESTAMPER_FORMAT_TEXT);
+  timestamper_discard_pending();
+}
+
+void timestamper_discard_pending(void) {
+  // ts_head is touched by the DMA ISR and the periodic flush; pause
+  // interrupts briefly so we don't race a half-written entry. The
+  // in-flight USB TX half also gets reset so any partially-formatted
+  // record is dropped. The marker flag is set inside the same critical
+  // section so it can't be observed before the ring is empty.
+  __disable_irq();
+  ts_head = 0;
+  ts_tail = 0;
+  tx_fill_pos = 0;
+  for (int i = 0; i < NUM_CHANNELS; i++) {
+    channels[i].num_missed = 0;
+    channels[i].buf_overflows = 0;
+  }
+  marker_pending = true;
+  __enable_irq();
 }
 
 int main() {

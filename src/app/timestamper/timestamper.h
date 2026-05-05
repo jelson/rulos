@@ -76,5 +76,12 @@ timestamper_format_t timestamper_get_format(void);
 // switch back to TEXT format, and re-enable streaming.
 void timestamper_reset_all(void);
 
+// Discard everything currently pending: drop the timestamp ring,
+// the in-flight TX-buffer half, and the per-channel missed/overflow
+// counters. After this returns, the next captured pulse will be the
+// first one the host sees. Channel configuration (slope, divider,
+// format, stream enable) is preserved.
+void timestamper_discard_pending(void);
+
 // Identity string returned for *IDN?.
 extern const char *const timestamper_idn;

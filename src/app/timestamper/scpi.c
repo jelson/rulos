@@ -140,6 +140,21 @@ static bool handle_output_state(const char *arg) {
 }
 
 static bool dispatch_line(const char *line) {
+  // ABORt -- drop any pending timestamps in the device's ring buffer
+  // and the in-flight USB TX half, then queue a "# output discarded"
+  // marker so the host can synchronize. Channel config (slope,
+  // divider, format, stream-enable) is preserved. The marker is
+  // emitted by the timestamper's own TX path; see
+  // timestamper_discard_pending().
+  {
+    const char *p = scpi_match_kw(line, "ABORT", "ABOR");
+    if (p && *p == 0) {
+      timestamper_discard_pending();
+      scpi_clear_error();
+      return true;
+    }
+  }
+
   // OUTPut:STATe -- gates the streaming timestamp output. Emitted before
   // the INPut subsystem because OUTP is shorter to match.
   {

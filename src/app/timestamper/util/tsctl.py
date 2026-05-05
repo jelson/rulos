@@ -189,14 +189,14 @@ class Timestamper:
         self._ser.write((cmd + "\n").encode())
         self._ser.flush()
 
-    def reset_input_buffer(self, quiet_s=0.1, max_s=1.0):
+    def reset_input_buffer(self, settle_s=0.2):
         """Discard whatever the device has already sent so the next
-        read starts on fresh output. Drops the OS-level RX buffer
-        first (cheap, instantaneous), then reads until the line has
-        been quiet for quiet_s seconds, or max_s total has elapsed --
-        catching any bytes the device emits while we're cleaning up."""
+        read starts on fresh output. Sleeps settle_s to let the device
+        finish draining anything buffered under the previous state,
+        then drops the OS-level RX buffer. After this returns, every
+        byte that arrives is post-call."""
+        time.sleep(settle_s)
         self._ser.reset_input_buffer()
-        _drain_raw(self._ser, quiet_s=quiet_s, max_s=max_s)
 
     def query(self, cmd):
         """Send a query and read one line of response. If streaming
@@ -207,7 +207,9 @@ class Timestamper:
         toggle = self._stream_on
         if toggle:
             self.send("OUTP:STAT OFF")
-        self.reset_input_buffer()
+        # Just-sent OUTP:STAT OFF takes effect within USB latency; a
+        # short settle is enough to drop the few in-flight records.
+        self.reset_input_buffer(settle_s=0.01)
         self.send(cmd)
         self._ser.timeout = 0.5
         line = self._ser.readline().decode(errors="replace").strip()
@@ -242,6 +244,41 @@ class Timestamper:
         if self._binary:
             self.send("FORM:DATA BIN")
             self.reset_input_buffer()
+
+    def discard_pending(self):
+        """Drop everything currently in flight so the next read sees
+        only post-discard records. Channel configuration is preserved.
+
+        Synchronizes via a firmware-emitted marker, no sleeps:
+
+            1. silence the stream (so no records emit after the marker)
+            2. send ABORt; the firmware clears its ring and emits
+               "# output discarded\\n" straight to USB CDC
+            3. read bytes until that marker appears, dropping everything
+            4. restore the prior stream state
+        """
+        was_on = self._stream_on
+        self.set_stream_enabled(False)
+        self.send("ABOR")
+
+        marker = b"# output discarded\n"
+        buf = bytearray()
+        # Short timeout so the read returns promptly with whatever's
+        # in the OS RX buffer; we don't want to wait for a full 4096-byte
+        # chunk when the marker is the last thing the device emits.
+        self._ser.timeout = 0.01
+        deadline = time.monotonic() + 1.0
+        while marker not in buf:
+            if time.monotonic() > deadline:
+                raise RuntimeError(
+                    "ABOR did not produce its marker within 1 s — "
+                    "is the device responsive?")
+            chunk = self._ser.read(4096)
+            if chunk:
+                buf += chunk
+
+        if was_on:
+            self.set_stream_enabled(True)
 
     def clear_errors(self):
         self.send("*CLS")

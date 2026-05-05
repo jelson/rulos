@@ -34,7 +34,9 @@ class PulseCount:
 def count_pulses(ts, settle_time_s=2.0, measure_time_s=3.0,
                  verbose=True):
     """Read records via the Timestamper, classify, and group into bursts."""
-    ts.reset_input_buffer()
+    # Drop the device's ring + host buffer so we measure only bursts
+    # captured under the current siggen configuration.
+    ts.discard_pending()
 
     timestamps = []  # list of float seconds-since-boot
     overcaptures = 0

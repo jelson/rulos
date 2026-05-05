@@ -28,6 +28,11 @@ correctly:
     Set a non-default state, send *RST, and verify every setting is back
     to its documented default.
 
+  Phase 7: 10,000-pulse burst at 100 ns spacing
+    Stress the DMA + ring-buffer path. Doubles as a hardware sanity
+    check on newly-built devices: every pulse must come through with
+    no overcapture or buffer-overflow comment.
+
 The signal generator's output channel must be wired to the timestamper
 input channel selected with --channel (default 1).
 
@@ -298,6 +303,72 @@ def phase_reset(ts, channel):
     return ok
 
 
+def phase_burst(sg, ts, channel, ncyc=10000, spacing_ns=100):
+    """Stress the on-device DMA + ring buffer: ask siggen for a burst
+    of ncyc pulses spaced spacing_ns apart, repeating once per second,
+    and verify every pulse comes through with no overcapture/overflow.
+    Doubles as a hardware sanity check for newly-built devices."""
+    print(f"\n=== Phase 7: {ncyc}-pulse burst at {spacing_ns} ns ===")
+
+    ts.set_slope(channel, "POS")
+    ts.set_divider(channel, 1)
+    # TEXT mode so the firmware's # overflow / # overcapture comments
+    # are visible if anything goes wrong.
+    ts.set_binary(False)
+
+    actual_ns = sg.pulse_burst(spacing_ns, ncyc=ncyc)
+    ts.discard_pending()
+
+    # Capture for a bit longer than 2 burst periods so we see at least
+    # two full bursts even if the first one is in flight when we start.
+    times = []
+    overcaptures = 0
+    overflows = 0
+    other_chans = set()
+    for r in ts.read_for(3.5):
+        if r.kind == "comment":
+            text = r.comment.lower()
+            if "overcapture" in text:
+                overcaptures += 1
+            if "overflow" in text:
+                overflows += 1
+            print(f"    | {r.comment}")
+            continue
+        if r.channel == channel:
+            times.append(r.time)
+        else:
+            other_chans.add(r.channel)
+
+    # Group into bursts: timestamps within 0.5 s of each other are
+    # the same burst (siggen repeats once per second).
+    bursts = []
+    i = 0
+    while i < len(times):
+        size = 1
+        t0 = times[i]
+        j = i + 1
+        while j < len(times) and abs(times[j] - t0) < 0.5:
+            size += 1
+            j += 1
+        bursts.append(size)
+        i = j
+
+    complete = [s for s in bursts if s == ncyc]
+    print(f"\n  actual spacing: {actual_ns:.1f} ns (requested {spacing_ns})")
+    print(f"  bursts captured: {bursts}")
+    print(f"  channels seen: {sorted(other_chans | {channel})}")
+    print(f"  overcaptures: {overcaptures}, overflows: {overflows}")
+
+    ok = True
+    ok &= expect(len(complete) >= 2,
+                 f"at least 2 complete bursts of {ncyc} pulses captured")
+    ok &= expect(overcaptures == 0, "no DMA overcaptures")
+    ok &= expect(overflows == 0, "no ring-buffer overflows")
+    ok &= expect(not other_chans,
+                 f"no spurious activity on other channels (got {other_chans})")
+    return ok
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -324,10 +395,11 @@ def main():
         sg.periodic(PULSE_HZ)
 
         try:
-            ts.set_stream_enabled(False)
-            ts.reset_input_buffer()
+            # *RST clears the device's timestamp ring as well as
+            # channel config, so any leftover records from a prior
+            # aborted run are dropped here.
             ts.reset()
-            ts.reset_input_buffer()
+            ts.discard_pending()
             print(f"Connected to timestamper: {ts.idn()}")
 
             results = []
@@ -347,6 +419,7 @@ def main():
             ts.set_binary(False)
             results.append(("SCPI errors", phase_scpi_errors(ts)))
             results.append(("reset", phase_reset(ts, args.channel)))
+            results.append(("burst", phase_burst(sg, ts, args.channel)))
         finally:
             ts.set_stream_enabled(False)
             sg.output_off()
