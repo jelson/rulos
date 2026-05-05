@@ -1,4 +1,21 @@
+# Eagle backups
 *.s#?
 *.b#?
 *.l#?
 *.pro
+
+# KiCad per-user project local state
+*.kicad_prl
+# KiCad's auto-rotated backups dir
+*-backups/
+# KiCad autosave files
+_autosave-*
+*.kicad_sch-bak
+*.kicad_pcb-bak
+# Footprint info cache
+fp-info-cache
+# Editor lock files
+*.lck
+
+# VS Code "Local History" extension
+.history/
