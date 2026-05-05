@@ -33,6 +33,12 @@ correctly:
     check on newly-built devices: every pulse must come through with
     no overcapture or buffer-overflow comment.
 
+  Phase 8: sustained 105 kHz throughput in BINARY mode
+    Single-point throughput check: drive a steady 105 kHz pulse train
+    for 5 s and verify every gap is within 1 µs of expected. Uses
+    sustained_rate.test_rate, so passing here implies the device
+    survives a representative ~95% of the measured 110 kHz USB ceiling.
+
 The signal generator's output channel must be wired to the timestamper
 input channel selected with --channel (default 1).
 
@@ -50,6 +56,7 @@ import sys
 sys.path.insert(0, __import__("os").path.dirname(__file__))
 from tsctl import Timestamper
 from siggen import Siggen
+import sustained_rate
 
 
 PULSE_HZ = 10
@@ -369,6 +376,21 @@ def phase_burst(sg, ts, channel, ncyc=10000, spacing_ns=100):
     return ok
 
 
+def phase_sustained_rate(sg, ts, channel, hz=105000):
+    """Single-point throughput check: drive a steady hz pulse train
+    and verify every gap is within 1 µs of the expected period. Uses
+    sustained_rate.test_rate so this stays a thin wrapper around the
+    same code the dedicated binary-search tool uses."""
+    print(f"\n=== Phase 8: sustained rate @ {hz} Hz (BIN) ===")
+    ts.set_slope(channel, "POS")
+    ts.set_divider(channel, 1)
+    ts.set_binary(True)
+    ok = sustained_rate.test_rate(
+        sg, ts, hz,
+        settle_s=2.0, measure_s=5.0, tolerance=1e-6, verbose=False)
+    return ok
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -420,6 +442,8 @@ def main():
             results.append(("SCPI errors", phase_scpi_errors(ts)))
             results.append(("reset", phase_reset(ts, args.channel)))
             results.append(("burst", phase_burst(sg, ts, args.channel)))
+            results.append(("sustained rate",
+                            phase_sustained_rate(sg, ts, args.channel)))
         finally:
             ts.set_stream_enabled(False)
             sg.output_off()
