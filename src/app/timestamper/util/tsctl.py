@@ -252,14 +252,14 @@ class Timestamper:
         Synchronizes via a firmware-emitted marker, no sleeps:
 
             1. silence the stream (so no records emit after the marker)
-            2. send ABORt; the firmware clears its ring and emits
-               "# output discarded\\n" straight to USB CDC
+            2. send OUTPut:CLEar; the firmware clears its ring and
+               emits "# output discarded\\n" straight to USB CDC
             3. read bytes until that marker appears, dropping everything
             4. restore the prior stream state
         """
         was_on = self._stream_on
         self.set_stream_enabled(False)
-        self.send("ABOR")
+        self.send("OUTP:CLE")
 
         marker = b"# output discarded\n"
         buf = bytearray()
@@ -271,7 +271,7 @@ class Timestamper:
         while marker not in buf:
             if time.monotonic() > deadline:
                 raise RuntimeError(
-                    "ABOR did not produce its marker within 1 s — "
+                    "OUTP:CLE did not produce its marker within 1 s — "
                     "is the device responsive?")
             chunk = self._ser.read(4096)
             if chunk:
