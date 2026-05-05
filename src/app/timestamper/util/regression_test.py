@@ -41,7 +41,6 @@ Usage:
 import argparse
 import statistics
 import sys
-import time
 
 sys.path.insert(0, __import__("os").path.dirname(__file__))
 from tsctl import Timestamper
@@ -54,25 +53,18 @@ PERIOD_S = 1.0 / PULSE_HZ
 TOLERANCE_S = 1e-6
 
 
-def format_label(binary):
-    return "BIN" if binary else "TEXT"
+def format_label(ts):
+    return "BIN" if ts.get_binary() else "TEXT"
 
 
-def settle(ts, duration_s=0.5):
-    """Drain pending bytes after a config change so the next capture
-    window starts on fresh data."""
-    time.sleep(duration_s)
-    ts.reset_input_buffer()
-
-
-def capture(ts, channel, duration_s, binary):
+def capture(ts, channel, duration_s):
     """Read records for duration_s, returning (timestamps for channel
     as floats, set of other channels seen, overflow comment count).
     Comments are only seen in text mode."""
     times = []
     other_chans = set()
     overflows = 0
-    for r in ts.read_for(duration_s, binary):
+    for r in ts.read_for(duration_s):
         if r.kind == "comment":
             if "overflow" in r.comment.lower():
                 overflows += 1
@@ -102,13 +94,12 @@ def expect(condition, message):
     return condition
 
 
-def phase_rising(ts, channel, duration_s, binary):
-    print(f"\n=== Phase 1: rising edge only ({format_label(binary)}) ===")
+def phase_rising(ts, channel, duration_s):
+    print(f"\n=== Phase 1: rising edge only ({format_label(ts)}) ===")
     ts.set_slope(channel, "POS")
-    ts.set_stream_enabled(True)
-    settle(ts)
+    ts.reset_input_buffer()
 
-    times, others, overflows = capture(ts, channel, duration_s, binary)
+    times, others, overflows = capture(ts, channel, duration_s)
     expected = PULSE_HZ * duration_s
     print(f"\n  collected {len(times)} timestamps on ch{channel} "
           f"(expected ~{expected:.0f}); "
@@ -127,15 +118,14 @@ def phase_rising(ts, channel, duration_s, binary):
     return ok
 
 
-def phase_divider(ts, channel, duration_s, binary, divider=5):
+def phase_divider(ts, channel, duration_s, divider=5):
     print(f"\n=== Phase 3: rising edge, divider={divider} "
-          f"({format_label(binary)}) ===")
+          f"({format_label(ts)}) ===")
     ts.set_slope(channel, "POS")
     ts.set_divider(channel, divider)
-    ts.set_stream_enabled(True)
-    settle(ts)
+    ts.reset_input_buffer()
 
-    times, others, overflows = capture(ts, channel, duration_s, binary)
+    times, others, overflows = capture(ts, channel, duration_s)
     expected = (PULSE_HZ / divider) * duration_s
     expected_period = PERIOD_S * divider
     print(f"\n  collected {len(times)} timestamps on ch{channel} "
@@ -159,13 +149,12 @@ def phase_divider(ts, channel, duration_s, binary, divider=5):
     return ok
 
 
-def phase_both(ts, channel, duration_s, binary):
-    print(f"\n=== Phase 2: both edges ({format_label(binary)}) ===")
+def phase_both(ts, channel, duration_s):
+    print(f"\n=== Phase 2: both edges ({format_label(ts)}) ===")
     ts.set_slope(channel, "BOTH")
-    ts.set_stream_enabled(True)
-    settle(ts)
+    ts.reset_input_buffer()
 
-    times, others, overflows = capture(ts, channel, duration_s, binary)
+    times, others, overflows = capture(ts, channel, duration_s)
     expected = 2 * PULSE_HZ * duration_s
     print(f"\n  collected {len(times)} timestamps on ch{channel} "
           f"(expected ~{expected:.0f}); "
@@ -202,26 +191,33 @@ def phase_both(ts, channel, duration_s, binary):
     return ok
 
 
-def phase_output_gating(ts, channel, binary):
+def phase_output_gating(ts, channel):
     print(f"\n=== Phase 4: OUTPut:STATe gating "
-          f"({format_label(binary)}) ===")
+          f"({format_label(ts)}) ===")
     ts.set_slope(channel, "POS")
     ts.set_divider(channel, 1)
 
+    # Disable streaming and verify zero bytes flow. Use read_raw, not
+    # capture(), because capture()->read_for would auto-enable streaming.
     ts.set_stream_enabled(False)
-    ts.drain()
-    times_off, _, _ = capture(ts, channel, 1.0, binary)
+    ts.reset_input_buffer()
+    bytes_off = ts.read_raw(1.0)
 
+    # Re-enable streaming and drain the backlog of records the device
+    # buffered while we were silent, so we count fresh ones in the
+    # measurement window below.
     ts.set_stream_enabled(True)
-    settle(ts, 0.2)
-    times_on, _, _ = capture(ts, channel, 1.0, binary)
+    ts.reset_input_buffer()
+    times_on, _, _ = capture(ts, channel, 1.0)
 
-    print(f"\n  with stream OFF: {len(times_off)} timestamps (expected 0)")
+    print(f"\n  with stream OFF: {len(bytes_off)} bytes received "
+          f"(expected 0)")
     print(f"  with stream ON:  {len(times_on)} timestamps "
           f"(expected ~{PULSE_HZ:.0f})")
 
     ok = True
-    ok &= expect(len(times_off) == 0, "no timestamps arrive while OUTP:STAT OFF")
+    ok &= expect(len(bytes_off) == 0,
+                 "no bytes arrive while OUTP:STAT OFF")
     ok &= expect(abs(len(times_on) - PULSE_HZ) <= 2,
                  f"~{PULSE_HZ:.0f} timestamps arrive after OUTP:STAT ON")
     return ok
@@ -230,6 +226,12 @@ def phase_output_gating(ts, channel, binary):
 def phase_scpi_errors(ts):
     print("\n=== Phase 5: SCPI error handling ===")
     ok = True
+
+    # Silence the stream so query()'s auto-toggle doesn't fire; the
+    # firmware clears the latched error on every successful command,
+    # so an OUTP:STAT OFF/ON pair between the bad command and SYST:ERR?
+    # would wipe the error we're trying to read.
+    ts.set_stream_enabled(False)
 
     ts.clear_errors()
     err = ts.get_error()
@@ -244,7 +246,7 @@ def phase_scpi_errors(ts):
     ]
     for cmd, expected_code in cases:
         ts.clear_errors()
-        ts.drain()
+        ts.reset_input_buffer()
         ts.send(cmd)
         err = ts.get_error()
         ok &= expect(expected_code in err,
@@ -269,20 +271,19 @@ def phase_reset(ts, channel):
         ts.set_slope(ch, "BOTH")
         ts.set_divider(ch, 7)
     ts.set_stream_enabled(False)
-    ts.drain()
+    ts.reset_input_buffer()
 
     slope_before = ts.get_slope(channel)
     div_before   = ts.get_divider(channel)
-    out_before   = ts.query("OUTP:STAT?")
     ok &= expect(slope_before == "BOTH",
                  f"pre-RST slope is BOTH (got: {slope_before!r})")
     ok &= expect(div_before == "7",
                  f"pre-RST divider is 7 (got: {div_before!r})")
-    ok &= expect(out_before == "0",
-                 f"pre-RST OUTP:STAT is 0 (got: {out_before!r})")
+    ok &= expect(ts.get_stream_enabled() is False,
+                 "pre-RST stream is off")
 
     ts.reset()
-    ts.drain()
+    ts.reset_input_buffer()
 
     for ch in (1, 2, 3, 4):
         slope = ts.get_slope(ch)
@@ -291,8 +292,8 @@ def phase_reset(ts, channel):
                      f"ch{ch} slope back to POS (got: {slope!r})")
         ok &= expect(div == "1",
                      f"ch{ch} divider back to 1 (got: {div!r})")
-    out = ts.query("OUTP:STAT?")
-    ok &= expect(out == "1", f"OUTP:STAT back to 1 (got: {out!r})")
+    ok &= expect(ts.get_stream_enabled() is True,
+                 "post-RST stream is on")
 
     return ok
 
@@ -324,28 +325,26 @@ def main():
 
         try:
             ts.set_stream_enabled(False)
-            ts.drain()
+            ts.reset_input_buffer()
             ts.reset()
-            ts.drain()
+            ts.reset_input_buffer()
             print(f"Connected to timestamper: {ts.idn()}")
 
             results = []
             for binary in (False, True):
-                tag = format_label(binary)
-                ts.set_format(binary)
+                ts.set_binary(binary)
+                tag = format_label(ts)
                 results.append((f"{tag} rising edge",
-                                phase_rising(ts, args.channel, args.duration,
-                                             binary)))
+                                phase_rising(ts, args.channel, args.duration)))
                 results.append((f"{tag} both edges",
-                                phase_both(ts, args.channel, args.duration,
-                                           binary)))
+                                phase_both(ts, args.channel, args.duration)))
                 results.append((f"{tag} divider",
-                                phase_divider(ts, args.channel, args.duration,
-                                              binary)))
+                                phase_divider(ts, args.channel,
+                                              args.duration)))
                 results.append((f"{tag} output gating",
-                                phase_output_gating(ts, args.channel, binary)))
+                                phase_output_gating(ts, args.channel)))
 
-            ts.set_format(False)
+            ts.set_binary(False)
             results.append(("SCPI errors", phase_scpi_errors(ts)))
             results.append(("reset", phase_reset(ts, args.channel)))
         finally:

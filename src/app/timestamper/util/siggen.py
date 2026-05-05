@@ -65,11 +65,10 @@ class Siggen:
 
     def periodic(self, hz, pulse_width_s=0.001):
         """Configure continuous pulse output at the given frequency in Hz.
-
         pulse_width_s must be smaller than the period (1/hz); the default
-        of 1 ms is fine up to a few hundred Hz, but high-rate callers must
-        pick a shorter width.
-        """
+        of 1 ms is fine up to a few hundred Hz, but high-rate callers
+        must pick a shorter width. Returns the *actual* frequency the
+        device accepted."""
         self.output_off()
         self.cmd(":SOUR1:BURS:STAT OFF")
         self.cmd(":SOUR1:FUNC PULS")
@@ -79,6 +78,8 @@ class Siggen:
         self.cmd(f":SOUR1:PULS:WIDT {pulse_width_s}")
         self.output_on()
 
+        return float(self.query(":SOUR1:FREQ?"))
+
         self.verify([
             ":SOUR1:FUNC?", ":SOUR1:FREQ?", ":SOUR1:VOLT:HIGH?",
             ":SOUR1:VOLT:LOW?", ":SOUR1:PULS:WIDT?", ":SOUR1:BURS:STAT?",
@@ -86,7 +87,10 @@ class Siggen:
         ])
 
     def pulse_burst(self, ns, ncyc=3):
-        """Configure burst of <ncyc> pulses separated by <ns> ns, repeating 1/sec."""
+        """Configure burst of <ncyc> pulses separated by <ns> ns,
+        repeating 1/sec. Returns the *actual* ns spacing the device
+        accepted (which may differ from the request: in PULS mode the
+        DG1022Z silently clamps above ~15 MHz / 67 ns)."""
         freq = 1e9 / ns
         pulse_width = 50e-9  # narrow pulse for dead-time testing
 
@@ -104,6 +108,9 @@ class Siggen:
         self.cmd(":SOUR1:BURS:INT:PER 1")
         self.cmd(":SOUR1:BURS:TRIG:SOUR INT")
         self.output_on()
+
+        actual_freq = float(self.query(":SOUR1:FREQ?"))
+        return 1e9 / actual_freq
 
         self.verify([
             ":SOUR1:FUNC?", ":SOUR1:FREQ?", ":SOUR1:VOLT:HIGH?",

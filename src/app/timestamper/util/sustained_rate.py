@@ -29,16 +29,14 @@ from tsctl import Timestamper
 from siggen import Siggen
 
 
-def measure_rate(ts, settle_s, measure_s, binary, verbose):
-    """Read records via the Timestamper. First settle_s seconds are
-    discarded; then collect timestamps for measure_s. Returns
-    (timestamp_list_seconds_float, overflow_count)."""
-    for _ in ts.read_for(settle_s, binary):
-        pass
+def measure_rate(ts, settle_s, measure_s, verbose):
+    """Discard records for settle_s seconds, then collect timestamps
+    for measure_s. Returns (timestamps_float_seconds, overflow_count)."""
+    ts.reset_input_buffer()
 
     timestamps = []
     overflows = 0
-    for r in ts.read_for(measure_s, binary):
+    for r in ts.read_for(measure_s):
         if r.kind == "comment":
             if "overflow" in r.comment.lower():
                 overflows += 1
@@ -49,7 +47,7 @@ def measure_rate(ts, settle_s, measure_s, binary, verbose):
     return timestamps, overflows
 
 
-def test_rate(sg, ts, hz, settle_s, measure_s, tolerance, binary, verbose):
+def test_rate(sg, ts, hz, settle_s, measure_s, tolerance, verbose):
     """Configure siggen for `hz` Hz continuous, measure, and decide
     pass/fail. Returns True on pass."""
     period_s = 1.0 / hz
@@ -59,8 +57,7 @@ def test_rate(sg, ts, hz, settle_s, measure_s, tolerance, binary, verbose):
           f"(pulse width {pulse_width_s * 1e9:.0f} ns)...")
     sg.periodic(hz, pulse_width_s=pulse_width_s)
 
-    timestamps, overflows = measure_rate(ts, settle_s, measure_s,
-                                         binary, verbose)
+    timestamps, overflows = measure_rate(ts, settle_s, measure_s, verbose)
 
     deltas = [timestamps[i] - timestamps[i - 1]
               for i in range(1, len(timestamps))]
@@ -128,10 +125,8 @@ def main():
         print()
 
         ts.reset()
-        ts.drain()
-        ts.set_format(binary)
-        ts.set_stream_enabled(True)
-
+        ts.reset_input_buffer()
+        ts.set_binary(binary)
         try:
             with Siggen(host=args.host) as sg:
                 print(f"Connected to: {sg.idn()}")
@@ -139,7 +134,7 @@ def main():
 
                 print("Verifying lower bound passes...")
                 if not test_rate(sg, ts, lo, args.settle, args.measure,
-                                 args.tolerance, binary, verbose):
+                                 args.tolerance, verbose):
                     print(f"ERROR: Lower bound {lo:.0f} Hz fails -- "
                           f"decrease --bottom")
                     sg.output_off()
@@ -147,7 +142,7 @@ def main():
 
                 print("Verifying upper bound fails...")
                 if test_rate(sg, ts, hi, args.settle, args.measure,
-                             args.tolerance, binary, verbose):
+                             args.tolerance, verbose):
                     print(f"NOTE: Upper bound {hi:.0f} Hz already passes -- "
                           f"increase --top to find the ceiling")
                     sg.output_off()
@@ -160,7 +155,7 @@ def main():
                     if mid == lo or mid == hi:
                         break
                     if test_rate(sg, ts, mid, args.settle, args.measure,
-                                 args.tolerance, binary, verbose):
+                                 args.tolerance, verbose):
                         lo = mid
                     else:
                         hi = mid
@@ -170,8 +165,8 @@ def main():
                 sg.output_off()
                 print("Signal generator output off.")
         finally:
-            # Restore TEXT so other tools see the documented default.
-            ts.set_format(False)
+            # Restore TEXT for downstream tools.
+            ts.set_binary(False)
 
 
 if __name__ == "__main__":

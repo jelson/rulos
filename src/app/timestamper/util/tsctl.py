@@ -7,22 +7,58 @@ CLI usage examples:
   tsctl.py slope 1 NEG
   tsctl.py slope 2          # query
   tsctl.py div 3 100
-  tsctl.py output ON
+  tsctl.py format binary
   tsctl.py reset
   tsctl.py raw '*IDN?'
   tsctl.py stream
-  tsctl.py --port /dev/ttyACM1 --leave-off slope 1 BOTH
+  tsctl.py --port /dev/ttyACM1 slope 1 BOTH
 
-As a library, open a Timestamper instance and call methods on it:
+As a library, open a Timestamper instance and call methods on it.
+Streaming is implicitly handled: query()/get_*() briefly silence the
+stream around the wire exchange so SCPI responses come back clean,
+and read_for()/iter_records() ensure the stream is on before reading.
 
   from tsctl import Timestamper
-  with Timestamper() as ts:                  # autodetect
-      print(ts.idn())
-      ts.set_slope(1, "BOTH")
-      ts.set_format(binary=True)
-      ts.set_stream_enabled(True)
-      for rec in ts.read_for(5.0, binary=True):
-          ...
+
+  # Default: autodetect by USB VID/PID, BINARY wire format. Override
+  # with port="/dev/ttyACM1" or binary=False.
+  with Timestamper() as ts:
+      print(ts.idn())                         # "Lectrobox,Timestamper,..."
+      ts.reset()                              # *RST
+
+      # Per-channel input configuration (channel ∈ 1..4).
+      ts.set_slope(1, "POS")                  # rising edges only
+      ts.set_slope(2, "NEG")                  # falling edges only
+      ts.set_slope(3, "BOTH")                 # every transition
+      ts.set_divider(1, 100)                  # report every 100th edge
+
+      # Read configuration back.
+      print(ts.get_slope(1))                  # "POS"
+      print(ts.get_divider(1))                # "100"
+
+      # Wire format. The default is binary; switch to ASCII if you
+      # want to read the stream as text.
+      ts.set_binary(False)
+
+      # Discard anything the device has already sent (overflow comments,
+      # records buffered under the old configuration, etc.) so the next
+      # read starts on fresh output.
+      ts.reset_input_buffer()
+
+      # Capture for 5 seconds. Loops forever via iter_records() if you
+      # want an unbounded stream instead.
+      for r in ts.read_for(5.0):
+          if r.kind == "ts":
+              print(f"ch {r.channel}: t = {r.time:.9f} s")
+          # else r.kind == "comment" (TEXT mode only): r.comment
+
+      # Latched-error access for diagnostics.
+      ts.clear_errors()                       # *CLS
+      print(ts.get_error())                   # "0,\"No error\""
+
+      # Escape hatches for raw SCPI.
+      ts.send("FOO:BAR 1")                    # no response read
+      print(ts.query("FOO:BAR?"))             # returns one line
 """
 
 import argparse
@@ -104,10 +140,24 @@ def _drain_raw(ser, quiet_s=0.1, max_s=1.0):
 
 class Timestamper:
     """A connected LectroTIC-4. Pass port=... to override autodetect.
-    Use as a context manager (preferred) or call close() explicitly."""
+    Use as a context manager (preferred) or call close() explicitly.
 
-    def __init__(self, port=None, timeout=0.5):
+    Stream wire format defaults to BINARY; set ts.set_binary(False) to
+    switch to ASCII. The device and the host's record parser are kept
+    in sync automatically."""
+
+    def __init__(self, port=None, timeout=0.5, binary=True):
         self._ser = serial.Serial(port or autodetect_port(), timeout=timeout)
+        self._binary = bool(binary)
+        # The library's contract is that streaming is on at entry and
+        # at exit. Internally, query() briefly disables the stream so
+        # the response comes back clean. We track that state in
+        # _stream_on so query() can avoid the toggle in the rare case
+        # a caller explicitly disables streaming for testing.
+        self._stream_on = True
+        self.send("OUTP:STAT ON")
+        self.send(f"FORM:DATA {'BIN' if self._binary else 'TEXT'}")
+        self.reset_input_buffer()
 
     # ---- Lifecycle ----------------------------------------------------
 
@@ -116,6 +166,14 @@ class Timestamper:
         return self._ser.port
 
     def close(self):
+        """Restore streaming to ON (the documented default the library
+        promises) and release the serial port. Other device state
+        (slope, divider, format) is left as-is."""
+        try:
+            if not self._stream_on:
+                self.set_stream_enabled(True)
+        except Exception:
+            pass
         self._ser.close()
 
     def __enter__(self):
@@ -131,20 +189,44 @@ class Timestamper:
         self._ser.write((cmd + "\n").encode())
         self._ser.flush()
 
-    def drain(self, quiet_s=0.1, max_s=1.0):
-        """Read until the line goes quiet for quiet_s, or max_s elapses."""
+    def reset_input_buffer(self, quiet_s=0.1, max_s=1.0):
+        """Discard whatever the device has already sent so the next
+        read starts on fresh output. Drops the OS-level RX buffer
+        first (cheap, instantaneous), then reads until the line has
+        been quiet for quiet_s seconds, or max_s total has elapsed --
+        catching any bytes the device emits while we're cleaning up."""
+        self._ser.reset_input_buffer()
         _drain_raw(self._ser, quiet_s=quiet_s, max_s=max_s)
 
     def query(self, cmd):
-        """Drain, send, and read one line of response. Returns string."""
-        self.drain()
+        """Send a query and read one line of response. If streaming
+        is on (the normal state), briefly disable it so the response
+        is not interleaved with timestamp output, then re-enable. If
+        the caller has explicitly silenced the stream for a series of
+        queries, leave it silent."""
+        toggle = self._stream_on
+        if toggle:
+            self.send("OUTP:STAT OFF")
+        self.reset_input_buffer()
         self.send(cmd)
         self._ser.timeout = 0.5
-        return self._ser.readline().decode(errors="replace").strip()
+        line = self._ser.readline().decode(errors="replace").strip()
+        if toggle:
+            self.send("OUTP:STAT ON")
+        return line
 
-    def reset_input_buffer(self):
-        """Discard anything pending on the OS-level RX buffer."""
-        self._ser.reset_input_buffer()
+    def read_raw(self, duration_s):
+        """Read whatever bytes arrive for duration_s seconds and return
+        them. Does not parse, decode, or enable streaming -- useful for
+        verifying that the device is silent (e.g. while OUTP:STAT is OFF)."""
+        self._ser.timeout = 0.05
+        deadline = time.monotonic() + duration_s
+        out = bytearray()
+        while time.monotonic() < deadline:
+            chunk = self._ser.read(4096)
+            if chunk:
+                out += chunk
+        return bytes(out)
 
     # ---- SCPI conveniences --------------------------------------------
 
@@ -152,7 +234,14 @@ class Timestamper:
         return self.query("*IDN?")
 
     def reset(self):
+        """*RST. The device returns to TEXT mode and streaming on; we
+        update the host cache and re-assert our chosen wire format so
+        host and device stay in sync."""
         self.send("*RST")
+        self._stream_on = True
+        if self._binary:
+            self.send("FORM:DATA BIN")
+            self.reset_input_buffer()
 
     def clear_errors(self):
         self.send("*CLS")
@@ -173,19 +262,28 @@ class Timestamper:
         return self.query(f"INP{channel}:DIV?")
 
     def set_stream_enabled(self, on):
+        """Enable or disable continuous timestamp output. Normally the
+        library manages this for you (queries briefly disable, exit
+        re-enables); call this only to explicitly silence the device
+        in the middle of a session, e.g. for behavioral testing."""
         self.send(f"OUTP:STAT {'ON' if on else 'OFF'}")
+        self._stream_on = bool(on)
 
     def get_stream_enabled(self):
-        return self.query("OUTP:STAT?") == "1"
+        """Returns the host-side cached stream state. Avoids querying
+        OUTP:STAT? on the wire (which query() would itself toggle and
+        thus return a misleading answer)."""
+        return self._stream_on
 
-    def set_format(self, binary):
-        """Switch wire format. Drains any in-flight bytes so the caller
-        can immediately start reading the new format."""
-        self.send(f"FORM:DATA {'BIN' if binary else 'TEXT'}")
-        self.drain()
+    def set_binary(self, value):
+        """True selects BINARY wire format, False selects TEXT. Updates
+        both the host's parser and the device, and drains."""
+        self._binary = bool(value)
+        self.send(f"FORM:DATA {'BIN' if self._binary else 'TEXT'}")
+        self.reset_input_buffer()
 
-    def get_format(self):
-        return self.query("FORM:DATA?")
+    def get_binary(self):
+        return self._binary
 
     # ---- Streaming ----------------------------------------------------
 
@@ -229,22 +327,21 @@ class Timestamper:
                 continue
             yield Record("ts", chan, t, None)
 
-    def iter_records(self, binary):
-        """Generator yielding records from a streaming device. Yields:
-            ('ts', channel:int, seconds:int, nanoseconds:int)
-            ('comment', text:str)              # text mode only
-        Loops forever; caller breaks out when done. Streaming
-        (OUTP:STAT ON) and the format must already be set."""
-        return self._iter_binary(None) if binary else self._iter_text(None)
+    def iter_records(self):
+        """Generator yielding Record namedtuples. Enables streaming on
+        the device first, then loops forever; the caller breaks out
+        when done."""
+        self.set_stream_enabled(True)
+        return (self._iter_binary(None) if self._binary
+                else self._iter_text(None))
 
-    def read_for(self, duration_s, binary):
+    def read_for(self, duration_s):
         """Like iter_records, but returns after duration_s seconds of
-        wall clock even if the device is silent. Sets the underlying
-        ser.timeout small enough that the wakeup granularity tracks
-        the deadline."""
+        wall clock even if the device is silent."""
+        self.set_stream_enabled(True)
         self._ser.timeout = 0.05
         deadline = time.monotonic() + duration_s
-        return (self._iter_binary(deadline) if binary
+        return (self._iter_binary(deadline) if self._binary
                 else self._iter_text(deadline))
 
 
@@ -272,14 +369,11 @@ def cmd_div(ts, args):
         ts.set_divider(args.channel, args.n)
 
 
-def cmd_output(ts, args):
-    if args.state is None:
-        print("ON" if ts.get_stream_enabled() else "OFF")
+def cmd_format(ts, args):
+    if args.value is None:
+        print("BIN" if ts.get_binary() else "TEXT")
     else:
-        # Override the auto-restore behavior: the explicit value wins.
-        on = args.state.upper() == "ON"
-        args.final_output_state = "ON" if on else "OFF"
-        ts.set_stream_enabled(on)
+        ts.set_binary(args.value.lower() in ("bin", "binary"))
 
 
 def cmd_raw(ts, args):
@@ -291,12 +385,9 @@ def cmd_raw(ts, args):
 
 
 def cmd_stream(ts, args):
-    binary = (args.format == "binary")
-    ts.set_format(binary)
-    ts.set_stream_enabled(True)
-    args.final_output_state = "ON"
+    ts.set_binary(args.format == "binary")
     try:
-        for r in ts.iter_records(binary):
+        for r in ts.iter_records():
             if r.kind == "ts":
                 # Reproduce the device's TEXT format precisely so
                 # downstream tooling can't tell the difference.
@@ -309,9 +400,10 @@ def cmd_stream(ts, args):
     except KeyboardInterrupt:
         pass
     finally:
-        # Always restore TEXT so other consumers (cat, screen, etc.)
-        # see the documented default after we exit.
-        ts.send("FORM:DATA TEXT")
+        # `stream` switches to BIN for performance, then decodes back
+        # to ASCII for stdout. Restore TEXT on the way out so other
+        # tools that come along see the documented default.
+        ts.set_binary(False)
 
 
 def main():
@@ -321,9 +413,6 @@ def main():
     p.add_argument("--port", default=None,
                    help="Serial port (default: autodetect via USB VID/PID + "
                         "*IDN? probe)")
-    p.add_argument("--leave-off", action="store_true",
-                   help="Leave the timestamp stream disabled after the "
-                        "command (default: re-enable on exit)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sp = sub.add_parser("idn", help="Read *IDN? identification string")
@@ -344,10 +433,12 @@ def main():
     sp.add_argument("n", nargs="?", type=int, help="Omit to query")
     sp.set_defaults(func=cmd_div)
 
-    sp = sub.add_parser("output", help="Set or query timestamp stream state")
-    sp.add_argument("state", nargs="?", choices=["on", "off", "ON", "OFF"],
+    sp = sub.add_parser("format", help="Set or query the wire format "
+                                       "(persists after tsctl exits)")
+    sp.add_argument("value", nargs="?",
+                    choices=["text", "binary", "bin", "TEXT", "BINARY", "BIN"],
                     help="Omit to query")
-    sp.set_defaults(func=cmd_output)
+    sp.set_defaults(func=cmd_format)
 
     sp = sub.add_parser("raw",
                         help="Send a raw SCPI command (queries auto-read)")
@@ -364,13 +455,8 @@ def main():
     sp.set_defaults(func=cmd_stream)
 
     args = p.parse_args()
-    args.final_output_state = "OFF" if args.leave_off else "ON"
-
     with Timestamper(args.port) as ts:
-        ts.set_stream_enabled(False)
-        ts.drain()
         args.func(ts, args)
-        ts.send(f"OUTP:STAT {args.final_output_state}")
 
 
 if __name__ == "__main__":

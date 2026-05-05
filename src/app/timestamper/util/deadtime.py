@@ -7,8 +7,9 @@ bursts at various spacings while reading the timestamper's serial output
 to determine whether all pulses in each burst are captured.
 
 Usage:
-  deadtime.py                           defaults: 3 pulses, 100-1000 ns
-  deadtime.py --ncyc 1000              test with 1000-pulse bursts
+  deadtime.py                           defaults: 16383-pulse bursts,
+                                                  100-1000 ns range
+  deadtime.py --ncyc 4096              just the per-channel DMA buffer
   deadtime.py --bottom 50 --top 500     custom range in ns
   deadtime.py --port /dev/ttyACM1       custom serial port
   deadtime.py --host siggen2            custom signal generator hostname
@@ -31,16 +32,14 @@ class PulseCount:
 
 
 def count_pulses(ts, settle_time_s=2.0, measure_time_s=3.0,
-                 binary=False, verbose=True):
+                 verbose=True):
     """Read records via the Timestamper, classify, and group into bursts."""
-    for r in ts.read_for(settle_time_s, binary):
-        if verbose and r.kind == "comment":
-            print(f"    | {r.comment}")
+    ts.reset_input_buffer()
 
     timestamps = []  # list of float seconds-since-boot
     overcaptures = 0
     overflows = 0
-    for r in ts.read_for(measure_time_s, binary):
+    for r in ts.read_for(measure_time_s):
         if r.kind == "comment":
             if verbose:
                 print(f"    | {r.comment}")
@@ -76,7 +75,7 @@ def count_pulses(ts, settle_time_s=2.0, measure_time_s=3.0,
     )
 
 
-def test_spacing(sg, ts, ns, ncyc=3, binary=False, verbose=True):
+def test_spacing(sg, ts, ns, ncyc=3, verbose=True):
     """Set the signal generator to the given spacing and check results.
 
     Returns True if all pulses in each burst are reliably captured
@@ -86,7 +85,7 @@ def test_spacing(sg, ts, ns, ncyc=3, binary=False, verbose=True):
 
     sg.pulse_burst(ns, ncyc=ncyc)
 
-    result = count_pulses(ts, binary=binary, verbose=verbose)
+    result = count_pulses(ts, verbose=verbose)
 
     # Pass = every burst has all ncyc pulses, no overcaptures or overflows.
     # Ignore partial bursts at measurement window boundaries.
@@ -122,11 +121,18 @@ def main():
     parser.add_argument("--precision", type=float, default=5,
                         help="Stop when range narrows to this many ns "
                              "(default: 5)")
-    parser.add_argument("--ncyc", type=int, default=3,
-                        help="Pulses per burst (default: 3)")
-    parser.add_argument("--text", action="store_true",
-                        help="Use TEXT wire format instead of BINARY "
-                             "(default)")
+    parser.add_argument("--ncyc", type=int, default=16383,
+                        help="Pulses per burst. The internal timestamp "
+                             "ring holds 16383 (16k-1, classic ring-buffer "
+                             "off-by-one); 4096 exercises just the "
+                             "per-channel DMA buffer. Smaller values fit "
+                             "in hardware and give no useful dead-time "
+                             "data. Default: 16383.")
+    parser.add_argument("--binary", action="store_true",
+                        help="Use BINARY wire format. Default is TEXT "
+                             "because deadtime's pass/fail signal lives "
+                             "in the # overflow / # overcapture comment "
+                             "lines, which are suppressed in BINARY.")
     parser.add_argument("--quiet", "-q", action="store_true",
                         help="Suppress raw serial output")
     args = parser.parse_args()
@@ -135,7 +141,7 @@ def main():
     hi = args.top
     ncyc = args.ncyc
     verbose = not args.quiet
-    binary = not args.text
+    binary = args.binary
 
     with Timestamper(args.port) as ts:
         print(f"Searching for dead time in range [{lo:.0f}, {hi:.0f}] ns, "
@@ -145,8 +151,7 @@ def main():
         print(f"Wire format:      {'BINARY' if binary else 'TEXT'}")
         print()
 
-        ts.set_format(binary)
-        ts.set_stream_enabled(True)
+        ts.set_binary(binary)
 
         try:
             with Siggen(host=args.host) as sg:
@@ -156,8 +161,7 @@ def main():
                 # Verify endpoints: top should pass, bottom should fail.
                 # If --bottom == --top, the upper-bound test answers both.
                 print("Verifying upper bound...")
-                if not test_spacing(sg, ts, hi, ncyc=ncyc, binary=binary,
-                                    verbose=verbose):
+                if not test_spacing(sg, ts, hi, ncyc=ncyc, verbose=verbose):
                     print(f"ERROR: Upper bound {hi:.0f} ns fails -- "
                           f"increase --top")
                     sys.exit(1)
@@ -170,8 +174,7 @@ def main():
                     sys.exit(0)
 
                 print("Verifying lower bound...")
-                if test_spacing(sg, ts, lo, ncyc=ncyc, binary=binary,
-                                verbose=verbose):
+                if test_spacing(sg, ts, lo, ncyc=ncyc, verbose=verbose):
                     print(f"NOTE: Lower bound {lo:.0f} ns already passes "
                           f"-- decrease --bottom or dead time is below "
                           f"{lo:.0f} ns")
@@ -186,8 +189,7 @@ def main():
                     mid = round(mid)
                     if mid == lo or mid == hi:
                         break
-                    if test_spacing(sg, ts, mid, ncyc=ncyc, binary=binary,
-                                    verbose=verbose):
+                    if test_spacing(sg, ts, mid, ncyc=ncyc, verbose=verbose):
                         hi = mid
                     else:
                         lo = mid
@@ -197,7 +199,8 @@ def main():
                 sg.output_off()
                 print("Signal generator output off.")
         finally:
-            ts.set_format(False)
+            # Restore TEXT for downstream tools.
+            ts.set_binary(False)
 
 
 if __name__ == "__main__":
