@@ -1,0 +1,47 @@
+LectroTIC-4 Windows driver installation
+=======================================
+
+The LectroTIC-4 enumerates as a USB CDC (Communications Device Class)
+serial port. Windows already ships the driver (usbser.sys) for this
+class -- the only question is whether Windows binds the driver to the
+device automatically.
+
+------------------------------------------------------------------------
+Windows 10 (version 1607 / Anniversary Update, August 2016) and later
+------------------------------------------------------------------------
+
+No driver installation needed. Plug in the LectroTIC-4 and it will
+appear in Device Manager under "Ports (COM & LPT)" as a new COM port.
+Use that COM number with PuTTY, Tera Term, pyserial-miniterm, or any
+other serial terminal.
+
+------------------------------------------------------------------------
+Windows 7, 8, and 8.1
+------------------------------------------------------------------------
+
+Windows ships the driver but won't load it automatically for the
+LectroTIC-4's USB ID. One-time installation:
+
+  1. Plug in the LectroTIC-4. Windows will list it as an unknown
+     device in Device Manager.
+  2. Right-click lectrotic4.inf (in this directory) and select
+     "Install".
+  3. Accept the unsigned-driver warning if prompted -- the INF is
+     not code-signed; the driver itself is the OS-supplied
+     usbser.sys.
+  4. Unplug and replug the device.
+
+After that, the LectroTIC-4 appears in Device Manager under
+"Ports (COM & LPT)" as a COM port.
+
+Alternative: open Device Manager, find the LectroTIC-4 under "Other
+devices", right-click it, choose "Update Driver" -> "Browse my
+computer for drivers", and point at the folder containing
+lectrotic4.inf.
+
+------------------------------------------------------------------------
+Windows XP
+------------------------------------------------------------------------
+
+Same right-click-install procedure as Windows 7. XP does not display
+an unsigned-driver warning.

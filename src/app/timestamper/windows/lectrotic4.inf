@@ -1,0 +1,78 @@
+; LectroTIC-4 USB serial driver INF
+; -----------------------------------------------------------------------------
+; Maps USB VID 0x1209 / PID 0x71C4 (Lectrobox / LectroTIC-4) to Windows's
+; built-in usbser.sys CDC ACM driver. No third-party driver code is shipped
+; here -- this file just tells pre-Windows-10-1607 Windows which built-in
+; driver to bind to the device. Windows 10 1607 (August 2016) and later
+; load usbser.sys automatically for any CDC ACM device and don't need an
+; INF.
+; -----------------------------------------------------------------------------
+
+[Version]
+Signature   = "$Windows NT$"
+Class       = Ports
+ClassGuid   = {4D36E978-E325-11CE-BFC1-08002BE10318}
+Provider    = %MfgName%
+CatalogFile = lectrotic4.cat
+DriverVer   = 05/04/2026,1.0.0.0
+
+[Manufacturer]
+%MfgName% = DeviceList,NTx86,NTamd64,NTarm64
+
+[DestinationDirs]
+DefaultDestDir = 12
+
+; -----------------------------------------------------------------------------
+; Device list (one entry per CPU architecture; XP / older Win7 32-bit fall back
+; to the unqualified DeviceList).
+; -----------------------------------------------------------------------------
+
+[DeviceList]
+%DeviceName% = DriverInstall, USB\VID_1209&PID_71C4
+
+[DeviceList.NTx86]
+%DeviceName% = DriverInstall, USB\VID_1209&PID_71C4
+
+[DeviceList.NTamd64]
+%DeviceName% = DriverInstall, USB\VID_1209&PID_71C4
+
+[DeviceList.NTarm64]
+%DeviceName% = DriverInstall, USB\VID_1209&PID_71C4
+
+; -----------------------------------------------------------------------------
+; Driver install: pull in the OS-supplied modem / usb INFs, register
+; usbser.sys as the function driver.
+; -----------------------------------------------------------------------------
+
+[DriverInstall.NT]
+include    = mdmcpq.inf,usb.inf
+CopyFiles  = DriverCopyFiles.NT
+AddReg     = DriverInstall.NT.AddReg
+
+[DriverCopyFiles.NT]
+usbser.sys,,,0x20
+
+[DriverInstall.NT.AddReg]
+HKR,,DevLoader,,*ntkern
+HKR,,NTMPDriver,,usbser.sys
+HKR,,EnumPropPages32,,"MsPorts.dll,SerialPortPropPageProvider"
+
+[DriverInstall.NT.Services]
+AddService = usbser, 0x00000002, DriverService.NT
+
+[DriverService.NT]
+DisplayName    = %ServiceName%
+ServiceType    = 1   ; SERVICE_KERNEL_DRIVER
+StartType      = 3   ; SERVICE_DEMAND_START
+ErrorControl   = 1   ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\usbser.sys
+LoadOrderGroup = Base
+
+; -----------------------------------------------------------------------------
+; User-visible strings.
+; -----------------------------------------------------------------------------
+
+[Strings]
+MfgName     = "Lectrobox"
+DeviceName  = "LectroTIC-4"
+ServiceName = "USB CDC Serial Driver"
