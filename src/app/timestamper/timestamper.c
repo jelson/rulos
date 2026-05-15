@@ -31,7 +31,7 @@
  *
  * Output is simply a list of channel numbers and timestamps, one per line:
  *
- * 1 5293.585203496
+ * 0 5293.585203496
  *
  * Timestamps are decimal seconds, with 9 digits following the decimal point
  * representing nanoseconds. Timestamps are relative to the time the program
@@ -128,10 +128,10 @@ _Static_assert(CLOCK_FREQ_HZ == 1000000000 / NS_PER_TICK,
 
 // PH1 is freed by HSE bypass (the otherwise-OSC_OUT pin on H5, same
 // trick as the G4 board freeing PF1).
-#define LED_CHAN0 GPIO_H1  // channel 1
-#define LED_CHAN1 GPIO_A4  // channel 2
-#define LED_CHAN2 GPIO_A5  // channel 3
-#define LED_CHAN3 GPIO_A6  // channel 4
+#define LED_CHAN0 GPIO_H1  // channel 0
+#define LED_CHAN1 GPIO_A4  // channel 1
+#define LED_CHAN2 GPIO_A5  // channel 2
+#define LED_CHAN3 GPIO_A6  // channel 3
 #define LED_CLOCK GPIO_B5  // 10 MHz HSE health
 #define LED_USB   GPIO_A7  // USB state
 
@@ -338,7 +338,7 @@ static int format_timestamp(timestamp_t *t, char *buf, int buf_size) {
   uint32_t counter = t->counter & COUNTER_CHAN_MASK;
   uint32_t nanoseconds = counter * NS_PER_TICK;
   return snprintf(buf, buf_size, "%d %lu.%09lu\n",
-                  channel + 1, t->seconds, nanoseconds);
+                  channel, t->seconds, nanoseconds);
 }
 
 static bool received_recent_pulse(uint8_t channel_num) {
@@ -538,7 +538,7 @@ static void periodic_task(void *data) {
         channels[i].buf_overflows = 0;
         int len = snprintf(usb_tx_bufs[tx_filling], USB_TX_BUFLEN,
                            "# ch%d: %lu overcaptures, %lu buf overflows\n",
-                           i + 1, missed, overflows);
+                           i, missed, overflows);
         usbd_cdc_write(scpi_usb_cdc_handle(), usb_tx_bufs[tx_filling], len);
         tx_filling = 1 - tx_filling;
         return;  // one message per period; USB will drain the rest

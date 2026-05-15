@@ -4,14 +4,14 @@
 
 CLI usage examples:
   tsctl.py idn
-  tsctl.py slope 1 NEG
-  tsctl.py slope 2          # query
-  tsctl.py div 3 100
+  tsctl.py slope 0 NEG
+  tsctl.py slope 1          # query
+  tsctl.py div 2 100
   tsctl.py format binary
   tsctl.py reset
   tsctl.py raw '*IDN?'
   tsctl.py stream
-  tsctl.py --port /dev/ttyACM1 slope 1 BOTH
+  tsctl.py --port /dev/ttyACM1 slope 0 BOTH
 
 As a library, open a Timestamper instance and call methods on it.
 Streaming is implicitly handled: query()/get_*() briefly silence the
@@ -26,15 +26,15 @@ and read_for()/iter_records() ensure the stream is on before reading.
       print(ts.idn())                         # "Lectrobox,Timestamper,..."
       ts.reset()                              # *RST
 
-      # Per-channel input configuration (channel ∈ 1..4).
-      ts.set_slope(1, "POS")                  # rising edges only
-      ts.set_slope(2, "NEG")                  # falling edges only
-      ts.set_slope(3, "BOTH")                 # every transition
-      ts.set_divider(1, 100)                  # report every 100th edge
+      # Per-channel input configuration (channel ∈ 0..3).
+      ts.set_slope(0, "POS")                  # rising edges only
+      ts.set_slope(1, "NEG")                  # falling edges only
+      ts.set_slope(2, "BOTH")                 # every transition
+      ts.set_divider(0, 100)                  # report every 100th edge
 
       # Read configuration back.
-      print(ts.get_slope(1))                  # "POS"
-      print(ts.get_divider(1))                # "100"
+      print(ts.get_slope(0))                  # "POS"
+      print(ts.get_divider(0))                # "100"
 
       # Wire format. The default is binary; switch to ASCII if you
       # want to read the stream as text.
@@ -338,7 +338,7 @@ class Timestamper:
                 off = i * _BINARY_RECORD_LEN
                 sec = int.from_bytes(buf[off:off + 4], "little")
                 cnt = int.from_bytes(buf[off + 4:off + 8], "little")
-                chan = (cnt >> _COUNTER_CHAN_SHIFT) + 1
+                chan = cnt >> _COUNTER_CHAN_SHIFT
                 ticks = cnt & _COUNTER_CHAN_MASK
                 yield Record("ts", chan,
                              sec + ticks * _NS_PER_TICK * 1e-9, None)
@@ -459,14 +459,14 @@ def main():
     sp.set_defaults(func=cmd_reset)
 
     sp = sub.add_parser("slope", help="Set or query input slope")
-    sp.add_argument("channel", type=int, choices=[1, 2, 3, 4])
+    sp.add_argument("channel", type=int, choices=[0, 1, 2, 3])
     sp.add_argument("value", nargs="?", choices=["pos", "neg", "both",
                                                  "POS", "NEG", "BOTH"],
                     help="Omit to query")
     sp.set_defaults(func=cmd_slope)
 
     sp = sub.add_parser("div", help="Set or query channel divider (>= 1)")
-    sp.add_argument("channel", type=int, choices=[1, 2, 3, 4])
+    sp.add_argument("channel", type=int, choices=[0, 1, 2, 3])
     sp.add_argument("n", nargs="?", type=int, help="Omit to query")
     sp.set_defaults(func=cmd_div)
 

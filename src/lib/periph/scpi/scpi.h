@@ -100,9 +100,10 @@ bool scpi_consume_recent_activity(void);
 const char *scpi_match_kw(const char *s, const char *full,
                           const char *short_);
 
-// If s starts with a 1..9 digit, set *ch to (digit - 1) and return s
-// advanced past the digit. Otherwise set *ch to 0 and return s unchanged.
-// Used for the optional 1-based channel suffix on commands like INPut3:.
+// If s starts with a digit in 0..(max_channel-1), set *ch to that digit
+// and return s advanced past it. Otherwise set *ch to 0 and return s
+// unchanged. Used for the optional 0-based channel suffix on commands
+// like INPut3:.
 const char *scpi_parse_channel_suffix(const char *s, int max_channel,
                                       int *ch);
 

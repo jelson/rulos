@@ -103,8 +103,8 @@
 #define HRTIM_PER_MAX 0xFFDFU
 
 // LEDs. PF1 is normally OSC_OUT; HSE bypass mode frees it for GPIO.
-#define LED_CHAN0 GPIO_A4   // channel 1 activity (output transitioning)
-#define LED_CHAN1 GPIO_A5   // channel 2 activity
+#define LED_CHAN0 GPIO_A4   // channel 0 activity (output transitioning)
+#define LED_CHAN1 GPIO_A5   // channel 1 activity
 #define LED_CLOCK GPIO_F1   // 10 MHz HSE health
 #define LED_USB   GPIO_A8   // USB activity
 

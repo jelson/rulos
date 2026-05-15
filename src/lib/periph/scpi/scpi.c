@@ -60,8 +60,8 @@ const char *scpi_match_kw(const char *s, const char *full,
 
 const char *scpi_parse_channel_suffix(const char *s, int max_channel,
                                       int *ch) {
-  if (max_channel >= 1 && *s >= '1' && *s <= ('0' + max_channel)) {
-    *ch = *s - '1';
+  if (max_channel >= 1 && *s >= '0' && *s < ('0' + max_channel)) {
+    *ch = *s - '0';
     return s + 1;
   }
   *ch = 0;

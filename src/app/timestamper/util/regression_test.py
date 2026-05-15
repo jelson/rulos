@@ -40,7 +40,7 @@ correctly:
     survives a representative ~95% of the measured 110 kHz USB ceiling.
 
 The signal generator's output channel must be wired to the timestamper
-input channel selected with --channel (default 1).
+input channel selected with --channel (default 0).
 
 Usage:
   regression_test.py
@@ -251,10 +251,10 @@ def phase_scpi_errors(ts):
                  f'SYST:ERR? after *CLS reports no-error (got: {err!r})')
 
     cases = [
-        ("INP1:DIV 0",            "-222"),
-        ("INP1:SLOP FROBNICATE",  "-104"),
+        ("INP0:DIV 0",            "-222"),
+        ("INP0:SLOP FROBNICATE",  "-104"),
         ("FOOBAR",                "-100"),
-        ("INP1:DIV notanumber",   "-104"),
+        ("INP0:DIV notanumber",   "-104"),
     ]
     for cmd, expected_code in cases:
         ts.clear_errors()
@@ -279,7 +279,7 @@ def phase_reset(ts, channel):
     print("\n=== Phase 6: *RST ===")
     ok = True
 
-    for ch in (1, 2, 3, 4):
+    for ch in range(4):
         ts.set_slope(ch, "BOTH")
         ts.set_divider(ch, 7)
     ts.set_stream_enabled(False)
@@ -297,7 +297,7 @@ def phase_reset(ts, channel):
     ts.reset()
     ts.reset_input_buffer()
 
-    for ch in (1, 2, 3, 4):
+    for ch in range(4):
         slope = ts.get_slope(ch)
         div   = ts.get_divider(ch)
         ok &= expect(slope == "POS",
@@ -310,7 +310,7 @@ def phase_reset(ts, channel):
     return ok
 
 
-def phase_burst(sg, ts, channel, ncyc=10000, spacing_ns=100):
+def phase_burst(sg, ts, channel, ncyc=16383, spacing_ns=100):
     """Stress the on-device DMA + ring buffer: ask siggen for a burst
     of ncyc pulses spaced spacing_ns apart, repeating once per second,
     and verify every pulse comes through with no overcapture/overflow.
@@ -398,8 +398,8 @@ def main():
                    help="Timestamper serial port (default: autodetect)")
     p.add_argument("--siggen-host", default="siggen",
                    help="Signal generator hostname (default: siggen)")
-    p.add_argument("--channel", type=int, choices=[1, 2, 3, 4], default=1,
-                   help="Timestamper input channel under test (default: 1)")
+    p.add_argument("--channel", type=int, choices=[0, 1, 2, 3], default=0,
+                   help="Timestamper input channel under test (default: 0)")
     p.add_argument("--duration", type=float, default=5.0,
                    help="Capture window per phase, seconds (default: 5)")
     args = p.parse_args()
