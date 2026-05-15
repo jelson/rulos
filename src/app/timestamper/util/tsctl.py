@@ -49,7 +49,7 @@ and read_for()/iter_records() ensure the stream is on before reading.
       # want an unbounded stream instead.
       for r in ts.read_for(5.0):
           if r.kind == "ts":
-              print(f"ch {r.channel}: t = {r.time:.9f} s")
+              print(f"ch {r.channel}: t = {r.seconds}.{r.nanoseconds:09d} s")
           # else r.kind == "comment" (TEXT mode only): r.comment
 
       # Latched-error access for diagnostics.
@@ -69,10 +69,24 @@ import sys
 import time
 
 # Yielded by Timestamper.iter_records / read_for. Exactly one of
-#   * (kind="ts", channel, time, comment=None)
-#   * (kind="comment", channel=None, time=None, comment)
-# is populated. `time` is float seconds since the device booted.
-Record = namedtuple("Record", "kind channel time comment")
+#   * (kind="ts", channel, seconds, nanoseconds, comment=None)
+#   * (kind="comment", channel=None, seconds=None, nanoseconds=None, comment)
+# is populated. `seconds` and `nanoseconds` are integers (whole seconds
+# since the device booted, plus the 0..999_999_999 ns within that
+# second), kept separate on purpose: a single 64-bit float can't hold
+# enough distinct nanoseconds to survive runs past ~104 days, so the
+# library never collapses a timestamp into one. Use record_seconds()
+# for relative math over short windows where a float is fine.
+Record = namedtuple("Record", "kind channel seconds nanoseconds comment")
+
+
+def record_seconds(r):
+    """Float seconds-since-boot for a 'ts' Record. Convenient for
+    relative measurements over short windows (gaps, burst durations).
+    Do NOT use it to store or compare absolute timestamps from runs
+    longer than ~104 days: that is exactly the 2**53-nanosecond
+    float64 limit r.seconds/r.nanoseconds exist to avoid."""
+    return r.seconds + r.nanoseconds * 1e-9
 
 TIMESTAMPER_VID = 0x1209  # pid.codes
 TIMESTAMPER_PID = 0x71C4  # LectroTIC-4
@@ -340,8 +354,7 @@ class Timestamper:
                 cnt = int.from_bytes(buf[off + 4:off + 8], "little")
                 chan = cnt >> _COUNTER_CHAN_SHIFT
                 ticks = cnt & _COUNTER_CHAN_MASK
-                yield Record("ts", chan,
-                             sec + ticks * _NS_PER_TICK * 1e-9, None)
+                yield Record("ts", chan, sec, ticks * _NS_PER_TICK, None)
             leftover = buf[n * _BINARY_RECORD_LEN:]
 
     def _iter_text(self, deadline):
@@ -352,17 +365,19 @@ class Timestamper:
             if not line:
                 continue
             if line.startswith("#"):
-                yield Record("comment", None, None, line)
+                yield Record("comment", None, None, None, line)
                 continue
             parts = line.split()
             if len(parts) != 2:
                 continue
             try:
                 chan = int(parts[0])
-                t = float(parts[1])
+                sec_str, _, ns_str = parts[1].partition(".")
+                seconds = int(sec_str)
+                nanoseconds = int(ns_str) if ns_str else 0
             except ValueError:
                 continue
-            yield Record("ts", chan, t, None)
+            yield Record("ts", chan, seconds, nanoseconds, None)
 
     def iter_records(self):
         """Generator yielding Record namedtuples. Enables streaming on
@@ -426,11 +441,11 @@ def cmd_stream(ts, args):
     try:
         for r in ts.iter_records():
             if r.kind == "ts":
-                # Reproduce the device's TEXT format precisely so
-                # downstream tooling can't tell the difference.
-                sec = int(r.time)
-                ns = round((r.time - sec) * 1e9)
-                sys.stdout.write(f"{r.channel} {sec}.{ns:09d}\n")
+                # Reproduce the device's TEXT format exactly from the
+                # integer fields -- no float round-trip, so it is
+                # byte-for-byte what the device would have emitted.
+                sys.stdout.write(
+                    f"{r.channel} {r.seconds}.{r.nanoseconds:09d}\n")
             else:
                 sys.stdout.write(r.comment + "\n")
             sys.stdout.flush()

@@ -19,7 +19,7 @@ import argparse
 import sys
 from dataclasses import dataclass
 
-from tsctl import Timestamper
+from tsctl import Timestamper, record_seconds
 from siggen import Siggen
 
 
@@ -51,9 +51,9 @@ def count_pulses(ts, settle_time_s=2.0, measure_time_s=3.0,
             if "overflow" in text:
                 overflows += 1
             continue
-        timestamps.append(r.time)
+        timestamps.append(record_seconds(r))
         if verbose:
-            print(f"    | {r.channel} {r.time:.9f}")
+            print(f"    | {r.channel} {r.seconds}.{r.nanoseconds:09d}")
 
     # Group timestamps into bursts. Bursts repeat 1/sec, so timestamps
     # within 0.5s of each other belong to the same burst.

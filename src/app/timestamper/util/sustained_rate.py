@@ -25,7 +25,7 @@ Usage:
 import argparse
 import sys
 
-from tsctl import Timestamper
+from tsctl import Timestamper, record_seconds
 from siggen import Siggen
 
 
@@ -47,7 +47,7 @@ def measure_rate(ts, settle_s, measure_s, verbose):
             if verbose:
                 print(f"    | {r.comment}")
             continue
-        timestamps.append(r.time)
+        timestamps.append(record_seconds(r))
     return timestamps, overflows
 
 

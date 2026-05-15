@@ -54,7 +54,7 @@ import statistics
 import sys
 
 sys.path.insert(0, __import__("os").path.dirname(__file__))
-from tsctl import Timestamper
+from tsctl import Timestamper, record_seconds
 from siggen import Siggen
 import sustained_rate
 
@@ -82,7 +82,7 @@ def capture(ts, channel, duration_s):
                 overflows += 1
             continue
         if r.channel == channel:
-            times.append(r.time)
+            times.append(record_seconds(r))
         else:
             other_chans.add(r.channel)
     return times, other_chans, overflows
@@ -342,7 +342,7 @@ def phase_burst(sg, ts, channel, ncyc=16383, spacing_ns=100):
             print(f"    | {r.comment}")
             continue
         if r.channel == channel:
-            times.append(r.time)
+            times.append(record_seconds(r))
         else:
             other_chans.add(r.channel)
 
