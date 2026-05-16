@@ -14,14 +14,13 @@ CLI usage examples:
   tsctl.py --port /dev/ttyACM1 slope 0 BOTH
 
 As a library, open a LectroTIC4 instance and call methods on it.
-Streaming is implicitly handled: query()/get_*() briefly silence the
-stream around the wire exchange so SCPI responses come back clean,
-and read_for()/iter_records() ensure the stream is on before reading.
+Records are always transferred in the device's 8-byte binary wire
+format and decoded for you; query()/get_*() briefly silence the
+stream so SCPI responses come back clean.
 
   from tsctl import LectroTIC4
 
-  # Default: autodetect by USB VID/PID, BINARY wire format. Override
-  # with port="/dev/ttyACM1" or binary=False.
+  # Autodetects by USB VID/PID (pass port="/dev/ttyACM1" to override).
   with LectroTIC4() as tic:
       print(tic.idn())                         # "Lectrobox,LectroTIC-4,..."
       tic.reset()                              # *RST
@@ -36,21 +35,9 @@ and read_for()/iter_records() ensure the stream is on before reading.
       print(tic.get_slope(0))                  # "POS"
       print(tic.get_divider(0))                # "100"
 
-      # Wire format. The default is binary; switch to ASCII if you
-      # want to read the stream as text.
-      tic.set_binary(False)
-
-      # Discard anything the device has already sent (overflow comments,
-      # records buffered under the old configuration, etc.) so the next
-      # read starts on fresh output.
-      tic.reset_input_buffer()
-
-      # Capture for 5 seconds. Loops forever via iter_records() if you
-      # want an unbounded stream instead.
+      # Capture for 5 seconds (loops forever via iter_records()).
       for r in tic.read_for(5.0):
-          if r.kind == "ts":
-              print(f"ch {r.channel}: t = {r.seconds}.{r.nanoseconds:09d} s")
-          # else r.kind == "comment" (TEXT mode only): r.comment
+          print(f"ch {r.channel}: t = {r.seconds}.{r.nanoseconds:09d} s")
 
       # Latched-error access for diagnostics.
       tic.clear_errors()                       # *CLS
@@ -63,21 +50,20 @@ and read_for()/iter_records() ensure the stream is on before reading.
 
 import argparse
 from collections import namedtuple
+import os
 import serial
 import serial.tools.list_ports
 import sys
 import time
 
-# Yielded by LectroTIC4.iter_records / read_for. Exactly one of
-#   * (kind="ts", channel, seconds, nanoseconds, comment=None)
-#   * (kind="comment", channel=None, seconds=None, nanoseconds=None, comment)
-# is populated. `seconds` and `nanoseconds` are integers (whole seconds
-# since the device booted, plus the 0..999_999_999 ns within that
-# second), kept separate on purpose: a single 64-bit float can't hold
-# enough distinct nanoseconds to survive runs past ~104 days, so the
-# library never collapses a timestamp into one. Use record_seconds()
-# for relative math over short windows where a float is fine.
-Record = namedtuple("Record", "kind channel seconds nanoseconds comment")
+# Yielded by LectroTIC4.iter_records / read_for: one captured edge.
+# `seconds` and `nanoseconds` are integers -- whole seconds since the
+# device booted plus the 0..999_999_999 ns within that second -- kept
+# separate on purpose: a single 64-bit float can't represent enough
+# distinct nanoseconds to survive runs past ~104 days. Use
+# record_seconds() for relative math over short windows where a float
+# is fine.
+Record = namedtuple("Record", "channel seconds nanoseconds")
 
 
 def record_seconds(r):
@@ -156,21 +142,26 @@ class LectroTIC4:
     """A connected LectroTIC-4. Pass port=... to override autodetect.
     Use as a context manager (preferred) or call close() explicitly.
 
-    Stream wire format defaults to BINARY; set tic.set_binary(False) to
-    switch to ASCII. The device and the host's record parser are kept
-    in sync automatically."""
+    Connecting does not change device state. The library transfers
+    records only in the binary wire format: a streaming read puts the
+    device in BIN, and close() restores whatever format it was in
+    before the first stream. A handle that never streams never touches
+    the format. The `format` command is a passthrough for
+    setting/querying the device's FORM:DATA (for other tools that read
+    the port) and persists."""
 
-    def __init__(self, port=None, timeout=0.5, binary=True):
+    # Device wire format captured before the first streaming read, so
+    # close() can restore it. None until a stream has been started.
+    _restore_format = None
+
+    def __init__(self, port=None, timeout=0.5):
         self._ser = serial.Serial(port or autodetect_port(), timeout=timeout)
-        self._binary = bool(binary)
         # The library's contract is that streaming is on at entry and
-        # at exit. Internally, query() briefly disables the stream so
-        # the response comes back clean. We track that state in
-        # _stream_on so query() can avoid the toggle in the rare case
-        # a caller explicitly disables streaming for testing.
+        # at exit. query() briefly disables the stream so a response
+        # comes back clean; _stream_on tracks that so query() can skip
+        # the toggle when a caller has deliberately silenced the stream.
         self._stream_on = True
         self.send("OUTP:STAT ON")
-        self.send(f"FORM:DATA {'BIN' if self._binary else 'TEXT'}")
         self.reset_input_buffer()
 
     # ---- Lifecycle ----------------------------------------------------
@@ -194,12 +185,15 @@ class LectroTIC4:
                      if p.device == self._ser.port), None)
 
     def close(self):
-        """Restore streaming to ON (the documented default the library
-        promises) and release the serial port. Other device state
-        (slope, divider, format) is left as-is."""
+        """Restore streaming to ON (the library's documented default).
+        If this handle ever streamed, also put the wire format back to
+        what the device had before the first stream. Slope and divider
+        are left exactly as the caller set them. Then release the port."""
         try:
             if not self._stream_on:
                 self.set_stream_enabled(True)
+            if self._restore_format is not None:
+                self.send(f"FORM:DATA {self._restore_format}")
         except Exception:
             pass
         self._ser.close()
@@ -264,14 +258,10 @@ class LectroTIC4:
         return self.query("*IDN?")
 
     def reset(self):
-        """*RST. The device returns to TEXT mode and streaming on; we
-        update the host cache and re-assert our chosen wire format so
-        host and device stay in sync."""
+        """*RST: the device returns to its defaults (TEXT wire format,
+        streaming on). Sync the streaming-state cache to match."""
         self.send("*RST")
         self._stream_on = True
-        if self._binary:
-            self.send("FORM:DATA BIN")
-            self.reset_input_buffer()
 
     def discard_pending(self):
         """Drop everything currently in flight so the next read sees
@@ -340,19 +330,21 @@ class LectroTIC4:
         thus return a misleading answer)."""
         return self._stream_on
 
-    def set_binary(self, value):
-        """True selects BINARY wire format, False selects TEXT. Updates
-        both the host's parser and the device, and drains."""
-        self._binary = bool(value)
-        self.send(f"FORM:DATA {'BIN' if self._binary else 'TEXT'}")
+    # ---- Streaming (binary wire format only) --------------------------
+
+    def _begin_stream(self):
+        # Records are consumed only in the 8-byte binary wire format,
+        # so put the device in BIN and enable streaming before reading.
+        # Capture the format it was in on the first stream so close()
+        # can restore it.
+        if self._restore_format is None:
+            fmt = self.query("FORM:DATA?").strip().upper()
+            self._restore_format = "BIN" if fmt.startswith("BIN") else "TEXT"
+        self.send("FORM:DATA BIN")
         self.reset_input_buffer()
+        self.set_stream_enabled(True)
 
-    def get_binary(self):
-        return self._binary
-
-    # ---- Streaming ----------------------------------------------------
-
-    def _iter_binary(self, deadline):
+    def _records(self, deadline):
         leftover = b""
         while True:
             if deadline is not None and time.monotonic() >= deadline:
@@ -368,47 +360,20 @@ class LectroTIC4:
                 cnt = int.from_bytes(buf[off + 4:off + 8], "little")
                 chan = cnt >> _COUNTER_CHAN_SHIFT
                 ticks = cnt & _COUNTER_CHAN_MASK
-                yield Record("ts", chan, sec, ticks * _NS_PER_TICK, None)
+                yield Record(chan, sec, ticks * _NS_PER_TICK)
             leftover = buf[n * _BINARY_RECORD_LEN:]
 
-    def _iter_text(self, deadline):
-        while True:
-            if deadline is not None and time.monotonic() >= deadline:
-                return
-            line = self._ser.readline().decode(errors="replace").strip()
-            if not line:
-                continue
-            if line.startswith("#"):
-                yield Record("comment", None, None, None, line)
-                continue
-            parts = line.split()
-            if len(parts) != 2:
-                continue
-            try:
-                chan = int(parts[0])
-                sec_str, _, ns_str = parts[1].partition(".")
-                seconds = int(sec_str)
-                nanoseconds = int(ns_str) if ns_str else 0
-            except ValueError:
-                continue
-            yield Record("ts", chan, seconds, nanoseconds, None)
-
     def iter_records(self):
-        """Generator yielding Record namedtuples. Enables streaming on
-        the device first, then loops forever; the caller breaks out
-        when done."""
-        self.set_stream_enabled(True)
-        return (self._iter_binary(None) if self._binary
-                else self._iter_text(None))
+        """Yield Record namedtuples forever; the caller breaks out."""
+        self._begin_stream()
+        return self._records(None)
 
     def read_for(self, duration_s):
-        """Like iter_records, but returns after duration_s seconds of
-        wall clock even if the device is silent."""
-        self.set_stream_enabled(True)
+        """Like iter_records, but stop after duration_s wall-clock
+        seconds even if the device is silent."""
+        self._begin_stream()
         self._ser.timeout = 0.05
-        deadline = time.monotonic() + duration_s
-        return (self._iter_binary(deadline) if self._binary
-                else self._iter_text(deadline))
+        return self._records(time.monotonic() + duration_s)
 
 
 # ---- CLI ------------------------------------------------------------------
@@ -437,9 +402,10 @@ def cmd_div(tic, args):
 
 def cmd_format(tic, args):
     if args.value is None:
-        print("BIN" if tic.get_binary() else "TEXT")
+        print(tic.query("FORM:DATA?").strip())
     else:
-        tic.set_binary(args.value.lower() in ("bin", "binary"))
+        fmt = "BIN" if args.value.lower() in ("bin", "binary") else "TEXT"
+        tic.send(f"FORM:DATA {fmt}")
 
 
 def cmd_raw(tic, args):
@@ -451,25 +417,20 @@ def cmd_raw(tic, args):
 
 
 def cmd_stream(tic, args):
-    tic.set_binary(args.format == "binary")
+    # Print each captured record as a plain ASCII line until ^C or the
+    # downstream pipe closes.
     try:
         for r in tic.iter_records():
-            if r.kind == "ts":
-                # Reproduce the device's TEXT format exactly from the
-                # integer fields -- no float round-trip, so it is
-                # byte-for-byte what the device would have emitted.
-                sys.stdout.write(
-                    f"{r.channel} {r.seconds}.{r.nanoseconds:09d}\n")
-            else:
-                sys.stdout.write(r.comment + "\n")
+            sys.stdout.write(
+                f"{r.channel} {r.seconds}.{r.nanoseconds:09d}\n")
             sys.stdout.flush()
     except KeyboardInterrupt:
         pass
-    finally:
-        # `stream` switches to BIN for performance, then decodes back
-        # to ASCII for stdout. Restore TEXT on the way out so other
-        # tools that come along see the documented default.
-        tic.set_binary(False)
+    except BrokenPipeError:
+        # Downstream closed the pipe (e.g. `tsctl stream | head`).
+        # Redirect stdout to /dev/null so the interpreter's final
+        # flush doesn't raise again.
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
 
 
 def main():
@@ -512,12 +473,9 @@ def main():
     sp.set_defaults(func=cmd_raw)
 
     sp = sub.add_parser("stream",
-                        help="Forward timestamps to stdout until ^C")
-    sp.add_argument("format", nargs="?", default="binary",
-                    choices=["binary", "text"],
-                    help="Wire format to request from the device "
-                         "(default: binary; decoded back to ASCII for "
-                         "stdout)")
+                        help="Forward timestamps to stdout until ^C "
+                             "(binary on the wire for throughput, printed "
+                             "as ASCII; device format restored on exit)")
     sp.set_defaults(func=cmd_stream)
 
     args = p.parse_args()
