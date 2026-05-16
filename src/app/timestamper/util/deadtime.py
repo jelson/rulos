@@ -47,7 +47,7 @@ def count_pulses(tic, channel, measure_time_s=3.0, verbose=True):
     # captured under the current siggen configuration.
     tic.discard_pending()
 
-    times, _, others, overcaptures, overflows, _, comments = \
+    times, others, overcaptures, overflows, comments = \
         parse_text_stream(tic.read_raw(measure_time_s), channel)
     if verbose:
         for c in comments:
