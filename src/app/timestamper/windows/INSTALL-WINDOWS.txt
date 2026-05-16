@@ -16,7 +16,7 @@ Use that COM number with PuTTY, Tera Term, pyserial-miniterm, or any
 other serial terminal.
 
 ------------------------------------------------------------------------
-Windows 7, 8, and 8.1
+Windows XP, 7, 8, and 8.1
 ------------------------------------------------------------------------
 
 Windows ships the driver but won't load it automatically for the
@@ -38,10 +38,3 @@ Alternative: open Device Manager, find the LectroTIC-4 under "Other
 devices", right-click it, choose "Update Driver" -> "Browse my
 computer for drivers", and point at the folder containing
 lectrotic4.inf.
-
-------------------------------------------------------------------------
-Windows XP
-------------------------------------------------------------------------
-
-Same right-click-install procedure as Windows 7. XP does not display
-an unsigned-driver warning.
