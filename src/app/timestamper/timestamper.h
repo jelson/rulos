@@ -83,5 +83,7 @@ void timestamper_reset_all(void);
 // format, stream enable) is preserved.
 void timestamper_discard_pending(void);
 
+#define TIMESTAMPER_FW_VERSION "0.9.0"
+
 // Identity string returned for *IDN?.
 extern const char *const timestamper_idn;
