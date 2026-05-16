@@ -51,7 +51,18 @@ TSCTL = os.path.join(os.path.dirname(__file__), "tsctl.py")
 PULSE_HZ = 10
 PULSE_WIDTH_S = 0.001  # siggen.periodic() hardcodes 1 ms
 PERIOD_S = 1.0 / PULSE_HZ
-TOLERANCE_S = 1e-6
+
+# Per-gap timing tolerance, applied to EVERY device-timestamp interval
+# in every phase. The siggen and the device both run off the same
+# 10 MHz lab standard, so there is no frequency drift between them; the
+# device timestamps with 4 ns resolution. A clean gap is therefore
+# nominal ± a handful of ns (siggen DDS quantization + one capture
+# tick). A single missed pulse, by contrast, moves a gap by a whole
+# period -- ≥40 µs at 25 kHz, 100 ms at 10 Hz -- thousands of times
+# outside this bound. One tolerance, one checker, every phase: any
+# interval off nominal by more than this is a dropped/extra edge or a
+# real timing fault, never measurement noise.
+GAP_TOL_S = 12e-9
 
 # Sustained continuous-rate target per mode: the device must keep up
 # with this edge rate for SUSTAINED_S seconds with no loss. Text is
@@ -188,14 +199,16 @@ def expect_no_loss(mode, ovc, ovf):
 def intervals_within(deltas, target, tol, label):
     """All deltas within tol of target. On failure, print every
     violator (index, value, deviation) so a boundary artifact vs a
-    real timing fault is immediately distinguishable."""
+    real timing fault is immediately distinguishable. Deviations are
+    shown in ns: a clean gap is a few ns off, a missed pulse is a
+    whole period off, so the magnitude alone tells which it is."""
     bad = [(i, d) for i, d in enumerate(deltas) if abs(d - target) >= tol]
     if bad:
         shown = bad[:6]
         print(f"    [DIAG] {label}: {len(bad)}/{len(deltas)} off "
-              f"target {target * 1e3:.3f} ms by >{tol * 1e6:.0f} µs: " +
+              f"target {target * 1e3:.3f} ms by >{tol * 1e9:.0f} ns: " +
               ", ".join(f"#{i}={d * 1e3:.4f}ms"
-                        f"(Δ{(d - target) * 1e6:+.1f}µs)"
+                        f"(Δ{(d - target) * 1e9:+.0f}ns)"
                         for i, d in shown) +
               (" …" if len(bad) > len(shown) else ""))
     return not bad
@@ -268,10 +281,10 @@ def phase_periodic(mode, sg, tic, channel, duration_s, divider,
                 f"count within {count_tol} of expected {expected:.1f}")
     ok &= score_clean(mode, ovc, ovf, others)
     if deltas:
-        ok &= expect(intervals_within(deltas, period, TOLERANCE_S,
+        ok &= expect(intervals_within(deltas, period, GAP_TOL_S,
                                       "intervals"),
-                     f"all intervals within {TOLERANCE_S:.0e}s of "
-                     f"{period * 1e3:.0f} ms")
+                     f"every interval within {GAP_TOL_S * 1e9:.0f} ns "
+                     f"of {period * 1e3:.0f} ms (no pulse missed)")
     return ok
 
 
@@ -288,17 +301,27 @@ def phase_both(mode, sg, tic, channel, duration_s):
 
     # BOTH mode captures both edges of each pulse, so the gaps must
     # strictly alternate: short (~pulse width) then long (~period -
-    # width), forever. Require strict alternation (independent of which
-    # class the capture starts on); clock precision is the periodic
-    # phase's job, so here only the class medians need be ~1/~99 ms.
+    # width), forever. The PERIOD_S/2 split only sorts each gap into
+    # its class (1 ms vs 99 ms are 98 ms apart -- unambiguous); once
+    # sorted, every gap in each class is held to the same GAP_TOL_S as
+    # every other phase, so a single missed edge anywhere is caught.
     deltas = [times[i + 1] - times[i] for i in range(len(times) - 1)]
     cls, short, long = classify_gaps(deltas, PERIOD_S / 2)
+    long_target = PERIOD_S - PULSE_WIDTH_S
+    # The capture window opens/closes asynchronously to the pulse
+    # train, so the first and last gap can straddle a pulse whose
+    # other edge lay outside the window -- a half-clipped pulse reads
+    # as one full period, not period-minus-width. Per-gap exactness is
+    # therefore asserted on the interior; strict alternation and the
+    # count check below span the whole sequence and catch any dropped
+    # interior edge (one missing edge puts two same-class gaps
+    # adjacent, breaking alternation).
+    _, ishort, ilong = classify_gaps(deltas[1:-1], PERIOD_S / 2)
     print(f"  short(rise→fall) n={len(short)} "
           f"med={statistics.median(short) * 1e3:.3f} ms; "
           f"long(fall→rise) n={len(long)} "
           f"med={statistics.median(long) * 1e3:.3f} ms")
 
-    BAND = 100e-6  # 0.1 ms: trivially separates the two classes
     ok = expect(abs(len(times) - expected) <= 4,
                 f"count within 4 of expected {expected:.0f}")
     ok &= score_clean(mode, ovc, ovf, others)
@@ -308,13 +331,18 @@ def phase_both(mode, sg, tic, channel, duration_s):
                  all(cls[i] != cls[i + 1] for i in range(len(cls) - 1)),
                  "gaps strictly alternate short/long (every pulse = "
                  "2 edges, regardless of start)")
-    ok &= expect(bool(short) and
-                 abs(statistics.median(short) - PULSE_WIDTH_S) < BAND,
-                 f"short gap ~{PULSE_WIDTH_S * 1e3:.0f} ms")
-    ok &= expect(bool(long) and
-                 abs(statistics.median(long)
-                     - (PERIOD_S - PULSE_WIDTH_S)) < BAND,
-                 f"long gap ~{(PERIOD_S - PULSE_WIDTH_S) * 1e3:.0f} ms")
+    ok &= expect(bool(ishort) and
+                 intervals_within(ishort, PULSE_WIDTH_S, GAP_TOL_S,
+                                  "short(rise→fall)"),
+                 f"every interior short gap within "
+                 f"{GAP_TOL_S * 1e9:.0f} ns of "
+                 f"{PULSE_WIDTH_S * 1e3:.0f} ms")
+    ok &= expect(bool(ilong) and
+                 intervals_within(ilong, long_target, GAP_TOL_S,
+                                  "long(fall→rise)"),
+                 f"every interior long gap within "
+                 f"{GAP_TOL_S * 1e9:.0f} ns of "
+                 f"{long_target * 1e3:.0f} ms")
     return ok
 
 
@@ -371,12 +399,23 @@ def phase_burst(mode, sg, tic, channel, ncyc=16383, spacing_ns=100):
           f"[{mode.name}] ===")
     actual_ns, sizes, others, ovc, ovf = capture_burst(
         mode, sg, tic, channel, "POS", ncyc, spacing_ns)
-    complete = [n for n in sizes if n == ncyc]
+    # Only the first and last burst can be clipped by the capture
+    # window; every burst that begins AND ends inside the window must
+    # have captured all ncyc pulses. A single dropped pulse anywhere
+    # in any interior burst (16382 instead of 16383) fails this.
+    interior = sizes[1:-1]
+    short = [(idx + 1, n) for idx, n in enumerate(interior)
+             if n != ncyc]
     print(f"  spacing {actual_ns:.1f} ns; bursts {sizes}; "
+          f"interior must all == {ncyc}; "
+          f"short interior (idx,n)={short or 'none'}; "
           f"others={sorted(others) or 'none'}")
 
-    ok = expect(len(complete) >= 2,
-                f"at least 2 complete bursts of {ncyc} pulses")
+    ok = expect(len(interior) >= 1,
+                f">=1 fully-captured (interior) burst of {ncyc}")
+    ok &= expect(not short,
+                 f"every interior burst is exactly {ncyc} pulses "
+                 f"(not one missed)")
     ok &= score_clean(mode, ovc, ovf, others)
     return ok
 
@@ -407,18 +446,25 @@ def phase_sustained(mode, sg, tic, channel):
     n = len(times)
     span = (times[-1] - times[0]) if n >= 2 else 0
     obs_hz = (n - 1) / span if span > 0 else 0
-    max_gap = max((times[i + 1] - times[i] for i in range(n - 1)),
-                  default=0)
+    deltas = [times[i + 1] - times[i] for i in range(n - 1)]
     nominal = 1.0 / hz
     print(f"  collected {n} on ch{channel}; observed "
-          f"{obs_hz:.0f} Hz over {span:.3f}s; "
-          f"max gap {max_gap * 1e6:.1f} µs (nominal "
-          f"{nominal * 1e6:.1f}); others={sorted(others) or 'none'}")
+          f"{obs_hz:.0f} Hz over {span:.3f}s "
+          f"(nominal gap {nominal * 1e6:.2f} µs); "
+          f"others={sorted(others) or 'none'}")
 
-    ok = expect(n >= 100 and abs(obs_hz - hz) < 0.02 * hz,
-                f"observed rate within 2% of {hz} Hz")
-    ok &= expect(max_gap < 5 * nominal,
-                 f"no streaming gap (max < {5 * nominal * 1e6:.0f} µs)")
+    ok = expect(n >= 100, f"sustained {hz} Hz produced enough records")
+    # Every inter-record gap must be the source period to within
+    # GAP_TOL_S -- the same bound every other phase uses. At this rate
+    # the device cannot keep up by streaming a smooth-but-wrong rate:
+    # falling behind drops chunks, and a dropped edge is a >=1*nominal
+    # gap excursion (>=40 µs at 25 kHz), thousands of ns past tol.
+    if deltas:
+        ok &= expect(intervals_within(deltas, nominal, GAP_TOL_S,
+                                      "sustained gap"),
+                     f"every gap within {GAP_TOL_S * 1e9:.0f} ns of "
+                     f"the {nominal * 1e6:.2f} µs source period "
+                     f"(not a single pulse missed)")
     ok &= score_clean(mode, ovc, ovf, others)
     return ok
 
@@ -510,9 +556,18 @@ def phase_slope_switch(sg, tic, channel):
             switched = True
     sg.output_off()
 
+    # The 5 ms split only separates the lone crossover gap from the
+    # steady run -- it's not the timing check. Once separated, the
+    # steady gaps (rising-rising before, falling-falling after) are
+    # held to GAP_TOL_S of the period like every other phase, and the
+    # crossover to GAP_TOL_S of WIDTH + k*PERIOD_S; only k (whole
+    # periods until the host's command lands) is non-deterministic.
     deltas = [times[i + 1] - times[i] for i in range(len(times) - 1)]
-    steady = [abs(d - PERIOD_S) < 5e-3 for d in deltas]  # ~100 ms
-    anomalies = [(i, deltas[i]) for i, s in enumerate(steady) if not s]
+    steady_idx = [i for i, d in enumerate(deltas)
+                  if abs(d - PERIOD_S) < 5e-3]
+    anomalies = [(i, d) for i, d in enumerate(deltas)
+                 if i not in steady_idx]
+    steady_gaps = [deltas[i] for i in steady_idx]
     print(f"  collected {len(times)} edges, {len(deltas)} gaps; "
           f"anomalies (idx, ms): "
           f"{[(i, round(d * 1e3, 1)) for i, d in anomalies]}")
@@ -522,11 +577,18 @@ def phase_slope_switch(sg, tic, channel):
     ok &= expect(len(anomalies) == 1,
                  "exactly one (clean) transition gap -- a string of "
                  "~100 ms, one crossover, ~100 ms again")
+    ok &= expect(bool(steady_gaps) and
+                 intervals_within(steady_gaps, PERIOD_S, GAP_TOL_S,
+                                  "steady (POS then NEG)"),
+                 f"every steady gap within {GAP_TOL_S * 1e9:.0f} ns of "
+                 f"{PERIOD_S * 1e3:.0f} ms, both sides of the switch "
+                 f"(no edge missed)")
     if anomalies:
         i, d = anomalies[0]
         k = round((d - WIDTH) / PERIOD_S)
-        ok &= expect(0 <= k <= 3
-                     and abs(d - (WIDTH + k * PERIOD_S)) < 5e-3,
+        ok &= expect(0 <= k <= 3 and
+                     intervals_within([d], WIDTH + k * PERIOD_S,
+                                      GAP_TOL_S, "crossover"),
                      f"transition gap {d * 1e3:.1f} ms = "
                      f"{WIDTH * 1e3:.0f} ms + {k}*{PERIOD_S * 1e3:.0f} "
                      f"ms (rising->falling crossover)")
