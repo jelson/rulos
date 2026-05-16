@@ -39,6 +39,10 @@ correctly:
     sustained_rate.test_rate, so passing here implies the device
     survives a representative ~95% of the measured 110 kHz USB ceiling.
 
+  Phase 9: *IDN? serial matches USB descriptor
+    The serial field of *IDN? must equal the USB iSerialNumber the
+    host sees (both derive from the STM32 unique ID).
+
 The signal generator's output channel must be wired to the LectroTIC-4
 input channel selected with --channel (default 0).
 
@@ -275,6 +279,32 @@ def phase_scpi_errors(tic):
     return ok
 
 
+def phase_idn_serial(tic):
+    print("\n=== Phase 9: *IDN? serial matches USB descriptor ===")
+    # The preceding sustained-rate phase leaves the device streaming
+    # BINARY with a large backlog. Silence it and marker-drain (no
+    # sleeps) so *IDN? comes back uncontaminated regardless of order.
+    tic.set_stream_enabled(False)
+    tic.discard_pending()
+    idn = tic.idn()
+    parts = idn.split(",")
+    idn_serial = parts[2] if len(parts) == 4 else None
+    usb_serial = tic.usb_serial
+    print(f"  *IDN?:          {idn!r}")
+    print(f"  *IDN? serial:   {idn_serial!r}")
+    print(f"  USB descriptor: {usb_serial!r}")
+
+    ok = True
+    ok &= expect(len(parts) == 4,
+                 f"*IDN? has 4 comma-separated fields (got {idn!r})")
+    ok &= expect(bool(usb_serial),
+                 "host can read the USB descriptor serial number")
+    ok &= expect(idn_serial == usb_serial,
+                 f"*IDN? serial == USB descriptor serial "
+                 f"({idn_serial!r} == {usb_serial!r})")
+    return ok
+
+
 def phase_reset(tic, channel):
     print("\n=== Phase 6: *RST ===")
     ok = True
@@ -444,6 +474,7 @@ def main():
             results.append(("burst", phase_burst(sg, tic, args.channel)))
             results.append(("sustained rate",
                             phase_sustained_rate(sg, tic, args.channel)))
+            results.append(("idn serial", phase_idn_serial(tic)))
         finally:
             tic.set_stream_enabled(False)
             sg.output_off()

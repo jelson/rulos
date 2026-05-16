@@ -22,6 +22,7 @@
 #include "usbd_core.h"
 #include "usbd_conf.h"
 #include "usbd_desc.h"
+#include "usb_cdc.h"
 
 /* USER CODE BEGIN INCLUDE */
 
@@ -120,7 +121,6 @@
   */
 
 static void Get_SerialNum(void);
-static void IntToUnicode(uint32_t value, uint8_t * pbuf, uint8_t len);
 
 /**
   * @}
@@ -351,52 +351,53 @@ uint8_t * USBD_CDC_InterfaceStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *len
 }
 
 /**
+  * @brief  Render the top `len` hex nibbles of `value` (MSB first) as
+  *         uppercase ASCII into `out`.
+  */
+static void uid_hex(uint32_t value, char *out, int len)
+{
+  for (int i = 0; i < len; i++)
+  {
+    uint8_t nyb = (value >> 28) & 0xFu;
+    out[i] = nyb < 0xA ? (char)(nyb + '0') : (char)(nyb + 'A' - 10);
+    value <<= 4;
+  }
+}
+
+/* See usb_cdc.h. The full 96-bit unique ID, all three words rendered
+   faithfully as 24 hex chars (no lossy fold/truncation). This is the
+   single source of truth for the serial; the USB iSerialNumber
+   descriptor below is widened from the same value, so SCPI *IDN? and
+   the OS-visible USB serial always agree. */
+void usbd_cdc_get_serial(char *out)
+{
+  uid_hex(*(uint32_t *) DEVICE_ID1, out,      8);
+  uid_hex(*(uint32_t *) DEVICE_ID2, out + 8,  8);
+  uid_hex(*(uint32_t *) DEVICE_ID3, out + 16, 8);
+  out[24] = '\0';
+}
+
+/**
   * @brief  Create the serial number string descriptor
-  * @param  None
   * @retval None
   */
 static void Get_SerialNum(void)
 {
-  uint32_t deviceserial0, deviceserial1, deviceserial2;
-
-  deviceserial0 = *(uint32_t *) DEVICE_ID1;
-  deviceserial1 = *(uint32_t *) DEVICE_ID2;
-  deviceserial2 = *(uint32_t *) DEVICE_ID3;
-
-  deviceserial0 += deviceserial2;
-
-  if (deviceserial0 != 0)
+  // Leave the descriptor blank if the unique ID reads as all-zero
+  // (unprogrammed / not yet readable).
+  if ((*(uint32_t *) DEVICE_ID1 | *(uint32_t *) DEVICE_ID2 |
+       *(uint32_t *) DEVICE_ID3) == 0)
   {
-    IntToUnicode(deviceserial0, &USBD_StringSerial[2], 8);
-    IntToUnicode(deviceserial1, &USBD_StringSerial[18], 4);
+    return;
   }
-}
 
-/**
-  * @brief  Convert Hex 32Bits value into char
-  * @param  value: value to convert
-  * @param  pbuf: pointer to the buffer
-  * @param  len: buffer length
-  * @retval None
-  */
-static void IntToUnicode(uint32_t value, uint8_t * pbuf, uint8_t len)
-{
-  uint8_t idx = 0;
+  char serial[25];
+  usbd_cdc_get_serial(serial);
 
-  for (idx = 0; idx < len; idx++)
+  for (int i = 0; i < 24; i++)
   {
-    if (((value >> 28)) < 0xA)
-    {
-      pbuf[2 * idx] = (value >> 28) + '0';
-    }
-    else
-    {
-      pbuf[2 * idx] = (value >> 28) + 'A' - 10;
-    }
-
-    value = value << 4;
-
-    pbuf[2 * idx + 1] = 0;
+    USBD_StringSerial[2 + 2 * i]     = (uint8_t) serial[i];
+    USBD_StringSerial[2 + 2 * i + 1] = 0;
   }
 }
 /**

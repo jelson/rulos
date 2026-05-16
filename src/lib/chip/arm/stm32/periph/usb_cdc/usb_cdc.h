@@ -100,3 +100,10 @@ bool usbd_cdc_tx_ready(usbd_cdc_state_t *cdc);
 // Buffer must remain valid until tx_complete callback is invoked.
 // Returns 0 on success, -1 if previous transmission still in progress.
 int usbd_cdc_print(usbd_cdc_state_t *cdc, const char *s);
+
+// Fill `out` with the device serial number as a NUL-terminated ASCII
+// string: the STM32 96-bit factory unique ID rendered exactly as the
+// USB iSerialNumber descriptor (12 uppercase hex chars). `out` must be
+// at least 13 bytes. The unique-ID flash region must be reachable
+// (after rulos_hal_init() on parts that map it via an MPU window).
+void usbd_cdc_get_serial(char *out);

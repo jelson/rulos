@@ -85,5 +85,5 @@ void timestamper_discard_pending(void);
 
 #define TIMESTAMPER_FW_VERSION "0.9.0"
 
-// Identity string returned for *IDN?.
-extern const char *const timestamper_idn;
+// *IDN? identity string. Call after rulos_hal_init().
+const char *timestamper_idn(void);

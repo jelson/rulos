@@ -179,6 +179,20 @@ class LectroTIC4:
     def port(self):
         return self._ser.port
 
+    @property
+    def usb_serial(self):
+        """The USB iSerialNumber the OS sees for this device (the
+        STM32 96-bit unique ID as hex); should equal the serial field
+        of *IDN?. None if it can't be read.
+
+        We already know our port; this is only a metadata lookup for
+        it. pyserial surfaces USB descriptor fields solely through the
+        port list (no handle-/path-keyed accessor), so we pick our
+        known port's row out of comports()."""
+        return next((p.serial_number
+                     for p in serial.tools.list_ports.comports()
+                     if p.device == self._ser.port), None)
+
     def close(self):
         """Restore streaming to ON (the documented default the library
         promises) and release the serial port. Other device state

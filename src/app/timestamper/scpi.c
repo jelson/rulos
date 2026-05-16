@@ -198,7 +198,7 @@ static bool dispatch_line(const char *line) {
 
 void timestamper_scpi_init(void (*on_usb_tx_complete)(void)) {
   const scpi_config_t cfg = {
-      .idn = timestamper_idn,
+      .idn = timestamper_idn(),
       .on_reset = timestamper_reset_all,
       .on_line = dispatch_line,
       .on_usb_tx_complete = on_usb_tx_complete,

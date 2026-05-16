@@ -670,10 +670,17 @@ static void init_timers() {
 // Public API for the SCPI dispatcher in scpi.c. Declared in timestamper.h.
 
 // IEEE 488.2 *IDN? response: <vendor>,<model>,<serial>,<firmware>.
-// Serial is a placeholder for now; the chip UID could replace it once
-// Get_SerialNum's output is plumbed up here.
-const char *const timestamper_idn =
-    "Lectrobox,LectroTIC-4,0," TIMESTAMPER_FW_VERSION "-" STRINGIFY(GIT_COMMIT);
+// Serial is the STM32 unique ID (same as the USB iSerialNumber).
+const char *timestamper_idn(void) {
+  static char idn[80];
+  char serial[25];
+  usbd_cdc_get_serial(serial);
+  snprintf(idn, sizeof(idn),
+           "Lectrobox,LectroTIC-4,%s," TIMESTAMPER_FW_VERSION
+           "-" STRINGIFY(GIT_COMMIT),
+           serial);
+  return idn;
+}
 
 void timestamper_set_slope(int ch, timestamper_slope_t slope) {
   if (ch < 0 || ch >= NUM_CHANNELS) return;
