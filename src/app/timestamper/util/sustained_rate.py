@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-"""Binary-search for the timestamper's sustained USB throughput.
+"""Binary-search for the LectroTIC-4's sustained USB throughput.
 
 Drives a continuous pulse train at increasing frequencies and verifies
-that every pulse makes it out of the timestamper to the host. This
+that every pulse makes it out of the LectroTIC-4 to the host. This
 measures USB drain bandwidth, not internal capture (deadtime.py covers
 the bursty regime where the on-device buffer absorbs short overruns).
 
@@ -25,22 +25,22 @@ Usage:
 import argparse
 import sys
 
-from tsctl import Timestamper, record_seconds
+from tsctl import LectroTIC4, record_seconds
 from siggen import Siggen
 
 
-def measure_rate(ts, settle_s, measure_s, verbose):
+def measure_rate(tic, settle_s, measure_s, verbose):
     """Discard records for settle_s seconds, then collect timestamps
     for measure_s. Returns (timestamps_float_seconds, overflow_count)."""
     # Configuring siggen takes a few hundred ms (output_off, set the
     # rate, output_on, run verify queries); during that time the ring
     # may have filled and lost records. Drop everything pending so the
     # measurement window starts clean.
-    ts.discard_pending()
+    tic.discard_pending()
 
     timestamps = []
     overflows = 0
-    for r in ts.read_for(measure_s):
+    for r in tic.read_for(measure_s):
         if r.kind == "comment":
             if "overflow" in r.comment.lower():
                 overflows += 1
@@ -51,7 +51,7 @@ def measure_rate(ts, settle_s, measure_s, verbose):
     return timestamps, overflows
 
 
-def test_rate(sg, ts, hz, settle_s, measure_s, tolerance, verbose):
+def test_rate(sg, tic, hz, settle_s, measure_s, tolerance, verbose):
     """Configure siggen for `hz` Hz continuous, measure, and decide
     pass/fail. Returns True on pass."""
     period_s = 1.0 / hz
@@ -61,7 +61,7 @@ def test_rate(sg, ts, hz, settle_s, measure_s, tolerance, verbose):
           f"(pulse width {pulse_width_s * 1e9:.0f} ns)...")
     sg.periodic(hz, pulse_width_s=pulse_width_s)
 
-    timestamps, overflows = measure_rate(ts, settle_s, measure_s, verbose)
+    timestamps, overflows = measure_rate(tic, settle_s, measure_s, verbose)
 
     deltas = [timestamps[i] - timestamps[i - 1]
               for i in range(1, len(timestamps))]
@@ -86,14 +86,14 @@ def test_rate(sg, ts, hz, settle_s, measure_s, tolerance, verbose):
 
 def main():
     p = argparse.ArgumentParser(
-        description="Binary-search for sustained timestamper USB throughput",
+        description="Binary-search for sustained LectroTIC-4 USB throughput",
         formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--bottom", type=float, default=1000,
                    help="Lower bound in Hz (default: 1000)")
     p.add_argument("--top", type=float, default=100000,
                    help="Upper bound in Hz (default: 100000)")
     p.add_argument("--port", default=None,
-                   help="Timestamper serial port (default: autodetect)")
+                   help="LectroTIC-4 serial port (default: autodetect)")
     p.add_argument("--host", default="siggen",
                    help="Signal generator hostname (default: siggen)")
     p.add_argument("--precision", type=float, default=500,
@@ -118,26 +118,26 @@ def main():
     lo = args.bottom
     hi = args.top
 
-    with Timestamper(args.port) as ts:
+    with LectroTIC4(args.port) as tic:
         print(f"Searching for max sustained rate in range "
               f"[{lo:.0f}, {hi:.0f}] Hz")
-        print(f"Timestamper port: {ts.port}")
+        print(f"LectroTIC-4 port: {tic.port}")
         print(f"Signal generator: {args.host}")
         print(f"Wire format:      {'BINARY' if binary else 'TEXT'}")
         print(f"Measurement: {args.measure}s after {args.settle}s settle, "
               f"per-gap tolerance ±{args.tolerance * 1e6:.2f} µs")
         print()
 
-        ts.reset()
-        ts.reset_input_buffer()
-        ts.set_binary(binary)
+        tic.reset()
+        tic.reset_input_buffer()
+        tic.set_binary(binary)
         try:
             with Siggen(host=args.host) as sg:
                 print(f"Connected to: {sg.idn()}")
                 print()
 
                 print("Verifying lower bound passes...")
-                if not test_rate(sg, ts, lo, args.settle, args.measure,
+                if not test_rate(sg, tic, lo, args.settle, args.measure,
                                  args.tolerance, verbose):
                     print(f"ERROR: Lower bound {lo:.0f} Hz fails -- "
                           f"decrease --bottom")
@@ -145,7 +145,7 @@ def main():
                     sys.exit(1)
 
                 print("Verifying upper bound fails...")
-                if test_rate(sg, ts, hi, args.settle, args.measure,
+                if test_rate(sg, tic, hi, args.settle, args.measure,
                              args.tolerance, verbose):
                     print(f"NOTE: Upper bound {hi:.0f} Hz already passes -- "
                           f"increase --top to find the ceiling")
@@ -158,7 +158,7 @@ def main():
                     mid = round((lo + hi) / 2)
                     if mid == lo or mid == hi:
                         break
-                    if test_rate(sg, ts, mid, args.settle, args.measure,
+                    if test_rate(sg, tic, mid, args.settle, args.measure,
                                  args.tolerance, verbose):
                         lo = mid
                     else:
@@ -170,7 +170,7 @@ def main():
                 print("Signal generator output off.")
         finally:
             # Restore TEXT for downstream tools.
-            ts.set_binary(False)
+            tic.set_binary(False)
 
 
 if __name__ == "__main__":

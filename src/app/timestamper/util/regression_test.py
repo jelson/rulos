@@ -3,7 +3,7 @@
 """LectroTIC-4 + Rigol DG1022Z end-to-end regression test.
 
 Drives the signal generator to produce a known 10 Hz pulse train (1 ms
-pulse width, 0..3.3 V) and verifies that the timestamper records it
+pulse width, 0..3.3 V) and verifies that the LectroTIC-4 records it
 correctly:
 
   Phase 1: rising-edge only (the *RST default)
@@ -39,7 +39,7 @@ correctly:
     sustained_rate.test_rate, so passing here implies the device
     survives a representative ~95% of the measured 110 kHz USB ceiling.
 
-The signal generator's output channel must be wired to the timestamper
+The signal generator's output channel must be wired to the LectroTIC-4
 input channel selected with --channel (default 0).
 
 Usage:
@@ -54,7 +54,7 @@ import statistics
 import sys
 
 sys.path.insert(0, __import__("os").path.dirname(__file__))
-from tsctl import Timestamper, record_seconds
+from tsctl import LectroTIC4, record_seconds
 from siggen import Siggen
 import sustained_rate
 
@@ -65,18 +65,18 @@ PERIOD_S = 1.0 / PULSE_HZ
 TOLERANCE_S = 1e-6
 
 
-def format_label(ts):
-    return "BIN" if ts.get_binary() else "TEXT"
+def format_label(tic):
+    return "BIN" if tic.get_binary() else "TEXT"
 
 
-def capture(ts, channel, duration_s):
+def capture(tic, channel, duration_s):
     """Read records for duration_s, returning (timestamps for channel
     as floats, set of other channels seen, overflow comment count).
     Comments are only seen in text mode."""
     times = []
     other_chans = set()
     overflows = 0
-    for r in ts.read_for(duration_s):
+    for r in tic.read_for(duration_s):
         if r.kind == "comment":
             if "overflow" in r.comment.lower():
                 overflows += 1
@@ -106,12 +106,12 @@ def expect(condition, message):
     return condition
 
 
-def phase_rising(ts, channel, duration_s):
-    print(f"\n=== Phase 1: rising edge only ({format_label(ts)}) ===")
-    ts.set_slope(channel, "POS")
-    ts.reset_input_buffer()
+def phase_rising(tic, channel, duration_s):
+    print(f"\n=== Phase 1: rising edge only ({format_label(tic)}) ===")
+    tic.set_slope(channel, "POS")
+    tic.reset_input_buffer()
 
-    times, others, overflows = capture(ts, channel, duration_s)
+    times, others, overflows = capture(tic, channel, duration_s)
     expected = PULSE_HZ * duration_s
     print(f"\n  collected {len(times)} timestamps on ch{channel} "
           f"(expected ~{expected:.0f}); "
@@ -130,14 +130,14 @@ def phase_rising(ts, channel, duration_s):
     return ok
 
 
-def phase_divider(ts, channel, duration_s, divider=5):
+def phase_divider(tic, channel, duration_s, divider=5):
     print(f"\n=== Phase 3: rising edge, divider={divider} "
-          f"({format_label(ts)}) ===")
-    ts.set_slope(channel, "POS")
-    ts.set_divider(channel, divider)
-    ts.reset_input_buffer()
+          f"({format_label(tic)}) ===")
+    tic.set_slope(channel, "POS")
+    tic.set_divider(channel, divider)
+    tic.reset_input_buffer()
 
-    times, others, overflows = capture(ts, channel, duration_s)
+    times, others, overflows = capture(tic, channel, duration_s)
     expected = (PULSE_HZ / divider) * duration_s
     expected_period = PERIOD_S * divider
     print(f"\n  collected {len(times)} timestamps on ch{channel} "
@@ -157,16 +157,16 @@ def phase_divider(ts, channel, duration_s, divider=5):
                      f"{expected_period * 1e3:.0f} ms")
 
     # Restore divider so we don't leave the device in an unexpected state.
-    ts.set_divider(channel, 1)
+    tic.set_divider(channel, 1)
     return ok
 
 
-def phase_both(ts, channel, duration_s):
-    print(f"\n=== Phase 2: both edges ({format_label(ts)}) ===")
-    ts.set_slope(channel, "BOTH")
-    ts.reset_input_buffer()
+def phase_both(tic, channel, duration_s):
+    print(f"\n=== Phase 2: both edges ({format_label(tic)}) ===")
+    tic.set_slope(channel, "BOTH")
+    tic.reset_input_buffer()
 
-    times, others, overflows = capture(ts, channel, duration_s)
+    times, others, overflows = capture(tic, channel, duration_s)
     expected = 2 * PULSE_HZ * duration_s
     print(f"\n  collected {len(times)} timestamps on ch{channel} "
           f"(expected ~{expected:.0f}); "
@@ -203,24 +203,24 @@ def phase_both(ts, channel, duration_s):
     return ok
 
 
-def phase_output_gating(ts, channel):
+def phase_output_gating(tic, channel):
     print(f"\n=== Phase 4: OUTPut:STATe gating "
-          f"({format_label(ts)}) ===")
-    ts.set_slope(channel, "POS")
-    ts.set_divider(channel, 1)
+          f"({format_label(tic)}) ===")
+    tic.set_slope(channel, "POS")
+    tic.set_divider(channel, 1)
 
     # Disable streaming and verify zero bytes flow. Use read_raw, not
     # capture(), because capture()->read_for would auto-enable streaming.
-    ts.set_stream_enabled(False)
-    ts.reset_input_buffer()
-    bytes_off = ts.read_raw(1.0)
+    tic.set_stream_enabled(False)
+    tic.reset_input_buffer()
+    bytes_off = tic.read_raw(1.0)
 
     # Re-enable streaming and drain the backlog of records the device
     # buffered while we were silent, so we count fresh ones in the
     # measurement window below.
-    ts.set_stream_enabled(True)
-    ts.reset_input_buffer()
-    times_on, _, _ = capture(ts, channel, 1.0)
+    tic.set_stream_enabled(True)
+    tic.reset_input_buffer()
+    times_on, _, _ = capture(tic, channel, 1.0)
 
     print(f"\n  with stream OFF: {len(bytes_off)} bytes received "
           f"(expected 0)")
@@ -235,7 +235,7 @@ def phase_output_gating(ts, channel):
     return ok
 
 
-def phase_scpi_errors(ts):
+def phase_scpi_errors(tic):
     print("\n=== Phase 5: SCPI error handling ===")
     ok = True
 
@@ -243,10 +243,10 @@ def phase_scpi_errors(ts):
     # firmware clears the latched error on every successful command,
     # so an OUTP:STAT OFF/ON pair between the bad command and SYST:ERR?
     # would wipe the error we're trying to read.
-    ts.set_stream_enabled(False)
+    tic.set_stream_enabled(False)
 
-    ts.clear_errors()
-    err = ts.get_error()
+    tic.clear_errors()
+    err = tic.get_error()
     ok &= expect(err.startswith("0,"),
                  f'SYST:ERR? after *CLS reports no-error (got: {err!r})')
 
@@ -257,74 +257,74 @@ def phase_scpi_errors(ts):
         ("INP0:DIV notanumber",   "-104"),
     ]
     for cmd, expected_code in cases:
-        ts.clear_errors()
-        ts.reset_input_buffer()
-        ts.send(cmd)
-        err = ts.get_error()
+        tic.clear_errors()
+        tic.reset_input_buffer()
+        tic.send(cmd)
+        err = tic.get_error()
         ok &= expect(expected_code in err,
                      f"`{cmd}` -> SYST:ERR? contains {expected_code} "
                      f"(got: {err!r})")
 
-    err = ts.get_error()
+    err = tic.get_error()
     ok &= expect(err.startswith("0,"),
                  f"SYST:ERR? auto-clears after read (got: {err!r})")
 
-    idn = ts.idn()
-    ok &= expect(idn.startswith("Lectrobox,Timestamper"),
+    idn = tic.idn()
+    ok &= expect(idn.startswith("Lectrobox,LectroTIC-4"),
                  f"device still responds to *IDN? (got: {idn!r})")
     return ok
 
 
-def phase_reset(ts, channel):
+def phase_reset(tic, channel):
     print("\n=== Phase 6: *RST ===")
     ok = True
 
     for ch in range(4):
-        ts.set_slope(ch, "BOTH")
-        ts.set_divider(ch, 7)
-    ts.set_stream_enabled(False)
-    ts.reset_input_buffer()
+        tic.set_slope(ch, "BOTH")
+        tic.set_divider(ch, 7)
+    tic.set_stream_enabled(False)
+    tic.reset_input_buffer()
 
-    slope_before = ts.get_slope(channel)
-    div_before   = ts.get_divider(channel)
+    slope_before = tic.get_slope(channel)
+    div_before   = tic.get_divider(channel)
     ok &= expect(slope_before == "BOTH",
                  f"pre-RST slope is BOTH (got: {slope_before!r})")
     ok &= expect(div_before == "7",
                  f"pre-RST divider is 7 (got: {div_before!r})")
-    ok &= expect(ts.get_stream_enabled() is False,
+    ok &= expect(tic.get_stream_enabled() is False,
                  "pre-RST stream is off")
 
-    ts.reset()
-    ts.reset_input_buffer()
+    tic.reset()
+    tic.reset_input_buffer()
 
     for ch in range(4):
-        slope = ts.get_slope(ch)
-        div   = ts.get_divider(ch)
+        slope = tic.get_slope(ch)
+        div   = tic.get_divider(ch)
         ok &= expect(slope == "POS",
                      f"ch{ch} slope back to POS (got: {slope!r})")
         ok &= expect(div == "1",
                      f"ch{ch} divider back to 1 (got: {div!r})")
-    ok &= expect(ts.get_stream_enabled() is True,
+    ok &= expect(tic.get_stream_enabled() is True,
                  "post-RST stream is on")
 
     return ok
 
 
-def phase_burst(sg, ts, channel, ncyc=16383, spacing_ns=100):
+def phase_burst(sg, tic, channel, ncyc=16383, spacing_ns=100):
     """Stress the on-device DMA + ring buffer: ask siggen for a burst
     of ncyc pulses spaced spacing_ns apart, repeating once per second,
     and verify every pulse comes through with no overcapture/overflow.
     Doubles as a hardware sanity check for newly-built devices."""
     print(f"\n=== Phase 7: {ncyc}-pulse burst at {spacing_ns} ns ===")
 
-    ts.set_slope(channel, "POS")
-    ts.set_divider(channel, 1)
+    tic.set_slope(channel, "POS")
+    tic.set_divider(channel, 1)
     # TEXT mode so the firmware's # overflow / # overcapture comments
     # are visible if anything goes wrong.
-    ts.set_binary(False)
+    tic.set_binary(False)
 
     actual_ns = sg.pulse_burst(spacing_ns, ncyc=ncyc)
-    ts.discard_pending()
+    tic.discard_pending()
 
     # Capture for a bit longer than 2 burst periods so we see at least
     # two full bursts even if the first one is in flight when we start.
@@ -332,7 +332,7 @@ def phase_burst(sg, ts, channel, ncyc=16383, spacing_ns=100):
     overcaptures = 0
     overflows = 0
     other_chans = set()
-    for r in ts.read_for(3.5):
+    for r in tic.read_for(3.5):
         if r.kind == "comment":
             text = r.comment.lower()
             if "overcapture" in text:
@@ -376,17 +376,17 @@ def phase_burst(sg, ts, channel, ncyc=16383, spacing_ns=100):
     return ok
 
 
-def phase_sustained_rate(sg, ts, channel, hz=105000):
+def phase_sustained_rate(sg, tic, channel, hz=105000):
     """Single-point throughput check: drive a steady hz pulse train
     and verify every gap is within 1 µs of the expected period. Uses
     sustained_rate.test_rate so this stays a thin wrapper around the
     same code the dedicated binary-search tool uses."""
     print(f"\n=== Phase 8: sustained rate @ {hz} Hz (BIN) ===")
-    ts.set_slope(channel, "POS")
-    ts.set_divider(channel, 1)
-    ts.set_binary(True)
+    tic.set_slope(channel, "POS")
+    tic.set_divider(channel, 1)
+    tic.set_binary(True)
     ok = sustained_rate.test_rate(
-        sg, ts, hz,
+        sg, tic, hz,
         settle_s=2.0, measure_s=5.0, tolerance=1e-6, verbose=False)
     return ok
 
@@ -395,17 +395,17 @@ def main():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--port", default=None,
-                   help="Timestamper serial port (default: autodetect)")
+                   help="LectroTIC-4 serial port (default: autodetect)")
     p.add_argument("--siggen-host", default="siggen",
                    help="Signal generator hostname (default: siggen)")
     p.add_argument("--channel", type=int, choices=[0, 1, 2, 3], default=0,
-                   help="Timestamper input channel under test (default: 0)")
+                   help="LectroTIC-4 input channel under test (default: 0)")
     p.add_argument("--duration", type=float, default=5.0,
                    help="Capture window per phase, seconds (default: 5)")
     args = p.parse_args()
 
-    with Timestamper(args.port) as ts:
-        print(f"Timestamper: {ts.port}")
+    with LectroTIC4(args.port) as tic:
+        print(f"LectroTIC-4: {tic.port}")
         print(f"Signal generator: {args.siggen_host}")
         print(f"Channel under test: {args.channel}")
         print(f"Capture duration per phase: {args.duration} s")
@@ -420,32 +420,32 @@ def main():
             # *RST clears the device's timestamp ring as well as
             # channel config, so any leftover records from a prior
             # aborted run are dropped here.
-            ts.reset()
-            ts.discard_pending()
-            print(f"Connected to timestamper: {ts.idn()}")
+            tic.reset()
+            tic.discard_pending()
+            print(f"Connected to LectroTIC-4: {tic.idn()}")
 
             results = []
             for binary in (False, True):
-                ts.set_binary(binary)
-                tag = format_label(ts)
+                tic.set_binary(binary)
+                tag = format_label(tic)
                 results.append((f"{tag} rising edge",
-                                phase_rising(ts, args.channel, args.duration)))
+                                phase_rising(tic, args.channel, args.duration)))
                 results.append((f"{tag} both edges",
-                                phase_both(ts, args.channel, args.duration)))
+                                phase_both(tic, args.channel, args.duration)))
                 results.append((f"{tag} divider",
-                                phase_divider(ts, args.channel,
+                                phase_divider(tic, args.channel,
                                               args.duration)))
                 results.append((f"{tag} output gating",
-                                phase_output_gating(ts, args.channel)))
+                                phase_output_gating(tic, args.channel)))
 
-            ts.set_binary(False)
-            results.append(("SCPI errors", phase_scpi_errors(ts)))
-            results.append(("reset", phase_reset(ts, args.channel)))
-            results.append(("burst", phase_burst(sg, ts, args.channel)))
+            tic.set_binary(False)
+            results.append(("SCPI errors", phase_scpi_errors(tic)))
+            results.append(("reset", phase_reset(tic, args.channel)))
+            results.append(("burst", phase_burst(sg, tic, args.channel)))
             results.append(("sustained rate",
-                            phase_sustained_rate(sg, ts, args.channel)))
+                            phase_sustained_rate(sg, tic, args.channel)))
         finally:
-            ts.set_stream_enabled(False)
+            tic.set_stream_enabled(False)
             sg.output_off()
             sg.close()
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Configure a LectroTIC-4 timestamper over its USB CDC SCPI interface.
+"""Configure a LectroTIC-4 over its USB CDC SCPI interface.
 
 CLI usage examples:
   tsctl.py idn
@@ -13,52 +13,52 @@ CLI usage examples:
   tsctl.py stream
   tsctl.py --port /dev/ttyACM1 slope 0 BOTH
 
-As a library, open a Timestamper instance and call methods on it.
+As a library, open a LectroTIC4 instance and call methods on it.
 Streaming is implicitly handled: query()/get_*() briefly silence the
 stream around the wire exchange so SCPI responses come back clean,
 and read_for()/iter_records() ensure the stream is on before reading.
 
-  from tsctl import Timestamper
+  from tsctl import LectroTIC4
 
   # Default: autodetect by USB VID/PID, BINARY wire format. Override
   # with port="/dev/ttyACM1" or binary=False.
-  with Timestamper() as ts:
-      print(ts.idn())                         # "Lectrobox,Timestamper,..."
-      ts.reset()                              # *RST
+  with LectroTIC4() as tic:
+      print(tic.idn())                         # "Lectrobox,LectroTIC-4,..."
+      tic.reset()                              # *RST
 
       # Per-channel input configuration (channel ∈ 0..3).
-      ts.set_slope(0, "POS")                  # rising edges only
-      ts.set_slope(1, "NEG")                  # falling edges only
-      ts.set_slope(2, "BOTH")                 # every transition
-      ts.set_divider(0, 100)                  # report every 100th edge
+      tic.set_slope(0, "POS")                  # rising edges only
+      tic.set_slope(1, "NEG")                  # falling edges only
+      tic.set_slope(2, "BOTH")                 # every transition
+      tic.set_divider(0, 100)                  # report every 100th edge
 
       # Read configuration back.
-      print(ts.get_slope(0))                  # "POS"
-      print(ts.get_divider(0))                # "100"
+      print(tic.get_slope(0))                  # "POS"
+      print(tic.get_divider(0))                # "100"
 
       # Wire format. The default is binary; switch to ASCII if you
       # want to read the stream as text.
-      ts.set_binary(False)
+      tic.set_binary(False)
 
       # Discard anything the device has already sent (overflow comments,
       # records buffered under the old configuration, etc.) so the next
       # read starts on fresh output.
-      ts.reset_input_buffer()
+      tic.reset_input_buffer()
 
       # Capture for 5 seconds. Loops forever via iter_records() if you
       # want an unbounded stream instead.
-      for r in ts.read_for(5.0):
+      for r in tic.read_for(5.0):
           if r.kind == "ts":
               print(f"ch {r.channel}: t = {r.seconds}.{r.nanoseconds:09d} s")
           # else r.kind == "comment" (TEXT mode only): r.comment
 
       # Latched-error access for diagnostics.
-      ts.clear_errors()                       # *CLS
-      print(ts.get_error())                   # "0,\"No error\""
+      tic.clear_errors()                       # *CLS
+      print(tic.get_error())                   # "0,\"No error\""
 
       # Escape hatches for raw SCPI.
-      ts.send("FOO:BAR 1")                    # no response read
-      print(ts.query("FOO:BAR?"))             # returns one line
+      tic.send("FOO:BAR 1")                    # no response read
+      print(tic.query("FOO:BAR?"))             # returns one line
 """
 
 import argparse
@@ -68,7 +68,7 @@ import serial.tools.list_ports
 import sys
 import time
 
-# Yielded by Timestamper.iter_records / read_for. Exactly one of
+# Yielded by LectroTIC4.iter_records / read_for. Exactly one of
 #   * (kind="ts", channel, seconds, nanoseconds, comment=None)
 #   * (kind="comment", channel=None, seconds=None, nanoseconds=None, comment)
 # is populated. `seconds` and `nanoseconds` are integers (whole seconds
@@ -90,7 +90,7 @@ def record_seconds(r):
 
 TIMESTAMPER_VID = 0x1209  # pid.codes
 TIMESTAMPER_PID = 0x71C4  # LectroTIC-4
-IDN_PREFIX = "Lectrobox,Timestamper"
+IDN_PREFIX = "Lectrobox,LectroTIC-4"
 
 _BINARY_RECORD_LEN = 8
 _NS_PER_TICK = 4
@@ -103,7 +103,7 @@ def autodetect_port():
     candidates = [p.device for p in serial.tools.list_ports.comports()
                   if p.vid == TIMESTAMPER_VID and p.pid == TIMESTAMPER_PID]
     if not candidates:
-        sys.exit(f"No timestamper found (VID:PID "
+        sys.exit(f"No LectroTIC-4 found (VID:PID "
                  f"{TIMESTAMPER_VID:04x}:{TIMESTAMPER_PID:04x}). "
                  f"Try --port.")
     matches = []
@@ -126,16 +126,16 @@ def autodetect_port():
         finally:
             ser.close()
     if not matches:
-        sys.exit("Found device(s) at the timestamper VID:PID but none "
-                 "answered *IDN? as a timestamper.")
+        sys.exit("Found device(s) at the LectroTIC-4 VID:PID but none "
+                 "answered *IDN? as a LectroTIC-4.")
     if len(matches) > 1:
-        sys.exit(f"Multiple timestampers found: {matches}. Use --port.")
+        sys.exit(f"Multiple LectroTIC-4s found: {matches}. Use --port.")
     return matches[0]
 
 
 def _drain_raw(ser, quiet_s=0.1, max_s=1.0):
     """Read until the line goes quiet for quiet_s, or max_s elapses.
-    Standalone helper used by autodetect_port before a Timestamper
+    Standalone helper used by autodetect_port before a LectroTIC4
     instance exists."""
     deadline = time.monotonic() + max_s
     last_rx = time.monotonic()
@@ -152,11 +152,11 @@ def _drain_raw(ser, quiet_s=0.1, max_s=1.0):
         ser.timeout = saved
 
 
-class Timestamper:
+class LectroTIC4:
     """A connected LectroTIC-4. Pass port=... to override autodetect.
     Use as a context manager (preferred) or call close() explicitly.
 
-    Stream wire format defaults to BINARY; set ts.set_binary(False) to
+    Stream wire format defaults to BINARY; set tic.set_binary(False) to
     switch to ASCII. The device and the host's record parser are kept
     in sync automatically."""
 
@@ -399,47 +399,47 @@ class Timestamper:
 
 # ---- CLI ------------------------------------------------------------------
 
-def cmd_idn(ts, args):
-    print(ts.idn())
+def cmd_idn(tic, args):
+    print(tic.idn())
 
 
-def cmd_reset(ts, args):
-    ts.reset()
+def cmd_reset(tic, args):
+    tic.reset()
 
 
-def cmd_slope(ts, args):
+def cmd_slope(tic, args):
     if args.value is None:
-        print(ts.get_slope(args.channel))
+        print(tic.get_slope(args.channel))
     else:
-        ts.set_slope(args.channel, args.value)
+        tic.set_slope(args.channel, args.value)
 
 
-def cmd_div(ts, args):
+def cmd_div(tic, args):
     if args.n is None:
-        print(ts.get_divider(args.channel))
+        print(tic.get_divider(args.channel))
     else:
-        ts.set_divider(args.channel, args.n)
+        tic.set_divider(args.channel, args.n)
 
 
-def cmd_format(ts, args):
+def cmd_format(tic, args):
     if args.value is None:
-        print("BIN" if ts.get_binary() else "TEXT")
+        print("BIN" if tic.get_binary() else "TEXT")
     else:
-        ts.set_binary(args.value.lower() in ("bin", "binary"))
+        tic.set_binary(args.value.lower() in ("bin", "binary"))
 
 
-def cmd_raw(ts, args):
+def cmd_raw(tic, args):
     cmd = args.command
     if "?" in cmd:
-        print(ts.query(cmd))
+        print(tic.query(cmd))
     else:
-        ts.send(cmd)
+        tic.send(cmd)
 
 
-def cmd_stream(ts, args):
-    ts.set_binary(args.format == "binary")
+def cmd_stream(tic, args):
+    tic.set_binary(args.format == "binary")
     try:
-        for r in ts.iter_records():
+        for r in tic.iter_records():
             if r.kind == "ts":
                 # Reproduce the device's TEXT format exactly from the
                 # integer fields -- no float round-trip, so it is
@@ -455,7 +455,7 @@ def cmd_stream(ts, args):
         # `stream` switches to BIN for performance, then decodes back
         # to ASCII for stdout. Restore TEXT on the way out so other
         # tools that come along see the documented default.
-        ts.set_binary(False)
+        tic.set_binary(False)
 
 
 def main():
@@ -507,8 +507,8 @@ def main():
     sp.set_defaults(func=cmd_stream)
 
     args = p.parse_args()
-    with Timestamper(args.port) as ts:
-        args.func(ts, args)
+    with LectroTIC4(args.port) as tic:
+        args.func(tic, args)
 
 
 if __name__ == "__main__":

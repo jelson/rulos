@@ -516,7 +516,7 @@ static void periodic_task(void *data) {
   static bool welcome_printed = false;
   if (!welcome_printed && format_mode == TIMESTAMPER_FORMAT_TEXT &&
       usbd_cdc_tx_ready(scpi_usb_cdc_handle())) {
-     usbd_cdc_print(scpi_usb_cdc_handle(), "# Starting timestamper, version " STRINGIFY(GIT_COMMIT) "\n");
+     usbd_cdc_print(scpi_usb_cdc_handle(), "# Starting LectroTIC-4, version " STRINGIFY(GIT_COMMIT) "\n");
      welcome_printed = true;
   }
 
@@ -673,7 +673,7 @@ static void init_timers() {
 // Serial is a placeholder for now; the chip UID could replace it once
 // Get_SerialNum's output is plumbed up here.
 const char *const timestamper_idn =
-    "Lectrobox,Timestamper,0," STRINGIFY(GIT_COMMIT);
+    "Lectrobox,LectroTIC-4,0," STRINGIFY(GIT_COMMIT);
 
 void timestamper_set_slope(int ch, timestamper_slope_t slope) {
   if (ch < 0 || ch >= NUM_CHANNELS) return;

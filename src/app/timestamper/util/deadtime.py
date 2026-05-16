@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-"""Binary-search for the timestamper's dead time.
+"""Binary-search for the LectroTIC-4's dead time.
 
 Drives a Rigol DG1022Z (via siggen.py's Siggen class) to produce pulse
-bursts at various spacings while reading the timestamper's serial output
+bursts at various spacings while reading the LectroTIC-4's serial output
 to determine whether all pulses in each burst are captured.
 
 Usage:
@@ -19,7 +19,7 @@ import argparse
 import sys
 from dataclasses import dataclass
 
-from tsctl import Timestamper, record_seconds
+from tsctl import LectroTIC4, record_seconds
 from siggen import Siggen
 
 
@@ -31,17 +31,17 @@ class PulseCount:
     burst_sizes: list  # list of per-burst timestamp counts
 
 
-def count_pulses(ts, settle_time_s=2.0, measure_time_s=3.0,
+def count_pulses(tic, settle_time_s=2.0, measure_time_s=3.0,
                  verbose=True):
-    """Read records via the Timestamper, classify, and group into bursts."""
+    """Read records via the LectroTIC4, classify, and group into bursts."""
     # Drop the device's ring + host buffer so we measure only bursts
     # captured under the current siggen configuration.
-    ts.discard_pending()
+    tic.discard_pending()
 
     timestamps = []  # list of float seconds-since-boot
     overcaptures = 0
     overflows = 0
-    for r in ts.read_for(measure_time_s):
+    for r in tic.read_for(measure_time_s):
         if r.kind == "comment":
             if verbose:
                 print(f"    | {r.comment}")
@@ -77,7 +77,7 @@ def count_pulses(ts, settle_time_s=2.0, measure_time_s=3.0,
     )
 
 
-def test_spacing(sg, ts, ns, ncyc=3, verbose=True):
+def test_spacing(sg, tic, ns, ncyc=3, verbose=True):
     """Set the signal generator to the given spacing and check results.
 
     Returns True if all pulses in each burst are reliably captured
@@ -87,7 +87,7 @@ def test_spacing(sg, ts, ns, ncyc=3, verbose=True):
 
     sg.pulse_burst(ns, ncyc=ncyc)
 
-    result = count_pulses(ts, verbose=verbose)
+    result = count_pulses(tic, verbose=verbose)
 
     # Pass = every burst has all ncyc pulses, no overcaptures or overflows.
     # Ignore partial bursts at measurement window boundaries.
@@ -111,13 +111,13 @@ def test_spacing(sg, ts, ns, ncyc=3, verbose=True):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Binary-search for timestamper dead time")
+        description="Binary-search for LectroTIC-4 dead time")
     parser.add_argument("--bottom", type=float, default=100,
                         help="Lower bound in ns (default: 100)")
     parser.add_argument("--top", type=float, default=1000,
                         help="Upper bound in ns (default: 1000)")
     parser.add_argument("--port", default=None,
-                        help="Timestamper serial port (default: autodetect)")
+                        help="LectroTIC-4 serial port (default: autodetect)")
     parser.add_argument("--host", default="siggen",
                         help="Signal generator hostname (default: siggen)")
     parser.add_argument("--precision", type=float, default=5,
@@ -145,15 +145,15 @@ def main():
     verbose = not args.quiet
     binary = args.binary
 
-    with Timestamper(args.port) as ts:
+    with LectroTIC4(args.port) as tic:
         print(f"Searching for dead time in range [{lo:.0f}, {hi:.0f}] ns, "
               f"{ncyc} pulses/burst")
-        print(f"Timestamper port: {ts.port}")
+        print(f"LectroTIC-4 port: {tic.port}")
         print(f"Signal generator: {args.host}")
         print(f"Wire format:      {'BINARY' if binary else 'TEXT'}")
         print()
 
-        ts.set_binary(binary)
+        tic.set_binary(binary)
 
         try:
             with Siggen(host=args.host) as sg:
@@ -163,7 +163,7 @@ def main():
                 # Verify endpoints: top should pass, bottom should fail.
                 # If --bottom == --top, the upper-bound test answers both.
                 print("Verifying upper bound...")
-                if not test_spacing(sg, ts, hi, ncyc=ncyc, verbose=verbose):
+                if not test_spacing(sg, tic, hi, ncyc=ncyc, verbose=verbose):
                     print(f"ERROR: Upper bound {hi:.0f} ns fails -- "
                           f"increase --top")
                     sys.exit(1)
@@ -176,7 +176,7 @@ def main():
                     sys.exit(0)
 
                 print("Verifying lower bound...")
-                if test_spacing(sg, ts, lo, ncyc=ncyc, verbose=verbose):
+                if test_spacing(sg, tic, lo, ncyc=ncyc, verbose=verbose):
                     print(f"NOTE: Lower bound {lo:.0f} ns already passes "
                           f"-- decrease --bottom or dead time is below "
                           f"{lo:.0f} ns")
@@ -191,7 +191,7 @@ def main():
                     mid = round(mid)
                     if mid == lo or mid == hi:
                         break
-                    if test_spacing(sg, ts, mid, ncyc=ncyc, verbose=verbose):
+                    if test_spacing(sg, tic, mid, ncyc=ncyc, verbose=verbose):
                         hi = mid
                     else:
                         lo = mid
@@ -202,7 +202,7 @@ def main():
                 print("Signal generator output off.")
         finally:
             # Restore TEXT for downstream tools.
-            ts.set_binary(False)
+            tic.set_binary(False)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 #
-# Script for analyzing timestamper data when the input is a PPS signal
+# Script for analyzing LectroTIC-4 data when the input is a PPS signal
 #
 
 import argparse
@@ -17,7 +17,7 @@ matplotlib.use('Agg')
 pd.set_option("display.precision", 9)
 
 def fit_and_correct(d, chan, debug=False):
-    # compute the phase difference between the timestamper's clock and the PPS
+    # compute the phase difference between the LectroTIC-4's clock and the PPS
     fitdata = d[chan].dropna()
     fit = np.polyfit(fitdata.index, fitdata.values, deg=1)
 
@@ -180,7 +180,7 @@ def get_args():
         'input_filenames',
         action='store',
         nargs='+',
-        help='Timestamper output files to process',
+        help='LectroTIC-4 output files to process',
     )
     return parser.parse_args(sys.argv[1:])
 
