@@ -13,14 +13,20 @@ Usage:
   deadtime.py --bottom 50 --top 500     custom range in ns
   deadtime.py --port /dev/ttyACM1       custom serial port
   deadtime.py --host siggen2            custom signal generator hostname
+  deadtime.py --channel 2               sub-channel to score (default 0)
+
+The pass/fail signal is the device's TEXT-mode '#' overcapture /
+overflow lines, so this always reads the TEXT stream (parsed with
+regression_test.parse_text_stream -- the shared text reader).
 """
 
 import argparse
 import sys
 from dataclasses import dataclass
 
-from tsctl import LectroTIC4, record_seconds
+from tsctl import LectroTIC4
 from siggen import Siggen
+from regression_test import parse_text_stream
 
 
 @dataclass
@@ -31,29 +37,24 @@ class PulseCount:
     burst_sizes: list  # list of per-burst timestamp counts
 
 
-def count_pulses(tic, settle_time_s=2.0, measure_time_s=3.0,
-                 verbose=True):
-    """Read records via the LectroTIC4, classify, and group into bursts."""
+def count_pulses(tic, channel, measure_time_s=3.0, verbose=True):
+    """Capture the device's TEXT stream for measure_time_s and group the
+    `channel` sub-channel's timestamps into bursts. Overcapture/overflow
+    counts come from the '#' diagnostic lines (summed across channels)."""
+    tic.send("FORM:DATA TEXT")
+    tic.set_stream_enabled(True)
     # Drop the device's ring + host buffer so we measure only bursts
     # captured under the current siggen configuration.
     tic.discard_pending()
 
-    timestamps = []  # list of float seconds-since-boot
-    overcaptures = 0
-    overflows = 0
-    for r in tic.read_for(measure_time_s):
-        if r.kind == "comment":
-            if verbose:
-                print(f"    | {r.comment}")
-            text = r.comment.lower()
-            if "overcapture" in text:
-                overcaptures += 1
-            if "overflow" in text:
-                overflows += 1
-            continue
-        timestamps.append(record_seconds(r))
-        if verbose:
-            print(f"    | {r.channel} {r.seconds}.{r.nanoseconds:09d}")
+    times, _, others, overcaptures, overflows, _, comments = \
+        parse_text_stream(tic.read_raw(measure_time_s), channel)
+    if verbose:
+        for c in comments:
+            print(f"    | {c}")
+        for t in times:
+            print(f"    | ch{channel} {t:.9f}")
+    timestamps = times
 
     # Group timestamps into bursts. Bursts repeat 1/sec, so timestamps
     # within 0.5s of each other belong to the same burst.
@@ -77,7 +78,7 @@ def count_pulses(tic, settle_time_s=2.0, measure_time_s=3.0,
     )
 
 
-def test_spacing(sg, tic, ns, ncyc=3, verbose=True):
+def test_spacing(sg, tic, ns, channel, ncyc=3, verbose=True):
     """Set the signal generator to the given spacing and check results.
 
     Returns True if all pulses in each burst are reliably captured
@@ -87,7 +88,7 @@ def test_spacing(sg, tic, ns, ncyc=3, verbose=True):
 
     sg.pulse_burst(ns, ncyc=ncyc)
 
-    result = count_pulses(tic, verbose=verbose)
+    result = count_pulses(tic, channel, verbose=verbose)
 
     # Pass = every burst has all ncyc pulses, no overcaptures or overflows.
     # Ignore partial bursts at measurement window boundaries.
@@ -130,11 +131,11 @@ def main():
                              "per-channel DMA buffer. Smaller values fit "
                              "in hardware and give no useful dead-time "
                              "data. Default: 16383.")
-    parser.add_argument("--binary", action="store_true",
-                        help="Use BINARY wire format. Default is TEXT "
-                             "because deadtime's pass/fail signal lives "
-                             "in the # overflow / # overcapture comment "
-                             "lines, which are suppressed in BINARY.")
+    parser.add_argument("--channel", type=int, default=0,
+                        help="Sub-channel whose burst completeness is "
+                             "scored. The signal generator drives one "
+                             "input; that input's rising sub-channel is "
+                             "ch0, falling ch1, etc. (default: 0)")
     parser.add_argument("--quiet", "-q", action="store_true",
                         help="Suppress raw serial output")
     args = parser.parse_args()
@@ -143,66 +144,63 @@ def main():
     hi = args.top
     ncyc = args.ncyc
     verbose = not args.quiet
-    binary = args.binary
+    channel = args.channel
 
     with LectroTIC4(args.port) as tic:
         print(f"Searching for dead time in range [{lo:.0f}, {hi:.0f}] ns, "
               f"{ncyc} pulses/burst")
         print(f"LectroTIC-4 port: {tic.port}")
         print(f"Signal generator: {args.host}")
-        print(f"Wire format:      {'BINARY' if binary else 'TEXT'}")
+        print(f"Scoring sub-channel: {channel}")
         print()
 
-        tic.set_binary(binary)
+        with Siggen(host=args.host) as sg:
+            print(f"Connected to: {sg.idn()}")
+            print()
 
-        try:
-            with Siggen(host=args.host) as sg:
-                print(f"Connected to: {sg.idn()}")
-                print()
+            # Verify endpoints: top should pass, bottom should fail.
+            # If --bottom == --top, the upper-bound test answers both.
+            print("Verifying upper bound...")
+            if not test_spacing(sg, tic, hi, channel, ncyc=ncyc,
+                                verbose=verbose):
+                print(f"ERROR: Upper bound {hi:.0f} ns fails -- "
+                      f"increase --top")
+                sys.exit(1)
 
-                # Verify endpoints: top should pass, bottom should fail.
-                # If --bottom == --top, the upper-bound test answers both.
-                print("Verifying upper bound...")
-                if not test_spacing(sg, tic, hi, ncyc=ncyc, verbose=verbose):
-                    print(f"ERROR: Upper bound {hi:.0f} ns fails -- "
-                          f"increase --top")
-                    sys.exit(1)
-
-                if lo == hi:
-                    print(f"NOTE: --bottom == --top == {lo:.0f} ns; that "
-                          f"spacing passes -- dead time is at or below "
-                          f"{lo:.0f} ns")
-                    sg.output_off()
-                    sys.exit(0)
-
-                print("Verifying lower bound...")
-                if test_spacing(sg, tic, lo, ncyc=ncyc, verbose=verbose):
-                    print(f"NOTE: Lower bound {lo:.0f} ns already passes "
-                          f"-- decrease --bottom or dead time is below "
-                          f"{lo:.0f} ns")
-                    sg.output_off()
-                    sys.exit(0)
-
-                print()
-                print("Binary search:")
-
-                while (hi - lo) > args.precision:
-                    mid = (lo + hi) / 2
-                    mid = round(mid)
-                    if mid == lo or mid == hi:
-                        break
-                    if test_spacing(sg, tic, mid, ncyc=ncyc, verbose=verbose):
-                        hi = mid
-                    else:
-                        lo = mid
-
-                print()
-                print(f"Dead time is between {lo:.0f} ns and {hi:.0f} ns")
+            if lo == hi:
+                print(f"NOTE: --bottom == --top == {lo:.0f} ns; that "
+                      f"spacing passes -- dead time is at or below "
+                      f"{lo:.0f} ns")
                 sg.output_off()
-                print("Signal generator output off.")
-        finally:
-            # Restore TEXT for downstream tools.
-            tic.set_binary(False)
+                sys.exit(0)
+
+            print("Verifying lower bound...")
+            if test_spacing(sg, tic, lo, channel, ncyc=ncyc,
+                            verbose=verbose):
+                print(f"NOTE: Lower bound {lo:.0f} ns already passes "
+                      f"-- decrease --bottom or dead time is below "
+                      f"{lo:.0f} ns")
+                sg.output_off()
+                sys.exit(0)
+
+            print()
+            print("Binary search:")
+
+            while (hi - lo) > args.precision:
+                mid = (lo + hi) / 2
+                mid = round(mid)
+                if mid == lo or mid == hi:
+                    break
+                if test_spacing(sg, tic, mid, channel, ncyc=ncyc,
+                                verbose=verbose):
+                    hi = mid
+                else:
+                    lo = mid
+
+            print()
+            print(f"Dead time is between {lo:.0f} ns and {hi:.0f} ns")
+            sg.output_off()
+            print("Signal generator output off.")
 
 
 if __name__ == "__main__":

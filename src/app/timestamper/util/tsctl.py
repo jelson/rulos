@@ -263,19 +263,22 @@ class LectroTIC4:
         self.send("*RST")
         self._stream_on = True
 
-    def discard_pending(self):
-        """Drop everything currently in flight so the next read sees
-        only post-discard records. Channel configuration is preserved.
+    def _sync_to_marker(self):
+        """Silence the stream and drain the host's input up to and
+        including the firmware's clear marker, leaving the device
+        quiescent with nothing buffered on either side.
 
-        Synchronizes via a firmware-emitted marker, no sleeps:
-
-            1. silence the stream (so no records emit after the marker)
-            2. send OUTPut:CLEar; the firmware clears its ring and
-               emits "# output discarded\\n" straight to USB CDC
+            1. silence the stream (so nothing emits after the marker)
+            2. send OUTPut:CLEar; the firmware clears its ring + the
+               in-flight TX half and emits "# output discarded\\n"
+               straight to USB CDC (as text, even in BIN format)
             3. read bytes until that marker appears, dropping everything
-            4. restore the prior stream state
+               before it -- including any partial binary record
+
+        This is the framing anchor: after this returns the device is
+        silent and aligned, so the next byte it emits once streaming is
+        re-enabled is the first byte of a fresh whole record.
         """
-        was_on = self._stream_on
         self.set_stream_enabled(False)
         self.send("OUTP:CLE")
 
@@ -295,6 +298,13 @@ class LectroTIC4:
             if chunk:
                 buf += chunk
 
+    def discard_pending(self):
+        """Drop everything currently in flight so the next read sees
+        only post-discard records. Channel configuration is preserved.
+        Synchronizes via the firmware marker (no sleeps); the prior
+        stream state is restored."""
+        was_on = self._stream_on
+        self._sync_to_marker()
         if was_on:
             self.set_stream_enabled(True)
 
@@ -334,14 +344,16 @@ class LectroTIC4:
 
     def _begin_stream(self):
         # Records are consumed only in the 8-byte binary wire format,
-        # so put the device in BIN and enable streaming before reading.
-        # Capture the format it was in on the first stream so close()
-        # can restore it.
+        # which has no self-framing. Capture the device's current
+        # format first (so close() can restore it), select BIN, then
+        # use the marker sync to establish a clean record boundary:
+        # after _sync_to_marker the device is silent and aligned, so
+        # enabling the stream yields whole 8-byte records from byte 0.
         if self._restore_format is None:
             fmt = self.query("FORM:DATA?").strip().upper()
             self._restore_format = "BIN" if fmt.startswith("BIN") else "TEXT"
         self.send("FORM:DATA BIN")
-        self.reset_input_buffer()
+        self._sync_to_marker()
         self.set_stream_enabled(True)
 
     def _records(self, deadline):
