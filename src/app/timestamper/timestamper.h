@@ -83,7 +83,7 @@ void timestamper_reset_all(void);
 // format, stream enable) is preserved.
 void timestamper_discard_pending(void);
 
-#define TIMESTAMPER_FW_VERSION "0.11.0"
+#define TIMESTAMPER_FW_VERSION "0.12.0"
 
 // *IDN? identity string. Call after rulos_hal_init().
 const char *timestamper_idn(void);

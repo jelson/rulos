@@ -364,17 +364,17 @@ static void uid_hex(uint32_t value, char *out, int len)
   }
 }
 
-/* See usb_cdc.h. The full 96-bit unique ID, all three words rendered
-   faithfully as 24 hex chars (no lossy fold/truncation). This is the
-   single source of truth for the serial; the USB iSerialNumber
-   descriptor below is widened from the same value, so SCPI *IDN? and
-   the OS-visible USB serial always agree. */
 void usbd_cdc_get_serial(char *out)
 {
-  uid_hex(*(uint32_t *) DEVICE_ID1, out,      8);
-  uid_hex(*(uint32_t *) DEVICE_ID2, out + 8,  8);
-  uid_hex(*(uint32_t *) DEVICE_ID3, out + 16, 8);
-  out[24] = '\0';
+  int n = 0;
+  for (const char *p = USBD_SERIAL_PREFIX; *p; p++)
+  {
+    out[n++] = *p;
+  }
+  uid_hex(*(uint32_t *) DEVICE_ID1, out + n,      8);
+  uid_hex(*(uint32_t *) DEVICE_ID2, out + n + 8,  8);
+  uid_hex(*(uint32_t *) DEVICE_ID3, out + n + 16, 8);
+  out[n + 24] = '\0';
 }
 
 /**
@@ -391,10 +391,10 @@ static void Get_SerialNum(void)
     return;
   }
 
-  char serial[25];
+  char serial[USBD_SERIAL_BUFLEN];
   usbd_cdc_get_serial(serial);
 
-  for (int i = 0; i < 24; i++)
+  for (unsigned i = 0; i < USBD_SERIAL_STRLEN; i++)
   {
     USBD_StringSerial[2 + 2 * i]     = (uint8_t) serial[i];
     USBD_StringSerial[2 + 2 * i + 1] = 0;

@@ -643,6 +643,10 @@ def phase_idn_serial(tic):
     ok &= expect(bool(usb_serial), "USB descriptor serial readable")
     ok &= expect(idn_serial == usb_serial,
                  f"*IDN? serial == USB serial ({idn_serial!r})")
+    # The serial is the LT4- product tag + the 24-hex 96-bit UID.
+    ok &= expect(bool(idn_serial) and idn_serial.startswith("LT4-")
+                 and len(idn_serial) == len("LT4-") + 24,
+                 f"serial is 'LT4-' + 24-hex UID ({idn_serial!r})")
     return ok
 
 

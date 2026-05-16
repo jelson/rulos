@@ -46,8 +46,15 @@
 #define USBD_BB_ALTMODE1_STR_DESC     (uint8_t *)"STM32 Alternate1 Mode"
 #endif
 
-// 2-byte header + 24 UTF-16 chars (full 96-bit UID as 24 hex digits).
-#define  USB_SIZ_STRING_SERIAL       0x32U
+// String-descriptor: 2-byte header + 2 bytes per UTF-16 char. The
+// serial is USBD_SERIAL_PREFIX (a -D string literal, default empty)
+// then the 96-bit UID as 24 hex chars. Empty prefix => 0x32U (50), the
+// historic size, so apps that don't set a prefix are byte-identical.
+#ifndef USBD_SERIAL_PREFIX
+#define USBD_SERIAL_PREFIX ""
+#endif
+#define  USB_SIZ_STRING_SERIAL \
+    (2U + 2U * ((sizeof(USBD_SERIAL_PREFIX) - 1U) + 24U))
 
 #if (USBD_LPM_ENABLED == 1)
 #define  USB_SIZ_BOS_DESC            0x0CU

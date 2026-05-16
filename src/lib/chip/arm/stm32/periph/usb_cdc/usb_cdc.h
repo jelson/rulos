@@ -101,9 +101,22 @@ bool usbd_cdc_tx_ready(usbd_cdc_state_t *cdc);
 // Returns 0 on success, -1 if previous transmission still in progress.
 int usbd_cdc_print(usbd_cdc_state_t *cdc, const char *s);
 
-// Fill `out` with the device serial number as a NUL-terminated ASCII
-// string: the STM32 96-bit factory unique ID rendered exactly as the
-// USB iSerialNumber descriptor (12 uppercase hex chars). `out` must be
-// at least 13 bytes. The unique-ID flash region must be reachable
-// (after rulos_hal_init() on parts that map it via an MPU window).
+// Optional product-type tag prepended to the serial number. Set per
+// app via -DUSBD_SERIAL_PREFIX=\"...\" (alongside USBD_VID/PID); the
+// empty default leaves the serial as the bare UID, so apps that don't
+// set it are unaffected.
+#ifndef USBD_SERIAL_PREFIX
+#define USBD_SERIAL_PREFIX ""
+#endif
+
+// The serial is USBD_SERIAL_PREFIX followed by the STM32 96-bit
+// factory unique ID as 24 uppercase hex chars. Lengths are
+// compile-time constants (the prefix is a string literal).
+#define USBD_SERIAL_STRLEN ((sizeof(USBD_SERIAL_PREFIX) - 1) + 24)
+#define USBD_SERIAL_BUFLEN (USBD_SERIAL_STRLEN + 1)
+
+// Fill `out` (>= USBD_SERIAL_BUFLEN bytes) with that serial as a
+// NUL-terminated ASCII string, identical to the USB iSerialNumber
+// descriptor. The unique-ID flash region must be reachable (after
+// rulos_hal_init() on parts that map it via an MPU window).
 void usbd_cdc_get_serial(char *out);
