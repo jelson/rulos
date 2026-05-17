@@ -120,12 +120,16 @@ _Static_assert(CLOCK_FREQ_HZ == 1000000000 / NS_PER_TICK,
 #define NUM_TX_BUFS                 2
 #define MONOTONICITY_CHECK          0
 
-// Channel number is packed into the top 2 bits of the counter field.
-// Counter maxes out at 250,000,000 (0x0EE6_B280), well within 28 bits.
-// 2 bits encode exactly 4 channels (0..3) -- no headroom needed since
-// NUM_CHANNELS is at the hardware limit of TIM2's input-capture channels.
+// counter field layout: [31:30] channel, [29:28] reserved (always 0;
+// spare bits for future in-band flags), [27:0] tick value. The tick
+// value maxes at CLOCK_FREQ_HZ-1 = 249,999,999 (0x0EE6_B27F), which
+// fits in 28 bits, so extracting it with the 28-bit value mask -- not
+// a 30-bit "everything but channel" mask -- keeps the reserved bits
+// out of the nanoseconds and lets bit 28/29 carry a flag later.
 #define COUNTER_CHAN_SHIFT 30
-#define COUNTER_CHAN_MASK  0x3FFFFFFFU
+#define COUNTER_VALUE_MASK 0x0FFFFFFFU
+_Static_assert(CLOCK_FREQ_HZ - 1 <= COUNTER_VALUE_MASK,
+               "tick value must fit in the 28-bit counter value field");
 
 // PH1 is freed by HSE bypass (the otherwise-OSC_OUT pin on H5, same
 // trick as the G4 board freeing PF1).
@@ -336,7 +340,7 @@ static int format_timestamp(timestamp_t *t, char *buf, int buf_size) {
     return sizeof(timestamp_t);
   }
   uint8_t channel = t->counter >> COUNTER_CHAN_SHIFT;
-  uint32_t counter = t->counter & COUNTER_CHAN_MASK;
+  uint32_t counter = t->counter & COUNTER_VALUE_MASK;
   uint32_t nanoseconds = counter * NS_PER_TICK;
   return snprintf(buf, buf_size, "%d %lu.%09lu\n",
                   channel, t->seconds, nanoseconds);

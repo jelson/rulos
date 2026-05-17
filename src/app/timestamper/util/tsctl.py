@@ -67,10 +67,14 @@ TIMESTAMPER_VID = 0x1209  # pid.codes
 TIMESTAMPER_PID = 0x71C4  # LectroTIC-4
 IDN_PREFIX = "Lectrobox,LectroTIC-4"
 
+# counter word: [31:30] channel, [29:28] reserved (always 0; spare
+# for future in-band flags), [27:0] tick value (max 249,999,999).
+# Mask ticks with the 28-bit value mask so reserved bits never leak
+# into the nanoseconds.
 _BINARY_RECORD_LEN = 8
 _NS_PER_TICK = 4
 _COUNTER_CHAN_SHIFT = 30
-_COUNTER_CHAN_MASK = 0x3FFFFFFF
+_COUNTER_VALUE_MASK = 0x0FFFFFFF
 
 
 def autodetect_port():
@@ -367,7 +371,7 @@ class LectroTIC4:
                 sec = int.from_bytes(buf[off:off + 4], "little")
                 cnt = int.from_bytes(buf[off + 4:off + 8], "little")
                 chan = cnt >> _COUNTER_CHAN_SHIFT
-                ticks = cnt & _COUNTER_CHAN_MASK
+                ticks = cnt & _COUNTER_VALUE_MASK
                 yield Record(chan, sec, ticks * _NS_PER_TICK)
             leftover = buf[n * _BINARY_RECORD_LEN:]
 
