@@ -174,8 +174,14 @@ class ArmPlatform(BaseRules.Platform):
             created_programming_target = True
 
 class ArmStmPlatform(ArmPlatform):
-    def __init__(self, chip_name, extra_peripherals = [], extra_cflags = []):
+    def __init__(self, chip_name, extra_peripherals = [], extra_cflags = [],
+                 flash_reserve_k = 0):
         super().__init__(chip_name, extra_peripherals, extra_cflags)
+        # KB of flash carved off the top for the app to self-program
+        # (e.g. a persisted-config sector). 0 = none; the linker
+        # reservation and its overrun ASSERT are then no-ops, so apps
+        # that don't ask for it are unaffected.
+        self.flash_reserve_k = flash_reserve_k
         if chip_name not in self.CHIPS:
             util.die(f"Unrecognized chip {chip_name}. Known chips: " +
                      ",".join(self.CHIPS))
@@ -314,7 +320,7 @@ class ArmStmPlatform(ArmPlatform):
                 util.cwd_to_project_root(os.path.join(STM32_ROOT, "linker", "stm32-generic.ld"))),
             target = os.path.join(env["RulosBuildObjDir"], "src", "lib", linkscript_name),
             action = env.SpinnerAction(
-                f'sed "s/%RULOS_FLASHK%/{self.chip.flashk}/; s/%RULOS_RAMK%/{self.chip.ramk}/; s/%RULOS_CCMRAMK%/{self.chip.ccmramk}/" $SOURCE > $TARGET',
+                f'sed "s/%RULOS_FLASHK%/{self.chip.flashk}/; s/%RULOS_RAMK%/{self.chip.ramk}/; s/%RULOS_CCMRAMK%/{self.chip.ccmramk}/; s/%RULOS_FLASH_RESERVEK%/{self.flash_reserve_k}/" $SOURCE > $TARGET',
                 'Generating linker script', use_source=False))
         env.Append(LINKFLAGS = ["-T", linkscript])
         env.Depends(env["RulosProgramPath"], linkscript)

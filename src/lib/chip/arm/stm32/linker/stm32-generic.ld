@@ -38,6 +38,17 @@ CCMSRAM (xrw)   : ORIGIN = 0x10000000, LENGTH = %RULOS_CCMRAMK%K
 /* Highest address of the user mode stack */
 _estack = ORIGIN(RAM) + LENGTH(RAM);
 
+/*
+ * Flash carved off the top for the app to self-program at runtime
+ * (e.g. a persisted-config sector). Set per app via ArmStmPlatform's
+ * flash_reserve_k; 0 (the default for every app that doesn't ask)
+ * leaves _nvconfig_base at the flash end and makes the overrun ASSERT
+ * below trivially true, so this is a no-op unless requested.
+ */
+_flash_reserve = (%RULOS_FLASH_RESERVEK%) * 1K;
+_nvconfig_size = _flash_reserve;
+_nvconfig_base = ORIGIN(FLASH) + LENGTH(FLASH) - _flash_reserve;
+
 /* Define output sections */
 SECTIONS
 {
@@ -178,3 +189,12 @@ SECTIONS
 
   .ARM.attributes 0 : { *(.ARM.attributes) }
 }
+
+/*
+ * The last thing placed in flash is the LMA copy of .ccmram (or, if
+ * CCMRAMK=0, .data's LMA, which .ccmram's LOADADDR then follows). If
+ * the app reserved flash, code+data must not grow into it.
+ */
+ASSERT(%RULOS_FLASH_RESERVEK% == 0 ||
+       (LOADADDR(.ccmram) + SIZEOF(.ccmram)) <= _nvconfig_base,
+       "FLASH image overruns the region reserved by flash_reserve_k")
