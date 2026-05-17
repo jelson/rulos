@@ -56,12 +56,25 @@ import serial.tools.list_ports
 import sys
 import time
 
-# Yielded by LectroTIC4.iter_records / read_for: one captured edge.
-# `seconds` and `nanoseconds` are integers -- whole seconds since the
-# device booted plus the 0..999_999_999 ns within that second -- kept
-# separate on purpose: a single 64-bit float can't represent enough
-# distinct nanoseconds to survive runs past ~104 days.
+# iter_records / read_for yield one of three record types; the caller
+# distinguishes with isinstance (a tagged union, not a .kind field):
+#
+#   Record       -- a captured edge. `seconds`/`nanoseconds` are
+#                    integers (whole seconds since boot plus the
+#                    0..999_999_999 ns within it), kept separate on
+#                    purpose: a 64-bit float can't hold enough distinct
+#                    nanoseconds to survive runs past ~104 days.
+#   PulsesLost   -- the device dropped edges on `channel`:
+#                    `overcaptures` arrived too close together to
+#                    record, `buf_overflows` were lost to a full ring
+#                    (each saturates at 65535). The binary-stream
+#                    equivalent of the text "# ch<N>: ..." line.
+#   OutputCleared-- an OUTPut:CLEar took effect (the device's ring and
+#                    in-flight TX were dropped). The binary equivalent
+#                    of the "# output cleared" sync marker.
 Record = namedtuple("Record", "channel seconds nanoseconds")
+PulsesLost = namedtuple("PulsesLost", "channel overcaptures buf_overflows")
+OutputCleared = namedtuple("OutputCleared", [])
 
 TIMESTAMPER_VID = 0x1209  # pid.codes
 TIMESTAMPER_PID = 0x71C4  # LectroTIC-4
@@ -75,6 +88,16 @@ _BINARY_RECORD_LEN = 8
 _NS_PER_TICK = 4
 _COUNTER_CHAN_SHIFT = 30
 _COUNTER_VALUE_MASK = 0x0FFFFFFF
+# counter [29] set => the record is a special message, not a timestamp;
+# [7:0] is then the message type and the seconds word its payload.
+_COUNTER_SPECIAL_BIT = 1 << 29
+_COUNTER_MSGTYPE_MASK = 0xFF
+_MSG_OUTPUT_CLEARED = 0
+_MSG_PULSES_LOST = 1
+# The OUTPUT_CLEARED record is a fixed 8-byte pattern (channel 0,
+# special bit, type 0, zero payload) -- the binary-mode framing anchor.
+_OUTPUT_CLEARED_BYTES = (0).to_bytes(4, "little") + (
+    _COUNTER_SPECIAL_BIT | _MSG_OUTPUT_CLEARED).to_bytes(4, "little")
 
 
 def autodetect_port():
@@ -270,8 +293,9 @@ class LectroTIC4:
 
             1. silence the stream (so nothing emits after the marker)
             2. send OUTPut:CLEar; the firmware clears its ring + the
-               in-flight TX half and emits "# output discarded\\n"
-               straight to USB CDC (as text, even in BIN format)
+               in-flight TX half and emits its clear marker -- the
+               "# output cleared\\n" text line in TEXT format, or the
+               fixed 8-byte OUTPUT_CLEARED record in BIN format
             3. read bytes until that marker appears, dropping everything
                before it -- including any partial binary record
 
@@ -282,14 +306,19 @@ class LectroTIC4:
         self.set_stream_enabled(False)
         self.send("OUTP:CLE")
 
-        marker = b"# output discarded\n"
+        # The device emits exactly one marker, in whatever format it's
+        # in -- the text line or the 8-byte binary record. Scan for
+        # both rather than asking the device which (an in-band format
+        # query is unreadable amid a 100 kHz binary flood).
+        text_marker = b"# output cleared\n"
+        bin_marker = _OUTPUT_CLEARED_BYTES
         buf = bytearray()
         # Short timeout so the read returns promptly with whatever's
         # in the OS RX buffer; we don't want to wait for a full 4096-byte
         # chunk when the marker is the last thing the device emits.
         self._ser.timeout = 0.01
         deadline = time.monotonic() + 1.0
-        while marker not in buf:
+        while text_marker not in buf and bin_marker not in buf:
             if time.monotonic() > deadline:
                 raise RuntimeError(
                     "OUTP:CLE did not produce its marker within 1 s — "
@@ -371,8 +400,16 @@ class LectroTIC4:
                 sec = int.from_bytes(buf[off:off + 4], "little")
                 cnt = int.from_bytes(buf[off + 4:off + 8], "little")
                 chan = cnt >> _COUNTER_CHAN_SHIFT
-                ticks = cnt & _COUNTER_VALUE_MASK
-                yield Record(chan, sec, ticks * _NS_PER_TICK)
+                if cnt & _COUNTER_SPECIAL_BIT:
+                    msgtype = cnt & _COUNTER_MSGTYPE_MASK
+                    if msgtype == _MSG_OUTPUT_CLEARED:
+                        yield OutputCleared()
+                    elif msgtype == _MSG_PULSES_LOST:
+                        yield PulsesLost(chan, sec & 0xFFFF, sec >> 16)
+                    # unknown special types: skip (forward-compatible)
+                else:
+                    ticks = cnt & _COUNTER_VALUE_MASK
+                    yield Record(chan, sec, ticks * _NS_PER_TICK)
             leftover = buf[n * _BINARY_RECORD_LEN:]
 
     def iter_records(self):
@@ -437,8 +474,15 @@ def cmd_stream(tic, args):
     # downstream pipe closes.
     try:
         for r in tic.iter_records():
-            sys.stdout.write(
-                f"{r.channel} {r.seconds}.{r.nanoseconds:09d}\n")
+            if isinstance(r, Record):
+                sys.stdout.write(
+                    f"{r.channel} {r.seconds}.{r.nanoseconds:09d}\n")
+            elif isinstance(r, PulsesLost):
+                sys.stdout.write(
+                    f"# ch{r.channel}: {r.overcaptures} overcaptures, "
+                    f"{r.buf_overflows} buf overflows\n")
+            elif isinstance(r, OutputCleared):
+                sys.stdout.write("# output cleared\n")
             sys.stdout.flush()
     except KeyboardInterrupt:
         pass

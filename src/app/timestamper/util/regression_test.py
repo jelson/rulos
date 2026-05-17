@@ -45,7 +45,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 import flash
-from tsctl import LectroTIC4
+from tsctl import LectroTIC4, Record, PulsesLost
 from siggen import Siggen
 
 TSCTL = os.path.join(os.path.dirname(__file__), "tsctl.py")
@@ -158,14 +158,21 @@ class BinaryMode:
 
     def capture(self, tic, channel, duration_s):
         # read_for() does FORM:DATA BIN + the marker-sync framing +
-        # stream-enable, then yields decoded Records for the window.
+        # stream-enable, then yields the record union for the window.
+        # Binary now carries loss in-band (PulsesLost), so overcapture/
+        # overflow are checkable here exactly like the text wire.
         times, others = [], set()
+        overcaptures = overflows = 0
         for r in tic.read_for(duration_s):
-            if r.channel != channel:
-                others.add(r.channel)
-                continue
-            times.append(r.seconds + r.nanoseconds * 1e-9)
-        return times, others, None, None, []
+            if isinstance(r, PulsesLost):
+                overcaptures += r.overcaptures
+                overflows += r.buf_overflows
+            elif isinstance(r, Record):
+                if r.channel != channel:
+                    others.add(r.channel)
+                    continue
+                times.append(r.seconds + r.nanoseconds * 1e-9)
+        return times, others, overcaptures, overflows, []
 
     def arrivals(self, tic, channel, window_s, want):
         """Host monotonic arrival time of each record on `channel`
@@ -173,7 +180,7 @@ class BinaryMode:
         out = []
         deadline = time.monotonic() + window_s
         for r in tic.read_for(window_s):
-            if r.channel == channel:
+            if isinstance(r, Record) and r.channel == channel:
                 out.append(time.monotonic())
                 if len(out) >= want:
                     break
@@ -186,16 +193,11 @@ MODES = [TextMode(), BinaryMode()]
 
 
 def expect_no_loss(mode, ovc, ovf):
-    """In text mode the device reports overcapture/overflow on the
-    wire; assert zero. In binary those '#' lines are suppressed, so
-    loss is caught by the caller's record-count assertion -- note it."""
-    if mode.name == "text":
-        ok = expect(ovc == 0, "no overcaptures")
-        ok &= expect(ovf == 0, "no ring-buffer overflows")
-        return ok
-    print("  [INFO] overcapture/overflow not on the binary wire; "
-          "loss is covered by the record-count check")
-    return True
+    """Both wires now report loss in-band -- the "# ch<N>: ..." line in
+    text, the PulsesLost record in binary -- so assert zero either way."""
+    ok = expect(ovc == 0, "no overcaptures")
+    ok &= expect(ovf == 0, "no ring-buffer overflows")
+    return ok
 
 
 def intervals_within(deltas, target, tol, label):
@@ -419,6 +421,41 @@ def phase_burst(mode, sg, tic, channel, ncyc=16383, spacing_ns=100):
                  f"every interior burst is exactly {ncyc} pulses "
                  f"(not one missed)")
     ok &= score_clean(mode, ovc, ovf, others)
+    return ok
+
+
+def phase_overcapture(mode, sg, tic, channel, ncyc=20000):
+    """Deliberately overrun the device and confirm it *reports* the
+    loss on this wire. Every other phase asserts zero loss; this is the
+    only one that exercises the loss-report path -- the text
+    "# ch<N>: ..." line and the binary PULSES_LOST record (one record
+    carrying both the overcapture and buffer-overflow counts).
+
+    A 20k-pulse burst (>> the 16,384 ring) at the siggen's minimum
+    spacing forces loss. With the DG1022Z (PULS-mode floor ~67 ns) the
+    device keeps up edge-for-edge, so the loss shows as buffer
+    overflow, not overcaptures -- the count breakdown is printed. A
+    faster generator (one able to outrun the dead-time floor) will also
+    drive the overcapture count nonzero; the assertion accepts either,
+    so it validates the report path now and overcaptures later."""
+    print(f"\n=== overcapture: {ncyc}-pulse burst, min spacing "
+          f"[{mode.name}] ===")
+    # Request 1 ns; the DG1022Z clamps to its PULS-mode floor.
+    actual_ns, sizes, others, ovc, ovf = capture_burst(
+        mode, sg, tic, channel, "POS", ncyc, spacing_ns=1)
+    print(f"  spacing {actual_ns:.1f} ns; bursts {sizes}; "
+          f"overcaptures={ovc}, buf overflows={ovf}; "
+          f"others={sorted(others) or 'none'}")
+
+    ok = expect(sum(sizes) > 0,
+                "device still streamed timestamps through the overrun")
+    ok &= expect(not others, "no spurious other-channel activity")
+    # The point of the phase: the loss was reported on this wire (text
+    # '# ch<N>:' line / binary PULSES_LOST). Either counter proves the
+    # report path works; both are expected at this rate.
+    ok &= expect(ovc > 0 or ovf > 0,
+                 f"device reported the loss on the {mode.name} wire "
+                 f"(overcaptures={ovc}, buf overflows={ovf})")
     return ok
 
 
@@ -918,6 +955,8 @@ def main():
             ("output gating",
              lambda m: phase_output_gating(m, sg, tic, ch)),
             ("burst", lambda m: phase_burst(m, sg, tic, ch)),
+            ("overcapture",
+             lambda m: phase_overcapture(m, sg, tic, ch)),
             ("sustained", lambda m: phase_sustained(m, sg, tic, ch)),
             ("single pulse",
              lambda m: phase_single_pulse(m, sg, tic, ch)),
