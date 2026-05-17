@@ -56,7 +56,7 @@ import serial.tools.list_ports
 import sys
 import time
 
-# iter_records / read_for yield one of three record types; the caller
+# iter_records / read_for yield one of four record types; the caller
 # distinguishes them with isinstance:
 #
 #   Timestamp     -- a captured edge. `seconds`/`nanoseconds` are
@@ -72,9 +72,13 @@ import time
 #   OutputCleared -- an OUTPut:CLEar took effect (the device's ring and
 #                    in-flight TX were dropped). The binary equivalent
 #                    of the "# output cleared" sync marker.
+#   OscillatorFailure -- the 10 MHz reference failed; the device has
+#                    halted and emits nothing further until reset. The
+#                    binary equivalent of the "# FATAL ..." line.
 Timestamp = namedtuple("Timestamp", "channel seconds nanoseconds")
 PulsesLost = namedtuple("PulsesLost", "channel overcaptures buf_overflows")
 OutputCleared = namedtuple("OutputCleared", [])
+OscillatorFailure = namedtuple("OscillatorFailure", [])
 
 TIMESTAMPER_VID = 0x1209  # pid.codes
 TIMESTAMPER_PID = 0x71C4  # LectroTIC-4
@@ -94,6 +98,7 @@ _COUNTER_SPECIAL_BIT = 1 << 29
 _COUNTER_MSGTYPE_MASK = 0xFF
 _MSG_OUTPUT_CLEARED = 0
 _MSG_PULSES_LOST = 1
+_MSG_OSC_FAIL = 2
 # The OUTPUT_CLEARED record is a fixed 8-byte pattern (channel 0,
 # special bit, type 0, zero payload) -- the binary-mode framing anchor.
 _OUTPUT_CLEARED_BYTES = (0).to_bytes(4, "little") + (
@@ -406,6 +411,8 @@ class LectroTIC4:
                         yield OutputCleared()
                     elif msgtype == _MSG_PULSES_LOST:
                         yield PulsesLost(chan, sec & 0xFFFF, sec >> 16)
+                    elif msgtype == _MSG_OSC_FAIL:
+                        yield OscillatorFailure()
                     # unknown special types: skip (forward-compatible)
                 else:
                     ticks = cnt & _COUNTER_VALUE_MASK
@@ -483,6 +490,9 @@ def cmd_stream(tic, args):
                     f"{r.buf_overflows} buf overflows\n")
             elif isinstance(r, OutputCleared):
                 sys.stdout.write("# output cleared\n")
+            elif isinstance(r, OscillatorFailure):
+                sys.stdout.write("# FATAL: External oscillator failure. "
+                                 "Connect a 10MHz source and press reset.\n")
             sys.stdout.flush()
     except KeyboardInterrupt:
         pass
