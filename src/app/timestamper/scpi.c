@@ -177,6 +177,24 @@ static bool dispatch_line(const char *line) {
     }
   }
 
+  // CONFig:SAVE -- persist the current channel config (slope +
+  // divider) to flash. This deliberately halts timestamp capture for
+  // the duration of the flash erase/program (interrupts are masked):
+  // pulses arriving during a save are lost, by design. Issue it when
+  // the instrument is not being relied on to measure.
+  {
+    const char *p = scpi_match_kw(line, "CONFIG", "CONF");
+    if (p && *p == ':') {
+      p++;
+      const char *q = scpi_match_kw(p, "SAVE", "SAVE");
+      if (q && *q == 0) {
+        timestamper_config_save();
+        scpi_clear_error();
+        return true;
+      }
+    }
+  }
+
   // INPut[n]:{SLOPe|DIVider}
   const char *p = scpi_match_kw(line, "INPUT", "INP");
   if (!p) return false;

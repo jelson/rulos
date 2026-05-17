@@ -36,6 +36,7 @@ Usage:
 
 import argparse
 import os
+import random
 import re
 import statistics
 import subprocess
@@ -43,6 +44,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(__file__))
+import flash
 from tsctl import LectroTIC4
 from siggen import Siggen
 
@@ -454,16 +456,21 @@ def phase_sustained(mode, sg, tic, channel):
           f"others={sorted(others) or 'none'}")
 
     ok = expect(n >= 100, f"sustained {hz} Hz produced enough records")
-    # Every inter-record gap must be the source period to within
-    # GAP_TOL_S -- the same bound every other phase uses. At this rate
-    # the device cannot keep up by streaming a smooth-but-wrong rate:
-    # falling behind drops chunks, and a dropped edge is a >=1*nominal
-    # gap excursion (>=40 µs at 25 kHz), thousands of ns past tol.
-    if deltas:
-        ok &= expect(intervals_within(deltas, nominal, GAP_TOL_S,
+    # Every interior inter-record gap must be the source period to
+    # within GAP_TOL_S -- the same bound every other phase uses. At
+    # this rate the device cannot keep up by streaming a
+    # smooth-but-wrong rate: falling behind drops chunks, and a dropped
+    # edge is a >=1*nominal positive gap excursion (>=40 µs at 25 kHz),
+    # thousands of ns past tol. The first/last gap touches the capture
+    # window edge, where a record can be clipped/torn (a window cut
+    # mid-line, or a seconds-rollover boundary) -- excluded like the
+    # other phases' boundary gaps; a real miss is interior and positive.
+    interior = deltas[1:-1]
+    if interior:
+        ok &= expect(intervals_within(interior, nominal, GAP_TOL_S,
                                       "sustained gap"),
-                     f"every gap within {GAP_TOL_S * 1e9:.0f} ns of "
-                     f"the {nominal * 1e6:.2f} µs source period "
+                     f"every interior gap within {GAP_TOL_S * 1e9:.0f} "
+                     f"ns of the {nominal * 1e6:.2f} µs source period "
                      f"(not a single pulse missed)")
     ok &= score_clean(mode, ovc, ovf, others)
     return ok
@@ -719,6 +726,146 @@ def phase_tsctl_cli(port, sg):
     return ok
 
 
+def _reconnect(timeout_s=45):
+    """After a BMP reset the LectroTIC-4's USB drops and re-enumerates
+    (its /dev path can change, and the CDC ACM takes a few seconds to
+    reappear and accept a connection), so autodetect afresh and retry
+    until it answers *IDN?."""
+    time.sleep(3.0)  # let the old USB device tear down before scanning
+    deadline = time.monotonic() + timeout_s
+    last = None
+    while time.monotonic() < deadline:
+        tic = None
+        try:
+            tic = LectroTIC4(None)
+            tic.idn()
+            return tic
+        # autodetect_port() raises SystemExit (not Exception) when the
+        # device isn't enumerated yet -- expected mid-reconnect, retry.
+        except (Exception, SystemExit) as e:
+            last = e
+            if tic is not None:
+                tic.close()
+            time.sleep(1.0)
+    raise RuntimeError(f"device did not re-enumerate within "
+                       f"{timeout_s}s ({last})")
+
+
+def _set_cfg(tic, cfg):
+    for chx, (sl, dv) in enumerate(cfg):
+        tic.set_slope(chx, sl)
+        tic.set_divider(chx, int(dv))
+
+
+def _persist_cfg(cfg):
+    """Set cfg on all 4 channels, issue the explicit CONF:SAVE, then a
+    query round-trip as a barrier: SCPI is processed in order, so the
+    *IDN? reply only comes back after the (interrupt-masked) flash
+    write has completed."""
+    with LectroTIC4(None) as tic:
+        _set_cfg(tic, cfg)
+        tic.save()
+        tic.idn()  # barrier: returns only once the save has finished
+
+
+def phase_config_persist():
+    """Channel config (slope+divider) must survive complete power loss.
+    Set a non-default config, CONF:SAVE it, cold-reset the MCU through
+    the BMP (clears SRAM, re-runs boot from flash), and confirm it came
+    back. Every channel differs from the *RST defaults (POS, divider 1)
+    so a blank or failed load can't masquerade as a pass."""
+    print("\n=== channel config persists across power loss ===")
+    want = [("NEG", "3"), ("BOTH", "7"), ("POS", "5"), ("NEG", "9")]
+    try:
+        _persist_cfg(want)
+        rc = flash.reset_dut()
+        ok = expect(rc == 0, "BMP cold-reset issued (SRAM cleared)")
+        tic = _reconnect()
+    except Exception as e:
+        return expect(False, f"config-persist setup/reset failed: {e}")
+    try:
+        got = _read_cfg(tic)
+        print(f"  expected {want}")
+        print(f"  got      {got}")
+        ok &= expect(got == want,
+                     "all 4 channels' slope+divider restored from flash")
+        # Leave device + flash at defaults (*RST persists defaults).
+        tic.reset()
+        tic.idn()
+    finally:
+        tic.close()
+    return ok
+
+
+def _read_cfg(tic):
+    return [(tic.get_slope(c), tic.get_divider(c)) for c in range(4)]
+
+
+def phase_config_persist_torn(iters=12):
+    """Power-loss *during* a flash write must never destroy the last
+    good config nor brick the device. A known non-default baseline A is
+    persisted cleanly first (so one slot is valid). Each iteration then
+    writes a *distinct* config B and cold-resets at a randomized delay
+    spanning the coalesced erase/program window. The readback must be
+    exactly A (write torn -> prior slot survived) or B (write
+    completed) -- NEVER defaults or garbage (that would mean the A/B
+    layout lost the prior slot) and NEVER a no-show (the ECC-fault boot
+    brick). A surviving B becomes the next baseline. (A brick here
+    needs `flash.py --erase` to recover.)"""
+    print(f"\n=== torn-write robustness: {iters} resets mid-save ===")
+    base = [("NEG", "3"), ("BOTH", "7"), ("POS", "5"), ("NEG", "9")]
+    try:
+        _persist_cfg(base)                   # clean baseline write
+        rc = flash.reset_dut()
+        ok = expect(rc == 0, "baseline reset issued")
+        tic = _reconnect()
+        with tic:
+            got = _read_cfg(tic)
+        ok &= expect(got == base,
+                     f"baseline A persisted cleanly {got}")
+    except Exception as e:
+        return expect(False, f"baseline setup failed: {e}")
+
+    for i in range(iters):
+        # A distinct config each iteration so a completed write is
+        # unambiguously distinguishable from the surviving baseline.
+        cand = [("BOTH", str(i + 2)), ("NEG", str(i + 3)),
+                ("POS", str(i + 4)), ("NEG", str(i + 5))]
+        try:
+            with LectroTIC4(None) as tic:
+                _set_cfg(tic, cand)
+                tic.save()  # no barrier: we WANT to reset mid-write
+            # CONF:SAVE starts an interrupt-masked erase+program (tens
+            # of ms). Reset across that window so some iterations
+            # interrupt it; the A/B slot + ECC must keep base intact.
+            time.sleep(random.uniform(0.0, 0.06))
+            rc = flash.reset_dut()
+            if rc != 0:
+                ok &= expect(False, f"iter {i}: reset rc={rc}")
+                continue
+            tic = _reconnect()
+        except Exception as e:
+            ok &= expect(False, f"iter {i}: DEVICE DID NOT COME BACK "
+                                f"-- bricked by torn write ({e})")
+            break
+        with tic:
+            got = _read_cfg(tic)
+        if got == cand:
+            ok &= expect(True, f"iter {i}: write completed (B)")
+            base = cand                      # new surviving baseline
+        else:
+            ok &= expect(got == base,
+                         f"iter {i}: write torn -> baseline A "
+                         f"survived (got {got})")
+    try:
+        with LectroTIC4(None) as tic:
+            tic.reset()
+            tic.idn()  # barrier: *RST's default-persist finished
+    except Exception:
+        pass
+    return ok
+
+
 # --------------------------------------------------------------------
 
 def main():
@@ -733,7 +880,23 @@ def main():
                    default=0, help="Input channel under test")
     p.add_argument("--duration", type=float, default=5.0,
                    help="Capture window per steady phase, s (default 5)")
+    p.add_argument("--phase", default=None,
+                   help="run only phases whose label contains this "
+                        "substring (case-insensitive), e.g. "
+                        "'config persist' or 'both'; default: all")
+    p.add_argument("--skip", default=None,
+                   help="skip phases whose label contains this "
+                        "substring (case-insensitive), e.g. 'config' "
+                        "to run everything but the resetting phases")
     args = p.parse_args()
+
+    sel = args.phase
+    skip = args.skip
+
+    def want(label):
+        if skip is not None and skip.lower() in label.lower():
+            return False
+        return sel is None or sel.lower() in label.lower()
 
     sg = Siggen(host=args.siggen_host)
     print(f"Signal generator: {sg.idn()}")
@@ -768,20 +931,34 @@ def main():
         try:
             for mode in MODES:
                 for label, fn in per_mode:
-                    results.append(
-                        (f"{label} [{mode.name}]", fn(mode)))
+                    name = f"{label} [{mode.name}]"
+                    if want(name):
+                        results.append((name, fn(mode)))
             for label, fn in once:
-                results.append((label, fn()))
+                if want(label):
+                    results.append((label, fn()))
         finally:
             tic.set_stream_enabled(False)
             sg.output_off()
 
-    # Port released -- now exercise the CLI tool itself.
+    # Port released -- now the CLI tool, then the cold-reset config-
+    # persistence check (both reacquire the port themselves; persist
+    # also drops it for the BMP reset).
     try:
-        results.append(("tsctl cli", phase_tsctl_cli(port, sg)))
+        if want("tsctl cli"):
+            results.append(("tsctl cli", phase_tsctl_cli(port, sg)))
+        if want("config persist"):
+            results.append(("config persist", phase_config_persist()))
+        if want("config torn"):
+            results.append(("config torn",
+                             phase_config_persist_torn()))
     finally:
         sg.output_off()
         sg.close()
+
+    if not results:
+        print(f"\nNo phase matched --phase {sel!r}")
+        sys.exit(2)
 
     print("\n=== Summary ===")
     all_ok = True

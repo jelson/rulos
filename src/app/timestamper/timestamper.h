@@ -73,8 +73,17 @@ void timestamper_set_format(timestamper_format_t fmt);
 timestamper_format_t timestamper_get_format(void);
 
 // *RST: restore all channels to defaults (rising-edge, divider=1),
-// switch back to TEXT format, and re-enable streaming.
+// switch back to TEXT format, re-enable streaming, and persist the
+// defaults to flash (a full factory reset that survives power loss).
 void timestamper_reset_all(void);
+
+// Persist the current channel config (slope + divider) to flash so it
+// survives power loss. Synchronous and DESTRUCTIVE to sampling: it
+// masks interrupts for the flash erase/program (tens of ms), so pulses
+// arriving during the save are missed -- by design. Driven by the
+// explicit CONFig:SAVE command (and *RST, which persists defaults).
+// A change that matches what's already stored is skipped.
+void timestamper_config_save(void);
 
 // Discard everything currently pending: drop the timestamp ring,
 // the in-flight TX-buffer half, and the per-channel missed/overflow
@@ -83,7 +92,7 @@ void timestamper_reset_all(void);
 // format, stream enable) is preserved.
 void timestamper_discard_pending(void);
 
-#define TIMESTAMPER_FW_VERSION "0.12.0"
+#define TIMESTAMPER_FW_VERSION "0.13.0"
 
 // *IDN? identity string. Call after rulos_hal_init().
 const char *timestamper_idn(void);

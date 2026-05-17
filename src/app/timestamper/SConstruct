@@ -32,10 +32,14 @@ from build_tools import *
 RulosBuildTarget(
     name = "timestamper",
     sources = ["timestamper.c", "scpi.c"],
-    peripherals = "uart usb-cdc-stm32 scpi",
+    peripherals = "uart usb-cdc-stm32 scpi nvconfig",
     platforms = [
         ArmStmPlatform(
             "stm32h523xc",
+            # Top 16 KB (two H523 8 KB flash sectors) reserved for the
+            # persisted channel config: nvconfig ping-pongs A/B sectors
+            # so an interrupted write never loses the live copy.
+            flash_reserve_k = 16,
             extra_cflags = [
                 '-DHSE_VALUE=10000000',
                 '-DRULOS_USE_HSE',

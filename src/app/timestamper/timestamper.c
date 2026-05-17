@@ -89,6 +89,7 @@
 #include "periph/scpi/scpi.h"
 #include "periph/uart/uart.h"
 #include "periph/usb_cdc/usb_cdc.h"
+#include "periph/nvconfig/nvconfig.h"
 #include "scpi.h"
 #include "stm32h5xx_ll_tim.h"
 #include "timestamper.h"
@@ -731,6 +732,57 @@ timestamper_format_t timestamper_get_format(void) {
   return format_mode;
 }
 
+// --- Persisted channel config (slope + divider) -------------------
+// channels[] is authoritative; flash is its mirror. Slope/divider
+// changes only touch RAM -- flash is written solely by the explicit
+// CONFig:SAVE command (and *RST, persisting defaults). A flash
+// erase/program on this single-bank part stalls instruction fetch for
+// tens of ms; doing that on the streaming hot path corrupts capture
+// and risks a fault-reset mid-write, so a save instead masks
+// interrupts and accepts that pulses during it are lost.
+
+// Persisted payload: per-channel slope + divider. Bump the version
+// whenever this layout changes so an older firmware's block is
+// rejected (defaults used) rather than misread.
+#define TS_CFG_VERSION 1
+
+typedef struct {
+  uint8_t slope[NUM_CHANNELS];
+  uint32_t divider[NUM_CHANNELS];
+} ts_persist_t;
+
+// Mirror of what's currently in flash, so a save can skip a redundant
+// erase+program when nothing actually changed.
+static ts_persist_t cfg_last_saved;
+static bool cfg_last_saved_valid;
+
+static void cfg_snapshot(ts_persist_t *c) {
+  for (int i = 0; i < NUM_CHANNELS; i++) {
+    c->slope[i] = (uint8_t)channels[i].slope;
+    c->divider[i] = channels[i].divider;
+  }
+}
+
+void timestamper_config_save(void) {
+  ts_persist_t c;
+  cfg_snapshot(&c);
+  if (cfg_last_saved_valid &&
+      memcmp(&c, &cfg_last_saved, sizeof(c)) == 0) {
+    return;  // unchanged -- no flash write
+  }
+  // Mask interrupts across the flash erase/program: nothing else may
+  // run from flash while it's busy. Capture/stream ISRs are silenced
+  // for the duration -- pulses arriving now are lost, by design.
+  uint32_t primask = __get_PRIMASK();
+  __disable_irq();
+  nvconfig_save(&c, sizeof(c), TS_CFG_VERSION);
+  if (!primask) {
+    __enable_irq();
+  }
+  cfg_last_saved = c;
+  cfg_last_saved_valid = true;
+}
+
 void timestamper_reset_all(void) {
   for (int i = 0; i < NUM_CHANNELS; i++) {
     timestamper_set_slope(i, TIMESTAMPER_SLOPE_RISING);
@@ -739,6 +791,10 @@ void timestamper_reset_all(void) {
   timestamper_set_stream_enabled(true);
   timestamper_set_format(TIMESTAMPER_FORMAT_TEXT);
   timestamper_discard_pending();
+
+  // Full factory reset: persist the defaults now (interrupt-masked,
+  // same as CONFig:SAVE).
+  timestamper_config_save();
 }
 
 void timestamper_discard_pending(void) {
@@ -772,6 +828,22 @@ int main() {
     channels[i].divider = 1;
     channels[i].slope = TIMESTAMPER_SLOPE_RISING;
   }
+
+  // Override the compiled defaults with the persisted config if a
+  // valid block is in flash. rulos_hal_init() has mapped flash for
+  // reads; init_timers() below applies channels[] to the hardware.
+  ts_persist_t saved;
+  if (nvconfig_load(&saved, sizeof(saved), TS_CFG_VERSION)) {
+    for (int i = 0; i < NUM_CHANNELS; i++) {
+      channels[i].slope = (timestamper_slope_t)saved.slope[i];
+      channels[i].divider = saved.divider[i] ? saved.divider[i] : 1;
+    }
+  }
+  // Seed the saved-mirror with what's now in channels[] (loaded block
+  // or compiled defaults) so the first config command doesn't rewrite
+  // an identical block.
+  cfg_snapshot(&cfg_last_saved);
+  cfg_last_saved_valid = true;
 
   // initialize uart for debug logging
   uart_init(&uart, /*uart_id=*/0, 1000000);

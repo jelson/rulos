@@ -263,6 +263,13 @@ class LectroTIC4:
         self.send("*RST")
         self._stream_on = True
 
+    def save(self):
+        """CONFig:SAVE: persist the current channel config (slope +
+        divider) to flash so it survives power loss. The device masks
+        interrupts for the flash write, so pulses arriving during the
+        save are lost -- issue it only when not relying on capture."""
+        self.send("CONF:SAVE")
+
     def _sync_to_marker(self):
         """Silence the stream and drain the host's input up to and
         including the firmware's clear marker, leaving the device
@@ -398,6 +405,10 @@ def cmd_reset(tic, args):
     tic.reset()
 
 
+def cmd_save(tic, args):
+    tic.save()
+
+
 def cmd_slope(tic, args):
     if args.value is None:
         print(tic.get_slope(args.channel))
@@ -459,6 +470,10 @@ def main():
 
     sp = sub.add_parser("reset", help="Send *RST (defaults, streaming on)")
     sp.set_defaults(func=cmd_reset)
+
+    sp = sub.add_parser("save", help="CONF:SAVE -- persist channel "
+                        "config to flash (halts capture briefly)")
+    sp.set_defaults(func=cmd_save)
 
     sp = sub.add_parser("slope", help="Set or query input slope")
     sp.add_argument("channel", type=int, choices=[0, 1, 2, 3])
