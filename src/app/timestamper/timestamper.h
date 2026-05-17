@@ -57,12 +57,20 @@ bool timestamper_get_stream_enabled(void);
 // TIMESTAMPER_BINARY_RECORD_LEN-byte record per timestamp -- the same
 // 8-byte representation used in the device's internal ring buffer:
 //   bytes 0-3: seconds (uint32 LE)
-//   bytes 4-7: counter (uint32 LE), where the top 2 bits are the
-//              channel (0..NUM_CHANNELS-1) and the low 30 bits are
-//              the raw tick count (0..249,999,999 at 250 MHz, i.e.
-//              4 ns per tick).
-// Comments / overcapture / overflow lines are suppressed in binary
-// mode (the host should switch back to TEXT to read them).
+//   bytes 4-7: counter (uint32 LE): bits [31:30] channel
+//              (0..NUM_CHANNELS-1), [27:0] raw tick count
+//              (0..249,999,999 at 250 MHz, i.e. 4 ns per tick).
+// Every record is exactly 8 bytes, timestamp or not. Counter bit [29]
+// marks a "special message" instead of a timestamp: device metadata
+// that would be a "#" comment line in text mode, carried in-band so
+// binary readers see it too. When set, counter [7:0] is the message
+// type and the seconds word is its payload:
+//   0 OUTPUT_CLEARED -- payload all-zero (still a full 8-byte record);
+//                       binary analog of the "# output cleared" marker.
+//   1 PULSES_LOST    -- counter [31:30] = channel; seconds [15:0] =
+//                       overcaptures, [31:16] = buffer overflows
+//                       (each saturated at 65535).
+// Text mode is unchanged: same "#" comment lines as before.
 typedef enum {
   TIMESTAMPER_FORMAT_TEXT,
   TIMESTAMPER_FORMAT_BINARY,

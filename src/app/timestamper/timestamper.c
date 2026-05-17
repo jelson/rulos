@@ -131,6 +131,18 @@ _Static_assert(CLOCK_FREQ_HZ == 1000000000 / NS_PER_TICK,
 _Static_assert(CLOCK_FREQ_HZ - 1 <= COUNTER_VALUE_MASK,
                "tick value must fit in the 28-bit counter value field");
 
+// counter [29] = "special message" marker: the 8-byte record is not a
+// timestamp but device metadata. When set, counter [7:0] is the
+// message type and the seconds word carries its payload. [31:30] still
+// names the channel the message concerns (0 when not channel-specific).
+#define COUNTER_SPECIAL_BIT  (1u << 29)
+#define COUNTER_MSGTYPE_MASK 0xFFu
+#define MSG_OUTPUT_CLEARED 0u  // all-zero payload, still a full 8-byte
+                               // record; binary analog of "# output
+                               // discarded"
+#define MSG_PULSES_LOST    1u  // payload: [15:0] overcaptures,
+                               // [31:16] buf overflows (each sat. 0xFFFF)
+
 // PH1 is freed by HSE bypass (the otherwise-OSC_OUT pin on H5, same
 // trick as the G4 board freeing PF1).
 #define LED_CHAN0 GPIO_H1  // channel 0
@@ -184,7 +196,7 @@ static timestamper_format_t format_mode = TIMESTAMPER_FORMAT_TEXT;
 // bypass stream_enabled because discard_pending always silences the
 // stream around the clear.
 static volatile bool marker_pending = false;
-static const char marker_msg[] = "# output discarded\n";
+static const char marker_msg[] = "# output cleared\n";
 
 // PA0..PA3 carry TIM2_CH1..CH4 input-capture signals. The TIM2 channel
 // codes are also used at runtime by the slope-setter, hence file scope.
@@ -412,16 +424,35 @@ static void fill_tx_buf(void) {
   }
 }
 
+// Emit one 8-byte special-message record on the binary stream. The
+// buffer is static because usbd_cdc_write is asynchronous (DMA): it
+// must outlive the transfer. Safe as a single instance because callers
+// gate on USB idle and send at most one per service period, exactly
+// like the text marker / diagnostic line.
+static void send_special(uint8_t channel, uint8_t msgtype,
+                         uint32_t payload) {
+  static timestamp_t msg;
+  msg.seconds = payload;
+  msg.counter = ((uint32_t)channel << COUNTER_CHAN_SHIFT) |
+                COUNTER_SPECIAL_BIT | msgtype;
+  usbd_cdc_write(scpi_usb_cdc_handle(), (uint8_t *)&msg, sizeof(msg));
+}
+
 // If the filling buffer has data and USB is idle, hand it off and
 // swap to the other buffer. Then eagerly start filling the new
 // buffer so it's ready when USB finishes.
 static void try_send_timestamps(void) {
-  // ABOR's marker bypasses stream_enabled so the host can synchronize
+  // The marker bypasses stream_enabled so the host can synchronize
   // even after silencing the stream during a discard_pending() dance.
+  // Binary mode gets it as a special record, text mode as the comment.
   if (marker_pending && usbd_cdc_tx_ready(scpi_usb_cdc_handle())) {
     marker_pending = false;
-    usbd_cdc_write(scpi_usb_cdc_handle(), (uint8_t *)marker_msg,
-                   sizeof(marker_msg) - 1);
+    if (format_mode == TIMESTAMPER_FORMAT_BINARY) {
+      send_special(0, MSG_OUTPUT_CLEARED, 0);
+    } else {
+      usbd_cdc_write(scpi_usb_cdc_handle(), (uint8_t *)marker_msg,
+                     sizeof(marker_msg) - 1);
+    }
     return;
   }
   if (!stream_enabled) return;
@@ -528,12 +559,11 @@ static void periodic_task(void *data) {
   flush_dma_captures();
   update_leds();
 
-  // Report missed pulses when USB is idle and no timestamps pending.
-  // Use the filling buffer for one-off messages since nothing else is
-  // writing to it in this path. Suppressed while streaming is disabled
-  // so SCPI query responses aren't interleaved with overflow noise.
-  if (stream_enabled && format_mode == TIMESTAMPER_FORMAT_TEXT &&
-      ts_tail == ts_head && tx_fill_pos == 0 &&
+  // Report missed pulses when USB is idle and no timestamps pending:
+  // a "# ch<N>: ..." line in text mode, a PULSES_LOST special record
+  // in binary mode. Suppressed while streaming is disabled so SCPI
+  // query responses aren't interleaved with overflow noise.
+  if (stream_enabled && ts_tail == ts_head && tx_fill_pos == 0 &&
       usbd_cdc_tx_ready(scpi_usb_cdc_handle())) {
     for (int i = 0; i < NUM_CHANNELS; i++) {
       uint32_t missed = channels[i].num_missed;
@@ -541,11 +571,20 @@ static void periodic_task(void *data) {
       if (missed || overflows) {
         channels[i].num_missed = 0;
         channels[i].buf_overflows = 0;
-        int len = snprintf(usb_tx_bufs[tx_filling], USB_TX_BUFLEN,
-                           "# ch%d: %lu overcaptures, %lu buf overflows\n",
-                           i, missed, overflows);
-        usbd_cdc_write(scpi_usb_cdc_handle(), usb_tx_bufs[tx_filling], len);
-        tx_filling = 1 - tx_filling;
+        if (format_mode == TIMESTAMPER_FORMAT_BINARY) {
+          uint32_t oc = missed > 0xFFFF ? 0xFFFF : missed;
+          uint32_t bo = overflows > 0xFFFF ? 0xFFFF : overflows;
+          send_special(i, MSG_PULSES_LOST, oc | (bo << 16));
+        } else {
+          // The filling buffer is free here -- nothing else writes it
+          // in this path.
+          int len = snprintf(usb_tx_bufs[tx_filling], USB_TX_BUFLEN,
+                             "# ch%d: %lu overcaptures, %lu buf overflows\n",
+                             i, missed, overflows);
+          usbd_cdc_write(scpi_usb_cdc_handle(),
+                         usb_tx_bufs[tx_filling], len);
+          tx_filling = 1 - tx_filling;
+        }
         return;  // one message per period; USB will drain the rest
       }
     }

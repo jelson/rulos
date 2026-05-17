@@ -151,7 +151,7 @@ static bool dispatch_line(const char *line) {
       }
       // OUTPut:CLEar -- drop any pending timestamps in the device's
       // ring buffer and the in-flight USB TX half, then queue a
-      // "# output discarded" marker so the host can synchronize.
+      // "# output cleared" marker so the host can synchronize.
       // Channel config (slope, divider, format, stream-enable) is
       // preserved.
       if ((q = scpi_match_kw(p, "CLEAR", "CLE")) && *q == 0) {
