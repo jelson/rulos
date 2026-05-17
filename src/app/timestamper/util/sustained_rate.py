@@ -7,12 +7,21 @@ that every pulse makes it out of the LectroTIC-4 to the host. This
 measures USB drain bandwidth, not internal capture (deadtime.py covers
 the bursty regime where the on-device buffer absorbs short overruns).
 
-For each frequency we discard pending records, then over the --measure
-window require (a) the device reported no loss — no PULSES_LOST
-records — and (b) every gap between consecutive timestamps is within
---tolerance of the expected period (1/hz). We don't count totals — a
+For each frequency we reconfigure the siggen, then drain the
+post-reconfigure residue for --settle seconds with the new signal
+already running (transition isolation: a frequency change leaves
+DMA-capture/ring residue from the old rate that the firmware streams
+out after the marker sync — a one-time transient, not a throughput
+deficit; the same isolation regression_test.phase_sustained does).
+Only then do we measure: over the --measure window require (a) the
+device reported no loss — no PULSES_LOST records — and (b) every
+*interior* gap between consecutive timestamps is within --tolerance
+of the expected period (1/hz). The first/last gap touches the capture
+window edge, where a record can be clipped or torn — excluded, as
+regression_test.phase_sustained does. We don't count totals — a
 slightly late start can chop a few samples without indicating a real
-failure — but one lost pulse or one bad gap fails the frequency.
+failure — but one lost pulse or one bad interior gap fails the
+frequency.
 
 Usage:
   sustained_rate.py                            defaults: 1000-100000 Hz
@@ -30,23 +39,35 @@ from siggen import Siggen
 from regression_test import parse_text_stream
 
 
-def measure_rate(tic, measure_s, text=False):
-    """Drop everything pending (siggen reconfig may have overrun the
-    ring), then collect the stream for measure_s. Returns
-    (timestamps_float_seconds, lost_count). lost_count sums the
+def measure_rate(tic, measure_s, text=False, settle_s=0.5):
+    """Drain the post-reconfigure residue for settle_s with the new
+    signal already running, then collect the stream for measure_s.
+    Returns (timestamps_float_seconds, lost_count). lost_count sums the
     overcaptures + buffer overflows the device reports -- in BINARY
     mode (default) via the in-band PULSES_LOST records, with text=True
     via the ASCII diagnostic lines (both the definitive no-loss
-    signal). The two formats have different USB-drain ceilings."""
+    signal). The two formats have different USB-drain ceilings.
+
+    The settle drain is transition isolation, mirroring
+    regression_test.phase_sustained: a siggen frequency change leaves
+    old-rate DMA-capture/ring residue that the firmware streams out
+    after the marker sync. Measuring it as a gap misreads a one-time
+    reconfiguration transient as a sustained-rate failure (a single
+    multi-ms gap, lost=0). discard -> drain through the residue with
+    the new rate running -> discard -> measure clean."""
     if text:
         tic.send("FORM:DATA TEXT")
         tic.set_stream_enabled(True)
         tic.discard_pending()
+        tic.read_raw(settle_s)   # drain old-rate residue
+        tic.discard_pending()    # clean measurement start
         timestamps, _others, overcaptures, overflows, _comments = \
             parse_text_stream(tic.read_raw(measure_s), channel=0)
         return timestamps, overcaptures + overflows
 
     tic.discard_pending()
+    tic.read_raw(settle_s)   # drain old-rate residue
+    tic.discard_pending()    # clean measurement start
     timestamps = []
     lost = 0
     for r in tic.read_for(measure_s):
@@ -61,7 +82,7 @@ def measure_rate(tic, measure_s, text=False):
     return timestamps, lost
 
 
-def test_rate(sg, tic, hz, measure_s, tolerance, text=False):
+def test_rate(sg, tic, hz, measure_s, tolerance, text=False, settle_s=0.5):
     """Configure siggen for `hz` Hz continuous, measure, and decide
     pass/fail. Returns True on pass."""
     period_s = 1.0 / hz
@@ -71,16 +92,23 @@ def test_rate(sg, tic, hz, measure_s, tolerance, text=False):
           f"(pulse width {pulse_width_s * 1e9:.0f} ns)...")
     sg.periodic(hz, pulse_width_s=pulse_width_s)
 
-    timestamps, lost = measure_rate(tic, measure_s, text=text)
+    timestamps, lost = measure_rate(tic, measure_s, text=text,
+                                    settle_s=settle_s)
 
     deltas = [timestamps[i] - timestamps[i - 1]
               for i in range(1, len(timestamps))]
-    bad_gaps = sum(1 for d in deltas if abs(d - period_s) > tolerance)
+    # Score interior gaps only, mirroring regression_test.phase_sustained:
+    # the first/last gap touches the capture-window edge, where a record
+    # can be clipped or torn (a window cut mid-record, or a seconds
+    # rollover straddling the boundary) -- a window artifact, not a
+    # device miss. A real miss is interior and a >=1*period excursion.
+    interior = deltas[1:-1]
+    bad_gaps = sum(1 for d in interior if abs(d - period_s) > tolerance)
 
-    passed = (lost == 0) and (bad_gaps == 0) and (len(timestamps) > 1)
+    passed = (lost == 0) and (bad_gaps == 0) and (len(interior) > 0)
 
-    if deltas:
-        worst = max(deltas, key=lambda d: abs(d - period_s))
+    if interior:
+        worst = max(interior, key=lambda d: abs(d - period_s))
         worst_err_ns = (worst - period_s) * 1e9
     else:
         worst_err_ns = float("nan")
@@ -89,7 +117,7 @@ def test_rate(sg, tic, hz, measure_s, tolerance, text=False):
     print(f"  {hz:>7.0f} Hz: {status}  "
           f"n={len(timestamps)} "
           f"lost={lost} "
-          f"bad_gaps={bad_gaps}/{len(deltas)} "
+          f"bad_gaps={bad_gaps}/{len(interior)} "
           f"worst_dev={worst_err_ns:+.0f} ns")
     return passed
 
@@ -122,11 +150,18 @@ def main():
     p.add_argument("--text", action="store_true",
                    help="Measure the ASCII TEXT stream instead of the "
                         "BINARY union (different USB-drain ceiling)")
+    p.add_argument("--settle", type=float, default=0.5,
+                   help="Seconds to drain post-reconfigure residue "
+                        "before each measurement window; transition "
+                        "isolation so a one-time siggen-reconfig "
+                        "transient is not misread as a rate failure "
+                        "(default: 0.5, matching phase_sustained)")
     args = p.parse_args()
 
     lo = args.bottom
     hi = args.top
     text = args.text
+    settle = args.settle
 
     with LectroTIC4(args.port) as tic:
         print(f"Searching for max sustained rate in range "
@@ -134,7 +169,8 @@ def main():
         print(f"LectroTIC-4 port: {tic.port}")
         print(f"Signal generator: {args.host}")
         print(f"Wire format: {'TEXT' if text else 'BINARY'}")
-        print(f"Measurement: {args.measure}s/frequency, per-gap "
+        print(f"Measurement: {args.measure}s/frequency, "
+              f"{settle:.1f}s settle, per-gap "
               f"tolerance +/-{args.tolerance * 1e9:.0f} ns, "
               f"loss via in-band PULSES_LOST")
         print()
