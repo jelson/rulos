@@ -139,9 +139,13 @@ _Static_assert(CLOCK_FREQ_HZ - 1 <= COUNTER_VALUE_MASK,
 #define COUNTER_MSGTYPE_MASK 0xFFu
 #define MSG_OUTPUT_CLEARED 0u  // all-zero payload, still a full 8-byte
                                // record; binary analog of "# output
-                               // discarded"
+                               // cleared"
 #define MSG_PULSES_LOST    1u  // payload: [15:0] overcaptures,
                                // [31:16] buf overflows (each sat. 0xFFFF)
+#define MSG_OSC_FAIL       2u  // all-zero payload; reference-clock
+                               // failure -- the device has halted
+                               // (binary analog of the "# FATAL ..."
+                               // oscillator line)
 
 // PH1 is freed by HSE bypass (the otherwise-OSC_OUT pin on H5, same
 // trick as the G4 board freeing PF1).
@@ -545,7 +549,11 @@ static void periodic_task(void *data) {
     static bool error_printed = false;
     if (!error_printed && usbd_cdc_tx_ready(scpi_usb_cdc_handle())) {
       error_printed = true;
-      usbd_cdc_print(scpi_usb_cdc_handle(), "# FATAL: External oscillator failure. Connect a 10MHz source and press reset.\n");
+      if (format_mode == TIMESTAMPER_FORMAT_BINARY) {
+        send_special(0, MSG_OSC_FAIL, 0);
+      } else {
+        usbd_cdc_print(scpi_usb_cdc_handle(), "# FATAL: External oscillator failure. Connect a 10MHz source and press reset.\n");
+      }
     }
     return;
   }

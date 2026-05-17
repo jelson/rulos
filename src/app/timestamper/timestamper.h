@@ -70,6 +70,9 @@ bool timestamper_get_stream_enabled(void);
 //   1 PULSES_LOST    -- counter [31:30] = channel; seconds [15:0] =
 //                       overcaptures, [31:16] = buffer overflows
 //                       (each saturated at 65535).
+//   2 OSC_FAIL       -- payload all-zero; the reference clock failed
+//                       and the device has halted (binary analog of
+//                       the "# FATAL ... oscillator" line).
 // Text mode is unchanged: same "#" comment lines as before.
 typedef enum {
   TIMESTAMPER_FORMAT_TEXT,
