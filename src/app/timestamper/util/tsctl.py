@@ -60,19 +60,8 @@ import time
 # `seconds` and `nanoseconds` are integers -- whole seconds since the
 # device booted plus the 0..999_999_999 ns within that second -- kept
 # separate on purpose: a single 64-bit float can't represent enough
-# distinct nanoseconds to survive runs past ~104 days. Use
-# record_seconds() for relative math over short windows where a float
-# is fine.
+# distinct nanoseconds to survive runs past ~104 days.
 Record = namedtuple("Record", "channel seconds nanoseconds")
-
-
-def record_seconds(r):
-    """Float seconds-since-boot for a 'ts' Record. Convenient for
-    relative measurements over short windows (gaps, burst durations).
-    Do NOT use it to store or compare absolute timestamps from runs
-    longer than ~104 days: that is exactly the 2**53-nanosecond
-    float64 limit r.seconds/r.nanoseconds exist to avoid."""
-    return r.seconds + r.nanoseconds * 1e-9
 
 TIMESTAMPER_VID = 0x1209  # pid.codes
 TIMESTAMPER_PID = 0x71C4  # LectroTIC-4

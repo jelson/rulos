@@ -25,7 +25,7 @@ Usage:
 import argparse
 import sys
 
-from tsctl import LectroTIC4, record_seconds
+from tsctl import LectroTIC4
 from siggen import Siggen
 
 
@@ -38,16 +38,12 @@ def measure_rate(tic, settle_s, measure_s, verbose):
     # measurement window starts clean.
     tic.discard_pending()
 
+    # The binary stream is timestamps only (no overflow comment lines);
+    # dropped pulses show up downstream as an out-of-tolerance gap.
     timestamps = []
     overflows = 0
     for r in tic.read_for(measure_s):
-        if r.kind == "comment":
-            if "overflow" in r.comment.lower():
-                overflows += 1
-            if verbose:
-                print(f"    | {r.comment}")
-            continue
-        timestamps.append(record_seconds(r))
+        timestamps.append(r.seconds + r.nanoseconds * 1e-9)
     return timestamps, overflows
 
 
