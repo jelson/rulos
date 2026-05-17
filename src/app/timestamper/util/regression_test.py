@@ -45,7 +45,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 import flash
-from tsctl import LectroTIC4, Record, PulsesLost
+from tsctl import LectroTIC4, Timestamp, PulsesLost
 from siggen import Siggen
 
 TSCTL = os.path.join(os.path.dirname(__file__), "tsctl.py")
@@ -167,7 +167,7 @@ class BinaryMode:
             if isinstance(r, PulsesLost):
                 overcaptures += r.overcaptures
                 overflows += r.buf_overflows
-            elif isinstance(r, Record):
+            elif isinstance(r, Timestamp):
                 if r.channel != channel:
                     others.add(r.channel)
                     continue
@@ -180,7 +180,7 @@ class BinaryMode:
         out = []
         deadline = time.monotonic() + window_s
         for r in tic.read_for(window_s):
-            if isinstance(r, Record) and r.channel == channel:
+            if isinstance(r, Timestamp) and r.channel == channel:
                 out.append(time.monotonic())
                 if len(out) >= want:
                     break
