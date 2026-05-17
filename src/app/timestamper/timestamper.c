@@ -219,7 +219,9 @@ volatile uint32_t seconds_B = 0;
 // Circular buffer for timestamps not yet written to USB
 typedef struct {
   uint32_t seconds;
-  uint32_t counter;  // top 2 bits = channel, bottom 30 = counter value
+  uint32_t counter;  // [31:30] channel, [29] special-message flag,
+                     // [28] reserved, [27:0] tick value / message type
+                     // (see the COUNTER_* / MSG_* defines below)
 } timestamp_t;
 
 timestamp_t timestamp_buffer[TIMESTAMP_BUFLEN];
