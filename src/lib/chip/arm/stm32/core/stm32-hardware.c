@@ -20,6 +20,7 @@
 #include "core/clock_split.h"
 #include "core/hal.h"
 #include "core/hardware.h"
+#include "core/dfu.h"
 
 #if defined(RULOS_ARM_stm32c0)
 /**
@@ -497,6 +498,11 @@ void _init() {
 }
 
 void rulos_hal_init() {
+  // Before anything else (CCM copy, HAL, clocks, caches, peripherals):
+  // if a host DFU_DETACH asked us to update firmware, this jumps into
+  // the ROM bootloader and never returns. No-op on a normal boot.
+  rulos_dfu_check_and_jump();
+
   // Copy .ccmram section from flash to CCM SRAM. This must happen before
   // any CCM-resident functions are called. Safe to run before HAL_Init()
   // since CCM SRAM needs no clock enable.

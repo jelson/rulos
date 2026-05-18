@@ -59,12 +59,19 @@ typedef struct usbd_cdc_state_s usbd_cdc_state_t;
 typedef void (*usbd_cdc_rx_cb)(usbd_cdc_state_t *cdc, void *user_data,
                                const uint8_t *data, uint32_t len);
 typedef void (*usbd_cdc_tx_complete_cb)(usbd_cdc_state_t *cdc, void *user_data);
+// Invoked (from task context) when the host opens the port (asserts
+// DTR) and when it closes it or the cable is pulled. The right place
+// to emit a greeting: tx is ready when connect_cb runs. Optional;
+// leave NULL if unused.
+typedef void (*usbd_cdc_connect_cb)(usbd_cdc_state_t *cdc, void *user_data);
 
 // State structure - caller allocates this
 struct usbd_cdc_state_s {
   // Public: caller must set these before init
   usbd_cdc_rx_cb rx_cb;
   usbd_cdc_tx_complete_cb tx_complete_cb;
+  usbd_cdc_connect_cb connect_cb;
+  usbd_cdc_connect_cb disconnect_cb;
   void *user_data;
 
   // Private: library manages these - do not access directly

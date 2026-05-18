@@ -157,6 +157,25 @@ SECTIONS
     __bss_end__ = _ebss;
   } >RAM
 
+  /*
+   * Uninitialized RAM that survives a warm reset. It is NOT part of
+   * .bss, so the startup .bss-zero loop never clears it, and (NOLOAD)
+   * it has no flash LMA to be copied from at boot. SRAM content is
+   * retained across a system reset, so this is where the DFU facility
+   * keeps its reboot magic: a host DFU_DETACH writes it just before
+   * NVIC_SystemReset(), and the very early boot path reads it to
+   * decide whether to jump straight to the ROM bootloader.
+   */
+  . = ALIGN(4);
+  .noinit (NOLOAD) :
+  {
+    _snoinit = .;
+    *(.noinit)
+    *(.noinit*)
+    . = ALIGN(4);
+    _enoinit = .;
+  } >RAM
+
   /* User_heap_stack section, used to check that there is enough RAM left */
   ._user_heap_stack :
   {

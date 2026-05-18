@@ -19,6 +19,7 @@
 #include "usb_cdc.h"
 #include "core/hal.h"
 #include "core/rulos.h"
+#include "core/dfu.h"
 #include "stm32.h"
 #include "usbd_cdc.h"
 #include "usbd_conf.h"
@@ -87,15 +88,50 @@ static int8_t CDC_Init_FS(void) {
   return USBD_OK;
 }
 
+static void disconnect_task(void *data);
+
 static int8_t CDC_DeInit_FS(void) {
   if (cdc_device) {
+    bool was_ready = cdc_device->usb_ready;
     cdc_device->usb_ready = false;
     // If USB drops mid-transfer, TransmitComplete will never fire.
     // Reset tx state so the device can TX again after reconnect.
     cdc_device->tx_busy = false;
     cdc_device->tx_buf_in_flight = NULL;
+    if (was_ready) {
+      schedule_now(disconnect_task, cdc_device);
+    }
   }
   return USBD_OK;
+}
+
+// The RULOS DFU runtime interface is interface #2 in the CDC config
+// descriptor (see ext/.../Class/CDC/Src/usbd_cdc.c). A host running
+// `dfu-util -e` sends the DFU_DETACH class request (bRequest 0, zero
+// length) to it; we reboot into the ROM bootloader (core/dfu.c).
+#define DFU_RUNTIME_IFACE 2U
+#define DFU_DETACH_REQUEST 0x00U
+
+// Deferred so the DFU_DETACH control transfer's status stage can ACK
+// before the device drops off the bus -- otherwise dfu-util reports a
+// failed detach even though the reboot is happening.
+static void dfu_detach_task(void *data) {
+  rulos_dfu_enter_bootloader();  // sets magic + NVIC_SystemReset(); no return
+}
+
+// Host open/close (DTR edge) delivered from task context, not the USB
+// callback context, like rx/tx.
+static void connect_task(void *data) {
+  usbd_cdc_state_t *cdc = (usbd_cdc_state_t *)data;
+  if (cdc->connect_cb) {
+    cdc->connect_cb(cdc, cdc->user_data);
+  }
+}
+static void disconnect_task(void *data) {
+  usbd_cdc_state_t *cdc = (usbd_cdc_state_t *)data;
+  if (cdc->disconnect_cb) {
+    cdc->disconnect_cb(cdc, cdc->user_data);
+  }
 }
 
 static int8_t CDC_Control_FS(uint8_t cmd, uint8_t *pbuf, uint16_t length) {
@@ -103,13 +139,32 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t *pbuf, uint16_t length) {
     LOG("CDC_Control_FS: no device");
     return USBD_FAIL;
   }
+  // Zero-length class requests arrive with pbuf = the raw setup packet.
+  // DFU_DETACH targets the DFU interface; the wIndex guard keeps it
+  // from colliding with the CDC class requests (0x20..0x22).
+  if (cmd == DFU_DETACH_REQUEST) {
+    USBD_SetupReqTypedef *req = (USBD_SetupReqTypedef *)pbuf;
+    if ((req->bmRequest & USB_REQ_TYPE_MASK) == USB_REQ_TYPE_CLASS &&
+        req->wIndex == DFU_RUNTIME_IFACE) {
+      schedule_us(100000, dfu_detach_task, NULL);
+      return USBD_OK;
+    }
+  }
   // Track host port open/close via DTR bit in SET_CONTROL_LINE_STATE.
   // When wLength==0 the middleware passes the raw setup packet as pbuf.
   // DTR (bit 0 of wValue) is set when the host opens the port and cleared
-  // when it closes it.
+  // when it closes it. usb_ready is set before connect_cb is dispatched
+  // so the callback can transmit a greeting.
   if (cmd == CDC_SET_CONTROL_LINE_STATE) {
     USBD_SetupReqTypedef *req = (USBD_SetupReqTypedef *)pbuf;
-    cdc_device->usb_ready = (req->wValue & 0x01) != 0;
+    bool dtr = (req->wValue & 0x01) != 0;
+    if (dtr && !cdc_device->usb_ready) {
+      cdc_device->usb_ready = true;
+      schedule_now(connect_task, cdc_device);
+    } else if (!dtr && cdc_device->usb_ready) {
+      cdc_device->usb_ready = false;
+      schedule_now(disconnect_task, cdc_device);
+    }
   }
   return USBD_OK;
 }
@@ -260,6 +315,120 @@ static void init_usb_clock(void) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
+// RULOS composite descriptor: stock CDC + a DFU 1.1 runtime interface
+//
+// Whether this product also exposes DFU is RULOS policy, not an ST
+// library concern, so the vendored CDC tree stays pristine. At init we
+// take ST's own CDC configuration descriptor verbatim, insert an
+// Interface Association Descriptor that groups the two CDC interfaces
+// as one function, append a RULOS-owned DFU runtime interface, and fix
+// the interface count and total length. The DFU interface has no
+// endpoints -- its only request, DFU_DETACH, rides EP0 and is handled
+// in CDC_Control_FS -- so no CDC class behaviour changes; only the
+// three GetXxxConfigDescriptor getters are overridden. The device
+// descriptor's class triplet is EF/02/01 (usbd_desc.c) so the host
+// looks for the IAD.
+//////////////////////////////////////////////////////////////////////////////
+
+// 8-byte Interface Association Descriptor grouping the two CDC
+// interfaces (0 and 1) as one function. With three interfaces of two
+// different classes in one configuration, the host needs the IAD to
+// know interfaces 0-1 are the CDC-ACM function and interface 2 is
+// separate; without it Linux cdc-acm binds but does not auto-assert
+// DTR on open (so a bare `cat` sees nothing), and Windows mis-binds.
+// It is placed immediately before interface 0, per the USB spec.
+#define RULOS_IAD_DESC_LEN 8
+static const uint8_t rulos_cdc_iad[RULOS_IAD_DESC_LEN] = {
+    0x08, 0x0B,  // bLength, bDescriptorType: INTERFACE ASSOCIATION
+    0x00,        // bFirstInterface: 0
+    0x02,        // bInterfaceCount: 2 (CDC control + CDC data)
+    0x02,        // bFunctionClass: CDC Communications
+    0x02,        // bFunctionSubClass: Abstract Control Model
+    0x01,        // bFunctionProtocol: AT commands
+    0x00,        // iFunction
+};
+
+// 9-byte DFU interface descriptor + 9-byte DFU 1.1 functional descriptor.
+#define RULOS_DFU_DESC_LEN 18
+static const uint8_t rulos_dfu_desc[RULOS_DFU_DESC_LEN] = {
+    // Interface #2, no endpoints, class 0xFE (Application Specific) /
+    // subclass 1 (DFU) / protocol 1 (runtime, not DFU mode).
+    0x09, USB_DESC_TYPE_INTERFACE, 0x02, 0x00, 0x00, 0xFE, 0x01, 0x01, 0x00,
+    // DFU functional descriptor (DFU 1.1).
+    0x09, 0x21,
+    0x0D,        // bmAttributes: WillDetach|ManifestTolerant|CanDnload
+    0xE8, 0x03,  // wDetachTimeOut: 1000 ms
+    0x00, 0x04,  // wTransferSize: 1024
+    0x10, 0x01,  // bcdDFUVersion: 1.1
+};
+
+// Stock cfg descriptor + the inserted IAD + the appended DFU block,
+// one buffer per speed the ST core may request.
+#define RULOS_CFG_BUFLEN \
+  (USB_CDC_CONFIG_DESC_SIZ + RULOS_IAD_DESC_LEN + RULOS_DFU_DESC_LEN)
+static uint8_t rulos_cfg_fs[RULOS_CFG_BUFLEN];
+static uint8_t rulos_cfg_hs[RULOS_CFG_BUFLEN];
+static uint8_t rulos_cfg_os[RULOS_CFG_BUFLEN];
+static uint16_t rulos_fs_len, rulos_hs_len, rulos_os_len;
+
+// The configuration descriptor is a 9-byte header followed by the
+// interface/endpoint descriptors.
+#define USB_CONFIG_HDR_LEN 9
+
+// Build the composite: stock config header, then the IAD, then the
+// stock interfaces (CDC 0+1), then the DFU interface. Patch
+// wTotalLength and bNumInterfaces. Returns the composite length.
+static uint16_t build_composite(const uint8_t *src, uint16_t srclen,
+                                uint8_t *dst) {
+  uint16_t total = (uint16_t)(srclen + RULOS_IAD_DESC_LEN +
+                              RULOS_DFU_DESC_LEN);
+  memcpy(dst, src, USB_CONFIG_HDR_LEN);
+  memcpy(dst + USB_CONFIG_HDR_LEN, rulos_cdc_iad, RULOS_IAD_DESC_LEN);
+  memcpy(dst + USB_CONFIG_HDR_LEN + RULOS_IAD_DESC_LEN,
+         src + USB_CONFIG_HDR_LEN, srclen - USB_CONFIG_HDR_LEN);
+  memcpy(dst + RULOS_IAD_DESC_LEN + srclen, rulos_dfu_desc,
+         RULOS_DFU_DESC_LEN);
+  dst[2] = (uint8_t)(total & 0xFF);  // wTotalLength low
+  dst[3] = (uint8_t)(total >> 8);    // wTotalLength high
+  dst[4] += 1;  // bNumInterfaces += the DFU interface (IAD is not one)
+  return total;
+}
+
+static uint8_t *rulos_get_fs_cfg(uint16_t *length) {
+  *length = rulos_fs_len;
+  return rulos_cfg_fs;
+}
+static uint8_t *rulos_get_hs_cfg(uint16_t *length) {
+  *length = rulos_hs_len;
+  return rulos_cfg_hs;
+}
+static uint8_t *rulos_get_os_cfg(uint16_t *length) {
+  *length = rulos_os_len;
+  return rulos_cfg_os;
+}
+
+// Stock CDC class with only the three config-descriptor getters
+// replaced by the composite ones; built once in usbd_cdc_init().
+static USBD_ClassTypeDef rulos_cdc_dfu_class;
+
+static void build_rulos_cdc_dfu_class(void) {
+  uint16_t len;
+  uint8_t *p;
+
+  p = USBD_CDC.GetFSConfigDescriptor(&len);
+  rulos_fs_len = build_composite(p, len, rulos_cfg_fs);
+  p = USBD_CDC.GetHSConfigDescriptor(&len);
+  rulos_hs_len = build_composite(p, len, rulos_cfg_hs);
+  p = USBD_CDC.GetOtherSpeedConfigDescriptor(&len);
+  rulos_os_len = build_composite(p, len, rulos_cfg_os);
+
+  rulos_cdc_dfu_class = USBD_CDC;  // inherit all stock CDC behaviour
+  rulos_cdc_dfu_class.GetFSConfigDescriptor = rulos_get_fs_cfg;
+  rulos_cdc_dfu_class.GetHSConfigDescriptor = rulos_get_hs_cfg;
+  rulos_cdc_dfu_class.GetOtherSpeedConfigDescriptor = rulos_get_os_cfg;
+}
+
+//////////////////////////////////////////////////////////////////////////////
 // Public API
 //////////////////////////////////////////////////////////////////////////////
 
@@ -288,7 +457,10 @@ void usbd_cdc_init(usbd_cdc_state_t *cdc) {
     __builtin_trap();
   }
 
-  if (USBD_RegisterClass(&cdc->usbd_handle, &USBD_CDC) != USBD_OK) {
+  // Register the stock CDC class augmented with the RULOS DFU runtime
+  // interface (composite descriptor; vendored CDC code untouched).
+  build_rulos_cdc_dfu_class();
+  if (USBD_RegisterClass(&cdc->usbd_handle, &rulos_cdc_dfu_class) != USBD_OK) {
     __builtin_trap();
   }
 

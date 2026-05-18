@@ -6,7 +6,8 @@ void *USBD_malloc(uint32_t size);
 void USBD_free(void *ptr);
 
 /*---------- -----------*/
-#define USBD_MAX_NUM_INTERFACES     1U
+/* CDC control + CDC data + the RULOS DFU runtime interface. */
+#define USBD_MAX_NUM_INTERFACES     3U
 /*---------- -----------*/
 #define USBD_MAX_NUM_CONFIGURATION     1U
 /*---------- -----------*/
