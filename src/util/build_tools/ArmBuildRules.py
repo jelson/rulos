@@ -154,8 +154,7 @@ class ArmPlatform(BaseRules.Platform):
 
     def post_configure(self, env, outputs):
         # Create a hex file and a raw .bin from the elf file. The .bin
-        # is what flashing-over-DFU (dfu-util -D) wants; emitting it by
-        # default means callers never have to find/run objcopy.
+        # is what flashing-over-DFU (dfu-util -D) wants
         hexfile = env.HexFile(outputs[0])
         Default(hexfile)
         binfile = env.BinFile(outputs[0])
