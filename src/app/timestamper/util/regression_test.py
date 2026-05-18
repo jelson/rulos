@@ -44,7 +44,9 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(__file__))
-import flash
+sys.path.insert(0, os.path.join(
+    os.path.dirname(__file__), "..", "..", "..", "util"))
+import bmpflash
 from tsctl import LectroTIC4, Timestamp, PulsesLost
 from siggen import Siggen
 
@@ -815,7 +817,7 @@ def phase_config_persist():
     want = [("NEG", "3"), ("BOTH", "7"), ("POS", "5"), ("NEG", "9")]
     try:
         _persist_cfg(want)
-        rc = flash.reset_dut()
+        rc = bmpflash.reset()
         ok = expect(rc == 0, "BMP cold-reset issued (SRAM cleared)")
         tic = _reconnect()
     except Exception as e:
@@ -848,12 +850,12 @@ def phase_config_persist_torn(iters=12):
     completed) -- NEVER defaults or garbage (that would mean the A/B
     layout lost the prior slot) and NEVER a no-show (the ECC-fault boot
     brick). A surviving B becomes the next baseline. (A brick here
-    needs `flash.py --erase` to recover.)"""
+    needs `bmpflash.py --erase` to recover.)"""
     print(f"\n=== torn-write robustness: {iters} resets mid-save ===")
     base = [("NEG", "3"), ("BOTH", "7"), ("POS", "5"), ("NEG", "9")]
     try:
         _persist_cfg(base)                   # clean baseline write
-        rc = flash.reset_dut()
+        rc = bmpflash.reset()
         ok = expect(rc == 0, "baseline reset issued")
         tic = _reconnect()
         with tic:
@@ -876,7 +878,7 @@ def phase_config_persist_torn(iters=12):
             # of ms). Reset across that window so some iterations
             # interrupt it; the A/B slot + ECC must keep base intact.
             time.sleep(random.uniform(0.0, 0.06))
-            rc = flash.reset_dut()
+            rc = bmpflash.reset()
             if rc != 0:
                 ok &= expect(False, f"iter {i}: reset rc={rc}")
                 continue
