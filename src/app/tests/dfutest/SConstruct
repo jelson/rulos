@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson
+# (jelson@gmail.com).
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+import sys
+sys.path.insert(0, "../../../util")
+from build_tools import *
+
+# Exercises the shared RULOS DFU facility (core/rulos_dfu.* + the DFU
+# runtime interface the usb-cdc-stm32 peripheral adds). The app is a
+# bare USB CDC banner emitter; DFU comes for free from the peripheral,
+# which is exactly what dfu_test.py validates end to end on the H5.
+#
+# Built for G4 too (no hardware test there) so the facility's
+# compile-time coverage spans both the H5 and G4 USB-CDC backends.
+RulosBuildTarget(
+    name = "dfutest",
+    sources = ["main.c"],
+    peripherals = "usb-cdc-stm32 uart",
+    extra_cflags = [
+        # Distinct USB identity so the host test and `dfu-util -e` can
+        # find the runtime device unambiguously (pid.codes test space).
+        '-DUSBD_VID=0x1209',
+        '-DUSBD_PID=0xDF00',
+        '-DUSBD_PRODUCT_STRING=\\"RULOS-DFUTEST\\"',
+        '-DUSBD_SERIAL_PREFIX=\\"DFUT-\\"',
+    ],
+    platforms = [
+        ArmStmPlatform("stm32g431x8"),
+        ArmStmPlatform("stm32h523xc"),
+    ],
+).build()
