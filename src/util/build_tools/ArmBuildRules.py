@@ -153,9 +153,13 @@ class ArmPlatform(BaseRules.Platform):
         subprocess.call(["grabserial", "-d", uart_path, "-b", "1000000", "-t"])
 
     def post_configure(self, env, outputs):
-        # Create a hex file from the elf file
+        # Create a hex file and a raw .bin from the elf file. The .bin
+        # is what flashing-over-DFU (dfu-util -D) wants; emitting it by
+        # default means callers never have to find/run objcopy.
         hexfile = env.HexFile(outputs[0])
         Default(hexfile)
+        binfile = env.BinFile(outputs[0])
+        Default(binfile)
 
         # Create programming aliases so a command like "scons
         # program-stm32-<progname>" works, even for SConstruct files

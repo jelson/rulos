@@ -59,6 +59,13 @@ class Platform:
                     f"{compiler_prefix}objcopy $SOURCE -O ihex $TARGET",
                     'Creating hex', use_source=False),
             ),
+            "BinFile": Builder(
+                src_suffix = ".elf",
+                suffix = ".bin",
+                action = env.SpinnerAction(
+                    f"{compiler_prefix}objcopy $SOURCE -O binary $TARGET",
+                    'Creating bin', use_source=False),
+            ),
         })
 
     def common_libs(self, target):
@@ -173,6 +180,15 @@ class Platform:
         env.Append(CCFLAGS = target.cflags())
         env.Append(LINKFLAGS = self.cflags())
         env.Append(LINKFLAGS = target.cflags())
+
+        # Command-line --define KEY=VAL (repeatable) -> -DKEY=VAL,
+        # appended last so it overrides any SConstruct/extra_cflags
+        # default. Same quoting rules as an extra_cflags entry, e.g.
+        #   scons --define 'FOO=\"bar\"'
+        # Goes on LINKFLAGS too (LTO needs matching compile/link flags).
+        cli_defines = ["-D" + d for d in (GetOption('rulos_defines') or [])]
+        env.Append(CCFLAGS = cli_defines)
+        env.Append(LINKFLAGS = cli_defines)
         env.Append(LINKFLAGS = self.ld_flags(target))
         env.Append(CPPPATH = self.include_dirs(target))
         env.Append(CPPPATH = os.path.join(build_obj_dir, "src"))
