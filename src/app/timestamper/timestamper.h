@@ -103,7 +103,7 @@ void timestamper_config_save(void);
 // format, stream enable) is preserved.
 void timestamper_discard_pending(void);
 
-#define TIMESTAMPER_FW_VERSION "0.13.0"
+#define TIMESTAMPER_FW_VERSION "0.14.0"
 
 // *IDN? identity string. Call after rulos_hal_init().
 const char *timestamper_idn(void);
