@@ -43,8 +43,18 @@
 #include "periph/usb_cdc/usb_cdc.h"
 
 typedef struct {
-  // Identity returned for *IDN?. Required.
-  const char *idn;
+  // Identity fields used to build the *IDN? response in the IEEE 488.2 form
+  // "<vendor>,<model>,<serial>,<firmware>". The library fills:
+  //   <serial>   from usbd_cdc_get_serial() at scpi_init() time -- matches
+  //              the USB iSerialNumber descriptor (USBD_SERIAL_PREFIX + UID).
+  //   <firmware> as "<version>-<git_commit>" if version is non-NULL, or
+  //              just "<git_commit>" if version is NULL. The git commit is
+  //              GIT_COMMIT, a global -D flag set by the build system.
+  // vendor and model are required; copies are not made, so pass string
+  // literals or pointers to long-lived storage.
+  const char *vendor;
+  const char *model;
+  const char *version;   // optional, NULL = git commit only
 
   // Called when *RST is received. May be NULL.
   void (*on_reset)(void);

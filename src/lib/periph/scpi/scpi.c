@@ -20,9 +20,11 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include <strings.h>
 
+#include "core/util.h"
 #include "periph/uart/linereader.h"
 #include "periph/usb_cdc/usb_cdc.h"
 
@@ -31,9 +33,16 @@
 // writes stepping on the same buffer mid-flight.
 #define SCPI_TX_BUFLEN 128
 
+// *IDN? response buffer. The format "<vendor>,<model>,<serial>,<firmware>"
+// is bounded by the lengths the app supplies in scpi_config_t plus the
+// USB serial; 128 bytes leaves room for a typical vendor name, a product
+// name, the prefix+UID serial, and a version/commit firmware tag.
+#define SCPI_IDN_BUFLEN 128
+
 static usbd_cdc_state_t scpi_usb_cdc;
 static LineReader_t linereader;
 static char tx_buf[SCPI_TX_BUFLEN];
+static char idn_buf[SCPI_IDN_BUFLEN];
 static volatile bool recent_activity = false;
 static scpi_config_t cfg;
 
@@ -164,7 +173,7 @@ bool scpi_parse_bool(const char *s, bool *out) {
 // matched and handled.
 static bool try_standard(const char *line) {
   if (strncasecmp(line, "*IDN?", 5) == 0) {
-    scpi_print(cfg.idn);
+    scpi_print(idn_buf);
     return true;
   }
   if (strncasecmp(line, "*RST", 4) == 0) {
@@ -244,6 +253,20 @@ static void on_usb_tx_complete(usbd_cdc_state_t *cdc, void *user_data) {
 
 void scpi_init(const scpi_config_t *config) {
   cfg = *config;
+
+  // Build the IEEE 488.2 *IDN? response once. The serial matches the USB
+  // iSerialNumber descriptor: USBD_SERIAL_PREFIX + STM32 96-bit UID. The
+  // firmware field is "<version>-<commit>" if the app supplied a version,
+  // or just "<commit>" otherwise.
+  char serial[USBD_SERIAL_BUFLEN];
+  usbd_cdc_get_serial(serial);
+  if (cfg.version) {
+    snprintf(idn_buf, sizeof(idn_buf), "%s,%s,%s,%s-" STRINGIFY(GIT_COMMIT),
+             cfg.vendor, cfg.model, serial, cfg.version);
+  } else {
+    snprintf(idn_buf, sizeof(idn_buf), "%s,%s,%s," STRINGIFY(GIT_COMMIT),
+             cfg.vendor, cfg.model, serial);
+  }
 
   linereader_init_unbound(&linereader, /*uart=*/NULL, on_line, NULL);
 

@@ -720,23 +720,6 @@ static void init_timers() {
   LL_TIM_EnableCounter(TIM15);
 }
 
-// ---------------------------------------------------------------------------
-// Public API for the SCPI dispatcher in scpi.c. Declared in timestamper.h.
-
-// IEEE 488.2 *IDN? response: <vendor>,<model>,<serial>,<firmware>.
-// Serial is the LT4- product tag + STM32 unique ID, identical to the
-// USB iSerialNumber.
-const char *timestamper_idn(void) {
-  static char idn[80];
-  char serial[USBD_SERIAL_BUFLEN];
-  usbd_cdc_get_serial(serial);
-  snprintf(idn, sizeof(idn),
-           "Lectrobox,LectroTIC-4,%s," TIMESTAMPER_FW_VERSION
-           "-" STRINGIFY(GIT_COMMIT),
-           serial);
-  return idn;
-}
-
 void timestamper_set_slope(int ch, timestamper_slope_t slope) {
   if (ch < 0 || ch >= NUM_CHANNELS) return;
   uint32_t pol;
