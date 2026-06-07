@@ -1,6 +1,7 @@
 # Pulsegen PCB notes
 
-Hardware target: **STM32G474xB** (LQFP48 minimum, for PF1 access).
+Hardware target: **STM32G474RE** (LQFP64, `stm32g474xe` in the build
+system: 512 KB flash, 96 KB SRAM). LQFP64 is needed for Port C access.
 
 ## Critical pin choices
 
@@ -9,31 +10,36 @@ changing code in `pulsegen.c`.
 
 | Net          | MCU pin | Why                                                          |
 |--------------|---------|--------------------------------------------------------------|
-| PULSE_OUT_1  | **PA9** | Only G474 pin that maps to both HRTIM (CHA2 / AF13) and a 32-bit timer (TIM2_CH3 / AF10). The firmware switches AF at runtime. |
-| PULSE_OUT_2  | **PA10**| Same property: HRTIM_CHB1 (AF13) and TIM2_CH4 (AF10).        |
-| OSC_IN       | PF0     | HSE input, fed by the 10 MHz active oscillator.              |
-| OSC_OUT (PF1)| LED_CLOCK | HSE bypass mode frees PF1; we drive a heartbeat LED here. |
+| PULSE_OUT_0  | **PC6** | HRTIM1_CHF1 (AF13) and TIM3_CH1 (AF2). Firmware switches AF at runtime: HRTIM for short periods (≤524 µs, 250 ps placement resolution), TIM3 for longer periods (up to ~34.4 s via TIM3's 16-bit prescaler). |
+| PULSE_OUT_1  | **PC7** | HRTIM1_CHF2 (AF13) and TIM3_CH2 (AF2). |
+| PULSE_OUT_2  | **PC8** | HRTIM1_CHE1 (AF13) and TIM3_CH3 (AF2). |
+| PULSE_OUT_3  | **PC9** | HRTIM1_CHE2 (AF13) and TIM3_CH4 (AF2). |
+| OSC_IN       | PF0     | HSE input, fed by the 10 MHz active oscillator. HSE bypass mode leaves PF1 (OSC_OUT) unused. |
 | USB_DM       | PA11    | Fixed by silicon.                                            |
 | USB_DP       | PA12    | Fixed by silicon.                                            |
-| UART_TX      | PA2     | USART2_TX, AF7 (rulos `uart_id=1`).                          |
-| UART_RX      | PA3     | USART2_RX, AF7.                                              |
+| UART_TX      | PA9     | USART1_TX, AF7 (rulos `uart_id=0`).                          |
+| UART_RX      | PA10    | USART1_RX, AF7.                                              |
 
-The USART1 pins (PA9/PA10) are reserved for outputs, which is why the
-debug UART has to live on USART2.
+The four outputs are the only G474 pins that map to BOTH an HRTIM output
+(via Timers E and F on AF13) and a general-purpose timer channel (TIM3
+on AF2), so they can carry either a fine HRTIM pulse train (down to a
+~24 ns minimum period) or a long-period TIM3 train (up to ~34.4 s).
 
 ### LEDs (flexible — change in `pulsegen.c` if you reroute)
 
-| Function       | Default pin |
-|----------------|-------------|
-| Channel 1 act. | PA4         |
-| Channel 2 act. | PA5         |
-| HSE heartbeat  | PF1         |
-| USB enumerated | PA8         |
+| Function       | Pin     | Note |
+|----------------|---------|------|
+| Channel 0 act. | PC0     |      |
+| Channel 1 act. | PA3     |      |
+| Channel 2 act. | PA4     |      |
+| Channel 3 act. | PA8     |      |
+| HSE heartbeat  | PB4     |      |
+| USB enumerated | PA5     |      |
 
 ## Headers
 
-- **2× SMA / BNC**: PULSE_OUT_1 (PA9), PULSE_OUT_2 (PA10). 50 Ω trace from
-  pin to connector. See "Output buffer" below — a direct CMOS pin into a
+- **4× SMA / BNC**: PULSE_OUT_0..3 (PC6, PC7, PC8, PC9). 50 Ω trace from
+  pin to connector. See "Output drive" below — a direct CMOS pin into a
   BNC is rarely what you want for ≤250 ps edges.
 - **USB-C / micro-USB** for PA11/PA12 and 5 V supply input.
 - **3-pin debug UART header**: GND, PA2 (TX from MCU), PA3 (RX into MCU).
@@ -102,8 +108,13 @@ port.
 ## Footnotes
 
 - The G474 LQFP32 package does **not** exist; LQFP48 is the smallest
-  variant that gives you PF1.
-- `PA8` is HRTIM1_CHA1 — kept free as a USB activity LED rather than
-  routed to a connector. If you ever want a 3rd output channel, PA8 is
-  HRTIM-only (no 32-bit-timer fallback), so it's only useful for periods
-  ≤524 µs unless you accept losing the long-period mode for that channel.
+  variant that gives you PF1, and LQFP64 is needed for Port C (PC6-PC9).
+- Each TIM3 channel has its own CCR, but TIM3 has a single shared ARR
+  and a single shared 16-bit prescaler. Two channels in TIM3 mode at
+  the same time will share whichever period was set last. Widths are
+  per-channel and unaffected.
+- USB DFU is enabled automatically by the `usb-cdc-stm32` peripheral
+  (the composite descriptor adds a DFU runtime interface). VID/PID
+  `0x1209:0x71C5` is configured in SConstruct so `dfu-util -d 1209:71C5
+  -a 0 -s 0x08000000:leave -D pulsegen.bin` will update firmware in
+  one command.

@@ -129,7 +129,8 @@ static bool dispatch_line(const char *line) {
 
 void pulsegen_scpi_init(void) {
   const scpi_config_t cfg = {
-      .idn = pulsegen_idn,
+      .vendor = "Lectrobox",
+      .model = "Pulsegen",
       .on_reset = pulsegen_reset_all,
       .on_line = dispatch_line,
   };

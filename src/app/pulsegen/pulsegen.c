@@ -17,7 +17,7 @@
  */
 
 /*
- * pulsegen: a 2-channel pulse generator built on the same hardware family as
+ * pulsegen: a 4-channel pulse generator built on the same hardware family as
  * timestamper but using the STM32G474, which has the High-Resolution Timer
  * (HRTIM) peripheral. Configuration is delivered over USB CDC using a small
  * subset of SCPI; a UART debug port stays available for log output.
@@ -27,16 +27,17 @@
  *   fHRTIM = 125 MHz; with the HRTIM DLL at 32x oversampling, fHRCK = 4 GHz
  *   and the finest tick is 250 ps.
  *
- * Output pins -- chosen because they are the *only* pins on the G474 that map
- * to both an HRTIM output and a 32-bit timer (TIM2) channel, allowing the
- * same physical pin to carry either a fine HRTIM pulse train or a long-period
- * TIM2 pulse train depending on the requested rate:
+ * Output pins -- the only G474 pins that map to BOTH an HRTIM output and a
+ * general-purpose timer (TIM3) channel, so the firmware switches alternate
+ * function at runtime to pick HRTIM (fine resolution, short period) or TIM3
+ * (long period via TIM3's 16-bit prescaler):
  *
- *   Channel 1 -> PA9   (HRTIM1_CHA2 = AF13, or TIM2_CH3 = AF10)
- *   Channel 2 -> PA10  (HRTIM1_CHB1 = AF13, or TIM2_CH4 = AF10)
+ *   Channel 0 -> PC6   (HRTIM1_CHF1 = AF13, or TIM3_CH1 = AF2)
+ *   Channel 1 -> PC7   (HRTIM1_CHF2 = AF13, or TIM3_CH2 = AF2)
+ *   Channel 2 -> PC8   (HRTIM1_CHE1 = AF13, or TIM3_CH3 = AF2)
+ *   Channel 3 -> PC9   (HRTIM1_CHE2 = AF13, or TIM3_CH4 = AF2)
  *
- * Because PA9/PA10 are also USART1, the debug UART moves to USART2 (PA2 TX /
- * PA3 RX, RULOS uart_id=1).
+ * Debug UART lives on USART1 (PA9 TX / PA10 RX, RULOS uart_id=0).
  *
  * Timebase ladder. For a requested period T, we pick the highest-resolution
  * clock source that can still represent T in the available counter width:
@@ -47,12 +48,15 @@
  *   HRTIM CKPSC=3 (mul4):    2   ns tick  --> max ~131  us
  *   HRTIM CKPSC=4 (mul2):    4   ns tick  --> max ~262  us
  *   HRTIM CKPSC=5 (div1):    8   ns tick  --> max ~524  us
- *   TIM2 (32-bit @ sysclk):  8   ns tick  --> max ~34.4 s
+ *   TIM3 (16-bit ARR + 16-bit PSC): up to ~34.4 s at PSC=65535
  *
- * Caveat: TIM2_CH3 and TIM2_CH4 share the TIM2 ARR. If both channels need
- * TIM2 mode simultaneously, the second configuration overrides the period of
- * the first. (Width is per-channel via CCR3/CCR4 and is not affected.) This
- * only matters above 524 us, where the system is already constrained.
+ * TIM3 mode picks the smallest prescaler that lets the period fit in the
+ * 16-bit ARR; tick = (PSC+1) * 8 ns.
+ *
+ * Caveat: TIM3_CH1..CH4 share the TIM3 ARR (and PSC). If two channels are in
+ * TIM3 mode simultaneously, the last configuration overrides the period of
+ * the others. (Widths are per-channel via CCRn and are not affected.) This
+ * only matters above 524 us, where the system is already in coarse mode.
  *
  * SCPI command surface (subset):
  *   *IDN?
@@ -95,47 +99,65 @@
 #define HRTIM_CLK_HZ  125000000UL  // fHRTIM == sysclk on G4
 // fHRCK at CKPSC=0 = 32 * 125 MHz = 4 GHz -> 250 ps/tick
 #define HRTIM_FINEST_TICK_PS 250ULL
-// TIM2 runs at sysclk -> 1/125 MHz = 8000 ps/tick
-#define TIM2_TICK_PS         8000ULL
+// TIM3 runs at sysclk -> 1/125 MHz = 8000 ps/tick (before its own prescaler)
+#define TIM3_BASE_TICK_PS    8000ULL
 
 // HRTIM 16-bit period max in high-res mode (RM0440 27.3.4): the period must
 // be at least 3 (or higher in mul* modes) and at most 0xFFDF.
 #define HRTIM_PER_MAX 0xFFDFU
 
-// LEDs. PF1 is normally OSC_OUT; HSE bypass mode frees it for GPIO.
-#define LED_CHAN0 GPIO_A4   // channel 0 activity (output transitioning)
-#define LED_CHAN1 GPIO_A5   // channel 1 activity
-#define LED_CLOCK GPIO_F1   // 10 MHz HSE health
-#define LED_USB   GPIO_A8   // USB activity
+// LEDs.
+#define LED_CHAN0 GPIO_C0   // channel 0 activity (output transitioning)
+#define LED_CHAN1 GPIO_A3   // channel 1 activity
+#define LED_CHAN2 GPIO_A4   // channel 2 activity
+#define LED_CHAN3 GPIO_A8   // channel 3 activity
+#define LED_CLOCK GPIO_B4   // 10 MHz HSE health
+#define LED_USB   GPIO_A5   // USB activity
 
 // ---- Channel hardware mapping ----------------------------------------------
 
 typedef struct {
-  // GPIO pin (always GPIOA bit n on this board)
+  // GPIO pin (always GPIOC bit n on this board)
   uint32_t ll_pin;            // LL_GPIO_PIN_n
-  uint32_t hrtim_timer;       // LL_HRTIM_TIMER_A / B
-  uint32_t hrtim_output;      // LL_HRTIM_OUTPUT_TA2 / TB1
-  uint32_t tim2_ll_channel;   // LL_TIM_CHANNEL_CH3 / CH4
-  volatile uint32_t *tim2_ccr;
+  uint32_t hrtim_timer;       // LL_HRTIM_TIMER_E / F
+  uint32_t hrtim_output;      // LL_HRTIM_OUTPUT_TE1/TE2 or TF1/TF2
+  uint32_t tim3_ll_channel;   // LL_TIM_CHANNEL_CH1..CH4
+  volatile uint32_t *tim3_ccr;
   gpio_pin_t led;
 } channel_hw_t;
 
 static const channel_hw_t channel_hw[NUM_CHANNELS] = {
     [0] = {
-        .ll_pin           = LL_GPIO_PIN_9,
-        .hrtim_timer      = LL_HRTIM_TIMER_A,
-        .hrtim_output     = LL_HRTIM_OUTPUT_TA2,
-        .tim2_ll_channel  = LL_TIM_CHANNEL_CH3,
-        .tim2_ccr         = &TIM2->CCR3,
+        .ll_pin           = LL_GPIO_PIN_6,
+        .hrtim_timer      = LL_HRTIM_TIMER_F,
+        .hrtim_output     = LL_HRTIM_OUTPUT_TF1,
+        .tim3_ll_channel  = LL_TIM_CHANNEL_CH1,
+        .tim3_ccr         = &TIM3->CCR1,
         .led              = LED_CHAN0,
     },
     [1] = {
-        .ll_pin           = LL_GPIO_PIN_10,
-        .hrtim_timer      = LL_HRTIM_TIMER_B,
-        .hrtim_output     = LL_HRTIM_OUTPUT_TB1,
-        .tim2_ll_channel  = LL_TIM_CHANNEL_CH4,
-        .tim2_ccr         = &TIM2->CCR4,
+        .ll_pin           = LL_GPIO_PIN_7,
+        .hrtim_timer      = LL_HRTIM_TIMER_F,
+        .hrtim_output     = LL_HRTIM_OUTPUT_TF2,
+        .tim3_ll_channel  = LL_TIM_CHANNEL_CH2,
+        .tim3_ccr         = &TIM3->CCR2,
         .led              = LED_CHAN1,
+    },
+    [2] = {
+        .ll_pin           = LL_GPIO_PIN_8,
+        .hrtim_timer      = LL_HRTIM_TIMER_E,
+        .hrtim_output     = LL_HRTIM_OUTPUT_TE1,
+        .tim3_ll_channel  = LL_TIM_CHANNEL_CH3,
+        .tim3_ccr         = &TIM3->CCR3,
+        .led              = LED_CHAN2,
+    },
+    [3] = {
+        .ll_pin           = LL_GPIO_PIN_9,
+        .hrtim_timer      = LL_HRTIM_TIMER_E,
+        .hrtim_output     = LL_HRTIM_OUTPUT_TE2,
+        .tim3_ll_channel  = LL_TIM_CHANNEL_CH4,
+        .tim3_ccr         = &TIM3->CCR4,
+        .led              = LED_CHAN3,
     },
 };
 
@@ -144,7 +166,7 @@ static const channel_hw_t channel_hw[NUM_CHANNELS] = {
 typedef enum {
   CHAN_OFF = 0,
   CHAN_HRTIM,
-  CHAN_TIM2,
+  CHAN_TIM3,
 } chan_mode_t;
 
 typedef struct {
@@ -169,14 +191,14 @@ static channel_state_t chan_state[NUM_CHANNELS];
 
 static UartState_t uart;
 static volatile bool chan_active_pulse[NUM_CHANNELS];
-static bool welcome_printed = false;
 static bool hrtim_dll_ready = false;
 
-// Last assigned TIM2 ARR; used to detect inter-channel conflict.
-static uint32_t tim2_active_arr = 0;
-static uint8_t tim2_active_mask = 0;  // bit n set if channel n is in TIM2 mode
+// Last assigned TIM3 (PSC, ARR); used to detect inter-channel conflict.
+static uint32_t tim3_active_psc = 0;
+static uint32_t tim3_active_arr = 0;
+static uint8_t tim3_active_mask = 0;  // bit n set if channel n is in TIM3 mode
 
-// ---- HRTIM / TIM2 helpers --------------------------------------------------
+// ---- HRTIM / TIM3 helpers --------------------------------------------------
 
 static const uint32_t hrtim_ckpsc_to_ll[6] = {
     LL_HRTIM_PRESCALERRATIO_MUL32,
@@ -216,35 +238,52 @@ static bool select_hrtim(uint64_t period_ps, uint64_t width_ps,
   return false;
 }
 
-// TIM2 fallback: 32-bit counter at sysclk = 8000 ps/tick.
-static bool select_tim2(uint64_t period_ps, uint64_t width_ps,
-                        uint32_t *out_arr, uint32_t *out_ccr) {
-  uint64_t arr = period_ps / TIM2_TICK_PS;
-  if (arr < 2 || arr > 0xFFFFFFFFULL) return false;
-  uint64_t ccr = width_ps / TIM2_TICK_PS;
-  if (ccr < 1) ccr = 1;
-  if (ccr >= arr) ccr = arr - 1;
-  *out_arr = (uint32_t)arr;
-  *out_ccr = (uint32_t)ccr;
-  return true;
+// TIM3 fallback: 16-bit ARR fed by sysclk through a 16-bit prescaler. Pick the
+// smallest PSC that lets the period fit in ARR; this gives the finest tick at
+// the requested period.
+static bool select_tim3(uint64_t period_ps, uint64_t width_ps,
+                        uint32_t *out_psc, uint32_t *out_arr,
+                        uint32_t *out_ccr) {
+  for (uint32_t psc = 0; psc <= 0xFFFFU; psc++) {
+    uint64_t tick_ps = TIM3_BASE_TICK_PS * (uint64_t)(psc + 1);
+    uint64_t arr = period_ps / tick_ps;
+    if (arr < 2) {
+      // Period too small for this PSC; smaller PSC won't help either since
+      // we started at the smallest. Bail out.
+      return false;
+    }
+    if (arr > 0xFFFFULL) continue;  // doesn't fit in 16 bits, try a slower PSC
+    uint64_t ccr = width_ps / tick_ps;
+    if (ccr < 1) ccr = 1;
+    if (ccr >= arr) ccr = arr - 1;
+    *out_psc = psc;
+    *out_arr = (uint32_t)arr;
+    *out_ccr = (uint32_t)ccr;
+    return true;
+  }
+  return false;
 }
 
 static void set_pin_af(int ch, uint8_t af) {
-  // PA9/PA10 are both in the high half (pins 8..15)
-  LL_GPIO_SetAFPin_8_15(GPIOA, channel_hw[ch].ll_pin, af);
-  LL_GPIO_SetPinMode(GPIOA, channel_hw[ch].ll_pin, LL_GPIO_MODE_ALTERNATE);
-  LL_GPIO_SetPinSpeed(GPIOA, channel_hw[ch].ll_pin,
-                      LL_GPIO_SPEED_FREQ_VERY_HIGH);
-  LL_GPIO_SetPinOutputType(GPIOA, channel_hw[ch].ll_pin,
-                           LL_GPIO_OUTPUT_PUSHPULL);
-  LL_GPIO_SetPinPull(GPIOA, channel_hw[ch].ll_pin, LL_GPIO_PULL_NO);
+  // PC6/PC7 are in the low half (pins 0..7); PC8/PC9 are in the high half
+  // (pins 8..15). LL_GPIO has separate AF setters for each half.
+  const uint32_t pin = channel_hw[ch].ll_pin;
+  if (pin <= LL_GPIO_PIN_7) {
+    LL_GPIO_SetAFPin_0_7(GPIOC, pin, af);
+  } else {
+    LL_GPIO_SetAFPin_8_15(GPIOC, pin, af);
+  }
+  LL_GPIO_SetPinMode(GPIOC, pin, LL_GPIO_MODE_ALTERNATE);
+  LL_GPIO_SetPinSpeed(GPIOC, pin, LL_GPIO_SPEED_FREQ_VERY_HIGH);
+  LL_GPIO_SetPinOutputType(GPIOC, pin, LL_GPIO_OUTPUT_PUSHPULL);
+  LL_GPIO_SetPinPull(GPIOC, pin, LL_GPIO_PULL_NO);
 }
 
 static void drive_pin_low(int ch) {
-  LL_GPIO_ResetOutputPin(GPIOA, channel_hw[ch].ll_pin);
-  LL_GPIO_SetPinMode(GPIOA, channel_hw[ch].ll_pin, LL_GPIO_MODE_OUTPUT);
-  LL_GPIO_SetPinOutputType(GPIOA, channel_hw[ch].ll_pin,
-                           LL_GPIO_OUTPUT_PUSHPULL);
+  const uint32_t pin = channel_hw[ch].ll_pin;
+  LL_GPIO_ResetOutputPin(GPIOC, pin);
+  LL_GPIO_SetPinMode(GPIOC, pin, LL_GPIO_MODE_OUTPUT);
+  LL_GPIO_SetPinOutputType(GPIOC, pin, LL_GPIO_OUTPUT_PUSHPULL);
 }
 
 // Stop whatever is currently driving the pin and park it low.
@@ -257,12 +296,13 @@ static void stop_channel_output(int ch) {
       LL_HRTIM_DisableOutput(HRTIM1, hw->hrtim_output);
       LL_HRTIM_TIM_CounterDisable(HRTIM1, hw->hrtim_timer);
       break;
-    case CHAN_TIM2:
-      LL_TIM_CC_DisableChannel(TIM2, hw->tim2_ll_channel);
-      tim2_active_mask &= ~(1U << ch);
-      if (tim2_active_mask == 0) {
-        LL_TIM_DisableCounter(TIM2);
-        tim2_active_arr = 0;
+    case CHAN_TIM3:
+      LL_TIM_CC_DisableChannel(TIM3, hw->tim3_ll_channel);
+      tim3_active_mask &= ~(1U << ch);
+      if (tim3_active_mask == 0) {
+        LL_TIM_DisableCounter(TIM3);
+        tim3_active_arr = 0;
+        tim3_active_psc = 0;
       }
       break;
     case CHAN_OFF:
@@ -310,36 +350,37 @@ static void start_hrtim(int ch, uint8_t ckpsc, uint32_t arr, uint32_t ccr) {
   LL_HRTIM_TIM_CounterEnable(HRTIM1, hw->hrtim_timer);
 }
 
-static void start_tim2(int ch, uint32_t arr, uint32_t ccr) {
+static void start_tim3(int ch, uint32_t psc, uint32_t arr, uint32_t ccr) {
   const channel_hw_t *hw = &channel_hw[ch];
 
-  // Enforce shared-ARR semantics. If another channel is already running TIM2
-  // with a different ARR, the latest configuration wins (caller already
-  // warned on the SCPI side).
-  LL_TIM_CC_DisableChannel(TIM2, hw->tim2_ll_channel);
+  // Enforce shared-(PSC, ARR) semantics. If another channel is already running
+  // TIM3 with a different prescaler or period, the latest configuration wins.
+  LL_TIM_CC_DisableChannel(TIM3, hw->tim3_ll_channel);
 
-  LL_TIM_SetAutoReload(TIM2, arr - 1);  // ARR is "period - 1"
-  *hw->tim2_ccr = ccr;
+  LL_TIM_SetPrescaler(TIM3, psc);
+  LL_TIM_SetAutoReload(TIM3, arr - 1);  // ARR is "period - 1"
+  *hw->tim3_ccr = ccr;
 
-  LL_TIM_OC_SetMode(TIM2, hw->tim2_ll_channel, LL_TIM_OCMODE_PWM1);
-  LL_TIM_OC_SetPolarity(TIM2, hw->tim2_ll_channel, LL_TIM_OCPOLARITY_HIGH);
-  LL_TIM_OC_EnablePreload(TIM2, hw->tim2_ll_channel);
-  LL_TIM_CC_EnableChannel(TIM2, hw->tim2_ll_channel);
+  LL_TIM_OC_SetMode(TIM3, hw->tim3_ll_channel, LL_TIM_OCMODE_PWM1);
+  LL_TIM_OC_SetPolarity(TIM3, hw->tim3_ll_channel, LL_TIM_OCPOLARITY_HIGH);
+  LL_TIM_OC_EnablePreload(TIM3, hw->tim3_ll_channel);
+  LL_TIM_CC_EnableChannel(TIM3, hw->tim3_ll_channel);
 
-  set_pin_af(ch, 10);  // AF10 = TIM2
+  set_pin_af(ch, 2);  // AF2 = TIM3
 
-  if (!LL_TIM_IsEnabledCounter(TIM2)) {
-    LL_TIM_GenerateEvent_UPDATE(TIM2);  // load preload
-    LL_TIM_EnableCounter(TIM2);
+  if (!LL_TIM_IsEnabledCounter(TIM3)) {
+    LL_TIM_GenerateEvent_UPDATE(TIM3);  // load preload (prescaler + ARR)
+    LL_TIM_EnableCounter(TIM3);
   }
-  tim2_active_arr = arr;
-  tim2_active_mask |= (1U << ch);
+  tim3_active_psc = psc;
+  tim3_active_arr = arr;
+  tim3_active_mask |= (1U << ch);
 }
 
 // ---- Channel apply ---------------------------------------------------------
 
 // Called when the user toggles a channel state, or when burst arming wants
-// the output running. Picks HRTIM vs TIM2 and configures hardware. Returns
+// the output running. Picks HRTIM vs TIM3 and configures hardware. Returns
 // 0 on success, negative on error (caller logs SCPI error).
 static int apply_channel_active(int ch) {
   channel_state_t *st = &chan_state[ch];
@@ -350,7 +391,7 @@ static int apply_channel_active(int ch) {
   if (W >= T) return -2;
 
   uint8_t ckpsc;
-  uint32_t arr, ccr;
+  uint32_t psc, arr, ccr;
   if (select_hrtim(T, W, &ckpsc, &arr, &ccr)) {
     stop_channel_output(ch);
     if (!hrtim_dll_ready) return -3;
@@ -359,10 +400,10 @@ static int apply_channel_active(int ch) {
     chan_active_pulse[ch] = true;
     return 0;
   }
-  if (select_tim2(T, W, &arr, &ccr)) {
+  if (select_tim3(T, W, &psc, &arr, &ccr)) {
     stop_channel_output(ch);
-    start_tim2(ch, arr, ccr);
-    st->mode = CHAN_TIM2;
+    start_tim3(ch, psc, arr, ccr);
+    st->mode = CHAN_TIM3;
     chan_active_pulse[ch] = true;
     return 0;
   }
@@ -436,8 +477,6 @@ static int apply_channel(int ch) {
 }
 
 // ---- SCPI hooks (called from scpi.c) ---------------------------------------
-
-const char *const pulsegen_idn = "RULOS,Pulsegen,0," STRINGIFY(GIT_COMMIT);
 
 // Translate apply_channel's status code into a SCPI error string, or NULL on
 // success. Returned strings have static storage.
@@ -532,7 +571,7 @@ static void periodic_task(void *data) {
   schedule_us(100000, periodic_task, NULL);
 
   if (g_rulos_hse_failed) {
-    // Disable any output
+    // Disable outputs and flash the channel LEDs as a visual indicator.
     for (int i = 0; i < NUM_CHANNELS; i++) {
       stop_channel_output(i);
     }
@@ -542,19 +581,7 @@ static void periodic_task(void *data) {
     for (int i = 0; i < NUM_CHANNELS; i++) {
       gpio_set_or_clr(channel_hw[i].led, on);
     }
-    static bool error_printed = false;
-    if (!error_printed && scpi_usb_ready()) {
-      error_printed = true;
-      scpi_print(
-          "# FATAL: External oscillator failure. Connect a 10MHz source"
-          " and press reset.");
-    }
     return;
-  }
-
-  if (!welcome_printed && scpi_usb_ready()) {
-    scpi_print("# pulsegen ready, version " STRINGIFY(GIT_COMMIT));
-    welcome_printed = true;
   }
 
   update_leds();
@@ -579,24 +606,24 @@ static void init_hrtim(void) {
   }
 }
 
-static void init_tim2(void) {
-  __HAL_RCC_TIM2_CLK_ENABLE();
+static void init_tim3(void) {
+  __HAL_RCC_TIM3_CLK_ENABLE();
   LL_TIM_InitTypeDef tinit = {
       .Prescaler = 0,
       .CounterMode = LL_TIM_COUNTERMODE_UP,
-      .Autoreload = 0xFFFFFFFFU,
+      .Autoreload = 0xFFFFU,  // 16-bit counter
       .ClockDivision = LL_TIM_CLOCKDIVISION_DIV1,
       .RepetitionCounter = 0,
   };
-  LL_TIM_Init(TIM2, &tinit);
-  LL_TIM_DisableARRPreload(TIM2);
-  LL_TIM_EnableARRPreload(TIM2);
-  // Counter starts disabled; start_tim2 enables on demand.
+  LL_TIM_Init(TIM3, &tinit);
+  LL_TIM_EnableARRPreload(TIM3);
+  // Counter starts disabled; start_tim3 enables on demand.
 }
 
 static void init_gpio(void) {
   LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
-  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOF);
+  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOB);
+  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOC);
 
   // Channel pins start parked low.
   for (int i = 0; i < NUM_CHANNELS; i++) {
@@ -605,6 +632,8 @@ static void init_gpio(void) {
 
   gpio_make_output(LED_CHAN0);
   gpio_make_output(LED_CHAN1);
+  gpio_make_output(LED_CHAN2);
+  gpio_make_output(LED_CHAN3);
   gpio_make_output(LED_CLOCK);
   gpio_make_output(LED_USB);
 }
@@ -617,9 +646,8 @@ int main(void) {
   // Channel state defaults: outputs off, no period configured.
   memset(chan_state, 0, sizeof(chan_state));
 
-  // USART2 on PA2/PA3 (rulos uart_id=1) -- USART1 (PA9/PA10) is reserved
-  // for the pulse outputs.
-  uart_init(&uart, /*uart_id=*/1, 1000000);
+  // USART1 on PA9/PA10 (rulos uart_id=0).
+  uart_init(&uart, /*uart_id=*/0, 1000000);
   log_bind_uart(&uart);
 
   init_gpio();
@@ -627,7 +655,7 @@ int main(void) {
   pulsegen_scpi_init();
 
   init_hrtim();
-  init_tim2();
+  init_tim3();
 
   schedule_us(1, periodic_task, NULL);
   scheduler_run();

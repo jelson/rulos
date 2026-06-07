@@ -24,7 +24,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define NUM_CHANNELS 2
+#define NUM_CHANNELS 4
 
 // Setters for each SCPI-controllable parameter. The setter stashes the new
 // value and, if the channel is currently armed, reconfigures hardware.
@@ -38,6 +38,3 @@ const char *pulsegen_set_burst_period_ps(int ch, uint64_t ps);
 
 // *RST: disable all outputs and clear all per-channel config.
 void pulsegen_reset_all(void);
-
-// Identity string returned for *IDN?.
-extern const char *const pulsegen_idn;
