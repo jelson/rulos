@@ -26,6 +26,8 @@
 
 #define NUM_CHANNELS 4
 
+#define PULSEGEN_FW_VERSION "0.1.0"
+
 // Setters for each SCPI-controllable parameter. The setter stashes the new
 // value and, if the channel is currently armed, reconfigures hardware.
 // Returns NULL on success, or a static SCPI error string (e.g.

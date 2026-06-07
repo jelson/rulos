@@ -131,6 +131,7 @@ void pulsegen_scpi_init(void) {
   const scpi_config_t cfg = {
       .vendor = "Lectrobox",
       .model = "Pulsegen",
+      .version = PULSEGEN_FW_VERSION,
       .on_reset = pulsegen_reset_all,
       .on_line = dispatch_line,
   };
