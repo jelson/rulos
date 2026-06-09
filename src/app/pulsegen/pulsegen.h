@@ -26,7 +26,7 @@
 
 #define NUM_CHANNELS 4
 
-#define PULSEGEN_FW_VERSION "0.1.0"
+#define PULSEGEN_FW_VERSION "0.2.0"
 
 // Setters for each SCPI-controllable parameter. Each stashes the new value
 // and rebuilds the HRTIM configuration. Returns NULL on success, or a static
@@ -41,6 +41,23 @@ const char *pulsegen_set_period_ps(int ch, uint64_t ps);
 const char *pulsegen_set_width_ps(int ch, uint64_t ps);
 const char *pulsegen_set_delay_ps(int ch, uint64_t ps);
 
+// Burst parameters apply to the channel's whole domain, like period. With
+// burst on, the domain emits exactly ncyc pulses (hardware-counted by the
+// HRTIM burst mode controller, 1..63488), rests low, and repeats every
+// interval. The interval is software-scheduled (~10 ms granularity); the
+// count and intra-burst spacing are hardware-exact. Only one domain can
+// burst at a time in async mode; sync mode bursts all four channels
+// coherently.
+const char *pulsegen_set_burst_state(int ch, bool on);
+const char *pulsegen_set_burst_ncyc(int ch, uint32_t ncyc);
+const char *pulsegen_set_burst_period_ps(int ch, uint64_t ps);
+
+// Query accessors for the burst settings; each reads back the channel's
+// domain-effective value.
+bool pulsegen_get_burst_state(int ch);
+uint32_t pulsegen_get_burst_ncyc(int ch);
+uint64_t pulsegen_get_burst_period_ps(int ch);
+
 // Select ASYNC (two independent frequency groups) or SYNC (all channels share
 // one period, phase-locked). Returns NULL (never fails).
 const char *pulsegen_set_mode(bool sync);
@@ -48,5 +65,6 @@ const char *pulsegen_set_mode(bool sync);
 // "ASYNC" or "SYNC", for the MODE? query.
 const char *pulsegen_mode_str(void);
 
-// *RST: ASYNC mode, all outputs off, all per-channel config cleared.
+// *RST: ASYNC mode, all outputs off, all per-channel config cleared; burst
+// off, burst count 1, burst interval 1 s.
 void pulsegen_reset_all(void);

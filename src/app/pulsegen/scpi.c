@@ -20,17 +20,21 @@
  * specific commands and translates them into pulsegen_* setters.
  *
  * Supported app-specific commands (long and short forms):
- *   MODE ASYNC|SYNC            MODE?
+ *   MODE ASYNC|SYNC                          MODE?
  *   OUTPut[n]:STATe ON|OFF|1|0
  *   SOURce[n]:PULSe:PERiod  <seconds>
  *   SOURce[n]:PULSe:WIDTh   <seconds>
  *   SOURce[n]:PULSe:DELay   <seconds>
+ *   SOURce[n]:BURSt:STATe ON|OFF|1|0         SOURce[n]:BURSt:STATe?
+ *   SOURce[n]:BURSt:NCYCles <count>          SOURce[n]:BURSt:NCYCles?
+ *   SOURce[n]:BURSt:INTernal:PERiod <sec>    SOURce[n]:BURSt:INTernal:PERiod?
  */
 
 #include "scpi.h"
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "periph/scpi/scpi.h"
 #include "pulsegen.h"
@@ -39,6 +43,25 @@
 static void apply_setter_result(const char *err) {
   if (err) scpi_set_error(err);
   else scpi_clear_error();
+}
+
+static void print_uint(uint32_t v) {
+  char buf[16];
+  snprintf(buf, sizeof(buf), "%lu", (unsigned long)v);
+  scpi_print(buf);
+}
+
+// Print picoseconds as decimal seconds with a full 12-digit fraction (e.g.
+// "1.000000000000"). The fraction is emitted as 3+9 digit halves so only
+// 32-bit printf conversions are needed.
+static void print_seconds_ps(uint64_t ps) {
+  char buf[28];
+  const uint64_t frac = ps % 1000000000000ULL;
+  snprintf(buf, sizeof(buf), "%lu.%03lu%09lu",
+           (unsigned long)(ps / 1000000000000ULL),
+           (unsigned long)(frac / 1000000000ULL),
+           (unsigned long)(frac % 1000000000ULL));
+  scpi_print(buf);
 }
 
 static bool dispatch_line(const char *line) {
@@ -88,7 +111,7 @@ static bool dispatch_line(const char *line) {
     }
   }
 
-  // SOURce[n]:{PULSe:{PER,WIDT,COUN} | BURSt:PER} <val>
+  // SOURce[n]:{PULSe | BURSt} subtrees
   {
     const char *p = scpi_match_kw(line, "SOURCE", "SOUR");
     if (p) {
@@ -127,6 +150,59 @@ static bool dispatch_line(const char *line) {
             }
             apply_setter_result(pulsegen_set_delay_ps(ch, v));
             return true;
+          }
+        }
+
+        const char *burst = scpi_match_kw(p, "BURST", "BURS");
+        if (burst && *burst == ':') {
+          burst++;
+          const char *q;
+          if ((q = scpi_match_kw(burst, "STATE", "STAT"))) {
+            if (*q == '?') {
+              scpi_print(pulsegen_get_burst_state(ch) ? "ON" : "OFF");
+              return true;
+            }
+            if (*q == ' ') {
+              bool on;
+              if (!scpi_parse_bool(q + 1, &on)) {
+                scpi_set_error("-104,\"Bad boolean\"");
+                return true;
+              }
+              apply_setter_result(pulsegen_set_burst_state(ch, on));
+              return true;
+            }
+          }
+          if ((q = scpi_match_kw(burst, "NCYCLES", "NCYC"))) {
+            if (*q == '?') {
+              print_uint(pulsegen_get_burst_ncyc(ch));
+              return true;
+            }
+            if (*q == ' ') {
+              uint32_t v;
+              if (!scpi_parse_uint(q + 1, &v)) {
+                scpi_set_error("-104,\"Bad number\"");
+                return true;
+              }
+              apply_setter_result(pulsegen_set_burst_ncyc(ch, v));
+              return true;
+            }
+          }
+          const char *internal = scpi_match_kw(burst, "INTERNAL", "INT");
+          if (internal && *internal == ':' &&
+              (q = scpi_match_kw(internal + 1, "PERIOD", "PER"))) {
+            if (*q == '?') {
+              print_seconds_ps(pulsegen_get_burst_period_ps(ch));
+              return true;
+            }
+            if (*q == ' ') {
+              uint64_t v;
+              if (!scpi_parse_seconds_ps(q + 1, &v)) {
+                scpi_set_error("-104,\"Bad number\"");
+                return true;
+              }
+              apply_setter_result(pulsegen_set_burst_period_ps(ch, v));
+              return true;
+            }
           }
         }
       }

@@ -26,11 +26,14 @@
  * directly from periph/scpi/scpi.h for runtime interaction.
  *
  * Pulsegen-specific commands handled here:
+ *   MODE ASYNC|SYNC                          MODE?
  *   OUTPut[n]:STATe ON|OFF|1|0
  *   SOURce[n]:PULSe:PERiod  <seconds>
  *   SOURce[n]:PULSe:WIDTh   <seconds>
- *   SOURce[n]:PULSe:COUNt   <integer>
- *   SOURce[n]:BURSt:PERiod  <seconds>
+ *   SOURce[n]:PULSe:DELay   <seconds>
+ *   SOURce[n]:BURSt:STATe ON|OFF|1|0         SOURce[n]:BURSt:STATe?
+ *   SOURce[n]:BURSt:NCYCles <count>          SOURce[n]:BURSt:NCYCles?
+ *   SOURce[n]:BURSt:INTernal:PERiod <sec>    SOURce[n]:BURSt:INTernal:PERiod?
  *
  * Hardware mutation happens in pulsegen.c via the pulsegen_* setters
  * declared in pulsegen.h.
