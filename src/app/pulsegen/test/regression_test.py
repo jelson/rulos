@@ -20,6 +20,11 @@ What it checks:
   - ASYNC pairing constraint: ch0 and ch1 are forced to share Timer F's
     period, so setting two different frequencies leaves both at the last one.
     This asserts that documented behavior.
+  - Burst mode: N-cycle bursts on ch0 must contain exactly N pulses
+    (hardware-counted by the HRTIM burst mode controller), at the exact
+    intra-burst spacing, repeating near the requested interval (the
+    repetition is software-scheduled, so its timing check is coarse).
+    Invalid burst parameters must latch the documented SCPI errors.
 
 Caveats baked into the tolerances:
   - The two devices share the 10 MHz clock, so they're phase-coherent and the
@@ -314,6 +319,114 @@ def test_async_pairing(ts, pg, duration_s):
     return all_ok
 
 
+# Burst sweep: pulse counts at two scales. Counts and intra-burst spacing
+# are hardware-exact; the repetition interval is software-scheduled on the
+# device (one 10 ms scheduler jiffy of granularity), so its check is coarse
+# and one-sided (a repetition fires on the first jiffy at or after its due
+# time, never early).
+BURST_CASES = [
+    # (ncyc, spacing_ns, rep_s)
+    (50, 10_000, 0.25),
+    (1000, 1_000, 0.25),
+]
+BURST_SPACING_TOL_NS = 12
+BURST_REP_EARLY_S = 0.005
+BURST_REP_LATE_S = 0.060
+
+# Invalid burst parameter -> the error code SYST:ERR? must latch. Each is
+# applied to an otherwise-valid running burst.
+BURST_ERROR_CASES = [
+    ("SOUR0:BURS:NCYC 0", "-200"),
+    ("SOUR0:BURS:NCYC 63489", "-200"),
+    ("SOUR0:BURS:INT:PER 0.01", "-200"),
+]
+
+
+def group_bursts(times, gap_ns):
+    """Split a sorted timestamp list into bursts: a gap longer than gap_ns
+    starts a new burst."""
+    bursts = []
+    for t in times:
+        if bursts and t - bursts[-1][-1] <= gap_ns:
+            bursts[-1].append(t)
+        else:
+            bursts.append([t])
+    return bursts
+
+
+def measure_burst(ts, pg, ncyc, spacing_ns, rep_s, duration_s):
+    """Run one burst configuration on ch0 and return (sizes, spacing_errs,
+    rep_gaps): interior burst sizes, the worst intra-burst spacing error in
+    ns, and the burst-to-burst start intervals in seconds. The capture
+    window truncates the first and last burst, so only interior bursts
+    count."""
+    pg.burst(0, spacing_ns / NS, spacing_ns / 4 / NS, ncyc, rep_s)
+    err = pg.get_error()
+    if not err.startswith("0,"):
+        raise RuntimeError(f"pulsegen error configuring burst: {err}")
+
+    time.sleep(0.3)
+    ts.discard_pending()
+    records = collect(ts, duration_s, channels=(0,))
+    times = sorted(t for _, t in records)
+    bursts = group_bursts(times, int(rep_s * NS / 2))
+    if len(bursts) < 4:
+        raise RuntimeError(f"only {len(bursts)} bursts captured "
+                           f"(need >=4 to have interior bursts)")
+    interior = bursts[1:-1]
+    sizes = [len(b) for b in interior]
+    worst_err = max((abs((b - a) - spacing_ns)
+                     for burst in interior
+                     for a, b in zip(burst, burst[1:])), default=0)
+    rep_gaps = [(b[0] - a[0]) / NS for a, b in zip(interior, interior[1:])]
+    return sizes, worst_err, rep_gaps
+
+
+def test_burst(ts, pg, duration_s):
+    print("\n=== Burst mode (hardware-exact N-cycle bursts) ===")
+    duration_s = max(duration_s, 2.0)  # need >=4 bursts at the 0.25 s rep
+    all_ok = True
+
+    for ncyc, spacing_ns, rep_s in BURST_CASES:
+        sizes, worst_err, rep_gaps = measure_burst(
+            ts, pg, ncyc, spacing_ns, rep_s, duration_s)
+        count_ok = all(s == ncyc for s in sizes)
+        spacing_ok = worst_err <= BURST_SPACING_TOL_NS
+        rep_ok = all(rep_s - BURST_REP_EARLY_S <= g <= rep_s + BURST_REP_LATE_S
+                     for g in rep_gaps)
+        ok = count_ok and spacing_ok and rep_ok
+        all_ok = all_ok and ok
+        print(f"  ncyc {ncyc:5d} @ {spacing_ns} ns, rep {rep_s} s: "
+              f"counts {min(sizes)}..{max(sizes)} ({len(sizes)} bursts)  "
+              f"spacing err {worst_err:.0f} ns  "
+              f"rep {min(rep_gaps):.3f}..{max(rep_gaps):.3f} s  "
+              f"{'PASS' if ok else 'FAIL'}")
+
+    # Error latching: each invalid parameter against a running burst.
+    for cmd, want_code in BURST_ERROR_CASES:
+        pg.burst(0, 1e-5, 2.5e-6, 50, 0.25)
+        pg.send(cmd)
+        err = pg.get_error()
+        ok = err.startswith(want_code)
+        all_ok = all_ok and ok
+        print(f"  reject [{cmd}]: {err}  {'PASS' if ok else 'FAIL'}")
+
+    # Burst off returns the channel to a continuous train: expect far more
+    # pulses than any burst could deliver in the same window.
+    pg.set_burst_ncycles(0, 50)
+    pg.set_burst_period(0, 0.25)
+    pg.pulse(0, 1e-5, 2.5e-6)  # clears burst state
+    time.sleep(0.2)
+    ts.discard_pending()
+    records = collect(ts, 1.0, channels=(0,))
+    expect_min = int(0.5 * NS / 10_000)  # half the window at 10 us periods
+    ok = len(records) >= expect_min
+    all_ok = all_ok and ok
+    print(f"  burst off -> continuous: {len(records)} pulses in 1 s "
+          f"(>= {expect_min})  {'PASS' if ok else 'FAIL'}")
+    return all_ok
+
+
 # ---- Driver ---------------------------------------------------------------
 
 def main():
@@ -326,8 +439,8 @@ def main():
                    help="Pulsegen serial port (default: autodetect)")
     p.add_argument("--duration", type=float, default=2.0,
                    help="Capture seconds per measurement (default: 2.0)")
-    p.add_argument("--only", choices=["sync", "async"], default=None,
-                   help="Run only the sync or only the async tests")
+    p.add_argument("--only", choices=["sync", "async", "burst"], default=None,
+                   help="Run only one test group")
     args = p.parse_args()
 
     results = {}
@@ -339,11 +452,13 @@ def main():
             pg.reset()
             configure_ts(ts)
 
-            if args.only != "async":
+            if args.only in (None, "sync"):
                 results["sync_gaps"] = test_sync_gaps(ts, pg, args.duration)
-            if args.only != "sync":
+            if args.only in (None, "async"):
                 results["async_freq"] = test_async_freq(ts, pg, args.duration)
                 results["async_pairing"] = test_async_pairing(ts, pg, args.duration)
+            if args.only in (None, "burst"):
+                results["burst"] = test_burst(ts, pg, args.duration)
         finally:
             pg.off()
             pg.reset()
