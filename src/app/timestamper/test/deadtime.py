@@ -4,7 +4,9 @@
 
 Drives a Rigol DG1022Z (via siggen.py's Siggen class) to produce pulse
 bursts at various spacings while reading the LectroTIC-4's serial output
-to determine whether all pulses in each burst are captured.
+to determine whether all pulses in each burst are captured. Rigol-only:
+the measurement is built on N-cycle bursts, which the Lectrobox PG-4
+(see pulse_sources.py) cannot produce.
 
 Usage:
   deadtime.py                           defaults: 16383-pulse bursts,

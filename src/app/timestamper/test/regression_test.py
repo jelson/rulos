@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
-"""LectroTIC-4 + Rigol DG1022Z end-to-end regression test.
+"""LectroTIC-4 end-to-end regression test.
 
-Exercises every wire/host path of the 4-channel device:
+Drives a pulse source -- a Rigol DG1022Z on LAN or a Lectrobox PG-4 on
+USB, selected with --generator (see pulse_sources.py) -- and exercises
+every wire/host path of the 4-channel device:
 
   * TEXT mode  -- the device's ASCII stream, read straight off the
     serial port and parsed by this file's own reader (also the only
@@ -32,14 +34,20 @@ the capturing phases assert it matches the slope under test, and the
 both-edge phases assert strict +/- alternation and time-ordering of
 the on-device rising/falling merge.
 
-The signal generator's output must be wired to the input selected
-with --channel (default 0).
+The pulse source's output must be wired to the input selected with
+--channel (default 0), and source and device must share the same
+10 MHz reference. The burst-based phases (burst, overcapture,
+polarity-burst, single-pulse) need the Rigol's N-cycle burst mode and
+are skipped on the PG-4; the slow periodic phases run at the source's
+preferred base rate (10 Hz on the Rigol, 2 kHz on the PG-4 whose
+HRTIM timebase can't go slower), with count tolerances scaled to it.
 
 Usage:
   regression_test.py
   regression_test.py --channel 1
   regression_test.py --duration 10
   regression_test.py --siggen-host siggen2
+  regression_test.py --generator pg4 --pg-channel 0
 """
 
 import argparse
@@ -57,12 +65,15 @@ sys.path.insert(0, os.path.join(
     os.path.dirname(__file__), "..", "..", "..", "util"))
 import bmpflash
 from tsctl import LectroTIC4, Timestamp, PulsesLost
-from siggen import Siggen
+from pulse_sources import make_generator
 
 TSCTL = os.path.join(os.path.dirname(__file__), "..", "util", "tsctl.py")
 
+# Source-rate parameters for the slow periodic phases. These defaults
+# match the Rigol; main() overrides them from the chosen generator's
+# base_hz / base_width_s (the PG-4 can't go below ~1.9 kHz).
 PULSE_HZ = 10
-PULSE_WIDTH_S = 0.001  # siggen.periodic() hardcodes 1 ms
+PULSE_WIDTH_S = 0.001
 PERIOD_S = 1.0 / PULSE_HZ
 
 # Per-gap timing tolerance, applied to EVERY device-timestamp interval
@@ -92,6 +103,14 @@ _DIAG_RE = re.compile(
 def expect(condition, message):
     print(f"  [{'PASS' if condition else 'FAIL'}] {message}")
     return bool(condition)
+
+
+def count_tol(rate_hz, base):
+    """Expected-count tolerance for a capture window. The window
+    opens and closes with tens of ms of host-side jitter, clipping
+    ~rate*jitter records at each end, so the budget scales with the
+    record rate; `base` preserves the old low-rate slack."""
+    return max(base, int(rate_hz * 0.1))
 
 
 # --------------------------------------------------------------------
@@ -299,16 +318,16 @@ def expect_monotonic(times):
 # --------------------------------------------------------------------
 
 def phase_periodic(mode, sg, tic, channel, duration_s, divider,
-                   count_tol, slope="POS"):
+                   slope="POS"):
     """Single-slope periodic capture. divider==1 is the plain rising
     (or falling) phase; divider>1 is the divider phase (1 stamp per N
-    pulses). One body, parameterized. Establishes its own siggen
+    pulses). One body, parameterized. Establishes its own source
     signal so phase order / prior state can't poison it."""
     edge = "rising" if slope == "POS" else "falling"
     label = (f"{edge} edge only" if divider == 1
              else f"{edge}, divider={divider}")
     print(f"\n=== {label} [{mode.name}] ===")
-    sg.periodic(PULSE_HZ)
+    sg.periodic(PULSE_HZ, PULSE_WIDTH_S)
     tic.set_slope(channel, slope)
     tic.set_divider(channel, divider)
     times, pols, others, ovc, ovf, _ = mode.capture(
@@ -318,8 +337,9 @@ def phase_periodic(mode, sg, tic, channel, duration_s, divider,
     collected(times, others, channel, expected)
     deltas = report_intervals("intervals", times)
 
-    ok = expect(abs(len(times) - expected) <= count_tol,
-                f"count within {count_tol} of expected {expected:.1f}")
+    tol = count_tol(PULSE_HZ / divider, 2 if divider == 1 else 1)
+    ok = expect(abs(len(times) - expected) <= tol,
+                f"count within {tol} of expected {expected:.1f}")
     ok &= score_clean(mode, ovc, ovf, others)
     ok &= expect_polarity(pols, "+" if slope == "POS" else "-")
     if deltas:
@@ -332,7 +352,7 @@ def phase_periodic(mode, sg, tic, channel, duration_s, divider,
 
 def phase_both(mode, sg, tic, channel, duration_s):
     print(f"\n=== both edges [{mode.name}] ===")
-    sg.periodic(PULSE_HZ)
+    sg.periodic(PULSE_HZ, PULSE_WIDTH_S)
     tic.set_slope(channel, "BOTH")
     tic.set_divider(channel, 1)
     times, pols, others, ovc, ovf, _ = mode.capture(
@@ -365,8 +385,9 @@ def phase_both(mode, sg, tic, channel, duration_s):
           f"long(fall→rise) n={len(long)} "
           f"med={statistics.median(long) * 1e3:.3f} ms")
 
-    ok = expect(abs(len(times) - expected) <= 4,
-                f"count within 4 of expected {expected:.0f}")
+    tol = count_tol(2 * PULSE_HZ, 4)
+    ok = expect(abs(len(times) - expected) <= tol,
+                f"count within {tol} of expected {expected:.0f}")
     ok &= score_clean(mode, ovc, ovf, others)
     ok &= expect_monotonic(times)
     ok &= expect(abs(len(short) - len(long)) <= 1,
@@ -402,7 +423,7 @@ def phase_both(mode, sg, tic, channel, duration_s):
 
 def phase_output_gating(mode, sg, tic, channel):
     print(f"\n=== OUTPut:STATe gating [{mode.name}] ===")
-    sg.periodic(PULSE_HZ)
+    sg.periodic(PULSE_HZ, PULSE_WIDTH_S)
     tic.set_slope(channel, "POS")
     tic.set_divider(channel, 1)
 
@@ -418,7 +439,7 @@ def phase_output_gating(mode, sg, tic, channel):
           f"ON: {len(times)} stamps (expect ~{PULSE_HZ})")
 
     ok = expect(len(bytes_off) == 0, "silent while OUTP:STAT OFF")
-    ok &= expect(abs(len(times) - PULSE_HZ) <= 2,
+    ok &= expect(abs(len(times) - PULSE_HZ) <= count_tol(PULSE_HZ, 2),
                  f"~{PULSE_HZ} stamps after OUTP:STAT ON")
     return ok
 
@@ -658,26 +679,28 @@ def phase_reset(tic, channel):
 def phase_slope_switch(sg, tic, channel):
     """Switch POS -> NEG mid-capture and confirm the device starts
     detecting the opposite edge -- coverage the steady POS/BOTH phases
-    don't give. Drive 10 Hz with a 10 ms-wide pulse (so the crossover
-    gap is plainly != the 100 ms period). Capturing rising edges gives
-    ~100 ms gaps; after SLOP NEG it captures falling edges, also
-    ~100 ms apart; between them sits exactly ONE crossover gap of
-    width + k*period (k = whole periods until the command takes
-    effect; the host can't phase-lock that, so k is ~0/1/2 -- the
-    value, not its determinism, is what we report). Mode-independent
-    device behavior, so it runs once (text)."""
-    WIDTH = 0.010
+    don't give. Drive the base rate with a period/10-wide pulse (so
+    the crossover gap is plainly != the period). Capturing rising
+    edges gives period-long gaps; after SLOP NEG it captures falling
+    edges, also period apart; between them sits exactly ONE crossover
+    gap of width + k*period (k = whole periods until the command takes
+    effect; the host can't phase-lock that, so k just has to be small
+    relative to its command latency budget). Mode-independent device
+    behavior, so it runs once (text)."""
+    width = PERIOD_S / 10
     print("\n=== slope switch POS->NEG mid-capture ===")
-    sg.periodic(PULSE_HZ, pulse_width_s=WIDTH)
+    sg.periodic(PULSE_HZ, pulse_width_s=width)
     tic.set_slope(channel, "POS")
     tic.set_divider(channel, 1)
     tic.send("FORM:DATA TEXT")
     tic.set_stream_enabled(True)
     tic.discard_pending()
 
+    # Enough edges that healthy runs surround the switch at any rate.
+    want = max(30, int(3 * PULSE_HZ))
     times, pols, raw, seen, switched = [], [], b"", 0, False
     start = time.monotonic()
-    while time.monotonic() - start < 6.0 and len(times) < 30:
+    while time.monotonic() - start < 6.0 and len(times) < want:
         chunk = tic.read_raw(0.05)
         if chunk:
             raw += chunk
@@ -686,20 +709,20 @@ def phase_slope_switch(sg, tic, channel):
                 times.append(ts[seen])
                 pols.append(ps[seen])
                 seen += 1
-        if not switched and len(times) >= 10:
+        if not switched and len(times) >= want // 3:
             tic.send(f"INP{channel}:SLOP NEG")  # POS -> NEG mid-stream
             switched = True
     sg.output_off()
 
-    # The 5 ms split only separates the lone crossover gap from the
-    # steady run -- it's not the timing check. Once separated, the
+    # The period/20 split only separates the lone crossover gap from
+    # the steady run -- it's not the timing check. Once separated, the
     # steady gaps (rising-rising before, falling-falling after) are
     # held to GAP_TOL_S of the period like every other phase, and the
-    # crossover to GAP_TOL_S of WIDTH + k*PERIOD_S; only k (whole
+    # crossover to GAP_TOL_S of width + k*PERIOD_S; only k (whole
     # periods until the host's command lands) is non-deterministic.
     deltas = [times[i + 1] - times[i] for i in range(len(times) - 1)]
     steady_idx = [i for i, d in enumerate(deltas)
-                  if abs(d - PERIOD_S) < 5e-3]
+                  if abs(d - PERIOD_S) < PERIOD_S / 20]
     anomalies = [(i, d) for i, d in enumerate(deltas)
                  if i not in steady_idx]
     steady_gaps = [deltas[i] for i in steady_idx]
@@ -708,7 +731,8 @@ def phase_slope_switch(sg, tic, channel):
           f"{[(i, round(d * 1e3, 1)) for i, d in anomalies]}")
 
     ok = expect(switched, "INP:SLOP NEG sent mid-capture")
-    ok &= expect(len(times) >= 20, ">=20 edges across the switch")
+    ok &= expect(len(times) >= want * 2 // 3,
+                 f">={want * 2 // 3} edges across the switch")
     ok &= expect(len(anomalies) == 1,
                  "exactly one (clean) transition gap -- a string of "
                  "~100 ms, one crossover, ~100 ms again")
@@ -730,13 +754,16 @@ def phase_slope_switch(sg, tic, channel):
             ok &= expect(flips[0] == i,
                          f"polarity flip (gap #{flips[0]}) coincides "
                          f"with the crossover gap (#{i})")
-        k = round((d - WIDTH) / PERIOD_S)
-        ok &= expect(0 <= k <= 3 and
-                     intervals_within([d], WIDTH + k * PERIOD_S,
+        k = round((d - width) / PERIOD_S)
+        # Command latency budget: ~50 ms of host->device delay, in
+        # whole periods of the source rate (>= the old slack of 3).
+        kmax = max(3, int(0.05 * PULSE_HZ))
+        ok &= expect(0 <= k <= kmax and
+                     intervals_within([d], width + k * PERIOD_S,
                                       GAP_TOL_S, "crossover"),
-                     f"transition gap {d * 1e3:.1f} ms = "
-                     f"{WIDTH * 1e3:.0f} ms + {k}*{PERIOD_S * 1e3:.0f} "
-                     f"ms (rising->falling crossover)")
+                     f"transition gap {d * 1e3:.3f} ms = "
+                     f"{width * 1e3:.3f} ms + {k}*{PERIOD_S * 1e3:.3f} "
+                     f"ms (rising->falling crossover, k <= {kmax})")
         ok &= expect(i >= 5 and i <= len(deltas) - 5,
                      "healthy ~100 ms runs before AND after the "
                      "switch (NEG detection working)")
@@ -1012,8 +1039,20 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--port", default=None,
                    help="LectroTIC-4 serial port (default: autodetect)")
+    p.add_argument("--generator", choices=["rigol", "pg4"],
+                   default="rigol",
+                   help="pulse source: 'rigol' = DG1022Z on LAN (full "
+                        "suite), 'pg4' = Lectrobox PG-4 on USB (no "
+                        "burst mode, so burst-based phases are "
+                        "skipped; slow phases run at 2 kHz)")
     p.add_argument("--siggen-host", default="siggen",
-                   help="Signal generator hostname (default: siggen)")
+                   help="DG1022Z hostname (default: siggen)")
+    p.add_argument("--pg-port", default=None,
+                   help="PG-4 serial port (default: autodetect)")
+    p.add_argument("--pg-channel", type=int, default=0,
+                   choices=[0, 1, 2, 3],
+                   help="PG-4 output channel wired to the input under "
+                        "test (default 0)")
     p.add_argument("--channel", type=int, choices=[0, 1, 2, 3],
                    default=0, help="Input channel under test")
     p.add_argument("--duration", type=float, default=5.0,
@@ -1036,8 +1075,18 @@ def main():
             return False
         return sel is None or sel.lower() in label.lower()
 
-    sg = Siggen(host=args.siggen_host)
-    print(f"Signal generator: {sg.idn()}")
+    # The slow-phase rate parameters come from the generator: 10 Hz on
+    # the Rigol, 2 kHz on the PG-4 (whose HRTIM timebase has no slower
+    # setting). Tolerances in the phases scale with PULSE_HZ.
+    global PULSE_HZ, PERIOD_S, PULSE_WIDTH_S
+    sg = make_generator(args.generator, siggen_host=args.siggen_host,
+                        pg_port=args.pg_port, pg_channel=args.pg_channel)
+    PULSE_HZ = sg.base_hz
+    PERIOD_S = 1.0 / PULSE_HZ
+    PULSE_WIDTH_S = sg.base_width_s
+    print(f"Pulse source: {sg.idn()} "
+          f"({sg.name}; base rate {PULSE_HZ:g} Hz; "
+          f"burst {'yes' if sg.can_burst else 'NO -- burst phases skipped'})")
     results = []
 
     with LectroTIC4(args.port) as tic:
@@ -1046,26 +1095,29 @@ def main():
         print(f"Connected: {tic.idn()}")
 
         ch, dur = args.channel, args.duration
-        # Each entry is (label, callable(mode)). Run for both modes.
+        # Each entry is (label, callable(mode), needs_burst). Run for
+        # both modes; burst-based phases are skipped on generators
+        # without an N-cycle burst mode.
         per_mode = [
             ("rising",
-             lambda m: phase_periodic(m, sg, tic, ch, dur, 1, 2)),
+             lambda m: phase_periodic(m, sg, tic, ch, dur, 1), False),
             ("falling",
-             lambda m: phase_periodic(m, sg, tic, ch, dur, 1, 2,
-                                      slope="NEG")),
-            ("both", lambda m: phase_both(m, sg, tic, ch, dur)),
+             lambda m: phase_periodic(m, sg, tic, ch, dur, 1,
+                                      slope="NEG"), False),
+            ("both", lambda m: phase_both(m, sg, tic, ch, dur), False),
             ("divider",
-             lambda m: phase_periodic(m, sg, tic, ch, dur, 5, 1)),
+             lambda m: phase_periodic(m, sg, tic, ch, dur, 5), False),
             ("output gating",
-             lambda m: phase_output_gating(m, sg, tic, ch)),
-            ("burst", lambda m: phase_burst(m, sg, tic, ch)),
+             lambda m: phase_output_gating(m, sg, tic, ch), False),
+            ("burst", lambda m: phase_burst(m, sg, tic, ch), True),
             ("overcapture",
-             lambda m: phase_overcapture(m, sg, tic, ch)),
+             lambda m: phase_overcapture(m, sg, tic, ch), True),
             ("polarity burst",
-             lambda m: phase_polarity_burst(m, sg, tic, ch)),
-            ("sustained", lambda m: phase_sustained(m, sg, tic, ch)),
+             lambda m: phase_polarity_burst(m, sg, tic, ch), True),
+            ("sustained",
+             lambda m: phase_sustained(m, sg, tic, ch), False),
             ("single pulse",
-             lambda m: phase_single_pulse(m, sg, tic, ch)),
+             lambda m: phase_single_pulse(m, sg, tic, ch), True),
         ]
         once = [
             ("scpi errors", lambda: phase_scpi_errors(tic)),
@@ -1075,10 +1127,15 @@ def main():
         ]
         try:
             for mode in MODES:
-                for label, fn in per_mode:
+                for label, fn, needs_burst in per_mode:
                     name = f"{label} [{mode.name}]"
-                    if want(name):
-                        results.append((name, fn(mode)))
+                    if not want(name):
+                        continue
+                    if needs_burst and not sg.can_burst:
+                        print(f"\n=== {name}: SKIP "
+                              f"({sg.name} has no burst mode) ===")
+                        continue
+                    results.append((name, fn(mode)))
             for label, fn in once:
                 if want(label):
                     results.append((label, fn()))

@@ -39,7 +39,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "util"))
 
 from tsctl import LectroTIC4, Timestamp, PulsesLost, OscillatorFailure
-from siggen import Siggen
+from pulse_sources import make_generator
 from regression_test import parse_text_stream
 
 
@@ -136,8 +136,21 @@ def main():
                    help="Upper bound in Hz (default: 100000)")
     p.add_argument("--port", default=None,
                    help="LectroTIC-4 serial port (default: autodetect)")
+    p.add_argument("--generator", choices=["rigol", "pg4"],
+                   default="rigol",
+                   help="pulse source: 'rigol' = DG1022Z on LAN, "
+                        "'pg4' = Lectrobox PG-4 on USB (continuous "
+                        "rates only -- exactly what this test needs; "
+                        "its rate floor is ~1.9 kHz, so use "
+                        "--bottom >= 2000)")
     p.add_argument("--host", default="siggen",
-                   help="Signal generator hostname (default: siggen)")
+                   help="DG1022Z hostname (default: siggen)")
+    p.add_argument("--pg-port", default=None,
+                   help="PG-4 serial port (default: autodetect)")
+    p.add_argument("--pg-channel", type=int, default=0,
+                   choices=[0, 1, 2, 3],
+                   help="PG-4 output channel wired to the "
+                        "timestamper (default 0)")
     p.add_argument("--precision", type=float, default=500,
                    help="Stop when range narrows to this many Hz "
                         "(default: 500)")
@@ -179,8 +192,10 @@ def main():
               f"loss via in-band PULSES_LOST")
         print()
 
-        with Siggen(host=args.host) as sg:
-            print(f"Connected to: {sg.idn()}")
+        with make_generator(args.generator, siggen_host=args.host,
+                            pg_port=args.pg_port,
+                            pg_channel=args.pg_channel) as sg:
+            print(f"Connected to: {sg.idn()} ({sg.name})")
             print()
 
             print("Verifying lower bound passes...")
