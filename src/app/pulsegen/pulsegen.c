@@ -77,6 +77,15 @@
  * Reconfiguration tears down and rebuilds the whole HRTIM state on any change,
  * so changing one channel briefly glitches the others -- fine for a bench
  * source that is set up and then observed.
+ *
+ * Firmware update over USB DFU (no SWD probe needed):
+ *
+ *   sudo dfu-util -d 1209:71c5,0483:df11 -a 0 -s 0x08000000:leave -D <fw>.bin
+ *
+ * 1209:71c5 is the runtime VID:PID, 0483:df11 the ST ROM bootloader; the
+ * two-tuple lets dfu-util find the running device, auto-detach it into the
+ * bootloader, flash, and restart (:leave). If interrupted it stays in the
+ * bootloader and the same command retries. Verify with `pgctl.py idn`.
  */
 
 #include <stdbool.h>

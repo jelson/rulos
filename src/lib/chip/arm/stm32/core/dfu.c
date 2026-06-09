@@ -61,6 +61,27 @@ base address (see ST's NUCLEO-H5xx ROT examples: BOOTLOADER_BASE)."
     defined(RULOS_ARM_stm32f3)
 #define DFU_HAVE_SYSMEM 1
 #define DFU_SYSMEM_BASE 0x1FFF0000u
+// The legacy ROM bootloader on these parts is linked to run at
+// 0x00000000 and reaches its own vector table and data through that
+// alias. A software jump that leaves main flash mapped at 0x00000000
+// runs a few bootloader instructions and then falls through to the
+// application instead of staying in USB DFU. Remap system memory to
+// 0x00000000 first. (The H5's M33 bootloader is position-independent
+// and needs no remap -- hence none in that branch.) SYSCFG is
+// clock-gated, so enable it with the mandatory readback before
+// touching the remap register. Implemented and hardware-validated on
+// G4. G0/F3 share this legacy ROM bootloader and would need the same
+// remap (against SYSCFG->CFGR1 rather than MEMRMP) before their DFU
+// path works -- not wired up here.
+#if defined(RULOS_ARM_stm32g4)
+#define DFU_REMAP_SYSMEM()                                                 \
+  do {                                                                     \
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;                                  \
+    (void)RCC->APB2ENR;                                                    \
+    SYSCFG->MEMRMP = (SYSCFG->MEMRMP & ~SYSCFG_MEMRMP_MEM_MODE) |          \
+                     SYSCFG_MEMRMP_MEM_MODE_0;                             \
+  } while (0)
+#endif
 #else
 // Facility still links (so app code can call it unconditionally), but
 // this chip has no known software-jumpable USB-DFU ROM bootloader: the
@@ -88,9 +109,10 @@ void rulos_dfu_check_and_jump(void) {
   // We run as the very first thing in rulos_hal_init(): SystemInit()
   // has executed but HAL_Init(), the clock config, caches, the MPU,
   // and every peripheral are still at reset state -- the cleanest
-  // possible environment for the ROM bootloader. We only have to mask
-  // interrupts, point the vector table at the bootloader, load its
-  // stack pointer, and branch to its reset entry.
+  // possible environment for the ROM bootloader. We mask interrupts,
+  // remap system memory to 0x00000000 where required, point the vector
+  // table at the bootloader, load its stack pointer, and branch to its
+  // reset entry.
   const uint32_t base = DFU_SYSMEM_BASE;
   const uint32_t boot_sp = *(volatile uint32_t *)base;
   const uint32_t boot_pc = *(volatile uint32_t *)(base + 4u);
@@ -98,6 +120,9 @@ void rulos_dfu_check_and_jump(void) {
   __disable_irq();
   SysTick->CTRL = 0;
   SysTick->VAL = 0;
+#ifdef DFU_REMAP_SYSMEM
+  DFU_REMAP_SYSMEM();
+#endif
   SCB->VTOR = base;
 
   __set_MSP(boot_sp);
