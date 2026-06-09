@@ -43,7 +43,7 @@ import sys
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(HERE, "..", "util"))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "timestamper", "util"))
 
 from pgctl import Pulsegen

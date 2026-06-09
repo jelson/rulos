@@ -25,8 +25,12 @@ between them once a burst exceeds the on-device ring.
 """
 
 import argparse
+import os
 import sys
 from dataclasses import dataclass
+
+sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "util"))
 
 from tsctl import LectroTIC4, Timestamp, PulsesLost, OscillatorFailure
 from siggen import Siggen

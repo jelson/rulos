@@ -44,13 +44,14 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "util"))
 sys.path.insert(0, os.path.join(
     os.path.dirname(__file__), "..", "..", "..", "util"))
 import bmpflash
 from tsctl import LectroTIC4, Timestamp, PulsesLost
 from siggen import Siggen
 
-TSCTL = os.path.join(os.path.dirname(__file__), "tsctl.py")
+TSCTL = os.path.join(os.path.dirname(__file__), "..", "util", "tsctl.py")
 
 PULSE_HZ = 10
 PULSE_WIDTH_S = 0.001  # siggen.periodic() hardcodes 1 ms
