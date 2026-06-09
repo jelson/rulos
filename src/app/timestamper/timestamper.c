@@ -37,6 +37,15 @@
  * representing nanoseconds. Timestamps are relative to the time the program
  * started.
  *
+ * Firmware update over USB DFU (no SWD probe needed; device not capturing):
+ *
+ *   sudo dfu-util -d 1209:71c4,0483:df11 -a 0 -s 0x08000000:leave -D <fw>.bin
+ *
+ * 1209:71c4 is the runtime VID:PID, 0483:df11 the ST ROM bootloader; the
+ * two-tuple lets dfu-util find the running device, auto-detach it into the
+ * bootloader, flash, and restart (:leave). If interrupted it stays in the
+ * bootloader and the same command retries. Verify with `tsctl.py idn`.
+ *
  * The implementation uses the input-capture feature of TIM2, a 32-bit timer of
  * the STM32H523. Input capture waits for the rising edge of the input signal
  * and then latches the timer value at the moment of the signal's edge. The
