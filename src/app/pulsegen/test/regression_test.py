@@ -36,7 +36,6 @@ Run:
 """
 
 import argparse
-import bisect
 import os
 import statistics
 import sys
@@ -55,39 +54,88 @@ NS = 1_000_000_000  # ns per second
 # ---- Measurement helpers --------------------------------------------------
 
 def collect(ts, duration_s, channels=(0, 1)):
-    """Stream timestamps for duration_s and bucket absolute-ns times per
-    channel. Returns (buckets, lost) where buckets maps channel -> sorted
-    list of ints (seconds*1e9 + nanoseconds), and lost is the total
-    overcaptures+overflows reported. Raises RuntimeError on oscillator loss."""
-    buckets = {c: [] for c in channels}
-    lost = 0
+    """Read the timestamp stream for duration_s and return a list of
+    (channel, abs_ns) for the requested channels, abs_ns = seconds*1e9 +
+    nanoseconds kept as an exact int (the library's seconds/nanoseconds are
+    ints, so no float ever touches a timestamp).
+
+    Raises immediately if the timestamper reports a lost pulse (overcapture or
+    buffer overflow) or an oscillator failure -- a regression test must see
+    every pulse, so any loss is a failure, not something to tolerate."""
+    records = []
     for rec in ts.read_for(duration_s):
         if isinstance(rec, Timestamp):
-            if rec.channel in buckets:
-                buckets[rec.channel].append(rec.seconds * NS + rec.nanoseconds)
+            if rec.channel in channels:
+                records.append((rec.channel, rec.seconds * NS + rec.nanoseconds))
         elif isinstance(rec, PulsesLost):
-            lost += rec.overcaptures + rec.buf_overflows
+            if rec.overcaptures or rec.buf_overflows:
+                raise RuntimeError(
+                    f"timestamper lost pulses on ch{rec.channel}: "
+                    f"{rec.overcaptures} overcaptures, "
+                    f"{rec.buf_overflows} buffer overflows")
         elif isinstance(rec, OscillatorFailure):
             raise RuntimeError("timestamper reported oscillator failure")
-    return buckets, lost
+    return records
 
 
-def pair_deltas(ch0, ch1, period_ns):
-    """For each ch0 edge, find the nearest ch1 edge; keep pairs within
-    +-period/2. Returns the list of (ch1 - ch0) deltas in ns. Robust to
-    dropped pulses (unmatched edges are skipped)."""
-    deltas = []
-    half = period_ns / 2
-    for t0 in ch0:
-        i = bisect.bisect_left(ch1, t0)
-        best = None
-        for j in (i - 1, i):
-            if 0 <= j < len(ch1):
-                d = ch1[j] - t0
-                if best is None or abs(d) < abs(best):
-                    best = d
-        if best is not None and abs(best) <= half:
-            deltas.append(best)
+def by_channel(records):
+    """Split records into per-channel time lists, each sorted ascending. The
+    device does NOT guarantee timestamps arrive in time order, so we sort."""
+    out = {}
+    for ch, t in records:
+        out.setdefault(ch, []).append(t)
+    for ch in out:
+        out[ch].sort()
+    return out
+
+
+def zipper_gaps(records, period_ns):
+    """Split by channel, sort each channel independently, and zipper the two
+    sorted lists index-for-index: the i-th ch0 edge pairs with the i-th ch1
+    edge (the i-th period, since ch0 fires gap-before ch1 every period).
+    Return the list of (ch1 - ch0) gaps.
+
+    The capture window does not begin or end on a clean period boundary, and
+    the device delivers each channel in batches, so at each end one channel can
+    lead the other by many edges. Those boundary edges have no partner -- they
+    are window edges, not missed pulses -- so trim any orphan (a ch1 whose ch0
+    is before the window, or a ch0 whose ch1 is after it) from both ends of
+    both channels. A valid pair is gap-apart (< one period); an orphan is a
+    whole period or more away.
+
+    After trimming, detecting missed pulses is the point of the test, so we are
+    strict: the two channels must have equal counts, every pair must fall
+    within one period, and every period must be present (consecutive
+    same-channel spacing stays near one period). Any of these failing means an
+    interior pulse was dropped or duplicated."""
+    by = by_channel(records)
+    ch0 = by.get(0, [])
+    ch1 = by.get(1, [])
+    # Leading orphans: ch1 before the first ch0, or a ch0 whose partner ch1 is
+    # a full period or more away (its ch1 fell before the window start).
+    while ch1 and ch0 and ch1[0] < ch0[0]:
+        ch1.pop(0)
+    while ch0 and ch1 and ch1[0] - ch0[0] >= period_ns:
+        ch0.pop(0)
+    # Trailing orphans: ch0 after the last ch1, or a ch1 whose partner ch0 is a
+    # full period or more before it (its ch0 fell after the window end).
+    while ch0 and ch1 and ch0[-1] > ch1[-1]:
+        ch0.pop()
+    while ch1 and ch0 and ch1[-1] - ch0[-1] >= period_ns:
+        ch1.pop()
+    if len(ch0) != len(ch1):
+        raise RuntimeError(
+            f"channel pulse counts differ ({len(ch0)} vs {len(ch1)}) -- "
+            f"a pulse was missed or duplicated")
+    deltas = [b - a for a, b in zip(ch0, ch1)]
+    if any(not (0 <= d < period_ns) for d in deltas):
+        raise RuntimeError(
+            "a ch0/ch1 pair does not fall within one period -- "
+            "a pulse was missed or duplicated")
+    for seq in (ch0, ch1):
+        if any(seq[i + 1] - seq[i] > period_ns * 3 // 2
+               for i in range(len(seq) - 1)):
+            raise RuntimeError("a period is missing from the capture")
     return deltas
 
 
@@ -144,33 +192,32 @@ def measure_gap(ts, pg, gap_ns, duration_s):
 
     time.sleep(0.1)
     ts.discard_pending()
-    buckets, lost = collect(ts, duration_s)
-    if lost:
-        raise RuntimeError(f"timestamper lost {lost} pulses during gap measurement")
-    deltas = pair_deltas(buckets[0], buckets[1], GAP_PERIOD_NS)
+    records = collect(ts, duration_s)
+    deltas = zipper_gaps(records, GAP_PERIOD_NS)
     if len(deltas) < 50:
-        raise RuntimeError(f"only {len(deltas)} paired edges (need >=50)")
-    return statistics.fmean(deltas), len(deltas)
+        raise RuntimeError(f"only {len(deltas)} zippered pairs (need >=50)")
+    return statistics.fmean(deltas), min(deltas), max(deltas), len(deltas)
 
 
 def test_sync_gaps(ts, pg, duration_s):
     print("\n=== SYNC inter-pulse gap sweep ===")
     print(f"  period {GAP_PERIOD_NS/1000:.0f} us, base delay {GAP_BASE_NS} ns")
 
-    # Baseline (gap 0) measures the fixed channel/cable skew, subtracted out.
-    skew, n = measure_gap(ts, pg, 0, duration_s)
-    print(f"  baseline skew (gap 0): {skew:+.2f} ns  ({n} pairs)")
-
     all_ok = True
     for gap in GAPS_NS:
-        measured, n = measure_gap(ts, pg, gap, duration_s)
-        observed = measured - skew
-        err = observed - gap
+        # min/max are raw per-sample gaps: exact integers, always multiples of
+        # the 4 ns timestamper tick. avg is the mean, which resolves between
+        # grid lines (the dither across min..max is what makes the average
+        # meaningful below one tick). Any fixed channel skew is sub-tick here
+        # (~0.01 ns) and absorbed by the tolerance.
+        mean, mn, mx, n = measure_gap(ts, pg, gap, duration_s)
+        err = mean - gap
         tol = gap_tolerance_ns(gap)
         ok = abs(err) <= tol
         all_ok = all_ok and ok
-        print(f"  gap {gap:5d} ns: measured {observed:8.2f} ns  "
-              f"err {err:+6.2f} ns  tol +-{tol:.1f}  "
+        print(f"  gap {gap:5d} ns: avg {mean:8.2f}  "
+              f"min {mn:6d}  max {mx:6d}  "
+              f"err {err:+6.2f}  tol +-{tol:.1f}  "
               f"({n} pairs)  {'PASS' if ok else 'FAIL'}")
     return all_ok
 
@@ -201,16 +248,14 @@ def measure_rate(ts, pg, freq_hz, duration_s):
         ts.set_divider(ch, divider)
     time.sleep(0.1)
     ts.discard_pending()
-    buckets, lost = collect(ts, duration_s)
+    records = collect(ts, duration_s)
     ts.set_divider(0, 1)
     ts.set_divider(1, 1)
-    if lost:
-        raise RuntimeError(f"timestamper lost {lost} pulses at {freq_hz} Hz")
-
+    times = by_channel(records)
     out = {}
     for ch in (0, 1):
-        iv = median_interval(buckets[ch])
-        if iv is None or len(buckets[ch]) < 50:
+        iv = median_interval(times.get(ch, []))
+        if iv is None or len(times.get(ch, [])) < 50:
             raise RuntimeError(f"too few samples on ch{ch} at {freq_hz} Hz")
         out[ch] = iv / divider  # divider downsamples; scale back to true period
     return out, period_ns
@@ -252,17 +297,15 @@ def test_async_pairing(ts, pg, duration_s):
 
     time.sleep(0.1)
     ts.discard_pending()
-    buckets, lost = collect(ts, duration_s)
-    if lost:
-        raise RuntimeError(f"timestamper lost {lost} pulses in pairing test")
-
+    records = collect(ts, duration_s)
+    times = by_channel(records)
     expect_ns = NS / f2
     all_ok = True
     print(f"  set ch0={f1} Hz then ch1={f2} Hz; both should track {f2} Hz "
           f"({expect_ns:.1f} ns)")
     for ch in (0, 1):
-        iv = median_interval(buckets[ch])
-        if iv is None or len(buckets[ch]) < 50:
+        iv = median_interval(times.get(ch, []))
+        if iv is None or len(times.get(ch, [])) < 50:
             raise RuntimeError(f"too few samples on ch{ch} in pairing test")
         err_pct = 100.0 * (iv - expect_ns) / expect_ns
         ok = abs(err_pct) <= 0.1
