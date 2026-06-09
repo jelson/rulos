@@ -167,15 +167,28 @@ class LectroboxPG4(PulseGenerator):
         # its 250 ps grid -- sub-ppb of any rate in range.
         return hz
 
+    # Smallest burst spacing offered: tests probe a generator's floor
+    # by requesting tiny spacings and using the clamped actual (the
+    # DG1022Z behaves the same way, clamping at ~67 ns). The HRTIM
+    # could period down to ~24 ns, but its minimum compare value is
+    # also ~24 ns at that prescaler, which would squeeze the pulse's
+    # low time below what the timestamper's input network can resolve;
+    # 48 ns leaves a clean half-period each way.
+    MIN_BURST_SPACING_NS = 48
+
     def pulse_burst(self, spacing_ns, ncyc):
+        spacing_ns = max(spacing_ns, self.MIN_BURST_SPACING_NS)
         period_ps = round(spacing_ns * 1000)
         actual_ps = self._quantize_period_ps(period_ps)
         if actual_ps is None:
             raise UnsupportedWaveform(
-                f"{spacing_ns:g} ns spacing is outside the PG-4's "
-                f"~24 ns .. ~524 us period range")
-        # 50 ns width and 1 s repetition, matching siggen.pulse_burst.
-        self._pg.burst(self._ch, period_ps * 1e-12, 50e-9, ncyc)
+                f"{spacing_ns:g} ns spacing is beyond the PG-4's "
+                f"~524 us period ceiling")
+        # 50 ns width (matching siggen.pulse_burst), shrunk to a half
+        # period when the spacing is tighter than 100 ns; 1 s
+        # repetition.
+        width_s = min(50e-9, actual_ps * 1e-12 / 2)
+        self._pg.burst(self._ch, period_ps * 1e-12, width_s, ncyc)
         self._check(f"{ncyc}-pulse burst at {spacing_ns:g} ns spacing")
         return actual_ps / 1000.0
 

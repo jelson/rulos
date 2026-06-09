@@ -141,6 +141,8 @@ _Static_assert(CLOCK_FREQ_HZ == 1000000000 / NS_PER_TICK,
 // leaving ~64 KB for stack, USB buffers, and globals.
 #define TIMESTAMP_BUFLEN            16384  // 16384 * 8 bytes = 128 KB; power of 2 for fast modulo
 #define DMA_CAPTURE_BUFLEN          4096   // 4 channels * 4096 * 4 bytes = 64 KB
+_Static_assert((DMA_CAPTURE_BUFLEN & (DMA_CAPTURE_BUFLEN - 1)) == 0,
+               "cursor arithmetic masks with DMA_CAPTURE_BUFLEN - 1");
 // USB FS bulk IN can transfer up to 19 packets (19*64 = 1216 bytes)
 // per 1ms frame. 1280 bytes gives headroom to fill a full frame
 // without cutting off mid-timestamp.
@@ -228,6 +230,8 @@ typedef struct {
     uint32_t merge_pos;       // next DMA index to drain (circular)
     uint32_t prev_ndtr;       // DMA remaining-count at last flush
                               // (quiescence detection)
+    uint16_t half_events;     // HT/TC callbacks since last service
+                              // (write-head lap detection)
     rulos_dma_channel_t *dma_ch;
     uint32_t polarity_bit;    // SUB_RISING: COUNTER_POLARITY_BIT; else 0
     stash_rec_t stash[STASH_LEN];
@@ -259,6 +263,15 @@ typedef struct {
 } channel_t;
 
 static channel_t channels[NUM_CHANNELS];
+
+// DMA callback context: identifies which channel AND sub-stream a
+// TIM2 capture DMA channel feeds (passed as user_data), so the ISR
+// can count per-sub half-buffer events for lap detection.
+typedef struct {
+  channel_t *chan;
+  uint8_t sub;
+} sub_ctx_t;
+static sub_ctx_t sub_ctx[NUM_HW_CAPTURE];
 
 // Continuous timestamp output enable (settable via SCPI OUTPut:STATe).
 // Default ON so a freshly-plugged-in device behaves as the user expects.
@@ -480,6 +493,82 @@ CCMRAM static void stash_residual(channel_t *chan, uint8_t s,
   }
 }
 
+// Write-head lap accounting for sub `s`, using the cursor positions
+// from before this service consumes anything. Every HT/TC callback
+// marks a half-buffer boundary crossing, so `half_events` callbacks
+// guarantee at least (half_events - 1) * half-buffer records were
+// written since the last service. If that exceeds what the cursor
+// advance can represent, the DMA write head lapped the unread region
+// and overwrote records the cursor never visited -- unrecoverable, so
+// count whole laps as overflows. NVIC collapses back-to-back pending
+// interrupts, so this can undercount under extreme overload; it never
+// falsely triggers.
+CCMRAM static void account_laps(channel_t *chan, uint8_t s,
+                                uint32_t cur) {
+  uint32_t h = chan->sub[s].half_events;
+  chan->sub[s].half_events = 0;
+  if (__builtin_expect(h <= 2, 1)) return;
+  uint32_t adv = (cur - chan->sub[s].merge_pos) & (DMA_CAPTURE_BUFLEN - 1);
+  uint32_t written_min = (h - 1) * (DMA_CAPTURE_BUFLEN / 2);
+  if (written_min >= adv + DMA_CAPTURE_BUFLEN) {
+    chan->buf_overflows += ((written_min - adv) / DMA_CAPTURE_BUFLEN)
+                           * DMA_CAPTURE_BUFLEN;
+  }
+}
+
+// Drain sub `s` from merge_pos up to cur straight into the timestamp
+// ring -- the single-slope hot path. Capture sustains one record per
+// 100 ns across a 16k-record burst, so the inner loop must stay at
+// the ~16-cycle cost of a load, an A/B seconds select, two stores,
+// and a masked increment: ring space is pre-checked per batch, the
+// channel/polarity tag is folded once, and recent_pulse is set once.
+// Records that don't fit in the ring are dropped and counted.
+CCMRAM static void drain_sub_fast(channel_t *chan, uint8_t s,
+                                  uint32_t cur) {
+  uint32_t pos = chan->sub[s].merge_pos;
+  if (pos == cur) return;
+  chan->recent_pulse = true;
+  chan->sub[s].merge_pos = cur;
+
+  uint32_t count = (cur - pos) & (DMA_CAPTURE_BUFLEN - 1);
+  uint32_t head = ts_head;
+  uint32_t available = (ts_tail - head - 1) % TIMESTAMP_BUFLEN;
+  if (__builtin_expect(count > available, 0)) {
+    chan->buf_overflows += count - available;
+    count = available;
+    if (count == 0) return;
+  }
+
+  const uint32_t tag = ((uint32_t)chan->channel_num << COUNTER_CHAN_SHIFT)
+                       | chan->sub[s].polarity_bit;
+  const uint32_t divider = chan->divider;
+  volatile uint32_t *const buf = chan->sub[s].buf;
+
+  while (count > 0) {
+    uint32_t seg = DMA_CAPTURE_BUFLEN - pos;
+    if (seg > count) seg = count;
+    // Pointer-based iteration so the compiler doesn't spill the count.
+    volatile uint32_t *src = buf + pos;
+    volatile uint32_t *const end = src + seg;
+    while (src < end) {
+      uint32_t counter = *src++;
+      uint32_t seconds =
+          counter < (CLOCK_FREQ_HZ / 2) ? seconds_A : seconds_B;
+      if (__builtin_expect(divider != 1, 0)) {
+        chan->count++;
+        if (chan->count < divider) continue;
+        chan->count = 0;
+      }
+      timestamp_buffer[head].seconds = seconds;
+      timestamp_buffer[head].counter = counter | tag;
+      head = (head + 1) % TIMESTAMP_BUFLEN;
+    }
+    pos = (pos + seg) & (DMA_CAPTURE_BUFLEN - 1);
+    count -= seg;
+  }
+  ts_head = head;
+}
+
 // Minimum age (in TIM2 ticks) of a record released by the drain path.
 // Capture-to-DMA-visible latency is bounded by GPDMA arbitration
 // (well under a microsecond), so any edge that could precede a
@@ -515,28 +604,21 @@ CCMRAM static void service_channel(channel_t *chan, bool drain) {
       chan->sub[act].st_head = (chan->sub[act].st_head + 1) % STASH_LEN;
       chan->sub[act].st_n--;
     }
-    volatile uint32_t *buf = chan->sub[act].buf;
     uint32_t cur = safe_cur(chan, act);
-    uint32_t pos = chan->sub[act].merge_pos;
-    while (pos != cur) {
-      uint32_t seg_end = (pos < cur) ? cur : DMA_CAPTURE_BUFLEN;
-      while (pos < seg_end) {
-        stash_rec_t r;
-        resolve(chan, act, buf[pos++], &r);
-        ring_emit(chan, &r);
-      }
-      if (seg_end == DMA_CAPTURE_BUFLEN) pos = 0;
-    }
-    chan->sub[act].merge_pos = cur;
+    account_laps(chan, act, cur);
+    drain_sub_fast(chan, act, cur);
     chan->sub[act].st_head = chan->sub[act].st_n = 0;
 
     chan->sub[oth].merge_pos = safe_cur(chan, oth);
+    chan->sub[oth].half_events = 0;
     chan->sub[oth].st_head = chan->sub[oth].st_n = 0;
     return;
   }
 
   uint32_t curR = safe_cur(chan, SUB_RISING);
   uint32_t curF = safe_cur(chan, SUB_FALLING);
+  account_laps(chan, SUB_RISING, curR);
+  account_laps(chan, SUB_FALLING, curF);
   for (;;) {
     bool aR = sub_avail(chan, SUB_RISING, curR);
     bool aF = sub_avail(chan, SUB_FALLING, curF);
@@ -570,13 +652,16 @@ CCMRAM static void service_channel(channel_t *chan, bool drain) {
 }
 
 // TIM2 capture DMA HT/TC callback (one per in-use sub). The NDTR-
-// driven drain doesn't distinguish HT from TC, so both map here. All
-// of a channel's sub DMA ISRs share one NVIC priority (cannot preempt
-// each other), so per-channel service is serialized without masking.
+// driven drain doesn't distinguish HT from TC, so both map here; each
+// firing marks one half-buffer boundary crossing on its sub (lap
+// detection). All capture DMA ISRs share one NVIC priority (cannot
+// preempt each other), so per-channel service is serialized without
+// masking.
 CCMRAM static void on_dma(void *user_data) {
-  channel_t *chan = (channel_t *)user_data;
-  chan->dma_isr_ran = true;
-  service_channel(chan, false);
+  sub_ctx_t *ctx = (sub_ctx_t *)user_data;
+  ctx->chan->sub[ctx->sub].half_events++;
+  ctx->chan->dma_isr_ran = true;
+  service_channel(ctx->chan, false);
 }
 
 // Format a timestamp into buf, returning the number of bytes written.
@@ -746,6 +831,23 @@ static void on_usb_tx_complete(void) {
 // high-rate input and was the root cause of a rare drain-path
 // mis-order.)
 static void flush_dma_captures(void) {
+  // Capture overrun: a CCxOF flag means an edge arrived before GPDMA
+  // fetched the previous capture from that channel's CCR -- the older
+  // edge's timestamp is gone. The flag is sampled, not a counter, so
+  // this undercounts at extreme rates; the wire report saturates
+  // anyway, communicating "many".
+  uint32_t sr = TIM2->SR;
+  const uint32_t of_all =
+      TIM_SR_CC1OF | TIM_SR_CC2OF | TIM_SR_CC3OF | TIM_SR_CC4OF;
+  if (__builtin_expect(sr & of_all, 0)) {
+    TIM2->SR = ~(sr & of_all);  // rc_w0: writing 1 leaves a bit alone
+    for (int k = 0; k < NUM_HW_CAPTURE; k++) {
+      if (sr & (TIM_SR_CC1OF << k)) {
+        channels[capture_hw[k].channel].num_missed++;
+      }
+    }
+  }
+
   for (int i = 0; i < NUM_CHANNELS; i++) {
     channel_t *ch = &channels[i];
     if (!ch->has_hw) continue;
@@ -926,6 +1028,8 @@ static void init_timers() {
     ch->sub[s].buf = capture_buf[k];
     ch->sub[s].polarity_bit =
         (s == SUB_RISING) ? COUNTER_POLARITY_BIT : 0;
+    sub_ctx[k].chan = ch;
+    sub_ctx[k].sub = s;
 
     const rulos_dma_config_t cfg = {
         .request = dma_setup[k].request,
@@ -938,7 +1042,7 @@ static void init_timers() {
         .priority = RULOS_DMA_PRIORITY_VERYHIGH,
         .tc_callback = on_dma,
         .ht_callback = on_dma,
-        .user_data = ch,
+        .user_data = &sub_ctx[k],
     };
     ch->sub[s].dma_ch = rulos_dma_alloc(&cfg);
     if (ch->sub[s].dma_ch == NULL) {
@@ -1008,6 +1112,7 @@ void timestamper_set_slope(int ch, timestamper_slope_t slope) {
   for (int s = 0; s < NUM_SUBS; s++) {
     if (!sub_active(c->slope, s) && sub_active(slope, s)) {
       c->sub[s].merge_pos = safe_cur(c, s);
+      c->sub[s].half_events = 0;
       c->sub[s].st_head = c->sub[s].st_n = 0;
     }
   }
@@ -1134,6 +1239,7 @@ void timestamper_discard_pending(void) {
     // residue: the next edge becomes the first one the host sees.
     for (int s = 0; s < NUM_SUBS; s++) {
       channels[i].sub[s].merge_pos = safe_cur(&channels[i], s);
+      channels[i].sub[s].half_events = 0;
       channels[i].sub[s].st_head = channels[i].sub[s].st_n = 0;
     }
   }
