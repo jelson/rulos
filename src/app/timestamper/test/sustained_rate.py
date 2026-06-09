@@ -65,7 +65,7 @@ def measure_rate(tic, measure_s, text=False, settle_s=0.5):
         tic.discard_pending()
         tic.read_raw(settle_s)   # drain old-rate residue
         tic.discard_pending()    # clean measurement start
-        timestamps, _others, overcaptures, overflows, _comments = \
+        timestamps, _pols, _others, overcaptures, overflows, _comments = \
             parse_text_stream(tic.read_raw(measure_s), channel=0)
         return timestamps, overcaptures + overflows
 

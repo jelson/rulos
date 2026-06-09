@@ -124,10 +124,14 @@ def analyze(args, filename, d):
         ax.figure.savefig(f'{filename}.residuals.plot.png', dpi=150, bbox_inches='tight')
 
 def parse(filename):
-    d = pd.read_csv(filename, names=['channel', 'timestamp'],
+    # The polarity column ('+'/'-') is appended by firmware >= 0.15;
+    # older captures have only two columns, leaving polarity NaN.
+    # Either way it's unused here, so don't let it veto rows.
+    d = pd.read_csv(filename, names=['channel', 'timestamp', 'polarity'],
                     skip_blank_lines=True,
                     delimiter=' ', comment='#')
-    d = d.dropna()
+    d = d.dropna(subset=['channel', 'timestamp'])
+    d = d.drop(columns=['polarity'])
     d = d.astype({
         'channel': int,
         'timestamp': float,

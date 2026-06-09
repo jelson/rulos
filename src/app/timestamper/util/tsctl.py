@@ -37,7 +37,8 @@ stream so SCPI responses come back clean.
 
       # Capture for 5 seconds (loops forever via iter_records()).
       for r in tic.read_for(5.0):
-          print(f"ch {r.channel}: t = {r.seconds}.{r.nanoseconds:09d} s")
+          print(f"ch {r.channel}: t = {r.seconds}.{r.nanoseconds:09d} s "
+                f"({r.polarity})")
 
       # Latched-error access for diagnostics.
       tic.clear_errors()                       # *CLS
@@ -64,6 +65,9 @@ import time
 #                    0..999_999_999 ns within it), kept separate on
 #                    purpose: a 64-bit float can't hold enough distinct
 #                    nanoseconds to survive runs past ~104 days.
+#                    `polarity` is the hardware-latched edge direction:
+#                    '+' rising, '-' falling -- the same character the
+#                    text wire format appends to each line.
 #   PulsesLost    -- the device dropped edges on `channel`:
 #                    `overcaptures` arrived too close together to
 #                    record, `buf_overflows` were lost to a full ring
@@ -75,7 +79,7 @@ import time
 #   OscillatorFailure -- the 10 MHz reference failed; the device has
 #                    halted and emits nothing further until reset. The
 #                    binary equivalent of the "# FATAL ..." line.
-Timestamp = namedtuple("Timestamp", "channel seconds nanoseconds")
+Timestamp = namedtuple("Timestamp", "channel seconds nanoseconds polarity")
 PulsesLost = namedtuple("PulsesLost", "channel overcaptures buf_overflows")
 OutputCleared = namedtuple("OutputCleared", [])
 OscillatorFailure = namedtuple("OscillatorFailure", [])
@@ -84,13 +88,15 @@ TIMESTAMPER_VID = 0x1209  # pid.codes
 TIMESTAMPER_PID = 0x71C4  # LectroTIC-4
 IDN_PREFIX = "Lectrobox,LectroTIC-4"
 
-# counter word: [31:30] channel, [29:28] reserved (always 0; spare
-# for future in-band flags), [27:0] tick value (max 249,999,999).
-# Mask ticks with the 28-bit value mask so reserved bits never leak
-# into the nanoseconds.
+# counter word: [31:30] channel, [29] special-message flag, [28] edge
+# polarity (timestamps: 1 = rising '+', 0 = falling '-'; special
+# records: 0), [27:0] tick value (max 249,999,999). Mask ticks with
+# the 28-bit value mask so the flag bits never leak into the
+# nanoseconds.
 _BINARY_RECORD_LEN = 8
 _NS_PER_TICK = 4
 _COUNTER_CHAN_SHIFT = 30
+_COUNTER_POLARITY_BIT = 1 << 28
 _COUNTER_VALUE_MASK = 0x0FFFFFFF
 # counter [29] set => the record is a special message, not a timestamp;
 # [7:0] is then the message type and the seconds word its payload.
@@ -416,7 +422,8 @@ class LectroTIC4:
                     # unknown special types: skip (forward-compatible)
                 else:
                     ticks = cnt & _COUNTER_VALUE_MASK
-                    yield Timestamp(chan, sec, ticks * _NS_PER_TICK)
+                    pol = "+" if cnt & _COUNTER_POLARITY_BIT else "-"
+                    yield Timestamp(chan, sec, ticks * _NS_PER_TICK, pol)
             leftover = buf[n * _BINARY_RECORD_LEN:]
 
     def iter_records(self):
@@ -483,7 +490,8 @@ def cmd_stream(tic, args):
         for r in tic.iter_records():
             if isinstance(r, Timestamp):
                 sys.stdout.write(
-                    f"{r.channel} {r.seconds}.{r.nanoseconds:09d}\n")
+                    f"{r.channel} {r.seconds}.{r.nanoseconds:09d} "
+                    f"{r.polarity}\n")
             elif isinstance(r, PulsesLost):
                 sys.stdout.write(
                     f"# ch{r.channel}: {r.overcaptures} overcaptures, "

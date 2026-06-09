@@ -19,10 +19,18 @@ expectations scale with the mode (a binary record is 8 bytes, a text
 record ~22, so binary sustains a much higher edge rate).
 
 Phases:
-  rising / both / divider / output-gating / burst / sustained-rate
+  rising / falling / both / divider / output-gating / burst /
+  overcapture / polarity-burst / sustained-rate / single-pulse
       -- run in text AND binary
-  scpi-errors / reset / single-pulse / idn-serial   -- run once
+  scpi-errors / reset / slope-switch / idn-serial   -- run once
   tsctl-cli   -- the CLI tool end to end
+  config-persist / config-torn  -- cold-reset flash phases
+
+Every timestamp record now carries a hardware-latched edge polarity
+('+' rising / '-' falling, text column 3 / binary counter bit 28);
+the capturing phases assert it matches the slope under test, and the
+both-edge phases assert strict +/- alternation and time-ordering of
+the on-device rising/falling merge.
 
 The signal generator's output must be wired to the input selected
 with --channel (default 0).
@@ -90,15 +98,16 @@ def expect(condition, message):
 # Capture modes
 #
 # Both return the uniform tuple
-#   (times, others, overcaptures, overflows, comments)
-# overcaptures/overflows are ints in text mode and None in binary mode
-# (the firmware suppresses the '#' diagnostic lines on the binary
-# wire -- there, loss is caught by the per-phase record-count check).
+#   (times, pols, others, overcaptures, overflows, comments)
+# pols is the per-record polarity column ('+' rising / '-' falling),
+# parallel to times.
 # --------------------------------------------------------------------
 
 def parse_text_stream(raw, channel):
-    """Parse the device's raw TEXT output (bytes)."""
-    times, others, comments = [], set(), []
+    """Parse the device's raw TEXT output (bytes). Each timestamp line
+    is '<ch> <sec>.<ns> <+|->'; lines without a valid polarity column
+    are treated as torn/garbage and skipped."""
+    times, pols, others, comments = [], [], set(), []
     overcaptures = overflows = 0
     for line in raw.decode(errors="replace").splitlines():
         line = line.strip()
@@ -112,7 +121,7 @@ def parse_text_stream(raw, channel):
                 overflows += int(m.group(3))
             continue
         parts = line.split()
-        if len(parts) < 2:
+        if len(parts) < 3 or parts[2] not in ("+", "-"):
             continue
         try:
             ch = int(parts[0])
@@ -124,7 +133,8 @@ def parse_text_stream(raw, channel):
             others.add(ch)
             continue
         times.append(t)
-    return times, others, overcaptures, overflows, comments
+        pols.append(parts[2])
+    return times, pols, others, overcaptures, overflows, comments
 
 
 class TextMode:
@@ -164,7 +174,7 @@ class BinaryMode:
         # stream-enable, then yields the record union for the window.
         # Binary now carries loss in-band (PulsesLost), so overcapture/
         # overflow are checkable here exactly like the text wire.
-        times, others = [], set()
+        times, pols, others = [], [], set()
         overcaptures = overflows = 0
         for r in tic.read_for(duration_s):
             if isinstance(r, PulsesLost):
@@ -175,7 +185,8 @@ class BinaryMode:
                     others.add(r.channel)
                     continue
                 times.append(r.seconds + r.nanoseconds * 1e-9)
-        return times, others, overcaptures, overflows, []
+                pols.append(r.polarity)
+        return times, pols, others, overcaptures, overflows, []
 
     def arrivals(self, tic, channel, window_s, want):
         """Host monotonic arrival time of each record on `channel`
@@ -262,23 +273,46 @@ def classify_gaps(deltas, split):
     return cls, short, long
 
 
+def expect_polarity(pols, want):
+    """Every record's hardware-latched polarity column is `want`."""
+    bad = [i for i, p in enumerate(pols) if p != want]
+    diag = f"; {len(bad)} wrong, first at #{bad[0]}" if bad else ""
+    return expect(not bad,
+                  f"all {len(pols)} records have polarity '{want}'{diag}")
+
+
+def expect_monotonic(times):
+    """Timestamps must be nondecreasing: a backwards step is a merge
+    mis-order, never measurement noise."""
+    bad = [i for i in range(len(times) - 1) if times[i + 1] < times[i]]
+    if bad:
+        i = bad[0]
+        print(f"    [DIAG] first backwards step at #{i}: "
+              f"{times[i]:.9f} -> {times[i + 1]:.9f} "
+              f"({(times[i + 1] - times[i]) * 1e9:+.0f} ns)")
+    return expect(not bad,
+                  f"timestamps in order ({len(bad)} backwards steps)")
+
+
 # --------------------------------------------------------------------
 # Mode-parameterized capturing phases
 # --------------------------------------------------------------------
 
 def phase_periodic(mode, sg, tic, channel, duration_s, divider,
-                   count_tol):
-    """Rising-edge-only periodic capture. divider==1 is the plain
-    rising phase; divider>1 is the divider phase (1 stamp per N
+                   count_tol, slope="POS"):
+    """Single-slope periodic capture. divider==1 is the plain rising
+    (or falling) phase; divider>1 is the divider phase (1 stamp per N
     pulses). One body, parameterized. Establishes its own siggen
     signal so phase order / prior state can't poison it."""
-    label = ("rising edge only" if divider == 1
-             else f"rising, divider={divider}")
+    edge = "rising" if slope == "POS" else "falling"
+    label = (f"{edge} edge only" if divider == 1
+             else f"{edge}, divider={divider}")
     print(f"\n=== {label} [{mode.name}] ===")
     sg.periodic(PULSE_HZ)
-    tic.set_slope(channel, "POS")
+    tic.set_slope(channel, slope)
     tic.set_divider(channel, divider)
-    times, others, ovc, ovf, _ = mode.capture(tic, channel, duration_s)
+    times, pols, others, ovc, ovf, _ = mode.capture(
+        tic, channel, duration_s)
     expected = (PULSE_HZ / divider) * duration_s
     period = PERIOD_S * divider
     collected(times, others, channel, expected)
@@ -287,6 +321,7 @@ def phase_periodic(mode, sg, tic, channel, duration_s, divider,
     ok = expect(abs(len(times) - expected) <= count_tol,
                 f"count within {count_tol} of expected {expected:.1f}")
     ok &= score_clean(mode, ovc, ovf, others)
+    ok &= expect_polarity(pols, "+" if slope == "POS" else "-")
     if deltas:
         ok &= expect(intervals_within(deltas, period, GAP_TOL_S,
                                       "intervals"),
@@ -300,7 +335,8 @@ def phase_both(mode, sg, tic, channel, duration_s):
     sg.periodic(PULSE_HZ)
     tic.set_slope(channel, "BOTH")
     tic.set_divider(channel, 1)
-    times, others, ovc, ovf, _ = mode.capture(tic, channel, duration_s)
+    times, pols, others, ovc, ovf, _ = mode.capture(
+        tic, channel, duration_s)
     expected = 2 * PULSE_HZ * duration_s
     collected(times, others, channel, expected)
     if len(times) < 4:
@@ -332,12 +368,23 @@ def phase_both(mode, sg, tic, channel, duration_s):
     ok = expect(abs(len(times) - expected) <= 4,
                 f"count within 4 of expected {expected:.0f}")
     ok &= score_clean(mode, ovc, ovf, others)
+    ok &= expect_monotonic(times)
     ok &= expect(abs(len(short) - len(long)) <= 1,
                  "short/long delta counts roughly equal")
     ok &= expect(len(cls) >= 4 and
                  all(cls[i] != cls[i + 1] for i in range(len(cls) - 1)),
                  "gaps strictly alternate short/long (every pulse = "
                  "2 edges, regardless of start)")
+    # The polarity column is hardware truth, independent of the gap
+    # classification: edges must strictly alternate +/-, and every
+    # short (intra-pulse) gap must run rising->falling.
+    ok &= expect(all(pols[i] != pols[i + 1]
+                     for i in range(len(pols) - 1)),
+                 "polarity strictly alternates +/-")
+    ok &= expect(all((cls[i] == "S") == (pols[i] == "+")
+                     for i in range(len(cls))),
+                 "every short gap is rise->fall ('+' then '-'), every "
+                 "long gap fall->rise")
     ok &= expect(bool(ishort) and
                  intervals_within(ishort, PULSE_WIDTH_S, GAP_TOL_S,
                                   "short(rise→fall)"),
@@ -366,7 +413,7 @@ def phase_output_gating(mode, sg, tic, channel):
 
     # Stream ON: a fresh window must produce ~PULSE_HZ stamps, decoded
     # through this mode's path.
-    times, others, ovc, ovf, _ = mode.capture(tic, channel, 1.0)
+    times, _pols, others, ovc, ovf, _ = mode.capture(tic, channel, 1.0)
     print(f"  OFF: {len(bytes_off)} bytes (expect 0); "
           f"ON: {len(times)} stamps (expect ~{PULSE_HZ})")
 
@@ -394,17 +441,17 @@ def capture_burst(mode, sg, tic, channel, slope, ncyc, spacing_ns,
     tic.set_slope(channel, slope)
     tic.set_divider(channel, 1)
     actual_ns = sg.pulse_burst(spacing_ns, ncyc=ncyc)
-    times, others, ovc, ovf, comments = mode.capture(
+    times, pols, others, ovc, ovf, comments = mode.capture(
         tic, channel, window_s)
     for c in comments:
         print(f"    | {c}")
-    return actual_ns, _group_bursts(times), others, ovc, ovf
+    return actual_ns, times, pols, _group_bursts(times), others, ovc, ovf
 
 
 def phase_burst(mode, sg, tic, channel, ncyc=16383, spacing_ns=100):
     print(f"\n=== {ncyc}-pulse rising burst @{spacing_ns} ns "
           f"[{mode.name}] ===")
-    actual_ns, sizes, others, ovc, ovf = capture_burst(
+    actual_ns, times, pols, sizes, others, ovc, ovf = capture_burst(
         mode, sg, tic, channel, "POS", ncyc, spacing_ns)
     # Only the first and last burst can be clipped by the capture
     # window; every burst that begins AND ends inside the window must
@@ -424,6 +471,8 @@ def phase_burst(mode, sg, tic, channel, ncyc=16383, spacing_ns=100):
                  f"every interior burst is exactly {ncyc} pulses "
                  f"(not one missed)")
     ok &= score_clean(mode, ovc, ovf, others)
+    ok &= expect_polarity(pols, "+")
+    ok &= expect_monotonic(times)
     return ok
 
 
@@ -444,7 +493,7 @@ def phase_overcapture(mode, sg, tic, channel, ncyc=20000):
     print(f"\n=== overcapture: {ncyc}-pulse burst, min spacing "
           f"[{mode.name}] ===")
     # Request 1 ns; the DG1022Z clamps to its PULS-mode floor.
-    actual_ns, sizes, others, ovc, ovf = capture_burst(
+    actual_ns, _times, _pols, sizes, others, ovc, ovf = capture_burst(
         mode, sg, tic, channel, "POS", ncyc, spacing_ns=1)
     print(f"  spacing {actual_ns:.1f} ns; bursts {sizes}; "
           f"overcaptures={ovc}, buf overflows={ovf}; "
@@ -459,6 +508,42 @@ def phase_overcapture(mode, sg, tic, channel, ncyc=20000):
     ok &= expect(ovc > 0 or ovf > 0,
                  f"device reported the loss on the {mode.name} wire "
                  f"(overcaptures={ovc}, buf overflows={ovf})")
+    return ok
+
+
+def phase_polarity_burst(mode, sg, tic, channel, ncyc=4096,
+                         spacing_ns=200):
+    """BOTH-edge burst at tight spacing -- the merge-engine stress
+    test. Each pulse is 50 ns wide (capture_burst's siggen setting),
+    so the rising and falling sub-streams' edges land 50 ns / 150 ns
+    apart and the on-device time-merge must zipper them back into one
+    ordered stream: every interior burst has exactly 2*ncyc edges,
+    polarity strictly alternates across the whole capture (bursts
+    included -- every pulse contributes '+' then '-'), and timestamps
+    never step backwards. A single merge mis-order, duplicate, or
+    dropped edge anywhere fails."""
+    print(f"\n=== polarity burst: {ncyc} pulses @{spacing_ns} ns, "
+          f"BOTH edges [{mode.name}] ===")
+    actual_ns, times, pols, sizes, others, ovc, ovf = capture_burst(
+        mode, sg, tic, channel, "BOTH", ncyc, spacing_ns)
+    interior = sizes[1:-1]
+    bad = [(idx + 1, n) for idx, n in enumerate(interior)
+           if n != 2 * ncyc]
+    print(f"  spacing {actual_ns:.1f} ns; bursts {sizes}; "
+          f"interior must all == {2 * ncyc}; "
+          f"bad interior (idx,n)={bad or 'none'}; "
+          f"others={sorted(others) or 'none'}")
+
+    ok = expect(len(interior) >= 1,
+                f">=1 fully-captured (interior) burst of {2 * ncyc} edges")
+    ok &= expect(not bad,
+                 f"every interior burst is exactly {2 * ncyc} edges "
+                 f"(both edges of every pulse)")
+    ok &= score_clean(mode, ovc, ovf, others)
+    ok &= expect(all(pols[i] != pols[i + 1]
+                     for i in range(len(pols) - 1)),
+                 "polarity strictly alternates through every burst")
+    ok &= expect_monotonic(times)
     return ok
 
 
@@ -478,7 +563,8 @@ def phase_sustained(mode, sg, tic, channel):
     # window is pure steady-rate.
     tic.discard_pending()
     tic.read_raw(0.5)
-    times, others, ovc, ovf, _ = mode.capture(tic, channel, SUSTAINED_S)
+    times, pols, others, ovc, ovf, _ = mode.capture(
+        tic, channel, SUSTAINED_S)
     # Rate is measured from the captured records' own time span, not
     # count/window: the latter loses ~(marker-sync + end-of-window
     # drain) at both ends regardless of rate. A device that keeps up
@@ -513,6 +599,7 @@ def phase_sustained(mode, sg, tic, channel):
                      f"ns of the {nominal * 1e6:.2f} µs source period "
                      f"(not a single pulse missed)")
     ok &= score_clean(mode, ovc, ovf, others)
+    ok &= expect_polarity(pols, "+")
     return ok
 
 
@@ -588,15 +675,16 @@ def phase_slope_switch(sg, tic, channel):
     tic.set_stream_enabled(True)
     tic.discard_pending()
 
-    times, raw, seen, switched = [], b"", 0, False
+    times, pols, raw, seen, switched = [], [], b"", 0, False
     start = time.monotonic()
     while time.monotonic() - start < 6.0 and len(times) < 30:
         chunk = tic.read_raw(0.05)
         if chunk:
             raw += chunk
-            ts, *_ = parse_text_stream(raw, channel)
+            ts, ps, *_ = parse_text_stream(raw, channel)
             while seen < len(ts):
                 times.append(ts[seen])
+                pols.append(ps[seen])
                 seen += 1
         if not switched and len(times) >= 10:
             tic.send(f"INP{channel}:SLOP NEG")  # POS -> NEG mid-stream
@@ -630,8 +718,18 @@ def phase_slope_switch(sg, tic, channel):
                  f"every steady gap within {GAP_TOL_S * 1e9:.0f} ns of "
                  f"{PERIOD_S * 1e3:.0f} ms, both sides of the switch "
                  f"(no edge missed)")
+    # The polarity column must tell the same story: a run of '+', one
+    # flip, a run of '-' -- with the flip at the crossover gap.
+    flips = [i for i in range(len(pols) - 1) if pols[i] != pols[i + 1]]
+    ok &= expect(len(flips) == 1 and pols[0] == "+" and pols[-1] == "-",
+                 f"polarity flips '+'->'-' exactly once "
+                 f"(flips at {flips})")
     if anomalies:
         i, d = anomalies[0]
+        if len(flips) == 1:
+            ok &= expect(flips[0] == i,
+                         f"polarity flip (gap #{flips[0]}) coincides "
+                         f"with the crossover gap (#{i})")
         k = round((d - WIDTH) / PERIOD_S)
         ok &= expect(0 <= k <= 3 and
                      intervals_within([d], WIDTH + k * PERIOD_S,
@@ -756,11 +854,11 @@ def phase_tsctl_cli(port, sg):
         out, _ = proc.communicate()
     sg.output_off()
     lines = [ln for ln in out.splitlines() if ln.strip()]
-    line_re = re.compile(r"^\d+ \d+\.\d{9}$")
+    line_re = re.compile(r"^\d+ \d+\.\d{9} [+-]$")
     good = [ln for ln in lines if line_re.match(ln)]
     print(f"  `tsctl stream`: {len(lines)} lines, {len(good)} well-formed")
     ok &= expect(len(good) >= 5 and len(good) == len(lines),
-                 "all stream lines are '<ch> <sec>.<ns>'")
+                 "all stream lines are '<ch> <sec>.<ns> <+|->'")
     ok &= expect(all(ln.split()[0] == "0" for ln in good),
                  "all stream records are on the driven channel 0")
     return ok
@@ -952,6 +1050,9 @@ def main():
         per_mode = [
             ("rising",
              lambda m: phase_periodic(m, sg, tic, ch, dur, 1, 2)),
+            ("falling",
+             lambda m: phase_periodic(m, sg, tic, ch, dur, 1, 2,
+                                      slope="NEG")),
             ("both", lambda m: phase_both(m, sg, tic, ch, dur)),
             ("divider",
              lambda m: phase_periodic(m, sg, tic, ch, dur, 5, 1)),
@@ -960,6 +1061,8 @@ def main():
             ("burst", lambda m: phase_burst(m, sg, tic, ch)),
             ("overcapture",
              lambda m: phase_overcapture(m, sg, tic, ch)),
+            ("polarity burst",
+             lambda m: phase_polarity_burst(m, sg, tic, ch)),
             ("sustained", lambda m: phase_sustained(m, sg, tic, ch)),
             ("single pulse",
              lambda m: phase_single_pulse(m, sg, tic, ch)),

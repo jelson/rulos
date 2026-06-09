@@ -58,7 +58,7 @@ def count_pulses(tic, channel, measure_time_s=3.0, text=False, verbose=True):
         tic.send("FORM:DATA TEXT")
         tic.set_stream_enabled(True)
         tic.discard_pending()
-        timestamps, _others, overcaptures, overflows, _comments = \
+        timestamps, _pols, _others, overcaptures, overflows, _comments = \
             parse_text_stream(tic.read_raw(measure_time_s), channel)
     else:
         tic.discard_pending()
