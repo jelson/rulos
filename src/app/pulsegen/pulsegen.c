@@ -222,9 +222,9 @@ static UartState_t uart;
 static bool hrtim_dll_ready = false;
 
 // Active burst hardware state, owned by apply_all().
-static uint32_t g_burst_outputs;  // OENR/ODISR mask armed for each burst
+static uint32_t g_burst_outputs;  // OENR/ODISR mask; 0 = no active burst
 static Time g_burst_rep_us;       // repetition interval of the active config
-static uint32_t g_burst_gen;      // bumped per reconfig; stale rep tasks die
+static bool g_burst_task_live;    // a burst_rep_task sits in the scheduler
 
 // ---- HRTIM helpers ---------------------------------------------------------
 
@@ -374,12 +374,18 @@ static uint32_t burst_idle_ticks(uint32_t ncyc) {
   return idle;
 }
 
-// Arm one burst, then reschedule for the next repetition interval. The
-// scheduler has no cancel, so data carries a generation stamp: a task
-// scheduled before the last reconfiguration dies here.
+// Arm one burst, then reschedule for the next repetition interval. At most
+// one instance of this task is ever in the scheduler queue (there is no
+// cancel, so a task per reconfiguration would leak queue slots until each
+// stale one fired); apply_all() clears g_burst_outputs to make it die, and
+// after a reconfiguration the surviving task arms the new configuration at
+// its next firing.
 static void burst_rep_task(void *data) {
-  if ((uint32_t)(uintptr_t)data != g_burst_gen) return;
-  schedule_us(g_burst_rep_us, burst_rep_task, data);
+  if (g_burst_outputs == 0) {
+    g_burst_task_live = false;
+    return;
+  }
+  schedule_us(g_burst_rep_us, burst_rep_task, NULL);
 
   // Glitch-free arm: with the outputs disabled, start the controller --
   // the burst begins in its idle phase -- then enable the outputs while
@@ -441,7 +447,10 @@ static void config_burst(int ch, uint32_t outputs) {
   g_burst_outputs = outputs;
   g_burst_rep_us = (Time)(chan_burst_rep_ps[ch] / 1000000);
   LL_HRTIM_EnableIT_BMPER(HRTIM1);
-  schedule_us(1, burst_rep_task, (void *)(uintptr_t)g_burst_gen);
+  if (!g_burst_task_live) {
+    g_burst_task_live = true;
+    schedule_us(1, burst_rep_task, NULL);
+  }
 }
 
 // Validate one channel's parameters against the current mode. Returns 0 if OK
@@ -509,9 +518,10 @@ static bool config_group(int g, uint8_t ck, uint32_t per, bool sync,
 // Called after any parameter change. A channel that is off, or on but invalid,
 // is parked low; valid on-channels drive their outputs.
 static void apply_all(void) {
-  // Quiesce the burst controller before touching any timer or output state,
-  // and invalidate the scheduled repetition task via the generation stamp.
-  g_burst_gen++;
+  // Quiesce the burst controller before touching any timer or output state.
+  // Clearing g_burst_outputs makes a parked burst_rep_task die at its next
+  // firing unless config_burst() re-arms below.
+  g_burst_outputs = 0;
   LL_HRTIM_DisableIT_BMPER(HRTIM1);
   LL_HRTIM_BM_Disable(HRTIM1);
   LL_HRTIM_ClearFlag_BMPER(HRTIM1);
