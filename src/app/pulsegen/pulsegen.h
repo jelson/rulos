@@ -28,15 +28,25 @@
 
 #define PULSEGEN_FW_VERSION "0.1.0"
 
-// Setters for each SCPI-controllable parameter. The setter stashes the new
-// value and, if the channel is currently armed, reconfigures hardware.
-// Returns NULL on success, or a static SCPI error string (e.g.
-// `"-200,\"Period out of range\""`) on failure.
+// Setters for each SCPI-controllable parameter. Each stashes the new value
+// and rebuilds the HRTIM configuration. Returns NULL on success, or a static
+// SCPI error string (e.g. `"-200,\"Period out of range\""`) describing why
+// the targeted channel is invalid.
+//
+// period applies to the channel's whole domain: its group (the other channel
+// on the same HRTIM timer) in async mode, all four channels in sync mode.
+// width and delay (rising-edge offset) are per channel.
 const char *pulsegen_set_state(int ch, bool on);
 const char *pulsegen_set_period_ps(int ch, uint64_t ps);
 const char *pulsegen_set_width_ps(int ch, uint64_t ps);
-const char *pulsegen_set_count(int ch, uint32_t n);
-const char *pulsegen_set_burst_period_ps(int ch, uint64_t ps);
+const char *pulsegen_set_delay_ps(int ch, uint64_t ps);
 
-// *RST: disable all outputs and clear all per-channel config.
+// Select ASYNC (two independent frequency groups) or SYNC (all channels share
+// one period, phase-locked). Returns NULL (never fails).
+const char *pulsegen_set_mode(bool sync);
+
+// "ASYNC" or "SYNC", for the MODE? query.
+const char *pulsegen_mode_str(void);
+
+// *RST: ASYNC mode, all outputs off, all per-channel config cleared.
 void pulsegen_reset_all(void);

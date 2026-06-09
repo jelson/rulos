@@ -2,15 +2,28 @@
 
 """Configure a Lectrobox Pulsegen over its USB CDC SCPI interface.
 
+The device has two modes:
+  ASYNC (default): two independent frequency groups. Channels 0+1 share
+    one period (HRTIM Timer F), channels 2+3 share another (Timer E).
+    Within a group each channel has its own width and rising-edge delay.
+  SYNC: all four channels share one period, phase-locked, so per-channel
+    delays place rising edges relative to a common t=0 at 250 ps steps.
+
+Setting a channel's period sets its whole domain's period (its group in
+async, all four in sync). Width and delay are always per channel. The
+HRTIM-only timebase spans roughly 24 ns to 524 us (1.9 kHz .. 41 MHz).
+
 CLI usage examples:
   pgctl.py idn
+  pgctl.py mode sync
+  pgctl.py mode                      # query
   pgctl.py state 0 ON
   pgctl.py period 0 1e-6
   pgctl.py width 0 100e-9
-  pgctl.py count 0 100
-  pgctl.py burst-period 0 1e-3
+  pgctl.py delay 1 250e-12
   pgctl.py pulse 0 1e-6 100e-9       # period + width + state ON in one shot
-  pgctl.py freq 0 1000 50            # 1 kHz, 50% duty
+  pgctl.py freq 0 1e6 50             # 1 MHz, 50% duty
+  pgctl.py stair 1e-6 100e-9 250e-12 # sync 4-channel 250 ps stair
   pgctl.py off 0                     # state OFF
   pgctl.py off                       # state OFF on every channel
   pgctl.py reset
@@ -18,31 +31,27 @@ CLI usage examples:
   pgctl.py raw '*IDN?'
   pgctl.py --port /dev/ttyACM2 state 2 ON
 
-As a library, open a Pulsegen instance and call methods on it. The
-device's SCPI surface is setters-only (no per-parameter queries), so
-the API mirrors that.
+As a library, open a Pulsegen instance and call methods on it.
 
   from pgctl import Pulsegen
 
   # Autodetects by USB VID/PID (pass port="/dev/ttyACM1" to override).
   with Pulsegen() as pg:
       print(pg.idn())                          # "Lectrobox,Pulsegen,..."
-      pg.reset()                               # *RST -- all outputs off
+      pg.reset()                               # *RST -- ASYNC, all off
 
-      # Per-channel configuration (channel in 0..3). Periods and widths
-      # are in seconds; the device works in picosecond units internally
-      # and accepts scientific notation (e.g. 1.5e-6 = 1.5 microseconds).
-      pg.set_period(0, 1e-6)                   # 1 microsecond period
-      pg.set_width(0, 100e-9)                  # 100 nanosecond pulse width
+      # Periods/widths/delays are in seconds; the device works in
+      # picoseconds internally and accepts scientific notation.
+      pg.set_period(0, 1e-6)                   # 1 us period (group 0)
+      pg.set_width(0, 100e-9)                  # 100 ns width
+      pg.set_delay(0, 0)                       # rising-edge offset
       pg.set_state(0, True)                    # OUTP0:STAT ON
 
-      # Convenience: one call to configure-and-start.
+      # Convenience: configure-and-start.
       pg.pulse(1, period_s=2e-7, width_s=5e-8)
 
-      # Burst mode: run N pulses each BURSt:PERiod seconds.
-      pg.set_count(2, 100)                     # 100 pulses per burst
-      pg.set_burst_period(2, 1e-3)             # bursts repeat every 1 ms
-      pg.set_state(2, True)
+      # Sync mode + a 4-channel 250 ps stair for timestamper testing.
+      pg.stair(period_s=1e-6, width_s=100e-9, step_s=250e-12)
 
       # Latched-error access for diagnostics.
       pg.clear_errors()                        # *CLS
@@ -50,14 +59,13 @@ the API mirrors that.
 
       # Escape hatches for raw SCPI.
       pg.send("OUTP3:STAT OFF")                # no response read
-      print(pg.query("*IDN?"))                 # returns one line
+      print(pg.query("MODE?"))                 # returns one line
 """
 
 import argparse
 import serial
 import serial.tools.list_ports
 import sys
-import time
 
 
 PULSEGEN_VID = 0x1209  # pid.codes
@@ -160,35 +168,43 @@ class Pulsegen:
     def get_error(self):
         return self.query("SYST:ERR?")
 
+    def set_mode(self, sync):
+        """Select SYNC (all channels one phase-locked period) or ASYNC
+        (two independent frequency groups)."""
+        self.send(f"MODE {'SYNC' if sync else 'ASYNC'}")
+
+    def get_mode(self):
+        """Returns 'ASYNC' or 'SYNC'."""
+        return self.query("MODE?")
+
     def set_state(self, channel, on):
         self.send(f"OUTP{channel}:STAT {'ON' if on else 'OFF'}")
 
     def set_period(self, channel, seconds):
-        """Pulse period in seconds. Resolution down to 250 ps in HRTIM
-        mode; falls back to TIM3 (8 ns base tick, up to ~34 s) for
-        longer periods. Errors latch in SYST:ERR if the period is out
-        of range or width >= period."""
+        """Pulse period in seconds for this channel's domain (its group
+        in async mode, all four channels in sync mode). HRTIM-only range
+        is ~24 ns to ~524 us. Errors latch in SYST:ERR if out of range or
+        width >= period."""
         self.send(f"SOUR{channel}:PULS:PER {seconds:g}")
 
     def set_width(self, channel, seconds):
-        """Pulse high-time width in seconds. Must be strictly less than
-        the period."""
+        """Pulse high-time width in seconds (per channel). Must be
+        strictly less than the period."""
         self.send(f"SOUR{channel}:PULS:WIDT {seconds:g}")
 
-    def set_count(self, channel, n):
-        """Number of pulses per burst. 0 = continuous (no burst gating)."""
-        self.send(f"SOUR{channel}:PULS:COUN {int(n)}")
-
-    def set_burst_period(self, channel, seconds):
-        """Period between bursts. 0 with COUN>0 = single shot."""
-        self.send(f"SOUR{channel}:BURS:PER {seconds:g}")
+    def set_delay(self, channel, seconds):
+        """Rising-edge offset in seconds (per channel), placed on the
+        250 ps grid. delay + width must not exceed the period."""
+        self.send(f"SOUR{channel}:PULS:DEL {seconds:g}")
 
     # ---- High-level helpers -----------------------------------------------
 
-    def pulse(self, channel, period_s, width_s):
-        """Configure period + width and start the channel in one call."""
+    def pulse(self, channel, period_s, width_s, delay_s=0.0):
+        """Configure period + width (+ optional delay) and start the
+        channel in one call."""
         self.set_period(channel, period_s)
         self.set_width(channel, width_s)
+        self.set_delay(channel, delay_s)
         self.set_state(channel, True)
 
     def freq(self, channel, hz, duty=0.5):
@@ -197,6 +213,17 @@ class Pulsegen:
             raise ValueError("duty must be between 0 and 1 (exclusive)")
         period_s = 1.0 / hz
         self.pulse(channel, period_s, period_s * duty)
+
+    def stair(self, period_s, width_s, step_s):
+        """Sync mode 4-channel staircase: every channel at `period_s`
+        and `width_s`, with channel n's rising edge delayed by n*step_s.
+        The canonical timestamper edge-resolution test."""
+        self.set_mode(True)
+        for ch in range(NUM_CHANNELS):
+            self.set_period(ch, period_s)
+            self.set_width(ch, width_s)
+            self.set_delay(ch, ch * step_s)
+            self.set_state(ch, True)
 
     def off(self, channel=None):
         """Turn off `channel`, or every channel if `channel` is None."""
@@ -209,6 +236,16 @@ class Pulsegen:
 
 # ---- CLI ------------------------------------------------------------------
 
+def _report(pg):
+    """Read back the latched error in the same connection a setter just used
+    and surface it. The device clears its error latch when the port is
+    reopened, so a separate `pgctl.py error` invocation can't see it -- check
+    here, while still connected."""
+    err = pg.get_error()
+    if not err.startswith('0,'):
+        sys.exit(err)
+
+
 def cmd_idn(pg, args):
     print(pg.idn())
 
@@ -217,33 +254,47 @@ def cmd_reset(pg, args):
     pg.reset()
 
 
+def cmd_mode(pg, args):
+    if args.value is None:
+        print(pg.get_mode())
+    else:
+        pg.set_mode(args.value.upper() == "SYNC")
+
+
 def cmd_state(pg, args):
     on = args.value.upper() in ("ON", "1", "TRUE")
     pg.set_state(args.channel, on)
+    _report(pg)
 
 
 def cmd_period(pg, args):
     pg.set_period(args.channel, args.seconds)
+    _report(pg)
 
 
 def cmd_width(pg, args):
     pg.set_width(args.channel, args.seconds)
+    _report(pg)
 
 
-def cmd_count(pg, args):
-    pg.set_count(args.channel, args.n)
-
-
-def cmd_burst_period(pg, args):
-    pg.set_burst_period(args.channel, args.seconds)
+def cmd_delay(pg, args):
+    pg.set_delay(args.channel, args.seconds)
+    _report(pg)
 
 
 def cmd_pulse(pg, args):
     pg.pulse(args.channel, args.period, args.width)
+    _report(pg)
 
 
 def cmd_freq(pg, args):
     pg.freq(args.channel, args.hz, args.duty / 100.0)
+    _report(pg)
+
+
+def cmd_stair(pg, args):
+    pg.stair(args.period, args.width, args.step)
+    _report(pg)
 
 
 def cmd_off(pg, args):
@@ -274,34 +325,36 @@ def main():
     sp = sub.add_parser("idn", help="Read *IDN? identification string")
     sp.set_defaults(func=cmd_idn)
 
-    sp = sub.add_parser("reset", help="Send *RST (disables all outputs)")
+    sp = sub.add_parser("reset", help="Send *RST (ASYNC, all outputs off)")
     sp.set_defaults(func=cmd_reset)
+
+    sp = sub.add_parser("mode", help="Set or query ASYNC/SYNC mode")
+    sp.add_argument("value", nargs="?",
+                    choices=["async", "sync", "ASYNC", "SYNC"],
+                    help="Omit to query")
+    sp.set_defaults(func=cmd_mode)
 
     sp = sub.add_parser("state", help="Enable or disable a channel output")
     sp.add_argument("channel", type=int, choices=range(NUM_CHANNELS))
     sp.add_argument("value", choices=["on", "off", "ON", "OFF", "1", "0"])
     sp.set_defaults(func=cmd_state)
 
-    sp = sub.add_parser("period", help="Set pulse period in seconds")
+    sp = sub.add_parser("period",
+                        help="Set domain period in seconds (group/global)")
     sp.add_argument("channel", type=int, choices=range(NUM_CHANNELS))
     sp.add_argument("seconds", type=float)
     sp.set_defaults(func=cmd_period)
 
-    sp = sub.add_parser("width", help="Set pulse width in seconds")
+    sp = sub.add_parser("width", help="Set pulse width in seconds (per channel)")
     sp.add_argument("channel", type=int, choices=range(NUM_CHANNELS))
     sp.add_argument("seconds", type=float)
     sp.set_defaults(func=cmd_width)
 
-    sp = sub.add_parser("count", help="Set pulse count per burst (0 = continuous)")
-    sp.add_argument("channel", type=int, choices=range(NUM_CHANNELS))
-    sp.add_argument("n", type=int)
-    sp.set_defaults(func=cmd_count)
-
-    sp = sub.add_parser("burst-period",
-                        help="Set burst-repeat period in seconds (0 = single shot)")
+    sp = sub.add_parser("delay",
+                        help="Set rising-edge offset in seconds (per channel)")
     sp.add_argument("channel", type=int, choices=range(NUM_CHANNELS))
     sp.add_argument("seconds", type=float)
-    sp.set_defaults(func=cmd_burst_period)
+    sp.set_defaults(func=cmd_delay)
 
     sp = sub.add_parser("pulse",
                         help="Configure period + width and turn the channel on")
@@ -317,6 +370,13 @@ def main():
     sp.add_argument("duty", nargs="?", type=float, default=50.0,
                     help="Duty cycle in percent (default: 50)")
     sp.set_defaults(func=cmd_freq)
+
+    sp = sub.add_parser("stair",
+                        help="SYNC 4-channel staircase: ch n delayed by n*step")
+    sp.add_argument("period", type=float, help="Period in seconds")
+    sp.add_argument("width", type=float, help="Width in seconds")
+    sp.add_argument("step", type=float, help="Per-channel delay step in seconds")
+    sp.set_defaults(func=cmd_stair)
 
     sp = sub.add_parser("off",
                         help="Turn off one channel (or every channel if omitted)")

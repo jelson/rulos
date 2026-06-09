@@ -20,11 +20,11 @@
  * specific commands and translates them into pulsegen_* setters.
  *
  * Supported app-specific commands (long and short forms):
+ *   MODE ASYNC|SYNC            MODE?
  *   OUTPut[n]:STATe ON|OFF|1|0
  *   SOURce[n]:PULSe:PERiod  <seconds>
  *   SOURce[n]:PULSe:WIDTh   <seconds>
- *   SOURce[n]:PULSe:COUNt   <integer>
- *   SOURce[n]:BURSt:PERiod  <seconds>
+ *   SOURce[n]:PULSe:DELay   <seconds>
  */
 
 #include "scpi.h"
@@ -42,6 +42,30 @@ static void apply_setter_result(const char *err) {
 }
 
 static bool dispatch_line(const char *line) {
+  // MODE ASYNC|SYNC  and  MODE?
+  {
+    const char *p = scpi_match_kw(line, "MODE", "MODE");
+    if (p) {
+      if (*p == '?') {
+        scpi_print(pulsegen_mode_str());
+        return true;
+      }
+      if (*p == ' ') {
+        p++;
+        if (scpi_match_kw(p, "SYNC", "SYNC")) {
+          apply_setter_result(pulsegen_set_mode(true));
+          return true;
+        }
+        if (scpi_match_kw(p, "ASYNC", "ASYNC")) {
+          apply_setter_result(pulsegen_set_mode(false));
+          return true;
+        }
+        scpi_set_error("-104,\"Expected ASYNC or SYNC\"");
+        return true;
+      }
+    }
+  }
+
   // OUTPut[n]:STATe ON|OFF
   {
     const char *p = scpi_match_kw(line, "OUTPUT", "OUTP");
@@ -95,28 +119,13 @@ static bool dispatch_line(const char *line) {
             apply_setter_result(pulsegen_set_width_ps(ch, v));
             return true;
           }
-          if ((q = scpi_match_kw(pulse, "COUNT", "COUN")) && *q == ' ') {
-            uint32_t v;
-            if (!scpi_parse_uint(q + 1, &v)) {
-              scpi_set_error("-104,\"Bad number\"");
-              return true;
-            }
-            apply_setter_result(pulsegen_set_count(ch, v));
-            return true;
-          }
-        }
-
-        const char *burst = scpi_match_kw(p, "BURST", "BURS");
-        if (burst && *burst == ':') {
-          burst++;
-          const char *q;
-          if ((q = scpi_match_kw(burst, "PERIOD", "PER")) && *q == ' ') {
+          if ((q = scpi_match_kw(pulse, "DELAY", "DEL")) && *q == ' ') {
             uint64_t v;
             if (!scpi_parse_seconds_ps(q + 1, &v)) {
               scpi_set_error("-104,\"Bad number\"");
               return true;
             }
-            apply_setter_result(pulsegen_set_burst_period_ps(ch, v));
+            apply_setter_result(pulsegen_set_delay_ps(ch, v));
             return true;
           }
         }
