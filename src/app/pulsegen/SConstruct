@@ -43,16 +43,10 @@ RulosBuildTarget(
                 '-DRULOS_PLLM=RCC_PLLM_DIV1',
                 '-DRULOS_PLLN=25',
                 '-DSCHEDULER_CAPACITY=8',
-                # USB VID/PID under pid.codes (0x1209). 0x71C5 neighbors the
-                # timestamper's 0x71C4 (LectroTIC-4). DFU support is auto-
-                # included by the usb-cdc-stm32 peripheral; this PID is what
-                # dfu-util -d targets to send a DFU_DETACH.
                 '-DUSBD_VID=0x1209',
                 '-DUSBD_PID=0x71C5',
-                # USB iSerialNumber descriptor prefix: <prefix><24-hex UID>.
-                # Also appears in the *IDN? serial field (built in the SCPI
-                # library from usbd_cdc_get_serial()).
-                '-DUSBD_SERIAL_PREFIX=\\"PG-\\"',
+                '-DUSBD_PRODUCT_STRING=\\"PG-4\\"',
+                '-DUSBD_SERIAL_PREFIX=\\"PG4-\\"',
             ],
         ),
     ],
