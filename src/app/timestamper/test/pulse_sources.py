@@ -15,8 +15,8 @@ and two implementations:
       pgctl.py. Clock-coherent with the timestamper when both share
       the lab 10 MHz reference and happy at much higher rates, but its
       HRTIM timebase tops out at ~524 us periods (no rates below
-      ~1.9 kHz) and it has no burst facility (can_burst = False, so
-      burst-based phases must be skipped).
+      ~1.9 kHz). N-cycle bursts are hardware-counted (HRTIM burst mode
+      controller, up to 63488 pulses/burst).
 
 Capabilities the tests read:
   can_burst    -- pulse_burst() / isolated single pulses available
@@ -109,7 +109,7 @@ class LectroboxPG4(PulseGenerator):
     """One PG-4 output channel over USB CDC (see pgctl.py)."""
 
     name = "PG-4"
-    can_burst = False
+    can_burst = True
     # The HRTIM-only timebase tops out at ~524 us periods, so there
     # are no rates below ~1.9 kHz: the slow phases run at 2 kHz
     # instead of the Rigol's 10 Hz, and the tests' tolerances scale
@@ -118,6 +118,27 @@ class LectroboxPG4(PulseGenerator):
     MIN_HZ = 1910.0
     base_hz = 2000.0
     base_width_s = 5e-6
+
+    # Mirror of the firmware's period quantization (select_ckpsc in
+    # pulsegen.c): the HRTIM tick is 250 ps times a power-of-two
+    # prescaler (CKPSC = 0..5); the firmware picks the finest prescaler
+    # whose period register value PER = floor(period / tick) is at most
+    # PER_MAX and at least that prescaler's minimum (RM0440 "Minimum
+    # PER value" table).
+    TICK_PS = 250
+    PER_MAX = 0xFFDF
+    MIN_PER = (0x60, 0x30, 0x18, 0xC, 0x6, 0x3)
+
+    @classmethod
+    def _quantize_period_ps(cls, period_ps):
+        """The period the PG-4 actually produces for a requested
+        period_ps, or None if no prescaler can produce it."""
+        for k in range(6):
+            tick_ps = cls.TICK_PS << k
+            per = period_ps // tick_ps
+            if cls.MIN_PER[k] <= per <= cls.PER_MAX:
+                return per * tick_ps
+        return None
 
     def __init__(self, port=None, channel=0):
         from pgctl import Pulsegen
@@ -145,6 +166,18 @@ class LectroboxPG4(PulseGenerator):
         # The PG-4 shares the timestamper's reference and quantizes to
         # its 250 ps grid -- sub-ppb of any rate in range.
         return hz
+
+    def pulse_burst(self, spacing_ns, ncyc):
+        period_ps = round(spacing_ns * 1000)
+        actual_ps = self._quantize_period_ps(period_ps)
+        if actual_ps is None:
+            raise UnsupportedWaveform(
+                f"{spacing_ns:g} ns spacing is outside the PG-4's "
+                f"~24 ns .. ~524 us period range")
+        # 50 ns width and 1 s repetition, matching siggen.pulse_burst.
+        self._pg.burst(self._ch, period_ps * 1e-12, 50e-9, ncyc)
+        self._check(f"{ncyc}-pulse burst at {spacing_ns:g} ns spacing")
+        return actual_ps / 1000.0
 
     def output_off(self):
         self._pg.off(self._ch)

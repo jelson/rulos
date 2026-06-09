@@ -13,6 +13,13 @@ Setting a channel's period sets its whole domain's period (its group in
 async, all four in sync). Width and delay are always per channel. The
 HRTIM-only timebase spans roughly 24 ns to 524 us (1.9 kHz .. 41 MHz).
 
+A domain can also run in burst mode: exactly N pulses (hardware-counted,
+1..63488), then quiet, repeating at a programmable interval. The pulse
+count and intra-burst spacing are hardware-exact; the repetition interval
+is software-scheduled on the device (~10 ms granularity). Only one domain
+can burst at a time in async mode; sync mode bursts all four channels
+coherently.
+
 CLI usage examples:
   pgctl.py idn
   pgctl.py mode sync
@@ -24,6 +31,8 @@ CLI usage examples:
   pgctl.py pulse 0 1e-6 100e-9       # period + width + state ON in one shot
   pgctl.py freq 0 1e6 50             # 1 MHz, 50% duty
   pgctl.py stair 1e-6 100e-9 250e-12 # sync 4-channel 250 ps stair
+  pgctl.py burst 0 1e-6 100e-9 50    # 50-pulse bursts, repeating 1/sec
+  pgctl.py burst 0 1e-6 100e-9 50 0.2  # ... every 200 ms
   pgctl.py off 0                     # state OFF
   pgctl.py off                       # state OFF on every channel
   pgctl.py reset
@@ -49,6 +58,9 @@ As a library, open a Pulsegen instance and call methods on it.
 
       # Convenience: configure-and-start.
       pg.pulse(1, period_s=2e-7, width_s=5e-8)
+
+      # N-cycle bursts: 50 pulses at 1 us spacing, repeating once/sec.
+      pg.burst(0, period_s=1e-6, width_s=100e-9, ncyc=50)
 
       # Sync mode + a 4-channel 250 ps stair for timestamper testing.
       pg.stair(period_s=1e-6, width_s=100e-9, step_s=250e-12)
@@ -185,26 +197,66 @@ class Pulsegen:
         in async mode, all four channels in sync mode). HRTIM-only range
         is ~24 ns to ~524 us. Errors latch in SYST:ERR if out of range or
         width >= period."""
-        self.send(f"SOUR{channel}:PULS:PER {seconds:g}")
+        self.send(f"SOUR{channel}:PULS:PER {seconds:.12g}")
 
     def set_width(self, channel, seconds):
         """Pulse high-time width in seconds (per channel). Must be
         strictly less than the period."""
-        self.send(f"SOUR{channel}:PULS:WIDT {seconds:g}")
+        self.send(f"SOUR{channel}:PULS:WIDT {seconds:.12g}")
 
     def set_delay(self, channel, seconds):
         """Rising-edge offset in seconds (per channel), placed on the
         250 ps grid. delay + width must not exceed the period."""
-        self.send(f"SOUR{channel}:PULS:DEL {seconds:g}")
+        self.send(f"SOUR{channel}:PULS:DEL {seconds:.12g}")
+
+    def set_burst_state(self, channel, on):
+        """Enable or disable burst mode on this channel's domain. With
+        burst on, the domain emits exactly ncycles pulses, rests low,
+        and repeats every burst period."""
+        self.send(f"SOUR{channel}:BURS:STAT {'ON' if on else 'OFF'}")
+
+    def get_burst_state(self, channel):
+        """True iff burst mode is enabled on this channel's domain."""
+        return self.query(f"SOUR{channel}:BURS:STAT?") == "ON"
+
+    def set_burst_ncycles(self, channel, ncyc):
+        """Pulses per burst (1..63488), hardware-counted."""
+        self.send(f"SOUR{channel}:BURS:NCYC {ncyc}")
+
+    def get_burst_ncycles(self, channel):
+        return int(self.query(f"SOUR{channel}:BURS:NCYC?"))
+
+    def set_burst_period(self, channel, seconds):
+        """Burst repetition interval in seconds (default 1.0). Software-
+        scheduled on the device (~10 ms granularity); must exceed the
+        burst length by at least 50 ms, max 60 s."""
+        self.send(f"SOUR{channel}:BURS:INT:PER {seconds:.12g}")
+
+    def get_burst_period(self, channel):
+        return float(self.query(f"SOUR{channel}:BURS:INT:PER?"))
 
     # ---- High-level helpers -----------------------------------------------
 
     def pulse(self, channel, period_s, width_s, delay_s=0.0):
         """Configure period + width (+ optional delay) and start the
-        channel in one call."""
+        channel as a continuous train in one call. Clears any leftover
+        burst state on the domain first."""
+        self.set_burst_state(channel, False)
         self.set_period(channel, period_s)
         self.set_width(channel, width_s)
         self.set_delay(channel, delay_s)
+        self.set_state(channel, True)
+
+    def burst(self, channel, period_s, width_s, ncyc, rep_s=1.0,
+              delay_s=0.0):
+        """Configure and start N-cycle bursts: ncyc pulses at period_s
+        spacing and width_s width, repeating every rep_s seconds."""
+        self.set_period(channel, period_s)
+        self.set_width(channel, width_s)
+        self.set_delay(channel, delay_s)
+        self.set_burst_ncycles(channel, ncyc)
+        self.set_burst_period(channel, rep_s)
+        self.set_burst_state(channel, True)
         self.set_state(channel, True)
 
     def freq(self, channel, hz, duty=0.5):
@@ -219,6 +271,9 @@ class Pulsegen:
         and `width_s`, with channel n's rising edge delayed by n*step_s.
         The canonical timestamper edge-resolution test."""
         self.set_mode(True)
+        # Sync mode is a single domain, so one channel clears burst
+        # state for all four.
+        self.set_burst_state(0, False)
         for ch in range(NUM_CHANNELS):
             self.set_period(ch, period_s)
             self.set_width(ch, width_s)
@@ -294,6 +349,11 @@ def cmd_freq(pg, args):
 
 def cmd_stair(pg, args):
     pg.stair(args.period, args.width, args.step)
+    _report(pg)
+
+
+def cmd_burst(pg, args):
+    pg.burst(args.channel, args.period, args.width, args.ncyc, args.rep)
     _report(pg)
 
 
@@ -377,6 +437,16 @@ def main():
     sp.add_argument("width", type=float, help="Width in seconds")
     sp.add_argument("step", type=float, help="Per-channel delay step in seconds")
     sp.set_defaults(func=cmd_stair)
+
+    sp = sub.add_parser("burst",
+                        help="N-cycle bursts: configure and start")
+    sp.add_argument("channel", type=int, choices=range(NUM_CHANNELS))
+    sp.add_argument("period", type=float, help="Pulse spacing in seconds")
+    sp.add_argument("width", type=float, help="Width in seconds")
+    sp.add_argument("ncyc", type=int, help="Pulses per burst (1..63488)")
+    sp.add_argument("rep", nargs="?", type=float, default=1.0,
+                    help="Burst repetition interval in seconds (default: 1)")
+    sp.set_defaults(func=cmd_burst)
 
     sp = sub.add_parser("off",
                         help="Turn off one channel (or every channel if omitted)")

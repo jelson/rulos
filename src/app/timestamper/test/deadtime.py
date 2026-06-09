@@ -2,11 +2,12 @@
 
 """Binary-search for the LectroTIC-4's dead time.
 
-Drives a Rigol DG1022Z (via siggen.py's Siggen class) to produce pulse
-bursts at various spacings while reading the LectroTIC-4's serial output
-to determine whether all pulses in each burst are captured. Rigol-only:
-the measurement is built on N-cycle bursts, which the Lectrobox PG-4
-(see pulse_sources.py) cannot produce.
+Drives a pulse generator -- a Rigol DG1022Z on LAN or a Lectrobox PG-4
+on USB, selected with --generator (see pulse_sources.py) -- to produce
+pulse bursts at various spacings while reading the LectroTIC-4's serial
+output to determine whether all pulses in each burst are captured. The
+measurement is built on N-cycle bursts, so a generator without burst
+support (can_burst) is rejected.
 
 Usage:
   deadtime.py                           defaults: 16383-pulse bursts,
@@ -15,6 +16,7 @@ Usage:
   deadtime.py --bottom 50 --top 500     custom range in ns
   deadtime.py --port /dev/ttyACM1       custom serial port
   deadtime.py --host siggen2            custom signal generator hostname
+  deadtime.py --generator pg4           burst from a PG-4 instead
   deadtime.py --channel 2               sub-channel to score (default 0)
 
 The pass/fail signal is the device's loss reporting. In BINARY mode
@@ -35,7 +37,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "util"))
 
 from tsctl import LectroTIC4, Timestamp, PulsesLost, OscillatorFailure
-from siggen import Siggen
+from pulse_sources import make_generator
 from regression_test import parse_text_stream
 
 
@@ -143,8 +145,19 @@ def main():
                         help="Upper bound in ns (default: 1000)")
     parser.add_argument("--port", default=None,
                         help="LectroTIC-4 serial port (default: autodetect)")
+    parser.add_argument("--generator", choices=["rigol", "pg4"],
+                        default="rigol",
+                        help="pulse source: 'rigol' = DG1022Z on LAN, "
+                             "'pg4' = Lectrobox PG-4 on USB (both produce "
+                             "the N-cycle bursts this test needs)")
     parser.add_argument("--host", default="siggen",
-                        help="Signal generator hostname (default: siggen)")
+                        help="DG1022Z hostname (default: siggen)")
+    parser.add_argument("--pg-port", default=None,
+                        help="PG-4 serial port (default: autodetect)")
+    parser.add_argument("--pg-channel", type=int, default=0,
+                        choices=[0, 1, 2, 3],
+                        help="PG-4 output channel wired to the "
+                             "timestamper (default 0)")
     parser.add_argument("--precision", type=float, default=5,
                         help="Stop when range narrows to this many ns "
                              "(default: 5)")
@@ -183,8 +196,14 @@ def main():
         print(f"Wire format: {'TEXT' if text else 'BINARY'}")
         print()
 
-        with Siggen(host=args.host) as sg:
-            print(f"Connected to: {sg.idn()}")
+        with make_generator(args.generator, siggen_host=args.host,
+                            pg_port=args.pg_port,
+                            pg_channel=args.pg_channel) as sg:
+            if not sg.can_burst:
+                sys.exit(f"{sg.name} cannot produce the N-cycle bursts "
+                         f"this measurement is built on; choose a "
+                         f"--generator with burst support")
+            print(f"Connected to: {sg.idn()} ({sg.name})")
             print()
 
             # Verify endpoints: top should pass, bottom should fail.
