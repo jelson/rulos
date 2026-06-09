@@ -37,7 +37,7 @@ As a library, open a Pulsegen instance and call methods on it.
 
   # Autodetects by USB VID/PID (pass port="/dev/ttyACM1" to override).
   with Pulsegen() as pg:
-      print(pg.idn())                          # "Lectrobox,Pulsegen,..."
+      print(pg.idn())                          # "Lectrobox,PG-4,..."
       pg.reset()                               # *RST -- ASYNC, all off
 
       # Periods/widths/delays are in seconds; the device works in
@@ -70,7 +70,7 @@ import sys
 
 PULSEGEN_VID = 0x1209  # pid.codes
 PULSEGEN_PID = 0x71C5  # Lectrobox Pulsegen
-IDN_PREFIX = "Lectrobox,Pulsegen"
+IDN_PREFIX = "Lectrobox,PG-4"
 NUM_CHANNELS = 4
 
 

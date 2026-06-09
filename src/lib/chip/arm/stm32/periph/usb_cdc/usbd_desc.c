@@ -74,14 +74,6 @@
 #define USBD_PID     0x274e  // Gets DISABLE_ECHO quirk in Linux cdc_acm driver
 #endif
 
-#ifndef USBD_MANUFACTURER_STRING
-#define USBD_MANUFACTURER_STRING     "Lectrobox"
-#endif
-
-#ifndef USBD_PRODUCT_STRING
-#define USBD_PRODUCT_STRING     "STM32 Virtual ComPort"
-#endif
-
 #ifndef USBD_SERIAL_STRING
 #define USBD_SERIAL_STRING     "00000000001A"
 #endif

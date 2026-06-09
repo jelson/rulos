@@ -37,7 +37,7 @@
  *   VID: 0x0424 (Microchip Technology, Inc.)
  *   PID: 0x274e (Gets Linux DISABLE_ECHO quirk - see link below)
  *   Manufacturer: "Lectrobox"
- *   Product: "STM32 Virtual ComPort"
+ *   Product: "RULOS Virtual ComPort"
  *   Serial: "00000000001A"
  *
  * Default VID/PID chosen to avoid garbled output on Linux (DISABLE_ECHO quirk).
@@ -108,10 +108,15 @@ bool usbd_cdc_tx_ready(usbd_cdc_state_t *cdc);
 // Returns 0 on success, -1 if previous transmission still in progress.
 int usbd_cdc_print(usbd_cdc_state_t *cdc, const char *s);
 
-// Optional product-type tag prepended to the serial number. Set per
-// app via -DUSBD_SERIAL_PREFIX=\"...\" (alongside USBD_VID/PID); the
-// empty default leaves the serial as the bare UID, so apps that don't
-// set it are unaffected.
+// USB iManufacturer / iProduct string descriptors.
+#ifndef USBD_MANUFACTURER_STRING
+#define USBD_MANUFACTURER_STRING "Lectrobox"
+#endif
+#ifndef USBD_PRODUCT_STRING
+#define USBD_PRODUCT_STRING "RULOS Virtual ComPort"
+#endif
+
+// Optional product-type tag prepended to the serial number.
 #ifndef USBD_SERIAL_PREFIX
 #define USBD_SERIAL_PREFIX ""
 #endif

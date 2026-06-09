@@ -254,18 +254,22 @@ static void on_usb_tx_complete(usbd_cdc_state_t *cdc, void *user_data) {
 void scpi_init(const scpi_config_t *config) {
   cfg = *config;
 
-  // Build the IEEE 488.2 *IDN? response once. The serial matches the USB
-  // iSerialNumber descriptor: USBD_SERIAL_PREFIX + STM32 96-bit UID. The
-  // firmware field is "<version>-<commit>" if the app supplied a version,
-  // or just "<commit>" otherwise.
+  // Build the IEEE 488.2 *IDN? response once. The vendor and model fields are
+  // the USB iManufacturer / iProduct strings (USBD_MANUFACTURER_STRING /
+  // USBD_PRODUCT_STRING) -- one source of truth, so the IDN can't drift from
+  // the USB enumeration name. The serial matches the USB iSerialNumber
+  // descriptor (USBD_SERIAL_PREFIX + STM32 96-bit UID). The firmware field is
+  // "<version>-<commit>" if the app supplied a version, else just "<commit>".
   char serial[USBD_SERIAL_BUFLEN];
   usbd_cdc_get_serial(serial);
   if (cfg.version) {
-    snprintf(idn_buf, sizeof(idn_buf), "%s,%s,%s,%s-" STRINGIFY(GIT_COMMIT),
-             cfg.vendor, cfg.model, serial, cfg.version);
+    snprintf(idn_buf, sizeof(idn_buf),
+             USBD_MANUFACTURER_STRING "," USBD_PRODUCT_STRING ",%s,%s-"
+             STRINGIFY(GIT_COMMIT), serial, cfg.version);
   } else {
-    snprintf(idn_buf, sizeof(idn_buf), "%s,%s,%s," STRINGIFY(GIT_COMMIT),
-             cfg.vendor, cfg.model, serial);
+    snprintf(idn_buf, sizeof(idn_buf),
+             USBD_MANUFACTURER_STRING "," USBD_PRODUCT_STRING ",%s,"
+             STRINGIFY(GIT_COMMIT), serial);
   }
 
   linereader_init_unbound(&linereader, /*uart=*/NULL, on_line, NULL);
