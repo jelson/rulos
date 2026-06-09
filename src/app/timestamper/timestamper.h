@@ -27,12 +27,15 @@
 
 #define NUM_CHANNELS 4
 
-// Per-channel slope. Updates hardware (TIM2 input-capture polarity) in
-// addition to stashed state.
+// Per-channel slope. Both edges are always captured in hardware (a
+// permanently rising-armed and a permanently falling-armed TIM2
+// capture channel per input); slope selects which are emitted. Every
+// emitted record carries an exact, hardware-latched polarity bit
+// regardless of slope.
 typedef enum {
-  TIMESTAMPER_SLOPE_RISING,   // capture LOW->HIGH transitions only
-  TIMESTAMPER_SLOPE_FALLING,  // capture HIGH->LOW transitions only
-  TIMESTAMPER_SLOPE_BOTH,     // capture both transitions
+  TIMESTAMPER_SLOPE_RISING,   // emit LOW->HIGH transitions only
+  TIMESTAMPER_SLOPE_FALLING,  // emit HIGH->LOW transitions only
+  TIMESTAMPER_SLOPE_BOTH,     // emit both transitions
 } timestamper_slope_t;
 
 void timestamper_set_slope(int ch, timestamper_slope_t slope);
@@ -53,18 +56,21 @@ void timestamper_set_stream_enabled(bool enabled);
 bool timestamper_get_stream_enabled(void);
 
 // Output stream format. TEXT is the documented default (ASCII
-// "<chan> <sec>.<ns>\n" per timestamp); BINARY emits a fixed
-// TIMESTAMPER_BINARY_RECORD_LEN-byte record per timestamp -- the same
-// 8-byte representation used in the device's internal ring buffer:
+// "<chan> <sec>.<ns> <+|->\n" per timestamp, where the final column
+// is the edge polarity: '+' rising, '-' falling); BINARY emits a
+// fixed TIMESTAMPER_BINARY_RECORD_LEN-byte record per timestamp --
+// the same 8-byte representation used in the device's internal ring
+// buffer:
 //   bytes 0-3: seconds (uint32 LE)
 //   bytes 4-7: counter (uint32 LE): bits [31:30] channel
-//              (0..NUM_CHANNELS-1), [27:0] raw tick count
+//              (0..NUM_CHANNELS-1), [28] edge polarity (1 = rising
+//              '+', 0 = falling '-'), [27:0] raw tick count
 //              (0..249,999,999 at 250 MHz, i.e. 4 ns per tick).
 // Every record is exactly 8 bytes, timestamp or not. Counter bit [29]
 // marks a "special message" instead of a timestamp: device metadata
 // that would be a "#" comment line in text mode, carried in-band so
 // binary readers see it too. When set, counter [7:0] is the message
-// type and the seconds word is its payload:
+// type, bit [28] is zero, and the seconds word is its payload:
 //   0 OUTPUT_CLEARED -- payload all-zero (still a full 8-byte record);
 //                       binary analog of the "# output cleared" marker.
 //   1 PULSES_LOST    -- counter [31:30] = channel; seconds [15:0] =
@@ -103,4 +109,4 @@ void timestamper_config_save(void);
 // format, stream enable) is preserved.
 void timestamper_discard_pending(void);
 
-#define TIMESTAMPER_FW_VERSION "0.14.0"
+#define TIMESTAMPER_FW_VERSION "0.15.0"

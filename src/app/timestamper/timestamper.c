@@ -29,13 +29,32 @@
  * periodic task below detects this and refuses to emit timestamps,
  * since HSI accuracy is meaningless for measurement-grade work.
  *
- * Output is simply a list of channel numbers and timestamps, one per line:
+ * Output is a list of channel numbers, timestamps, and edge polarities,
+ * one captured edge per line:
  *
- * 0 5293.585203496
+ * 0 5293.585203496 +
  *
  * Timestamps are decimal seconds, with 9 digits following the decimal point
- * representing nanoseconds. Timestamps are relative to the time the program
- * started.
+ * representing nanoseconds, relative to the time the program started. The
+ * trailing column is the edge polarity: '+' rising, '-' falling.
+ *
+ * EDGE POLARITY VIA PAIRED CAPTURE CHANNELS:
+ *
+ * TIM2's input capture latches only the counter, not the pin state, so
+ * polarity can't be read after the fact. Instead each input feeds TWO
+ * TIM2 capture channels off the same timer input: one armed rising on
+ * the direct TI, one armed falling on the indirect TI (internally
+ * sourced from the same TIx -- no second pin). Which channel captured
+ * IS the polarity, latched in hardware at the moment of the edge. The
+ * SCPI slope setting no longer re-arms the timer; it just selects
+ * which of the two sub-streams are emitted. In BOTH mode the two
+ * sub-streams are merged back into one time-ordered stream by
+ * comparing raw tick values (see service_channel).
+ *
+ * The pairing halves the inputs per timer: TIM2's four capture
+ * channels serve two polarity-capable inputs (PA0 = jack 0 and
+ * PA2 = jack 2). Jacks 1 and 3 are inoperative in this build, pending
+ * a second 32-bit timer (TIM5 on PA1/PA3) phase-locked to TIM2.
  *
  * Firmware update over USB DFU (no SWD probe needed; device not capturing):
  *
@@ -127,18 +146,24 @@ _Static_assert(CLOCK_FREQ_HZ == 1000000000 / NS_PER_TICK,
 // without cutting off mid-timestamp.
 #define USB_TX_BUFLEN               1280
 #define NUM_TX_BUFS                 2
-#define MONOTONICITY_CHECK          0
 
-// counter field layout: [31:30] channel, [29:28] reserved (always 0;
-// spare bits for future in-band flags), [27:0] tick value. The tick
-// value maxes at CLOCK_FREQ_HZ-1 = 249,999,999 (0x0EE6_B27F), which
-// fits in 28 bits, so extracting it with the 28-bit value mask -- not
-// a 30-bit "everything but channel" mask -- keeps the reserved bits
-// out of the nanoseconds and lets bit 28/29 carry a flag later.
+// counter field layout: [31:30] channel, [29] special-message flag,
+// [28] edge polarity, [27:0] tick value. The tick value maxes at
+// CLOCK_FREQ_HZ-1 = 249,999,999 (0x0EE6_B27F), which fits in 28 bits,
+// so extracting it with the 28-bit value mask -- not a 30-bit
+// "everything but channel" mask -- keeps the flag bits out of the
+// nanoseconds.
 #define COUNTER_CHAN_SHIFT 30
 #define COUNTER_VALUE_MASK 0x0FFFFFFFU
 _Static_assert(CLOCK_FREQ_HZ - 1 <= COUNTER_VALUE_MASK,
                "tick value must fit in the 28-bit counter value field");
+
+// counter [28] = edge polarity of a timestamp record: 1 = rising
+// (LOW->HIGH), 0 = falling. Hardware-latched, not inferred: each input
+// feeds two permanently-armed capture channels (one rising, one
+// falling), and the bit records which one captured. Special records
+// ([29] set) keep [28] zero.
+#define COUNTER_POLARITY_BIT (1u << 28)
 
 // counter [29] = "special message" marker: the 8-byte record is not a
 // timestamp but device metadata. When set, counter [7:0] is the
@@ -165,14 +190,53 @@ _Static_assert(CLOCK_FREQ_HZ - 1 <= COUNTER_VALUE_MASK,
 #define LED_CLOCK GPIO_B5  // 10 MHz HSE health
 #define LED_USB   GPIO_A7  // USB state
 
-// Per-channel state: statistics, divider, previous timestamp, and DMA.
-// Passed to the DMA callbacks via user_data so a single pair of
-// callback functions serves all channels.
+// A channel's two hardware capture sub-streams.
+#define SUB_RISING  0
+#define SUB_FALLING 1
+#define NUM_SUBS    2
+
+// In-use TIM2 capture channels on this board: CH1..CH4, two per
+// polarity-capable input. 64 KB total, same as the one-sub-per-input
+// design.
+#define NUM_HW_CAPTURE 4
+static volatile uint32_t capture_buf[NUM_HW_CAPTURE][DMA_CAPTURE_BUFLEN];
+
+// Per-sub holding FIFO for the BOTH-mode merge. The two subs capture
+// the same alternating edge train 1:1, so their DMA write heads stay
+// within O(1) of each other and the unpaired residual is tiny; this
+// just covers ISR-timing jitter. Overflow is the overcapture/extreme
+// regime -- counted (buf_overflows), never silent. Entries are
+// resolved (seconds, ready-to-emit counter word) at stash time, which
+// keeps every record's seconds_A/B resolution within one flush period
+// of its capture -- well inside the rollover scheme's validity window.
+#define STASH_LEN 64
 typedef struct {
-  // DMA circular buffer and progress cursor
-  volatile uint32_t dma_buf[DMA_CAPTURE_BUFLEN];
-  uint32_t dma_processed_pos;
-  rulos_dma_channel_t *dma_ch;
+  uint32_t sec;
+  uint32_t ctr;  // counter word: channel tag | polarity | ticks
+} stash_rec_t;
+
+// Per-channel state. A polarity-capable channel owns two TIM2 capture
+// sub-streams off the same timer input (one armed rising, one armed
+// falling); every record it emits carries channel_num and the
+// hardware-latched polarity bit. On the current board only inputs
+// PA0 and PA2 (jacks 0 and 2) have capture pairs -- TIM2's four
+// capture channels make two pairs -- so channels 1 and 3 are
+// inoperative until TIM5 picks up PA1/PA3.
+typedef struct {
+  struct {
+    volatile uint32_t *buf;   // DMA circular buffer; NULL if no hw
+    uint32_t merge_pos;       // next DMA index to drain (circular)
+    uint32_t prev_ndtr;       // DMA remaining-count at last flush
+                              // (quiescence detection)
+    rulos_dma_channel_t *dma_ch;
+    uint32_t polarity_bit;    // SUB_RISING: COUNTER_POLARITY_BIT; else 0
+    stash_rec_t stash[STASH_LEN];
+    uint16_t st_head;         // oldest stashed record
+    uint16_t st_n;            // count held
+  } sub[NUM_SUBS];
+  bool has_hw;                // false for inoperative channels (1, 3)
+  volatile bool dma_isr_ran;  // any capture HT/TC ISR since last flush
+                              // (quiescence detection)
 
   // channel identity (index into this array)
   uint8_t channel_num;
@@ -181,18 +245,15 @@ typedef struct {
   uint32_t num_missed;
   uint32_t buf_overflows;
 
-  // Input-capture slope. Default RISING at boot; configurable via SCPI
-  // INPut<n>:SLOPe.
+  // Input-capture slope, configurable via SCPI INPut<n>:SLOPe. Both
+  // edges are always captured in hardware; slope selects which
+  // sub-streams are emitted.
   timestamper_slope_t slope;
 
-  // divider state -- report only every Nth pulse. divider == 1 reports
-  // every pulse. Configurable via SCPI INPut<n>:DIVider.
+  // divider state -- report only every Nth emitted edge. divider == 1
+  // reports every edge. Configurable via SCPI INPut<n>:DIVider.
   uint32_t divider;
   uint32_t count;
-
-  // previously acquired timestamp
-  uint32_t prev_seconds;
-  uint32_t prev_counter;
 
   volatile bool recent_pulse;
 } channel_t;
@@ -211,21 +272,45 @@ static timestamper_format_t format_mode = TIMESTAMPER_FORMAT_TEXT;
 static volatile bool marker_pending = false;
 static const char marker_msg[] = "# output cleared\n";
 
-// PA0..PA3 carry TIM2_CH1..CH4 input-capture signals. The TIM2 channel
-// codes are also used at runtime by the slope-setter, hence file scope.
+// Hardware-latched edge polarity: each polarity-capable input drives
+// TWO TIM2 capture channels off the same timer input (TIx) -- one
+// armed rising on the direct TI, one armed falling on the indirect TI
+// (sourced internally from the same TIx, so no second pin). Edge
+// direction is implicit in WHICH channel captured. Each capture
+// channel keeps its own dedicated TIM2 DMA request, so raw capture is
+// identical to the proven one-sub-per-input path.
+//
+// The four TIM2 capture channels, paired into the two polarity-capable
+// inputs. gpio_pin == 0 means the channel is sourced from its pair's
+// TI internally (indirect) and needs no pin. Channel numbers track the
+// front-panel jack the pin is routed to: PA0 = jack 0, PA2 = jack 2.
+//   CH1 -> channel 0, rising  (PA0 = TI1, direct)
+//   CH2 -> channel 0, falling (TI1 indirect)
+//   CH3 -> channel 2, rising  (PA2 = TI3, direct)
+//   CH4 -> channel 2, falling (TI3 indirect)
+// Channels 1 and 3 have no entry -- inoperative until TIM5 picks up
+// PA1/PA3 (as TIM5 TI2/TI4) with the same pairing trick.
 static const struct {
-  uint32_t pin;         // LL_GPIO_PIN_n
-  uint32_t ll_channel;  // LL_TIM_CHANNEL_CHn
-} cap_pins[NUM_CHANNELS] = {
-    {LL_GPIO_PIN_0, LL_TIM_CHANNEL_CH1},
-    {LL_GPIO_PIN_1, LL_TIM_CHANNEL_CH2},
-    {LL_GPIO_PIN_2, LL_TIM_CHANNEL_CH3},
-    {LL_GPIO_PIN_3, LL_TIM_CHANNEL_CH4},
+  uint32_t gpio_pin;      // LL_GPIO_PIN_n, or 0 for indirect (no pin)
+  uint32_t ll_channel;    // LL_TIM_CHANNEL_CHn
+  uint32_t active_input;  // LL_TIM_ACTIVEINPUT_DIRECTTI / _INDIRECTTI
+  uint32_t ic_polarity;   // LL_TIM_IC_POLARITY_RISING / _FALLING
+  uint8_t channel;        // owning channel
+  uint8_t sub;            // SUB_RISING / SUB_FALLING
+} capture_hw[NUM_HW_CAPTURE] = {
+    {LL_GPIO_PIN_0, LL_TIM_CHANNEL_CH1, LL_TIM_ACTIVEINPUT_DIRECTTI,
+     LL_TIM_IC_POLARITY_RISING, 0, SUB_RISING},
+    {0, LL_TIM_CHANNEL_CH2, LL_TIM_ACTIVEINPUT_INDIRECTTI,
+     LL_TIM_IC_POLARITY_FALLING, 0, SUB_FALLING},
+    {LL_GPIO_PIN_2, LL_TIM_CHANNEL_CH3, LL_TIM_ACTIVEINPUT_DIRECTTI,
+     LL_TIM_IC_POLARITY_RISING, 2, SUB_RISING},
+    {0, LL_TIM_CHANNEL_CH4, LL_TIM_ACTIVEINPUT_INDIRECTTI,
+     LL_TIM_IC_POLARITY_FALLING, 2, SUB_FALLING},
 };
 
 // total seconds elapsed since boot -- for details, see comment at top.
-// volatile because TIM15 ISR writes these and process_dma_captures
-// reads them from both DMA ISR and main-thread (flush) context.
+// volatile because TIM15 ISR writes these and resolve() reads them
+// from both DMA ISR and main-thread (flush) context.
 volatile uint32_t seconds_A = 0;
 volatile uint32_t seconds_B = 0;
 
@@ -233,8 +318,9 @@ volatile uint32_t seconds_B = 0;
 typedef struct {
   uint32_t seconds;
   uint32_t counter;  // [31:30] channel, [29] special-message flag,
-                     // [28] reserved, [27:0] tick value / message type
-                     // (see the COUNTER_* / MSG_* defines below)
+                     // [28] edge polarity, [27:0] tick value /
+                     // message type (see the COUNTER_* / MSG_*
+                     // defines above)
 } timestamp_t;
 
 timestamp_t timestamp_buffer[TIMESTAMP_BUFLEN];
@@ -275,76 +361,222 @@ CCMRAM void TIM15_IRQHandler() {
 }
 
 
-// Process a batch of raw DMA-captured counter values into timestamp_buffer.
-// Called from DMA ISR and periodic flush — ts_head/ts_tail can't change
-// during execution, so we cache them locally to avoid volatile penalties.
-CCMRAM static void process_dma_captures(uint8_t channel_num,
-                                  volatile uint32_t *buf,
-                                  uint32_t offset, uint32_t count) {
-  channel_t *chan = &channels[channel_num];
+// Resolve a raw TIM2 capture (timer ticks) into a ready-to-emit
+// record: pick the seconds half from the tick value (top-of-file
+// rollover scheme) and fold in the channel tag + polarity bit. The
+// rollover scheme only tolerates a bounded capture-to-resolve delay
+// (the A/B copies advance around the second boundaries), so this must
+// run while the record is fresh -- the per-flush-period service
+// cadence guarantees that.
+CCMRAM static inline void resolve(channel_t *chan, uint8_t s,
+                                  uint32_t raw, stash_rec_t *out) {
+  out->sec = raw < (CLOCK_FREQ_HZ / 2) ? seconds_A : seconds_B;
+  out->ctr = raw
+      | ((uint32_t)chan->channel_num << COUNTER_CHAN_SHIFT)
+      | chan->sub[s].polarity_bit;
+}
+
+// Push one resolved record to the timestamp ring, honoring the
+// channel divider. A full ring is counted, never silent.
+CCMRAM static inline void ring_emit(channel_t *chan,
+                                    const stash_rec_t *r) {
   chan->recent_pulse = true;
+  if (__builtin_expect(chan->divider != 1, 0)) {
+    if (++chan->count < chan->divider) return;
+    chan->count = 0;
+  }
   uint32_t head = ts_head;
-  const uint32_t tail = ts_tail;
-  const uint32_t chan_tag = (uint32_t)channel_num << COUNTER_CHAN_SHIFT;
-  const uint32_t divider = chan->divider;
-
-  // Pre-check that the timestamp buffer has room for the entire batch.
-  // If not enough space, store what we can and count the drops.
-  uint32_t available = (tail - head - 1) % TIMESTAMP_BUFLEN;
-  if (__builtin_expect(available < count, 0)) {
-    chan->buf_overflows += count - available;
-    count = available;
-    if (count == 0) return;
+  if (__builtin_expect((ts_tail - head - 1) % TIMESTAMP_BUFLEN == 0, 0)) {
+    chan->buf_overflows++;
+    return;
   }
-
-  // Use pointer-based iteration so the compiler doesn't spill count
-  volatile uint32_t *src = buf + offset;
-  volatile uint32_t *const end = src + count;
-
-  while (src < end) {
-    uint32_t counter = *src++;
-    uint32_t seconds = counter < (CLOCK_FREQ_HZ / 2) ? seconds_A : seconds_B;
-
-    if (__builtin_expect(divider != 1, 0)) {
-      chan->count++;
-      if (chan->count < divider) continue;
-      chan->count = 0;
-    }
-
-    timestamp_buffer[head].seconds = seconds;
-    timestamp_buffer[head].counter = counter | chan_tag;
-    head = (head + 1) % TIMESTAMP_BUFLEN;
-  }
-
-  ts_head = head;
+  timestamp_buffer[head].seconds = r->sec;
+  timestamp_buffer[head].counter = r->ctr;
+  ts_head = (head + 1) % TIMESTAMP_BUFLEN;
 }
 
-// DMA HT/TC callbacks for TIM2 input capture. HT fires when the first
-// half of the circular buffer is full; TC fires when the second half
-// is full (i.e. at each buffer wrap). The core DMA layer has already
-// cleared the hardware flag before calling us.
+// True iff a is strictly earlier than b.
 //
-// Each callback starts from dma_processed_pos rather than a fixed
-// offset, so it doesn't reprocess entries the periodic flush already
-// handled.
-CCMRAM static void on_dma_ht(void *user_data) {
-  channel_t *ch = (channel_t *)user_data;
-  const uint32_t half = DMA_CAPTURE_BUFLEN / 2;
-  uint32_t last = ch->dma_processed_pos;
-  if (last < half) {
-    process_dma_captures(ch->channel_num, ch->dma_buf, last, half - last);
-    ch->dma_processed_pos = half;
+// Ordering is by raw timer tick modulo CLOCK_FREQ_HZ, NOT by the
+// stashed seconds: `sec` comes from the seconds_A/seconds_B
+// half-rollover scheme, which is only eventually-consistent (the
+// TIM15 ISR updates it around the FREQ/2 and wrap boundaries). That
+// is fine for formatting an already-ordered record, but using it for
+// the merge's ordering decision lets two edges that straddle the
+// boundary compare out of order.
+//
+// The two records the merge ever compares are the two subs' heads of
+// the SAME alternating signal, always within ~one period of each
+// other -- far under CLOCK_FREQ_HZ/2 -- so a half-window modular tick
+// comparison gives the correct relative order across the second wrap
+// with no dependence on the racy seconds resolution.
+CCMRAM static inline bool rec_before(const stash_rec_t *a,
+                                     const stash_rec_t *b) {
+  uint32_t ta = a->ctr & COUNTER_VALUE_MASK;
+  uint32_t tb = b->ctr & COUNTER_VALUE_MASK;
+  int32_t d = (int32_t)tb - (int32_t)ta;
+  if (d < 0) d += CLOCK_FREQ_HZ;  // wrap into [0, CLOCK_FREQ_HZ)
+  return d != 0 && d < (int32_t)(CLOCK_FREQ_HZ / 2);
+}
+
+// DMA-safe end-of-region for sub `s`: records [merge_pos, cur) are
+// captured and safe to read (cur is exclusive). Single-owner cursor:
+// per-channel service is serialized by the same-priority DMA ISRs
+// plus the irq-guarded flush.
+CCMRAM static inline uint32_t safe_cur(channel_t *chan, uint8_t s) {
+  uint32_t rem = rulos_dma_get_remaining(chan->sub[s].dma_ch);
+  uint32_t cur = DMA_CAPTURE_BUFLEN - rem;
+  return (cur == DMA_CAPTURE_BUFLEN) ? 0 : cur;
+}
+
+// A sub's next record comes from its stash (older, already resolved)
+// first, then directly from its DMA buffer at merge_pos. peek leaves
+// it in place; consume advances past it.
+CCMRAM static inline bool sub_avail(channel_t *chan, uint8_t s,
+                                    uint32_t cur) {
+  return chan->sub[s].st_n > 0 || chan->sub[s].merge_pos != cur;
+}
+CCMRAM static inline void sub_peek(channel_t *chan, uint8_t s,
+                                   stash_rec_t *out) {
+  if (chan->sub[s].st_n > 0) {
+    *out = chan->sub[s].stash[chan->sub[s].st_head];
+  } else {
+    resolve(chan, s, chan->sub[s].buf[chan->sub[s].merge_pos], out);
+  }
+}
+CCMRAM static inline void sub_consume(channel_t *chan, uint8_t s) {
+  if (chan->sub[s].st_n > 0) {
+    chan->sub[s].st_head = (chan->sub[s].st_head + 1) % STASH_LEN;
+    chan->sub[s].st_n--;
+  } else {
+    uint32_t p = chan->sub[s].merge_pos + 1;
+    chan->sub[s].merge_pos = (p == DMA_CAPTURE_BUFLEN) ? 0 : p;
   }
 }
 
-CCMRAM static void on_dma_tc(void *user_data) {
-  channel_t *ch = (channel_t *)user_data;
-  uint32_t last = ch->dma_processed_pos;
-  if (last >= DMA_CAPTURE_BUFLEN / 2) {
-    process_dma_captures(ch->channel_num, ch->dma_buf, last,
-                         DMA_CAPTURE_BUFLEN - last);
+// After the 2-way merge stalls (one sub ran out so ordering can't yet
+// continue), the other sub's still-unconsumed DMA records can't stay
+// in the circular DMA buffer -- the write head will lap them. Copy
+// just that residual (the O(1) inter-sub skew, since both subs capture
+// the same alternating edge train 1:1) into the stash and free the
+// DMA region. Resolving here also bounds capture-to-resolve delay for
+// records that stall across service calls. Overflow is the
+// overcapture/extreme regime -- counted.
+CCMRAM static void stash_residual(channel_t *chan, uint8_t s,
+                                  uint32_t cur) {
+  while (chan->sub[s].merge_pos != cur) {
+    if (__builtin_expect(chan->sub[s].st_n >= STASH_LEN, 0)) {
+      uint32_t dropped = (cur - chan->sub[s].merge_pos) % DMA_CAPTURE_BUFLEN;
+      chan->buf_overflows += dropped;  // drop the rest (not silent)
+      chan->sub[s].merge_pos = cur;
+      return;
+    }
+    uint16_t w = (chan->sub[s].st_head + chan->sub[s].st_n) % STASH_LEN;
+    resolve(chan, s, chan->sub[s].buf[chan->sub[s].merge_pos],
+            &chan->sub[s].stash[w]);
+    chan->sub[s].st_n++;
+    uint32_t p = chan->sub[s].merge_pos + 1;
+    chan->sub[s].merge_pos = (p == DMA_CAPTURE_BUFLEN) ? 0 : p;
   }
-  ch->dma_processed_pos = 0;
+}
+
+// Minimum age (in TIM2 ticks) of a record released by the drain path.
+// Capture-to-DMA-visible latency is bounded by GPDMA arbitration
+// (well under a microsecond), so any edge that could precede a
+// record this old is already visible in its sub's DMA buffer -- the
+// drain can never emit ahead of an edge it hasn't seen. In practice a
+// drained straggler is at least one flush period (~100 ms) old, so
+// the gate only ever bites if the quiescence detection is wrong.
+#define DRAIN_MIN_AGE_TICKS (1000 / NS_PER_TICK)  // 1 us
+
+// Service a channel.
+//   slope != BOTH: only the selected sub streams -- one monotonic,
+//     already-ordered stream copied straight to the ring (the proven
+//     fast path, one resolve + one ring write per record); the other
+//     sub is skipped past so its DMA buffer can't overflow.
+//   slope == BOTH: 2-way merge by timestamp, reading directly from
+//     both subs' DMA buffers (one resolve + compare + ring write per
+//     record -- same per-record cost as the fast path). A record is
+//     held until the other sub progresses past it (no earlier edge
+//     can then still arrive); only the small post-merge residual is
+//     copied to the stash. `drain` (channel verifiably quiescent for
+//     a full flush period) releases the final straggler at burst end.
+CCMRAM static void service_channel(channel_t *chan, bool drain) {
+  timestamper_slope_t sl = chan->slope;
+
+  if (sl != TIMESTAMPER_SLOPE_BOTH) {
+    uint8_t act = (sl == TIMESTAMPER_SLOPE_FALLING) ? SUB_FALLING
+                                                    : SUB_RISING;
+    uint8_t oth = act ^ 1;
+    // Stashed records (left over from a stint in BOTH mode) are older
+    // than anything still in the DMA buffer -- emit them first.
+    while (chan->sub[act].st_n > 0) {
+      ring_emit(chan, &chan->sub[act].stash[chan->sub[act].st_head]);
+      chan->sub[act].st_head = (chan->sub[act].st_head + 1) % STASH_LEN;
+      chan->sub[act].st_n--;
+    }
+    volatile uint32_t *buf = chan->sub[act].buf;
+    uint32_t cur = safe_cur(chan, act);
+    uint32_t pos = chan->sub[act].merge_pos;
+    while (pos != cur) {
+      uint32_t seg_end = (pos < cur) ? cur : DMA_CAPTURE_BUFLEN;
+      while (pos < seg_end) {
+        stash_rec_t r;
+        resolve(chan, act, buf[pos++], &r);
+        ring_emit(chan, &r);
+      }
+      if (seg_end == DMA_CAPTURE_BUFLEN) pos = 0;
+    }
+    chan->sub[act].merge_pos = cur;
+    chan->sub[act].st_head = chan->sub[act].st_n = 0;
+
+    chan->sub[oth].merge_pos = safe_cur(chan, oth);
+    chan->sub[oth].st_head = chan->sub[oth].st_n = 0;
+    return;
+  }
+
+  uint32_t curR = safe_cur(chan, SUB_RISING);
+  uint32_t curF = safe_cur(chan, SUB_FALLING);
+  for (;;) {
+    bool aR = sub_avail(chan, SUB_RISING, curR);
+    bool aF = sub_avail(chan, SUB_FALLING, curF);
+    uint8_t s;
+    if (aR && aF) {
+      stash_rec_t rR, rF;
+      sub_peek(chan, SUB_RISING, &rR);
+      sub_peek(chan, SUB_FALLING, &rF);
+      s = rec_before(&rR, &rF) ? SUB_RISING : SUB_FALLING;
+    } else if (drain && (aR || aF)) {
+      s = aR ? SUB_RISING : SUB_FALLING;
+      // Second, independent ordering guard (see DRAIN_MIN_AGE_TICKS):
+      // never release a record so fresh that an earlier edge could
+      // still be in flight to the other sub's DMA buffer.
+      stash_rec_t r;
+      sub_peek(chan, s, &r);
+      int32_t age = (int32_t)TIM2->CNT
+                    - (int32_t)(r.ctr & COUNTER_VALUE_MASK);
+      if (age < 0) age += CLOCK_FREQ_HZ;
+      if (age < DRAIN_MIN_AGE_TICKS) break;
+    } else {
+      break;
+    }
+    stash_rec_t r;
+    sub_peek(chan, s, &r);
+    ring_emit(chan, &r);
+    sub_consume(chan, s);
+  }
+  stash_residual(chan, SUB_RISING, curR);
+  stash_residual(chan, SUB_FALLING, curF);
+}
+
+// TIM2 capture DMA HT/TC callback (one per in-use sub). The NDTR-
+// driven drain doesn't distinguish HT from TC, so both map here. All
+// of a channel's sub DMA ISRs share one NVIC priority (cannot preempt
+// each other), so per-channel service is serialized without masking.
+CCMRAM static void on_dma(void *user_data) {
+  channel_t *chan = (channel_t *)user_data;
+  chan->dma_isr_ran = true;
+  service_channel(chan, false);
 }
 
 // Format a timestamp into buf, returning the number of bytes written.
@@ -352,12 +584,13 @@ CCMRAM static void on_dma_tc(void *user_data) {
 //
 // TEXT: at 250 MHz, each tick is 4 ns. Counter ranges 0..249,999,999;
 // counter * 4 yields nanoseconds in 0..999,999,996, within uint32_t.
-// 9 fractional digits give nanosecond resolution.
+// 9 fractional digits give nanosecond resolution. The trailing column
+// is the hardware-latched edge polarity: '+' rising, '-' falling.
 //
 // BINARY: 8 bytes -- the on-device timestamp_t layout (4 bytes seconds
-// LE, then 4 bytes counter LE with channel in the top 2 bits) is the
-// wire format. memcpy straight out, skipping the 9-digit divmod chain
-// in snprintf entirely.
+// LE, then 4 bytes counter LE with channel in the top 2 bits and
+// polarity in bit 28) is the wire format. memcpy straight out,
+// skipping the 9-digit divmod chain in snprintf entirely.
 static int format_timestamp(timestamp_t *t, char *buf, int buf_size) {
   if (format_mode == TIMESTAMPER_FORMAT_BINARY) {
     _Static_assert(sizeof(timestamp_t) == TIMESTAMPER_BINARY_RECORD_LEN,
@@ -367,10 +600,11 @@ static int format_timestamp(timestamp_t *t, char *buf, int buf_size) {
     return sizeof(timestamp_t);
   }
   uint8_t channel = t->counter >> COUNTER_CHAN_SHIFT;
+  char polarity = (t->counter & COUNTER_POLARITY_BIT) ? '+' : '-';
   uint32_t counter = t->counter & COUNTER_VALUE_MASK;
   uint32_t nanoseconds = counter * NS_PER_TICK;
-  return snprintf(buf, buf_size, "%d %lu.%09lu\n",
-                  channel, t->seconds, nanoseconds);
+  return snprintf(buf, buf_size, "%d %lu.%09lu %c\n",
+                  channel, t->seconds, nanoseconds, polarity);
 }
 
 static bool received_recent_pulse(uint8_t channel_num) {
@@ -427,8 +661,8 @@ static void update_leds(void) {
 // the previous send.
 static void fill_tx_buf(void) {
   while (ts_tail != ts_head) {
-    // Max formatted length: "4 4294967295.999999996\n" = 23 bytes.
-    if (tx_fill_pos + 23 > USB_TX_BUFLEN) {
+    // Max formatted length: "3 4294967295.999999996 +\n" = 25 bytes.
+    if (tx_fill_pos + 25 > USB_TX_BUFLEN) {
       break;
     }
     timestamp_t t = timestamp_buffer[ts_tail];
@@ -491,42 +725,45 @@ static void on_usb_tx_complete(void) {
   try_send_timestamps();
 }
 
-// Flush any DMA-captured values that haven't reached a half-buffer boundary
-// yet. This ensures slow pulses get processed promptly rather than waiting for
-// DMA_CAPTURE_BUFLEN/2 more captures to fill the half-buffer. Called from
-// periodic_task.
+// Periodic catch-up: drain/merge each channel promptly even when the
+// DMA buffers fill slowly (the HT/TC ISR alone could otherwise leave a
+// slow signal's captures waiting up to a half-buffer). Also releases
+// the final BOTH-mode straggler once a channel is verifiably
+// quiescent. Called from periodic_task.
+//
+// Quiescence must be EXACT: a false positive arms the drain path,
+// which emits one sub without waiting for the other -- the only way
+// the output can mis-order. A channel is quiescent iff no capture
+// landed since the previous flush, established by two independent
+// signals that cannot alias together:
+//   1. per-sub DMA remaining-count unchanged since the last flush.
+//      NDTR alone can alias -- it returns to the same value after
+//      exactly DMA_CAPTURE_BUFLEN more captures -- but never sooner;
+//   2. no capture HT/TC ISR ran since the last flush. Any
+//      DMA_CAPTURE_BUFLEN-capture aliasing run necessarily crossed a
+//      half-buffer boundary and fired one.
+// (A summed or single-signal detector aliases under sustained
+// high-rate input and was the root cause of a rare drain-path
+// mis-order.)
 static void flush_dma_captures(void) {
-  const uint32_t half = DMA_CAPTURE_BUFLEN / 2;
-
   for (int i = 0; i < NUM_CHANNELS; i++) {
     channel_t *ch = &channels[i];
+    if (!ch->has_hw) continue;
 
-    // Disable interrupts to coordinate with the DMA HT/TC ISR — both
-    // read and update the same processed_pos, so we must not race.
+    // Disable interrupts so we don't race the DMA ISR's call into
+    // service_channel (shared merge_pos / stash / ring head).
     __disable_irq();
 
-    // DMA counts DOWN from DMA_CAPTURE_BUFLEN; current write position is
-    // DMA_CAPTURE_BUFLEN minus the remaining count.
-    uint32_t remaining = rulos_dma_get_remaining(ch->dma_ch);
-    uint32_t current_pos = DMA_CAPTURE_BUFLEN - remaining;
-    if (current_pos == DMA_CAPTURE_BUFLEN) {
-      current_pos = 0;  // DMA counter reads 0 right at wrap
-    }
+    uint32_t ndtr_r = rulos_dma_get_remaining(ch->sub[SUB_RISING].dma_ch);
+    uint32_t ndtr_f = rulos_dma_get_remaining(ch->sub[SUB_FALLING].dma_ch);
+    bool quiescent = !ch->dma_isr_ran &&
+                     ndtr_r == ch->sub[SUB_RISING].prev_ndtr &&
+                     ndtr_f == ch->sub[SUB_FALLING].prev_ndtr;
+    ch->dma_isr_ran = false;
+    ch->sub[SUB_RISING].prev_ndtr = ndtr_r;
+    ch->sub[SUB_FALLING].prev_ndtr = ndtr_f;
 
-    // Only process within the current half — never cross a half-boundary.
-    // The DMA HT/TC ISR handles boundary transitions. Clamp current_pos
-    // to the next boundary so we don't step on the ISR's territory.
-    uint32_t last = ch->dma_processed_pos;
-    uint32_t limit = (last < half) ? half : DMA_CAPTURE_BUFLEN;
-    if (current_pos > limit) {
-      current_pos = limit;
-    }
-
-    if (current_pos > last) {
-      process_dma_captures(ch->channel_num, ch->dma_buf, last,
-                           current_pos - last);
-      ch->dma_processed_pos = current_pos;
-    }
+    service_channel(ch, quiescent);
 
     __enable_irq();
   }
@@ -545,7 +782,10 @@ static void periodic_task(void *data) {
     LL_TIM_DisableCounter(TIM2);
     LL_TIM_DisableCounter(TIM15);
     for (int i = 0; i < NUM_CHANNELS; i++) {
-      rulos_dma_stop(channels[i].dma_ch);
+      if (!channels[i].has_hw) continue;
+      for (int s = 0; s < NUM_SUBS; s++) {
+        rulos_dma_stop(channels[i].sub[s].dma_ch);
+      }
     }
     LL_TIM_DisableIT_UPDATE(TIM15);
 
@@ -630,52 +870,65 @@ static void init_timers() {
   LL_TIM_SetTriggerOutput(TIM2, LL_TIM_TRGO_UPDATE);
   LL_TIM_DisableMasterSlaveMode(TIM2);
 
-  // PA0..PA3 carry TIM2_CH1..CH4 input-capture signals on AF1 (same
-  // alternate-function mapping on G4 and H5). Mode must be ALTERNATE
-  // so the AF mux routes the pin to TIM2; OutputType / Speed don't
-  // apply since the pin is sensed, not driven.
+  // Each polarity-capable input's rising sub-stream uses a direct-TI
+  // pin (PA0 = TI1 for channel 0, PA2 = TI3 for channel 2) configured
+  // for AF input; its falling sub-stream is sourced from the same TI
+  // internally (indirect, gpio_pin == 0) and needs no pin. AF1 is the
+  // TIM2 IC mapping (same on G4 and H5); the pin is sensed, not
+  // driven. Capture polarities are fixed in hardware -- the SCPI slope
+  // selects which sub-streams are emitted, not how the timer is armed.
   LL_GPIO_InitTypeDef gpio_init = {0};
   gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
   gpio_init.Pull = LL_GPIO_PULL_DOWN;
   gpio_init.Alternate = LL_GPIO_AF_1;
 
-  // cap_pins is at file scope so the slope-setter API can also reference
-  // each channel's TIM2 channel code at runtime.
-  for (int i = 0; i < NUM_CHANNELS; i++) {
-    gpio_init.Pin = cap_pins[i].pin;
-    LL_GPIO_Init(GPIOA, &gpio_init);
-    LL_TIM_IC_SetActiveInput(TIM2, cap_pins[i].ll_channel,
-                             LL_TIM_ACTIVEINPUT_DIRECTTI);
-    LL_TIM_IC_SetPrescaler(TIM2, cap_pins[i].ll_channel, LL_TIM_ICPSC_DIV1);
-    LL_TIM_IC_SetFilter(TIM2, cap_pins[i].ll_channel, LL_TIM_IC_FILTER_FDIV1);
-    timestamper_set_slope(i, channels[i].slope);
+  for (int k = 0; k < NUM_HW_CAPTURE; k++) {
+    if (capture_hw[k].gpio_pin) {
+      gpio_init.Pin = capture_hw[k].gpio_pin;
+      LL_GPIO_Init(GPIOA, &gpio_init);
+    }
+    LL_TIM_IC_SetActiveInput(TIM2, capture_hw[k].ll_channel,
+                             capture_hw[k].active_input);
+    LL_TIM_IC_SetPrescaler(TIM2, capture_hw[k].ll_channel,
+                           LL_TIM_ICPSC_DIV1);
+    LL_TIM_IC_SetFilter(TIM2, capture_hw[k].ll_channel,
+                        LL_TIM_IC_FILTER_FDIV1);
+    LL_TIM_IC_SetPolarity(TIM2, capture_hw[k].ll_channel,
+                          capture_hw[k].ic_polarity);
   }
 
   /// Start the counter running and enable the input capture channels
   LL_TIM_EnableCounter(TIM2);
-  for (int i = 0; i < NUM_CHANNELS; i++) {
-    LL_TIM_CC_EnableChannel(TIM2, cap_pins[i].ll_channel);
+  for (int k = 0; k < NUM_HW_CAPTURE; k++) {
+    LL_TIM_CC_EnableChannel(TIM2, capture_hw[k].ll_channel);
   }
 
-  // Set up DMA for input capture. Each capture channel gets its own DMA
-  // channel in circular mode via the RULOS DMA abstraction. HT/TC
-  // callbacks fire at each half-buffer boundary so we can process
-  // captures while the other half fills.
+  // Per in-use TIM2 capture channel: its own circular-DMA channel via
+  // the RULOS DMA abstraction (HT/TC callbacks fire at each
+  // half-buffer boundary so captures are processed while the other
+  // half fills), feeding the owning channel's rising or falling
+  // sub-stream.
   static const struct {
     rulos_dma_request_t request;
     volatile uint32_t *ccr;
     uint32_t ll_dma_req_flag;  // LL_TIM_EnableDMAReq_CCn macro arg
-  } dma_setup[NUM_CHANNELS] = {
+  } dma_setup[NUM_HW_CAPTURE] = {
       {RULOS_DMA_REQ_TIM2_CH1, &TIM2->CCR1, TIM_DIER_CC1DE},
       {RULOS_DMA_REQ_TIM2_CH2, &TIM2->CCR2, TIM_DIER_CC2DE},
       {RULOS_DMA_REQ_TIM2_CH3, &TIM2->CCR3, TIM_DIER_CC3DE},
       {RULOS_DMA_REQ_TIM2_CH4, &TIM2->CCR4, TIM_DIER_CC4DE},
   };
 
-  for (int i = 0; i < NUM_CHANNELS; i++) {
-    channels[i].channel_num = i;
+  for (int k = 0; k < NUM_HW_CAPTURE; k++) {
+    channel_t *ch = &channels[capture_hw[k].channel];
+    uint8_t s = capture_hw[k].sub;
+    ch->has_hw = true;
+    ch->sub[s].buf = capture_buf[k];
+    ch->sub[s].polarity_bit =
+        (s == SUB_RISING) ? COUNTER_POLARITY_BIT : 0;
+
     const rulos_dma_config_t cfg = {
-        .request = dma_setup[i].request,
+        .request = dma_setup[k].request,
         .direction = RULOS_DMA_DIR_PERIPH_TO_MEM,
         .mode = RULOS_DMA_MODE_CIRCULAR,
         .periph_width = RULOS_DMA_WIDTH_WORD,
@@ -683,17 +936,17 @@ static void init_timers() {
         .periph_increment = false,
         .mem_increment = true,
         .priority = RULOS_DMA_PRIORITY_VERYHIGH,
-        .tc_callback = on_dma_tc,
-        .ht_callback = on_dma_ht,
-        .user_data = &channels[i],
+        .tc_callback = on_dma,
+        .ht_callback = on_dma,
+        .user_data = ch,
     };
-    channels[i].dma_ch = rulos_dma_alloc(&cfg);
-    if (channels[i].dma_ch == NULL) {
+    ch->sub[s].dma_ch = rulos_dma_alloc(&cfg);
+    if (ch->sub[s].dma_ch == NULL) {
       __builtin_trap();
     }
-    rulos_dma_start(channels[i].dma_ch, (volatile void *)dma_setup[i].ccr,
-                    (void *)channels[i].dma_buf, DMA_CAPTURE_BUFLEN);
-    SET_BIT(TIM2->DIER, dma_setup[i].ll_dma_req_flag);
+    rulos_dma_start(ch->sub[s].dma_ch, (volatile void *)dma_setup[k].ccr,
+                    (void *)capture_buf[k], DMA_CAPTURE_BUFLEN);
+    SET_BIT(TIM2->DIER, dma_setup[k].ll_dma_req_flag);
   }
 
 
@@ -729,17 +982,37 @@ static void init_timers() {
   LL_TIM_EnableCounter(TIM15);
 }
 
+// Which sub-streams a slope selects for emission.
+static bool sub_active(timestamper_slope_t sl, uint8_t s) {
+  if (sl == TIMESTAMPER_SLOPE_BOTH) return true;
+  return (sl == TIMESTAMPER_SLOPE_FALLING) ? (s == SUB_FALLING)
+                                           : (s == SUB_RISING);
+}
+
 void timestamper_set_slope(int ch, timestamper_slope_t slope) {
   if (ch < 0 || ch >= NUM_CHANNELS) return;
-  uint32_t pol;
-  switch (slope) {
-    case TIMESTAMPER_SLOPE_FALLING: pol = LL_TIM_IC_POLARITY_FALLING; break;
-    case TIMESTAMPER_SLOPE_BOTH:    pol = LL_TIM_IC_POLARITY_BOTHEDGE; break;
-    case TIMESTAMPER_SLOPE_RISING:
-    default:                        pol = LL_TIM_IC_POLARITY_RISING; break;
+  channel_t *c = &channels[ch];
+  if (!c->has_hw || c->slope == slope) {
+    c->slope = slope;
+    return;
   }
-  channels[ch].slope = slope;
-  LL_TIM_IC_SetPolarity(TIM2, cap_pins[ch].ll_channel, pol);
+  // Both edges are always captured in hardware; slope only selects
+  // which sub-streams are emitted. Emit everything captured under the
+  // old selection up to now, then skip the newly-selected sub-streams
+  // past their pre-command backlog, so the first record emitted under
+  // the new slope is an edge captured after the command. (Leaving
+  // BOTH may drop a final unpaired edge still held for ordering --
+  // one from within the last flush period.)
+  __disable_irq();
+  service_channel(c, false);
+  for (int s = 0; s < NUM_SUBS; s++) {
+    if (!sub_active(c->slope, s) && sub_active(slope, s)) {
+      c->sub[s].merge_pos = safe_cur(c, s);
+      c->sub[s].st_head = c->sub[s].st_n = 0;
+    }
+  }
+  c->slope = slope;
+  __enable_irq();
 }
 
 timestamper_slope_t timestamper_get_slope(int ch) {
@@ -855,6 +1128,14 @@ void timestamper_discard_pending(void) {
   for (int i = 0; i < NUM_CHANNELS; i++) {
     channels[i].num_missed = 0;
     channels[i].buf_overflows = 0;
+    channels[i].count = 0;
+    if (!channels[i].has_hw) continue;
+    // Skip past everything captured so far and drop any stashed
+    // residue: the next edge becomes the first one the host sees.
+    for (int s = 0; s < NUM_SUBS; s++) {
+      channels[i].sub[s].merge_pos = safe_cur(&channels[i], s);
+      channels[i].sub[s].st_head = channels[i].sub[s].st_n = 0;
+    }
   }
   marker_pending = true;
   __enable_irq();
