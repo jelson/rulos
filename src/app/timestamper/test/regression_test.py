@@ -640,44 +640,24 @@ def phase_sustained(mode, sg, tic, channel):
     # sync, contaminating a rate measurement. Drain through that
     # residue with the new signal already running, so the measured
     # window is pure steady-rate.
-    #
-    # Retry policy: a SINGLE over-tolerance interior gap with zero
-    # in-window loss is the fingerprint of a one-off stall, not of a
-    # device that can't sustain the rate (that drops constantly --
-    # dozens-to-hundreds of holes per window). Known one-off causes: a
-    # host that stops reading longer than the kernel buffer + device
-    # ring can absorb (~260 ms at 100 kHz), and the stream-start TX
-    # stall in current firmware that drops a counted-but-unreported
-    # chunk exactly one ring + one TX buffer (record #16540) into the
-    # window. Either way the loss report is deferred until the stream
-    # idles, past the window, so lost reads 0 here. Retry one such
-    # window; a second in a row fails the phase.
+    tic.discard_pending(settle_s=0.5)
+    times, pols, others, ovc, ovf, _ = mode.capture(
+        tic, channel, SUSTAINED_S)
+    # Rate is measured from the captured records' own time span, not
+    # count/window: the latter loses ~(marker-sync + end-of-window
+    # drain) at both ends regardless of rate. A device that keeps up
+    # streams at the true source rate with no gaps; one that can't
+    # either drops chunks (binary: a span-rate deficit and a gap) or
+    # overflows (text: the '#' line, asserted via expect_no_loss).
     nominal = 1.0 / hz
-    for attempt in range(2):
-        tic.discard_pending(settle_s=0.5)
-        times, pols, others, ovc, ovf, _ = mode.capture(
-            tic, channel, SUSTAINED_S)
-        # Rate is measured from the captured records' own time span,
-        # not count/window: the latter loses ~(marker-sync +
-        # end-of-window drain) at both ends regardless of rate. A
-        # device that keeps up streams at the true source rate with no
-        # gaps; one that can't either drops chunks (binary: a span-rate
-        # deficit and a gap) or overflows (text: the '#' line, asserted
-        # via expect_no_loss).
-        n = len(times)
-        span = (times[-1] - times[0]) if n >= 2 else 0
-        obs_hz = (n - 1) / span if span > 0 else 0
-        deltas = [times[i + 1] - times[i] for i in range(n - 1)]
-        print(f"  collected {n} on ch{channel}; observed "
-              f"{obs_hz:.0f} Hz over {span:.3f}s "
-              f"(nominal gap {nominal * 1e6:.2f} µs); "
-              f"others={sorted(others) or 'none'}")
-        holes = sum(1 for d in deltas[1:-1] if abs(d - nominal) > GAP_TOL_S)
-        if attempt == 0 and holes == 1 and ovc == 0 and ovf == 0:
-            print("  one interior hole, no in-window loss -- one-off "
-                  "stall fingerprint, retrying the window")
-            continue
-        break
+    n = len(times)
+    span = (times[-1] - times[0]) if n >= 2 else 0
+    obs_hz = (n - 1) / span if span > 0 else 0
+    deltas = [times[i + 1] - times[i] for i in range(n - 1)]
+    print(f"  collected {n} on ch{channel}; observed "
+          f"{obs_hz:.0f} Hz over {span:.3f}s "
+          f"(nominal gap {nominal * 1e6:.2f} µs); "
+          f"others={sorted(others) or 'none'}")
 
     ok = expect(n >= 100, f"sustained {hz} Hz produced enough records")
     # Every interior inter-record gap must be the source period to

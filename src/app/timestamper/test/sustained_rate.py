@@ -7,12 +7,9 @@ that every pulse makes it out of the LectroTIC-4 to the host. This
 measures USB drain bandwidth, not internal capture (deadtime.py covers
 the bursty regime where the on-device buffer absorbs short overruns).
 
-For each frequency we reconfigure the PG-4, then drain the
-post-reconfigure residue for --settle seconds with the new signal
-already running (transition isolation: a frequency change leaves
-DMA-capture/ring residue from the old rate that the firmware streams
-out after the marker sync — a one-time transient, not a throughput
-deficit; the same isolation regression_test.phase_sustained does).
+For each frequency we reconfigure the PG-4, then discard the first
+--settle seconds of data so the measurement starts after the source
+is steady (the same isolation regression_test.phase_sustained does).
 Only then do we measure: over the --measure window require (a) the
 device reported no loss — no PULSES_LOST records — and (b) every
 *interior* gap between consecutive timestamps is within --tolerance
@@ -54,10 +51,8 @@ def measure_rate(tic, measure_s, channel=0, text=False, settle_s=0.5):
     via the ASCII diagnostic lines (both the definitive no-loss
     signal). The two formats have different USB-drain ceilings.
 
-    The settle is transition isolation (discard_pending's settle_s):
-    measuring a source reconfiguration transient as a gap misreads a
-    one-time event as a sustained-rate failure (a single multi-ms gap,
-    lost=0)."""
+    The settle (discard_pending's settle_s) starts the measurement
+    after the just-reconfigured source is steady."""
     if text:
         tic.send("FORM:DATA TEXT")
         tic.set_stream_enabled(True)
@@ -171,11 +166,10 @@ def main():
                    help="Measure the ASCII TEXT stream instead of the "
                         "BINARY union (different USB-drain ceiling)")
     p.add_argument("--settle", type=float, default=0.5,
-                   help="Seconds to drain post-reconfigure residue "
-                        "before each measurement window; transition "
-                        "isolation so a one-time PG-4-reconfig "
-                        "transient is not misread as a rate failure "
-                        "(default: 0.5, matching phase_sustained)")
+                   help="Seconds of data to discard after each PG-4 "
+                        "reconfigure so the measurement starts on a "
+                        "steady source (default: 0.5, matching "
+                        "phase_sustained)")
     args = p.parse_args()
 
     lo = args.bottom
