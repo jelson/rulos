@@ -27,11 +27,11 @@
 
 #define NUM_CHANNELS 4
 
-// Per-channel slope. Both edges are always captured in hardware (a
-// permanently rising-armed and a permanently falling-armed TIM2
-// capture channel per input); slope selects which are emitted. Every
-// emitted record carries an exact, hardware-latched polarity bit
-// regardless of slope.
+// Per-channel slope. Each input has a rising-armed and a falling-armed
+// timer capture channel; slope selects which of the pair are enabled.
+// Unselected edge directions are not captured at all (no DMA traffic,
+// no drain cost). Every emitted record carries an exact,
+// hardware-latched polarity bit regardless of slope.
 //
 // Emission order: each (channel, polarity) sub-stream is emitted in
 // time order, but sub-streams are not interleaved into one globally
@@ -119,4 +119,4 @@ void timestamper_config_save(void);
 // format, stream enable) is preserved.
 void timestamper_discard_pending(void);
 
-#define TIMESTAMPER_FW_VERSION "0.17.0"
+#define TIMESTAMPER_FW_VERSION "0.18.0"

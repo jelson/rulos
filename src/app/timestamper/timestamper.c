@@ -81,8 +81,10 @@
  * counter, not the pin state, so each physical input feeds two TIM2 capture
  * channels from the same timer input: one direct-TI channel armed rising and
  * one indirect-TI channel armed falling. Which capture channel fired is the
- * edge polarity. The SCPI slope setting does not re-arm the timer; it selects
- * which captured sub-streams are emitted.
+ * edge polarity. The SCPI slope setting arms only the requested edge
+ * directions: a deselected sub-stream's capture channel is disabled
+ * outright, so unrequested edges cost no DMA bandwidth and no drain-loop
+ * time -- in single-slope mode each pulse costs one capture, not two.
  *
  * Pairing consumes two capture channels per input, so one 4-channel timer
  * serves two inputs. The four jacks split across the two 32-bit timers: TIM2
@@ -243,9 +245,9 @@ typedef struct {
   uint32_t num_missed;
   uint32_t buf_overflows;
 
-  // Input-capture slope, configurable via SCPI INPut<n>:SLOPe. Both
-  // edges are always captured in hardware; slope selects which
-  // sub-streams are emitted.
+  // Input-capture slope, configurable via SCPI INPut<n>:SLOPe. Only
+  // the slope-selected sub-streams are armed in hardware; deselected
+  // capture channels are disabled and capture nothing.
   timestamper_slope_t slope;
 
   // divider state -- report only every Nth emitted edge. divider == 1
@@ -550,16 +552,34 @@ CCMRAM static void drain_sub_fast(channel_t* chan, uint8_t s, uint32_t cur) {
   ts_head = head;
 }
 
-// Which sub-streams a slope selects for emission.
+// Which sub-streams a slope selects. A selected sub-stream is armed in
+// hardware and emitted; a deselected one's capture channel is disabled.
 static bool sub_active(timestamper_slope_t sl, uint8_t s) {
   if (sl == TIMESTAMPER_SLOPE_BOTH)
     return true;
   return (sl == TIMESTAMPER_SLOPE_FALLING) ? (s == SUB_FALLING) : (s == SUB_RISING);
 }
 
+// Arm or disarm capture sub-stream k. A disabled capture channel
+// latches nothing: no CCR update, no DMA request, no overcapture flag.
+// Its GPDMA channel stays armed but starves, so the drain cursor stays
+// in sync across disable/enable. On re-arm, clear the sub's stale
+// capture/overcapture flags (CCnIF is CCnOF >> 8 in TIM_SR) so a value
+// latched before the last disable isn't misread as a fresh edge.
+static void set_capture_enabled(int k, bool on) {
+  if (on) {
+    capture_hw[k].tim->SR = ~(capture_hw[k].sr_of_bit | (capture_hw[k].sr_of_bit >> 8));
+    LL_TIM_CC_EnableChannel(capture_hw[k].tim, capture_hw[k].ll_channel);
+  } else {
+    LL_TIM_CC_DisableChannel(capture_hw[k].tim, capture_hw[k].ll_channel);
+  }
+}
+
 // Service a channel: drain each slope-selected sub-stream straight
-// into the ring, and skip the deselected one past its backlog so its
-// circular buffer can't be misread later. Each sub-stream is emitted
+// into the ring. A deselected sub-stream is disarmed and captures
+// nothing, but its cursor is still resynced here: a capture in flight
+// at the instant of disarm can land one final buffer entry, which
+// this skips so it can't be misread later. Each sub-stream is emitted
 // in time order; the two sub-streams are NOT interleaved into one
 // ordered sequence (see the top-of-file EMISSION ORDER note).
 CCMRAM static void service_channel(channel_t* chan) {
@@ -895,9 +915,10 @@ static void init_timers() {
   // Each input's rising sub-stream uses a direct-TI pin configured for
   // AF input (TIM2 = AF1, TIM5 = AF2); its falling sub-stream is
   // sourced from the same TI internally (indirect, gpio_pin == 0) and
-  // needs no pin. The pin is sensed, not driven. Capture polarities
-  // are fixed in hardware -- the SCPI slope selects which sub-streams
-  // are emitted, not how the timer is armed.
+  // needs no pin. The pin is sensed, not driven. Each capture
+  // channel's polarity is fixed in hardware -- the SCPI slope picks
+  // which of the pair are armed (see set_capture_enabled), never how
+  // a channel is configured.
   LL_GPIO_InitTypeDef gpio_init = {0};
   gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
   gpio_init.Pull = LL_GPIO_PULL_DOWN;
@@ -951,11 +972,14 @@ static void init_timers() {
     SET_BIT(capture_hw[k].tim->DIER, capture_hw[k].dier_bit);
   }
 
-  // Enable all capture channels on both timers, then start the pair.
-  // Both counters preset to 0; enabling TIM2 (the master) fires its
+  // Arm the slope-selected capture channels (channels[] already holds
+  // the persisted or default slopes), then start the timer pair. Both
+  // counters preset to 0; enabling TIM2 (the master) fires its
   // ENABLE-sourced TRGO, which starts TIM5 on the same clock edge.
   for (int k = 0; k < NUM_HW_CAPTURE; k++) {
-    LL_TIM_CC_EnableChannel(capture_hw[k].tim, capture_hw[k].ll_channel);
+    if (sub_active(channels[capture_hw[k].channel].slope, capture_hw[k].sub)) {
+      set_capture_enabled(k, true);
+    }
   }
   LL_TIM_SetCounter(TIM2, 0);
   LL_TIM_SetCounter(TIM5, 0);
@@ -1001,20 +1025,26 @@ void timestamper_set_slope(int ch, timestamper_slope_t slope) {
     c->slope = slope;
     return;
   }
-  // Both edges are always captured in hardware; slope only selects
-  // which sub-streams are emitted. Emit everything captured under the
-  // old selection up to now, then skip the newly-selected sub-streams
-  // past their pre-command backlog, so the first record emitted under
-  // the new slope is an edge captured after the command.
+  // Disarm the channel's pair, emit the backlog captured under the
+  // old slope, then re-sync both cursors and arm the subs the new
+  // slope selects -- so the first record emitted under the new slope
+  // is an edge captured after the command.
   __disable_irq();
-  service_channel(c);
-  for (uint8_t s = 0; s < NUM_SUBS; s++) {
-    if (!sub_active(c->slope, s) && sub_active(slope, s)) {
-      c->sub[s].drain_pos = safe_cur(c, s);
-      c->sub[s].half_events = 0;
-    }
+  for (int k = 0; k < NUM_HW_CAPTURE; k++) {
+    if (capture_hw[k].channel == ch)
+      set_capture_enabled(k, false);
   }
+  service_channel(c);
   c->slope = slope;
+  for (int k = 0; k < NUM_HW_CAPTURE; k++) {
+    if (capture_hw[k].channel != ch)
+      continue;
+    uint8_t s = capture_hw[k].sub;
+    c->sub[s].drain_pos = safe_cur(c, s);
+    c->sub[s].half_events = 0;
+    if (sub_active(slope, s))
+      set_capture_enabled(k, true);
+  }
   __enable_irq();
 }
 
