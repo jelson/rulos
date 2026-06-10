@@ -4,3 +4,4 @@
 Thumbs.db
 __pycache__
 /build
+.claude/settings.local.json

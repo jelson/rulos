@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(scons)",
+      "Bash(scons *)",
+      "Bash(lsusb)",
+      "Bash(lsusb *)",
+      "Bash(journalctl *)",
+      "Bash(dmesg)",
+      "Bash(dmesg *)",
+      "Bash(python3 -m py_compile *)",
+      "Bash(/usr/local/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-eabi/bin/arm-none-eabi-nm *)",
+      "Bash(/usr/local/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-eabi/bin/arm-none-eabi-objdump *)",
+      "Bash(/usr/local/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-eabi/bin/arm-none-eabi-size *)",
+      "Bash(/usr/local/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-eabi/bin/arm-none-eabi-readelf *)"
+    ]
+  }
+}
