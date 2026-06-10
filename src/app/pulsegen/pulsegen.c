@@ -110,6 +110,8 @@
  * bootloader and the same command retries. Verify with `pgctl.py idn`.
  */
 
+#include "pulsegen.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -117,7 +119,6 @@
 #include "core/rulos.h"
 #include "periph/scpi/scpi.h"
 #include "periph/uart/uart.h"
-#include "pulsegen.h"
 #include "scpi.h"
 #include "stm32g4xx_ll_bus.h"
 #include "stm32g4xx_ll_gpio.h"
@@ -145,7 +146,7 @@
 #define BURST_IDLE_MAX 8192U
 #define BURST_NCYC_MAX (65536U - BURST_IDLE_MIN)
 
-#define PS_PER_SEC 1000000000000ULL
+#define PS_PER_SEC           1000000000000ULL
 #define BURST_REP_DEFAULT_PS PS_PER_SEC
 // The repetition interval must cover the whole burst frame plus margin for
 // the software re-arm (scheduler jiffy is 10 ms).
@@ -155,12 +156,12 @@
 #define BURST_REP_MAX_PS (60ULL * PS_PER_SEC)
 
 // LEDs.
-#define LED_CHAN0 GPIO_C0   // channel 0 activity (output transitioning)
-#define LED_CHAN1 GPIO_A3   // channel 1 activity
-#define LED_CHAN2 GPIO_A4   // channel 2 activity
-#define LED_CHAN3 GPIO_A8   // channel 3 activity
-#define LED_CLOCK GPIO_B4   // 10 MHz HSE health
-#define LED_USB   GPIO_A5   // USB activity
+#define LED_CHAN0 GPIO_C0  // channel 0 activity (output transitioning)
+#define LED_CHAN1 GPIO_A3  // channel 1 activity
+#define LED_CHAN2 GPIO_A4  // channel 2 activity
+#define LED_CHAN3 GPIO_A8  // channel 3 activity
+#define LED_CLOCK GPIO_B4  // 10 MHz HSE health
+#define LED_USB   GPIO_A5  // USB activity
 
 // ---- Channel hardware mapping ----------------------------------------------
 
@@ -170,22 +171,34 @@
 //   slot 0 -> output 1, rising on CMP1, falling on CMP2
 //   slot 1 -> output 2, rising on CMP3, falling on CMP4
 typedef struct {
-  uint32_t ll_pin;       // LL_GPIO_PIN_n (all on GPIOC)
-  uint8_t af;            // GPIO alternate function: TF outputs AF13, TE AF3
-  uint32_t hrtim_timer;  // LL_HRTIM_TIMER_E / F
+  uint32_t ll_pin;        // LL_GPIO_PIN_n (all on GPIOC)
+  uint8_t af;             // GPIO alternate function: TF outputs AF13, TE AF3
+  uint32_t hrtim_timer;   // LL_HRTIM_TIMER_E / F
   uint32_t hrtim_output;  // LL_HRTIM_OUTPUT_TE1/TE2 or TF1/TF2
   gpio_pin_t led;
 } channel_hw_t;
 
 static const channel_hw_t channel_hw[NUM_CHANNELS] = {
-    [0] = {.ll_pin = LL_GPIO_PIN_6, .af = 13, .hrtim_timer = LL_HRTIM_TIMER_F,
-           .hrtim_output = LL_HRTIM_OUTPUT_TF1, .led = LED_CHAN0},
-    [1] = {.ll_pin = LL_GPIO_PIN_7, .af = 13, .hrtim_timer = LL_HRTIM_TIMER_F,
-           .hrtim_output = LL_HRTIM_OUTPUT_TF2, .led = LED_CHAN1},
-    [2] = {.ll_pin = LL_GPIO_PIN_8, .af = 3, .hrtim_timer = LL_HRTIM_TIMER_E,
-           .hrtim_output = LL_HRTIM_OUTPUT_TE1, .led = LED_CHAN2},
-    [3] = {.ll_pin = LL_GPIO_PIN_9, .af = 3, .hrtim_timer = LL_HRTIM_TIMER_E,
-           .hrtim_output = LL_HRTIM_OUTPUT_TE2, .led = LED_CHAN3},
+    [0] = {.ll_pin = LL_GPIO_PIN_6,
+           .af = 13,
+           .hrtim_timer = LL_HRTIM_TIMER_F,
+           .hrtim_output = LL_HRTIM_OUTPUT_TF1,
+           .led = LED_CHAN0},
+    [1] = {.ll_pin = LL_GPIO_PIN_7,
+           .af = 13,
+           .hrtim_timer = LL_HRTIM_TIMER_F,
+           .hrtim_output = LL_HRTIM_OUTPUT_TF2,
+           .led = LED_CHAN1},
+    [2] = {.ll_pin = LL_GPIO_PIN_8,
+           .af = 3,
+           .hrtim_timer = LL_HRTIM_TIMER_E,
+           .hrtim_output = LL_HRTIM_OUTPUT_TE1,
+           .led = LED_CHAN2},
+    [3] = {.ll_pin = LL_GPIO_PIN_9,
+           .af = 3,
+           .hrtim_timer = LL_HRTIM_TIMER_E,
+           .hrtim_output = LL_HRTIM_OUTPUT_TE2,
+           .led = LED_CHAN3},
 };
 
 // group 0 = Timer F (ch0,1); group 1 = Timer E (ch2,3).
@@ -234,12 +247,8 @@ static bool g_burst_task_live;    // a burst_rep_task sits in the scheduler
 // ---- HRTIM helpers ---------------------------------------------------------
 
 static const uint32_t hrtim_ckpsc_to_ll[6] = {
-    LL_HRTIM_PRESCALERRATIO_MUL32,
-    LL_HRTIM_PRESCALERRATIO_MUL16,
-    LL_HRTIM_PRESCALERRATIO_MUL8,
-    LL_HRTIM_PRESCALERRATIO_MUL4,
-    LL_HRTIM_PRESCALERRATIO_MUL2,
-    LL_HRTIM_PRESCALERRATIO_DIV1,
+    LL_HRTIM_PRESCALERRATIO_MUL32, LL_HRTIM_PRESCALERRATIO_MUL16, LL_HRTIM_PRESCALERRATIO_MUL8,
+    LL_HRTIM_PRESCALERRATIO_MUL4,  LL_HRTIM_PRESCALERRATIO_MUL2,  LL_HRTIM_PRESCALERRATIO_DIV1,
 };
 
 // Per-CKPSC minimum PER value (RM0440 Table 218, "Minimum PER value"). Also
@@ -253,13 +262,14 @@ static const uint16_t hrtim_min_per[6] = {
 // 16-bit period register. Returns false if the period is too short for even
 // the coarsest prescaler's minimum, or too long for the finest. out_ckpsc and
 // out_per (the PER register value, = period in ticks) are filled on success.
-static bool select_ckpsc(uint64_t period_ps, uint8_t *out_ckpsc,
-                         uint32_t *out_per) {
+static bool select_ckpsc(uint64_t period_ps, uint8_t* out_ckpsc, uint32_t* out_per) {
   for (uint8_t k = 0; k <= 5; k++) {
     uint64_t tick_ps = HRTIM_FINEST_TICK_PS << k;
     uint64_t per = period_ps / tick_ps;
-    if (per > HRTIM_PER_MAX) continue;
-    if (per < hrtim_min_per[k]) continue;
+    if (per > HRTIM_PER_MAX)
+      continue;
+    if (per < hrtim_min_per[k])
+      continue;
     *out_ckpsc = k;
     *out_per = (uint32_t)per;
     return true;
@@ -298,9 +308,8 @@ static void drive_pin_low(int ch) {
 // per_ticks describe the timer the channel belongs to. A bursting channel is
 // gated by the burst mode controller and left disabled here; the repetition
 // task enables it for the duration of each burst.
-static void config_channel_output(int ch, uint8_t ckpsc, uint32_t per_ticks,
-                                  bool burst) {
-  const channel_hw_t *hw = &channel_hw[ch];
+static void config_channel_output(int ch, uint8_t ckpsc, uint32_t per_ticks, bool burst) {
+  const channel_hw_t* hw = &channel_hw[ch];
   const uint64_t tick_ps = HRTIM_FINEST_TICK_PS << ckpsc;
   const uint32_t min_t = hrtim_min_per[ckpsc];
 
@@ -309,54 +318,52 @@ static void config_channel_output(int ch, uint8_t ckpsc, uint32_t per_ticks,
   // coincident with the roll-over that opens the run window races the burst
   // controller's idle release. Clamp the rising edge to the first usable
   // compare value instead.
-  if (burst && delay_t < min_t) delay_t = min_t;
+  if (burst && delay_t < min_t)
+    delay_t = min_t;
   uint32_t width_t = (uint32_t)(chan_width_ps[ch] / tick_ps);
-  if (width_t < min_t) width_t = min_t;
+  if (width_t < min_t)
+    width_t = min_t;
   uint32_t fall_t = delay_t + width_t;
-  if (fall_t > per_ticks - 1) fall_t = per_ticks - 1;
+  if (fall_t > per_ticks - 1)
+    fall_t = per_ticks - 1;
   const bool zero_delay = (delay_t < min_t);
 
   // slot 0 owns CMP1 (rise) / CMP2 (fall); slot 1 owns CMP3 / CMP4.
   uint32_t set_src, reset_src;
   if ((ch & 1) == 0) {
-    if (!zero_delay) LL_HRTIM_TIM_SetCompare1(HRTIM1, hw->hrtim_timer, delay_t);
+    if (!zero_delay)
+      LL_HRTIM_TIM_SetCompare1(HRTIM1, hw->hrtim_timer, delay_t);
     LL_HRTIM_TIM_SetCompare2(HRTIM1, hw->hrtim_timer, fall_t);
-    set_src = zero_delay ? LL_HRTIM_OUTPUTSET_TIMPER
-                         : LL_HRTIM_OUTPUTSET_TIMCMP1;
+    set_src = zero_delay ? LL_HRTIM_OUTPUTSET_TIMPER : LL_HRTIM_OUTPUTSET_TIMCMP1;
     reset_src = LL_HRTIM_OUTPUTRESET_TIMCMP2;
   } else {
-    if (!zero_delay) LL_HRTIM_TIM_SetCompare3(HRTIM1, hw->hrtim_timer, delay_t);
+    if (!zero_delay)
+      LL_HRTIM_TIM_SetCompare3(HRTIM1, hw->hrtim_timer, delay_t);
     LL_HRTIM_TIM_SetCompare4(HRTIM1, hw->hrtim_timer, fall_t);
-    set_src = zero_delay ? LL_HRTIM_OUTPUTSET_TIMPER
-                         : LL_HRTIM_OUTPUTSET_TIMCMP3;
+    set_src = zero_delay ? LL_HRTIM_OUTPUTSET_TIMPER : LL_HRTIM_OUTPUTSET_TIMCMP3;
     reset_src = LL_HRTIM_OUTPUTRESET_TIMCMP4;
   }
 
-  LL_HRTIM_OUT_SetPolarity(HRTIM1, hw->hrtim_output,
-                           LL_HRTIM_OUT_POSITIVE_POLARITY);
+  LL_HRTIM_OUT_SetPolarity(HRTIM1, hw->hrtim_output, LL_HRTIM_OUT_POSITIVE_POLARITY);
   LL_HRTIM_OUT_SetOutputSetSrc(HRTIM1, hw->hrtim_output, set_src);
   LL_HRTIM_OUT_SetOutputResetSrc(HRTIM1, hw->hrtim_output, reset_src);
   // IDLEM selects which outputs the burst mode controller gates; outputs
   // with IDLEM clear run continuously, undisturbed by another group's burst.
   LL_HRTIM_OUT_SetIdleMode(HRTIM1, hw->hrtim_output,
-                           burst ? LL_HRTIM_OUT_IDLE_WHEN_BURST
-                                 : LL_HRTIM_OUT_NO_IDLE);
-  LL_HRTIM_OUT_SetIdleLevel(HRTIM1, hw->hrtim_output,
-                            LL_HRTIM_OUT_IDLELEVEL_INACTIVE);
-  LL_HRTIM_OUT_SetFaultState(HRTIM1, hw->hrtim_output,
-                             LL_HRTIM_OUT_FAULTSTATE_NO_ACTION);
-  LL_HRTIM_OUT_SetChopperMode(HRTIM1, hw->hrtim_output,
-                              LL_HRTIM_OUT_CHOPPERMODE_DISABLED);
+                           burst ? LL_HRTIM_OUT_IDLE_WHEN_BURST : LL_HRTIM_OUT_NO_IDLE);
+  LL_HRTIM_OUT_SetIdleLevel(HRTIM1, hw->hrtim_output, LL_HRTIM_OUT_IDLELEVEL_INACTIVE);
+  LL_HRTIM_OUT_SetFaultState(HRTIM1, hw->hrtim_output, LL_HRTIM_OUT_FAULTSTATE_NO_ACTION);
+  LL_HRTIM_OUT_SetChopperMode(HRTIM1, hw->hrtim_output, LL_HRTIM_OUT_CHOPPERMODE_DISABLED);
 
   set_pin_af(ch);  // route the pin to its HRTIM output AF
-  if (!burst) LL_HRTIM_EnableOutput(HRTIM1, hw->hrtim_output);
+  if (!burst)
+    LL_HRTIM_EnableOutput(HRTIM1, hw->hrtim_output);
 }
 
 // Set up a slave timer's counter (prescaler, period, counting mode) and its
 // reset source. sync => reset on the master period so this timer phase-locks
 // to the other group; async => free-running.
-static void config_group_timer(int g, uint8_t ckpsc, uint32_t per_ticks,
-                               bool sync) {
+static void config_group_timer(int g, uint8_t ckpsc, uint32_t per_ticks, bool sync) {
   const uint32_t timer = group_timer[g];
   LL_HRTIM_TIM_SetPrescaler(HRTIM1, timer, hrtim_ckpsc_to_ll[ckpsc]);
   LL_HRTIM_TIM_SetCounterMode(HRTIM1, timer, LL_HRTIM_MODE_CONTINUOUS);
@@ -364,8 +371,8 @@ static void config_group_timer(int g, uint8_t ckpsc, uint32_t per_ticks,
   LL_HRTIM_TIM_SetRepetition(HRTIM1, timer, 0);
   LL_HRTIM_TIM_SetCountingMode(HRTIM1, timer, LL_HRTIM_COUNTING_MODE_UP);
   LL_HRTIM_TIM_DisablePreload(HRTIM1, timer);
-  LL_HRTIM_TIM_SetResetTrig(HRTIM1, timer, sync ? LL_HRTIM_RESETTRIG_MASTER_PER
-                                                : LL_HRTIM_RESETTRIG_NONE);
+  LL_HRTIM_TIM_SetResetTrig(HRTIM1, timer,
+                            sync ? LL_HRTIM_RESETTRIG_MASTER_PER : LL_HRTIM_RESETTRIG_NONE);
 }
 
 // ---- Burst mode ------------------------------------------------------------
@@ -377,7 +384,8 @@ static void config_group_timer(int g, uint8_t ckpsc, uint32_t per_ticks,
 // ncyc <= BURST_NCYC_MAX the result is at least BURST_IDLE_MIN.
 static uint32_t burst_idle_ticks(uint32_t ncyc) {
   uint32_t idle = 65536U - ncyc;
-  if (idle > BURST_IDLE_MAX) idle = BURST_IDLE_MAX;
+  if (idle > BURST_IDLE_MAX)
+    idle = BURST_IDLE_MAX;
   return idle;
 }
 
@@ -387,7 +395,7 @@ static uint32_t burst_idle_ticks(uint32_t ncyc) {
 // stale one fired); apply_all() clears g_burst_outputs to make it die, and
 // after a reconfiguration the surviving task arms the new configuration at
 // its next firing.
-static void burst_rep_task(void *data) {
+static void burst_rep_task(void* data) {
   if (g_burst_outputs == 0) {
     g_burst_task_live = false;
     return;
@@ -437,9 +445,8 @@ static void config_burst(int ch, uint32_t outputs) {
   if (g_mode == MODE_SYNC) {
     clk_src = LL_HRTIM_BM_CLKSRC_MASTER;
   } else {
-    clk_src = (channel_hw[ch].hrtim_timer == LL_HRTIM_TIMER_F)
-                  ? LL_HRTIM_BM_CLKSRC_TIMER_F
-                  : LL_HRTIM_BM_CLKSRC_TIMER_E;
+    clk_src = (channel_hw[ch].hrtim_timer == LL_HRTIM_TIMER_F) ? LL_HRTIM_BM_CLKSRC_TIMER_F
+                                                               : LL_HRTIM_BM_CLKSRC_TIMER_E;
   }
 
   LL_HRTIM_BM_SetMode(HRTIM1, LL_HRTIM_BM_MODE_CONTINOUS);
@@ -464,34 +471,44 @@ static void config_burst(int ch, uint32_t outputs) {
 // (or if the channel is off -- an off channel imposes no constraint), else a
 // negative code mapped to a SCPI error string by err_for_rc().
 static int validate(int ch) {
-  if (!chan_on[ch]) return 0;
+  if (!chan_on[ch])
+    return 0;
   const uint64_t T = chan_period_ps[ch];
   const uint64_t W = chan_width_ps[ch];
   const uint64_t D = chan_delay_ps[ch];
-  if (!hrtim_dll_ready) return -3;
-  if (T == 0 || W == 0) return -1;
-  if (W >= T) return -2;
-  if (D + W > T) return -5;
+  if (!hrtim_dll_ready)
+    return -3;
+  if (T == 0 || W == 0)
+    return -1;
+  if (W >= T)
+    return -2;
+  if (D + W > T)
+    return -5;
   uint8_t ck;
   uint32_t per;
-  if (!select_ckpsc(T, &ck, &per)) return -4;
+  if (!select_ckpsc(T, &ck, &per))
+    return -4;
 
   if (chan_burst_on[ch]) {
     const uint32_t n = chan_burst_ncyc[ch];
-    if (n == 0 || n > BURST_NCYC_MAX) return -6;
+    if (n == 0 || n > BURST_NCYC_MAX)
+      return -6;
     if (g_mode == MODE_ASYNC) {
       // A single burst mode controller serves the whole HRTIM, so only one
       // async group may burst. (Sync mode bursts all four channels
       // coherently off the master, so there is no conflict.)
       for (int i = 0; i < NUM_CHANNELS; i++) {
-        if (!same_domain(ch, i) && chan_on[i] && chan_burst_on[i]) return -7;
+        if (!same_domain(ch, i) && chan_on[i] && chan_burst_on[i])
+          return -7;
       }
     }
-    if (chan_burst_rep_ps[ch] > BURST_REP_MAX_PS) return -9;
+    if (chan_burst_rep_ps[ch] > BURST_REP_MAX_PS)
+      return -9;
     // The frame (idle + run windows) is measured in quantized periods.
-    const uint64_t frame_ps = (uint64_t)(burst_idle_ticks(n) + n) * per *
-                              (HRTIM_FINEST_TICK_PS << ck);
-    if (chan_burst_rep_ps[ch] <= frame_ps + BURST_REP_MARGIN_PS) return -8;
+    const uint64_t frame_ps =
+        (uint64_t)(burst_idle_ticks(n) + n) * per * (HRTIM_FINEST_TICK_PS << ck);
+    if (chan_burst_rep_ps[ch] <= frame_ps + BURST_REP_MARGIN_PS)
+      return -8;
   }
   return 0;
 }
@@ -500,8 +517,8 @@ static int validate(int ch) {
 // the rest low. Bursting channels are accumulated into *burst_outputs /
 // *burst_ch instead of being enabled (the repetition task arms them per
 // burst). Returns true iff anything on this group's timer runs.
-static bool config_group(int g, uint8_t ck, uint32_t per, bool sync,
-                         uint32_t *burst_outputs, int *burst_ch) {
+static bool config_group(int g, uint8_t ck, uint32_t per, bool sync, uint32_t* burst_outputs,
+                         int* burst_ch) {
   config_group_timer(g, ck, per, sync);
   bool group_runs = false;
   for (int s = 0; s < 2; s++) {
@@ -511,7 +528,8 @@ static bool config_group(int g, uint8_t ck, uint32_t per, bool sync,
       config_channel_output(ch, ck, per, burst);
       if (burst) {
         *burst_outputs |= channel_hw[ch].hrtim_output;
-        if (*burst_ch < 0) *burst_ch = ch;
+        if (*burst_ch < 0)
+          *burst_ch = ch;
       }
       group_runs = true;
     } else {
@@ -534,8 +552,7 @@ static void apply_all(void) {
   LL_HRTIM_ClearFlag_BMPER(HRTIM1);
 
   // Stop master + both slave timers, disable all outputs.
-  LL_HRTIM_TIM_CounterDisable(
-      HRTIM1, LL_HRTIM_TIMER_MASTER | LL_HRTIM_TIMER_E | LL_HRTIM_TIMER_F);
+  LL_HRTIM_TIM_CounterDisable(HRTIM1, LL_HRTIM_TIMER_MASTER | LL_HRTIM_TIMER_E | LL_HRTIM_TIMER_F);
   for (int ch = 0; ch < NUM_CHANNELS; ch++) {
     LL_HRTIM_DisableOutput(HRTIM1, channel_hw[ch].hrtim_output);
   }
@@ -551,21 +568,18 @@ static void apply_all(void) {
 
   if (g_mode == MODE_SYNC) {
     // One global period (all chan_period_ps are kept equal in sync mode).
-    const bool any_on =
-        chan_on[0] || chan_on[1] || chan_on[2] || chan_on[3];
+    const bool any_on = chan_on[0] || chan_on[1] || chan_on[2] || chan_on[3];
     uint8_t ck;
     uint32_t per;
     if (any_on && select_ckpsc(chan_period_ps[0], &ck, &per)) {
       // Master timer defines the period and resets both slaves each cycle.
-      LL_HRTIM_TIM_SetPrescaler(HRTIM1, LL_HRTIM_TIMER_MASTER,
-                                hrtim_ckpsc_to_ll[ck]);
+      LL_HRTIM_TIM_SetPrescaler(HRTIM1, LL_HRTIM_TIMER_MASTER, hrtim_ckpsc_to_ll[ck]);
       LL_HRTIM_TIM_SetPeriod(HRTIM1, LL_HRTIM_TIMER_MASTER, per);
       LL_HRTIM_TIM_SetRepetition(HRTIM1, LL_HRTIM_TIMER_MASTER, 0);
       run_mask = LL_HRTIM_TIMER_MASTER;
 
       for (int g = 0; g < 2; g++) {
-        if (config_group(g, ck, per, /*sync=*/true, &burst_outputs,
-                         &burst_ch)) {
+        if (config_group(g, ck, per, /*sync=*/true, &burst_outputs, &burst_ch)) {
           run_mask |= group_timer[g];
         }
       }
@@ -584,36 +598,48 @@ static void apply_all(void) {
         drive_pin_low(base + 1);
         continue;
       }
-      if (config_group(g, ck, per, /*sync=*/false, &burst_outputs,
-                       &burst_ch)) {
+      if (config_group(g, ck, per, /*sync=*/false, &burst_outputs, &burst_ch)) {
         run_mask |= group_timer[g];
       }
     }
   }
 
-  if (run_mask) LL_HRTIM_TIM_CounterEnable(HRTIM1, run_mask);
+  if (run_mask)
+    LL_HRTIM_TIM_CounterEnable(HRTIM1, run_mask);
   // The bursting domain's counter must already be running: it clocks the
   // burst mode controller.
-  if (burst_ch >= 0) config_burst(burst_ch, burst_outputs);
+  if (burst_ch >= 0)
+    config_burst(burst_ch, burst_outputs);
 }
 
 // ---- SCPI hooks (called from scpi.c) ---------------------------------------
 
 // Translate a validate() code into a SCPI error string, or NULL on success.
-static const char *err_for_rc(int rc) {
+static const char* err_for_rc(int rc) {
   switch (rc) {
-    case 0:  return NULL;
-    case -1: return "-200,\"Period and width must be > 0\"";
-    case -2: return "-200,\"Width must be < period\"";
-    case -3: return "-200,\"HRTIM DLL not ready\"";
-    case -4: return "-200,\"Period out of range (24 ns .. 524 us)\"";
-    case -5: return "-200,\"Delay + width must be <= period\"";
-    case -6: return "-200,\"Burst count out of range (1 .. 63488)\"";
-    case -7: return "-200,\"Only one group can burst in ASYNC mode\"";
-    case -8: return "-200,\"Burst interval too short (needs burst length"
-                    " + 50 ms)\"";
-    case -9: return "-200,\"Burst interval out of range (max 60 s)\"";
-    default: return "-200,\"Apply failed\"";
+    case 0:
+      return NULL;
+    case -1:
+      return "-200,\"Period and width must be > 0\"";
+    case -2:
+      return "-200,\"Width must be < period\"";
+    case -3:
+      return "-200,\"HRTIM DLL not ready\"";
+    case -4:
+      return "-200,\"Period out of range (24 ns .. 524 us)\"";
+    case -5:
+      return "-200,\"Delay + width must be <= period\"";
+    case -6:
+      return "-200,\"Burst count out of range (1 .. 63488)\"";
+    case -7:
+      return "-200,\"Only one group can burst in ASYNC mode\"";
+    case -8:
+      return "-200,\"Burst interval too short (needs burst length"
+             " + 50 ms)\"";
+    case -9:
+      return "-200,\"Burst interval out of range (max 60 s)\"";
+    default:
+      return "-200,\"Apply failed\"";
   }
 }
 
@@ -622,65 +648,75 @@ static const char *err_for_rc(int rc) {
 // period.
 static void set_domain_period(int ch, uint64_t ps) {
   for (int i = 0; i < NUM_CHANNELS; i++) {
-    if (same_domain(ch, i)) chan_period_ps[i] = ps;
+    if (same_domain(ch, i))
+      chan_period_ps[i] = ps;
   }
 }
 
-const char *pulsegen_set_state(int ch, bool on) {
+const char* pulsegen_set_state(int ch, bool on) {
   chan_on[ch] = on;
   apply_all();
   return err_for_rc(validate(ch));
 }
 
-const char *pulsegen_set_period_ps(int ch, uint64_t ps) {
+const char* pulsegen_set_period_ps(int ch, uint64_t ps) {
   set_domain_period(ch, ps);
   apply_all();
   return err_for_rc(validate(ch));
 }
 
-const char *pulsegen_set_width_ps(int ch, uint64_t ps) {
+const char* pulsegen_set_width_ps(int ch, uint64_t ps) {
   chan_width_ps[ch] = ps;
   apply_all();
   return err_for_rc(validate(ch));
 }
 
-const char *pulsegen_set_delay_ps(int ch, uint64_t ps) {
+const char* pulsegen_set_delay_ps(int ch, uint64_t ps) {
   chan_delay_ps[ch] = ps;
   apply_all();
   return err_for_rc(validate(ch));
 }
 
-const char *pulsegen_set_burst_state(int ch, bool on) {
+const char* pulsegen_set_burst_state(int ch, bool on) {
   for (int i = 0; i < NUM_CHANNELS; i++) {
-    if (same_domain(ch, i)) chan_burst_on[i] = on;
+    if (same_domain(ch, i))
+      chan_burst_on[i] = on;
   }
   apply_all();
   return err_for_rc(validate(ch));
 }
 
-const char *pulsegen_set_burst_ncyc(int ch, uint32_t ncyc) {
+const char* pulsegen_set_burst_ncyc(int ch, uint32_t ncyc) {
   for (int i = 0; i < NUM_CHANNELS; i++) {
-    if (same_domain(ch, i)) chan_burst_ncyc[i] = ncyc;
+    if (same_domain(ch, i))
+      chan_burst_ncyc[i] = ncyc;
   }
   apply_all();
   return err_for_rc(validate(ch));
 }
 
-const char *pulsegen_set_burst_period_ps(int ch, uint64_t ps) {
+const char* pulsegen_set_burst_period_ps(int ch, uint64_t ps) {
   for (int i = 0; i < NUM_CHANNELS; i++) {
-    if (same_domain(ch, i)) chan_burst_rep_ps[i] = ps;
+    if (same_domain(ch, i))
+      chan_burst_rep_ps[i] = ps;
   }
   apply_all();
   return err_for_rc(validate(ch));
 }
 
-bool pulsegen_get_burst_state(int ch) { return chan_burst_on[ch]; }
+bool pulsegen_get_burst_state(int ch) {
+  return chan_burst_on[ch];
+}
 
-uint32_t pulsegen_get_burst_ncyc(int ch) { return chan_burst_ncyc[ch]; }
+uint32_t pulsegen_get_burst_ncyc(int ch) {
+  return chan_burst_ncyc[ch];
+}
 
-uint64_t pulsegen_get_burst_period_ps(int ch) { return chan_burst_rep_ps[ch]; }
+uint64_t pulsegen_get_burst_period_ps(int ch) {
+  return chan_burst_rep_ps[ch];
+}
 
-const char *pulsegen_set_mode(bool sync) {
+const char* pulsegen_set_mode(bool sync) {
   g_mode = sync ? MODE_SYNC : MODE_ASYNC;
   // Sync collapses the device into a single domain; adopt channel 0's
   // domain settings for all.
@@ -696,7 +732,7 @@ const char *pulsegen_set_mode(bool sync) {
   return NULL;
 }
 
-const char *pulsegen_mode_str(void) {
+const char* pulsegen_mode_str(void) {
   return (g_mode == MODE_SYNC) ? "SYNC" : "ASYNC";
 }
 
@@ -739,7 +775,7 @@ static void update_leds(void) {
 
 // ---- Periodic task ---------------------------------------------------------
 
-static void periodic_task(void *data) {
+static void periodic_task(void* data) {
   schedule_us(100000, periodic_task, NULL);
 
   if (g_rulos_hse_failed) {
@@ -766,8 +802,7 @@ static void init_hrtim(void) {
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_HRTIM1);
 
   // Continuous DLL recalibration: refreshes against process/temp drift.
-  LL_HRTIM_ConfigDLLCalibration(HRTIM1,
-                                LL_HRTIM_DLLCALIBRATION_MODE_CONTINUOUS,
+  LL_HRTIM_ConfigDLLCalibration(HRTIM1, LL_HRTIM_DLLCALIBRATION_MODE_CONTINUOUS,
                                 LL_HRTIM_DLLCALIBRATION_RATE_3);
   // Wait for the first calibration to complete (~6 us per RM0440); poll
   // the DLLRDY flag rather than blindly delaying.
