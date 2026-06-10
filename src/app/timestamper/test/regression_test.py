@@ -29,7 +29,7 @@ Phases:
   config-persist / config-torn  -- cold-reset flash phases
 
 Every timestamp record carries a hardware-latched edge polarity
-('+' rising / '-' falling, text column 3 / binary counter bit 28);
+('+' rising / '-' falling, text column 3 / binary counter bit 29);
 the capturing phases assert it matches the slope under test. The
 device emits each (channel, polarity) sub-stream in time order but
 does not interleave them globally, so the both-edge phases sort
@@ -981,6 +981,42 @@ def _persist_cfg(cfg):
         tic.idn()  # barrier: returns only once the save has finished
 
 
+# STM32H523 unique-ID register base; the firmware builds its USB
+# iSerialNumber (and thus the *IDN? serial) from the three 32-bit words
+# here, prefixed with "LT4-". See usbd_cdc_get_serial in usbd_desc.c.
+TS_UID_BASE = 0x08FFF800
+TS_SERIAL_PREFIX = "LT4-"
+
+
+def bmp_on_this_timestamper(port):
+    """(ok, reason): is a Black Magic Probe attached AND wired to the
+    same timestamper this test talks to over USB?
+
+    The config-persistence phases below cold-reset the device THROUGH
+    the BMP. If the probe is absent, or wired to some other target (a
+    bench may keep it on a different board), bmpflash.reset() would not
+    reset THIS timestamper -- the device would keep its RAM config and
+    the phases would pass without testing anything. Guard against that
+    vacuous pass by matching the probe target's SWD-read UID against
+    the device's own *IDN? serial."""
+    if not bmpflash.bmp_present():
+        return False, "no Black Magic Probe attached"
+    try:
+        with LectroTIC4(port) as tic:
+            idn_serial = tic.idn().split(",")[2]
+    except Exception as e:
+        return False, f"could not read timestamper *IDN?: {e}"
+    try:
+        bmp_serial = bmpflash.read_serial(TS_UID_BASE, TS_SERIAL_PREFIX)
+    except RuntimeError as e:
+        return False, str(e)
+    if bmp_serial != idn_serial:
+        return False, (f"BMP target UID is {bmp_serial}, not this "
+                       f"timestamper's {idn_serial} -- probe is on "
+                       f"another board")
+    return True, ""
+
+
 def phase_config_persist():
     """Channel config (slope+divider) must survive complete power loss.
     Set a non-default config, CONF:SAVE it, cold-reset the MCU through
@@ -1197,11 +1233,22 @@ def main():
     try:
         if want("tsctl cli"):
             results.append(("tsctl cli", phase_tsctl_cli(port, sg)))
-        if want("config persist"):
-            results.append(("config persist", phase_config_persist()))
-        if want("config torn"):
-            results.append(("config torn",
-                             phase_config_persist_torn()))
+
+        # The config-persistence phases reset the device through a Black
+        # Magic Probe; skip (don't fail) if no probe is wired to THIS
+        # timestamper, so they can't pass vacuously on a bench where the
+        # probe is absent or on another board.
+        config_phases = [("config persist", phase_config_persist),
+                         ("config torn", phase_config_persist_torn)]
+        if any(want(label) for label, _ in config_phases):
+            bmp_ok, why = bmp_on_this_timestamper(port)
+            for label, fn in config_phases:
+                if not want(label):
+                    continue
+                if not bmp_ok:
+                    print(f"\n=== {label}: SKIP ({why}) ===")
+                    continue
+                results.append((label, fn()))
     finally:
         sg.output_off()
         sg.close()
