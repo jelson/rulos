@@ -44,7 +44,11 @@ class PulseCount:
     timestamps: int    # number of timestamp lines received
     overcaptures: int  # number of "overcapture" comment lines
     overflows: int     # number of "buf overflow" comment lines
-    burst_sizes: list  # list of per-burst timestamp counts
+    bursts: list       # list of per-burst timestamp lists (seconds)
+
+    @property
+    def burst_sizes(self):
+        return [len(b) for b in self.bursts]
 
 
 def count_pulses(tic, channel, measure_time_s=3.0, text=False, verbose=True):
@@ -82,23 +86,21 @@ def count_pulses(tic, channel, measure_time_s=3.0, text=False, verbose=True):
 
     # Group timestamps into bursts. Bursts repeat 1/sec, so timestamps
     # within 0.5s of each other belong to the same burst.
-    burst_sizes = []
+    bursts = []
     i = 0
     while i < len(timestamps):
-        burst_size = 1
         t_start = timestamps[i]
         j = i + 1
         while j < len(timestamps) and abs(timestamps[j] - t_start) < 0.5:
-            burst_size += 1
             j += 1
-        burst_sizes.append(burst_size)
+        bursts.append(timestamps[i:j])
         i = j
 
     return PulseCount(
         timestamps=len(timestamps),
         overcaptures=overcaptures,
         overflows=overflows,
-        burst_sizes=burst_sizes,
+        bursts=bursts,
     )
 
 
@@ -114,14 +116,30 @@ def test_spacing(sg, tic, ns, channel, ncyc=3, text=False, verbose=True):
 
     result = count_pulses(tic, channel, text=text, verbose=verbose)
 
-    # Pass = every burst has all ncyc pulses, no overcaptures or overflows.
-    # Ignore partial bursts at measurement window boundaries.
-    complete = [sz for sz in result.burst_sizes if sz >= ncyc]
+    # Pass = every burst has all ncyc pulses, no overcaptures or
+    # overflows, and every intra-burst gap matches the requested
+    # spacing -- a count can be exact while the values are wrong (a
+    # mis-paired seconds word, a mis-programmed generator). Ignore
+    # partial bursts at measurement window boundaries.
+    complete = [b for b in result.bursts if len(b) >= ncyc]
+
+    expected_s = max(ns, sg.MIN_BURST_SPACING_NS) * 1e-9
+    gap_tol_s = 12e-9
+    bad_gaps = 0
+    worst_dev_ns = 0.0
+    for b in complete:
+        for i in range(1, len(b)):
+            dev = (b[i] - b[i - 1]) - expected_s
+            if abs(dev) > abs(worst_dev_ns) * 1e-9:
+                worst_dev_ns = dev * 1e9
+            if abs(dev) > gap_tol_s:
+                bad_gaps += 1
 
     if len(complete) < 2:
         passed = False
     else:
-        passed = (result.overcaptures == 0 and result.overflows == 0)
+        passed = (result.overcaptures == 0 and result.overflows == 0
+                  and bad_gaps == 0)
 
     status = "PASS" if passed else "FAIL"
     burst_str = ",".join(str(s) for s in result.burst_sizes)
@@ -129,7 +147,9 @@ def test_spacing(sg, tic, ns, channel, ncyc=3, text=False, verbose=True):
           f"(timestamps={result.timestamps}, "
           f"bursts=[{burst_str}], "
           f"overcaptures={result.overcaptures}, "
-          f"overflows={result.overflows})")
+          f"overflows={result.overflows}, "
+          f"bad_gaps={bad_gaps}, "
+          f"worst_gap_dev={worst_dev_ns:+.1f} ns)")
 
     return passed
 
@@ -151,10 +171,10 @@ def main():
     parser.add_argument("--ncyc", type=int, default=16383,
                         help="Pulses per burst. The internal timestamp "
                              "ring holds 16383 (16k-1, classic ring-buffer "
-                             "off-by-one); 4096 exercises just the "
-                             "per-channel DMA buffer. Smaller values fit "
-                             "in hardware and give no useful dead-time "
-                             "data. Default: 16383.")
+                             "off-by-one); 2048 exercises just the "
+                             "per-sub-stream DMA buffer. Smaller values "
+                             "fit in hardware and give no useful "
+                             "dead-time data. Default: 16383.")
     parser.add_argument("--channel", type=int, default=0,
                         choices=[0, 1, 2, 3],
                         help="Channel under test (0-3). The PG-4 output "

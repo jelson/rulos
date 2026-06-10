@@ -195,8 +195,7 @@ def measure_gap(ts, pg, gap_ns, duration_s):
     if not err.startswith("0,"):
         raise RuntimeError(f"pulsegen error configuring gap {gap_ns} ns: {err}")
 
-    time.sleep(0.1)
-    ts.discard_pending()
+    ts.discard_pending(settle_s=0.1)
     records = collect(ts, duration_s)
     deltas = zipper_gaps(records, GAP_PERIOD_NS)
     if len(deltas) < 50:
@@ -251,8 +250,7 @@ def measure_rate(ts, pg, freq_hz, duration_s):
 
     for ch in (0, 1):
         ts.set_divider(ch, divider)
-    time.sleep(0.1)
-    ts.discard_pending()
+    ts.discard_pending(settle_s=0.1)
     records = collect(ts, duration_s)
     ts.set_divider(0, 1)
     ts.set_divider(1, 1)
@@ -300,8 +298,7 @@ def test_async_pairing(ts, pg, duration_s):
     if not err.startswith("0,"):
         raise RuntimeError(f"pulsegen error in pairing test: {err}")
 
-    time.sleep(0.1)
-    ts.discard_pending()
+    ts.discard_pending(settle_s=0.1)
     records = collect(ts, duration_s)
     times = by_channel(records)
     expect_ns = NS / f2
@@ -365,8 +362,7 @@ def measure_burst(ts, pg, ncyc, spacing_ns, rep_s, duration_s):
     if not err.startswith("0,"):
         raise RuntimeError(f"pulsegen error configuring burst: {err}")
 
-    time.sleep(0.3)
-    ts.discard_pending()
+    ts.discard_pending(settle_s=0.3)
     records = collect(ts, duration_s, channels=(0,))
     times = sorted(t for _, t in records)
     bursts = group_bursts(times, int(rep_s * NS / 2))
@@ -416,8 +412,7 @@ def test_burst(ts, pg, duration_s):
     pg.set_burst_ncycles(0, 50)
     pg.set_burst_period(0, 0.25)
     pg.pulse(0, 1e-5, 2.5e-6)  # clears burst state
-    time.sleep(0.2)
-    ts.discard_pending()
+    ts.discard_pending(settle_s=0.2)
     records = collect(ts, 1.0, channels=(0,))
     expect_min = int(0.5 * NS / 10_000)  # half the window at 10 us periods
     ok = len(records) >= expect_min

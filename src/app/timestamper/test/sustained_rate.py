@@ -54,26 +54,19 @@ def measure_rate(tic, measure_s, channel=0, text=False, settle_s=0.5):
     via the ASCII diagnostic lines (both the definitive no-loss
     signal). The two formats have different USB-drain ceilings.
 
-    The settle drain is transition isolation, mirroring
-    regression_test.phase_sustained: a PG-4 frequency change leaves
-    old-rate DMA-capture/ring residue that the firmware streams out
-    after the marker sync. Measuring it as a gap misreads a one-time
-    reconfiguration transient as a sustained-rate failure (a single
-    multi-ms gap, lost=0). discard -> drain through the residue with
-    the new rate running -> discard -> measure clean."""
+    The settle is transition isolation (discard_pending's settle_s):
+    measuring a source reconfiguration transient as a gap misreads a
+    one-time event as a sustained-rate failure (a single multi-ms gap,
+    lost=0)."""
     if text:
         tic.send("FORM:DATA TEXT")
         tic.set_stream_enabled(True)
-        tic.discard_pending()
-        tic.read_raw(settle_s)   # drain old-rate residue
-        tic.discard_pending()    # clean measurement start
+        tic.discard_pending(settle_s=settle_s)
         timestamps, _pols, _others, overcaptures, overflows, _comments = \
             parse_text_stream(tic.read_raw(measure_s), channel=channel)
         return timestamps, overcaptures + overflows
 
-    tic.discard_pending()
-    tic.read_raw(settle_s)   # drain old-rate residue
-    tic.discard_pending()    # clean measurement start
+    tic.discard_pending(settle_s=settle_s)
     timestamps = []
     lost = 0
     for r in tic.read_for(measure_s):
@@ -90,7 +83,7 @@ def measure_rate(tic, measure_s, channel=0, text=False, settle_s=0.5):
 
 
 def test_rate(sg, tic, hz, measure_s, tolerance, channel=0, text=False,
-              settle_s=0.5):
+              settle_s=0.5, rate_tol_ppm=50.0):
     """Configure the PG-4 for `hz` Hz continuous, measure, and decide
     pass/fail. Returns True on pass."""
     period_s = 1.0 / hz
@@ -113,7 +106,20 @@ def test_rate(sg, tic, hz, measure_s, tolerance, channel=0, text=False,
     interior = deltas[1:-1]
     bad_gaps = sum(1 for d in interior if abs(d - period_s) > tolerance)
 
-    passed = (lost == 0) and (bad_gaps == 0) and (len(interior) > 0)
+    # Average-rate cross-check: count the pulses received and divide by
+    # the time between the first and last pulse. Per-gap tolerance can
+    # hide a systematic rate error (e.g. a mis-programmed generator);
+    # this can't.
+    rate_err_ppm = float("nan")
+    rate_ok = False
+    if len(timestamps) >= 2:
+        span = timestamps[-1] - timestamps[0]
+        observed_hz = (len(timestamps) - 1) / span
+        rate_err_ppm = (observed_hz / hz - 1.0) * 1e6
+        rate_ok = abs(rate_err_ppm) <= rate_tol_ppm
+
+    passed = (lost == 0) and (bad_gaps == 0) and (len(interior) > 0) \
+        and rate_ok
 
     if interior:
         worst = max(interior, key=lambda d: abs(d - period_s))
@@ -126,7 +132,8 @@ def test_rate(sg, tic, hz, measure_s, tolerance, channel=0, text=False,
           f"n={len(timestamps)} "
           f"lost={lost} "
           f"bad_gaps={bad_gaps}/{len(interior)} "
-          f"worst_dev={worst_err_ns:+.0f} ns")
+          f"worst_dev={worst_err_ns:+.0f} ns "
+          f"rate_err={rate_err_ppm:+.1f} ppm")
     return passed
 
 

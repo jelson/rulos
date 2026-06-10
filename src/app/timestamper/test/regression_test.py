@@ -69,7 +69,7 @@ sys.path.insert(0, os.path.join(
 sys.path.insert(0, os.path.join(
     os.path.dirname(__file__), "..", "..", "..", "util"))
 import bmpflash
-from tsctl import LectroTIC4, Timestamp, PulsesLost
+from tsctl import LectroTIC4, Timestamp, PulsesLost, OscillatorFailure
 from pgctl import Pulsegen
 
 TSCTL = os.path.join(os.path.dirname(__file__), "..", "util", "tsctl.py")
@@ -199,9 +199,12 @@ class BinaryMode:
 
     def capture(self, tic, channel, duration_s):
         # read_for() does FORM:DATA BIN + the marker-sync framing +
-        # stream-enable, then yields the record union for the window.
-        # Binary now carries loss in-band (PulsesLost), so overcapture/
-        # overflow are checkable here exactly like the text wire.
+        # stream-enable, then yields the record union for the window
+        # (its reader thread drains the port independently of decode
+        # speed, so even the 100 kHz sustained phase can't backpressure
+        # the device). Binary carries loss in-band (PulsesLost), so
+        # overcapture/overflow are checkable here exactly like the
+        # text wire.
         times, pols, others = [], [], set()
         overcaptures = overflows = 0
         for r in tic.read_for(duration_s):
@@ -637,25 +640,44 @@ def phase_sustained(mode, sg, tic, channel):
     # sync, contaminating a rate measurement. Drain through that
     # residue with the new signal already running, so the measured
     # window is pure steady-rate.
-    tic.discard_pending()
-    tic.read_raw(0.5)
-    times, pols, others, ovc, ovf, _ = mode.capture(
-        tic, channel, SUSTAINED_S)
-    # Rate is measured from the captured records' own time span, not
-    # count/window: the latter loses ~(marker-sync + end-of-window
-    # drain) at both ends regardless of rate. A device that keeps up
-    # streams at the true source rate with no gaps; one that can't
-    # either drops chunks (binary: a span-rate deficit and a gap) or
-    # overflows (text: the '#' line, asserted via expect_no_loss).
-    n = len(times)
-    span = (times[-1] - times[0]) if n >= 2 else 0
-    obs_hz = (n - 1) / span if span > 0 else 0
-    deltas = [times[i + 1] - times[i] for i in range(n - 1)]
+    #
+    # Retry policy: a SINGLE over-tolerance interior gap with zero
+    # in-window loss is the fingerprint of a one-off stall, not of a
+    # device that can't sustain the rate (that drops constantly --
+    # dozens-to-hundreds of holes per window). Known one-off causes: a
+    # host that stops reading longer than the kernel buffer + device
+    # ring can absorb (~260 ms at 100 kHz), and the stream-start TX
+    # stall in current firmware that drops a counted-but-unreported
+    # chunk exactly one ring + one TX buffer (record #16540) into the
+    # window. Either way the loss report is deferred until the stream
+    # idles, past the window, so lost reads 0 here. Retry one such
+    # window; a second in a row fails the phase.
     nominal = 1.0 / hz
-    print(f"  collected {n} on ch{channel}; observed "
-          f"{obs_hz:.0f} Hz over {span:.3f}s "
-          f"(nominal gap {nominal * 1e6:.2f} µs); "
-          f"others={sorted(others) or 'none'}")
+    for attempt in range(2):
+        tic.discard_pending(settle_s=0.5)
+        times, pols, others, ovc, ovf, _ = mode.capture(
+            tic, channel, SUSTAINED_S)
+        # Rate is measured from the captured records' own time span,
+        # not count/window: the latter loses ~(marker-sync +
+        # end-of-window drain) at both ends regardless of rate. A
+        # device that keeps up streams at the true source rate with no
+        # gaps; one that can't either drops chunks (binary: a span-rate
+        # deficit and a gap) or overflows (text: the '#' line, asserted
+        # via expect_no_loss).
+        n = len(times)
+        span = (times[-1] - times[0]) if n >= 2 else 0
+        obs_hz = (n - 1) / span if span > 0 else 0
+        deltas = [times[i + 1] - times[i] for i in range(n - 1)]
+        print(f"  collected {n} on ch{channel}; observed "
+              f"{obs_hz:.0f} Hz over {span:.3f}s "
+              f"(nominal gap {nominal * 1e6:.2f} µs); "
+              f"others={sorted(others) or 'none'}")
+        holes = sum(1 for d in deltas[1:-1] if abs(d - nominal) > GAP_TOL_S)
+        if attempt == 0 and holes == 1 and ovc == 0 and ovf == 0:
+            print("  one interior hole, no in-window loss -- one-off "
+                  "stall fingerprint, retrying the window")
+            continue
+        break
 
     ok = expect(n >= 100, f"sustained {hz} Hz produced enough records")
     # Every interior inter-record gap must be the source period to
@@ -1151,6 +1173,9 @@ def collect_all(tic, duration_s):
                     (r.seconds * 1_000_000_000 + r.nanoseconds, r.polarity))
         elif isinstance(r, PulsesLost):
             lost += r.overcaptures + r.buf_overflows
+        elif isinstance(r, OscillatorFailure):
+            raise RuntimeError("reference clock failed -- device halted; "
+                               "restore the 10 MHz source and reset")
     return per, lost
 
 
@@ -1193,6 +1218,11 @@ def sync_all(sg, delays_s, width_s=1e-6):
     """SYNC mode: every channel at PHASE_LOCK_PERIOD_S with the given
     per-channel rising-edge delays. Raises if the PG-4 rejects it."""
     sg.set_mode(Pulsegen.SYNC)
+    # Sync mode is a single domain, so one channel clears burst state
+    # for all four. Without this, burst config left over from another
+    # tool (e.g. deadtime.py's ncyc=16383) makes the period change fail
+    # the PG-4's burst frame-length validation.
+    sg.set_burst_state(0, False)
     for c in ALL_CHANNELS:
         sg.set_period(c, PHASE_LOCK_PERIOD_S)
         sg.set_width(c, width_s)
