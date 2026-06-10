@@ -70,14 +70,17 @@ bool timestamper_get_stream_enabled(void);
 // buffer:
 //   bytes 0-3: seconds (uint32 LE)
 //   bytes 4-7: counter (uint32 LE): bits [31:30] channel
-//              (0..NUM_CHANNELS-1), [28] edge polarity (1 = rising
+//              (0..NUM_CHANNELS-1), [29] edge polarity (1 = rising
 //              '+', 0 = falling '-'), [27:0] raw tick count
 //              (0..249,999,999 at 250 MHz, i.e. 4 ns per tick).
-// Every record is exactly 8 bytes, timestamp or not. Counter bit [29]
+//              For normal timestamp records, bits [31:29] are a
+//              direct channel/edge index:
+//              counter >> 29 == channel * 2 + (rising ? 1 : 0).
+// Every record is exactly 8 bytes, timestamp or not. Counter bit [28]
 // marks a "special message" instead of a timestamp: device metadata
 // that would be a "#" comment line in text mode, carried in-band so
 // binary readers see it too. When set, counter [7:0] is the message
-// type, bit [28] is zero, and the seconds word is its payload:
+// type, bit [29] is zero, and the seconds word is its payload:
 //   0 OUTPUT_CLEARED -- payload all-zero (still a full 8-byte record);
 //                       binary analog of the "# output cleared" marker.
 //   1 PULSES_LOST    -- counter [31:30] = channel; seconds [15:0] =
@@ -116,4 +119,4 @@ void timestamper_config_save(void);
 // format, stream enable) is preserved.
 void timestamper_discard_pending(void);
 
-#define TIMESTAMPER_FW_VERSION "0.15.0"
+#define TIMESTAMPER_FW_VERSION "0.16.0"

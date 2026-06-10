@@ -88,19 +88,21 @@ TIMESTAMPER_VID = 0x1209  # pid.codes
 TIMESTAMPER_PID = 0x71C4  # LectroTIC-4
 IDN_PREFIX = "Lectrobox,LectroTIC-4"
 
-# counter word: [31:30] channel, [29] special-message flag, [28] edge
-# polarity (timestamps: 1 = rising '+', 0 = falling '-'; special
-# records: 0), [27:0] tick value (max 249,999,999). Mask ticks with
-# the 28-bit value mask so the flag bits never leak into the
-# nanoseconds.
+# counter word: [31:30] channel, [29] edge polarity (timestamps:
+# 1 = rising '+', 0 = falling '-'; special records: 0), [28]
+# special-message flag, [27:0] tick value (max 249,999,999). Mask
+# ticks with the 28-bit value mask so the flag bits never leak into
+# the nanoseconds.
+#
+# For normal timestamp records, bits [31:29] are a direct channel/edge
+# index: counter >> 29 == channel * 2 + (rising ? 1 : 0).
 _BINARY_RECORD_LEN = 8
 _NS_PER_TICK = 4
-_COUNTER_CHAN_SHIFT = 30
-_COUNTER_POLARITY_BIT = 1 << 28
+_COUNTER_CHAN_EDGE_SHIFT = 29
 _COUNTER_VALUE_MASK = 0x0FFFFFFF
-# counter [29] set => the record is a special message, not a timestamp;
+# counter [28] set => the record is a special message, not a timestamp;
 # [7:0] is then the message type and the seconds word its payload.
-_COUNTER_SPECIAL_BIT = 1 << 29
+_COUNTER_SPECIAL_BIT = 1 << 28
 _COUNTER_MSGTYPE_MASK = 0xFF
 _MSG_OUTPUT_CLEARED = 0
 _MSG_PULSES_LOST = 1
@@ -410,7 +412,8 @@ class LectroTIC4:
                 off = i * _BINARY_RECORD_LEN
                 sec = int.from_bytes(buf[off:off + 4], "little")
                 cnt = int.from_bytes(buf[off + 4:off + 8], "little")
-                chan = cnt >> _COUNTER_CHAN_SHIFT
+                channel_edge = cnt >> _COUNTER_CHAN_EDGE_SHIFT
+                chan = channel_edge >> 1
                 if cnt & _COUNTER_SPECIAL_BIT:
                     msgtype = cnt & _COUNTER_MSGTYPE_MASK
                     if msgtype == _MSG_OUTPUT_CLEARED:
@@ -422,7 +425,7 @@ class LectroTIC4:
                     # unknown special types: skip (forward-compatible)
                 else:
                     ticks = cnt & _COUNTER_VALUE_MASK
-                    pol = "+" if cnt & _COUNTER_POLARITY_BIT else "-"
+                    pol = "+" if channel_edge & 1 else "-"
                     yield Timestamp(chan, sec, ticks * _NS_PER_TICK, pol)
             leftover = buf[n * _BINARY_RECORD_LEN:]
 

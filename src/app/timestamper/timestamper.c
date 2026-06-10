@@ -17,103 +17,104 @@
  */
 
 /*
- * This program timestamps pulses that it sees on its input capture pins and
- * prints a list of those timestamps (relative to program start) to its USB
- * serial interface. It has a resolution of 4 nanoseconds.
+ * LectroTIC-4 timestamping firmware.
  *
- * It is based on the STM32H523, a Cortex-M33 running at 250 MHz with four
- * input-capture channels on TIM2. A 10 MHz active oscillator (rubidium or
- * GPS-disciplined) is expected on OSC_IN via HSE bypass mode; the PLL
- * multiplies to 250 MHz SYSCLK. If HSE fails to start, rulos_hal_init
- * falls back to HSI (~1% accuracy) and sets g_rulos_hse_failed -- the
- * periodic task below detects this and refuses to emit timestamps,
- * since HSI accuracy is meaningless for measurement-grade work.
+ * USER-FACING BEHAVIOR
  *
- * Output is a list of channel numbers, timestamps, and edge polarities,
- * one captured edge per line:
+ * The device timestamps input pulses and streams them over USB CDC, relative
+ * to firmware start. The timestamp clock is 250 MHz, so each low-order timer
+ * tick is 4 ns.
  *
- * 0 5293.585203496 +
+ * The stream has two output formats. Text is human-readable and convenient
+ * for logging or terminal use, with diagnostics as "#" comment lines. Binary
+ * is compact and faster to drain over USB, with diagnostics as structured
+ * in-band records for host tools.
  *
- * Timestamps are decimal seconds, with 9 digits following the decimal point
- * representing nanoseconds, relative to the time the program started. The
- * trailing column is the edge polarity: '+' rising, '-' falling.
+ * Text format is one captured edge per line:
  *
- * EDGE POLARITY VIA PAIRED CAPTURE CHANNELS:
+ *   0 5293.585203496 +
  *
- * TIM2's input capture latches only the counter, not the pin state, so
- * polarity can't be read after the fact. Instead each input feeds TWO
- * TIM2 capture channels off the same timer input: one armed rising on
- * the direct TI, one armed falling on the indirect TI (internally
- * sourced from the same TIx -- no second pin). Which channel captured
- * IS the polarity, latched in hardware at the moment of the edge. The
- * SCPI slope setting no longer re-arms the timer; it just selects
- * which of the two sub-streams are emitted.
+ * The fields are channel, decimal seconds with 9 fractional digits, and edge
+ * polarity ('+' rising, '-' falling). Binary format uses the same internal
+ * 8-byte record that the firmware queues:
  *
- * EMISSION ORDER: each (channel, polarity) sub-stream is emitted in
- * time order, but the device does NOT interleave a channel's rising
- * and falling records into one globally ordered sequence -- the two
- * sub-streams drain independently, in service-sized batches, exactly
- * like records from different channels always have. A host that wants
- * total order sorts by timestamp, which is trivial there and brutally
- * expensive here: an on-device merge needs the two streams zippered
- * record-by-record under a hold-back rule, with stash buffers,
- * quiescence detection, and end-of-burst drains, all in the capture
- * hot path.
+ *   uint32 seconds
+ *   uint32 counter
  *
- * The pairing halves the inputs per timer: TIM2's four capture
- * channels serve two polarity-capable inputs (PA0 = jack 0 and
- * PA2 = jack 2). Jacks 1 and 3 are inoperative in this build, pending
- * a second 32-bit timer (TIM5 on PA1/PA3) phase-locked to TIM2.
+ * Normal timestamp counter layout:
+ *
+ *   [31:30] channel
+ *   [29]    edge polarity: 1 = rising '+', 0 = falling '-'
+ *   [28]    0
+ *   [27:0]  raw 250 MHz tick count within the second
+ *
+ * Thus, for timestamps, `counter >> 29` is directly
+ * `channel * 2 + edge`. If bit 28 is set, the record is a special
+ * in-band message instead: counter [7:0] is the message type and
+ * `seconds` carries that message's payload.
+ *
+ * Timing quality depends on a 10 MHz active oscillator (rubidium or
+ * GPS-disciplined) on OSC_IN via HSE bypass. The PLL multiplies that
+ * reference to 250 MHz SYSCLK. If the external oscillator fails,
+ * rulos_hal_init falls back to HSI and sets g_rulos_hse_failed; the
+ * periodic task refuses to emit measurement timestamps because HSI
+ * accuracy is not meaningful for this instrument.
  *
  * Firmware update over USB DFU (no SWD probe needed; device not capturing):
  *
  *   sudo dfu-util -d 1209:71c4,0483:df11 -a 0 -s 0x08000000:leave -D <fw>.bin
  *
- * 1209:71c4 is the runtime VID:PID, 0483:df11 the ST ROM bootloader; the
+ * 1209:71c4 is the runtime VID:PID, 0483:df11 the ST ROM bootloader. The
  * two-tuple lets dfu-util find the running device, auto-detach it into the
  * bootloader, flash, and restart (:leave). If interrupted it stays in the
  * bootloader and the same command retries. Verify with `tsctl.py idn`.
  *
- * The implementation uses the input-capture feature of TIM2, a 32-bit timer of
- * the STM32H523. Input capture waits for the rising edge of the input signal
- * and then latches the timer value at the moment of the signal's edge. The
- * timer runs at the system clock rate of 250 MHz. The timer is configured to
- * roll over once per second, i.e. every 250 million clock ticks.
+ * IMPLEMENTATION NOTES
  *
- * RACE CONDITION AVOIDANCE WITH seconds_A / seconds_B:
+ * The target is an STM32H523, a Cortex-M33 running at 250 MHz. TIM2 is a
+ * 32-bit timer configured to roll over once per second, i.e. every
+ * 250,000,000 clock ticks. Its input-capture channels latch the counter at
+ * the moment an input edge arrives; circular DMA moves those latched CCR
+ * values into per-sub-stream buffers.
  *
- * A timestamp consists of two parts: the high-order "seconds" counter
- * (maintained in software) and the low-order timer value (latched in hardware
- * at the moment of input capture). A naive implementation would increment the
- * seconds counter every time we get an interrupt indicating the 250MHz counter
- * has rolled over. But there's a potential race condition: if the timer rolls
- * over between when an input capture occurs and when the ISR reads the seconds
- * counter, the wrong seconds value could be paired with the timer value.
+ * Edge polarity is captured in hardware. TIM2 input capture records only the
+ * counter, not the pin state, so each physical input feeds two TIM2 capture
+ * channels from the same timer input: one direct-TI channel armed rising and
+ * one indirect-TI channel armed falling. Which capture channel fired is the
+ * edge polarity. The SCPI slope setting does not re-arm the timer; it selects
+ * which captured sub-streams are emitted.
  *
- * To solve this, we maintain two copies of the seconds counter (seconds_A and
- * seconds_B) and use a separate timer (TIM15) that fires twice per TIM2 cycle:
- * at the 1/4 and 3/4 points of each second. The TIM15 ISR checks TIM2's current
- * value to determine which firing it is:
+ * Pairing consumes two TIM2 channels per input. With TIM2's four capture
+ * channels, this build supports two polarity-capable inputs: PA0 = jack 0
+ * and PA2 = jack 2. Jacks 1 and 3 are inoperative until a second 32-bit timer
+ * (TIM5 on PA1/PA3) is phase-locked to TIM2.
  *
- * - At the 3/4 point (TIM2 counter is in second half): increment seconds_A,
- *   preparing it for the upcoming rollover
- * - At the 1/4 point (TIM2 counter is in first half): copy seconds_A to
- *   seconds_B, syncing them for the new second
+ * Emission order is per sub-stream, not global. Each (channel, polarity)
+ * sub-stream is emitted in timestamp order, but rising/falling records are
+ * not merged into one globally sorted stream. Hosts that need total order
+ * sort by timestamp. Doing that on-device would put a record-by-record merge,
+ * hold-back rule, stash buffers, quiescence detection, and end-of-burst
+ * drains in the capture hot path.
  *
- * In the input capture ISR, we check the captured timer value:
- * - If counter < half: use seconds_A (event was in the first half of the
- *   second)
- * - If counter >= half: use seconds_B (event was in the second half)
+ * The high-order seconds value is maintained in software. A naive rollover
+ * interrupt can race with input capture: if TIM2 rolls over after an edge is
+ * captured but before firmware pairs that CCR value with the software seconds
+ * counter, the timestamp can be off by one second.
  *
- * This ensures correctness even if there's a delay between input capture and
- * ISR execution. For example, if an input capture occurs just before rollover
- * (counter near max) but the ISR runs just after rollover (when seconds_A has
- * already been incremented), the ISR sees counter >= half and correctly uses
- * seconds_B, which still holds the pre-rollover value.
+ * To avoid that race, the firmware keeps two seconds counters. TIM15 fires
+ * twice per TIM2 cycle, at the 1/4 and 3/4 points of each second:
  *
- * The 1/4 and 3/4 timing (rather than 0 and 1/2) provides margin: the seconds
- * counters are updated 1/4 second before they're needed, allowing for any ISR
- * latency.
+ * - At 3/4 second, TIM2 is in its second half; increment seconds_A so it is
+ *   ready for the upcoming rollover.
+ * - At 1/4 second, TIM2 is in its first half; copy seconds_A into seconds_B
+ *   so both counters agree for the new second.
+ *
+ * When a captured CCR value is drained, values in the first half of the second
+ * use seconds_A and values in the second half use seconds_B. A capture just
+ * before rollover that is processed just after rollover still sees a
+ * second-half CCR value and therefore uses seconds_B, the pre-rollover
+ * seconds value. The 1/4 and 3/4 update points provide a quarter-second ISR
+ * latency margin before either value is needed.
  */
 
 #include <stdbool.h>
@@ -158,29 +159,35 @@ _Static_assert((DMA_CAPTURE_BUFLEN & (DMA_CAPTURE_BUFLEN - 1)) == 0,
 #define USB_TX_BUFLEN               1280
 #define NUM_TX_BUFS                 2
 
-// counter field layout: [31:30] channel, [29] special-message flag,
-// [28] edge polarity, [27:0] tick value. The tick value maxes at
+// counter field layout: [31:30] channel, [29] edge polarity,
+// [28] special-message flag, [27:0] tick value. The tick value maxes at
 // CLOCK_FREQ_HZ-1 = 249,999,999 (0x0EE6_B27F), which fits in 28 bits,
 // so extracting it with the 28-bit value mask -- not a 30-bit
 // "everything but channel" mask -- keeps the flag bits out of the
 // nanoseconds.
 #define COUNTER_CHAN_SHIFT 30
+#define COUNTER_CHAN_EDGE_SHIFT 29
 #define COUNTER_VALUE_MASK 0x0FFFFFFFU
 _Static_assert(CLOCK_FREQ_HZ - 1 <= COUNTER_VALUE_MASK,
                "tick value must fit in the 28-bit counter value field");
 
-// counter [28] = edge polarity of a timestamp record: 1 = rising
+// counter [29] = edge polarity of a timestamp record: 1 = rising
 // (LOW->HIGH), 0 = falling. Hardware-latched, not inferred: each input
 // feeds two permanently-armed capture channels (one rising, one
 // falling), and the bit records which one captured. Special records
-// ([29] set) keep [28] zero.
-#define COUNTER_POLARITY_BIT (1u << 28)
+// ([28] set) keep this bit zero.
+//
+// The top three bits are now a direct channel/edge index for normal
+// timestamp records: counter >> COUNTER_CHAN_EDGE_SHIFT =
+// (channel * 2) + (rising ? 1 : 0).
+#define COUNTER_POLARITY_BIT (1u << 29)
 
-// counter [29] = "special message" marker: the 8-byte record is not a
+// counter [28] = "special message" marker: the 8-byte record is not a
 // timestamp but device metadata. When set, counter [7:0] is the
 // message type and the seconds word carries its payload. [31:30] still
-// names the channel the message concerns (0 when not channel-specific).
-#define COUNTER_SPECIAL_BIT  (1u << 29)
+// names the channel the message concerns, [29] remains zero, and
+// channel 0 is used when the message is not channel-specific.
+#define COUNTER_SPECIAL_BIT  (1u << 28)
 #define COUNTER_MSGTYPE_MASK 0xFFu
 #define MSG_OUTPUT_CLEARED 0u  // all-zero payload, still a full 8-byte
                                // record; binary analog of "# output
@@ -214,8 +221,8 @@ static volatile uint32_t capture_buf[NUM_HW_CAPTURE][DMA_CAPTURE_BUFLEN];
 
 // Per-channel state. A polarity-capable channel owns two TIM2 capture
 // sub-streams off the same timer input (one armed rising, one armed
-// falling); every record it emits carries channel_num and the
-// hardware-latched polarity bit. On the current board only inputs
+// falling); every record it emits carries a precomputed channel/polarity
+// tag. On the current board only inputs
 // PA0 and PA2 (jacks 0 and 2) have capture pairs -- TIM2's four
 // capture channels make two pairs -- so channels 1 and 3 are
 // inoperative until TIM5 picks up PA1/PA3.
@@ -226,12 +233,9 @@ typedef struct {
     uint16_t half_events;     // HT/TC callbacks since last service
                               // (write-head lap detection)
     rulos_dma_channel_t *dma_ch;
-    uint32_t polarity_bit;    // SUB_RISING: COUNTER_POLARITY_BIT; else 0
+    uint32_t counter_tag;     // channel + polarity bits ORed into CCR ticks
   } sub[NUM_SUBS];
   bool has_hw;                // false for inoperative channels (1, 3)
-
-  // channel identity (index into this array)
-  uint8_t channel_num;
 
   // statistics
   uint32_t num_missed;
@@ -318,8 +322,8 @@ volatile uint32_t seconds_B = 0;
 // Circular buffer for timestamps not yet written to USB
 typedef struct {
   uint32_t seconds;
-  uint32_t counter;  // [31:30] channel, [29] special-message flag,
-                     // [28] edge polarity, [27:0] tick value /
+  uint32_t counter;  // [31:30] channel, [29] edge polarity,
+                     // [28] special-message flag, [27:0] tick value /
                      // message type (see the COUNTER_* / MSG_*
                      // defines above)
 } timestamp_t;
@@ -400,7 +404,8 @@ CCMRAM static void account_laps(channel_t *chan, uint8_t s,
 // 100 ns across a 16k-record burst, so the inner loop must stay at
 // the ~16-cycle cost of a load, an A/B seconds select, two stores,
 // and a masked increment: ring space is pre-checked per batch, the
-// channel/polarity tag is folded once, and recent_pulse is set once.
+// precomputed channel/polarity tag is loaded once, and recent_pulse is
+// set once.
 // Records that don't fit in the ring are dropped and counted.
 CCMRAM static void drain_sub_fast(channel_t *chan, uint8_t s,
                                   uint32_t cur) {
@@ -418,8 +423,7 @@ CCMRAM static void drain_sub_fast(channel_t *chan, uint8_t s,
     if (count == 0) return;
   }
 
-  const uint32_t tag = ((uint32_t)chan->channel_num << COUNTER_CHAN_SHIFT)
-                       | chan->sub[s].polarity_bit;
+  const uint32_t tag = chan->sub[s].counter_tag;
   const uint32_t divider = chan->divider;
   volatile uint32_t *const buf = chan->sub[s].buf;
 
@@ -494,9 +498,9 @@ CCMRAM static void on_dma(void *user_data) {
 // is the hardware-latched edge polarity: '+' rising, '-' falling.
 //
 // BINARY: 8 bytes -- the on-device timestamp_t layout (4 bytes seconds
-// LE, then 4 bytes counter LE with channel in the top 2 bits and
-// polarity in bit 28) is the wire format. memcpy straight out,
-// skipping the 9-digit divmod chain in snprintf entirely.
+// LE, then 4 bytes counter LE with channel and polarity in the top
+// 3 bits) is the wire format. memcpy straight out, skipping the
+// 9-digit divmod chain in snprintf entirely.
 static int format_timestamp(timestamp_t *t, char *buf, int buf_size) {
   if (format_mode == TIMESTAMPER_FORMAT_BINARY) {
     _Static_assert(sizeof(timestamp_t) == TIMESTAMPER_BINARY_RECORD_LEN,
@@ -505,8 +509,9 @@ static int format_timestamp(timestamp_t *t, char *buf, int buf_size) {
     memcpy(buf, t, sizeof(timestamp_t));
     return sizeof(timestamp_t);
   }
-  uint8_t channel = t->counter >> COUNTER_CHAN_SHIFT;
-  char polarity = (t->counter & COUNTER_POLARITY_BIT) ? '+' : '-';
+  uint8_t channel_edge = t->counter >> COUNTER_CHAN_EDGE_SHIFT;
+  uint8_t channel = channel_edge >> 1;
+  char polarity = (channel_edge & 1) ? '+' : '-';
   uint32_t counter = t->counter & COUNTER_VALUE_MASK;
   uint32_t nanoseconds = counter * NS_PER_TICK;
   return snprintf(buf, buf_size, "%d %lu.%09lu %c\n",
@@ -820,8 +825,9 @@ static void init_timers() {
     uint8_t s = capture_hw[k].sub;
     ch->has_hw = true;
     ch->sub[s].buf = capture_buf[k];
-    ch->sub[s].polarity_bit =
-        (s == SUB_RISING) ? COUNTER_POLARITY_BIT : 0;
+    ch->sub[s].counter_tag =
+        ((uint32_t)capture_hw[k].channel << COUNTER_CHAN_SHIFT) |
+        ((s == SUB_RISING) ? COUNTER_POLARITY_BIT : 0);
     sub_ctx[k].chan = ch;
     sub_ctx[k].sub = s;
 
