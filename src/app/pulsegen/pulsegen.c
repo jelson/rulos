@@ -30,8 +30,12 @@
  *
  *   Channel 0 -> PC6   HRTIM1_CHF1  (Timer F, output 1)   AF13
  *   Channel 1 -> PC7   HRTIM1_CHF2  (Timer F, output 2)   AF13
- *   Channel 2 -> PC8   HRTIM1_CHE1  (Timer E, output 1)   AF13
- *   Channel 3 -> PC9   HRTIM1_CHE2  (Timer E, output 2)   AF13
+ *   Channel 2 -> PC8   HRTIM1_CHE1  (Timer E, output 1)   AF3
+ *   Channel 3 -> PC9   HRTIM1_CHE2  (Timer E, output 2)   AF3
+ *
+ * Note the alternate function differs by pin: the Timer F outputs on PC6/PC7
+ * are AF13, but the Timer E outputs on PC8/PC9 are AF3 (per DS12288). The AF
+ * is therefore a per-channel property, not a constant.
  *
  * Only HRTIM Timers E and F reach these four pins. A single HRTIM timer has
  * one counter and one period, shared by its two outputs. So channels 0 and 1
@@ -167,19 +171,20 @@
 //   slot 1 -> output 2, rising on CMP3, falling on CMP4
 typedef struct {
   uint32_t ll_pin;       // LL_GPIO_PIN_n (all on GPIOC)
+  uint8_t af;            // GPIO alternate function: TF outputs AF13, TE AF3
   uint32_t hrtim_timer;  // LL_HRTIM_TIMER_E / F
   uint32_t hrtim_output;  // LL_HRTIM_OUTPUT_TE1/TE2 or TF1/TF2
   gpio_pin_t led;
 } channel_hw_t;
 
 static const channel_hw_t channel_hw[NUM_CHANNELS] = {
-    [0] = {.ll_pin = LL_GPIO_PIN_6, .hrtim_timer = LL_HRTIM_TIMER_F,
+    [0] = {.ll_pin = LL_GPIO_PIN_6, .af = 13, .hrtim_timer = LL_HRTIM_TIMER_F,
            .hrtim_output = LL_HRTIM_OUTPUT_TF1, .led = LED_CHAN0},
-    [1] = {.ll_pin = LL_GPIO_PIN_7, .hrtim_timer = LL_HRTIM_TIMER_F,
+    [1] = {.ll_pin = LL_GPIO_PIN_7, .af = 13, .hrtim_timer = LL_HRTIM_TIMER_F,
            .hrtim_output = LL_HRTIM_OUTPUT_TF2, .led = LED_CHAN1},
-    [2] = {.ll_pin = LL_GPIO_PIN_8, .hrtim_timer = LL_HRTIM_TIMER_E,
+    [2] = {.ll_pin = LL_GPIO_PIN_8, .af = 3, .hrtim_timer = LL_HRTIM_TIMER_E,
            .hrtim_output = LL_HRTIM_OUTPUT_TE1, .led = LED_CHAN2},
-    [3] = {.ll_pin = LL_GPIO_PIN_9, .hrtim_timer = LL_HRTIM_TIMER_E,
+    [3] = {.ll_pin = LL_GPIO_PIN_9, .af = 3, .hrtim_timer = LL_HRTIM_TIMER_E,
            .hrtim_output = LL_HRTIM_OUTPUT_TE2, .led = LED_CHAN3},
 };
 
@@ -262,10 +267,12 @@ static bool select_ckpsc(uint64_t period_ps, uint8_t *out_ckpsc,
   return false;
 }
 
-static void set_pin_af(int ch, uint8_t af) {
+static void set_pin_af(int ch) {
   // PC6/PC7 are in the low half (pins 0..7); PC8/PC9 are in the high half
-  // (pins 8..15). LL_GPIO has separate AF setters for each half.
+  // (pins 8..15). LL_GPIO has separate AF setters for each half. The AF
+  // number is per channel (Timer F outputs AF13, Timer E AF3).
   const uint32_t pin = channel_hw[ch].ll_pin;
+  const uint8_t af = channel_hw[ch].af;
   if (pin <= LL_GPIO_PIN_7) {
     LL_GPIO_SetAFPin_0_7(GPIOC, pin, af);
   } else {
@@ -341,7 +348,7 @@ static void config_channel_output(int ch, uint8_t ckpsc, uint32_t per_ticks,
   LL_HRTIM_OUT_SetChopperMode(HRTIM1, hw->hrtim_output,
                               LL_HRTIM_OUT_CHOPPERMODE_DISABLED);
 
-  set_pin_af(ch, 13);  // AF13 = HRTIM
+  set_pin_af(ch);  // route the pin to its HRTIM output AF
   if (!burst) LL_HRTIM_EnableOutput(HRTIM1, hw->hrtim_output);
 }
 
