@@ -573,7 +573,12 @@ static void apply_all(void) {
     uint32_t per;
     if (any_on && select_ckpsc(chan_period_ps[0], &ck, &per)) {
       // Master timer defines the period and resets both slaves each cycle.
+      // It must run continuously: the default single-shot mode would count
+      // one period and stop, so its period event (the slaves' reset source
+      // and the burst controller's clock) would fire only once.
       LL_HRTIM_TIM_SetPrescaler(HRTIM1, LL_HRTIM_TIMER_MASTER, hrtim_ckpsc_to_ll[ck]);
+      LL_HRTIM_TIM_SetCounterMode(HRTIM1, LL_HRTIM_TIMER_MASTER,
+                                  LL_HRTIM_MODE_CONTINUOUS);
       LL_HRTIM_TIM_SetPeriod(HRTIM1, LL_HRTIM_TIMER_MASTER, per);
       LL_HRTIM_TIM_SetRepetition(HRTIM1, LL_HRTIM_TIMER_MASTER, 0);
       run_mask = LL_HRTIM_TIMER_MASTER;
@@ -604,8 +609,17 @@ static void apply_all(void) {
     }
   }
 
-  if (run_mask)
+  if (run_mask) {
+    // Zero every counter before enabling: LL_HRTIM_TIM_CounterDisable above
+    // stops the counters but leaves CNT at its last value, so without this a
+    // re-enable would resume from a stale, per-timer-different count. Reset
+    // to 0 so all enabled timers start the same cycle phase-aligned -- in
+    // SYNC mode that is what makes Timer E coincide with Timer F (and the
+    // master); they share one clock and period, so an aligned start stays
+    // aligned.
+    LL_HRTIM_CounterReset(HRTIM1, run_mask);
     LL_HRTIM_TIM_CounterEnable(HRTIM1, run_mask);
+  }
   // The bursting domain's counter must already be running: it clocks the
   // burst mode controller.
   if (burst_ch >= 0)
