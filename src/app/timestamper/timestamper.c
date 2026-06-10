@@ -1072,6 +1072,16 @@ uint32_t timestamper_get_divider(int ch) {
 
 void timestamper_set_stream_enabled(bool enabled) {
   stream_enabled = enabled;
+  // Restart the TX pump immediately on enable. The send chain is
+  // completion-driven and dies whenever it finds the stream disabled
+  // (e.g. after emitting the clear marker, since hosts re-enable only
+  // AFTER reading it); without a kick here the first send waits for
+  // the 100 ms periodic fallback, during which a 100 kHz input fills
+  // the ~164 ms ring and then drops pulses.
+  if (enabled) {
+    fill_tx_buf();
+    try_send_timestamps();
+  }
 }
 
 bool timestamper_get_stream_enabled(void) {
@@ -1175,6 +1185,11 @@ void timestamper_discard_pending(void) {
   }
   marker_pending = true;
   __enable_irq();
+  // Emit the marker now (or, if a transfer is in flight, arm its
+  // completion to do so) rather than waiting up to 100 ms for the
+  // periodic fallback: the host can't re-enable the stream until it
+  // sees the marker, and the ring is filling the whole time.
+  try_send_timestamps();
 }
 
 int main() {
