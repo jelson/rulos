@@ -183,7 +183,7 @@ def gap_tolerance_ns(gap_ns):
 
 def measure_gap(ts, pg, gap_ns, duration_s):
     """Configure ch0=base, ch1=base+gap (SYNC), measure mean(ch1-ch0)."""
-    pg.set_mode(True)  # SYNC
+    pg.set_mode(Pulsegen.SYNC)
     pg.set_period(0, GAP_PERIOD_NS / NS)  # sync: applies to all channels
     pg.set_width(0, GAP_WIDTH_NS / NS)
     pg.set_width(1, GAP_WIDTH_NS / NS)
@@ -237,7 +237,7 @@ def measure_rate(ts, pg, freq_hz, duration_s):
     channel. Uses a timestamper divider to keep the reported rate ~<=10 k/s."""
     period_ns = NS / freq_hz
     divider = max(1, round(freq_hz / 10_000))
-    pg.set_mode(False)  # ASYNC
+    pg.set_mode(Pulsegen.ASYNC)
     pg.set_period(0, period_ns / NS)   # async: ch0 + its Timer-F sibling ch1
     pg.set_width(0, period_ns / 2 / NS)
     pg.set_width(1, period_ns / 2 / NS)
@@ -287,7 +287,7 @@ def test_async_freq(ts, pg, duration_s):
 def test_async_pairing(ts, pg, duration_s):
     print("\n=== ASYNC pairing constraint (ch0/ch1 share Timer F) ===")
     f1, f2 = 10_000, 20_000  # set f1 then f2; both should end up at f2
-    pg.set_mode(False)
+    pg.set_mode(Pulsegen.ASYNC)
     pg.set_period(0, 1 / f1)
     pg.set_period(1, 1 / f2)  # overrides the shared Timer-F period
     pg.set_width(0, 1 / f2 / 2)

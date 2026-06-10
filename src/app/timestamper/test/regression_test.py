@@ -1192,7 +1192,7 @@ def configure_ts_4ch(tic, slope):
 def sync_all(sg, delays_s, width_s=1e-6):
     """SYNC mode: every channel at PHASE_LOCK_PERIOD_S with the given
     per-channel rising-edge delays. Raises if the PG-4 rejects it."""
-    sg.set_mode(True)
+    sg.set_mode(Pulsegen.SYNC)
     for c in ALL_CHANNELS:
         sg.set_period(c, PHASE_LOCK_PERIOD_S)
         sg.set_width(c, width_s)

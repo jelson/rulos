@@ -75,6 +75,7 @@ As a library, open a Pulsegen instance and call methods on it.
 """
 
 import argparse
+import enum
 import serial
 import serial.tools.list_ports
 import sys
@@ -124,6 +125,16 @@ class Pulsegen:
     Connecting does not change device state. close() does not modify
     any output configuration -- whatever channels were running stay
     running."""
+
+    class Mode(enum.Enum):
+        """Channel timing mode for set_mode(). The value is the SCPI
+        keyword sent to the device."""
+        ASYNC = "ASYNC"  # two independent frequency groups
+        SYNC = "SYNC"    # all four channels share one phase-locked period
+
+    # Expose the members on the class so callers can write Pulsegen.SYNC.
+    ASYNC = Mode.ASYNC
+    SYNC = Mode.SYNC
 
     def __init__(self, port=None, timeout=0.5):
         self._ser = serial.Serial(port or autodetect_port(), timeout=timeout)
@@ -180,10 +191,13 @@ class Pulsegen:
     def get_error(self):
         return self.query("SYST:ERR?")
 
-    def set_mode(self, sync):
-        """Select SYNC (all channels one phase-locked period) or ASYNC
-        (two independent frequency groups)."""
-        self.send(f"MODE {'SYNC' if sync else 'ASYNC'}")
+    def set_mode(self, mode):
+        """Select Pulsegen.SYNC (all channels one phase-locked period) or
+        Pulsegen.ASYNC (two independent frequency groups)."""
+        if not isinstance(mode, self.Mode):
+            raise TypeError(
+                f"mode must be Pulsegen.SYNC or Pulsegen.ASYNC, got {mode!r}")
+        self.send(f"MODE {mode.value}")
 
     def get_mode(self):
         """Returns 'ASYNC' or 'SYNC'."""
@@ -270,7 +284,7 @@ class Pulsegen:
         """Sync mode 4-channel staircase: every channel at `period_s`
         and `width_s`, with channel n's rising edge delayed by n*step_s.
         The canonical timestamper edge-resolution test."""
-        self.set_mode(True)
+        self.set_mode(self.SYNC)
         # Sync mode is a single domain, so one channel clears burst
         # state for all four.
         self.set_burst_state(0, False)
@@ -381,7 +395,7 @@ def cmd_mode(pg, args):
     if args.value is None:
         print(pg.get_mode())
     else:
-        pg.set_mode(args.value.upper() == "SYNC")
+        pg.set_mode(Pulsegen.Mode(args.value.upper()))
 
 
 def cmd_state(pg, args):
