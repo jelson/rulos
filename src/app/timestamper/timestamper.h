@@ -32,6 +32,13 @@
 // capture channel per input); slope selects which are emitted. Every
 // emitted record carries an exact, hardware-latched polarity bit
 // regardless of slope.
+//
+// Emission order: each (channel, polarity) sub-stream is emitted in
+// time order, but sub-streams are not interleaved into one globally
+// ordered sequence -- in BOTH mode a channel's rising and falling
+// records arrive in independent service-sized batches, just as
+// records from different channels always have. Hosts that want total
+// order sort by timestamp.
 typedef enum {
   TIMESTAMPER_SLOPE_RISING,   // emit LOW->HIGH transitions only
   TIMESTAMPER_SLOPE_FALLING,  // emit HIGH->LOW transitions only

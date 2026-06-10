@@ -28,11 +28,13 @@ Phases:
   tsctl-cli   -- the CLI tool end to end
   config-persist / config-torn  -- cold-reset flash phases
 
-Every timestamp record now carries a hardware-latched edge polarity
+Every timestamp record carries a hardware-latched edge polarity
 ('+' rising / '-' falling, text column 3 / binary counter bit 28);
-the capturing phases assert it matches the slope under test, and the
-both-edge phases assert strict +/- alternation and time-ordering of
-the on-device rising/falling merge.
+the capturing phases assert it matches the slope under test. The
+device emits each (channel, polarity) sub-stream in time order but
+does not interleave them globally, so the both-edge phases sort
+host-side, then assert strict +/- alternation and per-sub-stream
+arrival order.
 
 The pulse source's output must be wired to the input selected with
 --channel (default 0), and source and device must share the same
@@ -292,6 +294,43 @@ def classify_gaps(deltas, split):
     return cls, short, long
 
 
+def order_records(times, pols):
+    """Sort (time, polarity) pairs by time. The device emits each
+    (channel, polarity) sub-stream in time order but interleaves the
+    two sub-streams in service-sized batches, so a both-edges capture
+    is only globally ordered after this host-side sort."""
+    pairs = sorted(zip(times, pols))
+    return [t for t, _ in pairs], [p for _, p in pairs]
+
+
+def trim_window(times, pols, guard_s=0.25):
+    """Drop records within guard_s of the capture edges (call on
+    sorted data). The two sub-streams arrive in flush batches up to
+    ~100 ms apart, so cutting the capture window mid-flush can clip
+    one polarity's final batch and leave the other artificially
+    unpaired at the tail; per-edge assertions only run on the
+    interior."""
+    if not times:
+        return times, pols
+    lo, hi = times[0] + guard_s, times[-1] - guard_s
+    kept = [(t, p) for t, p in zip(times, pols) if lo <= t <= hi]
+    return [t for t, _ in kept], [p for _, p in kept]
+
+
+def expect_substreams_monotonic(times, pols):
+    """Each polarity's records must arrive in time order (call on raw,
+    unsorted capture data): a backwards step within one sub-stream is
+    a device bug, never window or batching artifact."""
+    ok = True
+    for want in ("+", "-"):
+        sub = [t for t, p in zip(times, pols) if p == want]
+        bad = sum(1 for i in range(len(sub) - 1) if sub[i + 1] < sub[i])
+        ok &= expect(bad == 0,
+                     f"'{want}' sub-stream arrives in time order "
+                     f"({bad} backwards steps)")
+    return ok
+
+
 def expect_polarity(pols, want):
     """Every record's hardware-latched polarity column is `want`."""
     bad = [i for i, p in enumerate(pols) if p != want]
@@ -361,6 +400,13 @@ def phase_both(mode, sg, tic, channel, duration_s):
     collected(times, others, channel, expected)
     if len(times) < 4:
         return expect(False, "enough samples for interval analysis")
+    # The rising and falling sub-streams arrive independently; order
+    # them on the host and run per-edge assertions on the interior
+    # (window edges can clip one sub-stream's final batch).
+    ok_sub = expect_substreams_monotonic(times, pols)
+    n_raw = len(times)
+    times, pols = order_records(times, pols)
+    times, pols = trim_window(times, pols)
 
     # BOTH mode captures both edges of each pulse, so the gaps must
     # strictly alternate: short (~pulse width) then long (~period -
@@ -386,10 +432,10 @@ def phase_both(mode, sg, tic, channel, duration_s):
           f"med={statistics.median(long) * 1e3:.3f} ms")
 
     tol = count_tol(2 * PULSE_HZ, 4)
-    ok = expect(abs(len(times) - expected) <= tol,
+    ok = expect(abs(n_raw - expected) <= tol,
                 f"count within {tol} of expected {expected:.0f}")
     ok &= score_clean(mode, ovc, ovf, others)
-    ok &= expect_monotonic(times)
+    ok &= ok_sub
     ok &= expect(abs(len(short) - len(long)) <= 1,
                  "short/long delta counts roughly equal")
     ok &= expect(len(cls) >= 4 and
@@ -534,15 +580,14 @@ def phase_overcapture(mode, sg, tic, channel, ncyc=20000):
 
 def phase_polarity_burst(mode, sg, tic, channel, ncyc=4096,
                          spacing_ns=200):
-    """BOTH-edge burst at tight spacing -- the merge-engine stress
-    test. Each pulse is 50 ns wide (capture_burst's siggen setting),
+    """BOTH-edge burst at tight spacing -- the paired-capture stress
+    test. Each pulse is 50 ns wide (capture_burst's source setting),
     so the rising and falling sub-streams' edges land 50 ns / 150 ns
-    apart and the on-device time-merge must zipper them back into one
-    ordered stream: every interior burst has exactly 2*ncyc edges,
-    polarity strictly alternates across the whole capture (bursts
-    included -- every pulse contributes '+' then '-'), and timestamps
-    never step backwards. A single merge mis-order, duplicate, or
-    dropped edge anywhere fails."""
+    apart and both capture paths run at full burst rate at once:
+    every interior burst has exactly 2*ncyc edges, each sub-stream
+    arrives in order, and after a host-side time sort the polarity
+    strictly alternates (every pulse contributes '+' then '-'). A
+    single duplicate or dropped edge anywhere fails."""
     print(f"\n=== polarity burst: {ncyc} pulses @{spacing_ns} ns, "
           f"BOTH edges [{mode.name}] ===")
     actual_ns, times, pols, sizes, others, ovc, ovf = capture_burst(
@@ -561,10 +606,13 @@ def phase_polarity_burst(mode, sg, tic, channel, ncyc=4096,
                  f"every interior burst is exactly {2 * ncyc} edges "
                  f"(both edges of every pulse)")
     ok &= score_clean(mode, ovc, ovf, others)
-    ok &= expect(all(pols[i] != pols[i + 1]
-                     for i in range(len(pols) - 1)),
-                 "polarity strictly alternates through every burst")
-    ok &= expect_monotonic(times)
+    ok &= expect_substreams_monotonic(times, pols)
+    stimes, spols = order_records(times, pols)
+    stimes, spols = trim_window(stimes, spols)
+    ok &= expect(all(spols[i] != spols[i + 1]
+                     for i in range(len(spols) - 1)),
+                 "polarity strictly alternates through every burst "
+                 "(after host-side time sort)")
     return ok
 
 

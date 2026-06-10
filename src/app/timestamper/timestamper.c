@@ -47,9 +47,18 @@
  * sourced from the same TIx -- no second pin). Which channel captured
  * IS the polarity, latched in hardware at the moment of the edge. The
  * SCPI slope setting no longer re-arms the timer; it just selects
- * which of the two sub-streams are emitted. In BOTH mode the two
- * sub-streams are merged back into one time-ordered stream by
- * comparing raw tick values (see service_channel).
+ * which of the two sub-streams are emitted.
+ *
+ * EMISSION ORDER: each (channel, polarity) sub-stream is emitted in
+ * time order, but the device does NOT interleave a channel's rising
+ * and falling records into one globally ordered sequence -- the two
+ * sub-streams drain independently, in service-sized batches, exactly
+ * like records from different channels always have. A host that wants
+ * total order sorts by timestamp, which is trivial there and brutally
+ * expensive here: an on-device merge needs the two streams zippered
+ * record-by-record under a hold-back rule, with stash buffers,
+ * quiescence detection, and end-of-burst drains, all in the capture
+ * hot path.
  *
  * The pairing halves the inputs per timer: TIM2's four capture
  * channels serve two polarity-capable inputs (PA0 = jack 0 and
@@ -203,20 +212,6 @@ _Static_assert(CLOCK_FREQ_HZ - 1 <= COUNTER_VALUE_MASK,
 #define NUM_HW_CAPTURE 4
 static volatile uint32_t capture_buf[NUM_HW_CAPTURE][DMA_CAPTURE_BUFLEN];
 
-// Per-sub holding FIFO for the BOTH-mode merge. The two subs capture
-// the same alternating edge train 1:1, so their DMA write heads stay
-// within O(1) of each other and the unpaired residual is tiny; this
-// just covers ISR-timing jitter. Overflow is the overcapture/extreme
-// regime -- counted (buf_overflows), never silent. Entries are
-// resolved (seconds, ready-to-emit counter word) at stash time, which
-// keeps every record's seconds_A/B resolution within one flush period
-// of its capture -- well inside the rollover scheme's validity window.
-#define STASH_LEN 64
-typedef struct {
-  uint32_t sec;
-  uint32_t ctr;  // counter word: channel tag | polarity | ticks
-} stash_rec_t;
-
 // Per-channel state. A polarity-capable channel owns two TIM2 capture
 // sub-streams off the same timer input (one armed rising, one armed
 // falling); every record it emits carries channel_num and the
@@ -227,20 +222,13 @@ typedef struct {
 typedef struct {
   struct {
     volatile uint32_t *buf;   // DMA circular buffer; NULL if no hw
-    uint32_t merge_pos;       // next DMA index to drain (circular)
-    uint32_t prev_ndtr;       // DMA remaining-count at last flush
-                              // (quiescence detection)
+    uint32_t drain_pos;       // next DMA index to drain (circular)
     uint16_t half_events;     // HT/TC callbacks since last service
                               // (write-head lap detection)
     rulos_dma_channel_t *dma_ch;
     uint32_t polarity_bit;    // SUB_RISING: COUNTER_POLARITY_BIT; else 0
-    stash_rec_t stash[STASH_LEN];
-    uint16_t st_head;         // oldest stashed record
-    uint16_t st_n;            // count held
   } sub[NUM_SUBS];
   bool has_hw;                // false for inoperative channels (1, 3)
-  volatile bool dma_isr_ran;  // any capture HT/TC ISR since last flush
-                              // (quiescence detection)
 
   // channel identity (index into this array)
   uint8_t channel_num;
@@ -374,65 +362,7 @@ CCMRAM void TIM15_IRQHandler() {
 }
 
 
-// Resolve a raw TIM2 capture (timer ticks) into a ready-to-emit
-// record: pick the seconds half from the tick value (top-of-file
-// rollover scheme) and fold in the channel tag + polarity bit. The
-// rollover scheme only tolerates a bounded capture-to-resolve delay
-// (the A/B copies advance around the second boundaries), so this must
-// run while the record is fresh -- the per-flush-period service
-// cadence guarantees that.
-CCMRAM static inline void resolve(channel_t *chan, uint8_t s,
-                                  uint32_t raw, stash_rec_t *out) {
-  out->sec = raw < (CLOCK_FREQ_HZ / 2) ? seconds_A : seconds_B;
-  out->ctr = raw
-      | ((uint32_t)chan->channel_num << COUNTER_CHAN_SHIFT)
-      | chan->sub[s].polarity_bit;
-}
-
-// Push one resolved record to the timestamp ring, honoring the
-// channel divider. A full ring is counted, never silent.
-CCMRAM static inline void ring_emit(channel_t *chan,
-                                    const stash_rec_t *r) {
-  chan->recent_pulse = true;
-  if (__builtin_expect(chan->divider != 1, 0)) {
-    if (++chan->count < chan->divider) return;
-    chan->count = 0;
-  }
-  uint32_t head = ts_head;
-  if (__builtin_expect((ts_tail - head - 1) % TIMESTAMP_BUFLEN == 0, 0)) {
-    chan->buf_overflows++;
-    return;
-  }
-  timestamp_buffer[head].seconds = r->sec;
-  timestamp_buffer[head].counter = r->ctr;
-  ts_head = (head + 1) % TIMESTAMP_BUFLEN;
-}
-
-// True iff a is strictly earlier than b.
-//
-// Ordering is by raw timer tick modulo CLOCK_FREQ_HZ, NOT by the
-// stashed seconds: `sec` comes from the seconds_A/seconds_B
-// half-rollover scheme, which is only eventually-consistent (the
-// TIM15 ISR updates it around the FREQ/2 and wrap boundaries). That
-// is fine for formatting an already-ordered record, but using it for
-// the merge's ordering decision lets two edges that straddle the
-// boundary compare out of order.
-//
-// The two records the merge ever compares are the two subs' heads of
-// the SAME alternating signal, always within ~one period of each
-// other -- far under CLOCK_FREQ_HZ/2 -- so a half-window modular tick
-// comparison gives the correct relative order across the second wrap
-// with no dependence on the racy seconds resolution.
-CCMRAM static inline bool rec_before(const stash_rec_t *a,
-                                     const stash_rec_t *b) {
-  uint32_t ta = a->ctr & COUNTER_VALUE_MASK;
-  uint32_t tb = b->ctr & COUNTER_VALUE_MASK;
-  int32_t d = (int32_t)tb - (int32_t)ta;
-  if (d < 0) d += CLOCK_FREQ_HZ;  // wrap into [0, CLOCK_FREQ_HZ)
-  return d != 0 && d < (int32_t)(CLOCK_FREQ_HZ / 2);
-}
-
-// DMA-safe end-of-region for sub `s`: records [merge_pos, cur) are
+// DMA-safe end-of-region for sub `s`: records [drain_pos, cur) are
 // captured and safe to read (cur is exclusive). Single-owner cursor:
 // per-channel service is serialized by the same-priority DMA ISRs
 // plus the irq-guarded flush.
@@ -440,57 +370,6 @@ CCMRAM static inline uint32_t safe_cur(channel_t *chan, uint8_t s) {
   uint32_t rem = rulos_dma_get_remaining(chan->sub[s].dma_ch);
   uint32_t cur = DMA_CAPTURE_BUFLEN - rem;
   return (cur == DMA_CAPTURE_BUFLEN) ? 0 : cur;
-}
-
-// A sub's next record comes from its stash (older, already resolved)
-// first, then directly from its DMA buffer at merge_pos. peek leaves
-// it in place; consume advances past it.
-CCMRAM static inline bool sub_avail(channel_t *chan, uint8_t s,
-                                    uint32_t cur) {
-  return chan->sub[s].st_n > 0 || chan->sub[s].merge_pos != cur;
-}
-CCMRAM static inline void sub_peek(channel_t *chan, uint8_t s,
-                                   stash_rec_t *out) {
-  if (chan->sub[s].st_n > 0) {
-    *out = chan->sub[s].stash[chan->sub[s].st_head];
-  } else {
-    resolve(chan, s, chan->sub[s].buf[chan->sub[s].merge_pos], out);
-  }
-}
-CCMRAM static inline void sub_consume(channel_t *chan, uint8_t s) {
-  if (chan->sub[s].st_n > 0) {
-    chan->sub[s].st_head = (chan->sub[s].st_head + 1) % STASH_LEN;
-    chan->sub[s].st_n--;
-  } else {
-    uint32_t p = chan->sub[s].merge_pos + 1;
-    chan->sub[s].merge_pos = (p == DMA_CAPTURE_BUFLEN) ? 0 : p;
-  }
-}
-
-// After the 2-way merge stalls (one sub ran out so ordering can't yet
-// continue), the other sub's still-unconsumed DMA records can't stay
-// in the circular DMA buffer -- the write head will lap them. Copy
-// just that residual (the O(1) inter-sub skew, since both subs capture
-// the same alternating edge train 1:1) into the stash and free the
-// DMA region. Resolving here also bounds capture-to-resolve delay for
-// records that stall across service calls. Overflow is the
-// overcapture/extreme regime -- counted.
-CCMRAM static void stash_residual(channel_t *chan, uint8_t s,
-                                  uint32_t cur) {
-  while (chan->sub[s].merge_pos != cur) {
-    if (__builtin_expect(chan->sub[s].st_n >= STASH_LEN, 0)) {
-      uint32_t dropped = (cur - chan->sub[s].merge_pos) % DMA_CAPTURE_BUFLEN;
-      chan->buf_overflows += dropped;  // drop the rest (not silent)
-      chan->sub[s].merge_pos = cur;
-      return;
-    }
-    uint16_t w = (chan->sub[s].st_head + chan->sub[s].st_n) % STASH_LEN;
-    resolve(chan, s, chan->sub[s].buf[chan->sub[s].merge_pos],
-            &chan->sub[s].stash[w]);
-    chan->sub[s].st_n++;
-    uint32_t p = chan->sub[s].merge_pos + 1;
-    chan->sub[s].merge_pos = (p == DMA_CAPTURE_BUFLEN) ? 0 : p;
-  }
 }
 
 // Write-head lap accounting for sub `s`, using the cursor positions
@@ -508,7 +387,7 @@ CCMRAM static void account_laps(channel_t *chan, uint8_t s,
   uint32_t h = chan->sub[s].half_events;
   chan->sub[s].half_events = 0;
   if (__builtin_expect(h <= 2, 1)) return;
-  uint32_t adv = (cur - chan->sub[s].merge_pos) & (DMA_CAPTURE_BUFLEN - 1);
+  uint32_t adv = (cur - chan->sub[s].drain_pos) & (DMA_CAPTURE_BUFLEN - 1);
   uint32_t written_min = (h - 1) * (DMA_CAPTURE_BUFLEN / 2);
   if (written_min >= adv + DMA_CAPTURE_BUFLEN) {
     chan->buf_overflows += ((written_min - adv) / DMA_CAPTURE_BUFLEN)
@@ -516,7 +395,7 @@ CCMRAM static void account_laps(channel_t *chan, uint8_t s,
   }
 }
 
-// Drain sub `s` from merge_pos up to cur straight into the timestamp
+// Drain sub `s` from drain_pos up to cur straight into the timestamp
 // ring -- the single-slope hot path. Capture sustains one record per
 // 100 ns across a 16k-record burst, so the inner loop must stay at
 // the ~16-cycle cost of a load, an A/B seconds select, two stores,
@@ -525,10 +404,10 @@ CCMRAM static void account_laps(channel_t *chan, uint8_t s,
 // Records that don't fit in the ring are dropped and counted.
 CCMRAM static void drain_sub_fast(channel_t *chan, uint8_t s,
                                   uint32_t cur) {
-  uint32_t pos = chan->sub[s].merge_pos;
+  uint32_t pos = chan->sub[s].drain_pos;
   if (pos == cur) return;
   chan->recent_pulse = true;
-  chan->sub[s].merge_pos = cur;
+  chan->sub[s].drain_pos = cur;
 
   uint32_t count = (cur - pos) & (DMA_CAPTURE_BUFLEN - 1);
   uint32_t head = ts_head;
@@ -569,86 +448,29 @@ CCMRAM static void drain_sub_fast(channel_t *chan, uint8_t s,
   ts_head = head;
 }
 
-// Minimum age (in TIM2 ticks) of a record released by the drain path.
-// Capture-to-DMA-visible latency is bounded by GPDMA arbitration
-// (well under a microsecond), so any edge that could precede a
-// record this old is already visible in its sub's DMA buffer -- the
-// drain can never emit ahead of an edge it hasn't seen. In practice a
-// drained straggler is at least one flush period (~100 ms) old, so
-// the gate only ever bites if the quiescence detection is wrong.
-#define DRAIN_MIN_AGE_TICKS (1000 / NS_PER_TICK)  // 1 us
+// Which sub-streams a slope selects for emission.
+static bool sub_active(timestamper_slope_t sl, uint8_t s) {
+  if (sl == TIMESTAMPER_SLOPE_BOTH) return true;
+  return (sl == TIMESTAMPER_SLOPE_FALLING) ? (s == SUB_FALLING)
+                                           : (s == SUB_RISING);
+}
 
-// Service a channel.
-//   slope != BOTH: only the selected sub streams -- one monotonic,
-//     already-ordered stream copied straight to the ring (the proven
-//     fast path, one resolve + one ring write per record); the other
-//     sub is skipped past so its DMA buffer can't overflow.
-//   slope == BOTH: 2-way merge by timestamp, reading directly from
-//     both subs' DMA buffers (one resolve + compare + ring write per
-//     record -- same per-record cost as the fast path). A record is
-//     held until the other sub progresses past it (no earlier edge
-//     can then still arrive); only the small post-merge residual is
-//     copied to the stash. `drain` (channel verifiably quiescent for
-//     a full flush period) releases the final straggler at burst end.
-CCMRAM static void service_channel(channel_t *chan, bool drain) {
-  timestamper_slope_t sl = chan->slope;
-
-  if (sl != TIMESTAMPER_SLOPE_BOTH) {
-    uint8_t act = (sl == TIMESTAMPER_SLOPE_FALLING) ? SUB_FALLING
-                                                    : SUB_RISING;
-    uint8_t oth = act ^ 1;
-    // Stashed records (left over from a stint in BOTH mode) are older
-    // than anything still in the DMA buffer -- emit them first.
-    while (chan->sub[act].st_n > 0) {
-      ring_emit(chan, &chan->sub[act].stash[chan->sub[act].st_head]);
-      chan->sub[act].st_head = (chan->sub[act].st_head + 1) % STASH_LEN;
-      chan->sub[act].st_n--;
-    }
-    uint32_t cur = safe_cur(chan, act);
-    account_laps(chan, act, cur);
-    drain_sub_fast(chan, act, cur);
-    chan->sub[act].st_head = chan->sub[act].st_n = 0;
-
-    chan->sub[oth].merge_pos = safe_cur(chan, oth);
-    chan->sub[oth].half_events = 0;
-    chan->sub[oth].st_head = chan->sub[oth].st_n = 0;
-    return;
-  }
-
-  uint32_t curR = safe_cur(chan, SUB_RISING);
-  uint32_t curF = safe_cur(chan, SUB_FALLING);
-  account_laps(chan, SUB_RISING, curR);
-  account_laps(chan, SUB_FALLING, curF);
-  for (;;) {
-    bool aR = sub_avail(chan, SUB_RISING, curR);
-    bool aF = sub_avail(chan, SUB_FALLING, curF);
-    uint8_t s;
-    if (aR && aF) {
-      stash_rec_t rR, rF;
-      sub_peek(chan, SUB_RISING, &rR);
-      sub_peek(chan, SUB_FALLING, &rF);
-      s = rec_before(&rR, &rF) ? SUB_RISING : SUB_FALLING;
-    } else if (drain && (aR || aF)) {
-      s = aR ? SUB_RISING : SUB_FALLING;
-      // Second, independent ordering guard (see DRAIN_MIN_AGE_TICKS):
-      // never release a record so fresh that an earlier edge could
-      // still be in flight to the other sub's DMA buffer.
-      stash_rec_t r;
-      sub_peek(chan, s, &r);
-      int32_t age = (int32_t)TIM2->CNT
-                    - (int32_t)(r.ctr & COUNTER_VALUE_MASK);
-      if (age < 0) age += CLOCK_FREQ_HZ;
-      if (age < DRAIN_MIN_AGE_TICKS) break;
+// Service a channel: drain each slope-selected sub-stream straight
+// into the ring, and skip the deselected one past its backlog so its
+// circular buffer can't be misread later. Each sub-stream is emitted
+// in time order; the two sub-streams are NOT interleaved into one
+// ordered sequence (see the top-of-file EMISSION ORDER note).
+CCMRAM static void service_channel(channel_t *chan) {
+  for (uint8_t s = 0; s < NUM_SUBS; s++) {
+    uint32_t cur = safe_cur(chan, s);
+    if (sub_active(chan->slope, s)) {
+      account_laps(chan, s, cur);
+      drain_sub_fast(chan, s, cur);
     } else {
-      break;
+      chan->sub[s].drain_pos = cur;
+      chan->sub[s].half_events = 0;
     }
-    stash_rec_t r;
-    sub_peek(chan, s, &r);
-    ring_emit(chan, &r);
-    sub_consume(chan, s);
   }
-  stash_residual(chan, SUB_RISING, curR);
-  stash_residual(chan, SUB_FALLING, curF);
 }
 
 // TIM2 capture DMA HT/TC callback (one per in-use sub). The NDTR-
@@ -660,8 +482,7 @@ CCMRAM static void service_channel(channel_t *chan, bool drain) {
 CCMRAM static void on_dma(void *user_data) {
   sub_ctx_t *ctx = (sub_ctx_t *)user_data;
   ctx->chan->sub[ctx->sub].half_events++;
-  ctx->chan->dma_isr_ran = true;
-  service_channel(ctx->chan, false);
+  service_channel(ctx->chan);
 }
 
 // Format a timestamp into buf, returning the number of bytes written.
@@ -810,26 +631,10 @@ static void on_usb_tx_complete(void) {
   try_send_timestamps();
 }
 
-// Periodic catch-up: drain/merge each channel promptly even when the
-// DMA buffers fill slowly (the HT/TC ISR alone could otherwise leave a
-// slow signal's captures waiting up to a half-buffer). Also releases
-// the final BOTH-mode straggler once a channel is verifiably
-// quiescent. Called from periodic_task.
-//
-// Quiescence must be EXACT: a false positive arms the drain path,
-// which emits one sub without waiting for the other -- the only way
-// the output can mis-order. A channel is quiescent iff no capture
-// landed since the previous flush, established by two independent
-// signals that cannot alias together:
-//   1. per-sub DMA remaining-count unchanged since the last flush.
-//      NDTR alone can alias -- it returns to the same value after
-//      exactly DMA_CAPTURE_BUFLEN more captures -- but never sooner;
-//   2. no capture HT/TC ISR ran since the last flush. Any
-//      DMA_CAPTURE_BUFLEN-capture aliasing run necessarily crossed a
-//      half-buffer boundary and fired one.
-// (A summed or single-signal detector aliases under sustained
-// high-rate input and was the root cause of a rare drain-path
-// mis-order.)
+// Periodic catch-up: drain each channel promptly even when the DMA
+// buffers fill slowly (the HT/TC ISR alone could otherwise leave a
+// slow signal's captures waiting up to a half-buffer). Called from
+// periodic_task.
 static void flush_dma_captures(void) {
   // Capture overrun: a CCxOF flag means an edge arrived before GPDMA
   // fetched the previous capture from that channel's CCR -- the older
@@ -853,20 +658,9 @@ static void flush_dma_captures(void) {
     if (!ch->has_hw) continue;
 
     // Disable interrupts so we don't race the DMA ISR's call into
-    // service_channel (shared merge_pos / stash / ring head).
+    // service_channel (shared drain_pos / ring head).
     __disable_irq();
-
-    uint32_t ndtr_r = rulos_dma_get_remaining(ch->sub[SUB_RISING].dma_ch);
-    uint32_t ndtr_f = rulos_dma_get_remaining(ch->sub[SUB_FALLING].dma_ch);
-    bool quiescent = !ch->dma_isr_ran &&
-                     ndtr_r == ch->sub[SUB_RISING].prev_ndtr &&
-                     ndtr_f == ch->sub[SUB_FALLING].prev_ndtr;
-    ch->dma_isr_ran = false;
-    ch->sub[SUB_RISING].prev_ndtr = ndtr_r;
-    ch->sub[SUB_FALLING].prev_ndtr = ndtr_f;
-
-    service_channel(ch, quiescent);
-
+    service_channel(ch);
     __enable_irq();
   }
 }
@@ -1086,13 +880,6 @@ static void init_timers() {
   LL_TIM_EnableCounter(TIM15);
 }
 
-// Which sub-streams a slope selects for emission.
-static bool sub_active(timestamper_slope_t sl, uint8_t s) {
-  if (sl == TIMESTAMPER_SLOPE_BOTH) return true;
-  return (sl == TIMESTAMPER_SLOPE_FALLING) ? (s == SUB_FALLING)
-                                           : (s == SUB_RISING);
-}
-
 void timestamper_set_slope(int ch, timestamper_slope_t slope) {
   if (ch < 0 || ch >= NUM_CHANNELS) return;
   channel_t *c = &channels[ch];
@@ -1104,16 +891,13 @@ void timestamper_set_slope(int ch, timestamper_slope_t slope) {
   // which sub-streams are emitted. Emit everything captured under the
   // old selection up to now, then skip the newly-selected sub-streams
   // past their pre-command backlog, so the first record emitted under
-  // the new slope is an edge captured after the command. (Leaving
-  // BOTH may drop a final unpaired edge still held for ordering --
-  // one from within the last flush period.)
+  // the new slope is an edge captured after the command.
   __disable_irq();
-  service_channel(c, false);
-  for (int s = 0; s < NUM_SUBS; s++) {
+  service_channel(c);
+  for (uint8_t s = 0; s < NUM_SUBS; s++) {
     if (!sub_active(c->slope, s) && sub_active(slope, s)) {
-      c->sub[s].merge_pos = safe_cur(c, s);
+      c->sub[s].drain_pos = safe_cur(c, s);
       c->sub[s].half_events = 0;
-      c->sub[s].st_head = c->sub[s].st_n = 0;
     }
   }
   c->slope = slope;
@@ -1235,12 +1019,11 @@ void timestamper_discard_pending(void) {
     channels[i].buf_overflows = 0;
     channels[i].count = 0;
     if (!channels[i].has_hw) continue;
-    // Skip past everything captured so far and drop any stashed
-    // residue: the next edge becomes the first one the host sees.
-    for (int s = 0; s < NUM_SUBS; s++) {
-      channels[i].sub[s].merge_pos = safe_cur(&channels[i], s);
+    // Skip past everything captured so far: the next edge becomes
+    // the first one the host sees.
+    for (uint8_t s = 0; s < NUM_SUBS; s++) {
+      channels[i].sub[s].drain_pos = safe_cur(&channels[i], s);
       channels[i].sub[s].half_events = 0;
-      channels[i].sub[s].st_head = channels[i].sub[s].st_n = 0;
     }
   }
   marker_pending = true;
