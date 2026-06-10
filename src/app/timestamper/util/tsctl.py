@@ -52,9 +52,12 @@ stream so SCPI responses come back clean.
 import argparse
 from collections import namedtuple
 import os
+import queue
 import serial
 import serial.tools.list_ports
+import struct
 import sys
+import threading
 import time
 
 # iter_records / read_for yield one of four record types; the caller
@@ -98,7 +101,7 @@ IDN_PREFIX = "Lectrobox,LectroTIC-4"
 # index: counter >> 29 == channel * 2 + (rising ? 1 : 0).
 _BINARY_RECORD_LEN = 8
 _NS_PER_TICK = 4
-_COUNTER_CHAN_EDGE_SHIFT = 29
+_COUNTER_POLARITY_BIT = 1 << 29
 _COUNTER_VALUE_MASK = 0x0FFFFFFF
 # counter [28] set => the record is a special message, not a timestamp;
 # [7:0] is then the message type and the seconds word its payload.
@@ -111,6 +114,37 @@ _MSG_OSC_FAIL = 2
 # special bit, type 0, zero payload) -- the binary-mode framing anchor.
 _OUTPUT_CLEARED_BYTES = (0).to_bytes(4, "little") + (
     _COUNTER_SPECIAL_BIT | _MSG_OUTPUT_CLEARED).to_bytes(4, "little")
+
+
+def _decode_chunks(chunks):
+    """Yield stream records decoded from an iterable of byte chunks.
+    8-byte record alignment is carried across chunk boundaries; a
+    trailing partial record is held for the next chunk.
+
+    The timestamp arm of the loop runs >100k times per second when the
+    device streams at full rate, so it is written for CPython speed:
+    struct.iter_unpack for the field splits, and no intermediate
+    locals on the hot (non-special) arm."""
+    leftover = b""
+    for data in chunks:
+        if leftover:
+            data = leftover + data
+        end = len(data) & ~(_BINARY_RECORD_LEN - 1)
+        for sec, cnt in struct.iter_unpack("<II", memoryview(data)[:end]):
+            if cnt & _COUNTER_SPECIAL_BIT:
+                msgtype = cnt & _COUNTER_MSGTYPE_MASK
+                if msgtype == _MSG_OUTPUT_CLEARED:
+                    yield OutputCleared()
+                elif msgtype == _MSG_PULSES_LOST:
+                    yield PulsesLost(cnt >> 30, sec & 0xFFFF, sec >> 16)
+                elif msgtype == _MSG_OSC_FAIL:
+                    yield OscillatorFailure()
+                # unknown special types: skip (forward-compatible)
+            else:
+                yield Timestamp(cnt >> 30, sec,
+                                (cnt & _COUNTER_VALUE_MASK) * _NS_PER_TICK,
+                                "+" if cnt & _COUNTER_POLARITY_BIT else "-")
+        leftover = bytes(data[end:])
 
 
 def autodetect_port():
@@ -185,6 +219,16 @@ class LectroTIC4:
 
     def __init__(self, port=None, timeout=0.5):
         self._ser = serial.Serial(port or autodetect_port(), timeout=timeout)
+        # Ask for a deep OS receive buffer where the platform allows it
+        # (Windows SetupComm; POSIX has no equivalent and its ~64 KB tty
+        # buffer is fixed). The streaming reader thread is the real
+        # defense against overflow; this just widens the margin.
+        set_buffer_size = getattr(self._ser, "set_buffer_size", None)
+        if set_buffer_size is not None:
+            try:
+                set_buffer_size(rx_size=1 << 20)
+            except OSError:
+                pass
         # The library's contract is that streaming is on at entry and
         # at exit. query() briefly disables the stream so a response
         # comes back clean; _stream_on tracks that so query() can skip
@@ -340,13 +384,23 @@ class LectroTIC4:
             if chunk:
                 buf += chunk
 
-    def discard_pending(self):
+    def discard_pending(self, settle_s=0.0):
         """Drop everything currently in flight so the next read sees
         only post-discard records. Channel configuration is preserved.
         Synchronizes via the firmware marker (no sleeps); the prior
-        stream state is restored."""
+        stream state is restored.
+
+        settle_s additionally discards the first settle_s seconds of
+        NEW data. Use it after reconfiguring the pulse source: a
+        generator mid-transition can emit a glitch or pause, and
+        records captured during that transient are post-discard by
+        time but pre-change by intent."""
         was_on = self._stream_on
         self._sync_to_marker()
+        if settle_s > 0:
+            self.set_stream_enabled(True)
+            self.read_raw(settle_s)
+            self._sync_to_marker()
         if was_on:
             self.set_stream_enabled(True)
 
@@ -398,48 +452,69 @@ class LectroTIC4:
         self._sync_to_marker()
         self.set_stream_enabled(True)
 
-    def _records(self, deadline):
-        leftover = b""
-        while True:
-            if deadline is not None and time.monotonic() >= deadline:
-                return
-            data = self._ser.read(4096)
-            if not data:
+    def _reader_main(self, q, stop):
+        """Reader-thread body: move bytes from the serial port into the
+        queue as fast as they arrive. No decoding happens here, so this
+        thread never falls behind the wire."""
+        self._ser.timeout = 0.05
+        while not stop.is_set():
+            data = self._ser.read(65536)
+            if data:
+                q.put(data)
+
+    def _queued_chunks(self, q, deadline):
+        """Yield byte chunks from the reader queue until the deadline
+        passes (forever if None), then drain whatever the reader had
+        already buffered so the window's full capture is decoded."""
+        while deadline is None or time.monotonic() < deadline:
+            try:
+                yield q.get(timeout=0.05)
+            except queue.Empty:
                 continue
-            buf = leftover + data
-            n = len(buf) // _BINARY_RECORD_LEN
-            for i in range(n):
-                off = i * _BINARY_RECORD_LEN
-                sec = int.from_bytes(buf[off:off + 4], "little")
-                cnt = int.from_bytes(buf[off + 4:off + 8], "little")
-                channel_edge = cnt >> _COUNTER_CHAN_EDGE_SHIFT
-                chan = channel_edge >> 1
-                if cnt & _COUNTER_SPECIAL_BIT:
-                    msgtype = cnt & _COUNTER_MSGTYPE_MASK
-                    if msgtype == _MSG_OUTPUT_CLEARED:
-                        yield OutputCleared()
-                    elif msgtype == _MSG_PULSES_LOST:
-                        yield PulsesLost(chan, sec & 0xFFFF, sec >> 16)
-                    elif msgtype == _MSG_OSC_FAIL:
-                        yield OscillatorFailure()
-                    # unknown special types: skip (forward-compatible)
-                else:
-                    ticks = cnt & _COUNTER_VALUE_MASK
-                    pol = "+" if channel_edge & 1 else "-"
-                    yield Timestamp(chan, sec, ticks * _NS_PER_TICK, pol)
-            leftover = buf[n * _BINARY_RECORD_LEN:]
+        while True:
+            try:
+                yield q.get_nowait()
+            except queue.Empty:
+                return
+
+    def _stream_records(self, deadline):
+        """Decode and yield stream records, with the port serviced by a
+        dedicated reader thread that does nothing but move bytes into
+        an in-memory queue.
+
+        The thread exists for a real performance reason: the device can
+        emit records faster than Python can turn them into namedtuples
+        (~114k records/s on the wire vs ~100k/s of inline decode), and
+        the device has only ~180 ms of on-board buffering at full rate.
+        If reading and decoding shared one loop, any decode shortfall
+        or GC pause would stop the port reads, backpressure the device
+        through the kernel's serial buffer, and overflow the device's
+        ring -- real data loss, caused by the host. Splitting them
+        means a slow consumer only delays decoding; the byte drain
+        never stops, so the device never blocks on the host."""
+        q = queue.SimpleQueue()
+        stop = threading.Event()
+        reader = threading.Thread(target=self._reader_main, args=(q, stop),
+                                  daemon=True)
+        reader.start()
+        try:
+            yield from _decode_chunks(self._queued_chunks(q, deadline))
+        finally:
+            stop.set()
+            reader.join()
 
     def iter_records(self):
-        """Yield Timestamp namedtuples forever; the caller breaks out."""
+        """Yield record namedtuples forever; the caller breaks out."""
         self._begin_stream()
-        return self._records(None)
+        return self._stream_records(None)
 
     def read_for(self, duration_s):
         """Like iter_records, but stop after duration_s wall-clock
-        seconds even if the device is silent."""
+        seconds even if the device is silent. Everything the device
+        emitted within the window is yielded, even if decoding finishes
+        after the window closes."""
         self._begin_stream()
-        self._ser.timeout = 0.05
-        return self._records(time.monotonic() + duration_s)
+        return self._stream_records(time.monotonic() + duration_s)
 
 
 # ---- CLI ------------------------------------------------------------------
