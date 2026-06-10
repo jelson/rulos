@@ -144,13 +144,22 @@ def zipper_gaps(records, period_ns):
     return deltas
 
 
-def median_interval(times):
-    """Median spacing between consecutive edges (robust to occasional
-    dropped pulses). None if fewer than 2 samples."""
+def strict_interval(times, tol_ns=12):
+    """Mean spacing between consecutive edges. Every individual gap
+    must sit within tol_ns of the median gap: a dropped, duplicated,
+    or misplaced pulse is a failure, never averaged away. None if
+    fewer than 2 samples."""
     if len(times) < 2:
         return None
     diffs = [b - a for a, b in zip(times, times[1:])]
-    return statistics.median(diffs)
+    med = statistics.median(diffs)
+    worst = max(diffs, key=lambda d: abs(d - med))
+    if abs(worst - med) > tol_ns:
+        raise RuntimeError(
+            f"a gap deviates {worst - med:+.1f} ns from the "
+            f"{med:.1f} ns median -- a pulse was dropped, duplicated, "
+            f"or misplaced")
+    return sum(diffs) / len(diffs)
 
 
 def configure_ts(ts):
@@ -257,7 +266,7 @@ def measure_rate(ts, pg, freq_hz, duration_s):
     times = by_channel(records)
     out = {}
     for ch in (0, 1):
-        iv = median_interval(times.get(ch, []))
+        iv = strict_interval(times.get(ch, []))
         if iv is None or len(times.get(ch, [])) < 50:
             raise RuntimeError(f"too few samples on ch{ch} at {freq_hz} Hz")
         out[ch] = iv / divider  # divider downsamples; scale back to true period
@@ -306,7 +315,7 @@ def test_async_pairing(ts, pg, duration_s):
     print(f"  set ch0={f1} Hz then ch1={f2} Hz; both should track {f2} Hz "
           f"({expect_ns:.1f} ns)")
     for ch in (0, 1):
-        iv = median_interval(times.get(ch, []))
+        iv = strict_interval(times.get(ch, []))
         if iv is None or len(times.get(ch, [])) < 50:
             raise RuntimeError(f"too few samples on ch{ch} in pairing test")
         err_pct = 100.0 * (iv - expect_ns) / expect_ns

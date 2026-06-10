@@ -1161,10 +1161,16 @@ def collect_all(tic, duration_s):
 
 def complete_firings(per, split_ns=PHASE_LOCK_SPLIT_NS):
     """Group every channel's timestamps into firings (a gap > split_ns
-    starts a new firing) and keep those with exactly one record on each
-    of the four channels, as {channel: abs_ns}. Incomplete firings -- a
-    missed edge or one clipped by the capture-window edge -- are
-    dropped, so offsets are computed only where all four are present."""
+    starts a new firing). Returns (complete, interior_incomplete):
+    `complete` is [{channel: abs_ns}] for firings with exactly one
+    record on each of the four channels; `interior_incomplete` counts
+    firings that are missing a channel even though they lie strictly
+    inside every channel's coverage -- a missed edge, which callers
+    must treat as a failure. Firings at the coverage edges may
+    legitimately be partial (the window, or a channel's final emission
+    batch, clips them) and are excluded from both."""
+    if not all(per.get(c) for c in ALL_CHANNELS):
+        return [], 0
     tagged = sorted((t, ch) for ch, recs in per.items() for t, _ in recs)
     firings, cur, last = [], {}, None
     for t, ch in tagged:
@@ -1175,15 +1181,37 @@ def complete_firings(per, split_ns=PHASE_LOCK_SPLIT_NS):
         last = t
     if cur:
         firings.append(cur)
-    return [{c: f[c][0] for c in ALL_CHANNELS}
-            for f in firings
-            if all(len(f.get(c, [])) == 1 for c in ALL_CHANNELS)]
+    lo = max(min(t for t, _ in recs) for recs in per.values())
+    hi = min(max(t for t, _ in recs) for recs in per.values())
+    complete, interior_incomplete = [], 0
+    for f in firings:
+        if all(len(f.get(c, [])) == 1 for c in ALL_CHANNELS):
+            complete.append({c: f[c][0] for c in ALL_CHANNELS})
+        else:
+            ts = [t for c in ALL_CHANNELS for t in f.get(c, [])]
+            if ts and min(ts) > lo and max(ts) < hi:
+                interior_incomplete += 1
+    return complete, interior_incomplete
 
 
 def median_offsets(firings):
     """Median offset (ns) of each channel from ch0 across firings."""
     return {c: statistics.median(f[c] - f[0] for f in firings)
             for c in ALL_CHANNELS}
+
+
+def expect_firing_cadence(firings, tol_ns=12):
+    """Consecutive complete firings must be exactly one source period
+    apart -- a whole missing firing (all four channels at once) shows
+    as a multiple-period gap that per-channel completeness can't see."""
+    period_ns = PHASE_LOCK_PERIOD_S * 1e9
+    gaps = [b[0] - a[0] for a, b in zip(firings, firings[1:])]
+    bad = [g for g in gaps if abs(g - period_ns) > tol_ns]
+    worst = max(bad, key=lambda g: abs(g - period_ns)) if bad else 0
+    return expect(not bad,
+                  f"every firing one period apart ({len(bad)}/{len(gaps)} "
+                  f"gaps off, worst {worst:+.1f} ns)" if bad else
+                  f"every firing one period apart ({len(gaps)} gaps)")
 
 
 def configure_ts_4ch(tic, slope):
@@ -1230,13 +1258,22 @@ def phase_phase_lock(sg, tic):
     ok = expect(all(counts[c] > 50 for c in ALL_CHANNELS),
                 f"all four channels produced records (TIM5 alive) {counts}")
     ok &= expect(lost == 0, f"no loss (lost={lost})")
-    firings = complete_firings(per)
+    firings, interior_bad = complete_firings(per)
     if not firings:
         return ok and expect(False,
                              "coincident firings paired on all 4 channels")
+    ok &= expect(interior_bad == 0,
+                 f"every interior firing complete on all four channels "
+                 f"({interior_bad} incomplete)")
+    ok &= expect_firing_cadence(firings)
     med = median_offsets(firings)
     print("  offset from ch0 (ns): " +
           ", ".join(f"ch{c}={med[c]:+.1f}" for c in ALL_CHANNELS))
+    spread = max(abs((f[c] - f[0]) - med[c])
+                 for f in firings for c in ALL_CHANNELS)
+    ok &= expect(spread <= 12,
+                 f"every firing's offsets within 12 ns of the median "
+                 f"(worst {spread:.1f} ns)")
     tim5 = statistics.median([med[c] for c in TIM5_GROUP])
     ok &= expect(abs(med[2]) <= 8,
                  f"ch2 coincident with ch0 (both TIM2): {med[2]:+.1f} ns")
@@ -1262,12 +1299,21 @@ def phase_stair(sg, tic, step_ns=100):
     tic.discard_pending()
     per, lost = collect_all(tic, 2.0)
     ok = expect(lost == 0, f"no loss (lost={lost})")
-    firings = complete_firings(per)
+    firings, interior_bad = complete_firings(per)
     if not firings:
         return ok and expect(False, "firings paired on all 4 channels")
+    ok &= expect(interior_bad == 0,
+                 f"every interior firing complete on all four channels "
+                 f"({interior_bad} incomplete)")
+    ok &= expect_firing_cadence(firings)
     med = median_offsets(firings)
     print("  measured offset from ch0 (ns): " +
           ", ".join(f"ch{c}={med[c]:+.1f}" for c in ALL_CHANNELS))
+    spread = max(abs((f[c] - f[0]) - med[c])
+                 for f in firings for c in ALL_CHANNELS)
+    ok &= expect(spread <= 12,
+                 f"every firing's offsets within 12 ns of the median "
+                 f"(worst {spread:.1f} ns)")
     for c in ALL_CHANNELS:
         ok &= expect(abs(med[c] - c * step_ns) <= 12,
                      f"ch{c} at programmed {c * step_ns} ns offset "
