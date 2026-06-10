@@ -119,4 +119,4 @@ void timestamper_config_save(void);
 // format, stream enable) is preserved.
 void timestamper_discard_pending(void);
 
-#define TIMESTAMPER_FW_VERSION "0.16.0"
+#define TIMESTAMPER_FW_VERSION "0.17.0"

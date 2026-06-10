@@ -7,7 +7,7 @@ that every pulse makes it out of the LectroTIC-4 to the host. This
 measures USB drain bandwidth, not internal capture (deadtime.py covers
 the bursty regime where the on-device buffer absorbs short overruns).
 
-For each frequency we reconfigure the siggen, then drain the
+For each frequency we reconfigure the PG-4, then drain the
 post-reconfigure residue for --settle seconds with the new signal
 already running (transition isolation: a frequency change leaves
 DMA-capture/ring residue from the old rate that the firmware streams
@@ -28,7 +28,7 @@ Usage:
   sustained_rate.py --bottom 5000 --top 200000 custom range in Hz
   sustained_rate.py --measure 10               longer measurement window
   sustained_rate.py --port /dev/ttyACM1        custom serial port
-  sustained_rate.py --host siggen2             custom signal generator host
+  sustained_rate.py --pg-port /dev/ttyACM2     custom PG-4 serial port
 """
 
 import argparse
@@ -37,13 +37,15 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "util"))
+sys.path.insert(0, os.path.join(
+    os.path.dirname(__file__), "..", "..", "pulsegen", "util"))
 
 from tsctl import LectroTIC4, Timestamp, PulsesLost, OscillatorFailure
-from pulse_sources import make_generator
+from pgctl import Pulsegen
 from regression_test import parse_text_stream
 
 
-def measure_rate(tic, measure_s, text=False, settle_s=0.5):
+def measure_rate(tic, measure_s, channel=0, text=False, settle_s=0.5):
     """Drain the post-reconfigure residue for settle_s with the new
     signal already running, then collect the stream for measure_s.
     Returns (timestamps_float_seconds, lost_count). lost_count sums the
@@ -53,7 +55,7 @@ def measure_rate(tic, measure_s, text=False, settle_s=0.5):
     signal). The two formats have different USB-drain ceilings.
 
     The settle drain is transition isolation, mirroring
-    regression_test.phase_sustained: a siggen frequency change leaves
+    regression_test.phase_sustained: a PG-4 frequency change leaves
     old-rate DMA-capture/ring residue that the firmware streams out
     after the marker sync. Measuring it as a gap misreads a one-time
     reconfiguration transient as a sustained-rate failure (a single
@@ -66,7 +68,7 @@ def measure_rate(tic, measure_s, text=False, settle_s=0.5):
         tic.read_raw(settle_s)   # drain old-rate residue
         tic.discard_pending()    # clean measurement start
         timestamps, _pols, _others, overcaptures, overflows, _comments = \
-            parse_text_stream(tic.read_raw(measure_s), channel=0)
+            parse_text_stream(tic.read_raw(measure_s), channel=channel)
         return timestamps, overcaptures + overflows
 
     tic.discard_pending()
@@ -76,7 +78,8 @@ def measure_rate(tic, measure_s, text=False, settle_s=0.5):
     lost = 0
     for r in tic.read_for(measure_s):
         if isinstance(r, Timestamp):
-            timestamps.append(r.seconds + r.nanoseconds * 1e-9)
+            if r.channel == channel:
+                timestamps.append(r.seconds + r.nanoseconds * 1e-9)
         elif isinstance(r, PulsesLost):
             lost += r.overcaptures + r.buf_overflows
         elif isinstance(r, OscillatorFailure):
@@ -86,18 +89,19 @@ def measure_rate(tic, measure_s, text=False, settle_s=0.5):
     return timestamps, lost
 
 
-def test_rate(sg, tic, hz, measure_s, tolerance, text=False, settle_s=0.5):
-    """Configure siggen for `hz` Hz continuous, measure, and decide
+def test_rate(sg, tic, hz, measure_s, tolerance, channel=0, text=False,
+              settle_s=0.5):
+    """Configure the PG-4 for `hz` Hz continuous, measure, and decide
     pass/fail. Returns True on pass."""
     period_s = 1.0 / hz
     pulse_width_s = min(200e-9, period_s / 4)
 
     print(f"  Testing {hz:>7.0f} Hz "
           f"(pulse width {pulse_width_s * 1e9:.0f} ns)...")
-    sg.periodic(hz, pulse_width_s=pulse_width_s)
+    sg.periodic(channel, hz, width_s=pulse_width_s)
 
-    timestamps, lost = measure_rate(tic, measure_s, text=text,
-                                    settle_s=settle_s)
+    timestamps, lost = measure_rate(tic, measure_s, channel=channel,
+                                    text=text, settle_s=settle_s)
 
     deltas = [timestamps[i] - timestamps[i - 1]
               for i in range(1, len(timestamps))]
@@ -136,27 +140,19 @@ def main():
                    help="Upper bound in Hz (default: 100000)")
     p.add_argument("--port", default=None,
                    help="LectroTIC-4 serial port (default: autodetect)")
-    p.add_argument("--generator", choices=["rigol", "pg4"],
-                   default="rigol",
-                   help="pulse source: 'rigol' = DG1022Z on LAN, "
-                        "'pg4' = Lectrobox PG-4 on USB (continuous "
-                        "rates only -- exactly what this test needs; "
-                        "its rate floor is ~1.9 kHz, so use "
-                        "--bottom >= 2000)")
-    p.add_argument("--host", default="siggen",
-                   help="DG1022Z hostname (default: siggen)")
     p.add_argument("--pg-port", default=None,
                    help="PG-4 serial port (default: autodetect)")
-    p.add_argument("--pg-channel", type=int, default=0,
-                   choices=[0, 1, 2, 3],
-                   help="PG-4 output channel wired to the "
-                        "timestamper (default 0)")
+    p.add_argument("--channel", type=int, default=0, choices=[0, 1, 2, 3],
+                   help="Channel under test; the PG-4 output wired "
+                        "straight through to it is driven (default 0). "
+                        "The PG-4 floors at ~1.9 kHz, so use "
+                        "--bottom >= 2000.")
     p.add_argument("--precision", type=float, default=500,
                    help="Stop when range narrows to this many Hz "
                         "(default: 500)")
     p.add_argument("--measure", type=float, default=5.0,
                    help="Seconds to measure each frequency (default: 5)")
-    # The siggen and device run off the same 10 MHz lab standard (no
+    # The PG-4 and device run off the same 10 MHz lab standard (no
     # drift between them) and the device timestamps at 4 ns, so a clean
     # gap is the period +/- a few ns; a dropped pulse is a whole-period
     # excursion. 12 ns matches regression_test.py's GAP_TOL_S.
@@ -170,7 +166,7 @@ def main():
     p.add_argument("--settle", type=float, default=0.5,
                    help="Seconds to drain post-reconfigure residue "
                         "before each measurement window; transition "
-                        "isolation so a one-time siggen-reconfig "
+                        "isolation so a one-time PG-4-reconfig "
                         "transient is not misread as a rate failure "
                         "(default: 0.5, matching phase_sustained)")
     args = p.parse_args()
@@ -179,12 +175,13 @@ def main():
     hi = args.top
     text = args.text
     settle = args.settle
+    channel = args.channel
 
     with LectroTIC4(args.port) as tic:
         print(f"Searching for max sustained rate in range "
               f"[{lo:.0f}, {hi:.0f}] Hz")
         print(f"LectroTIC-4 port: {tic.port}")
-        print(f"Signal generator: {args.host}")
+        print(f"Channel under test: {channel}")
         print(f"Wire format: {'TEXT' if text else 'BINARY'}")
         print(f"Measurement: {args.measure}s/frequency, "
               f"{settle:.1f}s settle, per-gap "
@@ -192,26 +189,24 @@ def main():
               f"loss via in-band PULSES_LOST")
         print()
 
-        with make_generator(args.generator, siggen_host=args.host,
-                            pg_port=args.pg_port,
-                            pg_channel=args.pg_channel) as sg:
-            print(f"Connected to: {sg.idn()} ({sg.name})")
+        with Pulsegen(port=args.pg_port) as sg:
+            print(f"Connected to: {sg.idn()}")
             print()
 
             print("Verifying lower bound passes...")
             if not test_rate(sg, tic, lo, args.measure, args.tolerance,
-                             text=text):
+                             channel=channel, text=text):
                 print(f"ERROR: Lower bound {lo:.0f} Hz fails -- "
                       f"decrease --bottom")
-                sg.output_off()
+                sg.off()
                 sys.exit(1)
 
             print("Verifying upper bound fails...")
             if test_rate(sg, tic, hi, args.measure, args.tolerance,
-                         text=text):
+                         channel=channel, text=text):
                 print(f"NOTE: Upper bound {hi:.0f} Hz already passes -- "
                       f"increase --top to find the ceiling")
-                sg.output_off()
+                sg.off()
                 sys.exit(0)
 
             print()
@@ -221,15 +216,15 @@ def main():
                 if mid == lo or mid == hi:
                     break
                 if test_rate(sg, tic, mid, args.measure, args.tolerance,
-                             text=text):
+                             channel=channel, text=text):
                     lo = mid
                 else:
                     hi = mid
 
             print()
             print(f"Sustained rate is between {lo:.0f} Hz and {hi:.0f} Hz")
-            sg.output_off()
-            print("Signal generator output off.")
+            sg.off()
+            print("PG-4 output off.")
 
 
 if __name__ == "__main__":

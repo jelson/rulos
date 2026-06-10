@@ -2,12 +2,9 @@
 
 """Binary-search for the LectroTIC-4's dead time.
 
-Drives a pulse generator -- a Rigol DG1022Z on LAN or a Lectrobox PG-4
-on USB, selected with --generator (see pulse_sources.py) -- to produce
-pulse bursts at various spacings while reading the LectroTIC-4's serial
-output to determine whether all pulses in each burst are captured. The
-measurement is built on N-cycle bursts, so a generator without burst
-support (can_burst) is rejected.
+Drives a Lectrobox PG-4 (pgctl) over USB to produce N-cycle pulse
+bursts at various spacings while reading the LectroTIC-4's serial
+output to determine whether all pulses in each burst are captured.
 
 Usage:
   deadtime.py                           defaults: 16383-pulse bursts,
@@ -15,9 +12,8 @@ Usage:
   deadtime.py --ncyc 4096              just the per-channel DMA buffer
   deadtime.py --bottom 50 --top 500     custom range in ns
   deadtime.py --port /dev/ttyACM1       custom serial port
-  deadtime.py --host siggen2            custom signal generator hostname
-  deadtime.py --generator pg4           burst from a PG-4 instead
-  deadtime.py --channel 2               sub-channel to score (default 0)
+  deadtime.py --pg-port /dev/ttyACM2    custom PG-4 serial port
+  deadtime.py --channel 2               channel under test (default 0)
 
 The pass/fail signal is the device's loss reporting. In BINARY mode
 (default) it counts the in-band PULSES_LOST records the firmware emits,
@@ -35,9 +31,11 @@ from dataclasses import dataclass
 
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "util"))
+sys.path.insert(0, os.path.join(
+    os.path.dirname(__file__), "..", "..", "pulsegen", "util"))
 
 from tsctl import LectroTIC4, Timestamp, PulsesLost, OscillatorFailure
-from pulse_sources import make_generator
+from pgctl import Pulsegen
 from regression_test import parse_text_stream
 
 
@@ -58,7 +56,7 @@ def count_pulses(tic, channel, measure_time_s=3.0, text=False, verbose=True):
     regression_test.parse_text_stream."""
     if text:
         # Drop the device's ring + host buffer so we measure only bursts
-        # captured under the current siggen configuration.
+        # captured under the current PG-4 configuration.
         tic.send("FORM:DATA TEXT")
         tic.set_stream_enabled(True)
         tic.discard_pending()
@@ -112,7 +110,7 @@ def test_spacing(sg, tic, ns, channel, ncyc=3, text=False, verbose=True):
     """
     print(f"  Testing {ns:.1f} ns ({ncyc} pulses/burst)...")
 
-    sg.pulse_burst(ns, ncyc=ncyc)
+    sg.pulse_burst(channel, ns, ncyc)
 
     result = count_pulses(tic, channel, text=text, verbose=verbose)
 
@@ -145,19 +143,8 @@ def main():
                         help="Upper bound in ns (default: 1000)")
     parser.add_argument("--port", default=None,
                         help="LectroTIC-4 serial port (default: autodetect)")
-    parser.add_argument("--generator", choices=["rigol", "pg4"],
-                        default="rigol",
-                        help="pulse source: 'rigol' = DG1022Z on LAN, "
-                             "'pg4' = Lectrobox PG-4 on USB (both produce "
-                             "the N-cycle bursts this test needs)")
-    parser.add_argument("--host", default="siggen",
-                        help="DG1022Z hostname (default: siggen)")
     parser.add_argument("--pg-port", default=None,
                         help="PG-4 serial port (default: autodetect)")
-    parser.add_argument("--pg-channel", type=int, default=0,
-                        choices=[0, 1, 2, 3],
-                        help="PG-4 output channel wired to the "
-                             "timestamper (default 0)")
     parser.add_argument("--precision", type=float, default=5,
                         help="Stop when range narrows to this many ns "
                              "(default: 5)")
@@ -169,10 +156,11 @@ def main():
                              "in hardware and give no useful dead-time "
                              "data. Default: 16383.")
     parser.add_argument("--channel", type=int, default=0,
-                        help="Sub-channel whose burst completeness is "
-                             "scored. The signal generator drives one "
-                             "input; that input's rising sub-channel is "
-                             "ch0, falling ch1, etc. (default: 0)")
+                        choices=[0, 1, 2, 3],
+                        help="Channel under test (0-3). The PG-4 output "
+                             "wired straight through to this jack is "
+                             "driven and its burst completeness scored "
+                             "(default: 0)")
     parser.add_argument("--text", action="store_true",
                         help="Score the ASCII TEXT stream instead of the "
                              "BINARY union (different USB-drain ceiling)")
@@ -191,19 +179,12 @@ def main():
         print(f"Searching for dead time in range [{lo:.0f}, {hi:.0f}] ns, "
               f"{ncyc} pulses/burst")
         print(f"LectroTIC-4 port: {tic.port}")
-        print(f"Signal generator: {args.host}")
-        print(f"Scoring sub-channel: {channel}")
+        print(f"Channel under test: {channel}")
         print(f"Wire format: {'TEXT' if text else 'BINARY'}")
         print()
 
-        with make_generator(args.generator, siggen_host=args.host,
-                            pg_port=args.pg_port,
-                            pg_channel=args.pg_channel) as sg:
-            if not sg.can_burst:
-                sys.exit(f"{sg.name} cannot produce the N-cycle bursts "
-                         f"this measurement is built on; choose a "
-                         f"--generator with burst support")
-            print(f"Connected to: {sg.idn()} ({sg.name})")
+        with Pulsegen(port=args.pg_port) as sg:
+            print(f"Connected to: {sg.idn()}")
             print()
 
             # Verify endpoints: top should pass, bottom should fail.
@@ -219,7 +200,7 @@ def main():
                 print(f"NOTE: --bottom == --top == {lo:.0f} ns; that "
                       f"spacing passes -- dead time is at or below "
                       f"{lo:.0f} ns")
-                sg.output_off()
+                sg.off()
                 sys.exit(0)
 
             print("Verifying lower bound...")
@@ -228,7 +209,7 @@ def main():
                 print(f"NOTE: Lower bound {lo:.0f} ns already passes "
                       f"-- decrease --bottom or dead time is below "
                       f"{lo:.0f} ns")
-                sg.output_off()
+                sg.off()
                 sys.exit(0)
 
             print()
@@ -247,7 +228,7 @@ def main():
 
             print()
             print(f"Dead time is between {lo:.0f} ns and {hi:.0f} ns")
-            sg.output_off()
+            sg.off()
             print("Signal generator output off.")
 
 

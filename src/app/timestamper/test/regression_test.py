@@ -2,9 +2,8 @@
 
 """LectroTIC-4 end-to-end regression test.
 
-Drives a pulse source -- a Rigol DG1022Z on LAN or a Lectrobox PG-4 on
-USB, selected with --generator (see pulse_sources.py) -- and exercises
-every wire/host path of the 4-channel device:
+Drives a Lectrobox PG-4 (pgctl) over USB and exercises every wire/host
+path of the 4-channel device:
 
   * TEXT mode  -- the device's ASCII stream, read straight off the
     serial port and parsed by this file's own reader (also the only
@@ -36,20 +35,22 @@ does not interleave them globally, so the both-edge phases sort
 host-side, then assert strict +/- alternation and per-sub-stream
 arrival order.
 
-The pulse source's output must be wired to the input selected with
---channel (default 0), and source and device must share the same
-10 MHz reference. The burst-based phases (burst, overcapture,
-polarity-burst, single-pulse) need the Rigol's N-cycle burst mode and
-are skipped on the PG-4; the slow periodic phases run at the source's
-preferred base rate (10 Hz on the Rigol, 2 kHz on the PG-4 whose
-HRTIM timebase can't go slower), with count tolerances scaled to it.
+The signal source is a Lectrobox PG-4, wired straight through (PG-4
+ch_i -> timestamper jack i, all four) and sharing the timestamper's
+10 MHz reference. The per-channel phases drive the one PG-4 channel
+wired to the jack under test (--channel); the cross-channel phase-lock
+phases drive all four in SYNC mode. Jacks 0/2 are captured by TIM2 and
+jacks 1/3 by the phase-locked TIM5, so the phase-lock phases also check
+that the two timers share one timeline.
+
+The PG-4's HRTIM timebase can't go below ~1.9 kHz, so the periodic
+phases run at PULSE_HZ (2 kHz) and count tolerances scale with rate.
 
 Usage:
   regression_test.py
   regression_test.py --channel 1
   regression_test.py --duration 10
-  regression_test.py --siggen-host siggen2
-  regression_test.py --generator pg4 --pg-channel 0
+  regression_test.py --pg-port /dev/ttyACM2
 """
 
 import argparse
@@ -64,25 +65,31 @@ import time
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "util"))
 sys.path.insert(0, os.path.join(
+    os.path.dirname(__file__), "..", "..", "pulsegen", "util"))
+sys.path.insert(0, os.path.join(
     os.path.dirname(__file__), "..", "..", "..", "util"))
 import bmpflash
 from tsctl import LectroTIC4, Timestamp, PulsesLost
-from pulse_sources import make_generator
+from pgctl import Pulsegen
 
 TSCTL = os.path.join(os.path.dirname(__file__), "..", "util", "tsctl.py")
 
-# Source-rate parameters for the slow periodic phases. These defaults
-# match the Rigol; main() overrides them from the chosen generator's
-# base_hz / base_width_s (the PG-4 can't go below ~1.9 kHz).
-PULSE_HZ = 10
-PULSE_WIDTH_S = 0.001
+# Periodic-phase rate. The PG-4's HRTIM timebase floors at ~1.9 kHz, so
+# the "slow" phases run at 2 kHz; count tolerances scale with the rate.
+PULSE_HZ = 2000
+PULSE_WIDTH_S = 5e-6
 PERIOD_S = 1.0 / PULSE_HZ
 
+# Channels captured by each of the two phase-locked 32-bit timers.
+TIM2_GROUP = (0, 2)  # jacks on PA0/PA2
+TIM5_GROUP = (1, 3)  # jacks on PA1/PA3
+ALL_CHANNELS = (0, 1, 2, 3)
+
 # Per-gap timing tolerance, applied to EVERY device-timestamp interval
-# in every phase. The siggen and the device both run off the same
+# in every phase. The PG-4 and the device both run off the same
 # 10 MHz lab standard, so there is no frequency drift between them; the
 # device timestamps with 4 ns resolution. A clean gap is therefore
-# nominal ± a handful of ns (siggen DDS quantization + one capture
+# nominal ± a handful of ns (PG-4 250 ps quantization + one capture
 # tick). A single missed pulse, by contrast, moves a gap by a whole
 # period -- ≥40 µs at 25 kHz, 100 ms at 10 Hz -- thousands of times
 # outside this bound. One tolerance, one checker, every phase: any
@@ -366,7 +373,7 @@ def phase_periodic(mode, sg, tic, channel, duration_s, divider,
     label = (f"{edge} edge only" if divider == 1
              else f"{edge}, divider={divider}")
     print(f"\n=== {label} [{mode.name}] ===")
-    sg.periodic(PULSE_HZ, PULSE_WIDTH_S)
+    sg.periodic(channel, PULSE_HZ, PULSE_WIDTH_S)
     tic.set_slope(channel, slope)
     tic.set_divider(channel, divider)
     times, pols, others, ovc, ovf, _ = mode.capture(
@@ -391,7 +398,7 @@ def phase_periodic(mode, sg, tic, channel, duration_s, divider,
 
 def phase_both(mode, sg, tic, channel, duration_s):
     print(f"\n=== both edges [{mode.name}] ===")
-    sg.periodic(PULSE_HZ, PULSE_WIDTH_S)
+    sg.periodic(channel, PULSE_HZ, PULSE_WIDTH_S)
     tic.set_slope(channel, "BOTH")
     tic.set_divider(channel, 1)
     times, pols, others, ovc, ovf, _ = mode.capture(
@@ -469,7 +476,7 @@ def phase_both(mode, sg, tic, channel, duration_s):
 
 def phase_output_gating(mode, sg, tic, channel):
     print(f"\n=== OUTPut:STATe gating [{mode.name}] ===")
-    sg.periodic(PULSE_HZ, PULSE_WIDTH_S)
+    sg.periodic(channel, PULSE_HZ, PULSE_WIDTH_S)
     tic.set_slope(channel, "POS")
     tic.set_divider(channel, 1)
 
@@ -492,7 +499,7 @@ def phase_output_gating(mode, sg, tic, channel):
 
 def _group_bursts(times):
     """Split times into bursts: records within 0.5 s are one burst
-    (the siggen repeats a burst every 1 s). Returns burst sizes."""
+    (the PG-4 repeats a burst every 1 s). Returns burst sizes."""
     sizes, i = [], 0
     while i < len(times):
         j = i + 1
@@ -507,7 +514,7 @@ def capture_burst(mode, sg, tic, channel, slope, ncyc, spacing_ns,
                   window_s=3.5):
     tic.set_slope(channel, slope)
     tic.set_divider(channel, 1)
-    actual_ns = sg.pulse_burst(spacing_ns, ncyc=ncyc)
+    actual_ns = sg.pulse_burst(channel, spacing_ns, ncyc)
     times, pols, others, ovc, ovf, comments = mode.capture(
         tic, channel, window_s)
     for c in comments:
@@ -550,16 +557,16 @@ def phase_overcapture(mode, sg, tic, channel, ncyc=20000):
     "# ch<N>: ..." line and the binary PULSES_LOST record (one record
     carrying both the overcapture and buffer-overflow counts).
 
-    A 20k-pulse burst (>> the 16,384 ring) at the siggen's minimum
-    spacing forces loss. With the DG1022Z (PULS-mode floor ~67 ns) the
-    device keeps up edge-for-edge, so the loss shows as buffer
-    overflow, not overcaptures -- the count breakdown is printed. A
-    faster generator (one able to outrun the dead-time floor) will also
-    drive the overcapture count nonzero; the assertion accepts either,
-    so it validates the report path now and overcaptures later."""
+    A 20k-pulse burst (>> the 16,384 ring) at the PG-4's minimum
+    spacing forces loss. At the PG-4's ~48 ns floor the device keeps up
+    edge-for-edge, so the loss shows as buffer overflow, not
+    overcaptures -- the count breakdown is printed. A generator able to
+    outrun the dead-time floor would also drive the overcapture count
+    nonzero; the assertion accepts either, so it validates the report
+    path now and overcaptures later."""
     print(f"\n=== overcapture: {ncyc}-pulse burst, min spacing "
           f"[{mode.name}] ===")
-    # Request 1 ns; the DG1022Z clamps to its PULS-mode floor.
+    # Request 1 ns; pulse_burst clamps it up to the PG-4's floor.
     actual_ns, _times, _pols, sizes, others, ovc, ovf = capture_burst(
         mode, sg, tic, channel, "POS", ncyc, spacing_ns=1)
     print(f"  spacing {actual_ns:.1f} ns; bursts {sizes}; "
@@ -623,7 +630,7 @@ def phase_sustained(mode, sg, tic, channel):
     tic.set_slope(channel, "POS")
     tic.set_divider(channel, 1)
     # Continuous (non-burst) pulse train at the mode's rated rate.
-    sg.periodic(hz, pulse_width_s=min(1e-6, 0.2 / hz))
+    sg.periodic(channel, hz, width_s=min(1e-6, 0.2 / hz))
     # Transition isolation: a preceding burst phase can leave the
     # device's DMA capture buffer holding high-rate residue that the
     # firmware drains into the (just-cleared) ring after the marker
@@ -737,7 +744,7 @@ def phase_slope_switch(sg, tic, channel):
     behavior, so it runs once (text)."""
     width = PERIOD_S / 10
     print("\n=== slope switch POS->NEG mid-capture ===")
-    sg.periodic(PULSE_HZ, pulse_width_s=width)
+    sg.periodic(channel, PULSE_HZ, width_s=width)
     tic.set_slope(channel, "POS")
     tic.set_divider(channel, 1)
     tic.send("FORM:DATA TEXT")
@@ -760,7 +767,7 @@ def phase_slope_switch(sg, tic, channel):
         if not switched and len(times) >= want // 3:
             tic.send(f"INP{channel}:SLOP NEG")  # POS -> NEG mid-stream
             switched = True
-    sg.output_off()
+    sg.off()
 
     # The period/20 split only separates the lone crossover gap from
     # the steady run -- it's not the timing check. Once separated, the
@@ -821,7 +828,7 @@ def phase_slope_switch(sg, tic, channel):
 def phase_single_pulse(mode, sg, tic, channel, n=5):
     """A lone, isolated pulse must reach the host promptly -- not be
     held back waiting for more activity. Drives one 50 ns pulse per
-    second (siggen burst, ncyc=1, internal 1 s trigger) and times each
+    second (PG-4 burst, ncyc=1, internal 1 s trigger) and times each
     record's host arrival via this mode's path (so the binary
     marker-synced framing is also exercised on the isolated-pulse
     case). With prompt flushing each pulse arrives in its own ~1 s
@@ -830,9 +837,9 @@ def phase_single_pulse(mode, sg, tic, channel, n=5):
           f"[{mode.name}] ===")
     tic.set_slope(channel, "POS")
     tic.set_divider(channel, 1)
-    sg.pulse_burst(1000, ncyc=1)  # one pulse, repeating every 1.000 s
+    sg.pulse_burst(channel, 1000, 1)  # one pulse, repeating every 1.000 s
     arrivals = mode.arrivals(tic, channel, n + 2.5, n + 1)
-    sg.output_off()
+    sg.off()
 
     deltas = [arrivals[i + 1] - arrivals[i]
               for i in range(len(arrivals) - 1)]
@@ -915,7 +922,7 @@ def phase_tsctl_cli(port, sg):
 
     # stream: a real signal, run the CLI briefly, parse its stdout.
     # -u so the child's stdout isn't lost in a pipe buffer on kill.
-    sg.periodic(PULSE_HZ)
+    sg.periodic(0, PULSE_HZ)  # PG ch0 -> TS jack 0 (straight through)
     _cli(port, "slope", "0", "POS")
     proc = subprocess.Popen(
         [sys.executable, "-u", TSCTL, "--port", port, "stream"],
@@ -927,7 +934,7 @@ def phase_tsctl_cli(port, sg):
     except subprocess.TimeoutExpired:
         proc.kill()
         out, _ = proc.communicate()
-    sg.output_off()
+    sg.off()
     lines = [ln for ln in out.splitlines() if ln.strip()]
     line_re = re.compile(r"^\d+ \d+\.\d{9} [+-]$")
     good = [ln for ln in lines if line_re.match(ln)]
@@ -1116,6 +1123,149 @@ def phase_config_persist_torn(iters=12):
 
 
 # --------------------------------------------------------------------
+# Cross-channel coherence (TIM2 <-> TIM5 phase-lock)
+#
+# The four jacks split across two phase-locked 32-bit timers: jacks 0/2
+# on TIM2, jacks 1/3 on TIM5. These phases drive all four PG-4 outputs
+# in SYNC mode -- the source emits edges with a known cross-channel
+# relationship -- and check the device reproduces it, which it can only
+# do if the two timers share one timeline. Needs all four PG-4 outputs
+# wired straight through to the four jacks.
+
+# 200 us period -> 4 ns HRTIM tick (matching the device resolution), so
+# programmed delays land on the grid the device measures.
+PHASE_LOCK_PERIOD_S = 200e-6
+PHASE_LOCK_SPLIT_NS = PHASE_LOCK_PERIOD_S * 1e9 / 2  # firing-cluster gap
+
+
+def collect_all(tic, duration_s):
+    """Per-channel [(abs_ns, polarity)] over the window, plus summed
+    loss. abs_ns is an exact int (never a float). Raises on a
+    reference-clock failure."""
+    per = {c: [] for c in ALL_CHANNELS}
+    lost = 0
+    for r in tic.read_for(duration_s):
+        if isinstance(r, Timestamp):
+            if r.channel in per:
+                per[r.channel].append(
+                    (r.seconds * 1_000_000_000 + r.nanoseconds, r.polarity))
+        elif isinstance(r, PulsesLost):
+            lost += r.overcaptures + r.buf_overflows
+    return per, lost
+
+
+def complete_firings(per, split_ns=PHASE_LOCK_SPLIT_NS):
+    """Group every channel's timestamps into firings (a gap > split_ns
+    starts a new firing) and keep those with exactly one record on each
+    of the four channels, as {channel: abs_ns}. Incomplete firings -- a
+    missed edge or one clipped by the capture-window edge -- are
+    dropped, so offsets are computed only where all four are present."""
+    tagged = sorted((t, ch) for ch, recs in per.items() for t, _ in recs)
+    firings, cur, last = [], {}, None
+    for t, ch in tagged:
+        if last is not None and t - last > split_ns:
+            firings.append(cur)
+            cur = {}
+        cur.setdefault(ch, []).append(t)
+        last = t
+    if cur:
+        firings.append(cur)
+    return [{c: f[c][0] for c in ALL_CHANNELS}
+            for f in firings
+            if all(len(f.get(c, [])) == 1 for c in ALL_CHANNELS)]
+
+
+def median_offsets(firings):
+    """Median offset (ns) of each channel from ch0 across firings."""
+    return {c: statistics.median(f[c] - f[0] for f in firings)
+            for c in ALL_CHANNELS}
+
+
+def configure_ts_4ch(tic, slope):
+    tic.reset()
+    time.sleep(0.1)
+    for c in ALL_CHANNELS:
+        tic.set_slope(c, slope)
+        tic.set_divider(c, 1)
+
+
+def sync_all(sg, delays_s, width_s=1e-6):
+    """SYNC mode: every channel at PHASE_LOCK_PERIOD_S with the given
+    per-channel rising-edge delays. Raises if the PG-4 rejects it."""
+    sg.set_mode(True)
+    for c in ALL_CHANNELS:
+        sg.set_period(c, PHASE_LOCK_PERIOD_S)
+        sg.set_width(c, width_s)
+        sg.set_delay(c, delays_s[c])
+        sg.set_state(c, True)
+    err = sg.get_error()
+    if not err.startswith("0,"):
+        raise RuntimeError(f"PG-4 rejected sync config: {err}")
+
+
+def phase_phase_lock(sg, tic):
+    """SYNC, all delays 0: four coincident edges. Every channel must
+    timestamp the same instant; the offset between the TIM5 group
+    (jacks 1/3) and the TIM2 group (jacks 0/2) is the phase-lock metric,
+    expected within ~1 tick (4 ns) of zero."""
+    print("\n=== phase lock (TIM2<->TIM5 coincident edges) ===")
+    configure_ts_4ch(tic, "POS")
+    sg.off()
+    sync_all(sg, {c: 0.0 for c in ALL_CHANNELS})
+    time.sleep(0.1)
+    tic.discard_pending()
+    per, lost = collect_all(tic, 2.0)
+    counts = {c: len(per[c]) for c in ALL_CHANNELS}
+    print(f"  records per channel: {counts}")
+    ok = expect(all(counts[c] > 50 for c in ALL_CHANNELS),
+                f"all four channels produced records (TIM5 alive) {counts}")
+    ok &= expect(lost == 0, f"no loss (lost={lost})")
+    firings = complete_firings(per)
+    if not firings:
+        return ok and expect(False,
+                             "coincident firings paired on all 4 channels")
+    med = median_offsets(firings)
+    print("  offset from ch0 (ns): " +
+          ", ".join(f"ch{c}={med[c]:+.1f}" for c in ALL_CHANNELS))
+    tim5 = statistics.median([med[c] for c in TIM5_GROUP])
+    ok &= expect(abs(med[2]) <= 8,
+                 f"ch2 coincident with ch0 (both TIM2): {med[2]:+.1f} ns")
+    ok &= expect(abs(med[3] - med[1]) <= 8,
+                 f"ch3 coincident with ch1 (both TIM5): "
+                 f"{med[3] - med[1]:+.1f} ns")
+    ok &= expect(abs(tim5) <= 8,
+                 f"TIM5 phase-locked to TIM2 (group offset {tim5:+.1f} ns; "
+                 f"a small fixed offset is calibratable trigger latency, "
+                 f"large/variable is a sync fault)")
+    return ok
+
+
+def phase_stair(sg, tic, step_ns=100):
+    """SYNC, per-channel delays 0/step/2step/3step: each channel must be
+    measured at its programmed offset from ch0, exercising the
+    phase-lock at nonzero offsets too."""
+    print(f"\n=== stair (per-channel {step_ns} ns delays) ===")
+    configure_ts_4ch(tic, "POS")
+    sg.off()
+    sync_all(sg, {c: c * step_ns / 1e9 for c in ALL_CHANNELS})
+    time.sleep(0.1)
+    tic.discard_pending()
+    per, lost = collect_all(tic, 2.0)
+    ok = expect(lost == 0, f"no loss (lost={lost})")
+    firings = complete_firings(per)
+    if not firings:
+        return ok and expect(False, "firings paired on all 4 channels")
+    med = median_offsets(firings)
+    print("  measured offset from ch0 (ns): " +
+          ", ".join(f"ch{c}={med[c]:+.1f}" for c in ALL_CHANNELS))
+    for c in ALL_CHANNELS:
+        ok &= expect(abs(med[c] - c * step_ns) <= 12,
+                     f"ch{c} at programmed {c * step_ns} ns offset "
+                     f"(measured {med[c]:+.1f})")
+    return ok
+
+
+# --------------------------------------------------------------------
 
 def main():
     p = argparse.ArgumentParser(
@@ -1123,22 +1273,12 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--port", default=None,
                    help="LectroTIC-4 serial port (default: autodetect)")
-    p.add_argument("--generator", choices=["rigol", "pg4"],
-                   default="rigol",
-                   help="pulse source: 'rigol' = DG1022Z on LAN (full "
-                        "suite), 'pg4' = Lectrobox PG-4 on USB (no "
-                        "burst mode, so burst-based phases are "
-                        "skipped; slow phases run at 2 kHz)")
-    p.add_argument("--siggen-host", default="siggen",
-                   help="DG1022Z hostname (default: siggen)")
     p.add_argument("--pg-port", default=None,
                    help="PG-4 serial port (default: autodetect)")
-    p.add_argument("--pg-channel", type=int, default=0,
-                   choices=[0, 1, 2, 3],
-                   help="PG-4 output channel wired to the input under "
-                        "test (default 0)")
     p.add_argument("--channel", type=int, choices=[0, 1, 2, 3],
-                   default=0, help="Input channel under test")
+                   default=0, help="Input channel under test (the PG-4 "
+                        "output wired straight through to it is driven "
+                        "for the per-channel phases)")
     p.add_argument("--duration", type=float, default=5.0,
                    help="Capture window per steady phase, s (default 5)")
     p.add_argument("--phase", default=None,
@@ -1159,18 +1299,8 @@ def main():
             return False
         return sel is None or sel.lower() in label.lower()
 
-    # The slow-phase rate parameters come from the generator: 10 Hz on
-    # the Rigol, 2 kHz on the PG-4 (whose HRTIM timebase has no slower
-    # setting). Tolerances in the phases scale with PULSE_HZ.
-    global PULSE_HZ, PERIOD_S, PULSE_WIDTH_S
-    sg = make_generator(args.generator, siggen_host=args.siggen_host,
-                        pg_port=args.pg_port, pg_channel=args.pg_channel)
-    PULSE_HZ = sg.base_hz
-    PERIOD_S = 1.0 / PULSE_HZ
-    PULSE_WIDTH_S = sg.base_width_s
-    print(f"Pulse source: {sg.idn()} "
-          f"({sg.name}; base rate {PULSE_HZ:g} Hz; "
-          f"burst {'yes' if sg.can_burst else 'NO -- burst phases skipped'})")
+    sg = Pulsegen(port=args.pg_port)
+    print(f"Pulse source: {sg.idn()} (PG-4; base rate {PULSE_HZ:g} Hz)")
     results = []
 
     with LectroTIC4(args.port) as tic:
@@ -1179,53 +1309,51 @@ def main():
         print(f"Connected: {tic.idn()}")
 
         ch, dur = args.channel, args.duration
-        # Each entry is (label, callable(mode), needs_burst). Run for
-        # both modes; burst-based phases are skipped on generators
-        # without an N-cycle burst mode.
+        # Each entry is (label, callable(mode)), run for both wire modes.
         per_mode = [
             ("rising",
-             lambda m: phase_periodic(m, sg, tic, ch, dur, 1), False),
+             lambda m: phase_periodic(m, sg, tic, ch, dur, 1)),
             ("falling",
              lambda m: phase_periodic(m, sg, tic, ch, dur, 1,
-                                      slope="NEG"), False),
-            ("both", lambda m: phase_both(m, sg, tic, ch, dur), False),
+                                      slope="NEG")),
+            ("both", lambda m: phase_both(m, sg, tic, ch, dur)),
             ("divider",
-             lambda m: phase_periodic(m, sg, tic, ch, dur, 5), False),
+             lambda m: phase_periodic(m, sg, tic, ch, dur, 5)),
             ("output gating",
-             lambda m: phase_output_gating(m, sg, tic, ch), False),
-            ("burst", lambda m: phase_burst(m, sg, tic, ch), True),
+             lambda m: phase_output_gating(m, sg, tic, ch)),
+            ("burst", lambda m: phase_burst(m, sg, tic, ch)),
             ("overcapture",
-             lambda m: phase_overcapture(m, sg, tic, ch), True),
+             lambda m: phase_overcapture(m, sg, tic, ch)),
             ("polarity burst",
-             lambda m: phase_polarity_burst(m, sg, tic, ch), True),
+             lambda m: phase_polarity_burst(m, sg, tic, ch)),
             ("sustained",
-             lambda m: phase_sustained(m, sg, tic, ch), False),
+             lambda m: phase_sustained(m, sg, tic, ch)),
             ("single pulse",
-             lambda m: phase_single_pulse(m, sg, tic, ch), True),
+             lambda m: phase_single_pulse(m, sg, tic, ch)),
         ]
         once = [
             ("scpi errors", lambda: phase_scpi_errors(tic)),
             ("reset", lambda: phase_reset(tic, ch)),
             ("slope switch", lambda: phase_slope_switch(sg, tic, ch)),
+            # Cross-channel coherence: drives all four PG-4 channels in
+            # SYNC and checks TIM2 (jacks 0/2) and TIM5 (jacks 1/3)
+            # share one timeline. Needs all four wired straight through.
+            ("phase lock", lambda: phase_phase_lock(sg, tic)),
+            ("stair", lambda: phase_stair(sg, tic)),
             ("idn serial", lambda: phase_idn_serial(tic)),
         ]
         try:
             for mode in MODES:
-                for label, fn, needs_burst in per_mode:
+                for label, fn in per_mode:
                     name = f"{label} [{mode.name}]"
-                    if not want(name):
-                        continue
-                    if needs_burst and not sg.can_burst:
-                        print(f"\n=== {name}: SKIP "
-                              f"({sg.name} has no burst mode) ===")
-                        continue
-                    results.append((name, fn(mode)))
+                    if want(name):
+                        results.append((name, fn(mode)))
             for label, fn in once:
                 if want(label):
                     results.append((label, fn()))
         finally:
             tic.set_stream_enabled(False)
-            sg.output_off()
+            sg.off()
 
     # Port released -- now the CLI tool, then the cold-reset config-
     # persistence check (both reacquire the port themselves; persist
@@ -1250,7 +1378,7 @@ def main():
                     continue
                 results.append((label, fn()))
     finally:
-        sg.output_off()
+        sg.off()
         sg.close()
 
     if not results:
