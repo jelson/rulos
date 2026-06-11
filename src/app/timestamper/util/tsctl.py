@@ -13,10 +13,9 @@ CLI usage examples:
   tsctl.py stream
   tsctl.py --port /dev/ttyACM1 slope 0 BOTH
 
-As a library, open a LectroTIC4 instance and call methods on it.
-Records are always transferred in the device's 8-byte binary wire
-format and decoded for you; query()/get_*() briefly silence the
-stream so SCPI responses come back clean.
+As a library, open a LectroTIC4 instance and call methods on it. Records are always transferred
+in the device's 8-byte binary wire format and decoded for you; query()/get_*() briefly silence
+the stream so SCPI responses come back clean.
 
   from tsctl import LectroTIC4
 
@@ -51,6 +50,7 @@ stream so SCPI responses come back clean.
 
 import argparse
 from collections import namedtuple
+import math
 import os
 import queue
 import serial
@@ -60,8 +60,8 @@ import sys
 import threading
 import time
 
-# iter_records / read_for yield one of four record types; the caller
-# distinguishes them with isinstance:
+# iter_records / read_for yield one of four record types; the caller distinguishes them with
+# isinstance:
 #
 #   Timestamp     -- a captured edge. `seconds`/`nanoseconds` are
 #                    integers (whole seconds since boot plus the
@@ -91,39 +91,50 @@ TIMESTAMPER_VID = 0x1209  # pid.codes
 TIMESTAMPER_PID = 0x71C4  # LectroTIC-4
 IDN_PREFIX = "Lectrobox,LectroTIC-4"
 
-# counter word: [31:30] channel, [29] edge polarity (timestamps:
-# 1 = rising '+', 0 = falling '-'; special records: 0), [28]
-# special-message flag, [27:0] tick value (max 249,999,999). Mask
-# ticks with the 28-bit value mask so the flag bits never leak into
-# the nanoseconds.
+NS = 1_000_000_000
+
+# Largest value INPut<n>:DIVider accepts.
+MAX_DIVIDER = 2**32 - 1
+
+# Total record-rate budget, shared by however many channels a measurement watches: a gate's record
+# allowance is TOTAL_BUDGET_HZ * gate_s, split evenly among its channels. 40 k records/s is well
+# under the instrument's sustained ceiling (~100 k/s), so a gate that fits its budget is guaranteed
+# loss-free; one that crosses it is abandoned and the offending channels' dividers doubled (see
+# LectroTIC4.measure_by_channel / autorange_and_acquire). Decimation costs nothing in measurement
+# quality -- every record still carries a full-resolution hardware timestamp.
+TOTAL_BUDGET_HZ = 40_000
+
+# counter word: [31:30] channel, [29] edge polarity (timestamps: 1 = rising '+', 0 = falling '-';
+# special records: 0), [28] special-message flag, [27:0] tick value (max 249,999,999). Mask ticks
+# with the 28-bit value mask so the flag bits never leak into the nanoseconds.
 #
-# For normal timestamp records, bits [31:29] are a direct channel/edge
-# index: counter >> 29 == channel * 2 + (rising ? 1 : 0).
+# For normal timestamp records, bits [31:29] are a direct channel/edge index: counter >> 29 ==
+# channel * 2 + (rising ? 1 : 0).
 _BINARY_RECORD_LEN = 8
 _NS_PER_TICK = 4
 _COUNTER_POLARITY_BIT = 1 << 29
 _COUNTER_VALUE_MASK = 0x0FFFFFFF
-# counter [28] set => the record is a special message, not a timestamp;
-# [7:0] is then the message type and the seconds word its payload.
+# counter [28] set => the record is a special message, not a timestamp; [7:0] is then the message
+# type and the seconds word its payload.
 _COUNTER_SPECIAL_BIT = 1 << 28
 _COUNTER_MSGTYPE_MASK = 0xFF
 _MSG_OUTPUT_CLEARED = 0
 _MSG_PULSES_LOST = 1
 _MSG_OSC_FAIL = 2
-# The OUTPUT_CLEARED record is a fixed 8-byte pattern (channel 0,
-# special bit, type 0, zero payload) -- the binary-mode framing anchor.
+# The OUTPUT_CLEARED record is a fixed 8-byte pattern (channel 0, special bit, type 0, zero payload)
+# -- the binary-mode framing anchor.
 _OUTPUT_CLEARED_BYTES = (0).to_bytes(4, "little") + (
-    _COUNTER_SPECIAL_BIT | _MSG_OUTPUT_CLEARED).to_bytes(4, "little")
+    _COUNTER_SPECIAL_BIT | _MSG_OUTPUT_CLEARED
+).to_bytes(4, "little")
 
 
 def _decode_chunks(chunks):
-    """Yield stream records decoded from an iterable of byte chunks.
-    8-byte record alignment is carried across chunk boundaries; a
-    trailing partial record is held for the next chunk.
+    """Yield stream records decoded from an iterable of byte chunks. 8-byte record alignment is
+    carried across chunk boundaries; a trailing partial record is held for the next chunk.
 
-    The timestamp arm of the loop runs >100k times per second when the
-    device streams at full rate, so it is written for CPython speed:
-    struct.iter_unpack for the field splits, and no intermediate
+    The timestamp arm of the loop runs >100k times per second when the device streams at full
+    rate, so it is written for CPython speed: struct.iter_unpack for the field splits, and no
+    intermediate
     locals on the hot (non-special) arm."""
     leftover = b""
     for data in chunks:
@@ -141,20 +152,28 @@ def _decode_chunks(chunks):
                     yield OscillatorFailure()
                 # unknown special types: skip (forward-compatible)
             else:
-                yield Timestamp(cnt >> 30, sec,
-                                (cnt & _COUNTER_VALUE_MASK) * _NS_PER_TICK,
-                                "+" if cnt & _COUNTER_POLARITY_BIT else "-")
+                yield Timestamp(
+                    cnt >> 30,
+                    sec,
+                    (cnt & _COUNTER_VALUE_MASK) * _NS_PER_TICK,
+                    "+" if cnt & _COUNTER_POLARITY_BIT else "-",
+                )
         leftover = bytes(data[end:])
 
 
 def autodetect_port():
     """Return the device path of the (single) attached LectroTIC-4."""
-    candidates = [p.device for p in serial.tools.list_ports.comports()
-                  if p.vid == TIMESTAMPER_VID and p.pid == TIMESTAMPER_PID]
+    candidates = [
+        p.device
+        for p in serial.tools.list_ports.comports()
+        if p.vid == TIMESTAMPER_VID and p.pid == TIMESTAMPER_PID
+    ]
     if not candidates:
-        sys.exit(f"No LectroTIC-4 found (VID:PID "
-                 f"{TIMESTAMPER_VID:04x}:{TIMESTAMPER_PID:04x}). "
-                 f"Try --port.")
+        sys.exit(
+            f"No LectroTIC-4 found (VID:PID "
+            f"{TIMESTAMPER_VID:04x}:{TIMESTAMPER_PID:04x}). "
+            f"Try --port."
+        )
     matches = []
     for dev in candidates:
         try:
@@ -175,16 +194,18 @@ def autodetect_port():
         finally:
             ser.close()
     if not matches:
-        sys.exit("Found device(s) at the LectroTIC-4 VID:PID but none "
-                 "answered *IDN? as a LectroTIC-4.")
+        sys.exit(
+            "Found device(s) at the LectroTIC-4 VID:PID but none "
+            "answered *IDN? as a LectroTIC-4."
+        )
     if len(matches) > 1:
         sys.exit(f"Multiple LectroTIC-4s found: {matches}. Use --port.")
     return matches[0]
 
 
 def _drain_raw(ser, quiet_s=0.1, max_s=1.0):
-    """Read until the line goes quiet for quiet_s, or max_s elapses.
-    Standalone helper used by autodetect_port before a LectroTIC4
+    """Read until the line goes quiet for quiet_s, or max_s elapses. Standalone helper used by
+    autodetect_port before a LectroTIC4
     instance exists."""
     deadline = time.monotonic() + max_s
     last_rx = time.monotonic()
@@ -202,37 +223,34 @@ def _drain_raw(ser, quiet_s=0.1, max_s=1.0):
 
 
 class LectroTIC4:
-    """A connected LectroTIC-4. Pass port=... to override autodetect.
-    Use as a context manager (preferred) or call close() explicitly.
+    """A connected LectroTIC-4. Pass port=... to override autodetect. Use as a context manager
+    (preferred) or call close() explicitly.
 
-    Connecting does not change device state. The library transfers
-    records only in the binary wire format: a streaming read puts the
-    device in BIN, and close() restores whatever format it was in
-    before the first stream. A handle that never streams never touches
-    the format. The `format` command is a passthrough for
-    setting/querying the device's FORM:DATA (for other tools that read
+    Connecting does not change device state. The library transfers records only in the binary
+    wire format: a streaming read puts the device in BIN, and close() restores whatever format it
+    was in before the first stream. A handle that never streams never touches the format. The
+    `format` command is a passthrough for setting/querying the device's FORM:DATA (for other
+    tools that read
     the port) and persists."""
 
-    # Device wire format captured before the first streaming read, so
-    # close() can restore it. None until a stream has been started.
+    # Device wire format captured before the first streaming read, so close() can restore it. None
+    # until a stream has been started.
     _restore_format = None
 
     def __init__(self, port=None, timeout=0.5):
         self._ser = serial.Serial(port or autodetect_port(), timeout=timeout)
-        # Ask for a deep OS receive buffer where the platform allows it
-        # (Windows SetupComm; POSIX has no equivalent and its ~64 KB tty
-        # buffer is fixed). The streaming reader thread is the real
-        # defense against overflow; this just widens the margin.
+        # Ask for a deep OS receive buffer where the platform allows it (Windows SetupComm; POSIX
+        # has no equivalent and its ~64 KB tty buffer is fixed). The streaming reader thread is the
+        # real defense against overflow; this just widens the margin.
         set_buffer_size = getattr(self._ser, "set_buffer_size", None)
         if set_buffer_size is not None:
             try:
                 set_buffer_size(rx_size=1 << 20)
             except OSError:
                 pass
-        # The library's contract is that streaming is on at entry and
-        # at exit. query() briefly disables the stream so a response
-        # comes back clean; _stream_on tracks that so query() can skip
-        # the toggle when a caller has deliberately silenced the stream.
+        # The library's contract is that streaming is on at entry and at exit. query() briefly
+        # disables the stream so a response comes back clean; _stream_on tracks that so query() can
+        # skip the toggle when a caller has deliberately silenced the stream.
         self._stream_on = True
         self.send("OUTP:STAT ON")
         self.reset_input_buffer()
@@ -245,22 +263,26 @@ class LectroTIC4:
 
     @property
     def usb_serial(self):
-        """The USB iSerialNumber the OS sees for this device (the
-        STM32 96-bit unique ID as hex); should equal the serial field
-        of *IDN?. None if it can't be read.
+        """The USB iSerialNumber the OS sees for this device (the STM32 96-bit unique ID as hex);
+        should equal the serial field of *IDN?. None if it can't be read.
 
-        We already know our port; this is only a metadata lookup for
-        it. pyserial surfaces USB descriptor fields solely through the
-        port list (no handle-/path-keyed accessor), so we pick our
+        We already know our port; this is only a metadata lookup for it. pyserial surfaces USB
+        descriptor fields solely through the port list (no handle-/path-keyed accessor), so we
+        pick our
         known port's row out of comports()."""
-        return next((p.serial_number
-                     for p in serial.tools.list_ports.comports()
-                     if p.device == self._ser.port), None)
+        return next(
+            (
+                p.serial_number
+                for p in serial.tools.list_ports.comports()
+                if p.device == self._ser.port
+            ),
+            None,
+        )
 
     def close(self):
-        """Restore streaming to ON (the library's documented default).
-        If this handle ever streamed, also put the wire format back to
-        what the device had before the first stream. Slope and divider
+        """Restore streaming to ON (the library's documented default). If this handle ever streamed,
+        also put the wire format back to what the device had before the first stream. Slope and
+        divider
         are left exactly as the caller set them. Then release the port."""
         try:
             if not self._stream_on:
@@ -285,25 +307,23 @@ class LectroTIC4:
         self._ser.flush()
 
     def reset_input_buffer(self, settle_s=0.2):
-        """Discard whatever the device has already sent so the next
-        read starts on fresh output. Sleeps settle_s to let the device
-        finish draining anything buffered under the previous state,
-        then drops the OS-level RX buffer. After this returns, every
+        """Discard whatever the device has already sent so the next read starts on fresh output.
+        Sleeps settle_s to let the device finish draining anything buffered under the previous
+        state, then drops the OS-level RX buffer. After this returns, every
         byte that arrives is post-call."""
         time.sleep(settle_s)
         self._ser.reset_input_buffer()
 
     def query(self, cmd):
-        """Send a query and read one line of response. If streaming
-        is on (the normal state), briefly disable it so the response
-        is not interleaved with timestamp output, then re-enable. If
-        the caller has explicitly silenced the stream for a series of
+        """Send a query and read one line of response. If streaming is on (the normal state),
+        briefly disable it so the response is not interleaved with timestamp output, then
+        re-enable. If the caller has explicitly silenced the stream for a series of
         queries, leave it silent."""
         toggle = self._stream_on
         if toggle:
             self.send("OUTP:STAT OFF")
-        # Just-sent OUTP:STAT OFF takes effect within USB latency; a
-        # short settle is enough to drop the few in-flight records.
+        # Just-sent OUTP:STAT OFF takes effect within USB latency; a short settle is enough to drop
+        # the few in-flight records.
         self.reset_input_buffer(settle_s=0.01)
         self.send(cmd)
         self._ser.timeout = 0.5
@@ -313,8 +333,8 @@ class LectroTIC4:
         return line
 
     def read_raw(self, duration_s):
-        """Read whatever bytes arrive for duration_s seconds and return
-        them. Does not parse, decode, or enable streaming -- useful for
+        """Read whatever bytes arrive for duration_s seconds and return them. Does not parse,
+        decode, or enable streaming -- useful for
         verifying that the device is silent (e.g. while OUTP:STAT is OFF)."""
         self._ser.timeout = 0.05
         deadline = time.monotonic() + duration_s
@@ -337,16 +357,15 @@ class LectroTIC4:
         self._stream_on = True
 
     def save(self):
-        """CONFig:SAVE: persist the current channel config (slope +
-        divider) to flash so it survives power loss. The device masks
-        interrupts for the flash write, so pulses arriving during the
+        """CONFig:SAVE: persist the current channel config (slope + divider) to flash so it survives
+        power loss. The device masks interrupts for the flash write, so pulses arriving during
+        the
         save are lost -- issue it only when not relying on capture."""
         self.send("CONF:SAVE")
 
     def _sync_to_marker(self):
-        """Silence the stream and drain the host's input up to and
-        including the firmware's clear marker, leaving the device
-        quiescent with nothing buffered on either side.
+        """Silence the stream and drain the host's input up to and including the firmware's clear
+        marker, leaving the device quiescent with nothing buffered on either side.
 
             1. silence the stream (so nothing emits after the marker)
             2. send OUTPut:CLEar; the firmware clears its ring + the
@@ -356,44 +375,41 @@ class LectroTIC4:
             3. read bytes until that marker appears, dropping everything
                before it -- including any partial binary record
 
-        This is the framing anchor: after this returns the device is
-        silent and aligned, so the next byte it emits once streaming is
-        re-enabled is the first byte of a fresh whole record.
+        This is the framing anchor: after this returns the device is silent and aligned, so the
+        next byte it emits once streaming is re-enabled is the first byte of a fresh whole
+        record.
         """
         self.set_stream_enabled(False)
         self.send("OUTP:CLE")
 
-        # The device emits exactly one marker, in whatever format it's
-        # in -- the text line or the 8-byte binary record. Scan for
-        # both rather than asking the device which (an in-band format
+        # The device emits exactly one marker, in whatever format it's in -- the text line or the
+        # 8-byte binary record. Scan for both rather than asking the device which (an in-band format
         # query is unreadable amid a 100 kHz binary flood).
         text_marker = b"# output cleared\n"
         bin_marker = _OUTPUT_CLEARED_BYTES
         buf = bytearray()
-        # Short timeout so the read returns promptly with whatever's
-        # in the OS RX buffer; we don't want to wait for a full 4096-byte
-        # chunk when the marker is the last thing the device emits.
+        # Short timeout so the read returns promptly with whatever's in the OS RX buffer; we don't
+        # want to wait for a full 4096-byte chunk when the marker is the last thing the device
+        # emits.
         self._ser.timeout = 0.01
         deadline = time.monotonic() + 1.0
         while text_marker not in buf and bin_marker not in buf:
             if time.monotonic() > deadline:
                 raise RuntimeError(
-                    "OUTP:CLE did not produce its marker within 1 s — "
-                    "is the device responsive?")
+                    "OUTP:CLE did not produce its marker within 1 s — " "is the device responsive?"
+                )
             chunk = self._ser.read(4096)
             if chunk:
                 buf += chunk
 
     def discard_pending(self, settle_s=0.0):
-        """Drop everything currently in flight so the next read sees
-        only post-discard records. Channel configuration is preserved.
-        Synchronizes via the firmware marker (no sleeps); the prior
-        stream state is restored.
+        """Drop everything currently in flight so the next read sees only post-discard records.
+        Channel configuration is preserved. Synchronizes via the firmware marker (no sleeps); the
+        prior stream state is restored.
 
-        settle_s additionally discards the first settle_s seconds of
-        NEW data. Use it after reconfiguring the pulse source: a
-        generator mid-transition can emit a glitch or pause, and
-        records captured during that transient are post-discard by
+        settle_s additionally discards the first settle_s seconds of NEW data. Use it after
+        reconfiguring the pulse source: a generator mid-transition can emit a glitch or pause,
+        and records captured during that transient are post-discard by
         time but pre-change by intent."""
         was_on = self._stream_on
         self._sync_to_marker()
@@ -423,28 +439,26 @@ class LectroTIC4:
         return self.query(f"INP{channel}:DIV?")
 
     def set_stream_enabled(self, on):
-        """Enable or disable continuous timestamp output. Normally the
-        library manages this for you (queries briefly disable, exit
-        re-enables); call this only to explicitly silence the device
+        """Enable or disable continuous timestamp output. Normally the library manages this for you
+        (queries briefly disable, exit re-enables); call this only to explicitly silence the
+        device
         in the middle of a session, e.g. for behavioral testing."""
         self.send(f"OUTP:STAT {'ON' if on else 'OFF'}")
         self._stream_on = bool(on)
 
     def get_stream_enabled(self):
-        """Returns the host-side cached stream state. Avoids querying
-        OUTP:STAT? on the wire (which query() would itself toggle and
+        """Returns the host-side cached stream state. Avoids querying OUTP:STAT? on the wire (which
+        query() would itself toggle and
         thus return a misleading answer)."""
         return self._stream_on
 
     # ---- Streaming (binary wire format only) --------------------------
 
     def _begin_stream(self):
-        # Records are consumed only in the 8-byte binary wire format,
-        # which has no self-framing. Capture the device's current
-        # format first (so close() can restore it), select BIN, then
-        # use the marker sync to establish a clean record boundary:
-        # after _sync_to_marker the device is silent and aligned, so
-        # enabling the stream yields whole 8-byte records from byte 0.
+        # Records are consumed only in the 8-byte binary wire format, which has no self-framing.
+        # Capture the device's current format first (so close() can restore it), select BIN, then
+        # use the marker sync to establish a clean record boundary: after _sync_to_marker the device
+        # is silent and aligned, so enabling the stream yields whole 8-byte records from byte 0.
         if self._restore_format is None:
             fmt = self.query("FORM:DATA?").strip().upper()
             self._restore_format = "BIN" if fmt.startswith("BIN") else "TEXT"
@@ -453,49 +467,58 @@ class LectroTIC4:
         self.set_stream_enabled(True)
 
     def _reader_main(self, q, stop):
-        """Reader-thread body: move bytes from the serial port into the
-        queue as fast as they arrive. No decoding happens here, so this
-        thread never falls behind the wire."""
+        """Reader-thread body: move bytes from the serial port into the queue as fast as they
+        arrive. No decoding happens here, so this thread never falls behind the wire. A port
+        error is put on the queue for the decoding side to re-raise: a dying reader must fail the
+        read loudly, since a silently truncated capture could
+        otherwise pass for a complete one and measure wrong."""
         self._ser.timeout = 0.05
-        while not stop.is_set():
-            data = self._ser.read(65536)
-            if data:
-                q.put(data)
+        try:
+            while not stop.is_set():
+                data = self._ser.read(65536)
+                if data:
+                    q.put(data)
+        except Exception as e:
+            q.put(e)
 
     def _queued_chunks(self, q, deadline):
-        """Yield byte chunks from the reader queue until the deadline
-        passes (forever if None), then drain whatever the reader had
-        already buffered so the window's full capture is decoded."""
+        """Yield byte chunks from the reader queue until the deadline passes (forever if None), then
+        drain whatever the reader had already buffered so the window's full capture is decoded. A
+        reader-thread error found on the queue -- even during the post-deadline drain -- is
+        re-raised here, in the consumer's
+        thread."""
         while deadline is None or time.monotonic() < deadline:
             try:
-                yield q.get(timeout=0.05)
+                chunk = q.get(timeout=0.05)
             except queue.Empty:
                 continue
+            if isinstance(chunk, Exception):
+                raise chunk
+            yield chunk
         while True:
             try:
-                yield q.get_nowait()
+                chunk = q.get_nowait()
             except queue.Empty:
                 return
+            if isinstance(chunk, Exception):
+                raise chunk
+            yield chunk
 
     def _stream_records(self, deadline):
-        """Decode and yield stream records, with the port serviced by a
-        dedicated reader thread that does nothing but move bytes into
-        an in-memory queue.
+        """Decode and yield stream records, with the port serviced by a dedicated reader thread that
+        does nothing but move bytes into an in-memory queue.
 
-        The thread exists for a real performance reason: the device can
-        emit records faster than Python can turn them into namedtuples
-        (~114k records/s on the wire vs ~100k/s of inline decode), and
-        the device has only ~180 ms of on-board buffering at full rate.
-        If reading and decoding shared one loop, any decode shortfall
-        or GC pause would stop the port reads, backpressure the device
-        through the kernel's serial buffer, and overflow the device's
-        ring -- real data loss, caused by the host. Splitting them
-        means a slow consumer only delays decoding; the byte drain
+        The thread exists for a real performance reason: the device can emit records faster than
+        Python can turn them into namedtuples (~114k records/s on the wire vs ~100k/s of inline
+        decode), and the device has only ~180 ms of on-board buffering at full rate. If reading
+        and decoding shared one loop, any decode shortfall or GC pause would stop the port reads,
+        backpressure the device through the kernel's serial buffer, and overflow the device's
+        ring -- real data loss, caused by the host. Splitting them means a slow consumer only
+        delays decoding; the byte drain
         never stops, so the device never blocks on the host."""
         q = queue.SimpleQueue()
         stop = threading.Event()
-        reader = threading.Thread(target=self._reader_main, args=(q, stop),
-                                  daemon=True)
+        reader = threading.Thread(target=self._reader_main, args=(q, stop), daemon=True)
         reader.start()
         try:
             yield from _decode_chunks(self._queued_chunks(q, deadline))
@@ -509,15 +532,114 @@ class LectroTIC4:
         return self._stream_records(None)
 
     def read_for(self, duration_s):
-        """Like iter_records, but stop after duration_s wall-clock
-        seconds even if the device is silent. Everything the device
-        emitted within the window is yielded, even if decoding finishes
+        """Like iter_records, but stop after duration_s wall-clock seconds even if the device is
+        silent. Everything the device emitted within the window is yielded, even if decoding
+        finishes
         after the window closes."""
         self._begin_stream()
         return self._stream_records(time.monotonic() + duration_s)
 
+    def measure_by_channel(self, channels, gate_s, budget=None):
+        """One bounded measurement, organized per channel.
+
+        read_for is transport: it yields every raw record on the wire, for every channel, one at
+        a time, and leaves all interpretation to the caller. measure_by_channel consumes that
+        stream and returns a finished measurement instead: only the requested channels, each
+        record reduced to an integer-nanosecond time plus polarity and grouped into per-channel
+        lists, and device loss reports flattened to one `overrun` boolean. It is also
+        budget-limited, not just time-limited: the measurement ABORTS the moment the requested
+        channels' combined record count crosses `budget` (default TOTAL_BUDGET_HZ * gate_s), so
+        probing a too-fast signal at a mis-ranged divider costs milliseconds, not gate_s -- the
+        early abort is what makes autorange_and_acquire's binary search cheap.
+
+        Returns (recs, overrun, aborted): recs maps each requested channel to its [(t_ns,
+        polarity), ...] list. The measurement starts marker-synced, so every record was
+        captured under the current divider settings."""
+        if budget is None:
+            budget = int(TOTAL_BUDGET_HZ * gate_s)
+        recs = {ch: [] for ch in channels}
+        total = 0
+        overrun = aborted = False
+        for r in self.read_for(gate_s):
+            if isinstance(r, Timestamp):
+                if r.channel in recs:
+                    recs[r.channel].append((r.seconds * NS + r.nanoseconds, r.polarity))
+                    total += 1
+                    if total > budget:
+                        aborted = True
+                        break
+            elif isinstance(r, PulsesLost):
+                overrun = True
+        return recs, overrun, aborted
+
+    def autorange_and_acquire(self, channels, gate_s=0.35, max_gates=64):
+        """Binary-search each channel's divider from 1 upward until every channel's gate fits its
+        record budget (an over-budget gate aborts in milliseconds and doubles the offending
+        dividers; an empty gate halves them back). Returns {channel: (freq_hz or None, divider)};
+        freq None means no records arrived at divider 1 within one gate (the caller decides
+        whether to stretch gates or report silence). The
+        settled dividers are left programmed on the device."""
+        limit = int(TOTAL_BUDGET_HZ * gate_s / len(channels))
+        div = {ch: 1 for ch in channels}
+        recs = {ch: [] for ch in channels}
+        for _ in range(max_gates):
+            for ch in channels:
+                self.set_divider(ch, div[ch])
+            recs, _, _ = self.measure_by_channel(channels, gate_s)
+            changed = False
+            for ch in channels:
+                if len(recs[ch]) > limit:
+                    div[ch] = min(MAX_DIVIDER, div[ch] * 2)
+                    changed = True
+                elif len(recs[ch]) < 2 and div[ch] > 1:
+                    div[ch] //= 2
+                    changed = True
+            if not changed:
+                break
+        return {ch: (span_freq([t for t, _ in recs[ch]], div[ch])[0], div[ch]) for ch in channels}
+
+
+# ---- Measurement utilities -------------------------------------------------
+
+
+def span_freq(times_ns, divider):
+    """Count-based frequency over a gate's full span: (n - 1) intervals against integer-ns
+    endpoints. Returns (freq_hz, span_ns),
+    or (None, 0) given fewer than two records."""
+    if len(times_ns) < 2:
+        return None, 0
+    span_ns = times_ns[-1] - times_ns[0]
+    return divider * (len(times_ns) - 1) * NS / span_ns, span_ns
+
+
+def format_freq(hz, span_ns):
+    """Engineering-format `hz` with no more digits than the gate actually resolved: the span is
+    known to about two timestamp ticks,
+    so it distinguishes ~span/8ns steps."""
+    sig = min(10, max(4, int(math.log10(max(span_ns, 100) / 8))))
+    for unit, scale in (("MHz", 1e6), ("kHz", 1e3), ("Hz", 1.0)):
+        if hz >= scale or unit == "Hz":
+            value = hz / scale
+            int_digits = max(1, int(math.log10(value)) + 1) if value >= 1 else 1
+            return f"{value:.{max(0, sig - int_digits)}f} {unit}"
+
+
+def format_time_ns(t_ns):
+    """Engineering-format a time interval given in (possibly
+    fractional) nanoseconds."""
+    for unit, scale in (("s", 1e9), ("ms", 1e6), ("us", 1e3), ("ns", 1.0)):
+        if abs(t_ns) >= scale or unit == "ns":
+            return f"{t_ns / scale:.4g} {unit}"
+
+
+def status(line):
+    """Overwrite the current terminal line (live one-line display,
+    used by the demo utilities)."""
+    print(f"\r{line:<96}", end="", flush=True)
+
 
 # ---- CLI ------------------------------------------------------------------
+
 
 def cmd_idn(tic, args):
     print(tic.idn())
@@ -562,40 +684,41 @@ def cmd_raw(tic, args):
 
 
 def cmd_stream(tic, args):
-    # Print each captured record as a plain ASCII line until ^C or the
-    # downstream pipe closes.
+    # Print each captured record as a plain ASCII line until ^C or the downstream pipe closes.
     try:
         for r in tic.iter_records():
             if isinstance(r, Timestamp):
-                sys.stdout.write(
-                    f"{r.channel} {r.seconds}.{r.nanoseconds:09d} "
-                    f"{r.polarity}\n")
+                sys.stdout.write(f"{r.channel} {r.seconds}.{r.nanoseconds:09d} " f"{r.polarity}\n")
             elif isinstance(r, PulsesLost):
                 sys.stdout.write(
                     f"# ch{r.channel}: {r.overcaptures} overcaptures, "
-                    f"{r.buf_overflows} buf overflows\n")
+                    f"{r.buf_overflows} buf overflows\n"
+                )
             elif isinstance(r, OutputCleared):
                 sys.stdout.write("# output cleared\n")
             elif isinstance(r, OscillatorFailure):
-                sys.stdout.write("# FATAL: External oscillator failure. "
-                                 "Connect a 10MHz source and press reset.\n")
+                sys.stdout.write(
+                    "# FATAL: External oscillator failure. "
+                    "Connect a 10MHz source and press reset.\n"
+                )
             sys.stdout.flush()
     except KeyboardInterrupt:
         pass
     except BrokenPipeError:
-        # Downstream closed the pipe (e.g. `tsctl stream | head`).
-        # Redirect stdout to /dev/null so the interpreter's final
-        # flush doesn't raise again.
+        # Downstream closed the pipe (e.g. `tsctl stream | head`). Redirect stdout to /dev/null so
+        # the interpreter's final flush doesn't raise again.
         os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
 
 
 def main():
     p = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--port", default=None,
-                   help="Serial port (default: autodetect via USB VID/PID + "
-                        "*IDN? probe)")
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    p.add_argument(
+        "--port",
+        default=None,
+        help="Serial port (default: autodetect via USB VID/PID + " "*IDN? probe)",
+    )
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sp = sub.add_parser("idn", help="Read *IDN? identification string")
@@ -604,15 +727,19 @@ def main():
     sp = sub.add_parser("reset", help="Send *RST (defaults, streaming on)")
     sp.set_defaults(func=cmd_reset)
 
-    sp = sub.add_parser("save", help="CONF:SAVE -- persist channel "
-                        "config to flash (halts capture briefly)")
+    sp = sub.add_parser(
+        "save", help="CONF:SAVE -- persist channel " "config to flash (halts capture briefly)"
+    )
     sp.set_defaults(func=cmd_save)
 
     sp = sub.add_parser("slope", help="Set or query input slope")
     sp.add_argument("channel", type=int, choices=[0, 1, 2, 3])
-    sp.add_argument("value", nargs="?", choices=["pos", "neg", "both",
-                                                 "POS", "NEG", "BOTH"],
-                    help="Omit to query")
+    sp.add_argument(
+        "value",
+        nargs="?",
+        choices=["pos", "neg", "both", "POS", "NEG", "BOTH"],
+        help="Omit to query",
+    )
     sp.set_defaults(func=cmd_slope)
 
     sp = sub.add_parser("div", help="Set or query channel divider (>= 1)")
@@ -620,22 +747,27 @@ def main():
     sp.add_argument("n", nargs="?", type=int, help="Omit to query")
     sp.set_defaults(func=cmd_div)
 
-    sp = sub.add_parser("format", help="Set or query the wire format "
-                                       "(persists after tsctl exits)")
-    sp.add_argument("value", nargs="?",
-                    choices=["text", "binary", "bin", "TEXT", "BINARY", "BIN"],
-                    help="Omit to query")
+    sp = sub.add_parser(
+        "format", help="Set or query the wire format " "(persists after tsctl exits)"
+    )
+    sp.add_argument(
+        "value",
+        nargs="?",
+        choices=["text", "binary", "bin", "TEXT", "BINARY", "BIN"],
+        help="Omit to query",
+    )
     sp.set_defaults(func=cmd_format)
 
-    sp = sub.add_parser("raw",
-                        help="Send a raw SCPI command (queries auto-read)")
+    sp = sub.add_parser("raw", help="Send a raw SCPI command (queries auto-read)")
     sp.add_argument("command")
     sp.set_defaults(func=cmd_raw)
 
-    sp = sub.add_parser("stream",
-                        help="Forward timestamps to stdout until ^C "
-                             "(binary on the wire for throughput, printed "
-                             "as ASCII; device format restored on exit)")
+    sp = sub.add_parser(
+        "stream",
+        help="Forward timestamps to stdout until ^C "
+        "(binary on the wire for throughput, printed "
+        "as ASCII; device format restored on exit)",
+    )
     sp.set_defaults(func=cmd_stream)
 
     args = p.parse_args()
