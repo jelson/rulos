@@ -34,142 +34,126 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "util"))
-sys.path.insert(0, os.path.join(
-    os.path.dirname(__file__), "..", "..", "pulsegen", "util"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "pulsegen", "util"))
 
-from tsctl import LectroTIC4, Timestamp, PulsesLost, OscillatorFailure
+from tsctl import LectroTIC4
 from pgctl import Pulsegen
-from regression_test import parse_text_stream
+import tstest
 
 
 def measure_rate(tic, measure_s, channel=0, text=False, settle_s=0.5):
-    """Drain the post-reconfigure residue for settle_s with the new
-    signal already running, then collect the stream for measure_s.
-    Returns (timestamps_float_seconds, lost_count). lost_count sums the
-    overcaptures + buffer overflows the device reports -- in BINARY
-    mode (default) via the in-band PULSES_LOST records, with text=True
-    via the ASCII diagnostic lines (both the definitive no-loss
-    signal). The two formats have different USB-drain ceilings.
-
-    The settle (discard_pending's settle_s) starts the measurement
-    after the just-reconfigured source is steady."""
-    if text:
-        tic.send("FORM:DATA TEXT")
-        tic.set_stream_enabled(True)
-        tic.discard_pending(settle_s=settle_s)
-        timestamps, _pols, _others, overcaptures, overflows, _comments = \
-            parse_text_stream(tic.read_raw(measure_s), channel=channel)
-        return timestamps, overcaptures + overflows
-
-    tic.discard_pending(settle_s=settle_s)
-    timestamps = []
-    lost = 0
-    for r in tic.read_for(measure_s):
-        if isinstance(r, Timestamp):
-            if r.channel == channel:
-                timestamps.append(r.seconds + r.nanoseconds * 1e-9)
-        elif isinstance(r, PulsesLost):
-            lost += r.overcaptures + r.buf_overflows
-        elif isinstance(r, OscillatorFailure):
-            raise RuntimeError("reference clock failed mid-measurement "
-                               "-- device halted; restore the 10 MHz "
-                               "source and reset")
-    return timestamps, lost
+    """Capture the stream for measure_s through the shared tstest capture path (which discards
+    everything prior plus settle_s of new data, so the measurement starts on a steady source).
+    Returns (times_ns, lost): integer-ns timestamps for `channel` and the device's summed
+    in-band loss counts. A reference-clock failure raises."""
+    cap = tstest.capture(tic, "text" if text else "binary", measure_s, settle_s=settle_s)
+    return cap.times(channel), cap.overcaptures + cap.buf_overflows
 
 
-def test_rate(sg, tic, hz, measure_s, tolerance, channel=0, text=False,
-              settle_s=0.5, rate_tol_ppm=50.0):
-    """Configure the PG-4 for `hz` Hz continuous, measure, and decide
-    pass/fail. Returns True on pass."""
-    period_s = 1.0 / hz
-    pulse_width_s = min(200e-9, period_s / 4)
+def test_rate(
+    sg, tic, hz, measure_s, tolerance, channel=0, text=False, settle_s=0.5, rate_tol_ppm=50.0
+):
+    """Configure the PG-4 for `hz` Hz continuous, measure, and decide pass/fail. Returns True on
+    pass."""
+    period_ns = round(tstest.NS / hz)
+    tol_ns = round(tolerance * 1e9)
+    pulse_width_s = min(200e-9, period_ns / 4 / tstest.NS)
 
-    print(f"  Testing {hz:>7.0f} Hz "
-          f"(pulse width {pulse_width_s * 1e9:.0f} ns)...")
+    print(f"  Testing {hz:>7.0f} Hz (pulse width {pulse_width_s * 1e9:.0f} ns)...")
     sg.periodic(channel, hz, width_s=pulse_width_s)
 
-    timestamps, lost = measure_rate(tic, measure_s, channel=channel,
-                                    text=text, settle_s=settle_s)
+    times, lost = measure_rate(tic, measure_s, channel=channel, text=text, settle_s=settle_s)
 
-    deltas = [timestamps[i] - timestamps[i - 1]
-              for i in range(1, len(timestamps))]
-    # Score interior gaps only, mirroring regression_test.phase_sustained:
-    # the first/last gap touches the capture-window edge, where a record
-    # can be clipped or torn (a window cut mid-record, or a seconds
-    # rollover straddling the boundary) -- a window artifact, not a
-    # device miss. A real miss is interior and a >=1*period excursion.
+    deltas = [b - a for a, b in zip(times, times[1:])]
+    # Score interior gaps only, mirroring the regression suite: the first/last gap touches the
+    # capture-window edge, where a record can be clipped -- a window artifact, not a device miss.
+    # A real miss is interior and a >= 1*period excursion.
     interior = deltas[1:-1]
-    bad_gaps = sum(1 for d in interior if abs(d - period_s) > tolerance)
+    bad_gaps = sum(1 for d in interior if abs(d - period_ns) > tol_ns)
 
-    # Average-rate cross-check: count the pulses received and divide by
-    # the time between the first and last pulse. Per-gap tolerance can
-    # hide a systematic rate error (e.g. a mis-programmed generator);
-    # this can't.
+    # Average-rate cross-check: count the pulses received and divide by the time between the first
+    # and last pulse. Per-gap tolerance can hide a systematic rate error (e.g. a mis-programmed
+    # generator); this can't.
     rate_err_ppm = float("nan")
     rate_ok = False
-    if len(timestamps) >= 2:
-        span = timestamps[-1] - timestamps[0]
-        observed_hz = (len(timestamps) - 1) / span
+    if len(times) >= 2:
+        span_ns = times[-1] - times[0]
+        observed_hz = (len(times) - 1) * tstest.NS / span_ns
         rate_err_ppm = (observed_hz / hz - 1.0) * 1e6
         rate_ok = abs(rate_err_ppm) <= rate_tol_ppm
 
-    passed = (lost == 0) and (bad_gaps == 0) and (len(interior) > 0) \
-        and rate_ok
+    passed = (lost == 0) and (bad_gaps == 0) and (len(interior) > 0) and rate_ok
 
     if interior:
-        worst = max(interior, key=lambda d: abs(d - period_s))
-        worst_err_ns = (worst - period_s) * 1e9
+        worst = max(interior, key=lambda d: abs(d - period_ns))
+        worst_err_ns = worst - period_ns
     else:
         worst_err_ns = float("nan")
 
     status = "PASS" if passed else "FAIL"
-    print(f"  {hz:>7.0f} Hz: {status}  "
-          f"n={len(timestamps)} "
-          f"lost={lost} "
-          f"bad_gaps={bad_gaps}/{len(interior)} "
-          f"worst_dev={worst_err_ns:+.0f} ns "
-          f"rate_err={rate_err_ppm:+.1f} ppm")
+    print(
+        f"  {hz:>7.0f} Hz: {status}  "
+        f"n={len(times)} lost={lost} bad_gaps={bad_gaps}/{len(interior)} "
+        f"worst_dev={worst_err_ns:+.0f} ns rate_err={rate_err_ppm:+.1f} ppm"
+    )
     return passed
 
 
 def main():
     p = argparse.ArgumentParser(
         description="Binary-search for sustained LectroTIC-4 USB throughput",
-        formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--bottom", type=float, default=1000,
-                   help="Lower bound in Hz (default: 1000)")
-    p.add_argument("--top", type=float, default=100000,
-                   help="Upper bound in Hz (default: 100000)")
-    p.add_argument("--port", default=None,
-                   help="LectroTIC-4 serial port (default: autodetect)")
-    p.add_argument("--pg-port", default=None,
-                   help="PG-4 serial port (default: autodetect)")
-    p.add_argument("--channel", type=int, default=0, choices=[0, 1, 2, 3],
-                   help="Channel under test; the PG-4 output wired "
-                        "straight through to it is driven (default 0). "
-                        "The PG-4 floors at ~1.9 kHz, so use "
-                        "--bottom >= 2000.")
-    p.add_argument("--precision", type=float, default=500,
-                   help="Stop when range narrows to this many Hz "
-                        "(default: 500)")
-    p.add_argument("--measure", type=float, default=5.0,
-                   help="Seconds to measure each frequency (default: 5)")
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p.add_argument("--bottom", type=float, default=1000, help="Lower bound in Hz (default: 1000)")
+    p.add_argument("--top", type=float, default=100000, help="Upper bound in Hz (default: 100000)")
+    p.add_argument("--port", default=None, help="LectroTIC-4 serial port (default: autodetect)")
+    p.add_argument("--pg-port", default=None, help="PG-4 serial port (default: autodetect)")
+    p.add_argument(
+        "--channel",
+        type=int,
+        default=0,
+        choices=[0, 1, 2, 3],
+        help="Channel under test; the PG-4 output wired "
+        "straight through to it is driven (default 0). "
+        "The PG-4 floors at ~1.9 kHz, so use "
+        "--bottom >= 2000.",
+    )
+    p.add_argument(
+        "--precision",
+        type=float,
+        default=500,
+        help="Stop when range narrows to this many Hz " "(default: 500)",
+    )
+    p.add_argument(
+        "--measure", type=float, default=5.0, help="Seconds to measure each frequency (default: 5)"
+    )
     # The PG-4 and device run off the same 10 MHz lab standard (no
     # drift between them) and the device timestamps at 4 ns, so a clean
     # gap is the period +/- a few ns; a dropped pulse is a whole-period
     # excursion. 12 ns matches regression_test.py's GAP_TOL_S.
-    p.add_argument("--tolerance", type=float, default=12e-9,
-                   help="Per-gap tolerance in seconds; a frequency "
-                        "passes only if every gap is within this of "
-                        "1/hz (default: 12e-9 = 12 ns)")
-    p.add_argument("--text", action="store_true",
-                   help="Measure the ASCII TEXT stream instead of the "
-                        "BINARY union (different USB-drain ceiling)")
-    p.add_argument("--settle", type=float, default=0.5,
-                   help="Seconds of data to discard after each PG-4 "
-                        "reconfigure so the measurement starts on a "
-                        "steady source (default: 0.5, matching "
-                        "phase_sustained)")
+    p.add_argument(
+        "--tolerance",
+        type=float,
+        default=12e-9,
+        help="Per-gap tolerance in seconds; a frequency "
+        "passes only if every gap is within this of "
+        "1/hz (default: 12e-9 = 12 ns)",
+    )
+    p.add_argument(
+        "--text",
+        action="store_true",
+        help="Measure the ASCII TEXT stream instead of the "
+        "BINARY union (different USB-drain ceiling)",
+    )
+    p.add_argument(
+        "--settle",
+        type=float,
+        default=0.5,
+        help="Seconds of data to discard after each PG-4 "
+        "reconfigure so the measurement starts on a "
+        "steady source (default: 0.5, matching "
+        "phase_sustained)",
+    )
     args = p.parse_args()
 
     lo = args.bottom
@@ -179,15 +163,16 @@ def main():
     channel = args.channel
 
     with LectroTIC4(args.port) as tic:
-        print(f"Searching for max sustained rate in range "
-              f"[{lo:.0f}, {hi:.0f}] Hz")
+        print(f"Searching for max sustained rate in range " f"[{lo:.0f}, {hi:.0f}] Hz")
         print(f"LectroTIC-4 port: {tic.port}")
         print(f"Channel under test: {channel}")
         print(f"Wire format: {'TEXT' if text else 'BINARY'}")
-        print(f"Measurement: {args.measure}s/frequency, "
-              f"{settle:.1f}s settle, per-gap "
-              f"tolerance +/-{args.tolerance * 1e9:.0f} ns, "
-              f"loss via in-band PULSES_LOST")
+        print(
+            f"Measurement: {args.measure}s/frequency, "
+            f"{settle:.1f}s settle, per-gap "
+            f"tolerance +/-{args.tolerance * 1e9:.0f} ns, "
+            f"loss via in-band PULSES_LOST"
+        )
         print()
 
         with Pulsegen(port=args.pg_port) as sg:
@@ -195,18 +180,17 @@ def main():
             print()
 
             print("Verifying lower bound passes...")
-            if not test_rate(sg, tic, lo, args.measure, args.tolerance,
-                             channel=channel, text=text):
-                print(f"ERROR: Lower bound {lo:.0f} Hz fails -- "
-                      f"decrease --bottom")
+            if not test_rate(sg, tic, lo, args.measure, args.tolerance, channel=channel, text=text):
+                print(f"ERROR: Lower bound {lo:.0f} Hz fails -- " f"decrease --bottom")
                 sg.off()
                 sys.exit(1)
 
             print("Verifying upper bound fails...")
-            if test_rate(sg, tic, hi, args.measure, args.tolerance,
-                         channel=channel, text=text):
-                print(f"NOTE: Upper bound {hi:.0f} Hz already passes -- "
-                      f"increase --top to find the ceiling")
+            if test_rate(sg, tic, hi, args.measure, args.tolerance, channel=channel, text=text):
+                print(
+                    f"NOTE: Upper bound {hi:.0f} Hz already passes -- "
+                    f"increase --top to find the ceiling"
+                )
                 sg.off()
                 sys.exit(0)
 
@@ -216,8 +200,9 @@ def main():
                 mid = round((lo + hi) / 2)
                 if mid == lo or mid == hi:
                     break
-                if test_rate(sg, tic, mid, args.measure, args.tolerance,
-                             channel=channel, text=text):
+                if test_rate(
+                    sg, tic, mid, args.measure, args.tolerance, channel=channel, text=text
+                ):
                     lo = mid
                 else:
                     hi = mid
