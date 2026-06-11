@@ -322,6 +322,23 @@ def expect_quiet_others(ph, cap, active):
     ph.expect(not others, f"no spurious other-channel activity ({others or 'none'})")
 
 
+def expect_loss_only_for(ph, cap, channel):
+    """The capture must report loss, and attribute ALL of it to `channel`: a loss-provoking phase
+    that shows loss on an undriven channel is misattributing."""
+    oc, ovf = cap.loss_for(channel)
+    ph.expect(
+        oc > 0 or ovf > 0,
+        f"loss reported and attributed to the driven ch{channel} (overcaptures={oc}, "
+        f"buf overflows={ovf})",
+    )
+    misattributed = {
+        c: cap.loss_for(c) for c in CHANNELS if c != channel and cap.loss_for(c) != (0, 0)
+    }
+    ph.expect(
+        not misattributed, f"no loss attributed to undriven channels ({misattributed or 'none'})"
+    )
+
+
 def expect_monotonic(ph, times):
     """Timestamps must be nondecreasing: a backwards step is a merge mis-order, never measurement
     noise."""

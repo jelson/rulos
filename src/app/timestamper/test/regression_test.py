@@ -82,6 +82,8 @@ def phase(label, wires=WIRES, releases_port=False, needs_bmp=False, **params):
 # --------------------------------------------------------------------
 
 
+@phase("divider hw16", slope="NEG", divider=16)
+@phase("divider hw8", slope="POS", divider=8)
 @phase("divider", slope="POS", divider=5)
 @phase("falling", slope="NEG", divider=1)
 @phase("rising", slope="POS", divider=1)
@@ -253,20 +255,7 @@ def phase_overcapture(ctx, ncyc):
 
     ctx.ph.expect(sum(sizes) > 0, "device still streamed timestamps through the overrun")
     tstest.expect_quiet_others(ctx.ph, cap, {ctx.channel})
-    oc, ovf = cap.loss_for(ctx.channel)
-    ctx.ph.expect(
-        oc > 0 or ovf > 0,
-        f"loss reported on the {ctx.wire} wire, attributed to the driven ch{ctx.channel} "
-        f"(overcaptures={oc}, buf overflows={ovf})",
-    )
-    misattributed = {
-        c: cap.loss_for(c)
-        for c in tstest.CHANNELS
-        if c != ctx.channel and cap.loss_for(c) != (0, 0)
-    }
-    ctx.ph.expect(
-        not misattributed, f"no loss attributed to undriven channels ({misattributed or 'none'})"
-    )
+    tstest.expect_loss_only_for(ctx.ph, cap, ctx.channel)
 
 
 @phase("polarity burst", ncyc=4096, spacing_ns=200)
