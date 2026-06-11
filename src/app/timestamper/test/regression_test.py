@@ -1231,9 +1231,9 @@ def configure_ts_4ch(tic, slope):
         tic.set_divider(c, 1)
 
 
-def sync_all(sg, delays_s, width_s=1e-6):
-    """SYNC mode: every channel at PHASE_LOCK_PERIOD_S with the given
-    per-channel rising-edge delays. Raises if the PG-4 rejects it."""
+def sync_all(sg, delays_s, width_s=1e-6, period_s=PHASE_LOCK_PERIOD_S):
+    """SYNC mode: every channel at period_s with the given per-channel
+    rising-edge delays. Raises if the PG-4 rejects it."""
     sg.set_mode(Pulsegen.SYNC)
     # Sync mode is a single domain, so one channel clears burst state
     # for all four. Without this, burst config left over from another
@@ -1241,7 +1241,7 @@ def sync_all(sg, delays_s, width_s=1e-6):
     # the PG-4's burst frame-length validation.
     sg.set_burst_state(0, False)
     for c in ALL_CHANNELS:
-        sg.set_period(c, PHASE_LOCK_PERIOD_S)
+        sg.set_period(c, period_s)
         sg.set_width(c, width_s)
         sg.set_delay(c, delays_s[c])
         sg.set_state(c, True)
@@ -1296,37 +1296,162 @@ def phase_phase_lock(sg, tic):
     return ok
 
 
-def phase_stair(sg, tic, step_ns=100):
-    """SYNC, per-channel delays 0/step/2step/3step: each channel must be
-    measured at its programmed offset from ch0, exercising the
-    phase-lock at nonzero offsets too."""
-    print(f"\n=== stair (per-channel {step_ns} ns delays) ===")
+def phase_stair(sg, tic, step_ns=100, base_ns=0):
+    """SYNC, per-channel delays base/base+step/base+2step/base+3step,
+    measured DIFFERENTIALLY against a flat all-channels-at-base capture
+    taken first in the same phase: each channel's baseline-corrected
+    offset must equal its programmed step multiple to within one 4 ns
+    tick. The flat baseline cancels the fixed per-channel systematics
+    (TIM2<->TIM5 trigger latency, cable-length skew) that would
+    otherwise force a tolerance wider than a fine staircase. The base
+    delay rides under every channel equally; a fine stair needs
+    base_ns > 0 because per-channel delays below the PG-4's minimum
+    HRTIM compare are clamped and never appear on the wire."""
+    print(f"\n=== stair (per-channel {step_ns} ns delays"
+          f"{f' on a {base_ns} ns base' if base_ns else ''}) ===")
+    configure_ts_4ch(tic, "POS")
+
+    def measure(delays_ns, label, duration_s):
+        sg.off()
+        sync_all(sg, {c: delays_ns[c] / 1e9 for c in ALL_CHANNELS})
+        time.sleep(0.1)
+        tic.discard_pending()
+        per, lost = collect_all(tic, duration_s)
+        ok = expect(lost == 0, f"{label}: no loss (lost={lost})")
+        firings, interior_bad = complete_firings(per)
+        if not firings:
+            return expect(False,
+                          f"{label}: firings paired on all 4 channels"), None
+        ok &= expect(interior_bad == 0,
+                     f"{label}: every interior firing complete on all "
+                     f"four channels ({interior_bad} incomplete)")
+        ok &= expect_firing_cadence(firings)
+        med = median_offsets(firings)
+        spread = max(abs((f[c] - f[0]) - med[c])
+                     for f in firings for c in ALL_CHANNELS)
+        ok &= expect(spread <= 12,
+                     f"{label}: every firing's offsets within 12 ns of "
+                     f"the median (worst {spread:.1f} ns)")
+        return ok, med
+
+    ok, baseline = measure({c: base_ns for c in ALL_CHANNELS},
+                           "baseline (flat)", 1.0)
+    if baseline is None:
+        return ok
+    print("  baseline offsets (ns): " +
+          ", ".join(f"ch{c}={baseline[c]:+.1f}" for c in ALL_CHANNELS))
+    stair_ok, med = measure(
+        {c: base_ns + c * step_ns for c in ALL_CHANNELS}, "stair", 2.0)
+    ok &= stair_ok
+    if med is None:
+        return ok
+    print("  baseline-corrected offsets (ns): " +
+          ", ".join(f"ch{c}={med[c] - baseline[c]:+.1f}"
+                    for c in ALL_CHANNELS))
+    for c in ALL_CHANNELS:
+        delta = med[c] - baseline[c]
+        ok &= expect(abs(delta - c * step_ns) <= 4,
+                     f"ch{c} at programmed {c * step_ns} ns offset "
+                     f"(baseline-corrected {delta:+.1f})")
+    return ok
+
+
+# Per-channel rate for the 4-channel sustained phase: every jack at
+# once, summing to the binary wire's rated 100k records/s aggregate.
+SUSTAINED_4CH_HZ = 25000
+
+
+def phase_sustained_4ch(sg, tic):
+    """All four channels streaming at once at the rated aggregate:
+    4 x 25 kHz = 100k records/s spread across every jack, exercising
+    four concurrent DMA capture streams, the shared ring, and USB
+    together at the spec'd binary sustained rate. Every channel's
+    every interior gap must be the source period."""
+    print(f"\n=== sustained 4-channel "
+          f"(4 x {SUSTAINED_4CH_HZ} Hz, binary) ===")
     configure_ts_4ch(tic, "POS")
     sg.off()
-    sync_all(sg, {c: c * step_ns / 1e9 for c in ALL_CHANNELS})
+    sync_all(sg, {c: 0.0 for c in ALL_CHANNELS},
+             period_s=1.0 / SUSTAINED_4CH_HZ)
     time.sleep(0.1)
-    tic.discard_pending()
-    per, lost = collect_all(tic, 2.0)
+    tic.discard_pending(settle_s=0.5)
+    per, lost = collect_all(tic, SUSTAINED_S)
     ok = expect(lost == 0, f"no loss (lost={lost})")
-    firings, interior_bad = complete_firings(per)
-    if not firings:
-        return ok and expect(False, "firings paired on all 4 channels")
-    ok &= expect(interior_bad == 0,
-                 f"every interior firing complete on all four channels "
-                 f"({interior_bad} incomplete)")
-    ok &= expect_firing_cadence(firings)
-    med = median_offsets(firings)
-    print("  measured offset from ch0 (ns): " +
-          ", ".join(f"ch{c}={med[c]:+.1f}" for c in ALL_CHANNELS))
-    spread = max(abs((f[c] - f[0]) - med[c])
-                 for f in firings for c in ALL_CHANNELS)
-    ok &= expect(spread <= 12,
-                 f"every firing's offsets within 12 ns of the median "
-                 f"(worst {spread:.1f} ns)")
+    period_ns = 1e9 / SUSTAINED_4CH_HZ
     for c in ALL_CHANNELS:
-        ok &= expect(abs(med[c] - c * step_ns) <= 12,
-                     f"ch{c} at programmed {c * step_ns} ns offset "
-                     f"(measured {med[c]:+.1f})")
+        times = [t for t, _ in per[c]]
+        n = len(times)
+        ok &= expect(n >= 100, f"ch{c} produced records (n={n})")
+        if n < 4:
+            continue
+        interior = [b - a for a, b in zip(times, times[1:])][1:-1]
+        worst = max(interior, key=lambda d: abs(d - period_ns))
+        ok &= expect(all(abs(d - period_ns) <= GAP_TOL_S * 1e9
+                         for d in interior),
+                     f"ch{c}: every interior gap on the "
+                     f"{period_ns / 1000:.0f} µs period (n={n}, worst "
+                     f"dev {worst - period_ns:+.1f} ns)")
+        ok &= expect(all(p == "+" for _, p in per[c]),
+                     f"ch{c}: all polarities '+'")
+    return ok
+
+
+# Four distinct observed rates from two PG-4 period domains (ch0/1
+# share Timer F, ch2/3 Timer E -- four distinct source frequencies are
+# physically impossible on this board) crossed with per-channel
+# dividers, which also exercises divider correctness on concurrently
+# active channels: 25k/1, 25k/2, 40k/1, 40k/4 = 25k, 12.5k, 40k, 10k.
+MULTI_RATE_SRC_HZ = {0: 25000, 1: 25000, 2: 40000, 3: 40000}
+MULTI_RATE_DIV = {0: 1, 1: 2, 2: 1, 3: 4}
+
+
+def phase_multi_rate(sg, tic):
+    """Every channel at a different observed rate, all concurrent:
+    two ASYNC source frequencies x per-channel dividers. Each channel
+    must show exactly its own expected rate -- every interior gap is
+    divider x source period, and the average rate matches to ppm."""
+    print("\n=== four distinct rates (2 PG domains x dividers) ===")
+    configure_ts_4ch(tic, "POS")
+    sg.off()
+    sg.set_mode(Pulsegen.ASYNC)
+    for domain in (0, 2):  # clear stale burst state in both domains
+        sg.set_burst_state(domain, False)
+    for c in ALL_CHANNELS:
+        hz = MULTI_RATE_SRC_HZ[c]
+        sg.set_period(c, 1.0 / hz)
+        sg.set_width(c, 1.0 / hz / 4)
+        sg.set_delay(c, 0)
+        sg.set_state(c, True)
+    err = sg.get_error()
+    if not err.startswith("0,"):
+        raise RuntimeError(f"PG-4 rejected multi-rate config: {err}")
+    for c, d in MULTI_RATE_DIV.items():
+        tic.set_divider(c, d)
+    time.sleep(0.1)
+    tic.discard_pending(settle_s=0.5)
+    per, lost = collect_all(tic, 5.0)
+    for c in ALL_CHANNELS:
+        tic.set_divider(c, 1)
+    ok = expect(lost == 0, f"no loss (lost={lost})")
+    for c in ALL_CHANNELS:
+        hz = MULTI_RATE_SRC_HZ[c] / MULTI_RATE_DIV[c]
+        period_ns = 1e9 / hz
+        times = [t for t, _ in per[c]]
+        n = len(times)
+        ok &= expect(n >= 100, f"ch{c} produced records (n={n})")
+        if n < 4:
+            continue
+        obs_hz = (n - 1) * 1e9 / (times[-1] - times[0])
+        err_ppm = (obs_hz / hz - 1.0) * 1e6
+        interior = [b - a for a, b in zip(times, times[1:])][1:-1]
+        worst = max(interior, key=lambda d: abs(d - period_ns))
+        ok &= expect(all(abs(d - period_ns) <= GAP_TOL_S * 1e9
+                         for d in interior),
+                     f"ch{c}: every interior gap = {period_ns / 1000:.0f} "
+                     f"µs (worst dev {worst - period_ns:+.1f} ns)")
+        ok &= expect(abs(err_ppm) <= 50,
+                     f"ch{c}: observed {obs_hz:.1f} Hz vs expected "
+                     f"{hz:.0f} Hz ({err_ppm:+.1f} ppm)")
     return ok
 
 
@@ -1405,6 +1530,10 @@ def main():
             # share one timeline. Needs all four wired straight through.
             ("phase lock", lambda: phase_phase_lock(sg, tic)),
             ("stair", lambda: phase_stair(sg, tic)),
+            ("stair 4ns", lambda: phase_stair(sg, tic, step_ns=4,
+                                              base_ns=1000)),
+            ("sustained 4ch", lambda: phase_sustained_4ch(sg, tic)),
+            ("multi rate", lambda: phase_multi_rate(sg, tic)),
             ("idn serial", lambda: phase_idn_serial(tic)),
         ]
         try:
