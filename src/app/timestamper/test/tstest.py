@@ -25,6 +25,7 @@ import time
 from dataclasses import dataclass, field
 
 from pgctl import Pulsegen
+import tsctl
 from tsctl import Timestamp, PulsesLost, OscillatorFailure
 
 NS = 1_000_000_000
@@ -51,13 +52,29 @@ _DIAG_RE = re.compile(r"# ch(\d+): (\d+) overcaptures, (\d+) buf overflows")
 @dataclass
 class Capture:
     """Everything one capture window produced: per-channel records in arrival order (each (t_ns,
-    polarity)), the device's in-band loss counts, and any '#' comment lines (text wire only)."""
+    polarity)), the device's in-band loss counts attributed per channel, and any '#' comment lines
+    (text wire only)."""
 
     wire: str
     chans: dict = field(default_factory=dict)
-    overcaptures: int = 0
-    buf_overflows: int = 0
+    loss: dict = field(default_factory=dict)  # channel -> [overcaptures, buf_overflows]
     comments: list = field(default_factory=list)
+
+    @property
+    def overcaptures(self):
+        return sum(v[0] for v in self.loss.values())
+
+    @property
+    def buf_overflows(self):
+        return sum(v[1] for v in self.loss.values())
+
+    def loss_for(self, ch):
+        return tuple(self.loss.get(ch, (0, 0)))
+
+    def _add_loss(self, ch, oc, ovf):
+        entry = self.loss.setdefault(ch, [0, 0])
+        entry[0] += oc
+        entry[1] += ovf
 
     def records(self, ch):
         return self.chans.get(ch, [])
@@ -92,8 +109,7 @@ def _decode_text(raw, cap):
             cap.comments.append(line)
             m = _DIAG_RE.search(line)
             if m:
-                cap.overcaptures += int(m.group(2))
-                cap.buf_overflows += int(m.group(3))
+                cap._add_loss(int(m.group(1)), int(m.group(2)), int(m.group(3)))
             continue
         parts = line.split()
         try:
@@ -117,32 +133,44 @@ def decode_text(raw):
     return cap
 
 
-def capture(tic, wire, duration_s, settle_s=0.0):
-    """THE capture path: configure the wire format, discard everything prior (plus settle_s of new
-    data when the source was just reconfigured), then collect for duration_s and return a Capture. A
-    reference-clock failure raises."""
-    if wire == "text":
-        tic.send("FORM:DATA TEXT")
-        tic.set_stream_enabled(True)
-        tic.discard_pending(settle_s=settle_s)
-        cap = Capture(wire)
-        _decode_text(tic.read_raw(duration_s), cap)
-        return cap
-
-    # binary: read_for does the FORM switch + marker-synced framing; its reader thread drains the
-    # port independently of decode speed, so even full-rate captures can't backpressure the device.
-    tic.discard_pending(settle_s=settle_s)
-    cap = Capture(wire)
-    for r in tic.read_for(duration_s):
+def _ingest(cap, records):
+    for r in records:
         if isinstance(r, Timestamp):
             cap._add(r.channel, r.seconds * NS + r.nanoseconds, r.polarity)
         elif isinstance(r, PulsesLost):
-            cap.overcaptures += r.overcaptures
-            cap.buf_overflows += r.buf_overflows
+            cap._add_loss(r.channel, r.overcaptures, r.buf_overflows)
         elif isinstance(r, OscillatorFailure):
             raise RuntimeError(
                 "reference clock failed -- device halted; restore the 10 MHz source and reset"
             )
+
+
+def capture(tic, wire, duration_s, settle_s=0.0, discard=True):
+    """THE capture path: configure the wire format, discard everything prior (plus settle_s of new
+    data when the source was just reconfigured), then collect for duration_s and return a Capture.
+    A reference-clock failure raises.
+
+    discard=False skips the format command and marker sync and decodes the live stream exactly as
+    it arrives. Only valid where the caller knows the stream is record-aligned and in the expected
+    format -- e.g. resuming after OUTPut:STATe OFF, where the TX path has only ever emitted whole
+    records. This is how a test can observe the silenced-period backlog that a marker sync would
+    destroy."""
+    cap = Capture(wire)
+    if wire == "text":
+        if discard:
+            tic.send("FORM:DATA TEXT")
+            tic.set_stream_enabled(True)
+            tic.discard_pending(settle_s=settle_s)
+        _decode_text(tic.read_raw(duration_s), cap)
+        return cap
+
+    if discard:
+        # read_for does the FORM switch + marker-synced framing; its reader thread drains the port
+        # independently of decode speed, so even full-rate captures can't backpressure the device.
+        tic.discard_pending(settle_s=settle_s)
+        _ingest(cap, tic.read_for(duration_s))
+    else:
+        _ingest(cap, tsctl._decode_chunks([tic.read_raw(duration_s)]))
     return cap
 
 

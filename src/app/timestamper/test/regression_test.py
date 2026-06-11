@@ -166,29 +166,39 @@ def phase_both(ctx):
 
 @phase("output gating")
 def phase_output_gating(ctx):
-    """OUTPut:STATe OFF must silence the wire completely -- not one byte -- while capture continues;
-    ON must resume a full-rate stream."""
+    """OUTPut:STATe OFF must silence the wire completely -- not one byte -- while capture continues
+    into the internal buffer; ON must deliver the silenced-period backlog (the documented
+    query-session workflow: up to 16,384 records buffer during a pause) followed seamlessly by live
+    records. Perfect cadence across the whole capture proves not one silenced pulse was lost."""
     ctx.src.periodic(ctx.channel, PULSE_HZ, PULSE_WIDTH_S)
     tstest.configure(ctx.tic)
-
+    # Select the wire format up front: the backlog read below must not issue the format command
+    # (or any marker sync) itself, or it would wipe the backlog this test exists to verify.
+    ctx.tic.send(f"FORM:DATA {'TEXT' if ctx.wire == 'text' else 'BIN'}")
     ctx.tic.set_stream_enabled(False)
-    # Marker-synced barrier: drains the prior phase's in-flight residue end to end, so the
-    # silence window that follows is deterministic regardless of what ran before.
+    # Marker-synced barrier: drains the prior phase's in-flight residue end to end, so the silence
+    # window that follows is deterministic regardless of what ran before.
     ctx.tic.discard_pending()
     bytes_off = ctx.tic.read_raw(1.0)
-
-    cap = tstest.capture(ctx.tic, ctx.wire, 1.0)
-    times = cap.times(ctx.channel)
-    print(
-        f"  OFF: {len(bytes_off)} bytes (expect 0); "
-        f"ON: {len(times)} stamps (expect ~{PULSE_HZ})"
-    )
-
     ctx.ph.expect(len(bytes_off) == 0, "silent while OUTP:STAT OFF")
-    ctx.ph.expect(
-        abs(len(times) - PULSE_HZ) <= tstest.count_tol(PULSE_HZ, 2),
-        f"~{PULSE_HZ} stamps after OUTP:STAT ON",
+
+    ctx.tic.set_stream_enabled(True)
+    cap = tstest.capture(ctx.tic, ctx.wire, 1.5, discard=False)
+    times = cap.times(ctx.channel)
+    # The capture must contain the ~1 s of silenced backlog PLUS the live window -- far more than
+    # the live window alone could produce -- and be gap-free straight through the OFF/ON boundary.
+    floor = int(PULSE_HZ * 2.2)
+    print(
+        f"  OFF: {len(bytes_off)} bytes (expect 0); after ON: {len(times)} stamps "
+        f"(backlog + live; expect >= {floor})"
     )
+    ctx.ph.expect(
+        len(times) >= floor,
+        f"silenced-period backlog delivered after OUTP:STAT ON (n={len(times)})",
+    )
+    tstest.expect_cadence(ctx.ph, times, PERIOD_NS, "backlog+live cadence", edges="interior")
+    tstest.expect_no_loss(ctx.ph, cap)
+    tstest.expect_quiet_others(ctx.ph, cap, {ctx.channel})
 
 
 @phase("burst", ncyc=16383, spacing_ns=100)
@@ -243,10 +253,19 @@ def phase_overcapture(ctx, ncyc):
 
     ctx.ph.expect(sum(sizes) > 0, "device still streamed timestamps through the overrun")
     tstest.expect_quiet_others(ctx.ph, cap, {ctx.channel})
+    oc, ovf = cap.loss_for(ctx.channel)
     ctx.ph.expect(
-        cap.overcaptures > 0 or cap.buf_overflows > 0,
-        f"device reported the loss on the {ctx.wire} wire "
-        f"(overcaptures={cap.overcaptures}, buf overflows={cap.buf_overflows})",
+        oc > 0 or ovf > 0,
+        f"loss reported on the {ctx.wire} wire, attributed to the driven ch{ctx.channel} "
+        f"(overcaptures={oc}, buf overflows={ovf})",
+    )
+    misattributed = {
+        c: cap.loss_for(c)
+        for c in tstest.CHANNELS
+        if c != ctx.channel and cap.loss_for(c) != (0, 0)
+    }
+    ctx.ph.expect(
+        not misattributed, f"no loss attributed to undriven channels ({misattributed or 'none'})"
     )
 
 
@@ -498,6 +517,61 @@ def phase_idn_serial(ctx):
     )
 
 
+@phase("divider semantics", wires=None)
+def phase_divider_semantics(ctx):
+    """Two fine points of the divider contract. In BOTH mode the divider counts EDGES -- each
+    pulse contributes its rising and falling edge -- so divider N yields 2*rate/N records with
+    both polarities surviving. And setting the divider resets its progress counter: re-setting it
+    faster than N source pulses can accumulate keeps the channel silent indefinitely, because no
+    partial count survives a set."""
+    ph = ctx.ph
+
+    # (a) BOTH mode: the divider counts edges, not pulses.
+    ctx.src.periodic(ctx.channel, PULSE_HZ, PULSE_WIDTH_S)
+    tstest.configure(ctx.tic, slopes={ctx.channel: "BOTH"}, dividers={ctx.channel: 5})
+    cap = tstest.capture(ctx.tic, "binary", 5.0)
+    recs = cap.records(ctx.channel)
+    expected = 2 * PULSE_HZ * 5.0 / 5
+    tol = tstest.count_tol(2 * PULSE_HZ / 5, 2)
+    npos = sum(1 for _, p in recs if p == "+")
+    print(
+        f"  BOTH+div5: {len(recs)} records (expect ~{expected:.0f}); {npos} '+', "
+        f"{len(recs) - npos} '-'"
+    )
+    ph.expect(
+        abs(len(recs) - expected) <= tol,
+        f"one record per 5 EDGES in BOTH mode (count within {tol} of {expected:.0f})",
+    )
+    ph.expect(
+        abs(npos - len(recs) / 2) <= len(recs) * 0.05 + 5,
+        "both polarities survive the divider (~half each)",
+    )
+    tstest.expect_substreams_monotonic(ph, recs)
+    tstest.expect_no_loss(ph, cap)
+    tstest.expect_quiet_others(ph, cap, {ctx.channel})
+
+    # (b) Setting the divider resets its counter. With divider == one second of pulses, re-setting
+    # every ~0.2 s means the count never reaches the divider: the channel must stay silent the
+    # whole time. Stop re-setting and the records resume -- proving the silence was the reset
+    # semantics, not a dead channel.
+    tstest.configure(ctx.tic, dividers={ctx.channel: PULSE_HZ})  # 1 record per second
+    ctx.tic.send("FORM:DATA BIN")
+    ctx.tic.set_stream_enabled(True)
+    ctx.tic.discard_pending()
+    for _ in range(12):
+        time.sleep(0.2)
+        ctx.tic.set_divider(ctx.channel, PULSE_HZ)  # reset the count before it can reach 1 s
+    cap = tstest.capture(ctx.tic, "binary", 0.3, discard=False)
+    ph.expect(
+        len(cap.times(ctx.channel)) == 0,
+        f"silent while the divider is re-set faster than it can fill "
+        f"({len(cap.times(ctx.channel))} records in 2.4 s of spam)",
+    )
+    cap = tstest.capture(ctx.tic, "binary", 2.5, discard=False)
+    n = len(cap.times(ctx.channel))
+    ph.expect(n >= 1, f"records resume once the re-setting stops (n={n} in 2.5 s at 1/s)")
+
+
 # 4-channel SYNC timing: 200 us period (5 kHz/channel), firing-cluster split at half a period.
 PHASE_LOCK_PERIOD_NS = 200_000
 PHASE_LOCK_SPLIT_NS = PHASE_LOCK_PERIOD_NS // 2
@@ -710,6 +784,18 @@ def phase_tsctl_cli(ctx):
 
     r = _cli(port, "raw", "*IDN?")
     ph.expect("LectroTIC-4" in r.stdout, f"`tsctl raw *IDN?` -> IDN ({r.stdout.strip()!r})")
+
+    # save: runs the CONF:SAVE flash path without disturbing the live config; a final reset
+    # leaves the device (and the persisted defaults) clean. True power-loss persistence is the
+    # config-persist phase's job.
+    _cli(port, "slope", "0", "NEG")
+    _cli(port, "div", "0", "3")
+    ph.expect(_cli(port, "save").returncode == 0, "`tsctl save` ok")
+    r = _cli(port, "div", "0")
+    ph.expect(r.stdout.strip() == "3", f"config undisturbed by save ({r.stdout.strip()!r})")
+    ph.expect(_cli(port, "reset").returncode == 0, "`tsctl reset` restores defaults after save")
+    r = _cli(port, "slope", "0")
+    ph.expect(r.stdout.strip() == "POS", f"defaults back after reset ({r.stdout.strip()!r})")
 
     # stream: a real signal, run the CLI briefly, parse its stdout. -u so the child's stdout isn't
     # lost in a pipe buffer on kill.
