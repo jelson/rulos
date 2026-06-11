@@ -133,14 +133,21 @@ def count_tol(rate_hz, base):
 
 def parse_text_stream(raw, channel):
     """Parse the device's raw TEXT output (bytes). Each timestamp line
-    is '<ch> <sec>.<ns> <+|->'; lines without a valid polarity column
-    are treated as torn/garbage and skipped."""
+    is '<ch> <sec>.<ns> <+|->' with exactly nine ns digits. The stream
+    is pure ASCII and line-framed, so anything unparseable is
+    corruption and raises -- with one structural exception: the capture
+    window closes at an arbitrary instant, so a final partial line (no
+    trailing newline) is dropped. The start needs no exception:
+    captures begin marker-synced, on a line boundary."""
+    try:
+        text = raw.decode("ascii")
+    except UnicodeDecodeError as e:
+        raise RuntimeError(f"non-ASCII byte in text stream: {e}")
     times, pols, others, comments = [], [], set(), []
     overcaptures = overflows = 0
-    for line in raw.decode(errors="replace").splitlines():
-        line = line.strip()
-        if not line:
-            continue
+    lines = text.split("\n")
+    lines.pop()  # tail after the last newline: empty, or a torn partial
+    for line in lines:
         if line.startswith("#"):
             comments.append(line)
             m = _DIAG_RE.search(line)
@@ -149,14 +156,16 @@ def parse_text_stream(raw, channel):
                 overflows += int(m.group(3))
             continue
         parts = line.split()
-        if len(parts) < 3 or parts[2] not in ("+", "-"):
-            continue
         try:
+            if len(parts) != 3 or parts[2] not in ("+", "-"):
+                raise ValueError
             ch = int(parts[0])
-            sec_str, _, ns_str = parts[1].partition(".")
-            t = int(sec_str) + (int(ns_str) if ns_str else 0) * 1e-9
+            sec_str, dot, ns_str = parts[1].partition(".")
+            if not (0 <= ch <= 3) or dot != "." or len(ns_str) != 9:
+                raise ValueError
+            t = int(sec_str) + int(ns_str) * 1e-9
         except ValueError:
-            continue
+            raise RuntimeError(f"corrupt text line: {line!r}")
         if ch != channel:
             others.add(ch)
             continue
