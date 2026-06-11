@@ -1183,6 +1183,13 @@ void timestamper_discard_pending(void) {
       channels[i].sub[s].half_events = 0;
     }
   }
+  // Clear any pending overcapture flags along with the counters they
+  // feed: a CCxOF latched before this discard would otherwise be
+  // sampled by the next periodic flush and reported as in-window loss
+  // for an event the host just discarded.
+  for (int k = 0; k < NUM_HW_CAPTURE; k++) {
+    capture_hw[k].tim->SR = ~capture_hw[k].sr_of_bit;  // rc_w0
+  }
   marker_pending = true;
   __enable_irq();
   // Emit the marker now (or, if a transfer is in flight, arm its

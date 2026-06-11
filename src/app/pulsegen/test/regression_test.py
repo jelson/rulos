@@ -416,18 +416,32 @@ def test_burst(ts, pg, duration_s):
         all_ok = all_ok and ok
         print(f"  reject [{cmd}]: {err}  {'PASS' if ok else 'FAIL'}")
 
-    # Burst off returns the channel to a continuous train: expect far more
-    # pulses than any burst could deliver in the same window.
+    # Disabling a live burst fails safe: the domain's outputs turn OFF
+    # rather than running continuously (the domain period is the
+    # intra-burst spacing, so running on would stream at the burst's
+    # instantaneous rate -- a 48 ns burst would become ~20 MHz).
+    pg.pulse_burst(0, 10_000, 50)
+    pg.set_burst_state(0, False)
+    ts.discard_pending(settle_s=0.2)
+    records = collect(ts, 1.0, channels=(0,))
+    ok = len(records) == 0
+    all_ok = all_ok and ok
+    print(f"  burst off -> outputs off: {len(records)} pulses in 1 s "
+          f"(expect 0)  {'PASS' if ok else 'FAIL'}")
+
+    # Reconfiguring through pulse() does return the channel to a
+    # continuous train (it clears burst state and re-enables the
+    # output): expect far more pulses than any burst could deliver.
     pg.set_burst_ncycles(0, 50)
     pg.set_burst_period(0, 0.25)
-    pg.pulse(0, 1e-5, 2.5e-6)  # clears burst state
+    pg.pulse(0, 1e-5, 2.5e-6)  # clears burst state, re-enables output
     ts.discard_pending(settle_s=0.2)
     records = collect(ts, 1.0, channels=(0,))
     expect_min = int(0.5 * NS / 10_000)  # half the window at 10 us periods
     ok = len(records) >= expect_min
     all_ok = all_ok and ok
-    print(f"  burst off -> continuous: {len(records)} pulses in 1 s "
-          f"(>= {expect_min})  {'PASS' if ok else 'FAIL'}")
+    print(f"  pulse() after burst -> continuous: {len(records)} pulses "
+          f"in 1 s (>= {expect_min})  {'PASS' if ok else 'FAIL'}")
     return all_ok
 
 

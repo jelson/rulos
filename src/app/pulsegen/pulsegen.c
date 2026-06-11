@@ -577,8 +577,7 @@ static void apply_all(void) {
       // one period and stop, so its period event (the slaves' reset source
       // and the burst controller's clock) would fire only once.
       LL_HRTIM_TIM_SetPrescaler(HRTIM1, LL_HRTIM_TIMER_MASTER, hrtim_ckpsc_to_ll[ck]);
-      LL_HRTIM_TIM_SetCounterMode(HRTIM1, LL_HRTIM_TIMER_MASTER,
-                                  LL_HRTIM_MODE_CONTINUOUS);
+      LL_HRTIM_TIM_SetCounterMode(HRTIM1, LL_HRTIM_TIMER_MASTER, LL_HRTIM_MODE_CONTINUOUS);
       LL_HRTIM_TIM_SetPeriod(HRTIM1, LL_HRTIM_TIMER_MASTER, per);
       LL_HRTIM_TIM_SetRepetition(HRTIM1, LL_HRTIM_TIMER_MASTER, 0);
       run_mask = LL_HRTIM_TIMER_MASTER;
@@ -693,8 +692,19 @@ const char* pulsegen_set_delay_ps(int ch, uint64_t ps) {
 
 const char* pulsegen_set_burst_state(int ch, bool on) {
   for (int i = 0; i < NUM_CHANNELS; i++) {
-    if (same_domain(ch, i))
+    if (same_domain(ch, i)) {
+      // Disabling a live burst also disables the domain's outputs. The
+      // domain period IS the intra-burst spacing (the burst controller
+      // gates the timer's own roll-over), so "continuous after burst
+      // off" would emit at the burst's instantaneous rate -- a 48 ns
+      // burst becoming a ~20 MHz continuous stream. Fail safe instead:
+      // the user re-enables outputs explicitly. Burst-off on a domain
+      // that wasn't bursting stays a no-op.
+      if (!on && chan_burst_on[i]) {
+        chan_on[i] = false;
+      }
       chan_burst_on[i] = on;
+    }
   }
   apply_all();
   return err_for_rc(validate(ch));

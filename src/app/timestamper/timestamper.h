@@ -113,10 +113,10 @@ void timestamper_reset_all(void);
 void timestamper_config_save(void);
 
 // Discard everything currently pending: drop the timestamp ring,
-// the in-flight TX-buffer half, and the per-channel missed/overflow
-// counters. After this returns, the next captured pulse will be the
-// first one the host sees. Channel configuration (slope, divider,
-// format, stream enable) is preserved.
+// the in-flight TX-buffer half, the per-channel missed/overflow
+// counters, and any latched overcapture flags. After this returns, the next captured pulse will be
+// the first one the host sees. Channel configuration (slope, divider, format, stream enable) is
+// preserved.
 void timestamper_discard_pending(void);
 
-#define TIMESTAMPER_FW_VERSION "0.19.0"
+#define TIMESTAMPER_FW_VERSION "0.20.0"
