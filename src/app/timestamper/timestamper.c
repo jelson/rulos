@@ -233,8 +233,6 @@ typedef struct {
   struct {
     volatile uint32_t* buf;  // DMA circular buffer; NULL if no hw
     uint32_t drain_pos;      // next DMA index to drain (circular)
-    uint16_t half_events;    // HT/TC callbacks since last service
-                             // (write-head lap detection)
     rulos_dma_channel_t* dma_ch;
     uint32_t counter_tag;  // channel + polarity bits ORed into CCR ticks
   } sub[NUM_SUBS];
@@ -262,7 +260,7 @@ static channel_t channels[NUM_CHANNELS];
 
 // DMA callback context: identifies which channel AND sub-stream a
 // TIM2 capture DMA channel feeds (passed as user_data), so the ISR
-// can count per-sub half-buffer events for lap detection.
+// can service the owning channel.
 typedef struct {
   channel_t* chan;
   uint8_t sub;
@@ -475,28 +473,6 @@ CCMRAM static inline uint32_t safe_cur(channel_t* chan, uint8_t s) {
   return (cur == DMA_CAPTURE_BUFLEN) ? 0 : cur;
 }
 
-// Write-head lap accounting for sub `s`, using the cursor positions
-// from before this service consumes anything. Every HT/TC callback
-// marks a half-buffer boundary crossing, so `half_events` callbacks
-// guarantee at least (half_events - 1) * half-buffer records were
-// written since the last service. If that exceeds what the cursor
-// advance can represent, the DMA write head lapped the unread region
-// and overwrote records the cursor never visited -- unrecoverable, so
-// count whole laps as overflows. NVIC collapses back-to-back pending
-// interrupts, so this can undercount under extreme overload; it never
-// falsely triggers.
-CCMRAM static void account_laps(channel_t* chan, uint8_t s, uint32_t cur) {
-  uint32_t h = chan->sub[s].half_events;
-  chan->sub[s].half_events = 0;
-  if (__builtin_expect(h <= 2, 1))
-    return;
-  uint32_t adv = (cur - chan->sub[s].drain_pos) & (DMA_CAPTURE_BUFLEN - 1);
-  uint32_t written_min = (h - 1) * (DMA_CAPTURE_BUFLEN / 2);
-  if (written_min >= adv + DMA_CAPTURE_BUFLEN) {
-    chan->buf_overflows += ((written_min - adv) / DMA_CAPTURE_BUFLEN) * DMA_CAPTURE_BUFLEN;
-  }
-}
-
 // Drain sub `s` from drain_pos up to cur straight into the timestamp
 // ring -- the single-slope hot path. Capture sustains one record per
 // 100 ns across a 16k-record burst, so the inner loop must stay at
@@ -582,28 +558,31 @@ static void set_capture_enabled(int k, bool on) {
 // this skips so it can't be misread later. Each sub-stream is emitted
 // in time order; the two sub-streams are NOT interleaved into one
 // ordered sequence (see the top-of-file EMISSION ORDER note).
+//
+// The drain assumes the input stays within the capture envelope. The
+// cursor arithmetic is modular: if a sub's write head ever gained a
+// full buffer on its cursor between services, the overrun would alias
+// to a small advance and the overwritten records would go unnoticed.
+// In-regime inputs can't get there -- every half-buffer crossing wakes
+// this drain, which empties faster than a spec'd input can fill.
 CCMRAM static void service_channel(channel_t* chan) {
   for (uint8_t s = 0; s < NUM_SUBS; s++) {
     uint32_t cur = safe_cur(chan, s);
     if (sub_active(chan->slope, s)) {
-      account_laps(chan, s, cur);
       drain_sub_fast(chan, s, cur);
     } else {
       chan->sub[s].drain_pos = cur;
-      chan->sub[s].half_events = 0;
     }
   }
 }
 
 // TIM2 capture DMA HT/TC callback (one per in-use sub). The NDTR-
-// driven drain doesn't distinguish HT from TC, so both map here; each
-// firing marks one half-buffer boundary crossing on its sub (lap
-// detection). All capture DMA ISRs share one NVIC priority (cannot
+// driven drain doesn't distinguish HT from TC, so both map here as
+// pure wake-ups. All capture DMA ISRs share one NVIC priority (cannot
 // preempt each other), so per-channel service is serialized without
 // masking.
 CCMRAM static void on_dma(void* user_data) {
   sub_ctx_t* ctx = (sub_ctx_t*)user_data;
-  ctx->chan->sub[ctx->sub].half_events++;
   service_channel(ctx->chan);
 }
 
@@ -1041,7 +1020,6 @@ void timestamper_set_slope(int ch, timestamper_slope_t slope) {
       continue;
     uint8_t s = capture_hw[k].sub;
     c->sub[s].drain_pos = safe_cur(c, s);
-    c->sub[s].half_events = 0;
     if (sub_active(slope, s))
       set_capture_enabled(k, true);
   }
@@ -1180,7 +1158,6 @@ void timestamper_discard_pending(void) {
     // the first one the host sees.
     for (uint8_t s = 0; s < NUM_SUBS; s++) {
       channels[i].sub[s].drain_pos = safe_cur(&channels[i], s);
-      channels[i].sub[s].half_events = 0;
     }
   }
   // Clear any pending overcapture flags along with the counters they

@@ -119,4 +119,4 @@ void timestamper_config_save(void);
 // preserved.
 void timestamper_discard_pending(void);
 
-#define TIMESTAMPER_FW_VERSION "0.20.0"
+#define TIMESTAMPER_FW_VERSION "0.21.0"
