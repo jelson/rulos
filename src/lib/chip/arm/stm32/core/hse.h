@@ -18,6 +18,18 @@
 
 #pragma once
 
+#include <stdbool.h>
+
+// NMI first-refusal hook. The NMI line is shared: the Clock Security
+// System (HSE loss) raises it, and on some families so do other sources
+// -- e.g. STM32H5 flash double-ECC, handled by nvconfig. hse.c owns
+// NMI_Handler (compiled under -DRULOS_USE_HSE) and calls this hook
+// first. A module that recognizes the NMI as its own clears its
+// condition and returns true to consume it; the weak default returns
+// false, routing the NMI to the CSS/HSE failure path. Override by
+// defining a non-weak rulos_nmi_claimed in any linked translation unit.
+bool rulos_nmi_claimed(void);
+
 // Shared HSE-failure plumbing for STM32 families that support the
 // optional HSE oscillator path. Compiled in only when an app sets
 // -DRULOS_USE_HSE.
@@ -29,14 +41,13 @@
 //
 //   - g_rulos_hse_failed: a single global that records HSE failure,
 //     either a boot-time start failure or a runtime CSS-detected loss.
-//   - The NMI_Handler weak override and HAL_RCC_CSSCallback that wire
-//     CSS into the failure flag.
+//   - NMI_Handler (the CSS owner) and HAL_RCC_CSSCallback that wire CSS
+//     into the failure flag, plus the rulos_nmi_claimed hook above for
+//     other NMI sources.
 //   - rulos_hse_try_pll: the try-HSE / fall-back-to-HSI structural
 //     pattern shared by the per-family SystemClock_Config functions.
 
 #ifdef RULOS_USE_HSE
-
-#include <stdbool.h>
 
 #include "stm32.h"
 

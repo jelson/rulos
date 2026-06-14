@@ -22,11 +22,26 @@
 
 bool g_rulos_hse_failed = false;
 
-// Default NMI handler. The startup file defines NMI_Handler as a weak
-// alias to Default_Handler. This weak override wires CSS-driven HSE
-// failure into the HAL; can itself be overridden if an app needs
-// custom NMI behavior.
-__attribute__((weak)) void NMI_Handler(void) {
+// Weak default for the NMI first-refusal hook (see hse.h): with no
+// other module linked, nothing claims the NMI, so every NMI is the
+// CSS/HSE failure path.
+__attribute__((weak)) bool rulos_nmi_claimed(void) {
+  return false;
+}
+
+// NMI handler, owned here so every HSE app inherits CSS handling just by
+// linking this module. It is defined STRONG (not weak): the startup file
+// already provides a weak NMI_Handler aliased to the infinite-loop
+// Default_Handler, and a second weak definition here would not reliably
+// win -- the linker is free to keep the startup alias, leaving CSS armed
+// but unhandled, so an HSE glitch would wedge the chip in the default
+// loop until reset. A strong definition overrides the startup alias
+// unconditionally. Other NMI sources are consumed via rulos_nmi_claimed,
+// not by redefining this handler.
+void NMI_Handler(void) {
+  if (rulos_nmi_claimed()) {
+    return;
+  }
   HAL_RCC_NMI_IRQHandler();
 }
 

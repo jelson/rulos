@@ -31,12 +31,13 @@
  * so merely scanning the slots at boot could fault before USB is up.
  * Handling follows ST's own OEMiROT secure-boot reference
  * (STM32CubeH5 .../NUCLEO-H533RE/.../low_level_flash.c, same chip
- * family): there is no HAL/LL API for an ECC-tolerant read, so the
- * NMI_Handler clears the ECCD flag and bumps a counter (the faulting
- * read completes, so the NMI returns and execution resumes); the read
- * path zeroes the counter, copies, and rejects the slot if it fired.
- * The CSS/HSE NMI (hse.c, weak NMI_Handler) is preserved by falling
- * through to HAL_RCC_NMI_IRQHandler() for any non-ECC NMI.
+ * family): there is no HAL/LL API for an ECC-tolerant read, so this
+ * module claims the ECC NMI via the rulos_nmi_claimed hook (core/hse.c
+ * owns NMI_Handler) -- clearing the ECCD flag and bumping a counter (the
+ * faulting read completes, so the NMI returns and execution resumes);
+ * the read path zeroes the counter, copies, and rejects the slot if it
+ * fired. Returning false for any non-ECC NMI leaves it to the handler's
+ * CSS/HSE failure path.
  *
  * Flash program/erase primitives are family-specific (G4 doubleword,
  * F1 halfword, ...), so like the rulos_dma split this file is H5-only;
@@ -52,6 +53,7 @@
 #include <string.h>
 
 #include "core/crc32.h"
+#include "core/hse.h"
 #include "stm32h5xx_hal.h"
 
 // Top-of-flash region the linker reserved (flash_reserve_k); ping-pong
@@ -59,21 +61,22 @@
 extern uint8_t _nvconfig_base[];
 extern uint8_t _nvconfig_size[];
 
-// Bumped by NMI_Handler on each flash double-ECC detection. The read
-// path zeroes it, reads, then checks it (ST OEMiROT pattern).
+// Bumped by rulos_nmi_claimed on each flash double-ECC detection. The
+// read path zeroes it, reads, then checks it (ST OEMiROT pattern).
 static volatile uint32_t double_ecc_count;
 
-// hse.c's NMI_Handler is weak; override it. A flash double-ECC error
-// sets ECCD and raises NMI but the faulting read still completes, so
-// clearing ECCD and counting lets the NMI return and the scan resume.
-// Anything else is the CSS/HSE path the weak handler used.
-void NMI_Handler(void) {
+// Claim flash double-ECC NMIs via core/hse.c's first-refusal hook. The
+// error sets ECCD and raises NMI but the faulting read still completes,
+// so clearing ECCD and counting lets the NMI return and the scan
+// resume. Returning false leaves any non-ECC NMI to NMI_Handler's
+// CSS/HSE failure path.
+bool rulos_nmi_claimed(void) {
   if (__HAL_FLASH_GET_FLAG(FLASH_FLAG_ECCD)) {
     __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_ECCD);
     double_ecc_count++;
-    return;
+    return true;
   }
-  HAL_RCC_NMI_IRQHandler();
+  return false;
 }
 
 #define NVCONFIG_MAGIC 0x434F4E52u  // 'R''N''O''C' (RulOS NV blOC)
