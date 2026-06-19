@@ -3,38 +3,47 @@
 """End-to-end validation of the pulsegen, measured with a LectroTIC-4
 timestamper.
 
-Hardware setup this test assumes:
-  - A pulsegen and a timestamper both on USB (autodetected by VID/PID).
-  - Pulsegen ch0 -> timestamper ch0, pulsegen ch1 -> timestamper ch1.
+  *** REV B PORT IN PROGRESS -- the test BODIES below are still the Rev A
+  versions and will not run as-is on Rev B. They are kept as a reference to
+  port against once Rev B hardware exists; the header is the Rev B test plan.
+  The Rev A board (PC6-9, paired HRTIM E/F) is retired (tag: pulsegen-revA). ***
+
+REV B HARDWARE SETUP (when the board exists):
+  - Pulsegen and timestamper both on USB (autodetected by VID/PID).
+  - Pulsegen ch0..ch3 -> timestamper ch0..ch3 (now four independent channels;
+    Rev A only wired two).
   - Both devices fed from the same 10 MHz reference.
 
-What it checks:
-  - SYNC-mode inter-pulse gaps: places ch0 and ch1 rising edges a known
-    distance apart (4 ns, 8 ns, 100 ns, 1 us) and confirms the timestamper
-    measures that gap. Because ch0 (PC6) and ch1 (PC7) share HRTIM Timer F,
-    this validates intra-timer delay placement; it does not exercise the
-    cross-group master sync (that needs ch0+ch2 wiring), and it behaves the
-    same in SYNC and ASYNC at these two outputs.
-  - ASYNC frequency accuracy: drives a few frequencies and confirms the
-    measured pulse rate.
-  - ASYNC pairing constraint: ch0 and ch1 are forced to share Timer F's
-    period, so setting two different frequencies leaves both at the last one.
-    This asserts that documented behavior.
-  - Burst mode: N-cycle bursts on ch0 must contain exactly N pulses
-    (hardware-counted by the HRTIM burst mode controller), at the exact
-    intra-burst spacing, repeating near the requested interval (the
-    repetition is software-scheduled, so its timing check is coarse).
-    Invalid burst parameters must latch the documented SCPI errors.
+REV B TEST PLAN -- what first silicon must validate (the new capabilities, and
+the things that compile-clean but need hardware, per PCB_NOTES.md bring-up
+checklist):
+  1. FOUR INDEPENDENT PERIODS (the headline Rev B fix; replaces the obsolete
+     Rev A "pairing constraint" test). Set four DIFFERENT frequencies in ASYNC
+     and confirm each channel reads back its own -- proving the four distinct
+     HRTIM/GP timers, no shared period.
+  2. HRTIM<->GP HANDOFF continuity. Sweep one channel's period across the
+     ~524 us crossover (e.g. 400 us, 524 us, 600 us, 1 ms) and confirm rate,
+     width, and (in sync) delay stay correct on both sides -- the handoff must
+     be invisible.
+  3. LONG PERIODS (GP regime). Drive sub-1.9 kHz down toward ~0.03 Hz (34 s)
+     and confirm the rate -- the capability Rev A lacked entirely.
+  4. CROSS-TIMER SYNC. The 250 ps stair across all four channels, now on four
+     distinct HRTIM timers (HRTIM master), and a slow stair in the GP regime
+     (TIM1 master, ITR0) -- confirm phase-lock both ways (the Rev A v0.2.2
+     cross-group sync work, generalized).
+  5. BURST in both regimes. Fast (HRTIM BMC) and slow (GP software count) must
+     each emit exactly N pulses per frame at the requested spacing; invalid
+     params latch the documented SCPI errors; burst above ~524 us is rejected
+     (burst is fast-regime only).
+  6. PER-PIN AF. Drive every channel in both regimes and confirm all four emit
+     (the Rev A Timer-E-silent bug was a wrong AF; Rev B AFs are AF13/AF13/
+     AF13/AF3 fast and AF10/AF6/AF2/AF4 slow -- all per-pin).
 
-Caveats baked into the tolerances:
-  - The two devices share the 10 MHz clock, so they're phase-coherent and the
-    timestamper's 4 ns resolution can't finely resolve sub-2-tick gaps. The
-    4 ns and 8 ns checks are coarse (+-1 tick); 100 ns and 1 us are tight.
-  - 1 ms gaps aren't tested: the gap is a delay inside the shared period and
-    HRTIM tops out at ~524 us. (TIM3 is on these pins and could reach longer
-    periods, but the firmware is HRTIM-only for this board.)
+Caveats (carried from Rev A, still apply):
+  - The two devices share the 10 MHz clock, so sub-2-tick gaps resolve only to
+    +-1 timestamper tick; wider gaps are tight.
 
-Run:
+Run (once ported):
   regression_test.py
   regression_test.py --only sync --duration 3
   regression_test.py --ts-port /dev/ttyACM0 --pg-port /dev/ttyACM2

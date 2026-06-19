@@ -3,22 +3,23 @@
 """Configure a Lectrobox Pulsegen over its USB CDC SCPI interface.
 
 The device has two modes:
-  ASYNC (default): two independent frequency groups. Channels 0+1 share
-    one period (HRTIM Timer F), channels 2+3 share another (Timer E).
-    Within a group each channel has its own width and rising-edge delay.
+  ASYNC (default): four fully independent channels, each with its own
+    period, width, and rising-edge delay.
   SYNC: all four channels share one period, phase-locked, so per-channel
-    delays place rising edges relative to a common t=0 at 250 ps steps.
+    delays place rising edges relative to a common t=0.
 
-Setting a channel's period sets its whole domain's period (its group in
-async, all four in sync). Width and delay are always per channel. The
-HRTIM-only timebase spans roughly 24 ns to 524 us (1.9 kHz .. 41 MHz).
+Each channel spans ~24 ns to ~34 s. The instrument places fine edges with
+a high-resolution timer below ~524 us (250 ps grid) and hands off to a
+general-purpose timer above it (8 ns grid); the handoff is invisible --
+width, delay, sync, and burst behave the same on both sides. Setting a
+channel's period sets just that channel in async, or all four in sync.
+Width and delay are always per channel.
 
-A domain can also run in burst mode: exactly N pulses (hardware-counted,
-1..63488), then quiet, repeating at a programmable interval. The pulse
-count and intra-burst spacing are hardware-exact; the repetition interval
-is software-scheduled on the device (~10 ms granularity). Only one domain
-can burst at a time in async mode; sync mode bursts all four channels
-coherently.
+A domain can also run in burst mode: exactly N pulses (1..63488), then
+quiet, repeating at a programmable interval. The pulse count and
+intra-burst spacing are hardware-exact; the repetition interval is
+software-scheduled on the device (~10 ms granularity). One domain bursts
+at a time in async; sync mode bursts all four channels coherently.
 
 CLI usage examples:
   pgctl.py idn
@@ -51,7 +52,7 @@ As a library, open a Pulsegen instance and call methods on it.
 
       # Periods/widths/delays are in seconds; the device works in
       # picoseconds internally and accepts scientific notation.
-      pg.set_period(0, 1e-6)                   # 1 us period (group 0)
+      pg.set_period(0, 1e-6)                   # 1 us period (ch0 only)
       pg.set_width(0, 100e-9)                  # 100 ns width
       pg.set_delay(0, 0)                       # rising-edge offset
       pg.set_state(0, True)                    # OUTP0:STAT ON
@@ -129,7 +130,7 @@ class Pulsegen:
     class Mode(enum.Enum):
         """Channel timing mode for set_mode(). The value is the SCPI
         keyword sent to the device."""
-        ASYNC = "ASYNC"  # two independent frequency groups
+        ASYNC = "ASYNC"  # four independent channels
         SYNC = "SYNC"    # all four channels share one phase-locked period
 
     # Expose the members on the class so callers can write Pulsegen.SYNC.
@@ -193,7 +194,7 @@ class Pulsegen:
 
     def set_mode(self, mode):
         """Select Pulsegen.SYNC (all channels one phase-locked period) or
-        Pulsegen.ASYNC (two independent frequency groups)."""
+        Pulsegen.ASYNC (four independent channels)."""
         if not isinstance(mode, self.Mode):
             raise TypeError(
                 f"mode must be Pulsegen.SYNC or Pulsegen.ASYNC, got {mode!r}")
@@ -207,9 +208,9 @@ class Pulsegen:
         self.send(f"OUTP{channel}:STAT {'ON' if on else 'OFF'}")
 
     def set_period(self, channel, seconds):
-        """Pulse period in seconds for this channel's domain (its group
-        in async mode, all four channels in sync mode). HRTIM-only range
-        is ~24 ns to ~524 us. Errors latch in SYST:ERR if out of range or
+        """Pulse period in seconds for this channel's domain (just this
+        channel in async mode, all four channels in sync mode). Range is
+        ~24 ns to ~34 s. Errors latch in SYST:ERR if out of range or
         width >= period."""
         self.send(f"SOUR{channel}:PULS:PER {seconds:.12g}")
 
@@ -219,8 +220,10 @@ class Pulsegen:
         self.send(f"SOUR{channel}:PULS:WIDT {seconds:.12g}")
 
     def set_delay(self, channel, seconds):
-        """Rising-edge offset in seconds (per channel), placed on the
-        250 ps grid. delay + width must not exceed the period."""
+        """Rising-edge offset in seconds (per channel); observable in
+        SYNC mode (async channels free-run with no shared t=0). Placed on
+        the 250 ps grid in the fast regime, 8 ns in the slow regime. delay
+        + width must not exceed the period."""
         self.send(f"SOUR{channel}:PULS:DEL {seconds:.12g}")
 
     def set_burst_state(self, channel, on):
@@ -304,12 +307,12 @@ class Pulsegen:
 
     # ---- Rate / burst conveniences (the timestamper test surface) ---------
     #
-    # The HRTIM-only timebase spans ~24 ns to ~524 us periods (~1.9 kHz
-    # to ~41 MHz); there is no slower fallback. periodic()/pulse_burst()
-    # encode those limits and the 250 ps grid so callers work in Hz / ns
-    # and get back the value the hardware actually produced.
+    # Continuous output spans the full ~24 ns to ~34 s range (the device hands
+    # HRTIM off to a GP timer above ~524 us transparently). BURST, however, is
+    # fast-regime only -- the spacing must land in the HRTIM range -- so
+    # pulse_burst() quantizes to the 250 ps grid and rejects spacings > ~524 us.
 
-    MIN_HZ = 1910.0            # HRTIM period floor (~524 us)
+    MIN_HZ = 0.03              # continuous floor (~34 s period)
     MIN_BURST_SPACING_NS = 48  # tightest spacing offered: leaves a clean
                                # half-period each way above the HRTIM
                                # minimum-compare limit
@@ -341,10 +344,10 @@ class Pulsegen:
         Width defaults to min(5 us, period/4). Returns the actual rate
         (the PG quantizes to its 250 ps grid -- sub-ppb of any in-range
         rate, and coherent with a shared reference). Raises if `hz` is
-        below the ~1.9 kHz HRTIM floor."""
+        below the ~0.03 Hz floor (34 s period)."""
         if hz < self.MIN_HZ:
             raise ValueError(f"{hz:g} Hz is below the PG-4's "
-                             f"~{self.MIN_HZ:.0f} Hz floor")
+                             f"~{self.MIN_HZ:g} Hz floor")
         period_s = 1.0 / hz
         if width_s is None:
             width_s = min(5e-6, period_s / 4)
@@ -482,7 +485,7 @@ def main():
     sp.set_defaults(func=cmd_state)
 
     sp = sub.add_parser("period",
-                        help="Set domain period in seconds (group/global)")
+                        help="Set period in seconds (this channel async, all sync)")
     sp.add_argument("channel", type=int, choices=range(NUM_CHANNELS))
     sp.add_argument("seconds", type=float)
     sp.set_defaults(func=cmd_period)
