@@ -5,31 +5,78 @@ system: 512 KB flash, 96 KB SRAM). LQFP64 is needed for Port C access.
 
 ---
 
-# Next revision — what to verify before laying out the board
+# Rev B (firmware written 2026-06-14; not yet fabricated)
 
-**Goal the pinout must support:** 4 independently-programmable periods,
-AND a SYNC mode where all four phase-lock to one shared period spanning
-~24 ns to ~30 s (HRTIM hands off to a GP timer above HRTIM's ~524 µs
-ceiling). The current PC6-9 pinout can't: its outputs reach only HRTIM
-Timers E/F (2 timers → 2 shared periods) and only TIM3 as a GP fallback
-(one shared ARR → one long period for all four).
+**Goal:** 4 independently-programmable periods, AND a SYNC mode where all
+four phase-lock to one shared period, spanning ~24 ns to ~34 s (HRTIM
+hands off to a GP timer above HRTIM's ~524 µs ceiling). Rev A (PC6-9)
+couldn't: its outputs reach only HRTIM Timers E/F (2 timers → 2 shared
+periods) and only TIM3 as a GP fallback (one shared ARR).
 
-The list below is the actual work for the next rev: each item is a
-datasheet/RM lookup to do **before committing the layout.** Candidate
-pinout the checks refer to:
+The pinout below was fully verified against the datasheet (DS12288 Rev 6)
+and reference manual (RM0440 Rev 9) **before any layout** — the checks in
+the next section are all marked CONFIRMED — and the firmware is written
+and builds against it.
 
-| Ch | Pin  | HRTIM (fast)   | GP timer (slow)            |
-|----|------|----------------|----------------------------|
-| 0  | PA9  | Timer A, CHA2  | TIM2_CH3 (TIM2 is 32-bit)  |
-| 1  | PA10 | Timer B, CHB1  | TIM1_CH3                   |
-| 2  | PC6  | Timer F, CHF1  | TIM3_CH1                   |
-| 3  | PC8  | Timer E, CHE1  | TIM8_CH3                   |
+## Output timers (the load-bearing choice)
+
+| Ch | Pin  | HRTIM (fast)   | HRTIM AF | GP timer (slow)        | GP AF |
+|----|------|----------------|----------|------------------------|-------|
+| 0  | PA9  | Timer A, CHA2  | AF13     | TIM2_CH3 (TIM2 32-bit) | AF10  |
+| 1  | PA10 | Timer B, CHB1  | AF13     | TIM1_CH3               | AF6   |
+| 2  | PC6  | Timer F, CHF1  | AF13     | TIM3_CH1               | AF2   |
+| 3  | PC8  | Timer E, CHE1  | AF3      | TIM8_CH3               | AF4   |
+
+All AF numbers are **verified against DS12288 Rev 6 Table 13** by column
+position (2026-06-14). Four distinct HRTIM timers (A/B/E/F), four distinct
+GP timers (TIM2/TIM1/TIM3/TIM8), TIM2 is 32-bit. The HRTIM AF is per-pin
+(PC8/Timer E is AF3, the other three AF13) and the GP AF differs on every
+pin (AF10/AF6/AF2/AF4) — so the firmware MUST keep AF as a per-channel
+field, never a shared constant. (A web snippet during verification showed
+only PA9=TIM1_CH2 and nearly triggered a false "PA9 can't reach TIM2"
+alarm — the datasheet shows PA9 carries BOTH TIM1_CH2/AF6 and
+TIM2_CH3/AF10. Trust the datasheet, not the snippet.)
+
+## Complete pin map
+
+Every pin the firmware and board depend on (the Rev B analog of Rev A's
+"Critical pin choices"). Outputs, USB, SWD, HSE, and the debug UART are
+load-bearing; LEDs are flexible (change in `pulsegen.c` if rerouted).
+
+| Net          | MCU pin | Why |
+|--------------|---------|-----|
+| PULSE_OUT_0  | **PA9**  | HRTIM1_CHA2 **AF13** (fast) + TIM2_CH3 **AF10** (slow, 32-bit). |
+| PULSE_OUT_1  | **PA10** | HRTIM1_CHB1 **AF13** + TIM1_CH3 **AF6** (advanced timer → BDTR.MOE). |
+| PULSE_OUT_2  | **PC6**  | HRTIM1_CHF1 **AF13** + TIM3_CH1 **AF2**. |
+| PULSE_OUT_3  | **PC8**  | HRTIM1_CHE1 **AF3** (NOT AF13 — Timer E differs!) + TIM8_CH3 **AF4** (advanced → MOE). |
+| OSC_IN       | PF0     | 10 MHz HSE input (bypass; PF1/OSC_OUT free for GPIO). |
+| USB_DM       | PA11    | Fixed by silicon. |
+| USB_DP       | PA12    | Fixed by silicon. |
+| UART_TX      | **PB6** | USART1_TX, AF7 (rulos `uart_id=0`). Moved off PA9 vs Rev A. |
+| UART_RX      | **PB7** | USART1_RX, AF7. Moved off PA10 vs Rev A. |
+| SWDIO        | PA13    | Fixed by silicon. |
+| SWCLK        | PA14    | Fixed by silicon. |
+| LED ch0      | PC0     | (flexible) |
+| LED ch1      | PA3     | (flexible) |
+| LED ch2      | PA4     | (flexible) |
+| LED ch3      | PA8     | (flexible) |
+| LED HSE      | PB4     | (flexible) HSE health heartbeat. |
+| LED USB      | PA5     | (flexible) USB enumerated/activity. |
+
+**Internal-only (no pin to route):** the slow-regime Combined-PWM output
+uses each channel's *sibling* timer channel for the second edge, with its
+output stage **disabled** (CCyE=0), so it consumes a CCR register but
+drives no pin: ch0 TIM2_CH4, ch1 TIM1_CH4, ch2 TIM3_CH2, ch3 TIM8_CH4.
+Two of those siblings happen to map to pins used by other nets
+(TIM2_CH4 → PA10 = PULSE_OUT_1; TIM1_CH4 → PA11 = USB_DP) — harmless,
+because the sibling's output is never enabled, so its timer doesn't drive
+the pin. PC7 and PC9 (the old Rev A outputs) are free.
 
 ## The checks
 
 1. **Each pin is on a *distinct* HRTIM timer.** Confirm the four outputs
    land on four *different* HRTIM timers (A/B/E/F above). Two outputs on
-   the same HRTIM timer share one counter/period — the current board's
+   the same HRTIM timer share one counter/period — Rev A's
    defect that caps it at 2 independent periods. [DS12288 pin/AF table.]
 
 2. **Each pin *also* reaches a *distinct* GP timer.** Confirm every pin
@@ -37,11 +84,15 @@ pinout the checks refer to:
    (TIM1/2/3/8), so the long periods are independent. Confirm one is
    32-bit (TIM2) for the longest periods. [DS12288 pin/AF table.]
 
-3. **Those four GP timers can be mutually synchronized.** Confirm one of
-   them can reset/trigger the other three through the timer interconnect,
-   or SYNC breaks at long periods. On G4: TIM1 master, TIM2/TIM3/TIM8
-   slave on ITR0 (= tim1_trgo). [RM0440 Table 307, the unified ITR mux —
-   re-confirm for the exact four timers chosen.]
+3. **Those four GP timers can be mutually synchronized.** — **CONFIRMED
+   (RM0440 Rev 9, 2026-06-14).** TIM1 is master (MMS=update → tim1_trgo);
+   TIM2/TIM3/TIM8 each slave-reset on **ITR0 = tim1_trgo**: Table 291
+   gives TIM2 ITR0 = tim1_trgo and TIM3 ITR0 = tim1_trgo; Table 267 (the
+   advanced-timer-as-slave table) gives TIM8 ITR0 = tim1_trgo. So in
+   GP-timer SYNC, set TIM1 TRGO=update, the other three SMS=reset on ITR0,
+   preset all counters to 0 before a coordinated enable (the validated
+   recipe below). TIM1 doubles as ch1's output timer and the sync master —
+   no conflict (it emits TRGO and drives CH3).
 
 4. **Each pin's alternate-function number — looked up INDIVIDUALLY.** This
    is the bug that cost us a board generation. HRTIM outputs are NOT all
@@ -50,20 +101,108 @@ pinout the checks refer to:
    emitted nothing — undetected until a 4-channel test finally drove them.
    Verify EACH pin's HRTIM AF and EACH pin's GP-timer AF as separate
    lookups (and keep them in a per-channel firmware table, not a shared
-   constant). Status:
-   - PC6 CHF1 = AF13, PC8 CHE1 = AF3 — **confirmed.**
-   - PA9 CHA2, PA10 CHB1 HRTIM AFs — **unverified, look up.**
-   - all four GP-timer-channel AFs — **unverified, look up.**
-   [DS12288 alternate-function table.]
+   constant). Status — **all CONFIRMED against DS12288 Rev 6 Table 13
+   (2026-06-14):**
+   - HRTIM: PA9 CHA2 = AF13, PA10 CHB1 = AF13, PC6 CHF1 = AF13,
+     PC8 CHE1 = **AF3** (Timer E is the odd one out, as on the old board).
+   - GP timer: PA9 TIM2_CH3 = AF10, PA10 TIM1_CH3 = AF6,
+     PC6 TIM3_CH1 = AF2, PC8 TIM8_CH3 = AF4.
 
-5. **No collision with the fixed-function pins.** PA9/PA10 are currently
-   the debug UART (USART1) — relocate it to USART2 (PA2/PA3), as the
-   2-channel prototype did. Confirm still clear: PA11/12 = USB, PA13/14 =
-   SWD, PF0 = 10 MHz HSE.
+5. **No collision with the fixed-function pins.** — **RESOLVED.** PA9/PA10
+   become outputs, so the debug UART moves off them. Decision: keep it on
+   **USART1 but on PB6 (TX) / PB7 (RX)** — both USART1 AF7, both free —
+   which needs **zero rulos-driver change** (just two -D macros:
+   RULOS_UART0_TX_PIN=GPIO_B6, RULOS_UART0_RX_PIN=GPIO_B7). (USART2 on
+   PA2/PA3 would have worked too but needs a driver config entry; PB6/PB7
+   is simpler.) Confirmed clear: PA11/12 = USB, PA13/14 = SWD, PF0 = HSE.
+   LEDs unchanged from the old board (none of PC0/PA3/PA4/PA8/PB4/PA5
+   collide with the new outputs or PB6/PB7).
 
 6. **Package exposes every pin.** LQFP64 (Port C is needed for PC6/PC8;
    LQFP48 has none). Confirm the chosen variant brings out all of the
    above.
+
+## Rev B firmware architecture (finalized 2026-06-14)
+
+**Design rule (jelson): full feature parity across the HRTIM and GP-timer
+regimes — no arbitrary ~524 µs cliff where behavior changes. If a feature
+can't be supported in both regimes, it isn't implemented in either.** The
+handoff is invisible: you set a period anywhere in 24 ns–34 s and the
+firmware picks the timer. The ONLY thing that changes at the crossover is
+edge-placement granularity (250 ps below ~524 µs, 8 ns above) — a
+precision detail, not a behavior change, and 8 ns is ~15 ppm at 524 µs
+(imperceptible at those rates).
+
+- **Per-channel regime / handoff:** period ≤ HRTIM ceiling (≈524 µs,
+  CKPSC=5 × 0xFFDF) → HRTIM (250 ps); above → the channel's own GP timer.
+  The pin's AF is switched HRTIM-AF ↔ GP-AF at the crossover. Each channel
+  is now ALONE on its HRTIM timer, so HRTIM uses CMP1 (rise) / CMP2 (fall)
+  for every channel — no Rev A "slot" sharing.
+- **ASYNC = 4 independent periods** (each channel its own domain/timer);
+  **SYNC = all four share one period+phase.** Delay is a SYNC concept
+  (async channels free-run with no shared t=0, so delay is unobservable
+  there — a mode property, uniform across the whole range, not a cliff).
+- **GP-timer output = Combined PWM mode (verified RM0440 §29.3.15 /
+  §30.4.13).** A single GP channel has one CCR = one edge; Combined PWM
+  gangs the channel's CCR with its sibling's onto one output to place both
+  edges. Recipe for a [D, D+W] pulse on the routed channel:
+  - output channel: **Combined PWM mode 2 (OCxM=1101)**, CCR = D (its ref
+    is PWM-mode-2 = high D..ARR); the combined ref OCxREFC = OCxREF **AND**
+    OCyREF.
+  - sibling channel: **PWM mode 1 (OCyM=0110)**, CCR = D+W (high 0..D+W),
+    output NOT enabled (CCyE=0).
+  - AND ⇒ high only in [D, D+W]. Works for D=0, so it's the single uniform
+    GP output path. Siblings (all free on this pinout): ch0 TIM2_CH4,
+    ch1 TIM1_CH4 (output off → PA11 stays USB), ch2 TIM3_CH2, ch3 TIM8_CH4.
+    Advanced timers (TIM1/TIM8) need BDTR.MOE=1.
+- **SYNC master follows the regime:** ≤524 µs → HRTIM master resets slaves
+  A/B/E/F on MASTER_PER; above → TIM1 master (TRGO=update), TIM2/TIM3/TIM8
+  slave-reset on ITR0; all counters preset to 0 before a single coordinated
+  enable (the validated recipe below).
+- **Burst = uniform behavior, two implementations:** HRTIM BMC when fast
+  (software can't count MHz pulses); a software per-period count (GP update
+  IRQ, <2 kHz there) when slow. Same "exactly N then rest, repeat" either
+  way; no RCR needed (TIM2/TIM3 lack it — irrelevant).
+- **HRTIM cannot reach long periods (verified RM0440):** no inter-timer
+  clocking (every HRTIM counter is fHRTIM/prescaler only — no cascade), the
+  8-bit repetition counter only sets the interrupt rate (not the output),
+  and the single BMC reaches ~34 s but quantized to the base period and
+  not replicable per channel. So the GP-timer fallback is necessary, not a
+  workaround.
+- **HRTIM<->GP HANDOFF: no GP-timer fallback existed on the old board.**
+
+## First-silicon bring-up checklist (verified in code; confirm on hardware)
+
+The firmware compiles and was design-reviewed, but these compile-clean and can
+only be confirmed on a real board:
+
+- **Combined-PWM sibling mode.** The slow-regime output uses Combined PWM mode 2
+  on the routed channel + plain PWM mode 1 on the sibling, per DS/RM Figure 337.
+  The RM prose alternatively says the sibling should be in the *opposite combined*
+  mode; the figure (plain PWM1) is what's coded. Scope the GP-regime output first
+  thing: confirm width and delay land where asked at, say, a 1 ms period.
+- **GP-regime SYNC alignment.** Slaves (TIM2/TIM3/TIM8) are preset to 0 and
+  enabled, then TIM1 (master) is enabled; the master's update (TRGO) resets the
+  slaves each period via ITR0. Expect a few-instruction (~tens of ns) startup skew
+  before the first master reset; confirm the four edges coincide within tolerance
+  once running (this is the analog of the Rev A cross-timer sync work).
+- **GP-regime burst exactness.** Software-counted on the domain's timebase
+  (TIM1 in sync, the channel in async), gating outputs on period boundaries.
+  Confirm exactly ncyc pulses per frame at a slow period (e.g. 1 ms x 5).
+- **HRTIM AF per pin** (PA9/PA10/PC6 = AF13, PC8 = AF3) and **GP AF per pin**
+  (AF10/AF6/AF2/AF4): drive every channel in both regimes and confirm all four
+  actually emit (the Rev A Timer-E-silent bug was exactly a wrong AF).
+
+## Design-review findings already fixed in firmware (2026-06-14)
+
+A self-review of the first firmware draft caught and fixed: (1) GP-regime SYNC
+silently broke when ch1 was off, because TIM1 doubles as ch1's output AND the
+sync master and was only set up when ch1 was on -- now the master timebase runs
+independently; (2) GP burst in SYNC gated only one channel -- now it gates the
+whole domain off the master count; (3) GP burst wasn't pulse-exact -- now it
+opens/closes the run window on period boundaries in the update ISR. Plus parity
+polish: all channels capped uniformly at ~34 s (TIM2's 32-bit reach deliberately
+not exposed) and an O(1) prescaler calc.
 
 ## Firmware patterns these checks enable (reuse, not hardware checks)
 
@@ -90,12 +229,15 @@ pinout the checks refer to:
 
 ---
 
-# Current board (as built, STM32G474RE / PC6-9)
+# Rev A (as built, STM32G474RE / PC6-9 — RETIRED; tag `pulsegen-revA`)
+
+Superseded by Rev B above. Kept for reference; the last firmware that ran
+on this board is at git tag `pulsegen-revA`. Outputs reach only HRTIM
+Timers E/F (two shared periods) — the limitation Rev B fixes.
 
 ## Critical pin choices
 
-These are load-bearing for the firmware as written; changing them means
-changing code in `pulsegen.c`.
+These were load-bearing for the Rev A firmware as written.
 
 | Net          | MCU pin | Why                                                          |
 |--------------|---------|--------------------------------------------------------------|
@@ -113,7 +255,7 @@ These four pins each map to an HRTIM output (Timers E/F — **PC6/PC7 on
 AF13, PC8/PC9 on AF3**) and a TIM3 channel (AF2). The shipped firmware is
 **HRTIM-only**: the TIM3 long-period fallback was designed-for but never
 implemented (and TIM3's single shared ARR couldn't give four independent
-long periods anyway — that's a next-board goal). So the current board's
+long periods anyway — that's the Rev B goal). So Rev A's
 usable range is the HRTIM range, ~24 ns to ~524 µs.
 
 ### LEDs (flexible — change in `pulsegen.c` if you reroute)

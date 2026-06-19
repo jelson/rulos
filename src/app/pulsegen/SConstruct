@@ -40,6 +40,10 @@ RulosBuildTarget(
                 '-DHSE_VALUE=10000000',
                 '-DRULOS_USE_HSE',
                 '-DRULOS_HSE_BYPASS',
+                # Rev B: PA9/PA10 are channel outputs, so the debug UART (USART1)
+                # moves to PB6 (TX) / PB7 (RX) -- both USART1 AF7, both free.
+                '-DRULOS_UART0_TX_PIN=GPIO_B6',
+                '-DRULOS_UART0_RX_PIN=GPIO_B7',
                 '-DRULOS_PLLM=RCC_PLLM_DIV1',
                 '-DRULOS_PLLN=25',
                 '-DSCHEDULER_CAPACITY=8',
