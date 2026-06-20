@@ -41,10 +41,11 @@
 
 // NULL = success; non-NULL = pulsegen-supplied error string.
 static void apply_setter_result(const char* err) {
-  if (err)
+  if (err) {
     scpi_set_error(err);
-  else
+  } else {
     scpi_clear_error();
+  }
 }
 
 static void print_uint(uint32_t v) {

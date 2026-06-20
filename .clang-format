@@ -5,3 +5,5 @@ AllowShortFunctionsOnASingleLine: None
 AllowShortIfStatementsOnASingleLine: Never
 AlignConsecutiveMacros: true
 BreakBeforeBraces: Attach
+# Always brace single-statement if/else/for/while bodies.
+InsertBraces: true
