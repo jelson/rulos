@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .ArmBuildRules import ArmStmPlatform
+from .ArmBuildRules import ArmStmPlatform, ArmNxpPlatform
 from .AvrBuildRules import AvrPlatform
 from .Esp32BuildRules import Esp32Platform
 from .SimBuildRules import SimulatorPlatform
@@ -25,6 +25,8 @@ from .SimBuildRules import SimulatorPlatform
 # needed to catch driver breakage.
 _ATMEGA_REPRESENTATIVES = ("atmega32", "atmega328", "atmega1284")
 _ATTINY_REPRESENTATIVES = ("attiny84", "attiny85")
+
+_NXP_REPRESENTATIVES = ("lpc1114-102",)
 
 
 def _stm32_line_representatives(families):
@@ -49,6 +51,7 @@ def canary_platforms(
     stm32_families=None,
     include_atmega=True,
     include_attiny=True,
+    include_nxp=False,
     include_esp32=True,
     include_sim=True,
     extras=(),
@@ -60,10 +63,13 @@ def canary_platforms(
 
     stm32_families: iterable of STM32 major family names (e.g. "STM32G4")
         to include. None means every family.
-    include_atmega, include_attiny, include_esp32, include_sim: toggle
-        each AVR subfamily, ESP32, and the host simulator. Turn off the
-        ones a particular driver doesn't support (e.g. UART doesn't
-        build on ATtiny since those chips have USI, not USART).
+    include_atmega, include_attiny, include_nxp, include_esp32,
+    include_sim: toggle each AVR subfamily, NXP LPC, ESP32, and the host
+        simulator. Turn off the ones a particular driver doesn't support
+        (e.g. UART doesn't build on ATtiny since those chips have USI,
+        not USART). include_nxp is off by default because RULOS only
+        implements a subset of drivers (core, twi) on LPC; turn it on in
+        canaries for drivers LPC actually supports.
     extras: additional Platform instances to append — typically the
         specific chip used in a hardware test jig.
     """
@@ -76,6 +82,9 @@ def canary_platforms(
     if include_attiny:
         for chip_name in _ATTINY_REPRESENTATIVES:
             platforms.append(AvrPlatform(chip_name))
+    if include_nxp:
+        for chip_name in _NXP_REPRESENTATIVES:
+            platforms.append(ArmNxpPlatform(chip_name))
     if include_esp32:
         platforms.append(Esp32Platform())
     if include_sim:

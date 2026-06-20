@@ -67,17 +67,18 @@ RulosBuildTarget(
 ).build()
 
 # Canary build: twisendtest without the 7seg_panel status hack, across
-# every STM32 family TWI supports and the atmega canary set. twirecvtest
-# depends on network-layer reassembly that's not wired up on stm32 here;
-# twisendtest just needs hal_twi_init + send. ATtiny excluded since
-# those parts use USI, not the TWI peripheral. ESP32 excluded — twi.c
-# is AVR/STM32-only.
+# every STM32 family TWI supports, the atmega canary set, and NXP LPC.
+# twirecvtest depends on network-layer reassembly that's not wired up on
+# stm32 here; twisendtest just needs hal_twi_init + send. ATtiny excluded
+# since those parts use USI, not the TWI peripheral. ESP32 excluded — it
+# has no twi driver.
 RulosBuildTarget(
     name = "twisendtest_canary",
     sources = [ "twisendtest.c" ],
     platforms = canary_platforms(
         stm32_families = TWI_SUPPORTED_STM32_FAMILIES,
         include_attiny = False,
+        include_nxp = True,
         include_esp32 = False,
         include_sim = False,
     ),

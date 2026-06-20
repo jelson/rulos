@@ -23,5 +23,6 @@ from build_tools import *
 RulosBuildTarget(
     name = "nulltest",
     sources = ["nulltest.c"],
-    platforms = canary_platforms(),
+    # nulltest is core-only, so it builds on every platform including LPC.
+    platforms = canary_platforms(include_nxp=True),
 ).build()

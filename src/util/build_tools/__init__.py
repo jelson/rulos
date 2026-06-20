@@ -49,7 +49,7 @@ if _build_dir:
 # Global symbols that should be exposed
 from .util import BUILD_ROOT
 from .BuildTarget import RulosBuildTarget
-from .ArmBuildRules import ArmPlatform, ArmStmPlatform
+from .ArmBuildRules import ArmPlatform, ArmStmPlatform, ArmNxpPlatform
 from .AvrBuildRules import AvrPlatform
 from .SimBuildRules import SimulatorPlatform
 from .Esp32BuildRules import Esp32Platform

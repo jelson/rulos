@@ -23,6 +23,7 @@ from SCons.Script import *
 ARM_ROOT = os.path.join(util.SRC_ROOT, "lib", "chip", "arm")
 STM32_ROOT = os.path.join(ARM_ROOT, "stm32")
 STM32_VENDOR_ROOT = os.path.join(util.PROJECT_ROOT, "ext", "stm32")
+LPC_ROOT = os.path.join(ARM_ROOT, "lpc")
 
 created_programming_target = False
 
@@ -328,3 +329,83 @@ class ArmStmPlatform(ArmPlatform):
                 'Generating linker script', use_source=False))
         env.Append(LINKFLAGS = ["-T", linkscript])
         env.Depends(env["RulosProgramPath"], linkscript)
+
+
+class ArmNxpPlatform(ArmPlatform):
+    """NXP LPC11xx (Cortex-M0) support. The chip driver library is NXP's
+    LPCOpen vendor code under lib/chip/arm/lpc/vendor_libraries; it ships
+    its own CMSIS core headers, so unlike STM32 it does not depend on any
+    shared CMSIS copy. The recipe (chip family define, flash/ram, driver
+    lib, startup, linker) mirrors the pre-SCons Makefile build."""
+
+    class Chip:
+        def __init__(self, name, chip_family, flashk, ramk, arch_name,
+                     driver_lib="lpc_11uxx"):
+            self.name = name
+            self.chip_family = chip_family   # NXP LPCOpen define, e.g. CHIP_LPC11CXX
+            self.flashk = flashk
+            self.ramk = ramk
+            self.arch_name = arch_name       # key into ArmPlatform.ARCHITECTURES
+            self.driver_lib = driver_lib
+
+    CHIPS = dict([(chip.name, chip) for chip in [
+        Chip("lpc1114-102", "CHIP_LPC11CXX", flashk=32, ramk=4, arch_name="m0"),
+        Chip("lpc1115",     "CHIP_LPC11CXX", flashk=64, ramk=8, arch_name="m0"),
+    ]])
+
+    def __init__(self, chip_name, extra_peripherals=[], extra_cflags=[]):
+        super().__init__(chip_name, extra_peripherals, extra_cflags)
+        if chip_name not in self.CHIPS:
+            util.die(f"Unrecognized chip {chip_name}. Known chips: " +
+                     ",".join(self.CHIPS))
+        self.chip = self.CHIPS[chip_name]
+        self.arch = ArmPlatform.ARCHITECTURES[self.chip.arch_name]
+        self.driver_lib_path = os.path.join(
+            LPC_ROOT, "vendor_libraries", self.chip.driver_lib)
+
+    def part_name(self):
+        return self.chip.name
+
+    def periph_dir(self):
+        return os.path.join("arm", "lpc", "periph")
+
+    def cflags(self):
+        return self.platform_cflags(self.arch) + [
+            "-DRULOS_ARM_NXP",
+            f"-D{self.chip.chip_family}=1",
+        ]
+
+    def ld_flags(self, target):
+        return self.arm_ld_flags(target)
+
+    def include_dirs(self, target):
+        return self.platform_include_dirs(target) + [
+            LPC_ROOT,            # so chip-specific "core/hardware.h" resolves
+            self.driver_lib_path,  # NXP chip.h, cmsis.h, core_cm0.h, ...
+        ]
+
+    def platform_lib_source_files(self):
+        # arm-common core + LPC core + the whole NXP driver lib (its
+        # gpio/adc variants self-gate on the CHIP_* define, so globbing
+        # the directory compiles only the ones for this chip family)
+        return (self.arm_platform_lib_source_files()
+            + util.cglob(LPC_ROOT, "core")
+            + util.cglob(self.driver_lib_path))
+
+    def platform_specific_app_sources(self):
+        startup = f"startup_ARMC{self.arch.name.upper()}.S"
+        return util.cwd_to_project_root([
+            os.path.join(LPC_ROOT, "startup", startup),
+        ])
+
+    def configure_env(self, env):
+        self.arm_configure_env(env)
+        # The LPC startup file is .S (preprocessed), and selects its IRQ
+        # vector table on the CHIP_* define. SCons compiles .S with
+        # ASPPFLAGS, not CCFLAGS, so feed it the platform flags too.
+        env.Append(ASPPFLAGS = self.cflags())
+        linker_dir = os.path.join(LPC_ROOT, "linker")
+        ld_script = f"gcc_arm_{self.chip.flashk}k_{self.chip.ramk}k.ld"
+        # -L so both the chip script and the gcc_flash_common.ld it
+        # INCLUDEs are found by name
+        env.Append(LINKFLAGS = ["-L", linker_dir, "-T", ld_script])

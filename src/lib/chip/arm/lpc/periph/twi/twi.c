@@ -77,7 +77,7 @@ static void master_event_handler(I2C_ID_T id, I2C_EVENT_T event) {
 }
 
 static void twi_send(MediaStateIfc *media, Addr dest_addr,
-                     const unsigned char *data, uint8_t len,
+                     const void *data, uint8_t len,
                      MediaSendDoneFunc send_done_cb, void *send_done_cb_data) {
 #ifdef TIMING_DEBUG_PIN
   gpio_set(TIMING_DEBUG_PIN);
