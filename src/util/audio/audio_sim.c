@@ -29,7 +29,7 @@
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
-#define AU_HEADER_SIZE 24
+#define AU_HEADER_SIZE  24
 #define NUM_AUDIO_FILES 9
 
 void setasync(int fd) {
@@ -92,7 +92,9 @@ int16_t ulaw2linear(uint8_t ulawbyte) {
   return sample;
 }
 
-uint8_t pcm16s_to_pcm8u(int16_t s) { return (s >> 8) + 127; }
+uint8_t pcm16s_to_pcm8u(int16_t s) {
+  return (s >> 8) + 127;
+}
 
 #define DSP 1
 
@@ -196,10 +198,8 @@ main() {
       outbuf = auf->buf + auf->auptr;
 #endif
       rc = write(audiofd, outbuf, count);
-      fprintf(
-          stderr,
-          "aufile %d (next %d) write auptr = %x audiofd rc = %d; errno= %d\n",
-          au_index, au_queued_next, auf->auptr, rc, errno);
+      fprintf(stderr, "aufile %d (next %d) write auptr = %x audiofd rc = %d; errno= %d\n", au_index,
+              au_queued_next, auf->auptr, rc, errno);
       if (rc != count) {
         perror("write");
       }

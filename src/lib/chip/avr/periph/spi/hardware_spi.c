@@ -39,11 +39,11 @@ ISR(SPI_STC_vect) {
 }
 
 #define DDR_SPI DDRB
-#define DD_SS DDB2
-#define SPI_SS GPIO_B2
+#define DD_SS   DDB2
+#define SPI_SS  GPIO_B2
 #define DD_MOSI DDB3
 #define DD_MISO DDB4
-#define DD_SCK DDB5
+#define DD_SCK  DDB5
 // TODO these can't be right -- GPIO_B2 is allocated to BOARDSEL2
 // in V11PCB.
 
@@ -59,13 +59,13 @@ void hal_init_spi() {
 
 void hal_spi_set_fast(bool fast) {
 // defs atmega328p page 174
-#define FOSC4 0
-#define FOSC16 1
-#define FOSC64 2
+#define FOSC4   0
+#define FOSC16  1
+#define FOSC64  2
 #define FOSC128 3
-#define FOSC2 4
-#define FOSC8 5
-#define FOSC32 6
+#define FOSC2   4
+#define FOSC8   5
+#define FOSC32  6
 #ifdef CRYSTAL
 #if CRYSTAL == 20000000
 #define SLOW FOSC128
@@ -88,8 +88,14 @@ void hal_spi_set_fast(bool fast) {
   SPSR = (fast ? (SBIT(FAST, 2) << SPI2X) : (SBIT(SLOW, 2) << SPI2X));
 }
 
-void hal_spi_select_slave(bool select) { gpio_set_or_clr(SPI_SS, !select); }
+void hal_spi_select_slave(bool select) {
+  gpio_set_or_clr(SPI_SS, !select);
+}
 
-void hal_spi_set_handler(HALSPIHandler *handler) { g_spi_handler = handler; }
+void hal_spi_set_handler(HALSPIHandler *handler) {
+  g_spi_handler = handler;
+}
 
-void hal_spi_send(uint8_t byte) { SPDR = byte; }
+void hal_spi_send(uint8_t byte) {
+  SPDR = byte;
+}

@@ -40,7 +40,7 @@
 #include "pulsegen.h"
 
 // NULL = success; non-NULL = pulsegen-supplied error string.
-static void apply_setter_result(const char* err) {
+static void apply_setter_result(const char *err) {
   if (err) {
     scpi_set_error(err);
   } else {
@@ -65,10 +65,10 @@ static void print_seconds_ps(uint64_t ps) {
   scpi_print(buf);
 }
 
-static bool dispatch_line(const char* line) {
+static bool dispatch_line(const char *line) {
   // MODE ASYNC|SYNC  and  MODE?
   {
-    const char* p = scpi_match_kw(line, "MODE", "MODE");
+    const char *p = scpi_match_kw(line, "MODE", "MODE");
     if (p) {
       if (*p == '?') {
         scpi_print(pulsegen_mode_str());
@@ -92,13 +92,13 @@ static bool dispatch_line(const char* line) {
 
   // OUTPut[n]:STATe ON|OFF
   {
-    const char* p = scpi_match_kw(line, "OUTPUT", "OUTP");
+    const char *p = scpi_match_kw(line, "OUTPUT", "OUTP");
     if (p) {
       int ch;
       p = scpi_parse_channel_suffix(p, NUM_CHANNELS, &ch);
       if (*p == ':') {
         p++;
-        const char* q = scpi_match_kw(p, "STATE", "STAT");
+        const char *q = scpi_match_kw(p, "STATE", "STAT");
         if (q && *q == ' ') {
           bool on;
           if (!scpi_parse_bool(q + 1, &on)) {
@@ -114,17 +114,17 @@ static bool dispatch_line(const char* line) {
 
   // SOURce[n]:{PULSe | BURSt} subtrees
   {
-    const char* p = scpi_match_kw(line, "SOURCE", "SOUR");
+    const char *p = scpi_match_kw(line, "SOURCE", "SOUR");
     if (p) {
       int ch;
       p = scpi_parse_channel_suffix(p, NUM_CHANNELS, &ch);
       if (*p == ':') {
         p++;
 
-        const char* pulse = scpi_match_kw(p, "PULSE", "PULS");
+        const char *pulse = scpi_match_kw(p, "PULSE", "PULS");
         if (pulse && *pulse == ':') {
           pulse++;
-          const char* q;
+          const char *q;
           if ((q = scpi_match_kw(pulse, "PERIOD", "PER")) && *q == ' ') {
             uint64_t v;
             if (!scpi_parse_seconds_ps(q + 1, &v)) {
@@ -154,10 +154,10 @@ static bool dispatch_line(const char* line) {
           }
         }
 
-        const char* burst = scpi_match_kw(p, "BURST", "BURS");
+        const char *burst = scpi_match_kw(p, "BURST", "BURS");
         if (burst && *burst == ':') {
           burst++;
-          const char* q;
+          const char *q;
           if ((q = scpi_match_kw(burst, "STATE", "STAT"))) {
             if (*q == '?') {
               scpi_print(pulsegen_get_burst_state(ch) ? "ON" : "OFF");
@@ -188,7 +188,7 @@ static bool dispatch_line(const char* line) {
               return true;
             }
           }
-          const char* internal = scpi_match_kw(burst, "INTERNAL", "INT");
+          const char *internal = scpi_match_kw(burst, "INTERNAL", "INT");
           if (internal && *internal == ':' && (q = scpi_match_kw(internal + 1, "PERIOD", "PER"))) {
             if (*q == '?') {
               print_seconds_ps(pulsegen_get_burst_period_ps(ch));

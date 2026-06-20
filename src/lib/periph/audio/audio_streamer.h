@@ -49,8 +49,8 @@ typedef struct s_AudioStreamer {
 void init_audio_streamer(AudioStreamer *as);
 
 // Play sample at filename
-bool as_play(AudioStreamer *as, const char *pathname,
-             ActivationFuncPtr client_done_cb, void *client_done_data);
+bool as_play(AudioStreamer *as, const char *pathname, ActivationFuncPtr client_done_cb,
+             void *client_done_data);
 
 // Adjust the (logarithmic) volume multiplier.
 void as_set_volume(AudioStreamer *as, uint8_t volume);

@@ -6,8 +6,8 @@
 #define NUM_COLS 48
 
 #define COLLATCH_CLK GPIO_B0
-#define COLLATCH_OE GPIO_B1
-#define COLLATCH_LE GPIO_B2
+#define COLLATCH_OE  GPIO_B1
+#define COLLATCH_LE  GPIO_B2
 #define COLLATCH_SDI GPIO_B3
 
 int main() {
@@ -40,9 +40,10 @@ int main() {
 
     _delay_ms(100);
 
-    if (colNum == NUM_COLS)
+    if (colNum == NUM_COLS) {
       colNum = 1;
-    else
+    } else {
       colNum++;
+    }
   }
 }

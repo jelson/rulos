@@ -32,5 +32,5 @@ typedef struct s_potsticker {
   int8_t last_digital_value;
 } PotSticker;
 
-void init_potsticker(PotSticker *ps, uint8_t adc_channel, InputInjectorIfc *ifi,
-                     uint8_t detents, Keystroke fwd, Keystroke back);
+void init_potsticker(PotSticker *ps, uint8_t adc_channel, InputInjectorIfc *ifi, uint8_t detents,
+                     Keystroke fwd, Keystroke back);

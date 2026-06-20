@@ -58,8 +58,8 @@ typedef struct s_volume_control {
   Keystroke vol_down;
 } VolumeControl;
 
-void volume_control_init(VolumeControl *vc, AudioClient *ac, uint8_t boardnum,
-                         Keystroke vol_up, Keystroke vol_down);
+void volume_control_init(VolumeControl *vc, AudioClient *ac, uint8_t boardnum, Keystroke vol_up,
+                         Keystroke vol_down);
 
 static inline uint8_t volume_get_mlvolume(VolumeControl *vc) {
   return vc->cur_vol;

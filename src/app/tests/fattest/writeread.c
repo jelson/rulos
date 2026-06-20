@@ -37,7 +37,7 @@ static void try_write(void *data) {
 
 #if SIM
   LOG("trying to format");
-  const MKFS_PARM mkfs_opt = { .fmt = FM_FAT32, .au_size = 1024 };
+  const MKFS_PARM mkfs_opt = {.fmt = FM_FAT32, .au_size = 1024};
   if (f_mkfs("", &mkfs_opt, fatbuf, sizeof(fatbuf)) != FR_OK) {
     LOG("couldn't format");
     return;
@@ -61,8 +61,7 @@ static void try_write(void *data) {
   int total_written = 0;
   UINT bytes_written;
   do {
-    retval = f_write(&f, testbuf + total_written, len - total_written,
-                     &bytes_written);
+    retval = f_write(&f, testbuf + total_written, len - total_written, &bytes_written);
     if (retval != FR_OK) {
       LOG("write error writing to %s: %d", test_filename, retval);
       return;
@@ -108,8 +107,7 @@ static void try_write(void *data) {
     }
 
     total_read += bytes_read;
-    LOG("read %u bytes of data from %s, total=%d", (uint16_t)bytes_read,
-        test_filename, total_read);
+    LOG("read %u bytes of data from %s, total=%d", (uint16_t)bytes_read, test_filename, total_read);
   }
 }
 

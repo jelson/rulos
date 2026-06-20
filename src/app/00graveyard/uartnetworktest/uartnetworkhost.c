@@ -16,15 +16,14 @@
 #include "periph/uart/uart_net_media_preamble.h"
 
 #define _POSIX_SOURCE 1  // POSIX compliant source
-#define FALSE 0
-#define TRUE 1
+#define FALSE         0
+#define TRUE          1
 
 void display(char *token, char *buf, int len) {
   int i;
   for (i = 0; i < len; i++) {
     char c = buf[i];
-    fprintf(stderr, "%s [%2x] '%c'\n", token, c & 0xff,
-            (c >= ' ' && c < 127) ? c : '_');
+    fprintf(stderr, "%s [%2x] '%c'\n", token, c & 0xff, (c >= ' ' && c < 127) ? c : '_');
   }
 }
 
@@ -49,14 +48,12 @@ void serial_loop(HostUartNetwork *hun) {
       rc = read(0, &c, 1);
       assert(rc == 1);
       if (c == '\n') {
-        host_uart_network_send_buffer(hun, AUDIO_ADDR, UARTNETWORKTEST_PORT,
-                                      send_idx);
+        host_uart_network_send_buffer(hun, AUDIO_ADDR, UARTNETWORKTEST_PORT, send_idx);
         send_idx = 0;
       } else {
         hun->send_frame.buffer[send_idx++] = c;
         if (send_idx >= sizeof(hun->send_frame.buffer)) {
-          host_uart_network_send_buffer(hun, AUDIO_ADDR, UARTNETWORKTEST_PORT,
-                                        send_idx);
+          host_uart_network_send_buffer(hun, AUDIO_ADDR, UARTNETWORKTEST_PORT, send_idx);
         }
       }
     }

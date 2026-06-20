@@ -34,8 +34,7 @@ static inline bool KeystrokeCmp(Keystroke k1, Keystroke k2) {
 }
 
 struct s_input_injector_ifc;
-typedef void (*InputInjectorFunc)(struct s_input_injector_ifc *ii,
-                                  Keystroke key);
+typedef void (*InputInjectorFunc)(struct s_input_injector_ifc *ii, Keystroke key);
 typedef struct s_input_injector_ifc {
   InputInjectorFunc func;
 } InputInjectorIfc;
@@ -60,5 +59,4 @@ typedef struct {
   uint8_t topHandlerActive;
 } InputFocusInjector;
 
-void input_focus_injector_init(InputFocusInjector *ifi,
-                               UIEventHandler *topHandler);
+void input_focus_injector_init(InputFocusInjector *ifi, UIEventHandler *topHandler);

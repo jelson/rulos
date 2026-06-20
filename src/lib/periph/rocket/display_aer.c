@@ -21,12 +21,10 @@
 #include "periph/rocket/rocket.h"
 
 void daer_update(DisplayAzimuthElevationRoll *act);
-void daer_fetchCalcDecorationValues(
-    struct s_decoration_ifc *daer_decoration_ifc, DecimalFloatingPoint *op0,
-    DecimalFloatingPoint *op1);
+void daer_fetchCalcDecorationValues(struct s_decoration_ifc *daer_decoration_ifc,
+                                    DecimalFloatingPoint *op0, DecimalFloatingPoint *op1);
 
-void daer_init(DisplayAzimuthElevationRoll *daer, uint8_t board,
-               Time impulse_frequency_us) {
+void daer_init(DisplayAzimuthElevationRoll *daer, uint8_t board, Time impulse_frequency_us) {
   board_buffer_init(&daer->bbuf DBG_BBUF_LABEL("aer"));
   board_buffer_push(&daer->bbuf, board);
   drift_anim_init(&daer->azimuth, 10, 320, 0, 360, 5);
@@ -35,8 +33,7 @@ void daer_init(DisplayAzimuthElevationRoll *daer, uint8_t board,
   daer->impulse_frequency_us = impulse_frequency_us;
   daer->last_impulse = 0;
 
-  daer->decoration_ifc.func =
-      (FetchCalcDecorationValuesFunc)daer_fetchCalcDecorationValues;
+  daer->decoration_ifc.func = (FetchCalcDecorationValuesFunc)daer_fetchCalcDecorationValues;
   daer->decoration_ifc.daer = daer;
 
   schedule_us(1, (ActivationFuncPtr)daer_update, daer);
@@ -62,9 +59,8 @@ void daer_update(DisplayAzimuthElevationRoll *daer) {
   board_buffer_draw(&daer->bbuf);
 }
 
-void daer_fetchCalcDecorationValues(
-    struct s_decoration_ifc *daer_decoration_ifc, DecimalFloatingPoint *op0,
-    DecimalFloatingPoint *op1) {
+void daer_fetchCalcDecorationValues(struct s_decoration_ifc *daer_decoration_ifc,
+                                    DecimalFloatingPoint *op0, DecimalFloatingPoint *op1) {
   DisplayAzimuthElevationRoll *daer = daer_decoration_ifc->daer;
   op0->mantissa = da_read(&daer->azimuth) * 10;
   op0->neg_exponent = 1;

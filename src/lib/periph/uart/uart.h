@@ -36,8 +36,7 @@ struct UartState_t_s;
 typedef struct UartState_t_s UartState_t;
 
 // Upcall for reception. Called at task-time.
-typedef void (*uart_rx_cb)(UartState_t *s, void *user_data, char *buf,
-                           size_t len);
+typedef void (*uart_rx_cb)(UartState_t *s, void *user_data, char *buf, size_t len);
 
 struct UartState_t_s {
   bool initted;

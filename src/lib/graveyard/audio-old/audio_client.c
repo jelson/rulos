@@ -20,7 +20,7 @@
 
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 #define SYNCDEBUG() syncdebug(0, 'U', __LINE__)
-//#define SYNCDEBUG()	{}
+// #define SYNCDEBUG()	{}
 
 void init_audio_client(AudioClient *ac, Network *network) {
   ac->network = network;
@@ -51,8 +51,7 @@ bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx, SoundToken cur_token,
   ac->arm_send_slot.dest_addr = AUDIO_ADDR;
   ac->arm_send_slot.wire_msg->dest_port = AUDIO_PORT;
   ac->arm_send_slot.payload_len = sizeof(AudioRequestMessage);
-  AudioRequestMessage *arm =
-      (AudioRequestMessage *)&ac->arm_send_slot.wire_msg->data;
+  AudioRequestMessage *arm = (AudioRequestMessage *)&ac->arm_send_slot.wire_msg->data;
   arm->stream_id = stream_idx;
   arm->skip = TRUE;
   arm->skip_cmd.token = cur_token;
@@ -91,8 +90,7 @@ bool ac_change_volume(AudioClient *ac, uint8_t stream_id, uint8_t mlvolume) {
   ac->avm_send_slot.dest_addr = AUDIO_ADDR;
   ac->avm_send_slot.wire_msg->dest_port = SET_VOLUME_PORT;
   ac->avm_send_slot.payload_len = sizeof(AudioVolumeMessage);
-  AudioVolumeMessage *avm =
-      (AudioVolumeMessage *)&ac->avm_send_slot.wire_msg->data;
+  AudioVolumeMessage *avm = (AudioVolumeMessage *)&ac->avm_send_slot.wire_msg->data;
   avm->stream_id = stream_id;
   avm->mlvolume = mlvolume;
   net_send_message(ac->network, &ac->avm_send_slot);
@@ -108,8 +106,7 @@ bool ac_send_music_control(AudioClient *ac, int8_t advance) {
   ac->mcm_send_slot.dest_addr = AUDIO_ADDR;
   ac->mcm_send_slot.wire_msg->dest_port = MUSIC_CONTROL_PORT;
   ac->mcm_send_slot.payload_len = sizeof(MusicControlMessage);
-  MusicControlMessage *mcm =
-      (MusicControlMessage *)&ac->mcm_send_slot.wire_msg->data;
+  MusicControlMessage *mcm = (MusicControlMessage *)&ac->mcm_send_slot.wire_msg->data;
   mcm->advance = advance;
   net_send_message(ac->network, &ac->mcm_send_slot);
 

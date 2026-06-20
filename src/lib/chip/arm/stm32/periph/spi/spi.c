@@ -17,16 +17,16 @@
  */
 
 /* Definition for SPIx Pins */
-#define SPIx_SCK_PIN GPIO_PIN_5
-#define SPIx_SCK_GPIO_PORT GPIOA
-#define SPIx_SCK_AF GPIO_AF5_SPI1
-#define SPIx_MISO_PIN GPIO_PIN_6
+#define SPIx_SCK_PIN        GPIO_PIN_5
+#define SPIx_SCK_GPIO_PORT  GPIOA
+#define SPIx_SCK_AF         GPIO_AF5_SPI1
+#define SPIx_MISO_PIN       GPIO_PIN_6
 #define SPIx_MISO_GPIO_PORT GPIOA
-#define SPIx_MISO_AF GPIO_AF5_SPI1
-#define SPIx_MOSI_PIN GPIO_PIN_7
+#define SPIx_MISO_AF        GPIO_AF5_SPI1
+#define SPIx_MOSI_PIN       GPIO_PIN_7
 #define SPIx_MOSI_GPIO_PORT GPIOA
-#define SPIx_MOSI_AF GPIO_AF5_SPI1
-#define GPIO_CHIPSELECT GPIO_A4
+#define SPIx_MOSI_AF        GPIO_AF5_SPI1
+#define GPIO_CHIPSELECT     GPIO_A4
 
 #include "core/hardware.h"
 #include "periph/spi/hal_spi.h"
@@ -86,13 +86,14 @@ void hal_spi_select_slave(bool select) {
   gpio_set_or_clr(GPIO_CHIPSELECT, !select);
 }
 
-void hal_spi_send(uint8_t byte) { hal_spi_send_multi(&byte, 1); }
+void hal_spi_send(uint8_t byte) {
+  hal_spi_send_multi(&byte, 1);
+}
 
 void hal_spi_send_multi(uint8_t *buf_out, const uint16_t len) {
   HAL_SPI_Transmit(&hspi, buf_out, len, 1000);
 }
 
-void hal_spi_sendrecv_multi(uint8_t *buf_out, uint8_t *buf_in,
-                            const uint16_t len) {
+void hal_spi_sendrecv_multi(uint8_t *buf_out, uint8_t *buf_in, const uint16_t len) {
   HAL_SPI_TransmitReceive(&hspi, buf_out, buf_in, len, 1000);
 }

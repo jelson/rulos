@@ -43,10 +43,10 @@
 typedef struct {
   // init parameters from caller
   hal_i2s_play_done_cb_t play_done_cb;
-  void* user_data;
+  void *user_data;
 
   // DMA channel (allocated in hal_i2s_init).
-  rulos_dma_channel_t* dma_ch;
+  rulos_dma_channel_t *dma_ch;
 
   // internal state
   I2S_HandleTypeDef i2s_handle;
@@ -56,20 +56,19 @@ stm32_i2s_t stm32_i2s;
 
 // DMA half-transfer callback: first half of the circular buffer has
 // been sent. Runs in DMA ISR context.
-static void i2s_on_dma_ht(void* user_data) {
+static void i2s_on_dma_ht(void *user_data) {
   (void)user_data;
   stm32_i2s.play_done_cb(stm32_i2s.user_data, 0);
 }
 
 // DMA transfer-complete callback: second half of the circular buffer
 // has been sent (buffer wraparound). Runs in DMA ISR context.
-static void i2s_on_dma_tc(void* user_data) {
+static void i2s_on_dma_tc(void *user_data) {
   (void)user_data;
   stm32_i2s.play_done_cb(stm32_i2s.user_data, 1);
 }
 
-void hal_i2s_init(uint16_t sample_rate, hal_i2s_play_done_cb_t play_done_cb,
-                  void* user_data) {
+void hal_i2s_init(uint16_t sample_rate, hal_i2s_play_done_cb_t play_done_cb, void *user_data) {
   memset(&stm32_i2s, 0, sizeof(stm32_i2s));
   stm32_i2s.play_done_cb = play_done_cb;
   stm32_i2s.user_data = user_data;
@@ -103,7 +102,7 @@ void hal_i2s_init(uint16_t sample_rate, hal_i2s_play_done_cb_t play_done_cb,
   __HAL_RCC_SPI2_RELEASE_RESET();
 
   /* I2S peripheral configuration */
-  I2S_HandleTypeDef* const h = &stm32_i2s.i2s_handle;
+  I2S_HandleTypeDef *const h = &stm32_i2s.i2s_handle;
   h->Instance = SPI2;
   h->Init.Mode = I2S_MODE_MASTER_TX;
   h->Init.Standard = I2S_STANDARD_PHILIPS;
@@ -151,14 +150,14 @@ uint32_t htoi2s_24(uint32_t v) {
   // uint32_t b3 = (v>>24) & 0xff;
   uint32_t b2 = (v >> 16) & 0xff;
   uint32_t b1 = (v >> 8) & 0xff;
-  uint32_t b0 = (v)&0xff;
+  uint32_t b0 = (v) & 0xff;
   return (b0 << 24) | (b2 << 8) | b1;
 }
 
 // Convert 16-bit little-endian samples into big-endian.
-void hal_i2s_condition_buffer(int16_t* samples, uint16_t num_samples) {
+void hal_i2s_condition_buffer(int16_t *samples, uint16_t num_samples) {
   while (num_samples > 0) {
-    int8_t* ptr = (int8_t*)samples;
+    int8_t *ptr = (int8_t *)samples;
     int8_t tmp = ptr[0];
     ptr[0] = ptr[1];
     ptr[1] = tmp;
@@ -167,10 +166,9 @@ void hal_i2s_condition_buffer(int16_t* samples, uint16_t num_samples) {
   }
 }
 
-void hal_i2s_start(int16_t* samples, uint16_t num_samples_per_halfbuffer) {
-  rulos_dma_start(stm32_i2s.dma_ch,
-                  (volatile void*)LL_SPI_DMA_GetRegAddr(SPI2),
-                  samples, 2 * num_samples_per_halfbuffer);
+void hal_i2s_start(int16_t *samples, uint16_t num_samples_per_halfbuffer) {
+  rulos_dma_start(stm32_i2s.dma_ch, (volatile void *)LL_SPI_DMA_GetRegAddr(SPI2), samples,
+                  2 * num_samples_per_halfbuffer);
   LL_SPI_EnableDMAReq_TX(SPI2);
 }
 

@@ -23,8 +23,10 @@
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 #define R_SYNCDEBUG() syncdebug(0, 'R', __LINE__)
 #define SYNCDEBUG() \
-  { R_SYNCDEBUG(); }
-//#define SYNCDEBUG()	{}
+  {                 \
+    R_SYNCDEBUG();  \
+  }
+// #define SYNCDEBUG()	{}
 extern void audioled_set(bool red, bool yellow);
 
 static void as_fill(AudioStreamer *as);
@@ -52,12 +54,10 @@ void init_audio_streamer(AudioStreamer *as, uint8_t timer_id) {
   schedule_now((ActivationFuncPtr)as_1_init_sdc, as);
 }
 
-static void ad_decode_ulaw_buf(uint8_t *dst, uint8_t *src, uint16_t len,
-                               uint8_t mlvolume) {
+static void ad_decode_ulaw_buf(uint8_t *dst, uint8_t *src, uint16_t len, uint8_t mlvolume) {
   uint8_t *srcp = src;
   uint8_t *end = src + len;
-  uint8_t voloffset =
-      (mlvolume == 8) ? 128 : (((1 << mlvolume) - 1) << (7 - mlvolume));
+  uint8_t voloffset = (mlvolume == 8) ? 128 : (((1 << mlvolume) - 1) << (7 - mlvolume));
 
   end = src + len;
   for (; srcp < end; srcp++, dst++) {
@@ -147,9 +147,8 @@ void as_3_loop(AudioStreamer *as) {
 
 void as_4_start_tx(AudioStreamer *as) {
   SYNCDEBUG();
-  bool rc =
-      sdc_start_transaction(&as->sdc, as->block_address, as->ulawbuf, AO_BUFLEN,
-                            (ActivationFuncPtr)as_5_more_frames, as);
+  bool rc = sdc_start_transaction(&as->sdc, as->block_address, as->ulawbuf, AO_BUFLEN,
+                                  (ActivationFuncPtr)as_5_more_frames, as);
 
   if (!rc) {
     // dang, card was busy! the 'goto' didn't (sdc hasn't taken
@@ -188,16 +187,15 @@ void as_5_more_frames(AudioStreamer *as) {
 }
 
 void as_6_read_more(AudioStreamer *as) {
-  sdc_continue_transaction(&as->sdc, as->ulawbuf, AO_BUFLEN,
-                           (ActivationFuncPtr)as_5_more_frames, as);
+  sdc_continue_transaction(&as->sdc, as->ulawbuf, AO_BUFLEN, (ActivationFuncPtr)as_5_more_frames,
+                           as);
   return;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset,
-             uint32_t end_address, ActivationFuncPtr done_func,
-             void *done_data) {
+bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, uint32_t end_address,
+             ActivationFuncPtr done_func, void *done_data) {
   SYNCDEBUG();
   as->block_address = block_address;
   as->sector_offset = 0;
@@ -224,7 +222,9 @@ void as_set_volume(AudioStreamer *as, uint8_t mlvolume) {
   as->mlvolume = mlvolume;
 }
 
-void as_stop_streaming(AudioStreamer *as) { as->end_address = 0; }
+void as_stop_streaming(AudioStreamer *as) {
+  as->end_address = 0;
+}
 
 SDCard *as_borrow_sdc(AudioStreamer *as) {
   return as->sdc_initialized ? &as->sdc : NULL;

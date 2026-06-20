@@ -22,8 +22,7 @@
 
 void pov_update(PovHandler *pov);
 
-void pov_init(PovHandler *pov, MirrorHandler *mirror, uint8_t laser_board,
-              uint8_t laser_digit) {
+void pov_init(PovHandler *pov, MirrorHandler *mirror, uint8_t laser_board, uint8_t laser_digit) {
   pov->func = (ActivationFunc)pov_update;
   pov->mirror = mirror;
   pov->laser_board = laser_board;
@@ -48,8 +47,7 @@ void pov_update(PovHandler *pov) {
 
   Time now = clock_time_us();
   // TODO can we afford a divide on every update?
-  uint32_t frac = ((now - pov->mirror->last_interrupt) * POV_BITMAP_LENGTH) /
-                  pov->mirror->period;
+  uint32_t frac = ((now - pov->mirror->last_interrupt) * POV_BITMAP_LENGTH) / pov->mirror->period;
 
   if (frac < 0 || frac > POV_BITMAP_LENGTH) {
     // out of bitmap range; ignore.

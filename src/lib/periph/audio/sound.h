@@ -36,6 +36,6 @@ typedef enum {
 #define AUDIO_STREAM_BURST_EFFECTS 2
 #define AUDIO_NUM_STREAMS          3
 
-#define VOL_MAX (30)
-#define VOL_MIN (0)
+#define VOL_MAX     (30)
+#define VOL_MIN     (0)
 #define VOL_DEFAULT (29)

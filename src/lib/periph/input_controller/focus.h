@@ -42,6 +42,5 @@ typedef struct s_focus_act {
 } FocusManager;
 
 void focus_init(FocusManager *act);
-void focus_register(FocusManager *act, UIEventHandler *handler, RectRegion rr,
-                    const char *label);
+void focus_register(FocusManager *act, UIEventHandler *handler, RectRegion rr, const char *label);
 bool focus_is_active(FocusManager *act);

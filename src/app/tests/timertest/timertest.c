@@ -21,7 +21,7 @@
 #define FREQ_USEC 500000
 #define NUM_TASKS 20
 
-//#define TEST_HAL
+// #define TEST_HAL
 #define TEST_SCHEDULER
 
 #include "../test-pin.h"
@@ -37,8 +37,7 @@ static void test_func(void *data) {
   gpio_set(TEST_PIN);
   schedule_us(FREQ_USEC * NUM_TASKS, test_func, data);
   gpio_clr(TEST_PIN);
-  LOG("line %d printed by task %d at time %" PRId32, i++,
-      (int)(intptr_t)data, clock_time_us());
+  LOG("line %d printed by task %d at time %" PRId32, i++, (int)(intptr_t)data, clock_time_us());
 }
 #endif
 

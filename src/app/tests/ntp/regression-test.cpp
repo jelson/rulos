@@ -56,8 +56,7 @@ static const time_observation_t real_data_1[MAX_OBSERVATIONS] = {
     },
 };
 
-void regress(const time_observation_t *obs, uint64_t *offset_usec,
-             int64_t *freq_ppb) {
+void regress(const time_observation_t *obs, uint64_t *offset_usec, int64_t *freq_ppb) {
   char buf[1000];
   int bufcap = sizeof(buf);
   update_epoch_estimate(obs, buf, &bufcap, offset_usec, freq_ppb);
@@ -93,8 +92,7 @@ void test_perfect_clocks() {
     uint64_t local_time_sec = i * 10;
     uint64_t local_time_usec = local_time_sec * 1e6;
     uint64_t expected_epoch_time = local_time_usec + start_epoch - start_local;
-    assert(expected_epoch_time ==
-           local_to_epoch(local_time_usec, offset_usec, freq_ppb));
+    assert(expected_epoch_time == local_to_epoch(local_time_usec, offset_usec, freq_ppb));
   }
 
   printf("PASS\n");
@@ -125,8 +123,7 @@ void test_clock_rate_error() {
 
   // do some test conversions
   for (int i = 0; i < 10; i++) {
-    assert(o[i].epoch_time_usec ==
-           local_to_epoch(o[i].local_time_usec, offset_usec, freq_ppb));
+    assert(o[i].epoch_time_usec == local_to_epoch(o[i].local_time_usec, offset_usec, freq_ppb));
   }
 
   printf("PASS\n");
@@ -152,9 +149,8 @@ void test_with_observation_error() {
     for (int i = 0; i < MAX_OBSERVATIONS; i++) {
       o[i].rtt_usec = rtt;
       o[i].local_time_usec = i * sec_between_probes * 1e6;
-      o[i].epoch_time_usec = start_epoch +
-                             (i * sec_between_probes) * (1e6 - freq_error_ppm) +
-                             rand_range(-rtt, rtt);
+      o[i].epoch_time_usec =
+          start_epoch + (i * sec_between_probes) * (1e6 - freq_error_ppm) + rand_range(-rtt, rtt);
     }
     uint64_t offset_usec;
     int64_t freq_ppb;
@@ -165,12 +161,10 @@ void test_with_observation_error() {
 
     // do some test conversions; make sure each is accurate to within 1ms
     for (int i = 0; i < 10; i++) {
-      uint64_t expected =
-          start_epoch + (i * sec_between_probes) * (1e6 - freq_error_ppm);
-      uint64_t actual =
-          local_to_epoch(o[i].local_time_usec, offset_usec, freq_ppb);
-      printf("x=%lu,expected=%lu,actual=%lu,error=%ld\n", o[i].local_time_usec,
-             expected, actual, expected - actual);
+      uint64_t expected = start_epoch + (i * sec_between_probes) * (1e6 - freq_error_ppm);
+      uint64_t actual = local_to_epoch(o[i].local_time_usec, offset_usec, freq_ppb);
+      printf("x=%lu,expected=%lu,actual=%lu,error=%ld\n", o[i].local_time_usec, expected, actual,
+             expected - actual);
       assert(llabs(expected - actual) < rtt);
     }
     printf("test %d: passed\n", testnum);

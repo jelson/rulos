@@ -127,10 +127,8 @@ void hal_stop_pump() {
 void start_fountain(FountainState_t *f) {
   f->fountain_on = TRUE;
   f->fountain_fast = TRUE;
-  f->fountain_slowdown_time =
-      clock_time_us() + 1000 * ((Time)FOUNTAIN_FAST_TIME_MSEC);
-  f->fountain_stop_time =
-      clock_time_us() + 1000000 * ((Time)FOUNTAIN_ON_TIME_SEC);
+  f->fountain_slowdown_time = clock_time_us() + 1000 * ((Time)FOUNTAIN_FAST_TIME_MSEC);
+  f->fountain_stop_time = clock_time_us() + 1000000 * ((Time)FOUNTAIN_ON_TIME_SEC);
   hal_start_pump();
 }
 
@@ -150,8 +148,7 @@ static void fountain_update(FountainState_t *f) {
   }
 
   // If the fountain is on and has timed out, turn it off.
-  if (f->fountain_on &&
-      later_than_or_eq(clock_time_us(), f->fountain_stop_time)) {
+  if (f->fountain_on && later_than_or_eq(clock_time_us(), f->fountain_stop_time)) {
     stop_fountain(f);
   }
 

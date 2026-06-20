@@ -69,8 +69,7 @@ int main() {
   flash_dumper_init(&flash_dumper);
 
   // initialize serial readers
-  serial_reader_init(&psoc_console_tx, PSOC_TX_UART_NUM, 1000000, &flash_dumper,
-                     NULL, NULL);
+  serial_reader_init(&psoc_console_tx, PSOC_TX_UART_NUM, 1000000, &flash_dumper, NULL, NULL);
 #if 0
   serial_reader_init(&modem_uart, MODEM_UART_NUM, 115200, &flash_dumper, NULL, NULL);
   serial_reader_init(&gps_uart, GPS_UART_NUM, 115200, &flash_dumper, NULL, NULL);
@@ -81,8 +80,8 @@ int main() {
 
   // GPS: R_shunt is 150 milliohms, Iresolution = 66.7
   // .04096 / (66.7 uA * 0.150 ohms) = 4094
-  currmeas_init(&gps_cms, GPS_POWERMEASURE_ADDR, VOLT_PRESCALE_DIV1, 54613, 5,
-                GPS_UART_NUM, &flash_dumper);
+  currmeas_init(&gps_cms, GPS_POWERMEASURE_ADDR, VOLT_PRESCALE_DIV1, 54613, 5, GPS_UART_NUM,
+                &flash_dumper);
 
   // LTE: Rshunt = 0.50 ohms, Iresolution = 10uA
   // .04096 / (10 uA * 0.5 ohms) = 8192

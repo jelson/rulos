@@ -106,8 +106,7 @@ static void _rx_cb(UartState_t *u, void *user_data, char *buf, size_t len) {
   _parse(pms);
 }
 
-void pms5003_init(pms5003_t *pms, uint8_t uart_id, pms5003_cb_t cb,
-                  void *user_data) {
+void pms5003_init(pms5003_t *pms, uint8_t uart_id, pms5003_cb_t cb, void *user_data) {
   assert(cb != NULL);
   memset(pms, 0, sizeof(*pms));
   CharQueue_init(&pms->inq.q, sizeof(pms->inq));

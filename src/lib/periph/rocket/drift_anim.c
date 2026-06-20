@@ -20,8 +20,8 @@
 
 #include "periph/rocket/rocket.h"
 
-void drift_anim_init(DriftAnim *da, uint8_t expscale, int32_t initValue,
-                     int32_t min, int32_t max, uint32_t maxSpeed) {
+void drift_anim_init(DriftAnim *da, uint8_t expscale, int32_t initValue, int32_t min, int32_t max,
+                     uint32_t maxSpeed) {
   da->expscale = expscale;
   da->min = min << expscale;
   da->max = max << expscale;
@@ -71,8 +71,7 @@ void da_set_velocity(DriftAnim *da, int32_t velocity) {
   da_set_velocity_scaled(da, velocity, 0);
 }
 
-void da_set_velocity_scaled(DriftAnim *da, int32_t velocity,
-                            uint8_t downscale) {
+void da_set_velocity_scaled(DriftAnim *da, int32_t velocity, uint8_t downscale) {
   _da_update_base(da);
   da->velocity = velocity << (da->expscale - downscale);
   da_bound_velocity(da);

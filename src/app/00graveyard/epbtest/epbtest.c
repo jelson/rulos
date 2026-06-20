@@ -40,8 +40,12 @@ void test_update(TestAct *act) {
   schedule_us(1, (Activation *)act);
   uint8_t digit, segment, board;
   for (board = 0; board < NUM_BOARDS; board++) {
-    if (board == DISPLAYBOARD) continue;
-    if (board != 4 && board != 5) continue;
+    if (board == DISPLAYBOARD) {
+      continue;
+    }
+    if (board != 4 && board != 5) {
+      continue;
+    }
     for (digit = 0; digit < NUM_DIGITS; digit++) {
       for (segment = 0; segment < 8; segment++) {
         uint8_t chosen_segment = (((clock_time_us() >> 18) + digit) & 7);

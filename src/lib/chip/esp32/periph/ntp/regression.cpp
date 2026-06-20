@@ -35,9 +35,8 @@
 // This is not part of the NtpClient class so it can be compiled
 // separately as part of a unit test that's compiled natively on an
 // x64 host
-bool update_epoch_estimate(const time_observation_t *obs, char *logbuf,
-                           int *logbufcap, uint64_t *offset_usec /* OUT */,
-                           int64_t *freq_ppb /* OUT */) {
+bool update_epoch_estimate(const time_observation_t *obs, char *logbuf, int *logbufcap,
+                           uint64_t *offset_usec /* OUT */, int64_t *freq_ppb /* OUT */) {
   // Make a sorted list of RTTs so we can compute quartile statistics.
   // Also, find the minimum epoch time of all observations.
   uint32_t rtts[MAX_OBSERVATIONS];
@@ -94,8 +93,8 @@ bool update_epoch_estimate(const time_observation_t *obs, char *logbuf,
     double x = to->local_time_usec;
     double y = to->epoch_time_usec - min_epoch;
 #if SIMULATOR
-    printf("[ %9u , %12.12g , %13lu , %12.12g ]%s\n", to->rtt_usec, x,
-           to->epoch_time_usec, y, i == MAX_OBSERVATIONS - 1 ? "" : ",");
+    printf("[ %9u , %12.12g , %13lu , %12.12g ]%s\n", to->rtt_usec, x, to->epoch_time_usec, y,
+           i == MAX_OBSERVATIONS - 1 ? "" : ",");
 #endif
     sumX += x;
     sumX2 += x * x;
@@ -123,8 +122,7 @@ bool update_epoch_estimate(const time_observation_t *obs, char *logbuf,
   return true;
 }
 
-uint64_t local_to_epoch(uint64_t local_time_usec, uint64_t offset_usec,
-                        int64_t freq_ppb) {
+uint64_t local_to_epoch(uint64_t local_time_usec, uint64_t offset_usec, int64_t freq_ppb) {
   // compute the base offset
   uint64_t epoch_usec = local_time_usec + offset_usec;
 

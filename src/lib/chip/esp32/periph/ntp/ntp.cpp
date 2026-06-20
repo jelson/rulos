@@ -51,8 +51,7 @@ bool NtpClient::_sendRequest(ntp_packet_t *req) {
   }
   uint32_t remote_ip;
   if (server->h_addrtype != AF_INET) {
-    LOG("[NTP] got weird addr type of %d for host %s", server->h_addrtype,
-        _hostname);
+    LOG("[NTP] got weird addr type of %d for host %s", server->h_addrtype, _hostname);
     return false;
   }
 
@@ -87,8 +86,7 @@ bool NtpClient::_sendRequest(ntp_packet_t *req) {
   esp_wifi_set_promiscuous(true);
   _resp_time_usec = 0;
   _req_time_usec = wallclock_get_uptime_usec(&_uptime);
-  int sent = sendto(_sock, req, sizeof(*req), 0, (struct sockaddr *)&dest,
-                    sizeof(dest));
+  int sent = sendto(_sock, req, sizeof(*req), 0, (struct sockaddr *)&dest, sizeof(dest));
   if (sent < 0) {
     LOG("[NTP] could not send UDP packet to %s: errno %d", _hostname, errno);
     esp_wifi_set_promiscuous(false);
@@ -194,14 +192,12 @@ void NtpClient::_try_receive() {
   LOG("[NTP] got response after %u usec", rtt_usec);
 
   // time at which the ntp server transmitted its response
-  uint64_t server_ntp_usec =
-      (((uint64_t)1000000) * ntohl(resp.txTime_frac)) >> 32;
+  uint64_t server_ntp_usec = (((uint64_t)1000000) * ntohl(resp.txTime_frac)) >> 32;
   server_ntp_usec += (uint64_t)1000000 * ntohl(resp.txTime_sec);
 
   // how long the remote server took between its incoming and outgoing
   // packets
-  uint64_t rx_at_server_ntp_usec =
-      (((uint64_t)1000000) * ntohl(resp.rxTime_frac)) >> 32;
+  uint64_t rx_at_server_ntp_usec = (((uint64_t)1000000) * ntohl(resp.rxTime_frac)) >> 32;
   rx_at_server_ntp_usec += (uint64_t)1000000 * ntohl(resp.rxTime_sec);
   uint64_t server_delay_usec = server_ntp_usec - rx_at_server_ntp_usec;
 
@@ -209,8 +205,7 @@ void NtpClient::_try_receive() {
   uint32_t oneway_latency_usec = (rtt_usec - server_delay_usec) / 2;
 
   // compute the epoch time
-  uint64_t server_epoch_usec =
-      server_ntp_usec - ((uint64_t)1000000 * UNIX_EPOCH_NTP_TIMESTAMP);
+  uint64_t server_epoch_usec = server_ntp_usec - ((uint64_t)1000000 * UNIX_EPOCH_NTP_TIMESTAMP);
 
   // our estimate of the true epoch time when this packet was received locally
   uint64_t epoch_time_when_received = server_epoch_usec + oneway_latency_usec;
@@ -234,18 +229,16 @@ void NtpClient::_try_receive() {
   // log statistics
   char logbuf[1000];
   int logcapacity = sizeof(logbuf);
-  logcapacity -= snprintf(
-      logbuf, sizeof(logbuf),
-      "[NTP] stats: "
-      "sent=%llu,local_rx_time=%llu,server_delay=%llu,server_epoch_usec=%llu,"
-      "raw_rtt_usec=%u,oneway_latency_usec=%u,epoch_time_when_received=%llu,"
-      "this_offset_usec=%lld,",
-      _req_time_usec, _resp_time_usec, server_delay_usec, server_epoch_usec,
-      rtt_usec, oneway_latency_usec, epoch_time_when_received, offset_usec);
+  logcapacity -= snprintf(logbuf, sizeof(logbuf),
+                          "[NTP] stats: "
+                          "sent=%llu,local_rx_time=%llu,server_delay=%llu,server_epoch_usec=%llu,"
+                          "raw_rtt_usec=%u,oneway_latency_usec=%u,epoch_time_when_received=%llu,"
+                          "this_offset_usec=%lld,",
+                          _req_time_usec, _resp_time_usec, server_delay_usec, server_epoch_usec,
+                          rtt_usec, oneway_latency_usec, epoch_time_when_received, offset_usec);
 
-  _locked =
-      update_epoch_estimate(_obs, &logbuf[sizeof(logbuf) - logcapacity],
-                            &logcapacity, &_offset_usec, &_freq_error_ppb);
+  _locked = update_epoch_estimate(_obs, &logbuf[sizeof(logbuf) - logcapacity], &logcapacity,
+                                  &_offset_usec, &_freq_error_ppb);
   logbuf[sizeof(logbuf) - logcapacity] = '\n';
   logcapacity--;
   log_write(logbuf, sizeof(logbuf) - logcapacity);
@@ -284,8 +277,7 @@ uint64_t NtpClient::get_epoch_time_usec(void) {
 void NtpClient::start(void) {
   wallclock_init(&_uptime);
 
-  const wifi_promiscuous_filter_t filt = {.filter_mask =
-                                              WIFI_PROMIS_FILTER_MASK_DATA};
+  const wifi_promiscuous_filter_t filt = {.filter_mask = WIFI_PROMIS_FILTER_MASK_DATA};
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(&sniffer);
   schedule_now(NtpClient::_sync_trampoline, this);

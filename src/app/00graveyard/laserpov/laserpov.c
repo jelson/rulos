@@ -38,7 +38,6 @@ int main() {
   InputControllerAct ia;
   input_controller_init(&ia, NULL);
 
-
   MirrorHandler mirror;
   mirror_init(&mirror);
 

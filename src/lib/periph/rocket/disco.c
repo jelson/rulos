@@ -17,18 +17,18 @@
  */
 
 #include "periph/rocket/disco.h"
+
 #include "periph/audio/sound.h"
 
 void disco_update(Disco *disco);
 void disco_paint_once(Disco *disco);
-UIEventDisposition disco_event_handler(UIEventHandler *raw_handler,
-                                       UIEvent evt);
+UIEventDisposition disco_event_handler(UIEventHandler *raw_handler, UIEvent evt);
 static void disco_recv_metadata(MessageRecvBuffer *msg);
 
 #define SCROLL_METADATA_BOARD_NUM (1)
 
-void disco_init(Disco *disco, AudioClient *audioClient,
-                ScreenBlanker *screenblanker, IdleAct *idle, Network* network) {
+void disco_init(Disco *disco, AudioClient *audioClient, ScreenBlanker *screenblanker, IdleAct *idle,
+                Network *network) {
   disco->handler.uieh.func = (UIEventHandlerFunc)disco_event_handler;
   disco->handler.disco = disco;
 
@@ -37,7 +37,7 @@ void disco_init(Disco *disco, AudioClient *audioClient,
   disco->focused = FALSE;
 
   dscrlmsg_init(&disco->scroll_metadata, SCROLL_METADATA_BOARD_NUM, "", 120);
-  board_buffer_pop(&disco->scroll_metadata.bbuf); // Hide for now
+  board_buffer_pop(&disco->scroll_metadata.bbuf);  // Hide for now
 
   disco->app_receiver.recv_complete_func = disco_recv_metadata;
   disco->app_receiver.port = MUSIC_METADATA_PORT;
@@ -57,13 +57,13 @@ void disco_recv_metadata(MessageRecvBuffer *msg) {
   MusicMetadataMessage *mmm = (MusicMetadataMessage *)msg->data;
   assert(msg->payload_len == sizeof(MusicMetadataMessage));
 
-  //memcpy(&disco->music_metadata, mmm, sizeof(MusicMetadataMessage));
-  char* display = disco->music_metadata.path;
-  strcpy(display, mmm->path+7); // skip "/music/"
-  if (strlen(display)>4) {
-    strcpy(&display[strlen(display)-4], "  ");  // Cover ".raw"
+  // memcpy(&disco->music_metadata, mmm, sizeof(MusicMetadataMessage));
+  char *display = disco->music_metadata.path;
+  strcpy(display, mmm->path + 7);  // skip "/music/"
+  if (strlen(display) > 4) {
+    strcpy(&display[strlen(display) - 4], "  ");  // Cover ".raw"
   }
-  
+
   LOG("Music playing: %s", display);
   dscrlmsg_set_msg(&disco->scroll_metadata, display);
   net_free_received_message_buffer(msg);
@@ -89,8 +89,7 @@ static void disco_set_focus(Disco *disco, bool focused) {
       board_buffer_pop(&disco->scroll_metadata.bbuf);
     }
     // remove focus
-    ac_skip_to_clip(disco->audioClient, AUDIO_STREAM_MUSIC, sound_silence,
-                    sound_silence);
+    ac_skip_to_clip(disco->audioClient, AUDIO_STREAM_MUSIC, sound_silence, sound_silence);
   }
   disco->focused = focused;
 }
@@ -103,8 +102,7 @@ void disco_paint_once(Disco *disco) {
   }
 }
 
-UIEventDisposition disco_event_handler(UIEventHandler *raw_handler,
-                                       UIEvent evt) {
+UIEventDisposition disco_event_handler(UIEventHandler *raw_handler, UIEvent evt) {
   Disco *disco = ((DiscoHandler *)raw_handler)->disco;
 
   UIEventDisposition result = uied_accepted;
@@ -118,8 +116,7 @@ UIEventDisposition disco_event_handler(UIEventHandler *raw_handler,
       break;
     case evt_idle_nowidle:
       // Just silence, but don't remove focus
-      ac_skip_to_clip(disco->audioClient, AUDIO_STREAM_MUSIC, sound_silence,
-                      sound_silence);
+      ac_skip_to_clip(disco->audioClient, AUDIO_STREAM_MUSIC, sound_silence, sound_silence);
       break;
     case 'a':
     case 'e':

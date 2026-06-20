@@ -16,13 +16,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-//#include <avr/boot.h>
+// #include <avr/boot.h>
 #include <avr/io.h>
-//#include <avr/interrupt.h>
-//#include <util/delay_basic.h>
-//#include <inttypes.h>
-//#include <stdio.h>
-//#include <string.h>
+// #include <avr/interrupt.h>
+// #include <util/delay_basic.h>
+// #include <inttypes.h>
+// #include <stdio.h>
+// #include <string.h>
 
 #include "core/hardware.h"
 #include "periph/rocket/rocket.h"

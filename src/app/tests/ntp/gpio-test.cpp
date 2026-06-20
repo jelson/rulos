@@ -43,8 +43,8 @@ void external_gpio_handler(void *arg) {
   if (epoch == 0) {
     LOG("GPIO: not_locked");
   } else {
-    LOG("GPIO: has_lock,local=%llu,epoch_time=%llu.%06llu", local,
-        epoch / 1000000, epoch % 1000000);
+    LOG("GPIO: has_lock,local=%llu,epoch_time=%llu.%06llu", local, epoch / 1000000,
+        epoch % 1000000);
   }
 }
 
@@ -58,8 +58,7 @@ int main() {
   init_clock(JIFFY_CLOCK_US, TIMER0);
 
   // start wifi
-  inet_wifi_client_start(wifi_creds,
-                         sizeof(wifi_creds) / sizeof(wifi_creds[0]));
+  inet_wifi_client_start(wifi_creds, sizeof(wifi_creds) / sizeof(wifi_creds[0]));
 
   // start ntp
   ntp.start();

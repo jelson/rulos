@@ -21,13 +21,13 @@
 #include "core/rulos.h"
 #include "periph/audio/sound.h"
 #include "periph/ring_buffer/rocket_ring_buffer.h"
-//#include "graveyard/spiflash.h"
+// #include "graveyard/spiflash.h"
 
 #define NUM_COMPOSITE_STREAMS 1
 #if 0
-#define AUDIO_COMPOSITE_STREAM_BURST_EFFECTS 0
+#define AUDIO_COMPOSITE_STREAM_BURST_EFFECTS      0
 #define AUDIO_COMPOSITE_STREAM_CONTINUOUS_EFFECTS 1
-#define AUDIO_COMPOSITE_STREAM_COUNTDOWN 2
+#define AUDIO_COMPOSITE_STREAM_COUNTDOWN          2
 #endif
 
 #define AUDIO_RING_BUFFER_SIZE 50
@@ -71,6 +71,5 @@ void ad_skip_to_clip(AudioDriver *ad, uint8_t stream_idx, SoundToken cur_token,
                      SoundToken loop_token);
 // Change immediately to cur_token, then play loop_token in a loop
 
-void ad_queue_loop_clip(AudioDriver *ad, uint8_t stream_idx,
-                        SoundToken loop_token);
+void ad_queue_loop_clip(AudioDriver *ad, uint8_t stream_idx, SoundToken loop_token);
 // After current token finishes, start looping loop_token

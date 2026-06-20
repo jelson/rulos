@@ -24,7 +24,8 @@
 
 #if !HAVE_AUDIOBOARD_UART
 #define SYNCDEBUG() \
-  {}
+  {                 \
+  }
 #else
 
 #define SYNCDEBUG() syncdebug(0, 'T', __LINE__)

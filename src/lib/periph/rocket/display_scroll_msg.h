@@ -29,7 +29,6 @@ typedef struct s_dscrollmsgact {
   const char *msg;
 } DScrollMsgAct;
 
-void dscrlmsg_init(struct s_dscrollmsgact *act, uint8_t board, const char *msg,
-                   uint8_t speed_ms);
+void dscrlmsg_init(struct s_dscrollmsgact *act, uint8_t board, const char *msg, uint8_t speed_ms);
 
 void dscrlmsg_set_msg(DScrollMsgAct *act, const char *msg);

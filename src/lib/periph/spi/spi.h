@@ -50,6 +50,5 @@ typedef struct s_SPI {
 
 void spi_init(SPI *spi);
 void spi_start(SPI *spi, SPICmd *spic);
-void spi_resume_transfer(SPI *spi, uint8_t *reply_buffer,
-                         uint16_t reply_buflen);
+void spi_resume_transfer(SPI *spi, uint8_t *reply_buffer, uint16_t reply_buflen);
 void spi_finish(SPI *spi);

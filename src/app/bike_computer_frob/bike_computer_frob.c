@@ -138,7 +138,7 @@ void shell_init(Shell *shell) {
 
 void print32(uint32_t v) {
   syncdebug(2, 'h', (v) >> 16);
-  syncdebug(6, 'l', (v)&0xffff);
+  syncdebug(6, 'l', (v) & 0xffff);
 }
 
 void print_func(Shell *shell) {

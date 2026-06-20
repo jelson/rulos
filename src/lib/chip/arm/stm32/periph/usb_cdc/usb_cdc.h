@@ -48,16 +48,17 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "usbd_def.h"
+
 #include "usbd_cdc.h"
+#include "usbd_def.h"
 
 // Forward declarations
 struct usbd_cdc_state_s;
 typedef struct usbd_cdc_state_s usbd_cdc_state_t;
 
 // Callbacks
-typedef void (*usbd_cdc_rx_cb)(usbd_cdc_state_t *cdc, void *user_data,
-                               const uint8_t *data, uint32_t len);
+typedef void (*usbd_cdc_rx_cb)(usbd_cdc_state_t *cdc, void *user_data, const uint8_t *data,
+                               uint32_t len);
 typedef void (*usbd_cdc_tx_complete_cb)(usbd_cdc_state_t *cdc, void *user_data);
 // Invoked (from task context) when the host opens the port (asserts
 // DTR) and when it closes it or the cable is pulled. The right place
@@ -88,8 +89,8 @@ struct usbd_cdc_state_s {
   const void *tx_buf_in_flight;
 
   // STM32 HAL handles
-  USBD_HandleTypeDef usbd_handle;       // USB device handle
-  USBD_CDC_HandleTypeDef cdc_handle;    // CDC class handle
+  USBD_HandleTypeDef usbd_handle;     // USB device handle
+  USBD_CDC_HandleTypeDef cdc_handle;  // CDC class handle
 };
 
 // Initialize USB CDC device (configures clocks, USB peripheral, descriptors)

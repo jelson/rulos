@@ -34,8 +34,7 @@ typedef struct {
 } flash_dumper_t;
 
 void flash_dumper_init(flash_dumper_t *fd);
-void flash_dumper_write(flash_dumper_t *fd, const void *buf, uint32_t len,
-                        const char *prefix_fmt, ...)
-    __attribute__((format(printf, 4, 5)));
+void flash_dumper_write(flash_dumper_t *fd, const void *buf, uint32_t len, const char *prefix_fmt,
+                        ...) __attribute__((format(printf, 4, 5)));
 
 void flash_dumper_print(flash_dumper_t *fd, const char *s);

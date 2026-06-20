@@ -39,6 +39,6 @@ typedef struct {
   int32_t cum_current;
 } currmeas_state_t;
 
-void currmeas_init(currmeas_state_t *cms, uint8_t device_addr,
-                   uint32_t prescale, uint16_t calibration, uint32_t scale,
-                   uint32_t channel_num, flash_dumper_t *flash_dumper);
+void currmeas_init(currmeas_state_t *cms, uint8_t device_addr, uint32_t prescale,
+                   uint16_t calibration, uint32_t scale, uint32_t channel_num,
+                   flash_dumper_t *flash_dumper);

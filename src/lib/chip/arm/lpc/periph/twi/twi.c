@@ -30,7 +30,7 @@
 
 #include "chip.h"
 
-//#define TIMING_DEBUG_PIN GPIO0_08
+// #define TIMING_DEBUG_PIN GPIO0_08
 
 typedef struct {
   MediaStateIfc media;
@@ -51,7 +51,9 @@ static void handle_interrupt(I2C_ID_T id) {
   }
 }
 
-void I2C_IRQHandler(void) { handle_interrupt(I2C0); }
+void I2C_IRQHandler(void) {
+  handle_interrupt(I2C0);
+}
 
 // Unlike the "state handler", which is called to drive the I2C state
 // machine byte-by-byte, the "event handler" gets notifications of
@@ -76,8 +78,7 @@ static void master_event_handler(I2C_ID_T id, I2C_EVENT_T event) {
   }
 }
 
-static void twi_send(MediaStateIfc *media, Addr dest_addr,
-                     const void *data, uint8_t len,
+static void twi_send(MediaStateIfc *media, Addr dest_addr, const void *data, uint8_t len,
                      MediaSendDoneFunc send_done_cb, void *send_done_cb_data) {
 #ifdef TIMING_DEBUG_PIN
   gpio_set(TIMING_DEBUG_PIN);

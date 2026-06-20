@@ -31,5 +31,4 @@ typedef struct {
   SSBitmap bitmap[POV_BITMAP_LENGTH];
 } PovHandler;
 
-void pov_init(PovHandler *pov, MirrorHandler *mirror, uint8_t laser_board,
-              uint8_t laser_digit);
+void pov_init(PovHandler *pov, MirrorHandler *mirror, uint8_t laser_board, uint8_t laser_digit);

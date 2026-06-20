@@ -23,20 +23,20 @@
 #include "periph/uart/uart.h"
 
 // Set up logging system to emit log messages to a particular uart.
-void log_bind_uart(UartState_t* u);
+void log_bind_uart(UartState_t *u);
 
 // Emit to log system. Not really meant to be called directly, but through the
 // LOG() macro.
-void log_write(const void* buf, size_t len);
+void log_write(const void *buf, size_t len);
 
 // wait until log is drained
 void log_flush();
 
 // typically not called directly, but via the LOG macro
-void log_format_and_write(const char* fmt, ...) __attribute((format(printf, 1, 2)));
+void log_format_and_write(const char *fmt, ...) __attribute((format(printf, 1, 2)));
 
 // typically noot called directly, but via the assert() macro
-void log_assert(const char* file, long unsigned int line);
+void log_assert(const char *file, long unsigned int line);
 
 #ifndef KEEP_SYSTEM_ASSERT
 

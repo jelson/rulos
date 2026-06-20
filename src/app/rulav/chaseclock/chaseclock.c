@@ -23,25 +23,12 @@
 /* Chase's definitions */
 
 #define RAND_OFFSET_LIMIT 10
-#define SET_RAND_HOUR 12  // Time at which to reset the random offset
-#define SET_RAND_MIN 0
-#define SET_RAND_SEC 0
-//#define PRINT_DAYDATE
+#define SET_RAND_HOUR     12  // Time at which to reset the random offset
+#define SET_RAND_MIN      0
+#define SET_RAND_SEC      0
+// #define PRINT_DAYDATE
 
-typedef enum {
-  JAN,
-  FEB,
-  MAR,
-  APR,
-  MAY,
-  JUN,
-  JUL,
-  AUG,
-  SEP,
-  OCT,
-  NOV,
-  DEC
-} Month;
+typedef enum { JAN, FEB, MAR, APR, MAY, JUN, JUL, AUG, SEP, OCT, NOV, DEC } Month;
 
 typedef enum { SUN, MON, TUE, WED, THU, FRI, SAT } Day;
 
@@ -57,8 +44,7 @@ typedef struct {
 } ChaseTime_t;
 
 ChaseTime_t initTime = {
-    11,  59, 50,  TRUE,
-    SAT, 31, DEC, 0 /* Set initial time to 11:59.50 pm, Sat Dec 31, no offset */
+    11, 59, 50, TRUE, SAT, 31, DEC, 0 /* Set initial time to 11:59.50 pm, Sat Dec 31, no offset */
 };
 
 char daystrings[7][3] = {"SU", "MO", "TU", "WE", "TH", "FR", "SA"};
@@ -124,20 +110,27 @@ void update_time_vals(ChaseClockActivation_t *cc) {
       if (tptr->pm == TRUE) {
         tptr->pm = FALSE;
         tptr->date += 1;
-        //tptr->day = static_cast<Day>(static_cast<int>(tptr->day) + 1);
+        // tptr->day = static_cast<Day>(static_cast<int>(tptr->day) + 1);
         tptr->day += 1;
-      } else
+      } else {
         tptr->pm = TRUE;
+      }
     }
   }
-  if (tptr->hour > 12) tptr->hour = 1;
+  if (tptr->hour > 12) {
+    tptr->hour = 1;
+  }
   if (tptr->date > days_in_month[tptr->month]) {
     tptr->date = 1;
-    //tptr->month = static_cast<Month>(static_cast<int>(tptr->month) + 1);
-    tptr->month +=1;
-    if (tptr->month > DEC) tptr->month = JAN;
+    // tptr->month = static_cast<Month>(static_cast<int>(tptr->month) + 1);
+    tptr->month += 1;
+    if (tptr->month > DEC) {
+      tptr->month = JAN;
+    }
   }
-  if (tptr->day > SAT) tptr->day = SUN;
+  if (tptr->day > SAT) {
+    tptr->day = SUN;
+  }
   /* Leap years not handled yet */
 
   /* At specified time change the offset value based on total seconds */
@@ -145,10 +138,9 @@ void update_time_vals(ChaseClockActivation_t *cc) {
   //(tptr->sec == SET_RAND_SEC))
 
   // Every 10 seconds after the appointed time, change the offset
-  if ((tptr->hour >= SET_RAND_HOUR) && (tptr->min >= SET_RAND_MIN) &&
-      (tptr->sec % 10 == 0))
-    tptr->randoffmin =
-        (cc->secs + (cc->secs >> 2) + (cc->secs >> 4)) % RAND_OFFSET_LIMIT;
+  if ((tptr->hour >= SET_RAND_HOUR) && (tptr->min >= SET_RAND_MIN) && (tptr->sec % 10 == 0)) {
+    tptr->randoffmin = (cc->secs + (cc->secs >> 2) + (cc->secs >> 4)) % RAND_OFFSET_LIMIT;
+  }
 }
 
 int main() {

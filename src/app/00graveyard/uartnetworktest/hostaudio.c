@@ -54,8 +54,7 @@ int main(int argc, char **argv) {
     assert(rc == 1);
 #else
     memcpy(hun.send_frame.buffer, ulaw_buf, sizeof(ulaw_buf));
-    host_uart_network_send_buffer(&hun, AUDIO_ADDR, STREAMING_AUDIO_PORT,
-                                  sizeof(ulaw_buf));
+    host_uart_network_send_buffer(&hun, AUDIO_ADDR, STREAMING_AUDIO_PORT, sizeof(ulaw_buf));
 #endif
   }
 

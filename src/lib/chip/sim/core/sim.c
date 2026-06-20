@@ -66,9 +66,8 @@ static int numSimClockHandlers = 0;
 static SimActivation_t simSIGIOHandlers[MAX_HANDLERS];
 static int numSimSIGIOHandlers = 0;
 
-static void sim_register_generic_handler(SimActivation_t *handlerList,
-                                         int *numHandlers, clock_handler_t func,
-                                         void *data) {
+static void sim_register_generic_handler(SimActivation_t *handlerList, int *numHandlers,
+                                         clock_handler_t func, void *data) {
   rulos_irq_state_t old_interrupts = hal_start_atomic();
   handlerList[*numHandlers].func = func;
   handlerList[*numHandlers].data = data;
@@ -77,17 +76,14 @@ static void sim_register_generic_handler(SimActivation_t *handlerList,
 }
 
 void sim_register_clock_handler(clock_handler_t func, void *data) {
-  sim_register_generic_handler(simClockHandlers, &numSimClockHandlers, func,
-                               data);
+  sim_register_generic_handler(simClockHandlers, &numSimClockHandlers, func, data);
 }
 
 void sim_register_sigio_handler(clock_handler_t func, void *data) {
-  sim_register_generic_handler(simSIGIOHandlers, &numSimSIGIOHandlers, func,
-                               data);
+  sim_register_generic_handler(simSIGIOHandlers, &numSimSIGIOHandlers, func, data);
 }
 
-static void sim_generic_fire_handlers(SimActivation_t *handlerList,
-                                      int numHandlers) {
+static void sim_generic_fire_handlers(SimActivation_t *handlerList, int numHandlers) {
   rulos_irq_state_t old_interrupts = hal_start_atomic();
   int i;
 
@@ -105,8 +101,7 @@ static void sim_sigio_handler(int signo) {
   sim_generic_fire_handlers(simSIGIOHandlers, numSimSIGIOHandlers);
 }
 
-uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
-                            uint8_t timer_id) {
+uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data, uint8_t timer_id) {
   assert(hal_initted == HAL_MAGIC);  // did you forget to call rulos_hal_init()?
 
   /* init clock stuff */
@@ -191,13 +186,11 @@ typedef struct {
 } SimTwiState;
 SimTwiState g_sim_twi_state = {{NULL}, FALSE};
 
-static void sim_twi_send(MediaStateIfc *media, Addr dest_addr, const void *data,
-                         uint8_t len, MediaSendDoneFunc sendDoneCB,
-                         void *sendDoneCBData);
+static void sim_twi_send(MediaStateIfc *media, Addr dest_addr, const void *data, uint8_t len,
+                         MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
 static void sim_twi_poll(void *data);
 
-MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
-                            MediaRecvSlot *mrs) {
+MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr, MediaRecvSlot *mrs) {
   SimTwiState *twi_state = &g_sim_twi_state;
   twi_state->media.send = sim_twi_send;
   twi_state->mrs = mrs;
@@ -274,8 +267,7 @@ static void sim_twi_poll(void *data) {
   }
 
   if (rc > mrs->capacity) {
-    LOG("TWI SIM: Discarding %d-byte packet; too long for net stack's buffer",
-        rc);
+    LOG("TWI SIM: Discarding %d-byte packet; too long for net stack's buffer", rc);
     return;
   }
 
@@ -290,9 +282,8 @@ typedef struct {
   void *sendDoneCBData;
 } sendCallbackAct_t;
 
-static void sim_twi_send(MediaStateIfc *media, Addr dest_addr, const void *data,
-                         uint8_t len, MediaSendDoneFunc sendDoneCB,
-                         void *sendDoneCBData) {
+static void sim_twi_send(MediaStateIfc *media, Addr dest_addr, const void *data, uint8_t len,
+                         MediaSendDoneFunc sendDoneCB, void *sendDoneCBData) {
   SimTwiState *twi_state = (SimTwiState *)media;
 
 #if 0
@@ -306,8 +297,7 @@ static void sim_twi_send(MediaStateIfc *media, Addr dest_addr, const void *data,
   sai.sin_family = AF_INET;
   sai.sin_addr.s_addr = htonl(0x7f000001);
   sai.sin_port = htons(SIM_TWI_PORT_BASE + dest_addr);
-  sendto(twi_state->udp_socket, data, len, 0, (struct sockaddr *)&sai,
-         sizeof(sai));
+  sendto(twi_state->udp_socket, data, len, 0, (struct sockaddr *)&sai, sizeof(sai));
 
   if (sendDoneCB != NULL) {
     schedule_now((ActivationFuncPtr)sendDoneCB, sendDoneCBData);

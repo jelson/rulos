@@ -57,8 +57,8 @@ seg  x  y char
 
 */
 
-#define DIGIT_WIDTH 5
-#define DIGIT_HEIGHT 4
+#define DIGIT_WIDTH       5
+#define DIGIT_HEIGHT      4
 #define SHOW_OFF_SEGMENTS 0
 
 struct segment_def_s {
@@ -68,17 +68,15 @@ struct segment_def_s {
 } segment_defs[] = {{1, 0, "__"}, {3, 1, "|"}, {3, 2, "|"},  {1, 2, "__"},
                     {0, 2, "|"},  {0, 1, "|"}, {1, 1, "__"}, {4, 2, "."}};
 
-void hal_upside_down_led(SSBitmap *b) {}
+void hal_upside_down_led(SSBitmap *b) {
+}
 
-#define DBOARD(name, syms, x, y, remote_addr, remote_idx) \
-  { name, {syms}, x, y }
-#define B_NO_BOARD {NULL},
-#define B_END \
-  { NULL }
+#define DBOARD(name, syms, x, y, remote_addr, remote_idx) {name, {syms}, x, y}
+#define B_NO_BOARD                                        {NULL},
+#define B_END                                             {NULL}
 #include "periph/7seg_panel/display_tree.ch"
 
-BoardLayout g_sim_theTree_def[] = {ROCKET_TREE},
-            *g_sim_theTree = g_sim_theTree_def;
+BoardLayout g_sim_theTree_def[] = {ROCKET_TREE}, *g_sim_theTree = g_sim_theTree_def;
 
 // Current status of each displayed segment. -1 means uninitialized. 0
 // means off. 1 means on.
@@ -89,10 +87,8 @@ static void sim_program_labels() {
   for (bl = g_sim_theTree; bl->label != NULL; bl += 1) {
     attroff(A_BOLD);
     wcolor_set(curses_get_window(), PAIR_WHITE, NULL);
-    mvwprintw(curses_get_window(),
-              bl->y,
-              bl->x + (4 * NUM_DIGITS - strlen(bl->label)) / 2,
-              "%s", bl->label);
+    mvwprintw(curses_get_window(), bl->y, bl->x + (4 * NUM_DIGITS - strlen(bl->label)) / 2, "%s",
+              bl->label);
   }
 }
 
@@ -106,12 +102,11 @@ void sim_display_light_status(bool status) {
   }
 }
 
-void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
-                         uint8_t onoff) {
-  if (board < 0 || board >= NUM_LOCAL_BOARDS || digit < 0 ||
-      digit >= NUM_DIGITS || segment < 0 || segment >= 8 ||
-      g_sim_theTree[board].label == NULL)
+void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff) {
+  if (board < 0 || board >= NUM_LOCAL_BOARDS || digit < 0 || digit >= NUM_DIGITS || segment < 0 ||
+      segment >= 8 || g_sim_theTree[board].label == NULL) {
     return;
+  }
 
   if (curr_segment_status[board][digit][segment] == onoff) {
     return;
@@ -129,8 +124,7 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
     attron(A_BOLD);
     attroff(A_DIM);
     wcolor_set(curses_get_window(), g_sim_theTree[board].colors[digit], NULL);
-    mvwprintw(curses_get_window(), y_origin, x_origin,
-              "%s", segment_defs[segment].s);
+    mvwprintw(curses_get_window(), y_origin, x_origin, "%s", segment_defs[segment].s);
   } else {
 #if SHOW_OFF_SEGMENTS
     attroff(A_BOLD);

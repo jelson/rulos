@@ -83,20 +83,19 @@ bool rulos_nmi_claimed(void) {
 
 typedef struct {
   uint32_t magic;
-  uint32_t seq;     // monotonic; highest valid block wins at load
+  uint32_t seq;  // monotonic; highest valid block wins at load
   uint16_t version;
   uint16_t length;  // payload byte count; rejects a stale layout
 } nvconfig_hdr_t;
 
 // Framed block = header + payload + CRC32, padded up to the 16 B flash
 // program unit. CRC covers header + payload.
-#define NV_RAW(payload) \
-  (sizeof(nvconfig_hdr_t) + (payload) + sizeof(uint32_t))
+#define NV_RAW(payload) (sizeof(nvconfig_hdr_t) + (payload) + sizeof(uint32_t))
 #define NV_IMG(payload) ((NV_RAW(payload) + 15u) & ~15u)
-#define NV_BUF_LEN NV_IMG(NVCONFIG_MAX_PAYLOAD)
+#define NV_BUF_LEN      NV_IMG(NVCONFIG_MAX_PAYLOAD)
 
 #define NV_SLOT_BYTES FLASH_SECTOR_SIZE  // one erasable sector per slot
-#define NV_NSLOTS 2
+#define NV_NSLOTS     2
 
 static uint8_t *slot_addr(unsigned slot) {
   return _nvconfig_base + (size_t)slot * NV_SLOT_BYTES;
@@ -105,8 +104,7 @@ static uint8_t *slot_addr(unsigned slot) {
 // Read one slot into `buf` (>= NV_RAW(len)). Returns true and sets
 // *seq only if the slot read with no double-ECC error and holds a
 // block with the right magic/version/length and a good CRC.
-static bool slot_read(unsigned slot, void *buf, size_t len,
-                      uint16_t version, uint32_t *seq) {
+static bool slot_read(unsigned slot, void *buf, size_t len, uint16_t version, uint32_t *seq) {
   size_t raw = NV_RAW(len);
   bool ok = false;
   uint32_t s = 0;
@@ -120,9 +118,8 @@ static bool slot_read(unsigned slot, void *buf, size_t len,
   const nvconfig_hdr_t *h = (const nvconfig_hdr_t *)buf;
   uint32_t stored;
   memcpy(&stored, (const uint8_t *)buf + sizeof(*h) + len, sizeof(stored));
-  if (double_ecc_count == 0u && h->magic == NVCONFIG_MAGIC &&
-      h->version == version && h->length == len &&
-      stored == crc32(buf, sizeof(*h) + len)) {
+  if (double_ecc_count == 0u && h->magic == NVCONFIG_MAGIC && h->version == version &&
+      h->length == len && stored == crc32(buf, sizeof(*h) + len)) {
     s = h->seq;
     ok = true;
   }
@@ -140,7 +137,7 @@ static bool slot_read(unsigned slot, void *buf, size_t len,
 // NMIs interleaved with erase/program) is what ST's reference flash
 // code avoids and what corrupted writes once the flash had been torn.
 static bool nv_inited;
-static int nv_active = -1;    // slot holding the current good block
+static int nv_active = -1;  // slot holding the current good block
 static uint32_t nv_active_seq;
 
 static size_t nv_region(void) {
@@ -159,8 +156,7 @@ static void nv_scan_once(void *out, size_t len, uint16_t version) {
   nv_active = -1;
   for (unsigned s = 0; s < NV_NSLOTS; s++) {
     uint32_t seq;
-    if (slot_read(s, buf, len, version, &seq) &&
-        (nv_active < 0 || seq > nv_active_seq)) {
+    if (slot_read(s, buf, len, version, &seq) && (nv_active < 0 || seq > nv_active_seq)) {
       nv_active = (int)s;
       nv_active_seq = seq;
       if (out != NULL) {
@@ -237,8 +233,8 @@ void nvconfig_save(const void *data, size_t len, uint16_t version) {
     uint32_t img_len = (uint32_t)NV_IMG(len);
     for (uint32_t i = 0; i < img_len; i += 16) {
       uint32_t dst = (uint32_t)(uintptr_t)slot_addr(target) + i;
-      if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_QUADWORD, dst,
-                            (uint32_t)(uintptr_t)&img[i]) != HAL_OK) {
+      if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_QUADWORD, dst, (uint32_t)(uintptr_t)&img[i]) !=
+          HAL_OK) {
         ok = false;
         break;
       }

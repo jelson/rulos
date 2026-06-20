@@ -19,12 +19,12 @@
 #include <ctype.h>
 #include <inttypes.h>
 
-#include "periph/usi_twi_master/usi_twi_master.h"
 #include "core/clock.h"
 #include "core/hal.h"
 #include "core/hardware.h"
 #include "core/rulos.h"
 #include "core/util.h"
+#include "periph/usi_twi_master/usi_twi_master.h"
 
 int i = 0;
 
@@ -45,7 +45,7 @@ void send_init_message() {
   usi_twi_master_send(0b1110100, buf, 2);
 }
 
-void send_message(void* data) {
+void send_message(void *data) {
   send_init_message();
 
   char buf[30];

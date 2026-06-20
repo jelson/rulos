@@ -28,8 +28,7 @@ UartState_t console, dut;
 uint32_t console_rx_chars = 0, last_console_rx_chars = 0;
 uint32_t dut_rx_chars = 0, last_dut_rx_chars = 0;
 
-static void _buf_received(UartState_t *s, void *user_data, char *buf,
-                          size_t buflen) {
+static void _buf_received(UartState_t *s, void *user_data, char *buf, size_t buflen) {
   if (s == &console) {
     console_rx_chars += buflen;
   } else {

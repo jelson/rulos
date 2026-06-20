@@ -42,7 +42,6 @@ int main() {
 
   init_clock(10000, TIMER1);
 
-
   Network network;
   init_twi_network(&network, 100, ROCKET1_ADDR);
 
@@ -52,7 +51,7 @@ int main() {
   InputPollerAct ip;
 #define LOCALTEST 0
 #if LOCALTEST
-  input_poller_init(&ip, (InputInjectorIfc*)&cii);
+  input_poller_init(&ip, (InputInjectorIfc *)&cii);
 #else
   input_poller_init(&ip, &rks.forwardLocalStrokes);
 #endif
@@ -62,14 +61,14 @@ int main() {
   gpio_pin_t q0pin0 = GPIO_C0;
   gpio_pin_t q0pin1 = GPIO_C1;
   QuadKnob q0;
-  init_quadknob(&q0, &rks.forwardLocalStrokes, q0pin0, q0pin1,
-                KeystrokeCtor('e'), KeystrokeCtor('f'));
+  init_quadknob(&q0, &rks.forwardLocalStrokes, q0pin0, q0pin1, KeystrokeCtor('e'),
+                KeystrokeCtor('f'));
 
   gpio_pin_t q1pin0 = GPIO_C2;
   gpio_pin_t q1pin1 = GPIO_C3;
   QuadKnob q1;
-  init_quadknob(&q1, &rks.forwardLocalStrokes, q1pin0, q1pin1,
-                KeystrokeCtor('a'), KeystrokeCtor('b'));
+  init_quadknob(&q1, &rks.forwardLocalStrokes, q1pin0, q1pin1, KeystrokeCtor('a'),
+                KeystrokeCtor('b'));
 #endif
 
   scheduler_run();

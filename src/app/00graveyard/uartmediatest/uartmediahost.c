@@ -12,8 +12,8 @@
 #include "periph/uart/uart_net_media_preamble.h"
 
 #define _POSIX_SOURCE 1  // POSIX compliant source
-#define FALSE 0
-#define TRUE 1
+#define FALSE         0
+#define TRUE          1
 
 typedef struct {
   int fd;
@@ -109,8 +109,7 @@ void serial_loop(Serial *serial) {
       char c;
       rc = read(fd, &c, 1);
       assert(rc == 1);
-      fprintf(stderr, "RECV [%2x] '%c'\n", c & 0xff,
-              (c >= ' ' && c < 127) ? c : '_');
+      fprintf(stderr, "RECV [%2x] '%c'\n", c & 0xff, (c >= ' ' && c < 127) ? c : '_');
     }
   }
 }

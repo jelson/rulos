@@ -33,13 +33,11 @@ typedef struct {
 typedef struct s_audio_server {
   AudioStreamer audio_streamer;
 
-  uint8_t
-      arm_recv_ring_alloc[RECEIVE_RING_SIZE(1, sizeof(AudioRequestMessage))];
+  uint8_t arm_recv_ring_alloc[RECEIVE_RING_SIZE(1, sizeof(AudioRequestMessage))];
   AppReceiver arm_app_receiver;
   uint8_t avm_recv_ring_alloc[RECEIVE_RING_SIZE(1, sizeof(AudioVolumeMessage))];
   AppReceiver avm_app_receiver;
-  uint8_t
-      mcm_recv_ring_alloc[RECEIVE_RING_SIZE(1, sizeof(MusicControlMessage))];
+  uint8_t mcm_recv_ring_alloc[RECEIVE_RING_SIZE(1, sizeof(MusicControlMessage))];
   AppReceiver mcm_app_receiver;
 
   bool index_ready;

@@ -27,8 +27,7 @@ static const uint8_t sevseg_ascii[] PROGMEM = {
 #include "lib/periph/7seg_panel/sevseg_bitmaps.ch"
 };
 
-void display_controller_program_cell(uint8_t board, uint8_t digit,
-                                     SSBitmap bitmap) {
+void display_controller_program_cell(uint8_t board, uint8_t digit, SSBitmap bitmap) {
   int segment; /* must be signed! */
   uint8_t shape = (uint8_t)bitmap;
 
@@ -80,7 +79,7 @@ void debug_msg_hex(uint8_t board, char *m, uint16_t hex) {
   buf[4] = hexmap[(hex >> 12) & 0x0f];
   buf[5] = hexmap[(hex >> 8) & 0x0f];
   buf[6] = hexmap[(hex >> 4) & 0x0f];
-  buf[7] = hexmap[(hex)&0x0f];
+  buf[7] = hexmap[(hex) & 0x0f];
   ascii_to_bitmap_str(bm, 8, buf);
   display_controller_program_board(board, bm);
 }

@@ -17,8 +17,8 @@ float alpha = 1.0 / ALPHA;
 #define MIN_PER_DEGREE  (60.0)
 #define NM_PER_MIN_Y    (1.0)
 #define METERS_PER_NM   (1852.0)
-#define RAD_TO_DEG(rad) ((rad)*180.0 / PI)
-#define DEG_TO_RAD(rad) ((rad)*PI / 180.0)
+#define RAD_TO_DEG(rad) ((rad) * 180.0 / PI)
+#define DEG_TO_RAD(rad) ((rad) * PI / 180.0)
 
 float s_dot(Vector *v0, Vector *v1) {
   return v0->x * v1->x + v0->y * v1->y;
@@ -138,8 +138,8 @@ int navigation_compute(Navigation *nav, Vector *p0_ll, Vector *p1_ll) {
   v_normalize(&desired_w);
 #if NDBG
   fprintf(stderr, "recover(%f,%f)\n", (double)recover.x, (double)recover.y);
-  fprintf(stderr, "desired_w(%f,%f) l=%f\n", (double)desired_w.x,
-          (double)desired_w.y, (double)s_len(&desired_w));
+  fprintf(stderr, "desired_w(%f,%f) l=%f\n", (double)desired_w.x, (double)desired_w.y,
+          (double)s_len(&desired_w));
 #endif
 
   Vector p0_w;  // old position in waypoint-space
@@ -151,8 +151,8 @@ int navigation_compute(Navigation *nav, Vector *p0_ll, Vector *p1_ll) {
   v_sub(&heading_w, &p1_w, &p0_w);
   v_normalize(&heading_w);
 #if NDBG
-  fprintf(stderr, "heading_w(%f,%f) l=%f\n", (double)heading_w.x,
-          (double)heading_w.y, (double)s_len(&heading_w));
+  fprintf(stderr, "heading_w(%f,%f) l=%f\n", (double)heading_w.x, (double)heading_w.y,
+          (double)s_len(&heading_w));
 #endif
 
   Vector heading_d;  // current heading in desired-heading-space;
@@ -161,8 +161,8 @@ int navigation_compute(Navigation *nav, Vector *p0_ll, Vector *p1_ll) {
   v_init(&origin, 0, 0);
   v_transform(&heading_d, &heading_w, &origin, &desired_w);
 #if NDBG
-  fprintf(stderr, "heading_d(%f,%f) l=%f\n", (double)heading_d.x,
-          (double)heading_d.y, (double)s_len(&heading_d));
+  fprintf(stderr, "heading_d(%f,%f) l=%f\n", (double)heading_d.x, (double)heading_d.y,
+          (double)s_len(&heading_d));
 #endif
 
   float angle_radians = s_unit_to_angle(&heading_d);

@@ -17,14 +17,16 @@
  */
 
 #include "usb_cdc.h"
+
+#include <string.h>
+
+#include "core/dfu.h"
 #include "core/hal.h"
 #include "core/rulos.h"
-#include "core/dfu.h"
 #include "stm32.h"
 #include "usbd_cdc.h"
 #include "usbd_conf.h"
 #include "usbd_def.h"
-#include <string.h>
 
 // External descriptor defined in usb_desc.c
 extern USBD_DescriptorsTypeDef CDC_Desc;
@@ -58,7 +60,6 @@ void USBD_free(void *ptr) {
 
   // Nothing to do since it's statically allocated
 }
-
 
 // Task to deliver RX data to application callback (can't call from ISR)
 static void rx_delivery_task(void *data) {
@@ -109,7 +110,7 @@ static int8_t CDC_DeInit_FS(void) {
 // descriptor (see ext/.../Class/CDC/Src/usbd_cdc.c). A host running
 // `dfu-util -e` sends the DFU_DETACH class request (bRequest 0, zero
 // length) to it; we reboot into the ROM bootloader (core/dfu.c).
-#define DFU_RUNTIME_IFACE 2U
+#define DFU_RUNTIME_IFACE  2U
 #define DFU_DETACH_REQUEST 0x00U
 
 // Deferred so the DFU_DETACH control transfer's status stage can ACK
@@ -229,11 +230,7 @@ static int8_t CDC_TransmitComplete(uint8_t *buf, uint32_t *len, uint8_t epnum) {
 
 // CDC Interface function pointers
 USBD_CDC_ItfTypeDef USBD_Interface_fops_FS = {
-  CDC_Init_FS,
-  CDC_DeInit_FS,
-  CDC_Control_FS,
-  CDC_Receive_FS,
-  CDC_TransmitComplete,
+    CDC_Init_FS, CDC_DeInit_FS, CDC_Control_FS, CDC_Receive_FS, CDC_TransmitComplete,
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -309,8 +306,8 @@ static void init_usb_clock(void) {
 
   HAL_RCCEx_CRSConfig(&RCC_CRSInitStruct);
 #else
-  // TODO: Add clock configuration for other STM32 families
-  #error "USB clock configuration not implemented for this STM32 family"
+// TODO: Add clock configuration for other STM32 families
+#error "USB clock configuration not implemented for this STM32 family"
 #endif
 }
 
@@ -353,19 +350,30 @@ static const uint8_t rulos_cdc_iad[RULOS_IAD_DESC_LEN] = {
 static const uint8_t rulos_dfu_desc[RULOS_DFU_DESC_LEN] = {
     // Interface #2, no endpoints, class 0xFE (Application Specific) /
     // subclass 1 (DFU) / protocol 1 (runtime, not DFU mode).
-    0x09, USB_DESC_TYPE_INTERFACE, 0x02, 0x00, 0x00, 0xFE, 0x01, 0x01, 0x00,
+    0x09,
+    USB_DESC_TYPE_INTERFACE,
+    0x02,
+    0x00,
+    0x00,
+    0xFE,
+    0x01,
+    0x01,
+    0x00,
     // DFU functional descriptor (DFU 1.1).
-    0x09, 0x21,
-    0x0D,        // bmAttributes: WillDetach|ManifestTolerant|CanDnload
-    0xE8, 0x03,  // wDetachTimeOut: 1000 ms
-    0x00, 0x04,  // wTransferSize: 1024
-    0x10, 0x01,  // bcdDFUVersion: 1.1
+    0x09,
+    0x21,
+    0x0D,  // bmAttributes: WillDetach|ManifestTolerant|CanDnload
+    0xE8,
+    0x03,  // wDetachTimeOut: 1000 ms
+    0x00,
+    0x04,  // wTransferSize: 1024
+    0x10,
+    0x01,  // bcdDFUVersion: 1.1
 };
 
 // Stock cfg descriptor + the inserted IAD + the appended DFU block,
 // one buffer per speed the ST core may request.
-#define RULOS_CFG_BUFLEN \
-  (USB_CDC_CONFIG_DESC_SIZ + RULOS_IAD_DESC_LEN + RULOS_DFU_DESC_LEN)
+#define RULOS_CFG_BUFLEN (USB_CDC_CONFIG_DESC_SIZ + RULOS_IAD_DESC_LEN + RULOS_DFU_DESC_LEN)
 static uint8_t rulos_cfg_fs[RULOS_CFG_BUFLEN];
 static uint8_t rulos_cfg_hs[RULOS_CFG_BUFLEN];
 static uint8_t rulos_cfg_os[RULOS_CFG_BUFLEN];
@@ -378,19 +386,16 @@ static uint16_t rulos_fs_len, rulos_hs_len, rulos_os_len;
 // Build the composite: stock config header, then the IAD, then the
 // stock interfaces (CDC 0+1), then the DFU interface. Patch
 // wTotalLength and bNumInterfaces. Returns the composite length.
-static uint16_t build_composite(const uint8_t *src, uint16_t srclen,
-                                uint8_t *dst) {
-  uint16_t total = (uint16_t)(srclen + RULOS_IAD_DESC_LEN +
-                              RULOS_DFU_DESC_LEN);
+static uint16_t build_composite(const uint8_t *src, uint16_t srclen, uint8_t *dst) {
+  uint16_t total = (uint16_t)(srclen + RULOS_IAD_DESC_LEN + RULOS_DFU_DESC_LEN);
   memcpy(dst, src, USB_CONFIG_HDR_LEN);
   memcpy(dst + USB_CONFIG_HDR_LEN, rulos_cdc_iad, RULOS_IAD_DESC_LEN);
-  memcpy(dst + USB_CONFIG_HDR_LEN + RULOS_IAD_DESC_LEN,
-         src + USB_CONFIG_HDR_LEN, srclen - USB_CONFIG_HDR_LEN);
-  memcpy(dst + RULOS_IAD_DESC_LEN + srclen, rulos_dfu_desc,
-         RULOS_DFU_DESC_LEN);
+  memcpy(dst + USB_CONFIG_HDR_LEN + RULOS_IAD_DESC_LEN, src + USB_CONFIG_HDR_LEN,
+         srclen - USB_CONFIG_HDR_LEN);
+  memcpy(dst + RULOS_IAD_DESC_LEN + srclen, rulos_dfu_desc, RULOS_DFU_DESC_LEN);
   dst[2] = (uint8_t)(total & 0xFF);  // wTotalLength low
   dst[3] = (uint8_t)(total >> 8);    // wTotalLength high
-  dst[4] += 1;  // bNumInterfaces += the DFU interface (IAD is not one)
+  dst[4] += 1;                       // bNumInterfaces += the DFU interface (IAD is not one)
   return total;
 }
 

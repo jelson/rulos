@@ -36,5 +36,5 @@ typedef void(MorseOutputDoneFunc)();
 // done_func is a callback that will be called when the sending is
 // done.  Assumes the RulOS scheduler is running, i.e. schedule_us()
 // works.
-void emit_morse(const char* send_string, const uint32_t dot_time_us,
-                MorseOutputToggleFunc* toggle_func, MorseOutputDoneFunc* done_func);
+void emit_morse(const char *send_string, const uint32_t dot_time_us,
+                MorseOutputToggleFunc *toggle_func, MorseOutputDoneFunc *done_func);

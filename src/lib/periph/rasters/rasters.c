@@ -71,13 +71,12 @@ void raster_draw_sym(RectRegion *rrect, char sym, int8_t dx, int8_t dy) {
   }
 }
 
-static SSBitmap _sevseg_pixel_mask[6][4] = {
-    {0b00000000, 0b01000000, 0b00000000, 0b00000000},
-    {0b00000010, 0b00000000, 0b00100000, 0b00000000},
-    {0b00000000, 0b00000001, 0b00000000, 0b00000000},
-    {0b00000100, 0b00000000, 0b00010000, 0b00000000},
-    {0b00000000, 0b00001000, 0b00000000, 0b10000000},
-    {0b00000000, 0b00000000, 0b00000000, 0b00000000}};
+static SSBitmap _sevseg_pixel_mask[6][4] = {{0b00000000, 0b01000000, 0b00000000, 0b00000000},
+                                            {0b00000010, 0b00000000, 0b00100000, 0b00000000},
+                                            {0b00000000, 0b00000001, 0b00000000, 0b00000000},
+                                            {0b00000100, 0b00000000, 0b00010000, 0b00000000},
+                                            {0b00000000, 0b00001000, 0b00000000, 0b10000000},
+                                            {0b00000000, 0b00000000, 0b00000000, 0b00000000}};
 
 void raster_paint_pixel(RectRegion *rrect, int x, int y) {
   raster_paint_pixel_v(rrect, x, y, TRUE);
@@ -90,8 +89,7 @@ void raster_paint_pixel_v(RectRegion *rrect, int x, int y, bool on) {
   int min_y = y - (maj_y * 6);
 
   // LOG("x-painted y%2d.%d x%2d.%d", maj_y, min_y, maj_x, min_x);
-  if (maj_y < 0 || maj_y >= rrect->ylen || maj_x < rrect->x ||
-      maj_x >= rrect->x + rrect->xlen) {
+  if (maj_y < 0 || maj_y >= rrect->ylen || maj_x < rrect->x || maj_x >= rrect->x + rrect->xlen) {
     // LOG("discard: %d %d ; %d %d", 0, rrect->ylen, rrect->x,
     // rrect->x+rrect->xlen);
     return;
@@ -133,8 +131,7 @@ void raster_big_digit_update(RasterBigDigit *digit) {
   }
   int tens = ((t / 10000) % 10);
   int ones = ((t / 1000) % 10);
-  int ones_offset =
-      r_min((t * (spacing + roll) / 1000) % (spacing + roll), spacing);
+  int ones_offset = r_min((t * (spacing + roll) / 1000) % (spacing + roll), spacing);
   int tens_offset = 0;
   if (ones == 9) {
     tens_offset = ones_offset;

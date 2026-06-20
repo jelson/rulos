@@ -121,10 +121,8 @@ typedef struct s_control_panel {
   IdleAct *idle;
 } ControlPanel;
 
-void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
-                        Network *network, HPAM *hpam, AudioClient *audioClient,
-                        IdleAct *idle, ScreenBlanker *screenblanker,
-                        JoystickState_t *joystick,
+void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network,
+                        HPAM *hpam, AudioClient *audioClient, IdleAct *idle,
+                        ScreenBlanker *screenblanker, JoystickState_t *joystick,
                         ThrusterState_t *thrusterState, Keystroke vol_up_key,
-                        Keystroke vol_down_key,
-                        FetchCalcDecorationValuesIfc *decoration_ifc);
+                        Keystroke vol_down_key, FetchCalcDecorationValuesIfc *decoration_ifc);

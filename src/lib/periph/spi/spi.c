@@ -19,9 +19,10 @@
 #include "periph/sdcard/sdcard.h"
 
 #define R_SYNCDEBUG() syncdebug(0, 'I', __LINE__)
-//#define SYNCDEBUG()	R_SYNCDEBUG()
+// #define SYNCDEBUG()	R_SYNCDEBUG()
 #define SYNCDEBUG() \
-  {}
+  {                 \
+  }
 extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 
 // TODO on logic analyzer:
@@ -215,8 +216,7 @@ void spi_3_wait_buffer(SPI *spi) {
   schedule_now(spic->done_rec.func, spic->done_rec.data);
 }
 
-void spi_resume_transfer(SPI *spi, uint8_t *reply_buffer,
-                         uint16_t reply_buflen) {
+void spi_resume_transfer(SPI *spi, uint8_t *reply_buffer, uint16_t reply_buflen) {
   spi->spic->reply_buffer = reply_buffer;
   spi->spic->reply_buflen = reply_buflen;
   // poke at SPI to restart flow of bytes into fast handler

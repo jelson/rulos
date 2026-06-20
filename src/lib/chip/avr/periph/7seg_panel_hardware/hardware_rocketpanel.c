@@ -34,8 +34,7 @@
 #include "periph/rocket/rocket.h"
 
 #ifndef SEGSEL0
-#error \
-    "Make sure your makefile defines BOARD to be the name of a board with an EPB."
+#error "Make sure your makefile defines BOARD to be the name of a board with an EPB."
 #include <stophere>
 #endif
 
@@ -66,23 +65,15 @@ typedef struct {
 
 static BoardRemap boardRemapTables[] = {
 #define BRT_SOLDERED_UP_BOARD_UP 0
-    {FALSE,
-     {SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU,
-      SRT_SUBU}},
+    {FALSE, {SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SUBU}},
 #define BRT_SOLDERED_DN_BOARD_DN 1
-    {TRUE,
-     {SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD,
-      SRT_SDBD}},
+    {TRUE, {SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD, SRT_SDBD}},
 #define BRT_WALLCLOCK 2
     //	{ FALSE, { SRT_SUBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SDBU, SRT_SUBU,
     // SRT_SUBU, SRT_SUBU }},
-    {FALSE,
-     {SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SDBU, SRT_SUBU,
-      SRT_SUBU}},
+    {FALSE, {SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SUBU}},
 #define BRT_CHASECLOCK 3
-    {FALSE,
-     {SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SDBU, SRT_SUBU,
-      SRT_SUBU}},
+    {FALSE, {SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SUBU, SRT_SUBU, SRT_SDBU, SRT_SUBU, SRT_SUBU}},
 };
 typedef uint8_t BoardRemapIndex;
 
@@ -97,8 +88,7 @@ void epb_delay() {
   }
 }
 
-void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
-                         uint8_t onoff) {
+void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff) {
   if (!g_boardbus_is_awake) {
     boardbus_wake();
   }
@@ -109,8 +99,7 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
   } else {
     rdigit = NUM_DIGITS - 1 - digit;
   }
-  uint8_t asegment =
-      segmentRemapTables[br->segmentRemapIndices[rdigit]][segment];
+  uint8_t asegment = segmentRemapTables[br->segmentRemapIndices[rdigit]][segment];
 
   gpio_set_or_clr(DIGSEL0, rdigit & (1 << 0));
   gpio_set_or_clr(DIGSEL1, rdigit & (1 << 1));
@@ -138,7 +127,9 @@ void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
   epb_delay();
 }
 
-void hal_7seg_bus_enter_sleep() { boardbus_sleep(); }
+void hal_7seg_bus_enter_sleep() {
+  boardbus_sleep();
+}
 
 /*************************************************************************************/
 

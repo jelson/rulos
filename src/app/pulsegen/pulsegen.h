@@ -36,10 +36,10 @@
 // period applies to the channel's whole domain: its group (the other channel
 // on the same HRTIM timer) in async mode, all four channels in sync mode.
 // width and delay (rising-edge offset) are per channel.
-const char* pulsegen_set_state(int ch, bool on);
-const char* pulsegen_set_period_ps(int ch, uint64_t ps);
-const char* pulsegen_set_width_ps(int ch, uint64_t ps);
-const char* pulsegen_set_delay_ps(int ch, uint64_t ps);
+const char *pulsegen_set_state(int ch, bool on);
+const char *pulsegen_set_period_ps(int ch, uint64_t ps);
+const char *pulsegen_set_width_ps(int ch, uint64_t ps);
+const char *pulsegen_set_delay_ps(int ch, uint64_t ps);
 
 // Burst parameters apply to the channel's whole domain, like period. With
 // burst on, the domain emits exactly ncyc pulses (hardware-counted by the
@@ -53,9 +53,9 @@ const char* pulsegen_set_delay_ps(int ch, uint64_t ps);
 // them explicitly): the domain period is the intra-burst spacing, so
 // running on after burst-off would stream continuously at the burst's
 // instantaneous rate.
-const char* pulsegen_set_burst_state(int ch, bool on);
-const char* pulsegen_set_burst_ncyc(int ch, uint32_t ncyc);
-const char* pulsegen_set_burst_period_ps(int ch, uint64_t ps);
+const char *pulsegen_set_burst_state(int ch, bool on);
+const char *pulsegen_set_burst_ncyc(int ch, uint32_t ncyc);
+const char *pulsegen_set_burst_period_ps(int ch, uint64_t ps);
 
 // Query accessors for the burst settings; each reads back the channel's
 // domain-effective value.
@@ -65,10 +65,10 @@ uint64_t pulsegen_get_burst_period_ps(int ch);
 
 // Select ASYNC (two independent frequency groups) or SYNC (all channels share
 // one period, phase-locked). Returns NULL (never fails).
-const char* pulsegen_set_mode(bool sync);
+const char *pulsegen_set_mode(bool sync);
 
 // "ASYNC" or "SYNC", for the MODE? query.
-const char* pulsegen_mode_str(void);
+const char *pulsegen_mode_str(void);
 
 // *RST: ASYNC mode, all outputs off, all per-channel config cleared; burst
 // off, burst count 1, burst interval 1 s.

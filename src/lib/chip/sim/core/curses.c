@@ -18,7 +18,7 @@
 
 #include "core/curses.h"
 
-static WINDOW* mainwnd;
+static WINDOW *mainwnd;
 
 void init_curses() {
   mainwnd = initscr();
@@ -37,4 +37,6 @@ void init_curses() {
   curs_set(0);
 }
 
-WINDOW* curses_get_window() { return mainwnd; }
+WINDOW *curses_get_window() {
+  return mainwnd;
+}

@@ -47,9 +47,8 @@ void sdc_init(SDCard *sdc);
 
 void sdc_reset_card(SDCard *sdc, ActivationFuncPtr done_func, void *done_data);
 
-bool sdc_start_transaction(SDCard *sdc, uint32_t offset, uint8_t *buffer,
-                           uint16_t buflen, ActivationFuncPtr done_func,
-                           void *done_data);
+bool sdc_start_transaction(SDCard *sdc, uint32_t offset, uint8_t *buffer, uint16_t buflen,
+                           ActivationFuncPtr done_func, void *done_data);
 // FALSE if sdc was busy.
 
 bool sdc_is_error(SDCard *sdc);
@@ -58,5 +57,4 @@ bool sdc_is_error(SDCard *sdc);
 void sdc_continue_transaction(SDCard *sdc, uint8_t *buffer, uint16_t buflen,
                               ActivationFuncPtr done_func, void *done_data);
 
-void sdc_end_transaction(SDCard *sdc, ActivationFuncPtr done_func,
-                         void *done_data);
+void sdc_end_transaction(SDCard *sdc, ActivationFuncPtr done_func, void *done_data);

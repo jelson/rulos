@@ -20,13 +20,12 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "core/dma.h"
 #include "core/hal.h"
 #include "core/hardware.h"
 #include "core/logging.h"
 #include "periph/uart/uart_hal.h"
 #include "stm32.h"
-
-#include "core/dma.h"
 
 /*
  * USE_RX_DMA_FOR_CHIP: chip has enough DMA channels to dedicate one to
@@ -34,8 +33,7 @@
  * because their fixed-map DMA controllers don't have a spare channel
  * for every UART.
  */
-#if defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4) || \
-    defined(RULOS_ARM_stm32h5)
+#if defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4) || defined(RULOS_ARM_stm32h5)
 #define USE_RX_DMA_FOR_CHIP 1
 #else
 #define USE_RX_DMA_FOR_CHIP 0
@@ -179,8 +177,6 @@ static void config_gpio(const stm32_uart_config_t *config, bool rx);
 #ifndef RULOS_UART5_TX_PIN
 #define RULOS_UART5_TX_PIN GPIO_A4
 #endif
-
-
 
 ///////////// stm32h5
 
@@ -340,7 +336,7 @@ void USART2_IRQHandler() {
 
 static const stm32_uart_config_t stm32_uart_config[] = {
     {
-      // rulos uart 0
+        // rulos uart 0
         .instance = USART1,
         .instance_irqn = USART1_IRQn,
 
@@ -366,7 +362,7 @@ static const stm32_uart_config_t stm32_uart_config[] = {
         .tx_dma_req = RULOS_DMA_REQ_USART1_TX,
     },
     {
-      // rulos uart 1
+        // rulos uart 1
         .instance = USART2,
         .instance_irqn = USART2_IRQn,
         .rx_pin = RULOS_UART1_RX_PIN,
@@ -378,7 +374,7 @@ static const stm32_uart_config_t stm32_uart_config[] = {
     },
 #ifdef USART3
     {
-      // rulos uart 2
+        // rulos uart 2
         .instance = USART3,
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
         .rx_pin = RULOS_UART2_RX_PIN,
@@ -391,7 +387,7 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 #endif
 #ifdef USART4
     {
-      // rulos uart 3
+        // rulos uart 3
         .instance = USART4,
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
         .rx_pin = RULOS_UART3_RX_PIN,
@@ -404,7 +400,7 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 #endif
 #ifdef USART5
     {
-      // rulos uart 4
+        // rulos uart 4
         .instance = USART5,
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
         .rx_pin = RULOS_UART4_RX_PIN,
@@ -423,7 +419,7 @@ static const stm32_uart_config_t stm32_uart_config[] = {
 #endif
 #ifdef USART6
     {
-      // rulos uart 5
+        // rulos uart 5
         .instance = USART6,
         .instance_irqn = USART3_4_5_6_LPUART1_IRQn,
         .rx_pin = RULOS_UART5_RX_PIN,
@@ -488,11 +484,9 @@ static stm32_uart_t g_stm32_uarts[NUM_UARTS] = {};
 
 ///////////////////// reception /////////////////////////////
 
-static void on_rx_buffer_full(uint8_t uart_id, stm32_uart_t *u,
-                              const stm32_uart_config_t *c);
+static void on_rx_buffer_full(uint8_t uart_id, stm32_uart_t *u, const stm32_uart_config_t *c);
 static char *switch_rx_buffers(stm32_uart_t *u);
-static void rx_send_up(uint8_t uart_id, stm32_uart_t *u, char *buf,
-                       size_t len);
+static void rx_send_up(uint8_t uart_id, stm32_uart_t *u, char *buf, size_t len);
 
 //// Receiving: DMA Version
 
@@ -510,21 +504,19 @@ static void rx_send_up(uint8_t uart_id, stm32_uart_t *u, char *buf,
 static void hal_uart_on_rx_dma_ht(void *user_data);
 static void hal_uart_on_rx_dma_tc(void *user_data);
 
-static void hal_uart_start_rx_dma(stm32_uart_t *u,
-                                  const stm32_uart_config_t *config) {
+static void hal_uart_start_rx_dma(stm32_uart_t *u, const stm32_uart_config_t *config) {
   u->rx_dma_processed_pos = 0;
   LL_USART_EnableDMAReq_RX(config->instance);
-  rulos_dma_start(u->rx_dma_ch,
-                  (volatile void *)LL_USART_DMA_GetRegAddr(
-                      config->instance, LL_USART_DMA_REG_DATA_RECEIVE),
-                  u->rx_buf, 2 * u->rx_half_buflen);
+  rulos_dma_start(
+      u->rx_dma_ch,
+      (volatile void *)LL_USART_DMA_GetRegAddr(config->instance, LL_USART_DMA_REG_DATA_RECEIVE),
+      u->rx_buf, 2 * u->rx_half_buflen);
 }
 
 // Shared helper for HT and TC callbacks: deliver bytes from
 // rx_dma_processed_pos up to `boundary`, then advance the cursor
 // to `next_pos`. Runs in DMA ISR context; DMA never stops.
-static void rx_dma_deliver(uint8_t uart_id, uint32_t boundary,
-                           uint32_t next_pos) {
+static void rx_dma_deliver(uint8_t uart_id, uint32_t boundary, uint32_t next_pos) {
   stm32_uart_t *u = &g_stm32_uarts[uart_id];
   if (!u->initted) {
     return;
@@ -563,21 +555,19 @@ static void hal_uart_on_rx_dma_tc(void *user_data) {
 
 #else  // USE_RX_DMA_FOR_CHIP
 
-static void hal_uart_start_rx_dma(stm32_uart_t *u,
-                                  const stm32_uart_config_t *config) {
+static void hal_uart_start_rx_dma(stm32_uart_t *u, const stm32_uart_config_t *config) {
 }
 
 #endif  // USE_RX_DMA_FOR_CHIP
 
 //// Receiving: Per-Char Interrupt Version
 
-static void hal_uart_start_rx_interrupt(stm32_uart_t *u,
-                                        const stm32_uart_config_t *config) {
+static void hal_uart_start_rx_interrupt(stm32_uart_t *u, const stm32_uart_config_t *config) {
   LL_USART_EnableIT_RXNE(config->instance);
 }
 
-static void receive_char_int(uint8_t uart_id, stm32_uart_t *u,
-                             const stm32_uart_config_t *config, char c) {
+static void receive_char_int(uint8_t uart_id, stm32_uart_t *u, const stm32_uart_config_t *config,
+                             char c) {
   // store the character
   u->rx_curr_base_buf[u->rx_bytes_stored] = c;
   u->rx_bytes_stored++;
@@ -617,8 +607,7 @@ static void launch_next_rx(stm32_uart_t *u, const stm32_uart_config_t *config) {
   }
 }
 
-static void rx_send_up(uint8_t uart_id, stm32_uart_t *u, char *buf,
-                       size_t len) {
+static void rx_send_up(uint8_t uart_id, stm32_uart_t *u, char *buf, size_t len) {
   assert(u->rx_cb_ready);
   if (len > 0) {
     u->rx_cb_ready = false;
@@ -631,8 +620,7 @@ static void rx_send_up(uint8_t uart_id, stm32_uart_t *u, char *buf,
 
 // Maybe flush the RX buffer -- if there's data, and the upper layer is ready to
 // receive
-static void maybe_flush_rx_buf(uint8_t uart_id, stm32_uart_t *u,
-                               const stm32_uart_config_t *c) {
+static void maybe_flush_rx_buf(uint8_t uart_id, stm32_uart_t *u, const stm32_uart_config_t *c) {
   if (!u->rx_cb_ready) {
     return;
   }
@@ -685,8 +673,7 @@ static void maybe_flush_rx_buf(uint8_t uart_id, stm32_uart_t *u,
   rx_send_up(uart_id, u, oldbuf, len);
 }
 
-static void on_rx_buffer_full(uint8_t uart_id, stm32_uart_t *u,
-                              const stm32_uart_config_t *c) {
+static void on_rx_buffer_full(uint8_t uart_id, stm32_uart_t *u, const stm32_uart_config_t *c) {
   // RX buffer is full, so we better be done processing the other one! Otherwise
   // we have to drop it.
   if (!u->rx_cb_ready) {
@@ -701,8 +688,7 @@ static void on_rx_buffer_full(uint8_t uart_id, stm32_uart_t *u,
   launch_next_rx(u, c);
 }
 
-void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf,
-                       size_t buflen) {
+void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf, size_t buflen) {
   /*
    * RX is initialized lazily: TX-only users of a UART never pay the
    * cost of an RX DMA channel or an RX GPIO setup. This function is
@@ -781,23 +767,23 @@ static void on_usart_interrupt(uint8_t uart_id) {
   // if this uart is expecting to rx, and a character arrived, add it to the rx
   // buffer
   if (u->rx_buf) {
-      int num_read = 0;
-      while (u->rx_buf && LL_USART_IsActiveFlag_RXNE(c->instance)) {
-        // note: we have to read the character whether or not we send it anywhere;
-        // reading the char is what clears the interrupt
-        num_read++;
-        receive_char_int(uart_id, u, c, LL_USART_ReceiveData8(c->instance));
-      }
+    int num_read = 0;
+    while (u->rx_buf && LL_USART_IsActiveFlag_RXNE(c->instance)) {
+      // note: we have to read the character whether or not we send it anywhere;
+      // reading the char is what clears the interrupt
+      num_read++;
+      receive_char_int(uart_id, u, c, LL_USART_ReceiveData8(c->instance));
+    }
 
-      // If we read anything, update some statistics
-      if (num_read > 0) {
-        if (num_read > u->max_chars_per_rx_isr) {
-          u->max_chars_per_rx_isr = num_read;
-        }
-        if (u->min_chars_per_rx_isr == 0 || num_read < u->min_chars_per_rx_isr) {
-          u->min_chars_per_rx_isr = num_read;
-        }
+    // If we read anything, update some statistics
+    if (num_read > 0) {
+      if (num_read > u->max_chars_per_rx_isr) {
+        u->max_chars_per_rx_isr = num_read;
       }
+      if (u->min_chars_per_rx_isr == 0 || num_read < u->min_chars_per_rx_isr) {
+        u->min_chars_per_rx_isr = num_read;
+      }
+    }
   }
 
   // on idle interrupt, flush the rx buffers upwards
@@ -825,7 +811,6 @@ static void on_usart_interrupt(uint8_t uart_id) {
     LL_USART_ClearFlag_ORE(c->instance);
     u->overruns++;
   }
-
 }
 
 void hal_uart_rx_cb_done(uint8_t uart_id) {
@@ -916,8 +901,7 @@ static void config_gpio(const stm32_uart_config_t *config, bool rx) {
   }
 }
 
-void hal_uart_init(uint8_t uart_id, uint32_t baud,
-                   void *user_data /* for both rx and tx upcalls */,
+void hal_uart_init(uint8_t uart_id, uint32_t baud, void *user_data /* for both rx and tx upcalls */,
                    size_t *max_tx_len /* OUT */) {
   assert(uart_id < NUM_UARTS);
   stm32_uart_t *uart = &g_stm32_uarts[uart_id];
@@ -975,8 +959,8 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
   // Configure USART via the LL layer.
   LL_USART_Disable(config->instance);
   LL_USART_InitTypeDef usart_init = {
-#if defined(RULOS_ARM_stm32c0) || defined(RULOS_ARM_stm32g0) || \
-    defined(RULOS_ARM_stm32g4) || defined(RULOS_ARM_stm32h5)
+#if defined(RULOS_ARM_stm32c0) || defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4) || \
+    defined(RULOS_ARM_stm32h5)
       // PrescalerValue is a modern-era field. F0/F1/F3 predate the
       // USART prescaler and don't have it in LL_USART_InitTypeDef.
       .PrescalerValue = LL_USART_PRESCALER_DIV1,
@@ -999,11 +983,10 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
   // its USART has a single DR register for both TX and RX, so
   // LL_USART_DMA_GetRegAddr() takes no direction argument.
 #if defined(RULOS_ARM_stm32f1)
-  uart->usart_tdr =
-      (volatile void *)LL_USART_DMA_GetRegAddr(config->instance);
+  uart->usart_tdr = (volatile void *)LL_USART_DMA_GetRegAddr(config->instance);
 #else
-  uart->usart_tdr = (volatile void *)LL_USART_DMA_GetRegAddr(
-      config->instance, LL_USART_DMA_REG_DATA_TRANSMIT);
+  uart->usart_tdr =
+      (volatile void *)LL_USART_DMA_GetRegAddr(config->instance, LL_USART_DMA_REG_DATA_TRANSMIT);
 #endif
 
   // Allocate a RULOS DMA channel for TX. The core layer handles

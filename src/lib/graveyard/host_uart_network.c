@@ -17,8 +17,8 @@
 #include "periph/uart/uart_net_media_preamble.h"
 
 #define _POSIX_SOURCE 1  // POSIX compliant source
-#define FALSE 0
-#define TRUE 1
+#define FALSE         0
+#define TRUE          1
 
 void host_uart_network_init(HostUartNetwork *hun, const char *port_path) {
   int fd = open(port_path, O_RDWR | O_NOCTTY);
@@ -71,8 +71,8 @@ static void write_all(int fd, void *d, int len) {
   assert(rc == len);
 }
 
-void host_uart_network_send_buffer(HostUartNetwork *hun, uint8_t addr,
-                                   uint8_t port, uint8_t payload_len) {
+void host_uart_network_send_buffer(HostUartNetwork *hun, uint8_t addr, uint8_t port,
+                                   uint8_t payload_len) {
   uint8_t message_len = sizeof(Message) + payload_len;
   HostUartFrame *frame = &hun->send_frame;
   frame->preamble.p0 = UM_PREAMBLE0;
@@ -82,11 +82,9 @@ void host_uart_network_send_buffer(HostUartNetwork *hun, uint8_t addr,
   frame->messageHeader.dest_port = port;
   frame->messageHeader.payload_len = payload_len;
   frame->messageHeader.checksum = 0;
-  frame->messageHeader.checksum =
-      net_compute_checksum((char *)&frame->messageHeader, message_len);
+  frame->messageHeader.checksum = net_compute_checksum((char *)&frame->messageHeader, message_len);
 
-  int packet_len =
-      sizeof(frame->preamble) + sizeof(frame->messageHeader) + payload_len;
+  int packet_len = sizeof(frame->preamble) + sizeof(frame->messageHeader) + payload_len;
   write_all(hun->fd, &frame->preamble, packet_len);
 }
 
@@ -128,8 +126,7 @@ void host_uart_receive(HostUartNetwork *hun) {
 
     // here is where we'd dispatch the packet
     fprintf(stderr, "Recvd packet addr 0x%2x port 0x%2x payload_len 0x%2x\n",
-            hun->recv_frame.preamble.dest_addr,
-            hun->recv_frame.messageHeader.dest_port,
+            hun->recv_frame.preamble.dest_addr, hun->recv_frame.messageHeader.dest_port,
             hun->recv_frame.messageHeader.payload_len);
     break;
   }

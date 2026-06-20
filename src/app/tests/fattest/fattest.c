@@ -69,8 +69,7 @@ static void read_4meg_file(bool validate) {
           LOG("  validation index: %lu", num_validated);
           LOG("  position within buffer: %d", j);
           LOG("  expected number: %lu", expected_next_num);
-          LOG("  expected big-endian: %02x %02x %02x %02x", ptr[0], ptr[1],
-              ptr[2], ptr[3]);
+          LOG("  expected big-endian: %02x %02x %02x %02x", ptr[0], ptr[1], ptr[2], ptr[3]);
           LOG("  actual number: %lu", *fatbuf_uint32);
           __builtin_trap();
         }
@@ -98,8 +97,7 @@ static void read_4meg_file(bool validate) {
   f_close(&f);
 
   if (validate) {
-    LOG("read and validated %lu kbyte in %ld msec", total / 1024,
-        elapsed / 1000);
+    LOG("read and validated %lu kbyte in %ld msec", total / 1024, elapsed / 1000);
   } else {
     LOG("read benchmark: %lu kbyte in %ld msec", total / 1024, elapsed / 1000);
   }

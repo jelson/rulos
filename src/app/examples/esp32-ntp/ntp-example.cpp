@@ -54,8 +54,7 @@ int main() {
   init_clock(JIFFY_CLOCK_US, TIMER0);
 
   // start wifi
-  inet_wifi_client_start(wifi_creds,
-                         sizeof(wifi_creds) / sizeof(wifi_creds[0]));
+  inet_wifi_client_start(wifi_creds, sizeof(wifi_creds) / sizeof(wifi_creds[0]));
 
   // start ntp
   ntp.start();

@@ -55,8 +55,7 @@ typedef struct s_ddockact {
   JoystickState_t *joystick;
 } DDockAct;
 
-void ddock_init(DDockAct *act, Screen4 *s4, uint8_t auxboard_base,
-                AudioClient *audioClient, Booster *booster,
-                JoystickState_t *joystick);
+void ddock_init(DDockAct *act, Screen4 *s4, uint8_t auxboard_base, AudioClient *audioClient,
+                Booster *booster, JoystickState_t *joystick);
 void ddock_reset(DDockAct *dd);
 void ddock_thruster_update(DDockAct *act, ThrusterPayload *tp);

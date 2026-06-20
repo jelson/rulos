@@ -30,7 +30,7 @@
 #include "stm32f3xx_ll_tim.h"
 
 #define PRINT_STATS 0
-#define USE_HAL 0
+#define USE_HAL     0
 
 typedef struct {
   SPI_HandleTypeDef hspi;
@@ -51,9 +51,9 @@ static Rocket6Line_t r6l_g;
 #if defined(ROCKET6LINE_REV_A)
 // Decoder pin definitions
 #define DECODER_ENABLE GPIO_A3
-#define DECODER_A0 GPIO_A0
-#define DECODER_A1 GPIO_A1
-#define DECODER_A2 GPIO_A2
+#define DECODER_A0     GPIO_A0
+#define DECODER_A1     GPIO_A1
+#define DECODER_A2     GPIO_A2
 #elif defined(ROCKET6LINE_REV_B)
 #define ROW0_ENABLE GPIO_A0
 #define ROW1_ENABLE GPIO_A1
@@ -70,13 +70,13 @@ static Rocket6Line_t r6l_g;
 #define LEDDRIVER_LE GPIO_A7
 #define LEDDRIVER_OE GPIO_A6
 
-#define LEDDRIVER_SDI GPIO_B5
+#define LEDDRIVER_SDI      GPIO_B5
 #define LEDDRIVER_SDI_PORT GPIOB
-#define LEDDRIVER_SDI_PIN GPIO_PIN_5
+#define LEDDRIVER_SDI_PIN  GPIO_PIN_5
 
-#define LEDDRIVER_CLK GPIO_B3
+#define LEDDRIVER_CLK      GPIO_B3
 #define LEDDRIVER_CLK_PORT GPIOB
-#define LEDDRIVER_CLK_PIN GPIO_PIN_3
+#define LEDDRIVER_CLK_PIN  GPIO_PIN_3
 
 #define LEDDRIVER_SPI_AF GPIO_AF5_SPI1
 
@@ -200,7 +200,9 @@ static void build_remap_table() {
 }
 
 #if defined(ROCKET6LINE_REV_A)
-static inline void disable_all_rows() { gpio_clr(DECODER_ENABLE); }
+static inline void disable_all_rows() {
+  gpio_clr(DECODER_ENABLE);
+}
 
 static inline void enable_row(const uint8_t row_num) {
   // Configure the current row display in the decoder
@@ -259,8 +261,7 @@ static void refresh_display(Rocket6Line_t *r6l) {
 
   // Shift in the LED configuration for the row becoming active
 #if USE_HAL
-  HAL_SPI_Transmit(&r6l->hspi, r6l->row_data[r6l->curr_row],
-                   ROCKET6LINE_NUM_COLUMNS, 1000);
+  HAL_SPI_Transmit(&r6l->hspi, r6l->row_data[r6l->curr_row], ROCKET6LINE_NUM_COLUMNS, 1000);
 #else
   // Transmit the bytes two-at-a-time to reduce overhead.
   for (int i = 0; i < ROCKET6LINE_NUM_COLUMNS; i += 2) {
@@ -269,8 +270,7 @@ static void refresh_display(Rocket6Line_t *r6l) {
     } while (!LL_SPI_IsActiveFlag_TXE(SPI1));
 
     // Send 2 bytes to the peripheral.
-    LL_SPI_TransmitData16(SPI1,
-                          *((uint16_t *)&r6l->row_data[r6l->curr_row][i]));
+    LL_SPI_TransmitData16(SPI1, *((uint16_t *)&r6l->row_data[r6l->curr_row][i]));
   }
 #endif
 
@@ -337,17 +337,14 @@ void rocket6line_init() {
   r6l_g.initted = true;
 }
 
-void rocket6line_write_digit(const uint8_t row_num, const uint8_t col_num,
-                             const SSBitmap bm) {
-  assert(r6l_g.initted && row_num >= 0 && row_num < ROCKET6LINE_NUM_ROWS &&
-         col_num >= 0 && col_num < ROCKET6LINE_NUM_COLUMNS);
+void rocket6line_write_digit(const uint8_t row_num, const uint8_t col_num, const SSBitmap bm) {
+  assert(r6l_g.initted && row_num >= 0 && row_num < ROCKET6LINE_NUM_ROWS && col_num >= 0 &&
+         col_num < ROCKET6LINE_NUM_COLUMNS);
 
-  r6l_g.row_data[row_num][ROCKET6LINE_NUM_COLUMNS - col_num - 1] =
-      segment_remap_table[bm];
+  r6l_g.row_data[row_num][ROCKET6LINE_NUM_COLUMNS - col_num - 1] = segment_remap_table[bm];
 }
 
-void rocket6line_write_line(const uint8_t row_num, const SSBitmap *const bm,
-                            const uint8_t len) {
+void rocket6line_write_line(const uint8_t row_num, const SSBitmap *const bm, const uint8_t len) {
   for (int col_num = 0; col_num < len; col_num++) {
     rocket6line_write_digit(row_num, col_num, bm[col_num]);
   }

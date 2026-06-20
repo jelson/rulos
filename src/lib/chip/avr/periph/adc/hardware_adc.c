@@ -48,7 +48,9 @@ static uint16_t read_adc_raw(uint8_t adc_channel);
 
 /////////////// HAL (public interface) functions ////////////////
 
-void hal_init_adc(Time scan_period) { init_adc(&g_theADC, scan_period); }
+void hal_init_adc(Time scan_period) {
+  init_adc(&g_theADC, scan_period);
+}
 
 void hal_init_adc_channel(uint8_t idx) {
   assert((1 << idx) & AVAILABLE_ADCS);

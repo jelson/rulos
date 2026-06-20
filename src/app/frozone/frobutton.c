@@ -11,8 +11,8 @@
 
 #endif  // SIM
 
-static void _frobutton_act(void* v_fb) {
-  Frobutton* fb = (Frobutton*)v_fb;
+static void _frobutton_act(void *v_fb) {
+  Frobutton *fb = (Frobutton *)v_fb;
 
 #ifndef SIM
   if (!gpio_is_set(FRZ_SW0)) {
@@ -25,7 +25,7 @@ static void _frobutton_act(void* v_fb) {
   schedule_us(50000, _frobutton_act, fb);
 }
 
-void frobutton_init(Frobutton* fb, Animate* an) {
+void frobutton_init(Frobutton *fb, Animate *an) {
 #ifndef SIM
   gpio_make_input_enable_pullup(FRZ_SW0);
   gpio_make_input_enable_pullup(FRZ_SW1);

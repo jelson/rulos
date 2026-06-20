@@ -60,13 +60,13 @@ extern bool g_rulos_hse_failed;
 // Caller-provided function that fills `osc` for the HSI+PLL fallback
 // path. Family-specific implementations live in stm32-hardware.c since
 // the PLL field types and layout differ across STM32 families.
-typedef void (*rulos_hsi_pll_config_fn)(RCC_OscInitTypeDef* osc);
+typedef void (*rulos_hsi_pll_config_fn)(RCC_OscInitTypeDef *osc);
 
 // Try to start the PLL using HSE as input. `osc` must be pre-populated
 // with HSE state and PLL multiplier/divider fields. On success, enables
 // the Clock Security System so a mid-stream HSE failure fires NMI. On
 // failure, sets g_rulos_hse_failed, replaces `osc` contents via
 // `hsi_fallback`, and re-runs OscConfig (traps on a second failure).
-void rulos_hse_try_pll(RCC_OscInitTypeDef* osc, rulos_hsi_pll_config_fn hsi_fallback);
+void rulos_hse_try_pll(RCC_OscInitTypeDef *osc, rulos_hsi_pll_config_fn hsi_fallback);
 
 #endif  // RULOS_USE_HSE

@@ -22,18 +22,18 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <malloc.h>
+#include <signal.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/select.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <stdbool.h>
-#include <signal.h>
 
 #define NUM_AUDIO_FILES 9
 
 // input
-char* music_buffer;
+char *music_buffer;
 int buffer_size;
 
 int played_offset;
@@ -44,7 +44,7 @@ int audiofd;
 
 void push_audio() {
   while (true) {
-    char* ptr = &music_buffer[played_offset];
+    char *ptr = &music_buffer[played_offset];
     int len = buffer_size - played_offset;
     int rc = write(audiofd, ptr, len);
     if (rc < 0) {
@@ -67,7 +67,7 @@ void sigio_handler(int signo) {
   push_audio();
 }
 
-void read_all(FILE* fp, char* ptr, int size) {
+void read_all(FILE *fp, char *ptr, int size) {
   int rc;
   while (size > 0) {
     rc = fread(ptr, 1, size, fp);
@@ -87,7 +87,7 @@ int main() {
   buffer_size = ftell(fp);
   fseek(fp, 0, SEEK_SET);
   music_buffer = malloc(buffer_size);
-//  rc = fread(music_buffer, buffer_size, 1, fp);
+  //  rc = fread(music_buffer, buffer_size, 1, fp);
   read_all(fp, music_buffer, buffer_size);
   fclose(fp);
   played_offset = 0;
@@ -96,18 +96,19 @@ int main() {
   int pipefd[2];
   rc = pipe2(pipefd, /*flags*/ 0);
   fprintf(stderr, "XXX i2s readpipe %d writepipe %d", pipefd[0], pipefd[1]);
-  assert(rc==0);
+  assert(rc == 0);
   int pid = fork();
   if (pid == 0) {
     // child
     // close "all" the other fds, so we're not getting SIGIO on network packets and such.
-    for (int fdi=3; fdi<1000; fdi++) {
+    for (int fdi = 3; fdi < 1000; fdi++) {
       if (fdi != pipefd[0]) {
         close(fdi);
       }
     }
-    dup2(pipefd[0], 0); // read end of pipe becomes stdin
-    char* argv[] = {"aplay", "-f", "S16_LE", "--file-type", "raw", "--rate", "50000", "--channels", "2", "-", NULL};
+    dup2(pipefd[0], 0);  // read end of pipe becomes stdin
+    char *argv[] = {"aplay", "-f",         "S16_LE", "--file-type", "raw", "--rate",
+                    "50000", "--channels", "2",      "-",           NULL};
     execv("/usr/bin/aplay", argv);
     assert(false);
     exit(-1);

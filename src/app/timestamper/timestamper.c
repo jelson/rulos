@@ -202,9 +202,9 @@ static volatile uint32_t capture_buf[NUM_HW_CAPTURE][DMA_CAPTURE_BUFLEN];
 // Channels 0 and 2 capture on TIM2 (PA0/PA2), channels 1 and 3 on the phase-locked TIM5 (PA1/PA3).
 typedef struct {
   struct {
-    volatile uint32_t* buf;  // DMA circular buffer; NULL if no hw
+    volatile uint32_t *buf;  // DMA circular buffer; NULL if no hw
     uint32_t drain_pos;      // next DMA index to drain (circular)
-    rulos_dma_channel_t* dma_ch;
+    rulos_dma_channel_t *dma_ch;
     uint32_t counter_tag;  // channel + polarity bits ORed into CCR ticks
   } sub[NUM_SUBS];
   bool has_hw;  // every channel has capture hardware now;
@@ -235,7 +235,7 @@ static channel_t channels[NUM_CHANNELS];
 // DMA callback context: identifies which channel AND sub-stream a TIM2 capture DMA channel feeds
 // (passed as user_data), so the ISR can service the owning channel.
 typedef struct {
-  channel_t* chan;
+  channel_t *chan;
   uint8_t sub;
 } sub_ctx_t;
 static sub_ctx_t sub_ctx[NUM_HW_CAPTURE];
@@ -268,13 +268,13 @@ static const char marker_msg[] = "# output cleared\n";
 //   TIM5 CH2 direct  / CH1 indirect  -> jack 1 (TI2 = PA1)
 //   TIM5 CH4 direct  / CH3 indirect  -> jack 3 (TI4 = PA3)
 static const struct {
-  TIM_TypeDef* tim;        // owning timer (TIM2 or TIM5)
+  TIM_TypeDef *tim;        // owning timer (TIM2 or TIM5)
   uint32_t af;             // LL_GPIO_AF_1 (TIM2) / LL_GPIO_AF_2 (TIM5)
   uint32_t gpio_pin;       // LL_GPIO_PIN_n, or 0 for indirect (no pin)
   uint32_t ll_channel;     // LL_TIM_CHANNEL_CHn
   uint32_t active_input;   // LL_TIM_ACTIVEINPUT_DIRECTTI / _INDIRECTTI
   uint32_t ic_polarity;    // LL_TIM_IC_POLARITY_RISING / _FALLING
-  volatile uint32_t* ccr;  // &TIMx->CCRn -- the DMA source register
+  volatile uint32_t *ccr;  // &TIMx->CCRn -- the DMA source register
   uint32_t dier_bit;       // TIM_DIER_CCnDE
   uint32_t sr_of_bit;      // TIM_SR_CCnOF (overcapture flag)
   rulos_dma_request_t request;
@@ -431,7 +431,7 @@ CCMRAM void TIM15_IRQHandler() {
 // DMA-safe end-of-region for sub `s`: records [drain_pos, cur) are captured and safe to read (cur
 // is exclusive). Single-owner cursor: per-channel service is serialized by the same-priority DMA
 // ISRs plus the irq-guarded flush.
-CCMRAM static inline uint32_t safe_cur(channel_t* chan, uint8_t s) {
+CCMRAM static inline uint32_t safe_cur(channel_t *chan, uint8_t s) {
   uint32_t rem = rulos_dma_get_remaining(chan->sub[s].dma_ch);
   uint32_t cur = DMA_CAPTURE_BUFLEN - rem;
   return (cur == DMA_CAPTURE_BUFLEN) ? 0 : cur;
@@ -442,7 +442,7 @@ CCMRAM static inline uint32_t safe_cur(channel_t* chan, uint8_t s) {
 // stay at the ~16-cycle cost of a load, an A/B seconds select, two stores, and a masked increment:
 // ring space is pre-checked per batch, the precomputed channel/polarity tag is loaded once, and
 // recent_pulse is set once. Records that don't fit in the ring are dropped and counted.
-CCMRAM static void drain_sub_fast(channel_t* chan, uint8_t s, uint32_t cur) {
+CCMRAM static void drain_sub_fast(channel_t *chan, uint8_t s, uint32_t cur) {
   uint32_t pos = chan->sub[s].drain_pos;
   if (pos == cur) {
     return;
@@ -463,7 +463,7 @@ CCMRAM static void drain_sub_fast(channel_t* chan, uint8_t s, uint32_t cur) {
 
   const uint32_t tag = chan->sub[s].counter_tag;
   const uint32_t divider = chan->divider;
-  volatile uint32_t* const buf = chan->sub[s].buf;
+  volatile uint32_t *const buf = chan->sub[s].buf;
 
   while (count > 0) {
     uint32_t seg = DMA_CAPTURE_BUFLEN - pos;
@@ -471,8 +471,8 @@ CCMRAM static void drain_sub_fast(channel_t* chan, uint8_t s, uint32_t cur) {
       seg = count;
     }
     // Pointer-based iteration so the compiler doesn't spill the count.
-    volatile uint32_t* src = buf + pos;
-    volatile uint32_t* const end = src + seg;
+    volatile uint32_t *src = buf + pos;
+    volatile uint32_t *const end = src + seg;
     while (src < end) {
       uint32_t counter = *src++;
       uint32_t seconds = counter < (CLOCK_FREQ_HZ / 2) ? seconds_A : seconds_B;
@@ -527,7 +527,7 @@ static void set_capture_enabled(int k, bool on) {
 // alias to a small advance and the overwritten records would go unnoticed. In-regime inputs can't
 // get there -- every half-buffer crossing wakes this drain, which empties faster than a spec'd
 // input can fill.
-CCMRAM static void service_channel(channel_t* chan) {
+CCMRAM static void service_channel(channel_t *chan) {
   for (uint8_t s = 0; s < NUM_SUBS; s++) {
     uint32_t cur = safe_cur(chan, s);
     if (sub_active(chan->slope, s)) {
@@ -541,8 +541,8 @@ CCMRAM static void service_channel(channel_t* chan) {
 // TIM2 capture DMA HT/TC callback (one per in-use sub). The NDTR- driven drain doesn't distinguish
 // HT from TC, so both map here as pure wake-ups. All capture DMA ISRs share one NVIC priority
 // (cannot preempt each other), so per-channel service is serialized without masking.
-CCMRAM static void on_dma(void* user_data) {
-  sub_ctx_t* ctx = (sub_ctx_t*)user_data;
+CCMRAM static void on_dma(void *user_data) {
+  sub_ctx_t *ctx = (sub_ctx_t *)user_data;
   service_channel(ctx->chan);
 }
 
@@ -572,7 +572,7 @@ static uint32_t ic_prescaler_ll(uint32_t hw) {
 // Disarming a capture channel (CCxE = 0) also resets its prescaler's internal edge count, so the
 // hardware share starts a fresh group just like the zeroed software count.
 static void apply_channel_config(int ch, timestamper_slope_t slope) {
-  channel_t* c = &channels[ch];
+  channel_t *c = &channels[ch];
   uint32_t hw = 1;
   if (slope != TIMESTAMPER_SLOPE_BOTH) {
     if (c->divider_set % 8 == 0) {
@@ -617,7 +617,7 @@ static void apply_channel_config(int ch, timestamper_slope_t slope) {
 // BINARY: 8 bytes -- the on-device timestamp_t layout (4 bytes seconds LE, then 4 bytes counter LE
 // with channel and polarity in the top 3 bits) is the wire format. memcpy straight out, skipping
 // the 9-digit divmod chain in snprintf entirely.
-static int format_timestamp(timestamp_t* t, char* buf, int buf_size) {
+static int format_timestamp(timestamp_t *t, char *buf, int buf_size) {
   if (format_mode == TIMESTAMPER_FORMAT_BINARY) {
     _Static_assert(sizeof(timestamp_t) == TIMESTAMPER_BINARY_RECORD_LEN,
                    "binary wire format mirrors timestamp_t layout");
@@ -702,7 +702,7 @@ static void send_special(uint8_t channel, uint8_t msgtype, uint32_t payload) {
   static timestamp_t msg;
   msg.seconds = payload;
   msg.counter = ((uint32_t)channel << COUNTER_CHAN_SHIFT) | COUNTER_SPECIAL_BIT | msgtype;
-  usbd_cdc_write(scpi_usb_cdc_handle(), (uint8_t*)&msg, sizeof(msg));
+  usbd_cdc_write(scpi_usb_cdc_handle(), (uint8_t *)&msg, sizeof(msg));
 }
 
 // If the filling buffer has data and USB is idle, hand it off and swap to the other buffer. Then
@@ -716,7 +716,7 @@ static void try_send_timestamps(void) {
     if (format_mode == TIMESTAMPER_FORMAT_BINARY) {
       send_special(0, MSG_OUTPUT_CLEARED, 0);
     } else {
-      usbd_cdc_write(scpi_usb_cdc_handle(), (uint8_t*)marker_msg, sizeof(marker_msg) - 1);
+      usbd_cdc_write(scpi_usb_cdc_handle(), (uint8_t *)marker_msg, sizeof(marker_msg) - 1);
     }
     return;
   }
@@ -758,7 +758,7 @@ static void flush_dma_captures(void) {
   }
 
   for (int i = 0; i < NUM_CHANNELS; i++) {
-    channel_t* ch = &channels[i];
+    channel_t *ch = &channels[i];
     if (!ch->has_hw) {
       continue;
     }
@@ -771,7 +771,7 @@ static void flush_dma_captures(void) {
   }
 }
 
-static void periodic_task(void* data) {
+static void periodic_task(void *data) {
   schedule_us(TIMESTAMP_PRINT_PERIOD_USEC, periodic_task, NULL);
 
   // HSE failed at boot or mid-stream (the latter detected by CSS via the NMI handler in
@@ -858,7 +858,7 @@ static void periodic_task(void* data) {
 // Configure a capture timer's time base: 32-bit up-counter, no prescaler, rolling over once per
 // second (ARR = clock - 1). Leaves the counter disabled so the caller can start TIM2 and TIM5 in a
 // phase-locked pair.
-static void init_capture_timebase(TIM_TypeDef* tim) {
+static void init_capture_timebase(TIM_TypeDef *tim) {
   LL_TIM_InitTypeDef tb = {
       .Prescaler = 0,
       .CounterMode = LL_TIM_COUNTERMODE_UP,
@@ -921,7 +921,7 @@ static void init_timers() {
   // callbacks fire at each half-buffer boundary so captures are processed while the other half
   // fills), feeding the owning channel's rising or falling sub-stream.
   for (int k = 0; k < NUM_HW_CAPTURE; k++) {
-    channel_t* ch = &channels[capture_hw[k].channel];
+    channel_t *ch = &channels[capture_hw[k].channel];
     uint8_t s = capture_hw[k].sub;
     ch->has_hw = true;
     ch->sub[s].buf = capture_buf[k];
@@ -947,7 +947,7 @@ static void init_timers() {
     if (ch->sub[s].dma_ch == NULL) {
       __builtin_trap();
     }
-    rulos_dma_start(ch->sub[s].dma_ch, (volatile void*)capture_hw[k].ccr, (void*)capture_buf[k],
+    rulos_dma_start(ch->sub[s].dma_ch, (volatile void *)capture_hw[k].ccr, (void *)capture_buf[k],
                     DMA_CAPTURE_BUFLEN);
     SET_BIT(capture_hw[k].tim->DIER, capture_hw[k].dier_bit);
   }
@@ -996,7 +996,7 @@ void timestamper_set_slope(int ch, timestamper_slope_t slope) {
   if (ch < 0 || ch >= NUM_CHANNELS) {
     return;
   }
-  channel_t* c = &channels[ch];
+  channel_t *c = &channels[ch];
   if (!c->has_hw || c->slope == slope) {
     c->slope = slope;
     return;
@@ -1017,7 +1017,7 @@ void timestamper_set_divider(int ch, uint32_t n) {
   if (ch < 0 || ch >= NUM_CHANNELS || n == 0) {
     return;
   }
-  channel_t* c = &channels[ch];
+  channel_t *c = &channels[ch];
   c->divider_set = n;
   if (!c->has_hw) {
     c->divider = n;
@@ -1081,7 +1081,7 @@ typedef struct {
 static ts_persist_t cfg_last_saved;
 static bool cfg_last_saved_valid;
 
-static void cfg_snapshot(ts_persist_t* c) {
+static void cfg_snapshot(ts_persist_t *c) {
   for (int i = 0; i < NUM_CHANNELS; i++) {
     c->slope[i] = (uint8_t)channels[i].slope;
     c->divider[i] = channels[i].divider_set;

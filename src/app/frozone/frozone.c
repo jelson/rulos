@@ -34,7 +34,6 @@ int main() {
   rulos_hal_init();
   init_clock(SYSTEM_CLOCK, TIMER0);
 
-
   //	uart_init(&uart, 38400, TRUE, 0);
 
   Animate an;

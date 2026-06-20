@@ -44,9 +44,8 @@ void init_audio_streamer(AudioStreamer *as, uint8_t timer_id);
 // An alternative: use 4 or 8 smaller AudioOut buffers, so that we can let
 // them almost drain out during the time we're waiting on the sd card.
 
-bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset,
-             uint32_t end_address, ActivationFuncPtr done_func,
-             void *done_data);
+bool as_play(AudioStreamer *as, uint32_t block_address, uint16_t block_offset, uint32_t end_address,
+             ActivationFuncPtr done_func, void *done_data);
 // block_address: multiple of SDCard blocksize (512)
 // block_offset: multiple of AudioOut AO_HALFBUFLEN (128). Used if we
 //   want to have sound durations of shorter than SD block length.

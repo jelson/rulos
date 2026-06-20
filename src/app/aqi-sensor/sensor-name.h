@@ -45,8 +45,7 @@ class SensorName : public HttpsHandlerIfc {
     }
 
     // schedule the next retry just in case this one fails
-    schedule_us(1000000 * RETRY_TIME_SEC, _resolve_sensor_name_trampoline,
-                this);
+    schedule_us(1000000 * RETRY_TIME_SEC, _resolve_sensor_name_trampoline, this);
 
     // if last request is outstanding, do nothing
     if (_hc->is_in_use()) {
@@ -58,16 +57,14 @@ class SensorName : public HttpsHandlerIfc {
     // in-place after we get it
     _hc->set_response_buffer(_sensor_name, sizeof(_sensor_name) - 1);
     char url[100];
-    snprintf(url, sizeof(url), "%s/%s?macaddr=%s", _base_url, SENSOR_NAME_URL,
-             inet_wifi_macaddr());
+    snprintf(url, sizeof(url), "%s/%s?macaddr=%s", _base_url, SENSOR_NAME_URL, inet_wifi_macaddr());
     LOG("Getting sensor name at: %s", url);
     _hc->get(url, this);
   }
 
   void on_done(HttpsClient *hc, int response_code, size_t response_len) {
     if (response_code == 200 && response_len >= 1) {
-      LOG("Sensor name retrieval: success, code %d, len %d", response_code,
-          response_len);
+      LOG("Sensor name retrieval: success, code %d, len %d", response_code, response_len);
       _sensor_name[response_len] = '\0';
       _valid = true;
       LOG("Retrieved sensor name: %s", get_sensor_name());

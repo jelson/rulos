@@ -16,10 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "../test-pin.h"
 #include "core/rulos.h"
 #include "periph/uart/uart.h"
-
-#include "../test-pin.h"
 
 #define FREQ_USEC 1000000
 
@@ -52,13 +51,12 @@ void test_func(void *data) {
   gpio_set(TEST_PIN);
 
   for (int i = 0; i < 20; i++) {
-    uart_print(
-        &uart,
-        "hello there this is an extremely long message, one that actually\n"
-        "exceeds the send buffer size of 128 bytes. why would you want to "
-        "send\n"
-        "a message this long? who knows. i don't judge. i just transmit!\n"
-        "hopefully, the entire thing has been received!\n\n");
+    uart_print(&uart,
+               "hello there this is an extremely long message, one that actually\n"
+               "exceeds the send buffer size of 128 bytes. why would you want to "
+               "send\n"
+               "a message this long? who knows. i don't judge. i just transmit!\n"
+               "hopefully, the entire thing has been received!\n\n");
   }
   gpio_clr(TEST_PIN);
 

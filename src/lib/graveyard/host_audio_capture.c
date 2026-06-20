@@ -18,8 +18,7 @@ void host_audio_init(HostAudio *ha) {
   rc = snd_pcm_hw_params_any(ha->hdl, hw_params);
   assert(rc >= 0);
 
-  rc = snd_pcm_hw_params_set_access(ha->hdl, hw_params,
-                                    SND_PCM_ACCESS_RW_INTERLEAVED);
+  rc = snd_pcm_hw_params_set_access(ha->hdl, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
   assert(rc >= 0);
 
   rc = snd_pcm_hw_params_set_format(ha->hdl, hw_params, SND_PCM_FORMAT_S16_LE);
@@ -39,7 +38,9 @@ void host_audio_init(HostAudio *ha) {
   assert(rc >= 0);
 }
 
-void host_audio_close(HostAudio *ha) { snd_pcm_close(ha->hdl); }
+void host_audio_close(HostAudio *ha) {
+  snd_pcm_close(ha->hdl);
+}
 
 void host_audio_fetch_ulaw_samples(HostAudio *ha, uint8_t *ulaw_buf, int len) {
   int rc;

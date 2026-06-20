@@ -6,9 +6,9 @@
 #include "core/rulos.h"
 #include "periph/6matrix/6matrix.h"
 
-#define X_LEDS 24
-#define Y_LEDS 16
-#define LED_RADIUS 20
+#define X_LEDS      24
+#define Y_LEDS      16
+#define LED_RADIUS  20
 #define LED_SPACING 8
 
 #define X_SIZE (X_LEDS * (LED_RADIUS + LED_SPACING))
@@ -27,30 +27,26 @@ void destroy(void) {
 
 /* Redraw the screen from the backing pixmap */
 static gint expose_topWindow(GtkWidget *widget, GdkEventExpose *event) {
-  gdk_draw_pixmap(widget->window,
-                  widget->style->fg_gc[GTK_WIDGET_STATE(widget)], canvas,
-                  event->area.x, event->area.y, event->area.x, event->area.y,
-                  event->area.width, event->area.height);
+  gdk_draw_pixmap(widget->window, widget->style->fg_gc[GTK_WIDGET_STATE(widget)], canvas,
+                  event->area.x, event->area.y, event->area.x, event->area.y, event->area.width,
+                  event->area.height);
 
   return FALSE;
 }
 
 static void drawLed(int x, int y, int rColor, int gColor) {
-  GdkColor ledColor = {0, (uint8_t)(rColor * (0xffff / 16)),
-                       (uint8_t)(gColor * (0xffff / 16)), 0};
+  GdkColor ledColor = {0, (uint8_t)(rColor * (0xffff / 16)), (uint8_t)(gColor * (0xffff / 16)), 0};
   GdkColor ledOutline = {0, 0x4000, 0x4000, 0x4000};
   int xCoord = LED_SPACING / 2 + x * (LED_SPACING + LED_RADIUS);
   int yCoord = LED_SPACING / 2 + y * (LED_SPACING + LED_RADIUS);
 
   gdk_gc_set_rgb_fg_color(canvas_gc, &ledColor);
 
-  gdk_draw_arc(canvas, canvas_gc, TRUE, xCoord, yCoord, LED_RADIUS, LED_RADIUS,
-               0, 360 * 64);
+  gdk_draw_arc(canvas, canvas_gc, TRUE, xCoord, yCoord, LED_RADIUS, LED_RADIUS, 0, 360 * 64);
 
   gdk_gc_set_rgb_fg_color(canvas_gc, &ledOutline);
 
-  gdk_draw_arc(canvas, canvas_gc, FALSE, xCoord, yCoord, LED_RADIUS, LED_RADIUS,
-               0, 360 * 64);
+  gdk_draw_arc(canvas, canvas_gc, FALSE, xCoord, yCoord, LED_RADIUS, LED_RADIUS, 0, 360 * 64);
 }
 
 static void initCanvas() {
@@ -63,8 +59,11 @@ static void initCanvas() {
                      topWindow->allocation.height);
 
   int x, y;
-  for (y = 0; y < Y_LEDS; y++)
-    for (x = 0; x < X_LEDS; x++) drawLed(x, y, 0, 0);
+  for (y = 0; y < Y_LEDS; y++) {
+    for (x = 0; x < X_LEDS; x++) {
+      drawLed(x, y, 0, 0);
+    }
+  }
 }
 
 /****************************/
@@ -76,12 +75,11 @@ static void start_gui() {
 
   gtk_window_set_default_size(GTK_WINDOW(topWindow), X_SIZE, Y_SIZE);
 
-  gtk_signal_connect(GTK_OBJECT(topWindow), "destroy", GTK_SIGNAL_FUNC(destroy),
-                     NULL);
+  gtk_signal_connect(GTK_OBJECT(topWindow), "destroy", GTK_SIGNAL_FUNC(destroy), NULL);
 
   drawing_area = gtk_drawing_area_new();
-  gtk_signal_connect(GTK_OBJECT(drawing_area), "expose_event",
-                     GTK_SIGNAL_FUNC(expose_topWindow), NULL);
+  gtk_signal_connect(GTK_OBJECT(drawing_area), "expose_event", GTK_SIGNAL_FUNC(expose_topWindow),
+                     NULL);
   gtk_widget_show(topWindow);
 
   gtk_container_add(GTK_CONTAINER(topWindow), drawing_area);
@@ -118,8 +116,7 @@ static void sim_printrow(uint8_t *colBytes, uint8_t numBytes, uint8_t rowNum) {
   printf("\n");
 }
 
-void hal_6matrix_setRow_2bit(SixMatrix_Context_t *mat, uint8_t *colBytes,
-                             uint8_t rowNum) {
+void hal_6matrix_setRow_2bit(SixMatrix_Context_t *mat, uint8_t *colBytes, uint8_t rowNum) {
   sim_printrow(colBytes, SIXMATRIX_NUM_COL_BYTES_2BIT, rowNum);
 
   gdk_threads_enter();
@@ -127,14 +124,12 @@ void hal_6matrix_setRow_2bit(SixMatrix_Context_t *mat, uint8_t *colBytes,
   int byteNum;
   int colNum = 0;
 
-  for (byteNum = 0; byteNum < SIXMATRIX_NUM_COL_BYTES_2BIT;
-       byteNum++, colBytes++) {
+  for (byteNum = 0; byteNum < SIXMATRIX_NUM_COL_BYTES_2BIT; byteNum++, colBytes++) {
     uint8_t currByte = *colBytes;
     int i;
 
     for (i = 0; i < 4; i++) {
-      drawLed(colNum, rowNum, (currByte & 0b10000000) ? 16 : 0,
-              (currByte & 0b01000000) ? 16 : 0);
+      drawLed(colNum, rowNum, (currByte & 0b10000000) ? 16 : 0, (currByte & 0b01000000) ? 16 : 0);
       colNum++;
       currByte <<= 2;
     }
@@ -143,8 +138,7 @@ void hal_6matrix_setRow_2bit(SixMatrix_Context_t *mat, uint8_t *colBytes,
   gdk_threads_leave();
 }
 
-void hal_6matrix_setRow_8bit(SixMatrix_Context_t *mat, uint8_t *colBytes,
-                             uint8_t rowNum) {
+void hal_6matrix_setRow_8bit(SixMatrix_Context_t *mat, uint8_t *colBytes, uint8_t rowNum) {
   sim_printrow(colBytes, SIXMATRIX_NUM_COL_BYTES_8BIT, rowNum);
 
   gdk_threads_enter();
@@ -152,8 +146,7 @@ void hal_6matrix_setRow_8bit(SixMatrix_Context_t *mat, uint8_t *colBytes,
   int colNum;
 
   for (colNum = 0; colNum < SIXMATRIX_NUM_COL_BYTES_8BIT; colNum++) {
-    drawLed(colNum, rowNum, (colBytes[colNum] & 0b11110000) >> 4,
-            (colBytes[colNum] & 0b00001111));
+    drawLed(colNum, rowNum, (colBytes[colNum] & 0b11110000) >> 4, (colBytes[colNum] & 0b00001111));
   }
 
   gtk_widget_draw(drawing_area, NULL);

@@ -112,8 +112,8 @@ void rulos_dfu_check_and_jump(void) {
   // table at the bootloader, load its stack pointer, and branch to its
   // reset entry.
   const uint32_t base = DFU_SYSMEM_BASE;
-  const uint32_t boot_sp = *(volatile uint32_t*)base;
-  const uint32_t boot_pc = *(volatile uint32_t*)(base + 4u);
+  const uint32_t boot_sp = *(volatile uint32_t *)base;
+  const uint32_t boot_pc = *(volatile uint32_t *)(base + 4u);
 
   __disable_irq();
   SysTick->CTRL = 0;

@@ -20,32 +20,32 @@
 // aref - nc - a0
 // gnd  - nc - nc
 // avcc - nc - rw
-#define GLCD_CS2 GPIO_C7
-#define GLCD_CS1 GPIO_C6
+#define GLCD_CS2   GPIO_C7
+#define GLCD_CS1   GPIO_C6
 #define GLCD_RESET GPIO_C5
-#define GLCD_VBL GPIO_C4
-#define GLCD_A0 GPIO_C3
-#define GLCD_RW GPIO_C2
+#define GLCD_VBL   GPIO_C4
+#define GLCD_A0    GPIO_C3
+#define GLCD_RW    GPIO_C2
 
 #else  // original breadboard
 #define GLCD_RESET GPIO_A0
-#define GLCD_CS1 GPIO_A1
-#define GLCD_CS2 GPIO_A2
-#define GLCD_RW GPIO_A3
+#define GLCD_CS1   GPIO_A1
+#define GLCD_CS2   GPIO_A2
+#define GLCD_RW    GPIO_A3
 // NC - a4
-#define GLCD_A0 GPIO_A5
-#define GLCD_DB0 GPIO_A6
-#define GLCD_DB1 GPIO_A7
+#define GLCD_A0    GPIO_A5
+#define GLCD_DB0   GPIO_A6
+#define GLCD_DB1   GPIO_A7
 // nc - aref
 // nc - gnd
 // nc - avcc
-#define GLCD_DB5 GPIO_C7
-#define GLCD_DB6 GPIO_C6
-#define GLCD_DB7 GPIO_C5
-#define GLCD_VBL GPIO_C4
-#define GLCD_DB2 GPIO_C3
-#define GLCD_DB3 GPIO_C2
-#define GLCD_DB4 GPIO_C1
+#define GLCD_DB5   GPIO_C7
+#define GLCD_DB6   GPIO_C6
+#define GLCD_DB7   GPIO_C5
+#define GLCD_VBL   GPIO_C4
+#define GLCD_DB2   GPIO_C3
+#define GLCD_DB3   GPIO_C2
+#define GLCD_DB4   GPIO_C1
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -58,17 +58,17 @@ void glcd_complete_init(GLCD *glcd);
 
 #define DISPLAY_WIDTH 122
 
-#define GLCD_EVENT_BUSY 0x80
+#define GLCD_EVENT_BUSY  0x80
 #define GLCD_EVENT_RESET 0x10
 
-#define GLCD_CMD_DISPLAY_ON 0xAF
-#define GLCD_CMD_DISPLAY_OFF 0xAE
+#define GLCD_CMD_DISPLAY_ON         0xAF
+#define GLCD_CMD_DISPLAY_OFF        0xAE
 #define GLCD_CMD_DISPLAY_START_LINE 0xC0
-#define GLCD_CMD_RESET 0xE2
-#define GLCD_CMD_SET_PAGE 0xb8
-#define GLCD_CMD_SET_COLUMN 0x00
+#define GLCD_CMD_RESET              0xE2
+#define GLCD_CMD_SET_PAGE           0xb8
+#define GLCD_CMD_SET_COLUMN         0x00
 
-#define GLCD_READ 1
+#define GLCD_READ  1
 #define GLCD_WRITE 0
 
 void glcd_set_bus_dir(bool dir) {
@@ -97,12 +97,9 @@ void glcd_set_bus_dir(bool dir) {
 
 uint8_t glcd_data_in() {
   uint8_t val = 0 | (gpio_is_set(GLCD_DB0) ? (1 << 0) : 0) |
-                (gpio_is_set(GLCD_DB1) ? (1 << 1) : 0) |
-                (gpio_is_set(GLCD_DB2) ? (1 << 2) : 0) |
-                (gpio_is_set(GLCD_DB3) ? (1 << 3) : 0) |
-                (gpio_is_set(GLCD_DB4) ? (1 << 4) : 0) |
-                (gpio_is_set(GLCD_DB5) ? (1 << 5) : 0) |
-                (gpio_is_set(GLCD_DB6) ? (1 << 6) : 0) |
+                (gpio_is_set(GLCD_DB1) ? (1 << 1) : 0) | (gpio_is_set(GLCD_DB2) ? (1 << 2) : 0) |
+                (gpio_is_set(GLCD_DB3) ? (1 << 3) : 0) | (gpio_is_set(GLCD_DB4) ? (1 << 4) : 0) |
+                (gpio_is_set(GLCD_DB5) ? (1 << 5) : 0) | (gpio_is_set(GLCD_DB6) ? (1 << 6) : 0) |
                 (gpio_is_set(GLCD_DB7) ? (1 << 7) : 0);
   return val;
 }
@@ -114,8 +111,7 @@ uint8_t _lcd_bitswap[16] = {0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe,
 
 void glcd_data_out(uint8_t v) {
 #if FINAL_STRIPBOARD
-  uint8_t swap_v =
-      (_lcd_bitswap[v & 0xf] << 4) | (_lcd_bitswap[(v >> 4) & 0xf]);
+  uint8_t swap_v = (_lcd_bitswap[v & 0xf] << 4) | (_lcd_bitswap[(v >> 4) & 0xf]);
 
   /*
   void syncdebug(uint8_t spaces, char f, uint16_t line);
@@ -299,8 +295,7 @@ static uint8_t _glcd_fetch_column(GLCD *glcd, uint8_t page, uint8_t col) {
   uint8_t y_base = page << 3;
   uint8_t x_byte = col >> 3;
   uint8_t x_bit_shift = 7 - (col & 0x7);
-  return 0 |
-         (((glcd->framebuffer[y_base + 0][x_byte] >> x_bit_shift) & 1) << 0) |
+  return 0 | (((glcd->framebuffer[y_base + 0][x_byte] >> x_bit_shift) & 1) << 0) |
          (((glcd->framebuffer[y_base + 1][x_byte] >> x_bit_shift) & 1) << 1) |
          (((glcd->framebuffer[y_base + 2][x_byte] >> x_bit_shift) & 1) << 2) |
          (((glcd->framebuffer[y_base + 3][x_byte] >> x_bit_shift) & 1) << 3) |

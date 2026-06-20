@@ -156,9 +156,8 @@ void init_rocket0(Rocket0 *r0) {
 
   daer_init(&r0->daer, 10, ((Time)5) << 20);
 
-  init_control_panel(&r0->cp, 3, 1, &r0->network, &r0->hpam, &r0->audio_client,
-                     &r0->idle, &r0->screenblanker, joystick, &r0->ts,
-                     KEY_VOL_UP, KEY_VOL_DOWN,
+  init_control_panel(&r0->cp, 3, 1, &r0->network, &r0->hpam, &r0->audio_client, &r0->idle,
+                     &r0->screenblanker, joystick, &r0->ts, KEY_VOL_UP, KEY_VOL_DOWN,
                      (FetchCalcDecorationValuesIfc *)&r0->daer.decoration_ifc);
   r0->cp.ccl.launch.main_rtc = &r0->dr;
   r0->cp.ccl.launch.lunar_distance = &r0->ld;
@@ -171,8 +170,7 @@ void init_rocket0(Rocket0 *r0) {
   dtg_init_local(&r0->dtg, 11);
 
   // Remote receiver
-  init_remote_keyboard_recv(&r0->rkr, &r0->network,
-                            (InputInjectorIfc *)&r0->cp.direct_injector,
+  init_remote_keyboard_recv(&r0->rkr, &r0->network, (InputInjectorIfc *)&r0->cp.direct_injector,
                             REMOTE_KEYBOARD_PORT);
 
   // Register callbacks that should be fired when thruster state is updated

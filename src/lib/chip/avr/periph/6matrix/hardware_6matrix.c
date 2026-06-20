@@ -25,12 +25,12 @@
 #include <util/delay.h>
 
 #define COLLATCH_CLK GPIO_B0
-#define COLLATCH_OE GPIO_B1
-#define COLLATCH_LE GPIO_B2
+#define COLLATCH_OE  GPIO_B1
+#define COLLATCH_LE  GPIO_B2
 #define COLLATCH_SDI GPIO_B3
 
 #define SPI_SHIFTING
-//#define TOP_ROW_ONLY
+// #define TOP_ROW_ONLY
 
 #define DEBUG GPIO_C2
 
@@ -71,15 +71,15 @@
 // microseconds -- 10 instructions.
 //
 
-#define GPIO_ROW_1 GPIO_D2
-#define GPIO_ROW_2 GPIO_D1
-#define GPIO_ROW_3 GPIO_D0
-#define GPIO_ROW_4 GPIO_C3
-#define GPIO_ROW_5 GPIO_D5
-#define GPIO_ROW_6 GPIO_D6
-#define GPIO_ROW_7 GPIO_D7
-#define GPIO_ROW_8 GPIO_B4
-#define GPIO_ROW_9 GPIO_D3
+#define GPIO_ROW_1  GPIO_D2
+#define GPIO_ROW_2  GPIO_D1
+#define GPIO_ROW_3  GPIO_D0
+#define GPIO_ROW_4  GPIO_C3
+#define GPIO_ROW_5  GPIO_D5
+#define GPIO_ROW_6  GPIO_D6
+#define GPIO_ROW_7  GPIO_D7
+#define GPIO_ROW_8  GPIO_B4
+#define GPIO_ROW_9  GPIO_D3
 #define GPIO_ROW_10 GPIO_D4
 #define GPIO_ROW_11 GPIO_B6
 #define GPIO_ROW_12 GPIO_B7
@@ -90,55 +90,117 @@
 
 typedef void (*funcPtr)();
 
-static inline void row_1_on() { gpio_clr(GPIO_ROW_1); }
-static inline void row_2_on() { gpio_clr(GPIO_ROW_2); }
-static inline void row_3_on() { gpio_clr(GPIO_ROW_3); }
-static inline void row_4_on() { gpio_clr(GPIO_ROW_4); }
-static inline void row_5_on() { gpio_clr(GPIO_ROW_5); }
-static inline void row_6_on() { gpio_clr(GPIO_ROW_6); }
-static inline void row_7_on() { gpio_clr(GPIO_ROW_7); }
-static inline void row_8_on() { gpio_clr(GPIO_ROW_8); }
-static inline void row_9_on() { gpio_clr(GPIO_ROW_9); }
-static inline void row_10_on() { gpio_clr(GPIO_ROW_10); }
-static inline void row_11_on() { gpio_clr(GPIO_ROW_11); }
-static inline void row_12_on() { gpio_clr(GPIO_ROW_12); }
-static inline void row_13_on() { gpio_clr(GPIO_ROW_13); }
-static inline void row_14_on() { gpio_clr(GPIO_ROW_14); }
+static inline void row_1_on() {
+  gpio_clr(GPIO_ROW_1);
+}
+static inline void row_2_on() {
+  gpio_clr(GPIO_ROW_2);
+}
+static inline void row_3_on() {
+  gpio_clr(GPIO_ROW_3);
+}
+static inline void row_4_on() {
+  gpio_clr(GPIO_ROW_4);
+}
+static inline void row_5_on() {
+  gpio_clr(GPIO_ROW_5);
+}
+static inline void row_6_on() {
+  gpio_clr(GPIO_ROW_6);
+}
+static inline void row_7_on() {
+  gpio_clr(GPIO_ROW_7);
+}
+static inline void row_8_on() {
+  gpio_clr(GPIO_ROW_8);
+}
+static inline void row_9_on() {
+  gpio_clr(GPIO_ROW_9);
+}
+static inline void row_10_on() {
+  gpio_clr(GPIO_ROW_10);
+}
+static inline void row_11_on() {
+  gpio_clr(GPIO_ROW_11);
+}
+static inline void row_12_on() {
+  gpio_clr(GPIO_ROW_12);
+}
+static inline void row_13_on() {
+  gpio_clr(GPIO_ROW_13);
+}
+static inline void row_14_on() {
+  gpio_clr(GPIO_ROW_14);
+}
 static inline void row_15_on() { /*gpio_clr(GPIO_ROW_15); */
 }
-static inline void row_16_on() { gpio_clr(GPIO_ROW_16); }
+static inline void row_16_on() {
+  gpio_clr(GPIO_ROW_16);
+}
 
-static inline void row_1_off() { gpio_set(GPIO_ROW_1); }
-static inline void row_2_off() { gpio_set(GPIO_ROW_2); }
-static inline void row_3_off() { gpio_set(GPIO_ROW_3); }
-static inline void row_4_off() { gpio_set(GPIO_ROW_4); }
-static inline void row_5_off() { gpio_set(GPIO_ROW_5); }
-static inline void row_6_off() { gpio_set(GPIO_ROW_6); }
-static inline void row_7_off() { gpio_set(GPIO_ROW_7); }
-static inline void row_8_off() { gpio_set(GPIO_ROW_8); }
-static inline void row_9_off() { gpio_set(GPIO_ROW_9); }
-static inline void row_10_off() { gpio_set(GPIO_ROW_10); }
-static inline void row_11_off() { gpio_set(GPIO_ROW_11); }
-static inline void row_12_off() { gpio_set(GPIO_ROW_12); }
-static inline void row_13_off() { gpio_set(GPIO_ROW_13); }
-static inline void row_14_off() { gpio_set(GPIO_ROW_14); }
+static inline void row_1_off() {
+  gpio_set(GPIO_ROW_1);
+}
+static inline void row_2_off() {
+  gpio_set(GPIO_ROW_2);
+}
+static inline void row_3_off() {
+  gpio_set(GPIO_ROW_3);
+}
+static inline void row_4_off() {
+  gpio_set(GPIO_ROW_4);
+}
+static inline void row_5_off() {
+  gpio_set(GPIO_ROW_5);
+}
+static inline void row_6_off() {
+  gpio_set(GPIO_ROW_6);
+}
+static inline void row_7_off() {
+  gpio_set(GPIO_ROW_7);
+}
+static inline void row_8_off() {
+  gpio_set(GPIO_ROW_8);
+}
+static inline void row_9_off() {
+  gpio_set(GPIO_ROW_9);
+}
+static inline void row_10_off() {
+  gpio_set(GPIO_ROW_10);
+}
+static inline void row_11_off() {
+  gpio_set(GPIO_ROW_11);
+}
+static inline void row_12_off() {
+  gpio_set(GPIO_ROW_12);
+}
+static inline void row_13_off() {
+  gpio_set(GPIO_ROW_13);
+}
+static inline void row_14_off() {
+  gpio_set(GPIO_ROW_14);
+}
 static inline void row_15_off() { /*gpio_set(GPIO_ROW_15);*/
 }
-static inline void row_16_off() { gpio_set(GPIO_ROW_16); }
+static inline void row_16_off() {
+  gpio_set(GPIO_ROW_16);
+}
 
-const static funcPtr rowOn[] = {row_1_on,  row_2_on,  row_3_on,  row_4_on,
-                                row_5_on,  row_6_on,  row_7_on,  row_8_on,
-                                row_9_on,  row_10_on, row_11_on, row_12_on,
+const static funcPtr rowOn[] = {row_1_on,  row_2_on,  row_3_on,  row_4_on,  row_5_on,  row_6_on,
+                                row_7_on,  row_8_on,  row_9_on,  row_10_on, row_11_on, row_12_on,
                                 row_13_on, row_14_on, row_15_on, row_16_on};
 
 const static funcPtr rowOff[] = {
-    row_1_off,  row_2_off,  row_3_off,  row_4_off,  row_5_off,  row_6_off,
-    row_7_off,  row_8_off,  row_9_off,  row_10_off, row_11_off, row_12_off,
-    row_13_off, row_14_off, row_15_off, row_16_off};
+    row_1_off, row_2_off,  row_3_off,  row_4_off,  row_5_off,  row_6_off,  row_7_off,  row_8_off,
+    row_9_off, row_10_off, row_11_off, row_12_off, row_13_off, row_14_off, row_15_off, row_16_off};
 
-static inline void gpio_row_power_off(uint8_t rowNum) { rowOff[rowNum](); }
+static inline void gpio_row_power_off(uint8_t rowNum) {
+  rowOff[rowNum]();
+}
 
-static inline void gpio_row_power_on(uint8_t rowNum) { rowOn[rowNum](); }
+static inline void gpio_row_power_on(uint8_t rowNum) {
+  rowOn[rowNum]();
+}
 
 #ifdef SPI_SHIFTING
 
@@ -241,8 +303,7 @@ static inline void shift_subframe(uint8_t *colBytes) {
 #else
 static inline void shift_subframe(uint8_t *colBytes) {
   // shift in the new data for each column
-  for (uint8_t byteNum = 0; byteNum < SIXMATRIX_NUM_COL_BYTES_2BIT;
-       byteNum++, colBytes++) {
+  for (uint8_t byteNum = 0; byteNum < SIXMATRIX_NUM_COL_BYTES_2BIT; byteNum++, colBytes++) {
     uint8_t currByte = *colBytes;
     gpio_set_or_clr(COLLATCH_SDI, currByte & (uint8_t)0b10000000);
     gpio_set(COLLATCH_CLK);
@@ -308,9 +369,8 @@ static inline void shift_subframe(uint8_t *colBytes) {
 // {2.66667, 8., 21.3333, 56., 146.667, 384.,
 
 typedef struct {
-  const uint8_t ocr;  // subframe time -- timer0 OCR value, each tick is 8 usec
-  const uint16_t
-      pwm;  // subframe PWM -- timer1 value, each tick is 1/384th of a frame
+  const uint8_t ocr;   // subframe time -- timer0 OCR value, each tick is 8 usec
+  const uint16_t pwm;  // subframe PWM -- timer1 value, each tick is 1/384th of a frame
 } binTime;
 
 static const binTime binTimes[] = {{6, 3},   {6, 8},   {6, 21},   {6, 56},
@@ -345,8 +405,7 @@ static const brightnessToBins brightnessesToBins[] = {
     {0, 0, 0, 0, 0, 0, 0, 1},  //
     {1, 1, 1, 1, 1, 1, 1, 1}};
 
-void hal_6matrix_setRow_8bit(SixMatrix_Context_t *mat, uint8_t *colBytes,
-                             uint8_t rowNum) {
+void hal_6matrix_setRow_8bit(SixMatrix_Context_t *mat, uint8_t *colBytes, uint8_t rowNum) {
 #ifdef DEBUG
   gpio_set(DEBUG);
   gpio_clr(DEBUG);

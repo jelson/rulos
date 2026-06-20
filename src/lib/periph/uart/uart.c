@@ -54,17 +54,14 @@ static void _uart_receive_trampoline(void *data) {
 
   // report an overflow, if we recorded one during the interrupt handler
   if (u->rx_overflow_bytes != u->rx_overflow_bytes_last_reported) {
-    LOG("WARNING: uart %u dropped %" PRIu32 " bytes (%" PRIu32 " total)",
-        u->uart_id,
-        u->rx_overflow_bytes - u->rx_overflow_bytes_last_reported,
-        u->rx_overflow_bytes);
+    LOG("WARNING: uart %u dropped %" PRIu32 " bytes (%" PRIu32 " total)", u->uart_id,
+        u->rx_overflow_bytes - u->rx_overflow_bytes_last_reported, u->rx_overflow_bytes);
     u->rx_overflow_bytes_last_reported = u->rx_overflow_bytes;
   }
 }
 
 // Upcall from HAL when new data arrives.  Happens at interrupt time.
-static void _uart_receive(uint8_t uart_id, void *user_data, char *buf,
-                          size_t len) {
+static void _uart_receive(uint8_t uart_id, void *user_data, char *buf, size_t len) {
   UartState_t *u = (UartState_t *)user_data;
   assert(u != NULL);
   assert(u->uart_id == uart_id);
@@ -89,8 +86,7 @@ void uart_start_rx(UartState_t *u, uart_rx_cb rx_cb, void *user_data) {
 
 // Upcall from hal when the next byte is needed for a send.  Happens
 // at interrupt time.
-static void _get_next_data(uint8_t uart_id, void *user_data,
-                           const char **tx_buf /*OUT*/,
+static void _get_next_data(uint8_t uart_id, void *user_data, const char **tx_buf /*OUT*/,
                            uint16_t *tx_len /*OUT*/) {
   UartState_t *u = (UartState_t *)user_data;
   assert(u != NULL);
@@ -126,8 +122,7 @@ void uart_write(UartState_t *u, const void *buf, size_t len) {
 
     // In critical section: add as much new data to the send queue as will fit.
     rulos_irq_state_t old_interrupts = hal_start_atomic();
-    uint16_t write_size =
-        r_min((size_t)len, CharQueue_free_space(&u->tx_queue.q));
+    uint16_t write_size = r_min((size_t)len, CharQueue_free_space(&u->tx_queue.q));
 
     if (write_size == 0) {
       hal_end_atomic(old_interrupts);

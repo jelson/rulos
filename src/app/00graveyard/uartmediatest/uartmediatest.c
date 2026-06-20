@@ -36,7 +36,7 @@ void audioled_init();
 void audioled_set(bool red, bool yellow);
 //////////////////////////////////////////////////////////////////////////////
 
-#define AUDIO_LED_RED GPIO_D2
+#define AUDIO_LED_RED    GPIO_D2
 #define AUDIO_LED_YELLOW GPIO_D3
 
 #ifndef SIM
@@ -183,7 +183,9 @@ typedef struct {
 } MainContext;
 MainContext mc;
 
-void g_tick_say(char *msg) { tick_say(&mc.tick, msg); }
+void g_tick_say(char *msg) {
+  tick_say(&mc.tick, msg);
+}
 
 int main() {
   audioled_init();
@@ -204,7 +206,6 @@ int main() {
   // cmdproc_init(&mc.cmdproc, &mc.aserv, &mc.network);
 
   // init_audio_server(&mc.aserv, &mc.network, TIMER2);
-
 
 #if 0
 	board_buffer_module_init();

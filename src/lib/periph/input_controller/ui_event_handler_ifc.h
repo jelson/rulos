@@ -40,8 +40,7 @@ typedef enum {
   uied_blur       // child releases focus
 } UIEventDisposition;
 
-typedef UIEventDisposition (*UIEventHandlerFunc)(
-    struct s_focus_handler *handler, UIEvent evt);
+typedef UIEventDisposition (*UIEventHandlerFunc)(struct s_focus_handler *handler, UIEvent evt);
 typedef struct s_focus_handler {
   UIEventHandlerFunc func;
 } UIEventHandler;

@@ -125,8 +125,7 @@ void init_servo(ServoAct *servo) {
 #define SERVO_SLOP   (0x0180)
 #define SERVO_OFFSET (1000) /* give room to clamp values w/ over/underflow */
 
-void servo_set_pwm(ServoAct *servo, uint16_t desired_position,
-                   uint8_t push_state) {
+void servo_set_pwm(ServoAct *servo, uint16_t desired_position, uint8_t push_state) {
   int32_t output;
 
   if (push_state == SERVO_REST) {
@@ -147,16 +146,14 @@ void servo_set_pwm(ServoAct *servo, uint16_t desired_position,
   }
 
   // clamp output value
-  output = bound(output, SERVO_OFFSET,
-                 ((int32_t)SERVO_OFFSET) + ((uint32_t)SERVO_MAX));
+  output = bound(output, SERVO_OFFSET, ((int32_t)SERVO_OFFSET) + ((uint32_t)SERVO_MAX));
   output = output - SERVO_OFFSET;
   uint16_t output16 = output;
 
   // record state for next time
   servo->desired_position = desired_position;
 
-  OCR1A = SERVO_PULSE_MIN_US +
-          (output16 / (65535 / (SERVO_PULSE_MAX_US - SERVO_PULSE_MIN_US)));
+  OCR1A = SERVO_PULSE_MIN_US + (output16 / (65535 / (SERVO_PULSE_MAX_US - SERVO_PULSE_MIN_US)));
 }
 
 /****************************************************************************/
@@ -267,8 +264,7 @@ bool init_config(Config *config) {
 }
 
 void config_read_eeprom(Config *config) {
-  eeprom_read_block((void *)config, (void *)EEPROM_CONFIG_BASE,
-                    sizeof(*config));
+  eeprom_read_block((void *)config, (void *)EEPROM_CONFIG_BASE, sizeof(*config));
 }
 
 uint16_t config_clip(Config *config, Quadrature *quad) {
@@ -279,8 +275,7 @@ uint16_t config_clip(Config *config, Quadrature *quad) {
   return newDoor;
 }
 
-void config_update_servo(Config *config, ServoAct *servo, uint16_t doorPos,
-                         uint8_t push_state) {
+void config_update_servo(Config *config, ServoAct *servo, uint16_t doorPos, uint8_t push_state) {
   // Linearly interpolate
   int32_t servoPos = (config->servoPos[1] - config->servoPos[0]);
   servoPos *= doorPos;
@@ -292,8 +287,7 @@ void config_update_servo(Config *config, ServoAct *servo, uint16_t doorPos,
 
 void config_write_eeprom(Config *config) {
   /* note arg order is src, dest; reversed from avr eeprom_read_block */
-  eeprom_write_block((void *)config, (void *)EEPROM_CONFIG_BASE,
-                     sizeof(*config));
+  eeprom_write_block((void *)config, (void *)EEPROM_CONFIG_BASE, sizeof(*config));
 }
 
 /****************************************************************************/
@@ -309,8 +303,8 @@ typedef enum {
 struct s_control_act;
 
 struct s_control_event_handler {
-    UIEventHandlerFunc handler_func;
-    struct s_control_act *controlAct;
+  UIEventHandlerFunc handler_func;
+  struct s_control_act *controlAct;
 };
 
 typedef struct s_control_act {
@@ -332,8 +326,7 @@ typedef struct s_control_act {
 } ControlAct;
 
 static void control_update(ControlAct *ctl);
-static UIEventDisposition control_handler(
-    struct s_control_event_handler *handler, UIEvent evt);
+static UIEventDisposition control_handler(struct s_control_event_handler *handler, UIEvent evt);
 
 void init_control(ControlAct *ctl) {
   gpio_make_input_enable_pullup(LEFT_BTN);
@@ -411,8 +404,7 @@ static uint8_t control_run_mode(ControlAct *ctl) {
   } else {
     // else quiescent or idle & quiet "enough":
     // let servo rest; don't update anything until a "real" change arrives
-    config_update_servo(&ctl->config, &ctl->servo, ctl->last_position,
-                        SERVO_REST);
+    config_update_servo(&ctl->config, &ctl->servo, ctl->last_position, SERVO_REST);
   }
 
   return idle ? 0 : 15;
@@ -426,9 +418,7 @@ static void control_update(ControlAct *ctl) {
     if (READ_BUTTON(LEFT_BTN)) {
       ctl->pan_pos = (ctl->pan_pos < PAN_RATE) ? 0 : ctl->pan_pos - PAN_RATE;
     } else if (READ_BUTTON(RIGHT_BTN)) {
-      ctl->pan_pos = ((SERVO_MAX - ctl->pan_pos) < PAN_RATE)
-                         ? SERVO_MAX
-                         : ctl->pan_pos + PAN_RATE;
+      ctl->pan_pos = ((SERVO_MAX - ctl->pan_pos) < PAN_RATE) ? SERVO_MAX : ctl->pan_pos + PAN_RATE;
     }
   }
 
@@ -494,8 +484,7 @@ static void control_read_test(ControlAct *control)
 }
 #endif
 
-static UIEventDisposition control_handler(
-    struct s_control_event_handler *handler, UIEvent evt) {
+static UIEventDisposition control_handler(struct s_control_event_handler *handler, UIEvent evt) {
   ControlAct *control = handler->controlAct;
   switch (control->mode) {
     case cm_run: {
@@ -605,7 +594,6 @@ int main() {
   hal_init_adc_channel(POT_ADC_CHANNEL);
   hal_init_adc_channel(OPT0_ADC_CHANNEL);
   hal_init_adc_channel(OPT1_ADC_CHANNEL);
-
 
   /*
           BlinkAct blink;

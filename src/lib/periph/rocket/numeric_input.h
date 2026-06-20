@@ -25,8 +25,7 @@ typedef struct {
   uint8_t neg_exponent;  // base 10
 } DecimalFloatingPoint;
 
-uint8_t dfp_draw(DecimalFloatingPoint *dfp, SSBitmap *bm, uint8_t len,
-                 uint8_t show_decimal);
+uint8_t dfp_draw(DecimalFloatingPoint *dfp, SSBitmap *bm, uint8_t len, uint8_t show_decimal);
 
 struct s_numeric_input_act;
 typedef struct {
@@ -46,9 +45,7 @@ typedef struct s_numeric_input_act {
   const char *msg;
 } NumericInputAct;
 
-void numeric_input_init(NumericInputAct *act, RowRegion region,
-                        UIEventHandler *notify, FocusManager *fa,
-                        const char *label);
-void numeric_input_set_value(NumericInputAct *act,
-                             DecimalFloatingPoint new_value);
+void numeric_input_init(NumericInputAct *act, RowRegion region, UIEventHandler *notify,
+                        FocusManager *fa, const char *label);
+void numeric_input_set_value(NumericInputAct *act, DecimalFloatingPoint new_value);
 void numeric_input_set_msg(NumericInputAct *act, const char *msg);

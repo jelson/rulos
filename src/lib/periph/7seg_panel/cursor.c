@@ -84,18 +84,15 @@ void cursor_update_once(CursorAct *act) {
         if (act->label == cursor_label_white) {
           bbp->buffer[j] = 0;
         } else {
-          bbp->buffer[j] = ((j == x0) ? 0b0000110 : 0) |
-                           ((j == x1) ? 0b0110000 : 0) |
-                           ((i == 0) ? 0b1000000 : 0) |
-                           ((i == act->rr.ylen - 1) ? 0b0001000 : 0);
+          bbp->buffer[j] = ((j == x0) ? 0b0000110 : 0) | ((j == x1) ? 0b0110000 : 0) |
+                           ((i == 0) ? 0b1000000 : 0) | ((i == act->rr.ylen - 1) ? 0b0001000 : 0);
         }
       }
 
       // apply label to last line
-      if (i == act->rr.ylen - 1 && act->label != cursor_label_white &&
-          act->label != NULL) {
-        ascii_to_bitmap_str(act->bbuf[act->rr.ylen - 1].buffer + act->rr.x + 1,
-                            act->rr.xlen - 2, act->label);
+      if (i == act->rr.ylen - 1 && act->label != cursor_label_white && act->label != NULL) {
+        ascii_to_bitmap_str(act->bbuf[act->rr.ylen - 1].buffer + act->rr.x + 1, act->rr.xlen - 2,
+                            act->label);
       }
 
       // hide cursor half the time

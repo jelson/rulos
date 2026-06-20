@@ -32,8 +32,7 @@
 // TODO: Blink GameOver message?
 
 void snake_update(Snake *snake);
-UIEventDisposition snake_event_handler(UIEventHandler *raw_handler,
-                                       UIEvent evt);
+UIEventDisposition snake_event_handler(UIEventHandler *raw_handler, UIEvent evt);
 void snake_paint_once(Snake *snake);
 void snake_init_map(Map *map);
 void snake_reset_game(Snake *snake);
@@ -45,8 +44,8 @@ void snake_exploding_tick(Snake *snake);
 void snake_game_over_tick(Snake *snake);
 void populate_sqrt_table();
 
-void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient,
-                uint8_t score_boardnum, uint8_t status_boardnum) {
+void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient, uint8_t score_boardnum,
+                uint8_t status_boardnum) {
   snake->s4 = s4;
   snake->handler.func = (UIEventHandlerFunc)snake_event_handler;
   snake->handler.snake = snake;
@@ -111,10 +110,8 @@ static inline Point add(Point a, Direction d) {
 }
 
 static inline bool occupied(Map *map, Point a) {
-  return get_cell(map, a.x, a.y) != EMPTY ||
-         get_cell(map, a.x - 1, a.y) == RIGHT ||
-         get_cell(map, a.x + 1, a.y) == LEFT ||
-         get_cell(map, a.x, a.y - 1) == DOWN ||
+  return get_cell(map, a.x, a.y) != EMPTY || get_cell(map, a.x - 1, a.y) == RIGHT ||
+         get_cell(map, a.x + 1, a.y) == LEFT || get_cell(map, a.x, a.y - 1) == DOWN ||
          get_cell(map, a.x, a.y + 1) == UP;
 }
 
@@ -252,12 +249,10 @@ void snake_paint_once(Snake *snake) {
     for (uint8_t x = 0; x < CANVAS_W; x++) {
       uint8_t py = 2 * y;
       uint8_t px = 2 * x;
-      raster_paint_pixel_v(
-          rrect, px + 1, py,
-          get_cell(map, x, y) == RIGHT || get_cell(map, x + 1, y) == LEFT);
-      raster_paint_pixel_v(
-          rrect, px, py + 1,
-          get_cell(map, x, y) == DOWN || get_cell(map, x, y + 1) == UP);
+      raster_paint_pixel_v(rrect, px + 1, py,
+                           get_cell(map, x, y) == RIGHT || get_cell(map, x + 1, y) == LEFT);
+      raster_paint_pixel_v(rrect, px, py + 1,
+                           get_cell(map, x, y) == DOWN || get_cell(map, x, y + 1) == UP);
     }
   }
 
@@ -319,8 +314,7 @@ void snake_turn(Snake *snake, int8_t dir) {
   }
 }
 
-UIEventDisposition snake_event_handler(UIEventHandler *raw_handler,
-                                       UIEvent evt) {
+UIEventDisposition snake_event_handler(UIEventHandler *raw_handler, UIEvent evt) {
   Snake *snake = ((SnakeHandler *)raw_handler)->snake;
 
   UIEventDisposition result = uied_accepted;

@@ -194,8 +194,8 @@ typedef struct {
   uint8_t bDescriptorType;
   uint16_t bcdHID;  // HID class specification release
   uint8_t bCountryCode;
-  uint8_t bNumDescriptors;  // Number of additional class specific descriptors
-  uint8_t bDescrType;       // Type of class descriptor
+  uint8_t bNumDescriptors;     // Number of additional class specific descriptors
+  uint8_t bDescrType;          // Type of class descriptor
   uint16_t wDescriptorLength;  // Total size of the Report descriptor
 } __attribute__((packed)) USB_HID_DESCRIPTOR;
 

@@ -12,8 +12,8 @@ static void volume_transmit_message(VolumeControl *vc) {
   LOG("Transmit volume to %d", vc->cur_vol);
 }
 
-void volume_control_init(VolumeControl *vc, AudioClient *ac, uint8_t boardnum,
-                         Keystroke vol_up, Keystroke vol_down) {
+void volume_control_init(VolumeControl *vc, AudioClient *ac, uint8_t boardnum, Keystroke vol_up,
+                         Keystroke vol_down) {
   vc->injector.iii.func = _volume_input;
   vc->injector.vc = vc;
   vc->ac = ac;
@@ -55,8 +55,7 @@ void _volume_input(InputInjectorIfc *ii, Keystroke key) {
 void _volume_update(VolumeControl *vc) {
 #if DISPLAY_VOLUME_ADJUSTMENTS
   Time elapsed = clock_time_us() - vc->lastTouch;
-  bool display_should_be_visible =
-      (elapsed > 0 && elapsed < VOLUME_DISPLAY_PERSISTENCE);
+  bool display_should_be_visible = (elapsed > 0 && elapsed < VOLUME_DISPLAY_PERSISTENCE);
   if (vc->visible && !display_should_be_visible) {
     board_buffer_pop(&vc->bbuf);
     vc->visible = false;

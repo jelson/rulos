@@ -23,17 +23,16 @@
 
 #define I2S_STATS 1
 
-#define BUF_ADDR(i2s, buf_num)          \
-  ((int16_t*)(&(i2s)->bufdata[buf_num * \
-                              I2S_BUFSIZE_BYTES((i2s)->samples_per_buf)]))
+#define BUF_ADDR(i2s, buf_num) \
+  ((int16_t *)(&(i2s)->bufdata[buf_num * I2S_BUFSIZE_BYTES((i2s)->samples_per_buf)]))
 
 #if SIM
-static const char* decode_buf_state[] = {"EMPTY", "FILLING", "FULL", "PLAYING"};
+static const char *decode_buf_state[] = {"EMPTY", "FILLING", "FULL", "PLAYING"};
 #endif
 
 // Called at schedule time.
-static void i2s_request_buffer_fill_trampoline(void* data) {
-  i2s_t* i2s = (i2s_t*)data;
+static void i2s_request_buffer_fill_trampoline(void *data) {
+  i2s_t *i2s = (i2s_t *)data;
   uint8_t idx_to_fill = 0;
 
   if (i2s->buf_state[0] == FILLING) {
@@ -51,15 +50,15 @@ static void i2s_request_buffer_fill_trampoline(void* data) {
 // when it's finished.
 //
 // WARNING: May be called at interrupt time.
-static void i2s_request_buffer_fill(i2s_t* i2s, uint8_t buf_num) {
+static void i2s_request_buffer_fill(i2s_t *i2s, uint8_t buf_num) {
 #if I2S_STATS
   i2s->buf_fill_start_time = precise_clock_time_us();
 #endif  // I2S_STATS
   assert(i2s->buf_state[buf_num] == EMPTY);
   i2s->buf_state[buf_num] = FILLING;
 #if SIM
-  LOG("XXX i2s_request_buffer_fill(%d) in %s,%s", buf_num,
-      decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
+  LOG("XXX i2s_request_buffer_fill(%d) in %s,%s", buf_num, decode_buf_state[i2s->buf_state[0]],
+      decode_buf_state[i2s->buf_state[1]]);
 #endif
   schedule_now(i2s_request_buffer_fill_trampoline, i2s);
 }
@@ -69,11 +68,10 @@ static void i2s_request_buffer_fill(i2s_t* i2s, uint8_t buf_num) {
 // swapped over and begun playing the other buffer.
 //
 // WARNING: May be called at interrupt time.
-static void i2s_buf_is_playing(i2s_t* i2s, uint8_t play_idx,
-                               uint8_t other_idx) {
+static void i2s_buf_is_playing(i2s_t *i2s, uint8_t play_idx, uint8_t other_idx) {
 #if SIM
-  LOG("XXX i2s_buf_is_playing(%d) enters %s,%s", play_idx,
-      decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
+  LOG("XXX i2s_buf_is_playing(%d) enters %s,%s", play_idx, decode_buf_state[i2s->buf_state[0]],
+      decode_buf_state[i2s->buf_state[1]]);
 #endif
   assert(i2s->buf_state[play_idx] == FULL);
 
@@ -91,12 +89,11 @@ static void i2s_buf_is_playing(i2s_t* i2s, uint8_t play_idx,
 }
 
 // Downcall when a buf fill has been completed by the upper layer.
-static void i2s_buf_filled_internal(i2s_t* i2s, uint16_t samples_filled,
-                                    uint8_t just_filled_idx,
+static void i2s_buf_filled_internal(i2s_t *i2s, uint16_t samples_filled, uint8_t just_filled_idx,
                                     uint8_t other_idx) {
 #if SIM
-  LOG("XXX i2s_buf_filled(%d) enters %s,%s", just_filled_idx,
-      decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
+  LOG("XXX i2s_buf_filled(%d) enters %s,%s", just_filled_idx, decode_buf_state[i2s->buf_state[0]],
+      decode_buf_state[i2s->buf_state[1]]);
 #endif
   assert(i2s->buf_state[just_filled_idx] == FILLING);
   i2s->samples_in_buf[just_filled_idx] = samples_filled;
@@ -121,8 +118,7 @@ static void i2s_buf_filled_internal(i2s_t* i2s, uint16_t samples_filled,
       if (just_filled_idx == 1) {
         assert(i2s->buf_state[just_filled_idx] == FULL);
         assert(i2s->buf_state[other_idx] == EMPTY);
-        memcpy(BUF_ADDR(i2s, 0), BUF_ADDR(i2s, 1),
-               sizeof(int16_t) * i2s->samples_per_buf);
+        memcpy(BUF_ADDR(i2s, 0), BUF_ADDR(i2s, 1), sizeof(int16_t) * i2s->samples_per_buf);
         just_filled_idx = 0;
         other_idx = 1;
         i2s->buf_state[just_filled_idx] = FULL;
@@ -146,17 +142,16 @@ static void i2s_buf_filled_internal(i2s_t* i2s, uint16_t samples_filled,
       assert(FALSE);
   }
 #if SIM
-  LOG("XXX i2s_buf_filled(%d) exits %s,%s", just_filled_idx,
-      decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
+  LOG("XXX i2s_buf_filled(%d) exits %s,%s", just_filled_idx, decode_buf_state[i2s->buf_state[0]],
+      decode_buf_state[i2s->buf_state[1]]);
 #endif
 }
 
 // Downcall that indicates the buffer fill requested earlier has completed.
-void i2s_buf_filled(i2s_t* i2s, int16_t* buf, uint16_t samples_filled) {
+void i2s_buf_filled(i2s_t *i2s, int16_t *buf, uint16_t samples_filled) {
 #if I2S_STATS
   assert(i2s->buf_fill_start_time != 0);
-  minmax_add_sample(&i2s->buf_load_time_mmm,
-                    precise_clock_time_us() - i2s->buf_fill_start_time);
+  minmax_add_sample(&i2s->buf_load_time_mmm, precise_clock_time_us() - i2s->buf_fill_start_time);
   i2s->buf_fill_start_time = 0;
 #endif  // I2S_STATS
 
@@ -169,8 +164,8 @@ void i2s_buf_filled(i2s_t* i2s, int16_t* buf, uint16_t samples_filled) {
   }
 }
 
-static void i2s_audio_done_trampoline(void* data) {
-  i2s_t* i2s = (i2s_t*)data;
+static void i2s_audio_done_trampoline(void *data) {
+  i2s_t *i2s = (i2s_t *)data;
 
 #if I2S_STATS
   minmax_log(&i2s->buf_play_time_mmm, "buf play time");
@@ -185,8 +180,7 @@ static void i2s_audio_done_trampoline(void* data) {
 // Called when the HAL informs us that an I2S buffer has just finished playing.
 //
 // WARNING: Called at interrupt time!
-static void i2s_buf_played_cb_internal(i2s_t* i2s, uint8_t just_played_idx,
-                                       uint8_t other_idx) {
+static void i2s_buf_played_cb_internal(i2s_t *i2s, uint8_t just_played_idx, uint8_t other_idx) {
   assert(i2s->buf_state[just_played_idx] == PLAYING);
   i2s->buf_state[just_played_idx] = EMPTY;
 
@@ -219,8 +213,8 @@ static void i2s_buf_played_cb_internal(i2s_t* i2s, uint8_t just_played_idx,
 }
 
 // WARNING: Called at interrupt time!
-static void i2s_buf_played_cb(void* user_data, uint8_t just_played_idx) {
-  i2s_t* i2s = (i2s_t*)user_data;
+static void i2s_buf_played_cb(void *user_data, uint8_t just_played_idx) {
+  i2s_t *i2s = (i2s_t *)user_data;
 #if SIM
   LOG("XXX i2s_buf_played_cb(%d) enters %s,%s", just_played_idx,
       decode_buf_state[i2s->buf_state[0]], decode_buf_state[i2s->buf_state[1]]);
@@ -249,12 +243,11 @@ static void i2s_buf_played_cb(void* user_data, uint8_t just_played_idx) {
 
 //// API implementation
 
-i2s_t* i2s_init(uint16_t samples_per_buf, uint32_t sample_rate, void* user_data,
-                i2s_fill_buffer_cb_t fill_buffer_cb,
-                i2s_audio_done_cb_t audio_done_cb, uint8_t* rawbuf,
-                uint16_t allocated_size) {
+i2s_t *i2s_init(uint16_t samples_per_buf, uint32_t sample_rate, void *user_data,
+                i2s_fill_buffer_cb_t fill_buffer_cb, i2s_audio_done_cb_t audio_done_cb,
+                uint8_t *rawbuf, uint16_t allocated_size) {
   assert(allocated_size == I2S_STATE_SIZE(samples_per_buf));
-  i2s_t* i2s = (i2s_t*)rawbuf;
+  i2s_t *i2s = (i2s_t *)rawbuf;
 
   // note: this only initializes the state, not the buffers.
   memset(i2s, 0, sizeof(i2s_t));
@@ -275,7 +268,7 @@ i2s_t* i2s_init(uint16_t samples_per_buf, uint32_t sample_rate, void* user_data,
   return i2s;
 }
 
-void i2s_start(i2s_t* i2s) {
+void i2s_start(i2s_t *i2s) {
   assert(i2s->buf_state[0] == EMPTY);
   assert(i2s->buf_state[1] == EMPTY);
 

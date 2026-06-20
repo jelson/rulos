@@ -24,7 +24,7 @@
 #include "stm32.h"
 
 typedef struct {
-  GPIO_TypeDef* port;
+  GPIO_TypeDef *port;
   uint32_t pin;
 } gpio_pin_t;
 

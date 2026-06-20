@@ -23,7 +23,7 @@
 
 #define SLOW_MAX_BUFFERS NUM_TOTAL_BOARDS
 
-//#define BORROW_SCREENBLANKER_BUFS 1
+// #define BORROW_SCREENBLANKER_BUFS 1
 
 typedef struct s_slow_boot {
   ScreenBlanker *screenblanker;
@@ -37,5 +37,4 @@ typedef struct s_slow_boot {
   AudioClient *audioClient;
 } SlowBoot;
 
-void init_slow_boot(SlowBoot *slowboot, ScreenBlanker *screenblanker,
-                    AudioClient *audioClient);
+void init_slow_boot(SlowBoot *slowboot, ScreenBlanker *screenblanker, AudioClient *audioClient);

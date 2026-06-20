@@ -130,6 +130,10 @@ bool sim_adc_keystroke_handler(char c) {
   }
 }
 
-void hal_init_adc_channel(uint8_t idx) { adc[idx] = 512; }
+void hal_init_adc_channel(uint8_t idx) {
+  adc[idx] = 512;
+}
 
-uint16_t hal_read_adc(uint8_t idx) { return adc[idx]; }
+uint16_t hal_read_adc(uint8_t idx) {
+  return adc[idx];
+}

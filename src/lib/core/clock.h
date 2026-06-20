@@ -33,13 +33,13 @@ Time precise_clock_time_us();
 // Synchronous delay that does not take interrupts
 void delay_us(uint32_t delay);
 
-void schedule_us(Time offset_us, ActivationFuncPtr func, void* data);
+void schedule_us(Time offset_us, ActivationFuncPtr func, void *data);
 // schedule in the future. (asserts us>0)
-void schedule_now(ActivationFuncPtr func, void* data);
+void schedule_now(ActivationFuncPtr func, void *data);
 // Be very careful with schedule_now -- it can result in an infinite
 // loop if you schedule yourself for now repeatedly (because the clock
 // never advances past now until the queue empties).
-void schedule_absolute(Time at_time, ActivationFuncPtr func, void* data);
+void schedule_absolute(Time at_time, ActivationFuncPtr func, void *data);
 
 // LOG stats about the scheduler: the number of tasks scheduled, and their
 // minimum and maximum periods.

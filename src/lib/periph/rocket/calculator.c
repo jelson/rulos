@@ -22,7 +22,7 @@
 
 #include "periph/rocket/rocket.h"
 
-//#define LOG_CALC 1
+// #define LOG_CALC 1
 
 enum { op_add = 0, op_sub = 1, op_mul = 2, op_div = 3 };
 const char *operator_strs[] = {"add", "sub", "mul", "div"};
@@ -45,22 +45,18 @@ void calculator_init(Calculator *calc, int board0, FocusManager *fa,
 
   if (fa != NULL) {
     RectRegion calc_region = {calc->btable, 2, 1, 6};
-    focus_register(fa, (UIEventHandler *)&calc->focus, calc_region,
-                   "calculator");
+    focus_register(fa, (UIEventHandler *)&calc->focus, calc_region, "calculator");
   }
 
   RowRegion region0 = {&calc->bbuf[0], 0, 4};
-  numeric_input_init(&calc->operands[0], region0, (UIEventHandler *)calc,
-                     &calc->focus, "o1");
+  numeric_input_init(&calc->operands[0], region0, (UIEventHandler *)calc, &calc->focus, "o1");
   RowRegion region1 = {&calc->bbuf[0], 4, 4};
-  numeric_input_init(&calc->operands[1], region1, (UIEventHandler *)calc,
-                     &calc->focus, "o2");
+  numeric_input_init(&calc->operands[1], region1, (UIEventHandler *)calc, &calc->focus, "o2");
   RowRegion region2 = {&calc->bbuf[1], 0, 4};
-  knob_init(&calc->op, region2, operator_strs, 4, (UIEventHandler *)calc,
-            &calc->focus, "op");
+  knob_init(&calc->op, region2, operator_strs, 4, (UIEventHandler *)calc, &calc->focus, "op");
   RowRegion region3 = {&calc->bbuf[1], 4, 4};
-  numeric_input_init(&calc->result, region3, NULL /*unfocusable*/,
-                     NULL /* no notify */, NULL /* label */);
+  numeric_input_init(&calc->result, region3, NULL /*unfocusable*/, NULL /* no notify */,
+                     NULL /* label */);
 
   DecimalFloatingPoint op0 = {220, 0};
   DecimalFloatingPoint op1 = {659, 2};
@@ -94,8 +90,8 @@ UIEventDisposition calculator_notify_internal(Calculator *calc, UIEvent evt) {
   DecimalFloatingPoint op0 = calc->operands[0].cur_value;
   DecimalFloatingPoint op1 = calc->operands[1].cur_value;
 #if LOG_CALC
-  LOG("start  op0 %3de%d o1 %3de%d", op0.mantissa, op0.neg_exponent,
-      op1.mantissa, op1.neg_exponent);
+  LOG("start  op0 %3de%d o1 %3de%d", op0.mantissa, op0.neg_exponent, op1.mantissa,
+      op1.neg_exponent);
 #endif
   uint32_t mantissa = 0;
   switch (calc->op.selected) {
@@ -144,8 +140,7 @@ UIEventDisposition calculator_notify_internal(Calculator *calc, UIEvent evt) {
         op0.neg_exponent += 1;
       }
 #if LOG_CALC
-      LOG("setup2 op0 %3de%d o1 %3de%d", m0, op0.neg_exponent, m1,
-          op1.neg_exponent);
+      LOG("setup2 op0 %3de%d o1 %3de%d", m0, op0.neg_exponent, m1, op1.neg_exponent);
 #endif
       assert(op0.neg_exponent == op1.neg_exponent);
       // swap mantissas back so subtraction makes sense
@@ -219,8 +214,7 @@ done:
 #define DECORATION_UPDATE_INTERVAL 500000  /* 0.5 sec */
 
 void calculator_timeout_func(Calculator *calc) {
-  schedule_us(DECORATION_UPDATE_INTERVAL,
-              (ActivationFuncPtr)calculator_timeout_func, calc);
+  schedule_us(DECORATION_UPDATE_INTERVAL, (ActivationFuncPtr)calculator_timeout_func, calc);
 #if LOG_CALC
   LOG("calc: calculator_timeout_func");
 #endif
@@ -228,14 +222,13 @@ void calculator_timeout_func(Calculator *calc) {
   if (focus_is_active(&calc->focus)) {
     // focus means activity.
     calc->decorationTimeout.last_activity = clock_time_us();
-  } else if (later_than(clock_time_us(), calc->decorationTimeout.last_activity +
-                                             DECORATION_TIMEOUT)) {
+  } else if (later_than(clock_time_us(),
+                        calc->decorationTimeout.last_activity + DECORATION_TIMEOUT)) {
 #if LOG_CALC
     LOG("calc: timed out");
 #endif
     // update last_activity to keep it from rolling over
-    calc->decorationTimeout.last_activity =
-        clock_time_us() - DECORATION_TIMEOUT - 1;
+    calc->decorationTimeout.last_activity = clock_time_us() - DECORATION_TIMEOUT - 1;
 
     // fetch values from source
     if (calc->decorationTimeout.fetchDecorationValuesObj != NULL) {

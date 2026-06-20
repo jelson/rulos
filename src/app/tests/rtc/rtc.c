@@ -42,11 +42,10 @@ int main() {
     Time curr_time = precise_clock_time_us();
     if (curr_time < last_time) {
       if (later_than(curr_time, last_time)) {
-        LOG("test %d: detected normal rollover! time %lu came before time %lu",
-            i, last_time, curr_time);
-      } else {
-        LOG("test %d failed! time %lu came before time %lu", i, last_time,
+        LOG("test %d: detected normal rollover! time %lu came before time %lu", i, last_time,
             curr_time);
+      } else {
+        LOG("test %d failed! time %lu came before time %lu", i, last_time, curr_time);
         goto done;
       }
     }

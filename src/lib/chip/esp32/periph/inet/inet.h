@@ -43,8 +43,7 @@ class HttpsClient;
 
 class HttpsHandlerIfc {
  public:
-  virtual void on_done(HttpsClient *hc, int response_code,
-                       size_t response_len) = 0;
+  virtual void on_done(HttpsClient *hc, int response_code, size_t response_len) = 0;
 };
 
 class HttpsClient {
@@ -55,8 +54,7 @@ class HttpsClient {
   void set_header(const char *header, const char *value);
   void set_response_buffer(char *buf, size_t len);
   void get(const char *url, HttpsHandlerIfc *on_done);
-  void post(const char *url, const char *post_body, size_t body_len,
-            HttpsHandlerIfc *on_done);
+  void post(const char *url, const char *post_body, size_t body_len, HttpsHandlerIfc *on_done);
 
  private:
   // params from the caller

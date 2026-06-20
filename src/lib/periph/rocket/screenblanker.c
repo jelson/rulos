@@ -21,10 +21,9 @@
 //////////////////////////////////////////////////////////////////////////////
 // disco mode defs
 
-#define _packed(c0, c1, c2, c3, c4, c5, c6, c7, zero)              \
-  (0 | (((uint32_t)c0) << (7 * 4)) | (((uint32_t)c1) << (6 * 4)) | \
-   (((uint32_t)c2) << (5 * 4)) | (((uint32_t)c3) << (4 * 4)) |     \
-   (((uint32_t)c4) << (3 * 4)) | (((uint32_t)c5) << (2 * 4)) |     \
+#define _packed(c0, c1, c2, c3, c4, c5, c6, c7, zero)                                            \
+  (0 | (((uint32_t)c0) << (7 * 4)) | (((uint32_t)c1) << (6 * 4)) | (((uint32_t)c2) << (5 * 4)) | \
+   (((uint32_t)c3) << (4 * 4)) | (((uint32_t)c4) << (3 * 4)) | (((uint32_t)c5) << (2 * 4)) |     \
    (((uint32_t)c6) << (1 * 4)) | (((uint32_t)c7) << (0 * 4)))
 
 #undef PR
@@ -42,13 +41,11 @@ static const uint32_t rocket_tree[] = {ROCKET_TREE};
 
 //////////////////////////////////////////////////////////////////////////////
 
-UIEventDisposition screenblanker_handler(ScreenBlanker *screenblanker,
-                                         UIEvent evt);
+UIEventDisposition screenblanker_handler(ScreenBlanker *screenblanker, UIEvent evt);
 void screenblanker_update(ScreenBlanker *sb);
 void screenblanker_update_once(ScreenBlanker *sb);
 
-void init_screenblanker(ScreenBlanker *screenblanker, HPAM *hpam,
-                        IdleAct *idle) {
+void init_screenblanker(ScreenBlanker *screenblanker, HPAM *hpam, IdleAct *idle) {
   screenblanker->func = (UIEventHandlerFunc)screenblanker_handler;
   screenblanker->num_buffers = NUM_TOTAL_BOARDS;
   screenblanker->tree = rocket_tree;
@@ -65,8 +62,7 @@ void init_screenblanker(ScreenBlanker *screenblanker, HPAM *hpam,
       screenblanker->hpam_max_alpha[i] = 0xff;
     }
 
-    board_buffer_init(
-        &screenblanker->buffer[i] DBG_BBUF_LABEL("screenblanker"));
+    board_buffer_init(&screenblanker->buffer[i] DBG_BBUF_LABEL("screenblanker"));
   }
 
   screenblanker->mode = sb_inactive;
@@ -80,8 +76,7 @@ void init_screenblanker(ScreenBlanker *screenblanker, HPAM *hpam,
   }
 }
 
-UIEventDisposition screenblanker_handler(ScreenBlanker *screenblanker,
-                                         UIEvent evt) {
+UIEventDisposition screenblanker_handler(ScreenBlanker *screenblanker, UIEvent evt) {
   if (evt == evt_idle_nowidle) {
     screenblanker_setmode(screenblanker, sb_blankdots);
   } else if (evt == evt_idle_nowactive) {
@@ -91,8 +86,7 @@ UIEventDisposition screenblanker_handler(ScreenBlanker *screenblanker,
   return uied_accepted;
 }
 
-void screenblanker_setmode(ScreenBlanker *screenblanker,
-                           ScreenBlankerMode newmode) {
+void screenblanker_setmode(ScreenBlanker *screenblanker, ScreenBlankerMode newmode) {
   uint8_t i;
 
   if (newmode == screenblanker->mode) {
@@ -119,8 +113,7 @@ void screenblanker_setmode(ScreenBlanker *screenblanker,
   screenblanker_update_once(screenblanker);
 }
 
-void screenblanker_setdisco(ScreenBlanker *screenblanker,
-                            DiscoColor disco_color) {
+void screenblanker_setdisco(ScreenBlanker *screenblanker, DiscoColor disco_color) {
   screenblanker->disco_color = disco_color;
 
   if (screenblanker->screenblanker_sender != NULL) {
@@ -181,15 +174,13 @@ void screenblanker_update_once(ScreenBlanker *sb) {
       for (i = 0; i < sb->num_buffers; i++) {
         for (j = 0; j < NUM_DIGITS; j++) {
           sb->buffer[i].buffer[j] =
-              ((sb->tree[i] >> (4 * (NUM_DIGITS - 1 - j))) & 0x0f) ==
-                      (uint8_t)sb->disco_color
+              ((sb->tree[i] >> (4 * (NUM_DIGITS - 1 - j))) & 0x0f) == (uint8_t)sb->disco_color
                   ? 0xff
                   : 0;
         }
       }
       if (sb->hpam != NULL) {
-        hpam_set_port(sb->hpam, HPAM_LIGHTING_FLICKER,
-                      sb->disco_color == DISCO_WHITE);
+        hpam_set_port(sb->hpam, HPAM_LIGHTING_FLICKER, sb->disco_color == DISCO_WHITE);
       }
       break;
     }
@@ -207,8 +198,7 @@ void screenblanker_update_once(ScreenBlanker *sb) {
         // NB 'set_alpha includes a redraw.
       }
       if (sb->hpam != NULL) {
-        hpam_set_port(sb->hpam, HPAM_LIGHTING_FLICKER,
-                      (deadbeef_rand() & 3) != 0);
+        hpam_set_port(sb->hpam, HPAM_LIGHTING_FLICKER, (deadbeef_rand() & 3) != 0);
       }
       break;
     }
@@ -225,8 +215,7 @@ void screenblanker_update_once(ScreenBlanker *sb) {
 
 void sbl_recv_func(MessageRecvBuffer *msg) {
   AppReceiver *const app_receiver = msg->app_receiver;
-  ScreenBlankerListener *const sbl =
-      (ScreenBlankerListener *)app_receiver->user_data;
+  ScreenBlankerListener *const sbl = (ScreenBlankerListener *)app_receiver->user_data;
   ScreenblankerPayload *const sp = (ScreenblankerPayload *)msg->data;
   assert(msg->payload_len == sizeof(ScreenblankerPayload));
   screenblanker_setdisco(&sbl->screenblanker, sp->disco_color);
@@ -267,8 +256,7 @@ void sbs_send(ScreenBlankerSender *sbs, ScreenBlanker *sb) {
     return;
   }
 
-  ScreenblankerPayload *sp =
-      (ScreenblankerPayload *)sbs->sendSlot.wire_msg->data;
+  ScreenblankerPayload *sp = (ScreenblankerPayload *)sbs->sendSlot.wire_msg->data;
   sp->mode = sb->mode;
   sp->disco_color = sb->disco_color;
   net_send_message(sbs->network, &sbs->sendSlot);

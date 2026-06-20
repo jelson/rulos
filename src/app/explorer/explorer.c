@@ -21,7 +21,7 @@
 #include "core/rulos.h"
 
 #define EXPLORER_MOTOR
-//#define EXPLORER_SERVO
+// #define EXPLORER_SERVO
 
 ADC_HandleTypeDef hadc1;
 
@@ -129,8 +129,7 @@ void pwm_adjust(uint32_t pulse_interval, uint32_t pulse_width) {
   outputChannelInit.OCFastMode = TIM_OCFAST_DISABLE;
   outputChannelInit.OCIdleState = TIM_OCIDLESTATE_RESET;
   outputChannelInit.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-  if (HAL_TIM_PWM_ConfigChannel(&timerHandle, &outputChannelInit,
-                                TIM_CHANNEL_1) != HAL_OK) {
+  if (HAL_TIM_PWM_ConfigChannel(&timerHandle, &outputChannelInit, TIM_CHANNEL_1) != HAL_OK) {
     __builtin_trap();
   }
 

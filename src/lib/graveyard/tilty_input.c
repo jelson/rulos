@@ -3,8 +3,8 @@
 #include "chip/avr/periph/pov/pov.h"  // for pov_paint
 
 #define G_QUIESCENT 50
-#define G_GRAVITY 100
-//#define DBG_CAT_ON
+#define G_GRAVITY   100
+// #define DBG_CAT_ON
 #if DBG_CAT_ON
 #define DBG_CAT(x) strcat(dbg_msg, x);
 #else
@@ -137,8 +137,7 @@ void tilty_input_update(TiltyInputAct *tia) {
   Time time_now = clock_time_us();
 
 #if DBG_CAT_ON
-  sprintf(dbg_msg + strlen(dbg_msg), "\n state cur: %3x new: %2x\n",
-          tia->curState, newState);
+  sprintf(dbg_msg + strlen(dbg_msg), "\n state cur: %3x new: %2x\n", tia->curState, newState);
 #endif
   if (ti_proposed & tia->curState) {
     DBG_CAT("proposed:\n");
@@ -186,8 +185,7 @@ void tilty_input_update(TiltyInputAct *tia) {
       }
     } else if (tia->curState == ti_neutral) {
       DBG_CAT("  cur neutral:\n");
-      if (newState == ti_left || newState == ti_right || newState == ti_down ||
-          newState == ti_up) {
+      if (newState == ti_left || newState == ti_right || newState == ti_down || newState == ti_up) {
         DBG_CAT("    new lrdi:\n");
         tia->curState = newState | ti_proposed;
         tia->proposed_time = time_now;
@@ -225,8 +223,7 @@ void tilty_input_update(TiltyInputAct *tia) {
 #endif  // DBG_CAT_ON
 }
 
-void tilty_input_init(TiltyInputAct *tia, Vect3D *accelValue,
-                      UIEventHandler *event_handler) {
+void tilty_input_init(TiltyInputAct *tia, Vect3D *accelValue, UIEventHandler *event_handler) {
   tia->accelValue = accelValue;
   tia->event_handler = event_handler;
 

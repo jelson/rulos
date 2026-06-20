@@ -69,10 +69,11 @@ char hal_read_keybuf() {
 
   char k;
 
-  if (CharQueue_pop(keypad_q, &k))
+  if (CharQueue_pop(keypad_q, &k)) {
     return k;
-  else
+  } else {
     return 0;
+  }
 }
 
 char hal_scan_keypad() {
@@ -82,30 +83,39 @@ char hal_scan_keypad() {
 // translation from a key typed at the keyboard to the simulated
 // keypad input that should be enqueued
 char translate_to_keybuf(char c) {
-  if (c >= 'a' && c <= 'd')
+  if (c >= 'a' && c <= 'd') {
     return c;
-  if (c == '\t')
+  }
+  if (c == '\t') {
     return 'a';
-  if (c == '\n')
+  }
+  if (c == '\n') {
     return 'c';
-  if (c == 27)
+  }
+  if (c == 27) {
     return 'd';
+  }
 
-  if (c >= '0' && c <= '9')
+  if (c >= '0' && c <= '9') {
     return c;
+  }
 
-  if (c == '*' || c == 's' || c == '.')
+  if (c == '*' || c == 's' || c == '.') {
     return 's';
+  }
 
-  if (c == 'p' || c == '#')
+  if (c == 'p' || c == '#') {
     return 'p';
+  }
 
   // volume quads
-  if (c == 'j' || c == 'k')
+  if (c == 'j' || c == 'k') {
     return c;
+  }
   // pong quads
-  if (c == 'm' || c == 'n' || c == 'e' || c == 'f')
+  if (c == 'm' || c == 'n' || c == 'e' || c == 'f') {
     return c;
+  }
 
   return 0;
 }

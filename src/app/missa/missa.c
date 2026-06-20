@@ -99,13 +99,13 @@ static void morse_toggle_func_trampoline(const bool onoff) {
   missa_hal_set_led(0, onoff);
 }
 
-static void start_birthday_morse(void* data);
+static void start_birthday_morse(void *data);
 
 static void start_birthday_morse_after_delay() {
   schedule_us(5000000 /* 5 sec */, start_birthday_morse, NULL);
 }
 
-static void start_birthday_morse(void* data) {
+static void start_birthday_morse(void *data) {
   emit_morse("happy birthday missa", 170000, morse_toggle_func_trampoline,
              start_birthday_morse_after_delay);
 }
@@ -122,7 +122,7 @@ typedef struct {
 
 prime_state_t prime_state;
 
-static void do_prime_count(void* data);
+static void do_prime_count(void *data);
 
 static void init_prime_counting() {
   prime_state.prime_num = 0;
@@ -136,7 +136,7 @@ static void prime_delay(uint8_t time_quanta) {
   schedule_us((uint32_t)210000 * time_quanta, do_prime_count, NULL);
 }
 
-static void do_prime_count(void* data) {
+static void do_prime_count(void *data) {
   if (prime_state.is_keyed) {
     missa_hal_set_led(1, 0);
     prime_state.is_keyed = 0;

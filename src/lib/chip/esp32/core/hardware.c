@@ -39,8 +39,7 @@
 #include "core/hardware_types.h"
 
 const int RULOS_STACK_SIZE = 16 * 1024;
-const int __attribute__((used)) DRAM_ATTR uxTopUsedPriority =
-    configMAX_PRIORITIES - 1;
+const int __attribute__((used)) DRAM_ATTR uxTopUsedPriority = configMAX_PRIORITIES - 1;
 
 // when we run RULOS on core 0, we get watchdog timer timeouts unless
 // we put vTaskDelay() in hal_idle() -- I guess there are other
@@ -55,15 +54,14 @@ const int __attribute__((used)) DRAM_ATTR uxTopUsedPriority =
 
 void rulos_hal_init(void) {
   esp_err_t ret = nvs_flash_init();
-  if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
-      ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
     ESP_ERROR_CHECK(nvs_flash_erase());
     ret = nvs_flash_init();
   }
   ESP_ERROR_CHECK(ret);
 }
 
-static void run_rulos_main(void* data) {
+static void run_rulos_main(void *data) {
   extern int main(void);
   main();
 }
@@ -75,12 +73,12 @@ void hal_reset() {
 extern "C" {
 void app_main(void) {
   gpio_install_isr_service(0);
-  xTaskCreatePinnedToCore(run_rulos_main, "rulosMain", RULOS_STACK_SIZE, NULL,
-                          1, NULL, RULOS_ESP32_CORE_ID);
+  xTaskCreatePinnedToCore(run_rulos_main, "rulosMain", RULOS_STACK_SIZE, NULL, 1, NULL,
+                          RULOS_ESP32_CORE_ID);
 }
 }
 
-static uint32_t calculateApb(rtc_cpu_freq_config_t* conf) {
+static uint32_t calculateApb(rtc_cpu_freq_config_t *conf) {
   if (conf->freq_mhz >= 80) {
     return 80000000;
   }

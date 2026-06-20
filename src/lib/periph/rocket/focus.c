@@ -30,8 +30,7 @@ void focus_init(FocusManager *act) {
   act->children_size = 0;
 }
 
-void focus_register(FocusManager *act, UIEventHandler *handler, RectRegion rr,
-                    const char *label) {
+void focus_register(FocusManager *act, UIEventHandler *handler, RectRegion rr, const char *label) {
   uint8_t idx = act->children_size;
   assert(idx < NUM_CHILDREN);
   act->children[idx].handler = handler;
@@ -40,8 +39,7 @@ void focus_register(FocusManager *act, UIEventHandler *handler, RectRegion rr,
   act->children_size += 1;
 }
 
-UIEventDisposition focus_input_handler(UIEventHandler *raw_handler,
-                                       UIEvent evt) {
+UIEventDisposition focus_input_handler(UIEventHandler *raw_handler, UIEvent evt) {
   FocusManager *fm = (FocusManager *)raw_handler;
 
   // avoid mod-by-zero
@@ -67,12 +65,10 @@ UIEventDisposition focus_input_handler(UIEventHandler *raw_handler,
     // nobody focused. Start selectin'!
     switch (evt) {
       case uie_right:
-        fm->selectedChild =
-            (fm->selectedChild + 1 + fm->children_size) % fm->children_size;
+        fm->selectedChild = (fm->selectedChild + 1 + fm->children_size) % fm->children_size;
         break;
       case uie_left:
-        fm->selectedChild =
-            (fm->selectedChild - 1 + fm->children_size) % fm->children_size;
+        fm->selectedChild = (fm->selectedChild - 1 + fm->children_size) % fm->children_size;
         break;
       case uie_select:
         if (fm->selectedChild != NO_CHILD) {

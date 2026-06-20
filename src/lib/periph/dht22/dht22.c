@@ -6,7 +6,7 @@
 #include "core/rulos.h"
 
 #define DHT22_BUFLEN 5
-#define NUM_BITS     ((DHT22_BUFLEN)*8)
+#define NUM_BITS     ((DHT22_BUFLEN) * 8)
 
 #define MAX_CYCLES    (10000)
 #define DHT22_TIMEOUT ((uint32_t)(1 << 30))
@@ -113,8 +113,7 @@ release_irq:
 #endif
 
   if (data[4] != ((data[0] + data[1] + data[2] + data[3]) & 0xFF)) {
-    LOG("DHT22: Checksum failure, got 0x%02x",
-        data[0] + data[1] + data[2] + data[3]);
+    LOG("DHT22: Checksum failure, got 0x%02x", data[0] + data[1] + data[2] + data[3]);
     return false;
   }
 

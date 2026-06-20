@@ -40,7 +40,7 @@ typedef struct {
   uint8_t fader_key;
 } Inputs;
 
-void inputs_init(Inputs* inputs) {
+void inputs_init(Inputs *inputs) {
   // note I'm NOT using init_adc(); it adds a scheduled function,
   // and we're not using any of rulos scheduling for this device.
   reg_set(&ADCSRA, ADEN);  // enable ADC
@@ -75,7 +75,7 @@ static uint16_t read_adc_raw(uint8_t adc_channel) {
 //
 //----------------------------------------------------------------------
 
-void inputs_sample(Inputs* inputs) {
+void inputs_sample(Inputs *inputs) {
   inputs->hue = read_adc_raw(KNOB_HUE);
   inputs->lightness0 = read_adc_raw(KNOB_LIGHTNESS0);
   inputs->lightness1 = read_adc_raw(KNOB_LIGHTNESS1);
@@ -98,19 +98,19 @@ typedef struct {
   ControlChannel w;
 } ControlTable;
 
-inline void channel_configure(ControlChannel* channel, uint8_t value) {
+inline void channel_configure(ControlChannel *channel, uint8_t value) {
   channel->low = value & 0x7f;
   channel->off_cycle = (value >> 7) & 1;
 }
 
-void control_init(ControlTable* table) {
+void control_init(ControlTable *table) {
   gpio_make_output(LEDR);
   gpio_make_output(LEDG);
   gpio_make_output(LEDB);
   gpio_make_output(LEDW);
 }
 
-void control_phase(ControlTable* control_table) {
+void control_phase(ControlTable *control_table) {
   uint8_t red = control_table->r.low;
   uint8_t green = control_table->g.low;
   uint8_t blue = control_table->b.low;
@@ -119,8 +119,7 @@ void control_phase(ControlTable* control_table) {
   uint8_t t;
   for (t = 0; t < 128; t++) {
     PORTA = (t + red) & 0x80;
-    PORTB = ((t + green) & 0x80) >> 7 | ((t + blue) & 0x80) >> 6 |
-            ((~(t + white)) & 0x80) >> 5;
+    PORTB = ((t + green) & 0x80) >> 7 | ((t + blue) & 0x80) >> 6 | ((~(t + white)) & 0x80) >> 5;
   }
   PORTA = (control_table->r.off_cycle << 7) | FADER_KEY_PULLUP;
   PORTB = control_table->g.off_cycle | (control_table->b.off_cycle << 1) |
@@ -172,11 +171,11 @@ typedef struct {
 // Fading from dimmer settings is ugly; shall we take a 45% brightness setting
 // and change it to 100% with a 55% discount?
 #define FADER_ONE_DECREMENT_TIME (1 << 7)
-#define APPLY_FADER(x)           (((x) > fader_discount) ? ((x)-fader_discount) : 0)
+#define APPLY_FADER(x)           (((x) > fader_discount) ? ((x) - fader_discount) : 0)
 
-void hue_conversion(App* app) {
-  Inputs* inputs = &app->inputs;
-  ControlTable* control_table = &app->control_table;
+void hue_conversion(App *app) {
+  Inputs *inputs = &app->inputs;
+  ControlTable *control_table = &app->control_table;
 
   uint16_t hue = (inputs->hue * 3) >> 1;  // 0..1535
 #define FWD(x) (x)
@@ -264,7 +263,7 @@ void app_set_clock() {
   CLKPR = 0x00;
 }
 
-void app_init(App* app) {
+void app_init(App *app) {
   app_set_clock();
   timer_init();
   inputs_init(&app->inputs);
@@ -272,7 +271,7 @@ void app_init(App* app) {
   control_init(&app->control_table);
 }
 
-void app_run(App* app) {
+void app_run(App *app) {
   while (1) {
     //		gpio_set(LEDW);
     inputs_sample(&app->inputs);

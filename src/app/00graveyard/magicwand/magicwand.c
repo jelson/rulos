@@ -1,7 +1,7 @@
-//#define TIME_DEBUG
-//#define MANUAL_US_TEST
-//#define NO_GYRO
-//#define NO_ANALOG
+// #define TIME_DEBUG
+// #define MANUAL_US_TEST
+// #define NO_GYRO
+// #define NO_ANALOG
 
 #include <avr/interrupt.h>
 #include <stdbool.h>
@@ -22,8 +22,7 @@ struct locatorAct;
 typedef struct locatorAct locatorAct_t;
 
 typedef void (*PeripheralSendCompleteFunc)(locatorAct_t *aa);
-typedef void (*PeripheralRecvCompleteFunc)(locatorAct_t *aa, char *data,
-                                           int len);
+typedef void (*PeripheralRecvCompleteFunc)(locatorAct_t *aa, char *data, int len);
 
 typedef struct {
   ActivationFunc f;
@@ -97,25 +96,25 @@ struct locatorAct {
 
 static locatorAct_t aa_g;
 
-#define ACCEL_ADDR 0b0111000
+#define ACCEL_ADDR               0b0111000
 #define ACCEL_SAMPLING_RATE_BITS 0b001  // 50 hz
-#define ACCEL_RANGE_BITS 0b01           // +/- 4g
+#define ACCEL_RANGE_BITS         0b01   // +/- 4g
 
-#define GYRO_ADDR 0b1101000
-#define GYRO_FS_SEL 0x3    // 2000 deg/sec
+#define GYRO_ADDR     0b1101000
+#define GYRO_FS_SEL   0x3  // 2000 deg/sec
 #define GYRO_DLPF_CFG 0x3  // 42 hz
 
 #define FIRMWARE_ID "$Rev$"
-#define ID_OFFSET 6
+#define ID_OFFSET   6
 
-#define GPIO_10V_ENABLE GPIO_B0
-#define GPIO_US_XMIT GPIO_D6
-#define GPIO_US_RECV GPIO_C6
-#define US_RECV_CHANNEL 0
+#define GPIO_10V_ENABLE       GPIO_B0
+#define GPIO_US_XMIT          GPIO_D6
+#define GPIO_US_RECV          GPIO_C6
+#define US_RECV_CHANNEL       0
 #define US_QUIET_TRAINING_LEN 2000
-#define US_MIN_NOISE_RANGE 25
-#define US_MIN_RUN_LENGTH 5
-#define US_CHIRP_LEN_US 1000
+#define US_MIN_NOISE_RANGE    25
+#define US_MIN_RUN_LENGTH     5
+#define US_CHIRP_LEN_US       1000
 #define US_CHIRP_RING_TIME_MS 40
 
 /****************************************************/
@@ -139,11 +138,10 @@ void _peripheralSendComplete(void *user_data) {
   aa->sendFunc(aa);
 }
 
-void sendToPeripheral(locatorAct_t *aa, uint8_t twiAddr, char *data,
-                      uint8_t len, PeripheralSendCompleteFunc f) {
+void sendToPeripheral(locatorAct_t *aa, uint8_t twiAddr, char *data, uint8_t len,
+                      PeripheralSendCompleteFunc f) {
   aa->sendFunc = f;
-  (aa->twiState->send)(aa->twiState, twiAddr, data, len,
-                       _peripheralSendComplete, aa);
+  (aa->twiState->send)(aa->twiState, twiAddr, data, len, _peripheralSendComplete, aa);
 }
 
 /*** receiving data from a locator peripheral, using the
@@ -154,8 +152,8 @@ void _locatorReadComplete(MediaRecvSlot *mrs, uint8_t len) {
   aa->recvFunc(aa, mrs->data, aa->readLen);
 }
 
-void readFromPeripheral(locatorAct_t *aa, uint8_t twiAddr, uint16_t baseAddr,
-                        int len, PeripheralRecvCompleteFunc f) {
+void readFromPeripheral(locatorAct_t *aa, uint8_t twiAddr, uint16_t baseAddr, int len,
+                        PeripheralRecvCompleteFunc f) {
   aa->recvFunc = f;
   aa->readLen = len;
 
@@ -182,9 +180,9 @@ typedef struct {
   uint8_t *mode_ptr;
 } TiltyInputHandler;
 
-static char *card_value_names[] = {
-    "ZERO",  "ACE",  "TWO", "THREE", "FOUR",  "FIVE", "SIX",   "SEVEN",
-    "EIGHT", "NINE", "TEN", "JACK",  "QUEEN", "KING", "FORTN", "FIFTN"};
+static char *card_value_names[] = {"ZERO",  "ACE",   "TWO",   "THREE", "FOUR", "FIVE",
+                                   "SIX",   "SEVEN", "EIGHT", "NINE",  "TEN",  "JACK",
+                                   "QUEEN", "KING",  "FORTN", "FIFTN"};
 static char *card_suit_names[] = {"HARTS", "DIAMND", "CLUBS", "SPADES"};
 
 void tih_handle(TiltyInputHandler *tih, UIEvent evt) {
@@ -217,8 +215,7 @@ void tih_handle(TiltyInputHandler *tih, UIEvent evt) {
 #if 1
   if (!tih->la->uartSending) {
     static char buf[80];
-    snprintf(buf, sizeof(buf) - 1,
-             "Input event 0x%02x %d %s of %d %s mode %s\r\n", evt,
+    snprintf(buf, sizeof(buf) - 1, "Input event 0x%02x %d %s of %d %s mode %s\r\n", evt,
              tih->card_value, card_value_names[tih->card_value], tih->card_suit,
              card_suit_names[tih->card_suit],
              (tih->mode_ptr == &tih->card_suit) ? "suit" : "value");
@@ -227,8 +224,7 @@ void tih_handle(TiltyInputHandler *tih, UIEvent evt) {
 #endif
 }
 
-void tih_init(TiltyInputHandler *tih, struct locatorAct *la, PovAct *pov,
-              MessageChangeAct *mca) {
+void tih_init(TiltyInputHandler *tih, struct locatorAct *la, PovAct *pov, MessageChangeAct *mca) {
   tih->func = (UIEventHandlerFunc)tih_handle;
   tih->la = la;
   tih->pov = pov;
@@ -264,7 +260,9 @@ static inline void config_recv_next(locatorAct_t *aa, char *data, int len) {
 }
 
 // This is a little clumsy, but keeps the sequencing code otherwise clean-ish.
-static inline char *last_read_data(locatorAct_t *aa) { return aa->mrs->data; }
+static inline char *last_read_data(locatorAct_t *aa) {
+  return aa->mrs->data;
+}
 
 // Configure the accelerometer by first reading config byte 0x14, then
 // setting the low bits (leaving the 3 highest bits untouched), and
@@ -312,8 +310,8 @@ void configLocator_acc1(void *v_aa) {
 void configLocator_acc2(void *v_aa) {
   locatorAct_t *aa = (locatorAct_t *)v_aa;
   aa->TWIsendBuf[0] = 0x14;
-  aa->TWIsendBuf[1] = (last_read_data(aa)[0] & 0b11100000) |
-                      (ACCEL_RANGE_BITS << 3) | (ACCEL_SAMPLING_RATE_BITS);
+  aa->TWIsendBuf[1] =
+      (last_read_data(aa)[0] & 0b11100000) | (ACCEL_RANGE_BITS << 3) | (ACCEL_SAMPLING_RATE_BITS);
   sendToPeripheral(aa, ACCEL_ADDR, aa->TWIsendBuf, 2, config_next);
 }
 
@@ -335,10 +333,11 @@ void configLocator_done(void *v_aa) {
 /*************************************/
 
 static inline int16_t convert_accel(char lsb, char msb) {
-  int16_t mag =
-      ((((int16_t)msb) & 0b01111111) << 2) | ((lsb & 0b11000000) >> 6);
+  int16_t mag = ((((int16_t)msb) & 0b01111111) << 2) | ((lsb & 0b11000000) >> 6);
 
-  if (msb & 0b10000000) mag = mag - 512;
+  if (msb & 0b10000000) {
+    mag = mag - 512;
+  }
 
   return mag;
 }
@@ -446,15 +445,16 @@ int main() {
   aa->f = (ActivationFunc)sampleLocator;
 
   if (strlen(FIRMWARE_ID) > ID_OFFSET) {
-    snprintf(aa->UARTsendBuf, sizeof(aa->UARTsendBuf) - 1, "^i;%s\r\n",
-             FIRMWARE_ID + ID_OFFSET);
+    snprintf(aa->UARTsendBuf, sizeof(aa->UARTsendBuf) - 1, "^i;%s\r\n", FIRMWARE_ID + ID_OFFSET);
   } else {
     snprintf(aa->UARTsendBuf, sizeof(aa->UARTsendBuf) - 1, "^i;0$\r\n");
   }
   emit(&aa_g, aa->UARTsendBuf);
 
 #ifdef TIME_DEBUG
-  for (uint8_t i = 0; i < 10; i++) recordTime(precise_clock_time_us());
+  for (uint8_t i = 0; i < 10; i++) {
+    recordTime(precise_clock_time_us());
+  }
   printTimeRecords("res");
 #endif
 

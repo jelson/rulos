@@ -74,8 +74,7 @@ void read_and_verify_sectors(int sector, int count, bool skip_validate) {
     for (int i = 0; i < SECTOR_SIZE * count; i++) {
       if (inbuf[i] != pseudorand) {
         sector_errors++;
-        LOG("Data mismatch! Sector %d, byte %d. Exp %d, got %d", sector, i,
-            pseudorand, inbuf[i]);
+        LOG("Data mismatch! Sector %d, byte %d. Exp %d, got %d", sector, i, pseudorand, inbuf[i]);
         if (++errors > 10) {
           LOG("aborting sector, too many errors");
           return;
@@ -97,14 +96,12 @@ void do_test(void *data) {
 
   LOG("performing sector write-read correctness test");
 
-  int num_special =
-      sizeof(special_test_sectors) / sizeof(special_test_sectors[0]);
+  int num_special = sizeof(special_test_sectors) / sizeof(special_test_sectors[0]);
   for (int i = 0; i < num_special; i++) {
     write_sectors(special_test_sectors[i], 1, false);
   }
   for (int i = 0; i < num_special; i++) {
-    read_and_verify_sectors(special_test_sectors[num_special - i - 1], 1,
-                            false);
+    read_and_verify_sectors(special_test_sectors[num_special - i - 1], 1, false);
   }
 
   // Run next part of the test twice: first for correctness validation, second
@@ -118,13 +115,11 @@ void do_test(void *data) {
     }
 
     write_start = precise_clock_time_us();
-    for (int sector = START_SECTOR; sector < START_SECTOR + NUM_SECTORS;
-         sector += MULTI) {
+    for (int sector = START_SECTOR; sector < START_SECTOR + NUM_SECTORS; sector += MULTI) {
       write_sectors(sector, MULTI, i);
     }
     read_start = precise_clock_time_us();
-    for (int sector = START_SECTOR; sector < START_SECTOR + NUM_SECTORS;
-         sector += MULTI) {
+    for (int sector = START_SECTOR; sector < START_SECTOR + NUM_SECTORS; sector += MULTI) {
       read_and_verify_sectors(sector, MULTI, i);
     }
     read_end = precise_clock_time_us();
@@ -133,13 +128,11 @@ void do_test(void *data) {
   int speed_test_bytes = NUM_SECTORS * SECTOR_SIZE;
   int write_time = read_start - write_start;
   int write_speed = speed_test_bytes / (write_time / 1000);
-  LOG("write speed: %d bytes in %d usec, %d kB/sec", speed_test_bytes,
-      write_time, write_speed);
+  LOG("write speed: %d bytes in %d usec, %d kB/sec", speed_test_bytes, write_time, write_speed);
 
   int read_time = read_end - read_start;
   int read_speed = speed_test_bytes / (read_time / 1000);
-  LOG("read speed: %d bytes in %d usec, %d kB/sec", speed_test_bytes, read_time,
-      read_speed);
+  LOG("read speed: %d bytes in %d usec, %d kB/sec", speed_test_bytes, read_time, read_speed);
 }
 
 int main() {

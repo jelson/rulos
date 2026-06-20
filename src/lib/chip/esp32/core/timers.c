@@ -80,8 +80,7 @@ static void IRAM_ATTR timer_isr(void *arg) {
   hal_end_atomic(0);
 }
 
-uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
-                            uint8_t timer_id) {
+uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data, uint8_t timer_id) {
   esp32_timer_t *const eu = get_timer(timer_id);
 
   // store RULOS-specific data
@@ -114,13 +113,11 @@ uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
   // enable the timer
   timer_start(eu->group, eu->index);
 
-  LOG("starting timer %d with a reload value of %d", timer_id,
-      (uint32_t)eu->alarm_value);
+  LOG("starting timer %d with a reload value of %d", timer_id, (uint32_t)eu->alarm_value);
 
   // return the exact timer period, in microseconds, accounting for
   // any rouding that might have happened
-  eu->us_per_period =
-      (eu->alarm_value * config.divider * 1000000) / getApbFrequency();
+  eu->us_per_period = (eu->alarm_value * config.divider * 1000000) / getApbFrequency();
   return eu->us_per_period;
 }
 

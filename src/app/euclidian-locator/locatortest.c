@@ -1,6 +1,6 @@
-//#define TIME_DEBUG
-//#define NO_ACCEL
-//#define NO_GYRO
+// #define TIME_DEBUG
+// #define NO_ACCEL
+// #define NO_GYRO
 #define NO_ULTRASOUND
 
 #include <avr/interrupt.h>
@@ -22,8 +22,8 @@
 
 #define SAMPLING_PERIOD 30000
 #define SCHED_QUANTUM   5000
-//#define SERIAL_BAUD_RATE 250000
-// Don't know how to get 250kbaud in Linux.
+// #define SERIAL_BAUD_RATE 250000
+//  Don't know how to get 250kbaud in Linux.
 #define SERIAL_BAUD_RATE 38400
 
 #include "core/hardware.h"
@@ -35,8 +35,7 @@ struct locatorAct;
 typedef struct locatorAct locatorAct_t;
 
 typedef void (*PeripheralSendCompleteFunc)(locatorAct_t *aa);
-typedef void (*PeripheralRecvCompleteFunc)(locatorAct_t *aa, char *data,
-                                           int len);
+typedef void (*PeripheralRecvCompleteFunc)(locatorAct_t *aa, char *data, int len);
 void sampleLocator(locatorAct_t *locatorAct);
 
 #ifndef NO_ULTRASOUND
@@ -144,8 +143,8 @@ void printTimeRecords(char *prefix) {
   uint8_t i;
 
   for (i = 0; i < numTimeRecords; i++) {
-    snprintf(locatorAct_g.UARTsendBuf, sizeof(locatorAct_g.UARTsendBuf) - 1,
-             "%s %d: %ld\r\n", prefix, i, timerecord[i]);
+    snprintf(locatorAct_g.UARTsendBuf, sizeof(locatorAct_g.UARTsendBuf) - 1, "%s %d: %ld\r\n",
+             prefix, i, timerecord[i]);
     emit(&locatorAct_g, locatorAct_g.UARTsendBuf);
   }
 }
@@ -158,12 +157,11 @@ void _peripheralSendComplete(void *user_data) {
   locatorAct->sendFunc(locatorAct);
 }
 
-void sendToPeripheral(locatorAct_t *locatorAct, uint8_t twiAddr,
-                      unsigned char *data, uint8_t len,
+void sendToPeripheral(locatorAct_t *locatorAct, uint8_t twiAddr, unsigned char *data, uint8_t len,
                       PeripheralSendCompleteFunc f) {
   locatorAct->sendFunc = f;
-  (locatorAct->twiState->send)(locatorAct->twiState, twiAddr, data, len,
-                               _peripheralSendComplete, locatorAct);
+  (locatorAct->twiState->send)(locatorAct->twiState, twiAddr, data, len, _peripheralSendComplete,
+                               locatorAct);
 }
 
 /*** receiving data from a locator peripheral, using the
@@ -179,12 +177,10 @@ void _readFromPeripheral2(locatorAct_t *locatorAct) {
   locatorAct->mrs->func = _locatorReadComplete;
   locatorAct->mrs->capacity = locatorAct->readLen;
   locatorAct->mrs->user_data = locatorAct;
-  hal_twi_start_master_read((TwiState *)locatorAct->twiState,
-                            locatorAct->twiAddr, locatorAct->mrs);
+  hal_twi_start_master_read((TwiState *)locatorAct->twiState, locatorAct->twiAddr, locatorAct->mrs);
 }
 
-void readFromPeripheral(locatorAct_t *locatorAct, uint8_t twiAddr,
-                        uint16_t baseAddr, int len,
+void readFromPeripheral(locatorAct_t *locatorAct, uint8_t twiAddr, uint16_t baseAddr, int len,
                         PeripheralRecvCompleteFunc f) {
   locatorAct->recvFunc = f;
   locatorAct->readLen = len;
@@ -192,8 +188,7 @@ void readFromPeripheral(locatorAct_t *locatorAct, uint8_t twiAddr,
 
   locatorAct->twiAddr = twiAddr;
   locatorAct->TWIsendBuf[0] = baseAddr;
-  sendToPeripheral(locatorAct, twiAddr, locatorAct->TWIsendBuf, 1,
-                   _readFromPeripheral2);
+  sendToPeripheral(locatorAct, twiAddr, locatorAct->TWIsendBuf, 1, _readFromPeripheral2);
 }
 
 ///////////// Ultrasound ////////////////////////////////////
@@ -210,12 +205,14 @@ void start_sampling(locatorAct_t *locatorAct, uint8_t topOrBot) {
 
   locatorAct->topOrBot = topOrBot;
 
-  if (topOrBot == US_TOP)
+  if (topOrBot == US_TOP) {
     adcChan = US_TOP_CHAN;
+  }
 #ifdef US_BOT_CHAN
 
-  else if (topOrBot == US_BOT)
+  else if (topOrBot == US_BOT) {
     adcChan = US_BOT_CHAN;
+  }
 #endif
   else {
     emit(locatorAct, "invalid channel sent to start_sampling");
@@ -253,23 +250,22 @@ void updateNoiseThresholds(usState_t *usState, locatorAct_t *locatorAct) {
 
   // in case it happens to be very not-noisy when we train, enforce
   // a minimum noise band
-  if (range < US_MIN_NOISE_RANGE)
+  if (range < US_MIN_NOISE_RANGE) {
     range = US_MIN_NOISE_RANGE;
+  }
 
   usState->threshMin = usState->noiseMin - (range / 2);
   usState->threshMax = usState->noiseMax + (range / 2);
 
-  if (serial_is_idle(
-          locatorAct)) {  // can't use wait_for_serial; in interrupt context!
+  if (serial_is_idle(locatorAct)) {  // can't use wait_for_serial; in interrupt context!
     snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf) - 1,
-             "^t;side=%d;l=%5d;h=%5d$\r\n", locatorAct->topOrBot,
-             usState->noiseMin, usState->noiseMax);
+             "^t;side=%d;l=%5d;h=%5d$\r\n", locatorAct->topOrBot, usState->noiseMin,
+             usState->noiseMax);
     emit(locatorAct, locatorAct->UARTsendBuf);
   }
 }
 
-void trainUltrasound(uint16_t adcval, usState_t *usState,
-                     locatorAct_t *locatorAct) {
+void trainUltrasound(uint16_t adcval, usState_t *usState, locatorAct_t *locatorAct) {
   // If we're in training mode, see if the current ADC value is
   // lower or higher than the previously computed noise threshold.
   if (usState->noiseMin == 0 && usState->noiseMax == 0) {
@@ -287,8 +283,7 @@ void trainUltrasound(uint16_t adcval, usState_t *usState,
   }
 }
 
-void detectChirp(uint16_t adcval, usState_t *usState,
-                 locatorAct_t *locatorAct) {
+void detectChirp(uint16_t adcval, usState_t *usState, locatorAct_t *locatorAct) {
   // See if the current ADC value is beyond the noise threshold.
   // If so, increase the run length.  If not, set runlength to 0 and return.
   if (adcval >= usState->threshMin && adcval <= usState->threshMax) {
@@ -307,8 +302,7 @@ void detectChirp(uint16_t adcval, usState_t *usState,
     if (locatorAct->rangingMode == 'r') {
       _delay_ms(US_CHIRP_RING_TIME_MS + 10);
       chirp(US_CHIRP_LEN_US);
-      _delay_ms(
-          US_CHIRP_RING_TIME_MS);  // make sure we don't reply to our own ping
+      _delay_ms(US_CHIRP_RING_TIME_MS);  // make sure we don't reply to our own ping
       if (serial_is_idle(locatorAct)) {  // can't use wait_for_serial; in
                                          // interrupt context!
         snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf) - 1,
@@ -343,12 +337,10 @@ ISR(ADC_vect) {
 
   if (locatorAct_g.trainingMode) {
     // Are we in training mode?
-    trainUltrasound(adcval, &locatorAct_g.usState[locatorAct_g.topOrBot],
-                    &locatorAct_g);
+    trainUltrasound(adcval, &locatorAct_g.usState[locatorAct_g.topOrBot], &locatorAct_g);
   } else {
     // Otherwise, detect
-    detectChirp(adcval, &locatorAct_g.usState[locatorAct_g.topOrBot],
-                &locatorAct_g);
+    detectChirp(adcval, &locatorAct_g.usState[locatorAct_g.topOrBot], &locatorAct_g);
   }
 }
 
@@ -419,8 +411,7 @@ void configLocator3(locatorAct_t *locatorAct) {
 
   locatorAct->TWIsendBuf[0] = 0x16;
   locatorAct->TWIsendBuf[1] = (GYRO_FS_SEL << 3) | (GYRO_DLPF_CFG);
-  sendToPeripheral(locatorAct, GYRO_ADDR, locatorAct->TWIsendBuf, 2,
-                   configLocator4);
+  sendToPeripheral(locatorAct, GYRO_ADDR, locatorAct->TWIsendBuf, 2, configLocator4);
 }
 
 // Configure the accelerometer by first reading config byte 0x14, then
@@ -429,10 +420,9 @@ void configLocator3(locatorAct_t *locatorAct) {
 // completes.
 void configLocator2(locatorAct_t *locatorAct, char *data, int len) {
   locatorAct->TWIsendBuf[0] = 0x14;
-  locatorAct->TWIsendBuf[1] = (data[0] & 0b11100000) | (ACCEL_RANGE_BITS << 3) |
-                              (ACCEL_SAMPLING_RATE_BITS);
-  sendToPeripheral(locatorAct, ACCEL_ADDR, locatorAct->TWIsendBuf, 2,
-                   configLocator3);
+  locatorAct->TWIsendBuf[1] =
+      (data[0] & 0b11100000) | (ACCEL_RANGE_BITS << 3) | (ACCEL_SAMPLING_RATE_BITS);
+  sendToPeripheral(locatorAct, ACCEL_ADDR, locatorAct->TWIsendBuf, 2, configLocator3);
 }
 
 void configLocator(locatorAct_t *locatorAct) {
@@ -474,11 +464,11 @@ void configLocator(locatorAct_t *locatorAct) {
 /*************************************/
 
 static inline int16_t convert_accel(char lsb, char msb) {
-  int16_t mag =
-      ((((int16_t)msb) & 0b01111111) << 2) | ((lsb & 0b11000000) >> 6);
+  int16_t mag = ((((int16_t)msb) & 0b01111111) << 2) | ((lsb & 0b11000000) >> 6);
 
-  if (msb & 0b10000000)
+  if (msb & 0b10000000) {
     mag = mag - 512;
+  }
 
   return mag;
 }
@@ -574,8 +564,8 @@ void sampleLocator(locatorAct_t *locatorAct) {
 #endif
 
 #ifdef TEST_TIME_ONLY
-  snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf) - 1,
-           "%d\r\n", locatorAct->debug);
+  snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf) - 1, "%d\r\n",
+           locatorAct->debug);
   emit(locatorAct, locatorAct->UARTsendBuf);
   return;
 #endif
@@ -611,8 +601,8 @@ void sampleLocator(locatorAct_t *locatorAct) {
   // If we were recently in 's' mode and sucessfully completed a
   // ranging trial, print the result
   if (locatorAct->chirpRTT) {
-    snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf) - 1,
-             "^d;t=%ld$\r\n", locatorAct->chirpRTT);
+    snprintf(locatorAct->UARTsendBuf, sizeof(locatorAct->UARTsendBuf) - 1, "^d;t=%ld$\r\n",
+             locatorAct->chirpRTT);
     locatorAct->chirpRTT = 0;
     emit(locatorAct, locatorAct->UARTsendBuf);
   }
@@ -642,15 +632,16 @@ int main() {
   // TODO if ever unrotting: connect process_serial_command to uart input
 
   if (strlen(FIRMWARE_ID) > ID_OFFSET) {
-    snprintf(locatorAct_g.UARTsendBuf, sizeof(locatorAct_g.UARTsendBuf) - 1,
-             "^i;%s\r\n", FIRMWARE_ID + ID_OFFSET);
+    snprintf(locatorAct_g.UARTsendBuf, sizeof(locatorAct_g.UARTsendBuf) - 1, "^i;%s\r\n",
+             FIRMWARE_ID + ID_OFFSET);
   } else {
-    snprintf(locatorAct_g.UARTsendBuf, sizeof(locatorAct_g.UARTsendBuf) - 1,
-             "^i;0$\r\n");
+    snprintf(locatorAct_g.UARTsendBuf, sizeof(locatorAct_g.UARTsendBuf) - 1, "^i;0$\r\n");
   }
 
 #ifdef TIME_DEBUG
-  for (uint8_t i = 0; i < 10; i++) recordTime(precise_clock_time_us());
+  for (uint8_t i = 0; i < 10; i++) {
+    recordTime(precise_clock_time_us());
+  }
   printTimeRecords("res");
 #endif
 

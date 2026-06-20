@@ -34,33 +34,40 @@ static void update(BoardIDAct_t *ba) {
   for (board = 0; board < NUM_LOCAL_BOARDS; board++) {
     switch (ba->stage) {
       case 0:
-        for (digit = 0; digit < NUM_DIGITS; digit++)
+        for (digit = 0; digit < NUM_DIGITS; digit++) {
           ba->b[board].buffer[digit] = ba->b_bitmap;
+        }
         break;
 
       case 1:
-        for (digit = 0; digit < NUM_DIGITS; digit++)
+        for (digit = 0; digit < NUM_DIGITS; digit++) {
           ba->b[board].buffer[digit] = ascii_to_bitmap(board + '0');
+        }
         break;
 
       case 2:
-        for (digit = 0; digit < NUM_DIGITS; digit++)
+        for (digit = 0; digit < NUM_DIGITS; digit++) {
           ba->b[board].buffer[digit] = ba->d_bitmap;
+        }
         break;
 
       case 3:
-        for (digit = 0; digit < NUM_DIGITS; digit++)
+        for (digit = 0; digit < NUM_DIGITS; digit++) {
           ba->b[board].buffer[digit] = ascii_to_bitmap(digit + '0');
+        }
         break;
 
       default:
-        for (digit = 0; digit < NUM_DIGITS; digit++)
+        for (digit = 0; digit < NUM_DIGITS; digit++) {
           ba->b[board].buffer[digit] = (1 << (11 - ba->stage));
+        }
     }
 
     board_buffer_draw(&ba->b[board]);
   }
-  if (++(ba->stage) == 12) ba->stage = 0;
+  if (++(ba->stage) == 12) {
+    ba->stage = 0;
+  }
 
   schedule_us(1000000, (ActivationFuncPtr)update, ba);
   return;

@@ -41,8 +41,7 @@ typedef struct s_remote_bbuf_send {
 void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network);
 
 // Inbound interface from callsite in board_buffer that delivers remote boards.
-void send_remote_bbuf(RemoteBBufSend *rbs, SSBitmap *bm, uint8_t index,
-                      uint8_t mask);
+void send_remote_bbuf(RemoteBBufSend *rbs, SSBitmap *bm, uint8_t index, uint8_t mask);
 
 #define REMOTE_BBUF_RING_SIZE    4
 #define REMOTE_BBUF_RING_NEXT(x) ((x + 1) % RING_SIZE)
@@ -50,8 +49,7 @@ void send_remote_bbuf(RemoteBBufSend *rbs, SSBitmap *bm, uint8_t index,
 #define RING_INVALID_INDEX (255)
 
 typedef struct s_remote_bbuf_recv {
-  uint8_t recv_ring_alloc[RECEIVE_RING_SIZE(REMOTE_BBUF_RING_SIZE,
-                                            sizeof(BBufMessage))];
+  uint8_t recv_ring_alloc[RECEIVE_RING_SIZE(REMOTE_BBUF_RING_SIZE, sizeof(BBufMessage))];
   AppReceiver app_receiver;
 } RemoteBBufRecv;
 

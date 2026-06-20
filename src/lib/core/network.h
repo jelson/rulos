@@ -34,12 +34,12 @@
 
 // We allocate num_receive_buffers of these things.
 typedef struct {
-  struct app_receiver_t* app_receiver;  // back pointer for access to user_data
+  struct app_receiver_t *app_receiver;  // back pointer for access to user_data
   uint8_t payload_len;
   uint8_t data[0];
 } MessageRecvBuffer;
 
-typedef void (*RecvCompleteFunc)(MessageRecvBuffer* msg);
+typedef void (*RecvCompleteFunc)(MessageRecvBuffer *msg);
 
 #define RECEIVE_BUFFER_SIZE(payload_capacity) (sizeof(MessageRecvBuffer) + payload_capacity)
 #define RECEIVE_RING_SIZE(num_receive_buffers, payload_capacity) \
@@ -50,21 +50,21 @@ typedef struct app_receiver_t {
   Port port;
   uint8_t payload_capacity;
   uint8_t num_receive_buffers;
-  void* user_data;  // pointer can be used for user functions
+  void *user_data;  // pointer can be used for user functions
 
   // message_recv_buffers should point to RECEIVE_RING_SIZE(...) bytes.
-  uint8_t* message_recv_buffers;
+  uint8_t *message_recv_buffers;
 } AppReceiver;
 
 struct s_send_slot;
-typedef void (*SendCompleteFunc)(struct s_send_slot* send_slot);
+typedef void (*SendCompleteFunc)(struct s_send_slot *send_slot);
 typedef struct s_send_slot {
   SendCompleteFunc func;
   Addr dest_addr;
   uint8_t payload_len;  // Size of application payload at msg->data
-  WireMessage* wire_msg;
+  WireMessage *wire_msg;
   bool sending;
-  void* user_data;  // pointer can be used for user functions
+  void *user_data;  // pointer can be used for user functions
 } SendSlot, *SendSlotPtr;
 
 #include "queue.mh"
@@ -72,7 +72,7 @@ typedef struct s_send_slot {
 QUEUE_DECLARE(SendSlotPtr)
 
 typedef struct {
-  AppReceiver* app_receivers[MAX_LISTENERS];
+  AppReceiver *app_receivers[MAX_LISTENERS];
   uint8_t sendQueue_storage[sizeof(SendSlotPtrQueue) + sizeof(SendSlotPtr) * SEND_QUEUE_SIZE];
   struct {
     MediaRecvSlot media_recv_slot;
@@ -80,16 +80,16 @@ typedef struct {
     uint8_t payload[NET_MAX_PAYLOAD_SIZE];
   } media_recv_alloc;
 
-  MediaStateIfc* media;
+  MediaStateIfc *media;
 } Network;
 
 // Public API
-void init_network(Network* net);
-void net_bind_media(Network* net, MediaStateIfc* media);
-void net_bind_receiver(Network* net, AppReceiver* appReceiver);
-void net_free_received_message_buffer(MessageRecvBuffer* msg);
-bool net_send_message(Network* net, SendSlot* sendSlot);
+void init_network(Network *net);
+void net_bind_media(Network *net, MediaStateIfc *media);
+void net_bind_receiver(Network *net, AppReceiver *appReceiver);
+void net_free_received_message_buffer(MessageRecvBuffer *msg);
+bool net_send_message(Network *net, SendSlot *sendSlot);
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_twi_network(Network* network, uint32_t speed_khz, Addr local_addr);
+void init_twi_network(Network *network, uint32_t speed_khz, Addr local_addr);

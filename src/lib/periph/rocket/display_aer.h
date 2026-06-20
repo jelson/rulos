@@ -40,5 +40,4 @@ typedef struct s_d_aer {
   decoration_ifc_t decoration_ifc;
 } DisplayAzimuthElevationRoll;
 
-void daer_init(DisplayAzimuthElevationRoll *daer, uint8_t board,
-               Time impulse_frequency_us);
+void daer_init(DisplayAzimuthElevationRoll *daer, uint8_t board, Time impulse_frequency_us);

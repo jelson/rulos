@@ -224,8 +224,7 @@ static void sim_audio_poll(void *data) {
     simAudioState->write_avail += rc;
   }
 
-  while (simAudioState->write_avail > 0 &&
-         ring_remove_avail(simAudioState->ring) > 0) {
+  while (simAudioState->write_avail > 0 && ring_remove_avail(simAudioState->ring) > 0) {
     uint8_t sample = ring_remove(simAudioState->ring);
     // LOG("sim_audio_poll removes sample %2x", sample);
     int wrote = write(simAudioState->audiofd, &sample, 1);
@@ -237,6 +236,8 @@ static void sim_audio_poll(void *data) {
   }
 }
 
-void hal_audio_fire_latch(void) {}
+void hal_audio_fire_latch(void) {
+}
 
-void hal_audio_shift_sample(uint8_t sample) {}
+void hal_audio_shift_sample(uint8_t sample) {
+}

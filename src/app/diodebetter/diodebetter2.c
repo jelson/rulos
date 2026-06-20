@@ -23,8 +23,8 @@
 #include "core/rulos.h"
 #include "stm32f3xx_ll_rcc.h"
 
-static void configure_pin_and_channel(TIM_HandleTypeDef *timerHandle,
-                                      uint32_t pin, uint32_t channel) {
+static void configure_pin_and_channel(TIM_HandleTypeDef *timerHandle, uint32_t pin,
+                                      uint32_t channel) {
   GPIO_InitTypeDef gpioStructure;
   gpioStructure.Mode = GPIO_MODE_AF_PP;
   gpioStructure.Alternate = GPIO_AF1_TIM2;
@@ -46,8 +46,7 @@ static void configure_pin_and_channel(TIM_HandleTypeDef *timerHandle,
   outputChannelInit.OCFastMode = TIM_OCFAST_DISABLE;
   outputChannelInit.OCIdleState = TIM_OCIDLESTATE_RESET;
   outputChannelInit.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-  if (HAL_TIM_PWM_ConfigChannel(timerHandle, &outputChannelInit, channel) !=
-      HAL_OK) {
+  if (HAL_TIM_PWM_ConfigChannel(timerHandle, &outputChannelInit, channel) != HAL_OK) {
     __builtin_trap();
   }
   if (HAL_TIM_PWM_Start(timerHandle, channel) != HAL_OK) {
@@ -135,8 +134,7 @@ void init_pwm_tim1test() {
   outputChannelInit.OCFastMode = TIM_OCFAST_DISABLE;
   outputChannelInit.OCIdleState = TIM_OCIDLESTATE_RESET;
   outputChannelInit.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-  if (HAL_TIM_PWM_ConfigChannel(&timerHandle, &outputChannelInit,
-                                TIM_CHANNEL_1) != HAL_OK) {
+  if (HAL_TIM_PWM_ConfigChannel(&timerHandle, &outputChannelInit, TIM_CHANNEL_1) != HAL_OK) {
     __builtin_trap();
   }
 

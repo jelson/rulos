@@ -23,8 +23,7 @@
 
 void dcompass_update_once(DCompassAct *act);
 void dcompass_update(void *data);
-UIEventDisposition dcompass_event_handler(UIEventHandler *raw_handler,
-                                          UIEvent evt);
+UIEventDisposition dcompass_event_handler(UIEventHandler *raw_handler, UIEvent evt);
 
 void dcompass_init(DCompassAct *act, uint8_t board, FocusManager *focus) {
   board_buffer_init(&act->bbuf DBG_BBUF_LABEL("compass"));
@@ -75,8 +74,7 @@ void dcompass_update_once(DCompassAct *act) {
   board_buffer_draw(&act->bbuf);
 }
 
-UIEventDisposition dcompass_event_handler(UIEventHandler *raw_handler,
-                                          UIEvent evt) {
+UIEventDisposition dcompass_event_handler(UIEventHandler *raw_handler, UIEvent evt) {
   DCompassAct *act = ((DCompassHandler *)raw_handler)->act;
   UIEventDisposition result = uied_accepted;
   switch (evt) {

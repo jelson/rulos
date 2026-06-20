@@ -23,8 +23,7 @@ void slowboot_update(SlowBoot *slowboot);
 #define SB_ANIM_INTERVAL 100000
 #define NO_SLOW_BOOT     0
 
-void init_slow_boot(SlowBoot *slowboot, ScreenBlanker *screenblanker,
-                    AudioClient *audioClient) {
+void init_slow_boot(SlowBoot *slowboot, ScreenBlanker *screenblanker, AudioClient *audioClient) {
 #if NO_SLOW_BOOT
   return;
 #endif
@@ -60,8 +59,7 @@ void slowboot_update(SlowBoot *slowboot) {
       }
       memset(slowboot->buffer[bi].buffer, 0, NUM_DIGITS);
       slowboot->buffer[bi].buffer[dist] = SSB_SEG_e | SSB_SEG_f | SSB_SEG_g;
-      slowboot->buffer[bi].buffer[NUM_DIGITS - 1 - dist] =
-          SSB_SEG_b | SSB_SEG_c | SSB_SEG_g;
+      slowboot->buffer[bi].buffer[NUM_DIGITS - 1 - dist] = SSB_SEG_b | SSB_SEG_c | SSB_SEG_g;
       int di;
       for (di = 0; di < dist; di++) {
         slowboot->buffer[bi].buffer[di] = 0xff;
@@ -80,8 +78,8 @@ void slowboot_update(SlowBoot *slowboot) {
   }
   step -= 2;
   if (step == 0) {
-    ac_skip_to_clip(slowboot->audioClient, AUDIO_STREAM_BURST_EFFECTS,
-                    sound_quindar_key_down, sound_silence);
+    ac_skip_to_clip(slowboot->audioClient, AUDIO_STREAM_BURST_EFFECTS, sound_quindar_key_down,
+                    sound_silence);
   }
   step /= 4;
   if (step < 5) {

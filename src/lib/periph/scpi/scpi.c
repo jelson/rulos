@@ -58,17 +58,19 @@ void scpi_clear_error(void) {
   strcpy(err_msg, "0,\"No error\"");
 }
 
-const char *scpi_match_kw(const char *s, const char *full,
-                          const char *short_) {
+const char *scpi_match_kw(const char *s, const char *full, const char *short_) {
   size_t lf = strlen(full);
   size_t ls = strlen(short_);
-  if (strncasecmp(s, full, lf) == 0) return s + lf;
-  if (strncasecmp(s, short_, ls) == 0) return s + ls;
+  if (strncasecmp(s, full, lf) == 0) {
+    return s + lf;
+  }
+  if (strncasecmp(s, short_, ls) == 0) {
+    return s + ls;
+  }
   return NULL;
 }
 
-const char *scpi_parse_channel_suffix(const char *s, int max_channel,
-                                      int *ch) {
+const char *scpi_parse_channel_suffix(const char *s, int max_channel, int *ch) {
   if (max_channel >= 1 && *s >= '0' && *s < ('0' + max_channel)) {
     *ch = *s - '0';
     return s + 1;
@@ -78,16 +80,26 @@ const char *scpi_parse_channel_suffix(const char *s, int max_channel,
 }
 
 bool scpi_parse_seconds_ps(const char *s, uint64_t *out) {
-  while (*s == ' ' || *s == '\t') s++;
-  if (*s == 0) return false;
-  if (*s == '+') s++;
-  if (*s == '-') return false;
+  while (*s == ' ' || *s == '\t') {
+    s++;
+  }
+  if (*s == 0) {
+    return false;
+  }
+  if (*s == '+') {
+    s++;
+  }
+  if (*s == '-') {
+    return false;
+  }
 
   uint64_t mant = 0;
   int frac_digits = 0;
   bool seen_digit = false;
   while (*s >= '0' && *s <= '9') {
-    if (mant > (UINT64_MAX - 9) / 10) return false;
+    if (mant > (UINT64_MAX - 9) / 10) {
+      return false;
+    }
     mant = mant * 10 + (*s - '0');
     seen_digit = true;
     s++;
@@ -104,31 +116,49 @@ bool scpi_parse_seconds_ps(const char *s, uint64_t *out) {
       s++;
     }
   }
-  if (!seen_digit) return false;
+  if (!seen_digit) {
+    return false;
+  }
 
   int exp = 0;
   if (*s == 'e' || *s == 'E') {
     s++;
     bool exp_neg = false;
-    if (*s == '+') s++;
-    else if (*s == '-') { exp_neg = true; s++; }
-    if (!(*s >= '0' && *s <= '9')) return false;
-    while (*s >= '0' && *s <= '9') {
-      exp = exp * 10 + (*s - '0');
-      if (exp > 100) return false;
+    if (*s == '+') {
+      s++;
+    } else if (*s == '-') {
+      exp_neg = true;
       s++;
     }
-    if (exp_neg) exp = -exp;
+    if (!(*s >= '0' && *s <= '9')) {
+      return false;
+    }
+    while (*s >= '0' && *s <= '9') {
+      exp = exp * 10 + (*s - '0');
+      if (exp > 100) {
+        return false;
+      }
+      s++;
+    }
+    if (exp_neg) {
+      exp = -exp;
+    }
   }
-  while (*s == ' ' || *s == '\t') s++;
-  if (*s != 0) return false;
+  while (*s == ' ' || *s == '\t') {
+    s++;
+  }
+  if (*s != 0) {
+    return false;
+  }
 
   // seconds -> picoseconds is *10^12; subtract the fractional digits already
   // absorbed into mant and add the explicit exponent.
   int net = 12 + exp - frac_digits;
   if (net >= 0) {
     for (int i = 0; i < net; i++) {
-      if (mant > UINT64_MAX / 10) return false;
+      if (mant > UINT64_MAX / 10) {
+        return false;
+      }
       mant *= 10;
     }
   } else {
@@ -141,29 +171,55 @@ bool scpi_parse_seconds_ps(const char *s, uint64_t *out) {
 }
 
 bool scpi_parse_uint(const char *s, uint32_t *out) {
-  while (*s == ' ' || *s == '\t') s++;
-  if (*s == 0) return false;
+  while (*s == ' ' || *s == '\t') {
+    s++;
+  }
+  if (*s == 0) {
+    return false;
+  }
   uint32_t v = 0;
   bool seen = false;
   while (*s >= '0' && *s <= '9') {
-    if (v > (UINT32_MAX - 9) / 10) return false;
+    if (v > (UINT32_MAX - 9) / 10) {
+      return false;
+    }
     v = v * 10 + (*s - '0');
     seen = true;
     s++;
   }
-  if (!seen) return false;
-  while (*s == ' ' || *s == '\t') s++;
-  if (*s != 0) return false;
+  if (!seen) {
+    return false;
+  }
+  while (*s == ' ' || *s == '\t') {
+    s++;
+  }
+  if (*s != 0) {
+    return false;
+  }
   *out = v;
   return true;
 }
 
 bool scpi_parse_bool(const char *s, bool *out) {
-  while (*s == ' ' || *s == '\t') s++;
-  if (strncasecmp(s, "ON", 2) == 0)  { *out = true;  return true; }
-  if (strncasecmp(s, "OFF", 3) == 0) { *out = false; return true; }
-  if (s[0] == '1') { *out = true;  return true; }
-  if (s[0] == '0') { *out = false; return true; }
+  while (*s == ' ' || *s == '\t') {
+    s++;
+  }
+  if (strncasecmp(s, "ON", 2) == 0) {
+    *out = true;
+    return true;
+  }
+  if (strncasecmp(s, "OFF", 3) == 0) {
+    *out = false;
+    return true;
+  }
+  if (s[0] == '1') {
+    *out = true;
+    return true;
+  }
+  if (s[0] == '0') {
+    *out = false;
+    return true;
+  }
   return false;
 }
 
@@ -177,7 +233,9 @@ static bool try_standard(const char *line) {
     return true;
   }
   if (strncasecmp(line, "*RST", 4) == 0) {
-    if (cfg.on_reset) cfg.on_reset();
+    if (cfg.on_reset) {
+      cfg.on_reset();
+    }
     scpi_clear_error();
     return true;
   }
@@ -188,7 +246,9 @@ static bool try_standard(const char *line) {
 
   const char *p = scpi_match_kw(line, "SYSTEM", "SYST");
   if (p && (*p == ':' || *p == ' ')) {
-    if (*p == ':') p++;
+    if (*p == ':') {
+      p++;
+    }
     if (scpi_match_kw(p, "ERROR?", "ERR?")) {
       scpi_print(err_msg);
       scpi_clear_error();
@@ -199,11 +259,19 @@ static bool try_standard(const char *line) {
 }
 
 static void handle_line(char *line) {
-  while (*line == ' ' || *line == '\t') line++;
-  if (*line == 0) return;
+  while (*line == ' ' || *line == '\t') {
+    line++;
+  }
+  if (*line == 0) {
+    return;
+  }
 
-  if (try_standard(line)) return;
-  if (cfg.on_line && cfg.on_line(line)) return;
+  if (try_standard(line)) {
+    return;
+  }
+  if (cfg.on_line && cfg.on_line(line)) {
+    return;
+  }
 
   scpi_set_error("-100,\"Command error\"");
 }
@@ -211,9 +279,13 @@ static void handle_line(char *line) {
 // ---- USB CDC plumbing ------------------------------------------------------
 
 void scpi_print(const char *line) {
-  if (!usbd_cdc_tx_ready(&scpi_usb_cdc)) return;
+  if (!usbd_cdc_tx_ready(&scpi_usb_cdc)) {
+    return;
+  }
   size_t n = strlen(line);
-  if (n + 1 > SCPI_TX_BUFLEN) n = SCPI_TX_BUFLEN - 1;
+  if (n + 1 > SCPI_TX_BUFLEN) {
+    n = SCPI_TX_BUFLEN - 1;
+  }
   memcpy(tx_buf, line, n);
   tx_buf[n++] = '\n';
   usbd_cdc_write(&scpi_usb_cdc, tx_buf, n);
@@ -240,15 +312,16 @@ static void on_line(UartState_t *uart, void *user_data, char *line) {
   handle_line(line);
 }
 
-static void on_usb_rx(usbd_cdc_state_t *cdc, void *user_data,
-                      const uint8_t *data, uint32_t len) {
+static void on_usb_rx(usbd_cdc_state_t *cdc, void *user_data, const uint8_t *data, uint32_t len) {
   recent_activity = true;
   linereader_feed(&linereader, (const char *)data, len);
 }
 
 static void on_usb_tx_complete(usbd_cdc_state_t *cdc, void *user_data) {
   recent_activity = true;
-  if (cfg.on_usb_tx_complete) cfg.on_usb_tx_complete();
+  if (cfg.on_usb_tx_complete) {
+    cfg.on_usb_tx_complete();
+  }
 }
 
 void scpi_init(const scpi_config_t *config) {
@@ -264,12 +337,11 @@ void scpi_init(const scpi_config_t *config) {
   usbd_cdc_get_serial(serial);
   if (cfg.version) {
     snprintf(idn_buf, sizeof(idn_buf),
-             USBD_MANUFACTURER_STRING "," USBD_PRODUCT_STRING ",%s,%s-"
-             STRINGIFY(GIT_COMMIT), serial, cfg.version);
+             USBD_MANUFACTURER_STRING "," USBD_PRODUCT_STRING ",%s,%s-" STRINGIFY(GIT_COMMIT),
+             serial, cfg.version);
   } else {
     snprintf(idn_buf, sizeof(idn_buf),
-             USBD_MANUFACTURER_STRING "," USBD_PRODUCT_STRING ",%s,"
-             STRINGIFY(GIT_COMMIT), serial);
+             USBD_MANUFACTURER_STRING "," USBD_PRODUCT_STRING ",%s," STRINGIFY(GIT_COMMIT), serial);
   }
 
   linereader_init_unbound(&linereader, /*uart=*/NULL, on_line, NULL);

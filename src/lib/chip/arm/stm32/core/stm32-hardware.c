@@ -298,7 +298,7 @@ static void SystemClock_Config(void) {
 #define RULOS_PLLN HSI_PLLN
 #endif
 
-static void config_hsi_pll(RCC_OscInitTypeDef* osc) {
+static void config_hsi_pll(RCC_OscInitTypeDef *osc) {
   osc->OscillatorType = RCC_OSCILLATORTYPE_HSI;
   osc->HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   osc->HSIState = RCC_HSI_ON;
@@ -375,7 +375,7 @@ static void SystemClock_Config(void) {
  * for 250 MHz at VOS0 per RM0481. FLASH_PROGRAMMING_DELAY_2 sets
  * WRHIGHFREQ to the 168+ MHz band.
  */
-static void config_hsi_pll_h5(RCC_OscInitTypeDef* osc) {
+static void config_hsi_pll_h5(RCC_OscInitTypeDef *osc) {
   osc->OscillatorType = RCC_OSCILLATORTYPE_HSI;
   osc->HSIState = RCC_HSI_ON;
   osc->HSIDiv = RCC_HSI_DIV1;
@@ -577,7 +577,7 @@ uint32_t arm_hal_get_clock_rate() {
   return HAL_RCC_GetSysClockFreq();
 }
 
-static void* g_timer_data = NULL;
+static void *g_timer_data = NULL;
 static clock_handler_t g_timer_handler = NULL;
 
 void SysTick_Handler() {
@@ -593,7 +593,7 @@ static uint32_t g_systick_k_num;
 static uint32_t g_systick_load_scaled;
 
 void arm_hal_start_clock_us(uint32_t ticks_per_interrupt, uint32_t us_per_period,
-                            clock_handler_t handler, void* data) {
+                            clock_handler_t handler, void *data) {
   g_timer_handler = handler;
   g_timer_data = data;
 

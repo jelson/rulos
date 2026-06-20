@@ -9,9 +9,8 @@ typedef struct {
   UartState_t uart;
   LineReader_t linereader;
   ActivationFuncPtr data_ready_cb_func;
-  void* data_ready_cb_data;
+  void *data_ready_cb_data;
 } GPSInput;
 
-void gpsinput_init(GPSInput* gpsi, uint8_t uart_id,
-                   ActivationFuncPtr data_ready_cb_func,
-                   void* data_ready_cb_data);
+void gpsinput_init(GPSInput *gpsi, uint8_t uart_id, ActivationFuncPtr data_ready_cb_func,
+                   void *data_ready_cb_data);

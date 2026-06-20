@@ -54,8 +54,7 @@ char recent_uart_buf[40];
 static hal_uart_receive_cb uart_recv_cb = NULL;
 static void *uart_user_data = NULL;
 
-void hal_uart_init(uint8_t uart_id, uint32_t baud,
-                   void *user_data /* for both rx and tx upcalls */,
+void hal_uart_init(uint8_t uart_id, uint32_t baud, void *user_data /* for both rx and tx upcalls */,
                    size_t *max_tx_len /* OUT */) {
   *max_tx_len = 3;
   uart_user_data = user_data;
@@ -63,8 +62,7 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
   memset(recent_uart_buf, 0, sizeof(recent_uart_buf));
 }
 
-void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf,
-                       size_t buflen) {
+void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf, size_t buflen) {
   uart_recv_cb = rx_cb;
 }
 
@@ -118,9 +116,8 @@ void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb) {
   buf[i] = '\0';
 
   uint64_t normalized_time_usec = curr_time_usec() - init_time;
-  fprintf(logfp, "%" PRIu64 ".%06" PRIu64 " UART %d: %s",
-          normalized_time_usec / 1000000, normalized_time_usec % 1000000,
-          uart_id, buf);
+  fprintf(logfp, "%" PRIu64 ".%06" PRIu64 " UART %d: %s", normalized_time_usec / 1000000,
+          normalized_time_usec % 1000000, uart_id, buf);
   fflush(logfp);
 }
 
@@ -136,13 +133,13 @@ static void uart_simulator_input(int c) {
 
   // display on screen
   if (strlen(recent_uart_buf) == sizeof(recent_uart_buf) - 1) {
-    memmove(&recent_uart_buf[0], &recent_uart_buf[1],
-            sizeof(recent_uart_buf) - 1);
+    memmove(&recent_uart_buf[0], &recent_uart_buf[1], sizeof(recent_uart_buf) - 1);
   }
-  if (isprint(c))
+  if (isprint(c)) {
     sprintf(recent_uart_buf + strlen(recent_uart_buf), "%c", c);
-  else
+  } else {
     strcat(recent_uart_buf, ".");
+  }
 
   draw_uart_input_window();
 

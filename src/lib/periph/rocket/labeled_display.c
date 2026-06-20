@@ -21,11 +21,9 @@
 #include "core/util.h"
 #include "periph/rocket/rocket.h"
 
-UIEventDisposition labeled_display_event_handler(UIEventHandler *raw_handler,
-                                                 UIEvent evt);
+UIEventDisposition labeled_display_event_handler(UIEventHandler *raw_handler, UIEvent evt);
 
-void labeled_display_init(LabeledDisplayHandler *ldh, int b0,
-                          FocusManager *focus) {
+void labeled_display_init(LabeledDisplayHandler *ldh, int b0, FocusManager *focus) {
   ldh->func = labeled_display_event_handler;
 
   dscrlmsg_init(&ldh->msgAct, 0, " clock  ", b0);
@@ -37,8 +35,7 @@ void labeled_display_init(LabeledDisplayHandler *ldh, int b0,
   focus_register(focus, (UIEventHandler *)ldh, rr, "clock");
 }
 
-UIEventDisposition labeled_display_event_handler(UIEventHandler *raw_handler,
-                                                 UIEvent evt) {
+UIEventDisposition labeled_display_event_handler(UIEventHandler *raw_handler, UIEvent evt) {
   // most-trivial handler (note no cursor; sorry.)
   switch (evt) {
     case uie_escape:

@@ -47,8 +47,7 @@ static bool initted = false;
 static int keystroke_handler_count;
 static sim_keystroke_handler keystroke_handlers[MAX_HANDLERS];
 
-void sim_maybe_init_and_register_keystroke_handler(
-    sim_keystroke_handler handler) {
+void sim_maybe_init_and_register_keystroke_handler(sim_keystroke_handler handler) {
   if (!initted) {
     sim_register_clock_handler(sim_curses_poll, NULL);
     init_curses();  // Need curses to receive input.
@@ -58,8 +57,7 @@ void sim_maybe_init_and_register_keystroke_handler(
   assert(keystroke_handler_count <= MAX_HANDLERS);
 }
 
-void sim_install_modal_handler(sim_special_input_handler_t handler,
-                               sim_input_handler_stop_t stop) {
+void sim_install_modal_handler(sim_special_input_handler_t handler, sim_input_handler_stop_t stop) {
   sim_special_input_handler = handler;
   sim_input_handler_stop = stop;
 }
@@ -81,7 +79,9 @@ static void terminate_sim(void) {
 static void sim_curses_poll(void *data) {
   int c = getch();
 
-  if (c == ERR) return;
+  if (c == ERR) {
+    return;
+  }
 
   LOG("poll_kb got char: %c (%x)", c, c);
 

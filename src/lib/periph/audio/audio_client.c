@@ -33,13 +33,12 @@ void init_audio_client(AudioClient *ac, Network *network) {
   ac->mcm_send_slot.wire_msg = (WireMessage *)ac->mcm_send_msg_alloc;
   ac->mcm_send_slot.sending = FALSE;
 
-  for (int stream_idx = 0; stream_idx < AUDIO_NUM_STREAMS; stream_idx+=1) {
+  for (int stream_idx = 0; stream_idx < AUDIO_NUM_STREAMS; stream_idx += 1) {
     ac->volume_for_stream[stream_idx] = VOL_DEFAULT;
   }
 }
 
-bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx,
-                     SoundEffectId cur_effect_id,
+bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx, SoundEffectId cur_effect_id,
                      SoundEffectId loop_effect_id) {
   if (ac->arm_send_slot.sending) {
     return FALSE;
@@ -48,8 +47,7 @@ bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx,
   ac->arm_send_slot.dest_addr = AUDIO_ADDR;
   ac->arm_send_slot.wire_msg->dest_port = AUDIO_PORT;
   ac->arm_send_slot.payload_len = sizeof(AudioRequestMessage);
-  AudioRequestMessage *arm =
-      (AudioRequestMessage *)&ac->arm_send_slot.wire_msg->data;
+  AudioRequestMessage *arm = (AudioRequestMessage *)&ac->arm_send_slot.wire_msg->data;
   arm->stream_idx = stream_idx;
   arm->skip = TRUE;
   arm->skip_effect_id = cur_effect_id;
@@ -71,8 +69,7 @@ bool ac_change_volume(AudioClient *ac, uint8_t stream_idx, uint8_t volume) {
   ac->avm_send_slot.dest_addr = AUDIO_ADDR;
   ac->avm_send_slot.wire_msg->dest_port = SET_VOLUME_PORT;
   ac->avm_send_slot.payload_len = sizeof(AudioVolumeMessage);
-  AudioVolumeMessage *avm =
-      (AudioVolumeMessage *)&ac->avm_send_slot.wire_msg->data;
+  AudioVolumeMessage *avm = (AudioVolumeMessage *)&ac->avm_send_slot.wire_msg->data;
   avm->stream_idx = stream_idx;
   avm->volume = volume;
   net_send_message(ac->network, &ac->avm_send_slot);
@@ -88,8 +85,7 @@ bool ac_send_music_control(AudioClient *ac, int8_t advance) {
   ac->mcm_send_slot.dest_addr = AUDIO_ADDR;
   ac->mcm_send_slot.wire_msg->dest_port = MUSIC_CONTROL_PORT;
   ac->mcm_send_slot.payload_len = sizeof(MusicControlMessage);
-  MusicControlMessage *mcm =
-      (MusicControlMessage *)&ac->mcm_send_slot.wire_msg->data;
+  MusicControlMessage *mcm = (MusicControlMessage *)&ac->mcm_send_slot.wire_msg->data;
   mcm->advance = advance;
   mcm->volume = ac->volume_for_stream[AUDIO_STREAM_MUSIC];
   net_send_message(ac->network, &ac->mcm_send_slot);

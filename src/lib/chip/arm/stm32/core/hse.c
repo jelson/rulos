@@ -51,7 +51,7 @@ void HAL_RCC_CSSCallback(void) {
   g_rulos_hse_failed = true;
 }
 
-void rulos_hse_try_pll(RCC_OscInitTypeDef* osc, rulos_hsi_pll_config_fn hsi_fallback) {
+void rulos_hse_try_pll(RCC_OscInitTypeDef *osc, rulos_hsi_pll_config_fn hsi_fallback) {
   if (HAL_RCC_OscConfig(osc) == HAL_OK) {
     // HSE locked. Enable CSS so a mid-stream HSE failure fires NMI.
     HAL_RCC_EnableCSS();

@@ -20,8 +20,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_cc_local_calc(CCLocalCalc *cclc,
-                        FetchCalcDecorationValuesIfc *decoration_ifc) {
+void init_cc_local_calc(CCLocalCalc *cclc, FetchCalcDecorationValuesIfc *decoration_ifc) {
   calculator_init(&cclc->calc, 12 /*and 13*/, NULL, decoration_ifc);
   cclc->uie_handler = (UIEventHandler *)&cclc->calc.focus;
   cclc->name = "Computer";
@@ -30,8 +29,7 @@ void init_cc_local_calc(CCLocalCalc *cclc,
 //////////////////////////////////////////////////////////////////////////////
 
 void init_cc_remote_calc(CCRemoteCalc *ccrc, Network *network) {
-  init_remote_keyboard_send(&ccrc->rks, network, ROCKET1_ADDR,
-                            REMOTE_SUBFOCUS_PORT0);
+  init_remote_keyboard_send(&ccrc->rks, network, ROCKET1_ADDR, REMOTE_SUBFOCUS_PORT0);
   init_remote_uie(&ccrc->ruie, &ccrc->rks.forwardLocalStrokes);
   ccrc->uie_handler = (UIEventHandler *)&ccrc->ruie;
   ccrc->name = "Computer";
@@ -42,17 +40,15 @@ void init_cc_remote_calc(CCRemoteCalc *ccrc, Network *network) {
 void init_cc_launch(CCLaunch *ccl, Screen4 *s4, Booster *booster, HPAM *hpam,
                     ThrusterState_t *thrusterState, AudioClient *audioClient,
                     ScreenBlanker *screenblanker) {
-  launch_init(&ccl->launch, s4, booster, hpam, thrusterState, audioClient,
-              screenblanker);
+  launch_init(&ccl->launch, s4, booster, hpam, thrusterState, audioClient, screenblanker);
   ccl->uie_handler = (UIEventHandler *)&ccl->launch;
   ccl->name = "Launch";
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_cc_dock(CCDock *ccd, Screen4 *s4, uint8_t auxboard0,
-                  AudioClient *audioClient, Booster *booster,
-                  JoystickState_t *joystick) {
+void init_cc_dock(CCDock *ccd, Screen4 *s4, uint8_t auxboard0, AudioClient *audioClient,
+                  Booster *booster, JoystickState_t *joystick) {
   ddock_init(&ccd->dock, s4, auxboard0, audioClient, booster, joystick);
   ccd->uie_handler = (UIEventHandler *)&ccd->dock.handler;
   ccd->name = "dock";
@@ -76,8 +72,8 @@ void init_cc_snake(CCSnake *ccs, Screen4 *s4, AudioClient *audioClient) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_cc_disco(CCDisco *ccp, AudioClient *audioClient,
-                   ScreenBlanker *screenblanker, IdleAct *idle, Network* network) {
+void init_cc_disco(CCDisco *ccp, AudioClient *audioClient, ScreenBlanker *screenblanker,
+                   IdleAct *idle, Network *network) {
   disco_init(&ccp->disco, audioClient, screenblanker, idle, network);
   ccp->uie_handler = (UIEventHandler *)&ccp->disco.handler;
   ccp->name = "disco";
@@ -89,13 +85,11 @@ UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt);
 void cp_inject(struct s_direct_injector *di, char k);
 void cp_paint(ControlPanel *cp);
 
-void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
-                        Network *network, HPAM *hpam, AudioClient *audioClient,
-                        IdleAct *idle, ScreenBlanker *screenblanker,
-                        JoystickState_t *joystick,
+void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0, Network *network,
+                        HPAM *hpam, AudioClient *audioClient, IdleAct *idle,
+                        ScreenBlanker *screenblanker, JoystickState_t *joystick,
                         ThrusterState_t *thrusterState, Keystroke vol_up_key,
-                        Keystroke vol_down_key,
-                        FetchCalcDecorationValuesIfc *decoration_ifc) {
+                        Keystroke vol_down_key, FetchCalcDecorationValuesIfc *decoration_ifc) {
   cp->handler_func = (UIEventHandlerFunc)cp_uie_handler;
 
   init_screen4(&cp->s4, board0);
@@ -116,12 +110,10 @@ void init_control_panel(ControlPanel *cp, uint8_t board0, uint8_t aux_board0,
 #endif
 
   cp->children[cp->child_count++] = (ControlChild *)&cp->ccl;
-  init_cc_launch(&cp->ccl, &cp->s4, &cp->booster, hpam, thrusterState,
-                 audioClient, screenblanker);
+  init_cc_launch(&cp->ccl, &cp->s4, &cp->booster, hpam, thrusterState, audioClient, screenblanker);
 
   cp->children[cp->child_count++] = (ControlChild *)&cp->ccdock;
-  init_cc_dock(&cp->ccdock, &cp->s4, aux_board0, audioClient, &cp->booster,
-               joystick);
+  init_cc_dock(&cp->ccdock, &cp->s4, aux_board0, audioClient, &cp->booster, joystick);
 
   cp->children[cp->child_count++] = (ControlChild *)&cp->ccpong;
   init_cc_pong(&cp->ccpong, &cp->s4, audioClient);
@@ -155,8 +147,8 @@ void cp_inject(struct s_direct_injector *di, char k) {
 UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt) {
   UIEventDisposition result = uied_accepted;
 
-  if (KeystrokeCmp(KeystrokeCtor(evt), cp->vol_up_key)
-      || KeystrokeCmp(KeystrokeCtor(evt), cp->vol_down_key)) {
+  if (KeystrokeCmp(KeystrokeCtor(evt), cp->vol_up_key) ||
+      KeystrokeCmp(KeystrokeCtor(evt), cp->vol_down_key)) {
     // steal these events for volume control
     (cp->volume_control.injector.iii.func)(&cp->volume_control.injector.iii, KeystrokeCtor(evt));
     return result;
@@ -181,8 +173,7 @@ UIEventDisposition cp_uie_handler(ControlPanel *cp, UIEvent evt) {
         break;
       }
       case uie_left: {
-        cp->selected_child =
-            (cp->selected_child + cp->child_count - 1) % cp->child_count;
+        cp->selected_child = (cp->selected_child + cp->child_count - 1) % cp->child_count;
         break;
       }
       case uie_select: {

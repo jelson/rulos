@@ -20,8 +20,7 @@
 
 #include "periph/rocket/rocket.h"
 
-uint8_t dfp_draw(DecimalFloatingPoint *dfp, SSBitmap *bm, uint8_t len,
-                 uint8_t show_decimal) {
+uint8_t dfp_draw(DecimalFloatingPoint *dfp, SSBitmap *bm, uint8_t len, uint8_t show_decimal) {
   uint8_t width = dfp->neg_exponent + 1;
   uint8_t mantissa_width = 0;
   uint32_t mant_copy = dfp->mantissa;
@@ -39,8 +38,7 @@ uint8_t dfp_draw(DecimalFloatingPoint *dfp, SSBitmap *bm, uint8_t len,
       bm[len - 1 - d] = d < width ? SEVSEG_0 : 0;
     }
     // now draw in the mantissa digits
-    for (d = 0, mant_copy = dfp->mantissa; mant_copy > 0;
-         d++, mant_copy = mant_copy / 10) {
+    for (d = 0, mant_copy = dfp->mantissa; mant_copy > 0; d++, mant_copy = mant_copy / 10) {
       bm[len - 1 - d] = ascii_to_bitmap('0' + (mant_copy % 10));
     }
     assert(d <= width);
@@ -52,17 +50,15 @@ uint8_t dfp_draw(DecimalFloatingPoint *dfp, SSBitmap *bm, uint8_t len,
   return width;
 }
 
-UIEventDisposition numeric_input_handler(UIEventHandler *raw_handler,
-                                         UIEvent evt);
+UIEventDisposition numeric_input_handler(UIEventHandler *raw_handler, UIEvent evt);
 void ni_update_once(NumericInputAct *act);
 void ni_start_input(NumericInputAct *act);
 void ni_accept_input(NumericInputAct *act);
 void ni_cancel_input(NumericInputAct *act);
 void ni_add_digit(NumericInputAct *act, uint8_t digit);
 
-void numeric_input_init(NumericInputAct *act, RowRegion region,
-                        UIEventHandler *notify, FocusManager *fa,
-                        const char *label) {
+void numeric_input_init(NumericInputAct *act, RowRegion region, UIEventHandler *notify,
+                        FocusManager *fa, const char *label) {
   act->region = region;
   act->handler.func = numeric_input_handler;
   act->handler.act = act;
@@ -84,8 +80,8 @@ void ni_update_once(NumericInputAct *act) {
   if (act->msg != NULL) {
     ascii_to_bitmap_str(act->region.bbuf->buffer + act->region.x, 4, act->msg);
   } else {
-    dfp_draw(&act->cur_value, act->region.bbuf->buffer + act->region.x,
-             act->region.xlen, act->decimal_present);
+    dfp_draw(&act->cur_value, act->region.bbuf->buffer + act->region.x, act->region.xlen,
+             act->decimal_present);
   }
   board_buffer_draw(act->region.bbuf);
 }
@@ -96,8 +92,7 @@ void ni_start_input(NumericInputAct *act) {
   act->cur_value.mantissa = 0;
   act->cur_value.neg_exponent = 0;
 
-  RectRegion rr = {&act->region.bbuf, 1,
-                   (uint8_t)(act->region.x + act->region.xlen - 1), 1};
+  RectRegion rr = {&act->region.bbuf, 1, (uint8_t)(act->region.x + act->region.xlen - 1), 1};
   cursor_show(&act->cursor, rr);
   act->decimal_present = FALSE;
 
@@ -139,8 +134,7 @@ void ni_add_digit(NumericInputAct *act, uint8_t digit) {
   ni_update_once(act);
 }
 
-UIEventDisposition numeric_input_handler(UIEventHandler *raw_handler,
-                                         UIEvent evt) {
+UIEventDisposition numeric_input_handler(UIEventHandler *raw_handler, UIEvent evt) {
   NumericInputAct *act = ((NumericInputHandler *)raw_handler)->act;
   UIEventDisposition result = uied_accepted;
   switch (evt) {
@@ -175,8 +169,7 @@ UIEventDisposition numeric_input_handler(UIEventHandler *raw_handler,
   return result;
 }
 
-void numeric_input_set_value(NumericInputAct *act,
-                             DecimalFloatingPoint new_value) {
+void numeric_input_set_value(NumericInputAct *act, DecimalFloatingPoint new_value) {
   act->msg = NULL;
   act->cur_value = new_value;
   ni_update_once(act);

@@ -86,8 +86,7 @@ static void end_xmit(TwiState *const twi) {
 }
 
 static inline bool sr_is_valid_packet(MediaRecvSlot *slaveRecvSlot) {
-  return slaveRecvSlot->packet_len > 0 &&
-         slaveRecvSlot->packet_len <= slaveRecvSlot->capacity;
+  return slaveRecvSlot->packet_len > 0 && slaveRecvSlot->packet_len <= slaveRecvSlot->capacity;
 }
 
 static inline void sr_deliver(MediaRecvSlot *slaveRecvSlot) {
@@ -102,9 +101,9 @@ static inline void mark_packet_invalid(MediaRecvSlot *recvSlot) {
 }
 
 static void mr_maybe_dont_ack(TwiState *const twi) {
-  if (twi->masterRecvSlot &&
-      twi->masterRecvLen == twi->masterRecvSlot->capacity - 1)
+  if (twi->masterRecvSlot && twi->masterRecvLen == twi->masterRecvSlot->capacity - 1) {
     twi->dont_ack = TRUE;
+  }
 }
 
 static void mr_deliver(TwiState *const twi) {
@@ -277,8 +276,7 @@ static void twi_update(TwiState *const twi, uint8_t status) {
     case TW_MR_DATA_ACK:
     case TW_MR_DATA_NACK:
       // received a byte -- that we might have acked, or not acked
-      if (masterRecvSlot == NULL ||
-          masterRecvSlot->packet_len >= twi->masterRecvSlot->capacity) {
+      if (masterRecvSlot == NULL || masterRecvSlot->packet_len >= twi->masterRecvSlot->capacity) {
         mark_packet_invalid(masterRecvSlot);
       } else {
         // store next byte
@@ -307,13 +305,14 @@ static void twi_update(TwiState *const twi, uint8_t status) {
   twi_set_control_register(twi, _BV(TWINT));
 }
 
-static void hal_twi_send(MediaStateIfc *media, Addr dest_addr, const void *data,
-                         uint8_t len, MediaSendDoneFunc sendDoneCB,
-                         void *sendDoneCBData);
+static void hal_twi_send(MediaStateIfc *media, Addr dest_addr, const void *data, uint8_t len,
+                         MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
 
 static TwiState g_twi;
 
-ISR(TWI_vect) { twi_update(&g_twi, TW_STATUS); }
+ISR(TWI_vect) {
+  twi_update(&g_twi, TW_STATUS);
+}
 
 MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
                             MediaRecvSlot *const slaveRecvSlot) {
@@ -359,9 +358,8 @@ MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
 }
 
 // Send a packet in master-transmitter mode.
-static void hal_twi_send(MediaStateIfc *media, Addr dest_addr, const void *data,
-                         uint8_t len, MediaSendDoneFunc sendDoneCB,
-                         void *sendDoneCBData) {
+static void hal_twi_send(MediaStateIfc *media, Addr dest_addr, const void *data, uint8_t len,
+                         MediaSendDoneFunc sendDoneCB, void *sendDoneCBData) {
   TwiState *twi = (TwiState *)media;
   assert(twi->initted == TWI_MAGIC);
 
@@ -383,8 +381,7 @@ static void hal_twi_send(MediaStateIfc *media, Addr dest_addr, const void *data,
 }
 
 // Read a packet in master-receiver mode.
-void hal_twi_start_master_read(TwiState *twi, Addr addr,
-                               MediaRecvSlot *masterRecvSlot) {
+void hal_twi_start_master_read(TwiState *twi, Addr addr, MediaRecvSlot *masterRecvSlot) {
   assert(twi->initted == TWI_MAGIC);
   assert(masterRecvSlot != NULL);
 

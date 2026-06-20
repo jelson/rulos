@@ -199,12 +199,12 @@ static const uint16_t hrtim_min_per[6] = {0x0060, 0x0030, 0x0018, 0x000C, 0x0006
 // output channel is paired with a sibling channel to form a Combined-PWM pulse; the sibling's own
 // output is never enabled.
 typedef struct {
-  GPIO_TypeDef* gpio;     // GPIOA or GPIOC
+  GPIO_TypeDef *gpio;     // GPIOA or GPIOC
   uint32_t ll_pin;        // LL_GPIO_PIN_n
   uint8_t hrtim_af;       // per-pin HRTIM AF (AF13, except PC8 = AF3)
   uint32_t hrtim_timer;   // LL_HRTIM_TIMER_A/B/E/F
   uint32_t hrtim_output;  // LL_HRTIM_OUTPUT_Txy
-  TIM_TypeDef* gp_timer;  // TIM1/TIM2/TIM3/TIM8
+  TIM_TypeDef *gp_timer;  // TIM1/TIM2/TIM3/TIM8
   uint32_t gp_out_ch;     // LL_TIM_CHANNEL_CHn (the routed output)
   uint32_t gp_sib_ch;     // LL_TIM_CHANNEL_CHn (sibling, internal, for the 2nd edge)
   uint8_t gp_af;          // per-pin GP-timer AF
@@ -352,7 +352,7 @@ static bool g_burst_active;
 // ---- Small helpers ---------------------------------------------------------
 
 static void set_pin_af(int ch, uint8_t af) {
-  const channel_hw_t* hw = &channel_hw[ch];
+  const channel_hw_t *hw = &channel_hw[ch];
   if (hw->ll_pin <= LL_GPIO_PIN_7) {
     LL_GPIO_SetAFPin_0_7(hw->gpio, hw->ll_pin, af);
   } else {
@@ -365,14 +365,14 @@ static void set_pin_af(int ch, uint8_t af) {
 }
 
 static void drive_pin_low(int ch) {
-  const channel_hw_t* hw = &channel_hw[ch];
+  const channel_hw_t *hw = &channel_hw[ch];
   LL_GPIO_ResetOutputPin(hw->gpio, hw->ll_pin);
   LL_GPIO_SetPinMode(hw->gpio, hw->ll_pin, LL_GPIO_MODE_OUTPUT);
   LL_GPIO_SetPinOutputType(hw->gpio, hw->ll_pin, LL_GPIO_OUTPUT_PUSHPULL);
 }
 
 // Set a GP timer's compare register by channel mask (LL splits these per channel number).
-static void gp_set_compare(TIM_TypeDef* t, uint32_t ll_channel, uint32_t value) {
+static void gp_set_compare(TIM_TypeDef *t, uint32_t ll_channel, uint32_t value) {
   switch (ll_channel) {
     case LL_TIM_CHANNEL_CH1:
       LL_TIM_OC_SetCompareCH1(t, value);
@@ -393,7 +393,7 @@ static void gp_set_compare(TIM_TypeDef* t, uint32_t ll_channel, uint32_t value) 
 
 // Pick the finest CKPSC whose period fits the 16-bit HRTIM period register. Caller has already
 // established period_ps <= HRTIM_MAX_PERIOD_PS.
-static bool select_ckpsc(uint64_t period_ps, uint8_t* out_ckpsc, uint32_t* out_per) {
+static bool select_ckpsc(uint64_t period_ps, uint8_t *out_ckpsc, uint32_t *out_per) {
   for (uint8_t k = 0; k <= 5; k++) {
     uint64_t tick_ps = HRTIM_FINEST_TICK_PS << k;
     uint64_t per = period_ps / tick_ps;
@@ -411,7 +411,7 @@ static bool select_ckpsc(uint64_t period_ps, uint8_t* out_ckpsc, uint32_t* out_p
 // master period so the timer phase-locks to the others. burst => the output is gated by the burst
 // mode controller and left disabled here (the repetition task enables it per burst).
 static void config_hrtim_channel(int ch, uint8_t ckpsc, uint32_t per, bool sync, bool burst) {
-  const channel_hw_t* hw = &channel_hw[ch];
+  const channel_hw_t *hw = &channel_hw[ch];
   const uint32_t timer = hw->hrtim_timer;
   const uint64_t tick_ps = HRTIM_FINEST_TICK_PS << ckpsc;
   const uint32_t min_t = hrtim_min_per[ckpsc];
@@ -468,8 +468,8 @@ static void config_hrtim_channel(int ch, uint8_t ckpsc, uint32_t per, bool sync,
 // Pick the smallest prescaler whose period fits in GP_MAX_PERIOD_PS worth of 16-bit-counter ticks
 // (uniform across channels). out_psc is the PSC register value (divisor - 1); out_arr is the ARR
 // value (period in prescaled ticks - 1). Computed directly, no scan.
-static bool select_gp_psc(int ch, uint64_t period_ps, uint32_t* out_psc, uint32_t* out_arr,
-                          uint64_t* out_tick_ps) {
+static bool select_gp_psc(int ch, uint64_t period_ps, uint32_t *out_psc, uint32_t *out_arr,
+                          uint64_t *out_tick_ps) {
   // div = ceil(period_ps / (GP_TICK_PS * (GP_ARR16_MAX + 1))): the fewest prescaled ticks need
   // (GP_ARR16_MAX + 1) of them at most.
   const uint64_t span = GP_TICK_PS * (GP_ARR16_MAX + 1);
@@ -496,9 +496,9 @@ static bool select_gp_psc(int ch, uint64_t period_ps, uint32_t* out_psc, uint32_
 // the others slave-reset off it when sync, else free-run. Split out from the output stage so the
 // master timebase can run even when its own channel (ch1) is off. Returns ARR + tick via out
 // params; false if the period doesn't fit.
-static bool config_gp_timebase(int ch, uint64_t period_ps, bool sync, uint32_t* out_arr,
-                               uint64_t* out_tick_ps) {
-  TIM_TypeDef* t = channel_hw[ch].gp_timer;
+static bool config_gp_timebase(int ch, uint64_t period_ps, bool sync, uint32_t *out_arr,
+                               uint64_t *out_tick_ps) {
+  TIM_TypeDef *t = channel_hw[ch].gp_timer;
   uint32_t psc, arr;
   uint64_t tick_ps;
   if (!select_gp_psc(ch, period_ps, &psc, &arr, &tick_ps)) {
@@ -525,8 +525,8 @@ static bool config_gp_timebase(int ch, uint64_t period_ps, bool sync, uint32_t* 
 // 0..CCR, CCR = delay+width); the AND is high only in [delay, delay+width]. burst leaves the
 // output channel disabled (the burst gating enables it on a period boundary).
 static void config_gp_output(int ch, uint32_t arr, uint64_t tick_ps, bool burst) {
-  const channel_hw_t* hw = &channel_hw[ch];
-  TIM_TypeDef* t = hw->gp_timer;
+  const channel_hw_t *hw = &channel_hw[ch];
+  TIM_TypeDef *t = hw->gp_timer;
   uint32_t delay_t = (uint32_t)(chan[ch].delay_ps / tick_ps);
   uint32_t width_t = (uint32_t)(chan[ch].width_ps / tick_ps);
   if (width_t < 1) {
@@ -582,7 +582,7 @@ static uint32_t burst_idle_ticks(uint64_t period_ps, uint32_t ncyc) {
 // Pick prescaler + ARR for the repetition timer (TIM5, 32-bit) to count one burst-repeat interval.
 // Smallest prescaler that fits the 32-bit counter, for the finest cadence step. rep_ps is already
 // validated into [frame + 50 ms, 60 s], so it always fits (div 1 reaches ~34 s, div 2 ~69 s).
-static void select_rep_timer(uint64_t rep_ps, uint32_t* out_psc, uint32_t* out_arr) {
+static void select_rep_timer(uint64_t rep_ps, uint32_t *out_psc, uint32_t *out_arr) {
   const uint64_t span = GP_TICK_PS * ((uint64_t)GP_ARR32_MAX + 1);  // reach at div 1
   uint64_t div = (rep_ps + span - 1) / span;
   if (div < 1) {
@@ -614,7 +614,7 @@ static void burst_arm_frame(void) {
     // count is exact.
     g_gp_burst_remaining = chan[g_gp_burst_count_ch].burst_ncyc;
     g_gp_burst_arming = true;
-    TIM_TypeDef* ct = channel_hw[g_gp_burst_count_ch].gp_timer;
+    TIM_TypeDef *ct = channel_hw[g_gp_burst_count_ch].gp_timer;
     LL_TIM_ClearFlag_UPDATE(ct);
     LL_TIM_EnableIT_UPDATE(ct);
   }
@@ -637,7 +637,7 @@ void TIM5_IRQHandler(void) {
 static void gp_burst_set_outputs(uint32_t mask, bool on) {
   for (int c = 0; c < NUM_CHANNELS; c++) {
     if (mask & (1u << c)) {
-      const channel_hw_t* hw = &channel_hw[c];
+      const channel_hw_t *hw = &channel_hw[c];
       if (on) {
         LL_TIM_CC_EnableChannel(hw->gp_timer, hw->gp_out_ch);
       } else {
@@ -657,7 +657,7 @@ void HRTIM1_Master_IRQHandler(void) {
   }
 }
 
-static int gp_ch_for_timer(TIM_TypeDef* t) {
+static int gp_ch_for_timer(TIM_TypeDef *t) {
   for (int ch = 0; ch < NUM_CHANNELS; ch++) {
     if (channel_hw[ch].gp_timer == t) {
       return ch;
@@ -674,7 +674,7 @@ static int gp_ch_for_timer(TIM_TypeDef* t) {
 //      ncyc updates later it closes the window. The repetition timer (TIM5) re-arms the next frame.
 // A channel is never both (per-pulse requires not-bursting), so the two paths don't fight over the
 // timer's update interrupt.
-static void gp_update(TIM_TypeDef* t) {
+static void gp_update(TIM_TypeDef *t) {
   if (!LL_TIM_IsActiveFlag_UPDATE(t)) {
     return;
   }
@@ -836,7 +836,7 @@ static void apply_all(void) {
                                           LL_HRTIM_TIMER_E | LL_HRTIM_TIMER_F);
   for (int ch = 0; ch < NUM_CHANNELS; ch++) {
     LL_HRTIM_DisableOutput(HRTIM1, channel_hw[ch].hrtim_output);
-    TIM_TypeDef* t = channel_hw[ch].gp_timer;
+    TIM_TypeDef *t = channel_hw[ch].gp_timer;
     LL_TIM_DisableIT_UPDATE(t);
     LL_TIM_DisableCounter(t);
     LL_TIM_CC_DisableChannel(t, channel_hw[ch].gp_out_ch);
@@ -995,7 +995,7 @@ static void apply_all(void) {
 
 // ---- SCPI hooks (called from scpi.c) ---------------------------------------
 
-static const char* err_for_rc(int rc) {
+static const char *err_for_rc(int rc) {
   switch (rc) {
     case 0:
       return NULL;
@@ -1030,31 +1030,31 @@ static void set_domain_period(int ch, uint64_t ps) {
   }
 }
 
-const char* pulsegen_set_state(int ch, bool on) {
+const char *pulsegen_set_state(int ch, bool on) {
   chan[ch].on = on;
   apply_all();
   return err_for_rc(validate(ch));
 }
 
-const char* pulsegen_set_period_ps(int ch, uint64_t ps) {
+const char *pulsegen_set_period_ps(int ch, uint64_t ps) {
   set_domain_period(ch, ps);
   apply_all();
   return err_for_rc(validate(ch));
 }
 
-const char* pulsegen_set_width_ps(int ch, uint64_t ps) {
+const char *pulsegen_set_width_ps(int ch, uint64_t ps) {
   chan[ch].width_ps = ps;
   apply_all();
   return err_for_rc(validate(ch));
 }
 
-const char* pulsegen_set_delay_ps(int ch, uint64_t ps) {
+const char *pulsegen_set_delay_ps(int ch, uint64_t ps) {
   chan[ch].delay_ps = ps;
   apply_all();
   return err_for_rc(validate(ch));
 }
 
-const char* pulsegen_set_burst_state(int ch, bool on) {
+const char *pulsegen_set_burst_state(int ch, bool on) {
   for (int i = 0; i < NUM_CHANNELS; i++) {
     if (same_domain(ch, i)) {
       // Disabling a live burst also disables the domain's outputs: the domain period IS the
@@ -1070,7 +1070,7 @@ const char* pulsegen_set_burst_state(int ch, bool on) {
   return err_for_rc(validate(ch));
 }
 
-const char* pulsegen_set_burst_ncyc(int ch, uint32_t ncyc) {
+const char *pulsegen_set_burst_ncyc(int ch, uint32_t ncyc) {
   for (int i = 0; i < NUM_CHANNELS; i++) {
     if (same_domain(ch, i)) {
       chan[i].burst_ncyc = ncyc;
@@ -1080,7 +1080,7 @@ const char* pulsegen_set_burst_ncyc(int ch, uint32_t ncyc) {
   return err_for_rc(validate(ch));
 }
 
-const char* pulsegen_set_burst_period_ps(int ch, uint64_t ps) {
+const char *pulsegen_set_burst_period_ps(int ch, uint64_t ps) {
   for (int i = 0; i < NUM_CHANNELS; i++) {
     if (same_domain(ch, i)) {
       chan[i].burst_rep_ps = ps;
@@ -1100,7 +1100,7 @@ uint64_t pulsegen_get_burst_period_ps(int ch) {
   return chan[ch].burst_rep_ps;
 }
 
-const char* pulsegen_set_mode(bool sync) {
+const char *pulsegen_set_mode(bool sync) {
   g_mode = sync ? MODE_SYNC : MODE_ASYNC;
   if (sync) {
     for (int i = 1; i < NUM_CHANNELS; i++) {
@@ -1114,7 +1114,7 @@ const char* pulsegen_set_mode(bool sync) {
   return NULL;
 }
 
-const char* pulsegen_mode_str(void) {
+const char *pulsegen_mode_str(void) {
   return (g_mode == MODE_SYNC) ? "SYNC" : "ASYNC";
 }
 
@@ -1157,7 +1157,7 @@ static void update_leds(void) {
 
 // ---- Periodic task ---------------------------------------------------------
 
-static void periodic_task(void* data) {
+static void periodic_task(void *data) {
   schedule_us(100000, periodic_task, NULL);
 
   if (g_rulos_hse_failed) {

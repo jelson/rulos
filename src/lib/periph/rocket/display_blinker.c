@@ -42,15 +42,13 @@ void blinker_update_once(DBlinker *blinker) {
   // LOG("blinker->cur_line = %d", blinker->cur_line);
   memset(&blinker->bbuf.buffer, 0, NUM_DIGITS);
   if (blinker->msg != NULL && blinker->msg[blinker->cur_line] != NULL) {
-    ascii_to_bitmap_str(blinker->bbuf.buffer, NUM_DIGITS,
-                        blinker->msg[blinker->cur_line]);
+    ascii_to_bitmap_str(blinker->bbuf.buffer, NUM_DIGITS, blinker->msg[blinker->cur_line]);
   }
   board_buffer_draw(&blinker->bbuf);
 }
 
 void blinker_update(DBlinker *blinker) {
-  schedule_us(blinker->period * 1000, (ActivationFuncPtr)blinker_update,
-              blinker);
+  schedule_us(blinker->period * 1000, (ActivationFuncPtr)blinker_update, blinker);
   blinker_update_once(blinker);
 
   blinker->cur_line += 1;

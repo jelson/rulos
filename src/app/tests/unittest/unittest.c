@@ -16,11 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <inttypes.h>
+
 #include "core/queue.h"
 #include "core/rulos.h"
 #include "periph/ring_buffer/rocket_ring_buffer.h"
-
-#include <inttypes.h>
 
 QUEUE_DECLARE(short)
 
@@ -107,11 +107,11 @@ void test_ring_buffer() {
 }
 
 void test_later_than_case(Time a, Time b) {
-  LOG("\ntesting that %"PRIu32" is later than %"PRIu32, a, b);
+  LOG("\ntesting that %" PRIu32 " is later than %" PRIu32, a, b);
   if (a > b) {
-    LOG("a-b=%"PRIu32, a-b);
+    LOG("a-b=%" PRIu32, a - b);
   } else {
-    LOG("b-a=%"PRIu32, b-a);
+    LOG("b-a=%" PRIu32, b - a);
   }
   LOG("a-b later than: %d", later_than(a, b));
   assert(later_than(a, b));
@@ -126,18 +126,17 @@ void test_later_than() {
 }
 
 void test_delta_case(Time a, Time b, int32_t result) {
-  LOG("\ntesting that delta from %"PRIu32" to %"PRIu32" is %"PRIi32,
-      a, b, result);
+  LOG("\ntesting that delta from %" PRIu32 " to %" PRIu32 " is %" PRIi32, a, b, result);
   volatile int32_t actual_result = time_delta(a, b);
-  LOG("...got %"PRIi32, actual_result);
+  LOG("...got %" PRIi32, actual_result);
   assert(actual_result == result);
 }
-  
+
 void test_delta() {
-  test_delta_case(0, 0,  0);
-  test_delta_case(3000000000, 3000000000,  0);
-  test_delta_case(0, 1,  1);
-  test_delta_case(1, 0,  -1);
+  test_delta_case(0, 0, 0);
+  test_delta_case(3000000000, 3000000000, 0);
+  test_delta_case(0, 1, 1);
+  test_delta_case(1, 0, -1);
   test_delta_case(0xfffffffe, 0xffffffff, 1);
   test_delta_case(0xffffffff, 0xfffffffe, -1);
   test_delta_case(0xffffffff, 0, 1);

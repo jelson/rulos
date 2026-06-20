@@ -37,7 +37,7 @@
 #define debug(x...)
 #endif
 
-static const char* const morse_alphabet[] = {
+static const char *const morse_alphabet[] = {
     ".-",    // a
     "-...",  // b
     "-.-.",  // c
@@ -68,25 +68,25 @@ static const char* const morse_alphabet[] = {
 
 typedef struct {
   // inputs
-  const char* send_string;
+  const char *send_string;
   uint32_t dot_time_us;
-  MorseOutputToggleFunc* toggle_func;
-  MorseOutputDoneFunc* done_func;
+  MorseOutputToggleFunc *toggle_func;
+  MorseOutputDoneFunc *done_func;
 
   // dynamically kept state
-  const char* curr_letter;
+  const char *curr_letter;
   bool is_keyed;
 } morse_state_t;
 
 morse_state_t morse_state;
 
-static void morse_go(morse_state_t* morse_state);
+static void morse_go(morse_state_t *morse_state);
 
-static void morse_wait(morse_state_t* morse_state, uint8_t dot_times) {
+static void morse_wait(morse_state_t *morse_state, uint8_t dot_times) {
   schedule_us(dot_times * morse_state->dot_time_us, (ActivationFuncPtr)morse_go, morse_state);
 }
 
-static void morse_go(morse_state_t* morse_state) {
+static void morse_go(morse_state_t *morse_state) {
   // If we're currently keyed (i.e., mid-symbol), unkey, and determine what
   // comes next.
   if (morse_state->is_keyed) {
@@ -155,8 +155,8 @@ static void morse_go(morse_state_t* morse_state) {
   }
 }
 
-void emit_morse(const char* send_string, const uint32_t dot_time_us,
-                MorseOutputToggleFunc* toggle_func, MorseOutputDoneFunc* done_func) {
+void emit_morse(const char *send_string, const uint32_t dot_time_us,
+                MorseOutputToggleFunc *toggle_func, MorseOutputDoneFunc *done_func) {
   morse_state.send_string = send_string;
   morse_state.dot_time_us = dot_time_us;
   morse_state.toggle_func = toggle_func;

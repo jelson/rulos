@@ -37,6 +37,5 @@ typedef struct {
   InputInjectorIfc *escape_ifi;
 } CascadedInputInjector;
 
-void init_cascaded_input_injector(CascadedInputInjector *cii,
-                                  UIEventHandler *uie_handler,
+void init_cascaded_input_injector(CascadedInputInjector *cii, UIEventHandler *uie_handler,
                                   InputInjectorIfc *escape_ifi);

@@ -106,14 +106,14 @@ void start_frequency(waveformAct_t *ta, float frequency) {
 
   uint16_t num_samples = SAMPLE_RATE_HZ / frequency;
 
-  if (num_samples > MAX_SAMPLES)
+  if (num_samples > MAX_SAMPLES) {
     return;
+  }
 
   uint16_t i;
-  for (i = 0; i < num_samples; i++)
-    ta->waveform[i] =
-        128 +
-        (128.0 * sin(i * frequency * 2 * 3.14159 / (1.0 * SAMPLE_RATE_HZ)));
+  for (i = 0; i < num_samples; i++) {
+    ta->waveform[i] = 128 + (128.0 * sin(i * frequency * 2 * 3.14159 / (1.0 * SAMPLE_RATE_HZ)));
+  }
   ta->num_samples = num_samples;
   ta->sample_idx = 0;
 }
@@ -137,8 +137,9 @@ void change_frequency(changeFrequencyAct_t *cfa) {
                    -1};
 
   cfa->i++;
-  if (scale[cfa->i] == -1)
+  if (scale[cfa->i] == -1) {
     cfa->i = 0;
+  }
 
   start_frequency(cfa->wa, scale[cfa->i]);
   schedule_us(NOTE_LEN, (ActivationFuncPtr)change_frequency, cfa);
@@ -163,8 +164,7 @@ int main() {
 #ifdef USE_SCHEDULER_FOR_WAVEFORM_PLAYBACK
   schedule_now((Activation *)&wa);
 #else
-  hal_start_clock_us(USEC_PER_SAMPLE, (clock_handler_t)emit_waveform, &wa,
-                     TIMER2);
+  hal_start_clock_us(USEC_PER_SAMPLE, (clock_handler_t)emit_waveform, &wa, TIMER2);
 #endif
 
 #if 0

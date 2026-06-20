@@ -7,7 +7,7 @@
 
 #include "core/hardware.h"
 
-#define SERVO_PERIOD 20000
+#define SERVO_PERIOD       20000
 #define SERVO_PULSE_MIN_US 350
 #define SERVO_PULSE_MAX_US 2000
 
@@ -32,10 +32,11 @@ void servo_init() {
 
 void servo_set_pwm(uint16_t desired_position) {
   OCR1A =
-      SERVO_PULSE_MIN_US +
-      (desired_position / (65535 / (SERVO_PULSE_MAX_US - SERVO_PULSE_MIN_US)));
+      SERVO_PULSE_MIN_US + (desired_position / (65535 / (SERVO_PULSE_MAX_US - SERVO_PULSE_MIN_US)));
 }
 #else
-void servo_init() {}
-void servo_set_pwm(uint16_t desired_position) {}
+void servo_init() {
+}
+void servo_set_pwm(uint16_t desired_position) {
+}
 #endif  // SIM

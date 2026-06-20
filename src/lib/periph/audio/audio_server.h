@@ -21,8 +21,8 @@
 #include "core/network.h"
 #include "core/network_ports.h"
 #include "periph/audio/audio_request_message.h"
-#include "periph/audio/music_metadata_message.h"
 #include "periph/audio/audio_streamer.h"
+#include "periph/audio/music_metadata_message.h"
 #include "periph/audio/sound.h"
 #include "periph/fatfs/ff.h"
 
@@ -41,16 +41,14 @@ typedef struct s_music_metadata_sender {
 } MusicMetadataSender;
 
 void init_music_metadata_sender(MusicMetadataSender *mms, Network *network);
-MusicMetadataMessage* music_metadata_message_buffer(MusicMetadataSender *mms);
+MusicMetadataMessage *music_metadata_message_buffer(MusicMetadataSender *mms);
 
 typedef struct s_audio_server {
-  uint8_t
-      arm_recv_ring_alloc[RECEIVE_RING_SIZE(1, sizeof(AudioRequestMessage))];
+  uint8_t arm_recv_ring_alloc[RECEIVE_RING_SIZE(1, sizeof(AudioRequestMessage))];
   AppReceiver arm_app_receiver;
   uint8_t avm_recv_ring_alloc[RECEIVE_RING_SIZE(1, sizeof(AudioVolumeMessage))];
   AppReceiver avm_app_receiver;
-  uint8_t
-      mcm_recv_ring_alloc[RECEIVE_RING_SIZE(1, sizeof(MusicControlMessage))];
+  uint8_t mcm_recv_ring_alloc[RECEIVE_RING_SIZE(1, sizeof(MusicControlMessage))];
   AppReceiver mcm_app_receiver;
 
   AudioStreamer audio_streamer;

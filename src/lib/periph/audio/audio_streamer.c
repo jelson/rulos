@@ -41,8 +41,8 @@ void init_audio_streamer(AudioStreamer *as) {
   memset(as, 0, sizeof(*as));
 
   // Set up the i2s driver.
-  as->i2s = i2s_init(SAMPLE_BUF_COUNT, 50000, as, fill_buffer_cb, audio_done_cb,
-                     as->i2s_storage, sizeof(as->i2s_storage));
+  as->i2s = i2s_init(SAMPLE_BUF_COUNT, 50000, as, fill_buffer_cb, audio_done_cb, as->i2s_storage,
+                     sizeof(as->i2s_storage));
 
   as->fp_valid = false;
   as->playing = false;
@@ -58,8 +58,7 @@ static void fill_buffer_cb(void *user_data, int16_t *buffer_to_fill) {
     return;
   }
   UINT bytes_read;
-  int retval =
-      f_read(&as->fp, buffer_to_fill, SAMPLE_BUF_COUNT * 2, &bytes_read);
+  int retval = f_read(&as->fp, buffer_to_fill, SAMPLE_BUF_COUNT * 2, &bytes_read);
   if (retval != FR_OK) {
     LOG("read error reading fp: %d", retval);
     i2s_buf_filled(as->i2s, buffer_to_fill, 0);
@@ -101,8 +100,8 @@ static void audio_done_cb(void *user_data) {
   schedule_now(as->client_done_cb, as->client_done_data);
 }
 
-bool as_play(AudioStreamer *as, const char *pathname,
-             ActivationFuncPtr client_done_cb, void *client_done_data) {
+bool as_play(AudioStreamer *as, const char *pathname, ActivationFuncPtr client_done_cb,
+             void *client_done_data) {
   as->client_done_cb = client_done_cb;
   as->client_done_data = client_done_data;
 

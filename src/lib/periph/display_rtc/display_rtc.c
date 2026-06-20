@@ -42,8 +42,7 @@ void drtc_update(DRTCAct *act) {
 }
 
 void drtc_update_once(DRTCAct *act) {
-  int32_t mission_clock_ms =
-      time_delta(act->base_time, clock_time_us()) / 1000;
+  int32_t mission_clock_ms = time_delta(act->base_time, clock_time_us()) / 1000;
 
   char buf[16], *p = buf;
   p += int_to_string2(p, 8, 3, mission_clock_ms / 10);

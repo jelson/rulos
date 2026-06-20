@@ -29,7 +29,7 @@ void idle_display_init(IdleDisplayAct *act, DScrollMsgAct *scrollAct) {
 
 void idle_display_update(IdleDisplayAct *act) {
   strcpy(act->msg, "busy ");
-  int busy = 0; // TODO: reimplement cpu business metric
+  int busy = 0;  // TODO: reimplement cpu business metric
   int d = int_to_string2(act->msg + 5, 2, 0, busy);
   strcpy(act->msg + 5 + d, "%");
   dscrlmsg_set_msg(act->scrollAct, act->msg);

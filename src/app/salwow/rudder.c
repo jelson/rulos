@@ -18,10 +18,9 @@
 void rudder_set_angle(RudderState *rudder, int8_t position) {
   rudder->desired_position = position;
 
-  OCR1A =
-      RUDDER_SERVO_MIN_US + (((uint16_t)position - RUDDER_API_MIN) *
-                             ((RUDDER_SERVO_MAX_US - RUDDER_SERVO_MIN_US + 1) /
-                              (uint16_t)(RUDDER_API_MAX - RUDDER_API_MIN + 1)));
+  OCR1A = RUDDER_SERVO_MIN_US + (((uint16_t)position - RUDDER_API_MIN) *
+                                 ((RUDDER_SERVO_MAX_US - RUDDER_SERVO_MIN_US + 1) /
+                                  (uint16_t)(RUDDER_API_MAX - RUDDER_API_MIN + 1)));
 }
 
 #define RUDDER_TEST_PERIOD_US 20000

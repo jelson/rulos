@@ -33,8 +33,8 @@ void hpam_update(HPAM *hpam);
 #define HPAM_DIGIT_0 0
 #define HPAM_DIGIT_1 4
 
-static void hpam_init_port(HPAM *hpam, HPAMIndex idx, uint8_t rest_time_secs,
-                           uint8_t board, uint8_t digit, uint8_t segment) {
+static void hpam_init_port(HPAM *hpam, HPAMIndex idx, uint8_t rest_time_secs, uint8_t board,
+                           uint8_t digit, uint8_t segment) {
   hpam->hpam_ports[idx].status = FALSE;
   hpam->hpam_ports[idx].rest_time_secs = rest_time_secs;
   hpam->hpam_ports[idx].board = board;
@@ -47,25 +47,20 @@ void init_hpam(HPAM *hpam, uint8_t board0, ThrusterUpdate *thrusterUpdates) {
   hpam_init_port(hpam, HPAM_HOBBS, REST_NONE, board0, HPAM_DIGIT_0, 0);
   hpam_init_port(hpam, HPAM_RESERVED, REST_NONE, board0, HPAM_DIGIT_0, 1);
   // HPAM 0 slot 2
-  hpam_init_port(hpam, HPAM_LIGHTING_FLICKER, REST_NONE, board0, HPAM_DIGIT_0,
-                 2);
+  hpam_init_port(hpam, HPAM_LIGHTING_FLICKER, REST_NONE, board0, HPAM_DIGIT_0, 2);
   // HPAM 0 slot 1
   hpam_init_port(hpam, HPAM_FIVE_VOLTS, REST_NONE, board0, HPAM_DIGIT_0, 7);
   // HPAM 0 slot 3
-  hpam_init_port(hpam, HPAM_THRUSTER_FRONTLEFT, REST_TIME_SECONDS, board0,
-                 HPAM_DIGIT_0, 4);
+  hpam_init_port(hpam, HPAM_THRUSTER_FRONTLEFT, REST_TIME_SECONDS, board0, HPAM_DIGIT_0, 4);
   // HPAM 1 slot 3
   // cable "thruster2"
-  hpam_init_port(hpam, HPAM_THRUSTER_FRONTRIGHT, REST_TIME_SECONDS, board0,
-                 HPAM_DIGIT_0, 5);
+  hpam_init_port(hpam, HPAM_THRUSTER_FRONTRIGHT, REST_TIME_SECONDS, board0, HPAM_DIGIT_0, 5);
   // HPAM 1 slot 2
   // calbe "thruster1"
-  hpam_init_port(hpam, HPAM_THRUSTER_REAR, REST_TIME_SECONDS, board0,
-                 HPAM_DIGIT_0, 6);
+  hpam_init_port(hpam, HPAM_THRUSTER_REAR, REST_TIME_SECONDS, board0, HPAM_DIGIT_0, 6);
   // HPAM 1 slot 1
   // cable "thruster0"
-  hpam_init_port(hpam, HPAM_BOOSTER, REST_TIME_SECONDS, board0, HPAM_DIGIT_0,
-                 3);
+  hpam_init_port(hpam, HPAM_BOOSTER, REST_TIME_SECONDS, board0, HPAM_DIGIT_0, 3);
   // HPAM 1 slot 3
   hpam->thrusterPayload.thruster_bits = 0;
   hpam->thrusterUpdates = thrusterUpdates;
@@ -96,8 +91,7 @@ void hpam_update(HPAM *hpam) {
 
       port->resting = TRUE;
       // 33% duty cycle: rest expires two timeouts from now
-      port->expire_time =
-          clock_time_us() + 2 * ((Time)port->rest_time_secs * 1000000);
+      port->expire_time = clock_time_us() + 2 * ((Time)port->rest_time_secs * 1000000);
       LOG("RESTING HPAM idx %d", idx);
     }
     if (port->resting && later_than(clock_time_us(), port->expire_time)) {
@@ -123,8 +117,7 @@ void hpam_set_port(HPAM *hpam, HPAMIndex idx, bool status) {
 
   // drive the HPAM through the LED latch
   SSBitmap mask = (1 << port->segment);
-  hpam->bbuf.buffer[port->digit] =
-      (hpam->bbuf.buffer[port->digit] & ~mask) | (status ? 0 : mask);
+  hpam->bbuf.buffer[port->digit] = (hpam->bbuf.buffer[port->digit] & ~mask) | (status ? 0 : mask);
   //	LOG("idx %d status %d digit now %x",
   //		idx, status, hpam->bbuf.buffer[port->digit]);
 

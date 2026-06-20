@@ -24,15 +24,13 @@
 #include "periph/rasters/rasters.h"
 #include "periph/rocket/rocket.h"
 
-UIEventDisposition ddock_event_handler(UIEventHandler *raw_handler,
-                                       UIEvent evt);
+UIEventDisposition ddock_event_handler(UIEventHandler *raw_handler, UIEvent evt);
 
 void ddock_update_once(DDockAct *act);
 void ddock_update(DDockAct *act);
 uint32_t ddock_compute_dx(int yc, int r, int y);
 void ddock_paint_axes(DDockAct *act);
-void dd_bump(DDockAct *act, HPAMIndex thruster_index, uint32_t xscale,
-             uint32_t yscale);
+void dd_bump(DDockAct *act, HPAMIndex thruster_index, uint32_t xscale, uint32_t yscale);
 void ddock_hide(DDockAct *dd);
 void ddock_show(DDockAct *dd);
 
@@ -45,9 +43,8 @@ void ddock_show(DDockAct *dd);
 #define DD_THRUSTER_DOWNSCALE 4
 #define DD_TOLERANCE          2
 
-void ddock_init(DDockAct *act, Screen4 *s4, uint8_t auxboard_base,
-                AudioClient *audioClient, Booster *booster,
-                JoystickState_t *joystick) {
+void ddock_init(DDockAct *act, Screen4 *s4, uint8_t auxboard_base, AudioClient *audioClient,
+                Booster *booster, JoystickState_t *joystick) {
   // init_screen4(&act->s4, b0);
   act->s4 = s4;
 
@@ -63,8 +60,7 @@ void ddock_init(DDockAct *act, Screen4 *s4, uint8_t auxboard_base,
 
   drift_anim_init(&act->xd, 10, 0, -DD_MAX_POS, DD_MAX_POS, DD_SPEED_LIMIT);
   drift_anim_init(&act->yd, 10, 0, -DD_MAX_POS, DD_MAX_POS, DD_SPEED_LIMIT);
-  drift_anim_init(&act->rd, 10, DD_MIN_RADIUS, DD_MIN_RADIUS, DD_MAX_RADIUS,
-                  DD_SPEED_LIMIT);
+  drift_anim_init(&act->rd, 10, DD_MIN_RADIUS, DD_MIN_RADIUS, DD_MAX_RADIUS, DD_SPEED_LIMIT);
   act->last_impulse_time = 0;
 
   act->thrusterPayload.thruster_bits = 0;
@@ -148,8 +144,8 @@ void ddock_update(DDockAct *act) {
   if (da_read(&act->rd) == DD_MAX_RADIUS) {
     int x = da_read(&act->xd);
     int y = da_read(&act->yd);
-    bool success = ((-DD_TOLERANCE <= x && x <= DD_TOLERANCE) &&
-                    (-DD_TOLERANCE <= y && y <= DD_TOLERANCE));
+    bool success =
+        ((-DD_TOLERANCE <= x && x <= DD_TOLERANCE) && (-DD_TOLERANCE <= y && y <= DD_TOLERANCE));
     if (success && !act->docking_complete) {
       // TODO snap clanger solenoid
       ac_skip_to_clip(act->audioClient, AUDIO_STREAM_BURST_EFFECTS,
@@ -167,28 +163,23 @@ void ddock_update(DDockAct *act) {
   */
 }
 
-void dd_bump(DDockAct *act, HPAMIndex thruster_index, uint32_t xscale,
-             uint32_t yscale) {
+void dd_bump(DDockAct *act, HPAMIndex thruster_index, uint32_t xscale, uint32_t yscale) {
   // LOG("dd_bump(hpam %x tb %x) %d", 1<<thruster_index,
   // act->thrusterPayload.thruster_bits, act->thrusterPayload.thruster_bits &
   // (1<<thruster_index));
   if (act->thrusterPayload.thruster_bits & (1 << thruster_index)) {
 #if DD_INERTIA
-    act->xd.velocity += (DD_SPEED_LIMIT * xscale)
-                        << (act->xd.expscale - DD_THRUSTER_DOWNSCALE);
+    act->xd.velocity += (DD_SPEED_LIMIT * xscale) << (act->xd.expscale - DD_THRUSTER_DOWNSCALE);
     da_bound_velocity(&act->xd);
 
-    act->yd.velocity += (DD_SPEED_LIMIT * yscale)
-                        << (act->yd.expscale - DD_THRUSTER_DOWNSCALE);
+    act->yd.velocity += (DD_SPEED_LIMIT * yscale) << (act->yd.expscale - DD_THRUSTER_DOWNSCALE);
     da_bound_velocity(&act->yd);
 #else   // DD_INERTIA
     da_set_velocity(&act->xd, 0);
-    act->xd.base += DD_SPEED_LIMIT * xscale
-                    << (act->xd.expscale - DD_THRUSTER_DOWNSCALE);
+    act->xd.base += DD_SPEED_LIMIT * xscale << (act->xd.expscale - DD_THRUSTER_DOWNSCALE);
 
     da_set_velocity(&act->yd, 0);
-    act->yd.base += DD_SPEED_LIMIT * yscale
-                    << (act->yd.expscale - DD_THRUSTER_DOWNSCALE);
+    act->yd.base += DD_SPEED_LIMIT * yscale << (act->yd.expscale - DD_THRUSTER_DOWNSCALE);
 #endif  // DD_INERTIA
   }
 }
@@ -246,8 +237,7 @@ void ddock_update_once(DDockAct *act) {
     int xs = star - ys * ((DD_MAX_POS << DD_SC) * 4);
     int y = (ys >> DD_SC) - DD_MAX_POS * 2;
     int x = (xs >> DD_SC) - DD_MAX_POS * 2;
-    LOG("star %d : %2d, %2d at %4d, %4d", star, x, y, x + xc,
-        y + (yc_s >> DD_SC));
+    LOG("star %d : %2d, %2d at %4d, %4d", star, x, y, x + xc, y + (yc_s >> DD_SC));
     raster_paint_pixel(&act->s4->rrect, x + xc, y + (yc_s >> DD_SC));
     star += 2269;
     if (y > DD_MAX_POS * 2) {
@@ -299,13 +289,13 @@ void ddock_paint_axes(DDockAct *act) {
 uint32_t ddock_compute_dx(int yc, int r, int y) {
   int dy = (y - yc);
   int dx2 = r * r - dy * dy;
-  if (dx2 < 0)
+  if (dx2 < 0) {
     return I_NAN;
+  }
   return isqrt(dx2);
 }
 
-UIEventDisposition ddock_event_handler(UIEventHandler *raw_handler,
-                                       UIEvent evt) {
+UIEventDisposition ddock_event_handler(UIEventHandler *raw_handler, UIEvent evt) {
   DDockAct *act = ((DDockHandler *)raw_handler)->act;
 
   UIEventDisposition result = uied_accepted;

@@ -25,8 +25,7 @@ extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 
 void _ao_handler(void *data);
 
-void init_audio_out(AudioOut *ao, uint8_t timer_id, ActivationFuncPtr fill_func,
-                    void *fill_data) {
+void init_audio_out(AudioOut *ao, uint8_t timer_id, ActivationFuncPtr fill_func, void *fill_data) {
   memset(ao->buffers, 255, sizeof(ao->buffers));
   int i;
   for (i = 0; i < AO_BUFLEN; i++) {

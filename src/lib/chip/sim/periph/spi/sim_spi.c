@@ -65,7 +65,8 @@ void hal_init_spi() {
   sim_register_clock_handler(sim_spi_poll, NULL);
 }
 
-void hal_spi_set_fast(bool fast) {}
+void hal_spi_set_fast(bool fast) {
+}
 
 void hal_spi_select_slave(bool select) {
   if (select) {
@@ -130,4 +131,6 @@ static void sim_spi_poll(void *data) {
   }
 }
 
-void hal_spi_close() { g_spi.state = sss_ready; }
+void hal_spi_close() {
+  g_spi.state = sss_ready;
+}

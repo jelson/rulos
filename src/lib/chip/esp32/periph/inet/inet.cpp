@@ -61,8 +61,7 @@ static void reconfigure_wifi_creds() {
                                        },
                                }};
   strcpy((char *)wifi_config.sta.ssid, curr_wifi_ssid());
-  strcpy((char *)wifi_config.sta.password,
-         g_wifi_creds[g_wifi_creds_idx].password);
+  strcpy((char *)wifi_config.sta.password, g_wifi_creds[g_wifi_creds_idx].password);
 
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
 }
@@ -73,15 +72,14 @@ bool inet_wifi_is_connected() {
   return _is_connected;
 }
 
-static void wifi_event_handler(void *arg, esp_event_base_t event_base,
-                               int32_t event_id, void *event_data) {
+static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id,
+                               void *event_data) {
   if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
     LOG("Wifi: started");
     esp_wifi_connect();
   } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_CONNECTED) {
     LOG("Wifi: connected to %s", curr_wifi_ssid());
-  } else if (event_base == WIFI_EVENT &&
-             event_id == WIFI_EVENT_STA_DISCONNECTED) {
+  } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
     LOG("Wifi: connection to %s failed", curr_wifi_ssid());
     _is_connected = false;
     reconfigure_wifi_creds();
@@ -91,8 +89,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
     _is_connected = true;
     LOG("Wifi: Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
   } else {
-    LOG("Wifi: got unknown event base %d, event id %d", (int)event_base,
-        (int)event_id);
+    LOG("Wifi: got unknown event base %d, event id %d", (int)event_base, (int)event_id);
   }
 }
 
@@ -102,15 +99,14 @@ const char *inet_wifi_macaddr() {
   if (!*_macaddr_string) {
     uint8_t binary_mac[6];
     esp_wifi_get_mac((wifi_interface_t)ESP_MAC_WIFI_STA, binary_mac);
-    snprintf(_macaddr_string, sizeof(_macaddr_string),
-             "%02X:%02X:%02X:%02X:%02X:%02X", binary_mac[0], binary_mac[1],
-             binary_mac[2], binary_mac[3], binary_mac[4], binary_mac[5]);
+    snprintf(_macaddr_string, sizeof(_macaddr_string), "%02X:%02X:%02X:%02X:%02X:%02X",
+             binary_mac[0], binary_mac[1], binary_mac[2], binary_mac[3], binary_mac[4],
+             binary_mac[5]);
   }
   return _macaddr_string;
 }
 
-void inet_wifi_client_start(const inet_wifi_creds_t *wifi_creds,
-                            int num_creds) {
+void inet_wifi_client_start(const inet_wifi_creds_t *wifi_creds, int num_creds) {
   // store credentials for later
   assert(g_wifi_creds == NULL);
   assert(g_num_wifi_creds == 0);
@@ -124,10 +120,10 @@ void inet_wifi_client_start(const inet_wifi_creds_t *wifi_creds,
   esp_netif_create_default_wifi_sta();
   wifi_init_config_t wifi_init_cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&wifi_init_cfg));
-  ESP_ERROR_CHECK(esp_event_handler_instance_register(
-      WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
-  ESP_ERROR_CHECK(esp_event_handler_instance_register(
-      IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL));
+  ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID,
+                                                      &wifi_event_handler, NULL, NULL));
+  ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP,
+                                                      &wifi_event_handler, NULL, NULL));
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
   reconfigure_wifi_creds();
   ESP_ERROR_CHECK(esp_wifi_start());
@@ -156,8 +152,8 @@ void HttpsClient::_maybeStartWorkerThread() {
   _worker_ready = xSemaphoreCreateBinary();
 
   // Create a task to perform the blocking HTTPS requests.
-  xTaskCreate(HttpsClient::_worker_thread_trampoline, "https_client", 8 * 1024,
-              this, configMAX_PRIORITIES, NULL);
+  xTaskCreate(HttpsClient::_worker_thread_trampoline, "https_client", 8 * 1024, this,
+              configMAX_PRIORITIES, NULL);
 
   // Wait for task to start
   xSemaphoreTake(_worker_ready, portMAX_DELAY);
@@ -201,15 +197,12 @@ esp_err_t HttpsClient::_event_handler(esp_http_client_event_t *evt) {
       LOG("HTTPS Client: Error on http operation");
       break;
     case HTTP_EVENT_ON_HEADER:
-      LOG("HTTPS Client: got an http header: key=%s, value=%s", evt->header_key,
-          evt->header_value);
+      LOG("HTTPS Client: got an http header: key=%s, value=%s", evt->header_key, evt->header_value);
       break;
     case HTTP_EVENT_ON_DATA: {
       size_t data_to_store =
-          r_min((size_t)evt->data_len,
-                _response_buffer_len - _response_bytes_written);
-      memcpy(_response_buffer + _response_bytes_written, evt->data,
-             data_to_store);
+          r_min((size_t)evt->data_len, _response_buffer_len - _response_bytes_written);
+      memcpy(_response_buffer + _response_bytes_written, evt->data, data_to_store);
       _response_bytes_written += data_to_store;
     }
     default:
@@ -311,8 +304,8 @@ void HttpsClient::_perform_one_op() {
 
   if (err == ESP_OK) {
     _result_code = esp_http_client_get_status_code(_client);
-    LOG("HTTPS Client: request complete: status=%d, content_length=%d",
-        _result_code, esp_http_client_get_content_length(_client));
+    LOG("HTTPS Client: request complete: status=%d, content_length=%d", _result_code,
+        esp_http_client_get_content_length(_client));
   } else {
     _result_code = -1;
     LOG("HTTPS Client: error: %s", esp_err_to_name(err));

@@ -90,8 +90,8 @@ class TestClient : public HttpsHandlerIfc {
 
   void on_done(HttpsClient *hc, int response_code, size_t response_len) {
     response_buffer[response_len] = '\0';
-    LOG("http done with code %d; got %d bytes of data: %s", response_code,
-        response_len, response_buffer);
+    LOG("http done with code %d; got %d bytes of data: %s", response_code, response_len,
+        response_buffer);
   }
 };
 
@@ -103,8 +103,7 @@ int main() {
   uart_init(&u, /* uart_id= */ 0, 1000000);
   log_bind_uart(&u);
 
-  inet_wifi_client_start(wifi_creds,
-                         sizeof(wifi_creds) / sizeof(wifi_creds[0]));
+  inet_wifi_client_start(wifi_creds, sizeof(wifi_creds) / sizeof(wifi_creds[0]));
 
   TestClient tc;
   schedule_now(TestClient::execute_trampoline, &tc);

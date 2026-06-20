@@ -23,8 +23,8 @@
 UIEventDisposition knob_handler(UIEventHandler *raw_handler, UIEvent evt);
 void knob_update_once(Knob *knob);
 
-void knob_init(Knob *knob, RowRegion region, const char **msgs, uint8_t len,
-               UIEventHandler *notify, FocusManager *fa, const char *label) {
+void knob_init(Knob *knob, RowRegion region, const char **msgs, uint8_t len, UIEventHandler *notify,
+               FocusManager *fa, const char *label) {
   knob->func = knob_handler;
   knob->msgs = msgs;
   knob->len = len;
@@ -43,8 +43,7 @@ UIEventDisposition knob_handler(UIEventHandler *raw_handler, UIEvent evt) {
   Knob *knob = (Knob *)raw_handler;
   switch (evt) {
     case uie_focus: {
-      RectRegion rr = {&knob->region.bbuf, 1, knob->region.x,
-                       knob->region.xlen};
+      RectRegion rr = {&knob->region.bbuf, 1, knob->region.x, knob->region.xlen};
       cursor_show(&knob->cursor, rr);
     } break;
     case uie_escape:
@@ -66,8 +65,8 @@ UIEventDisposition knob_handler(UIEventHandler *raw_handler, UIEvent evt) {
 }
 
 void knob_update_once(Knob *knob) {
-  ascii_to_bitmap_str(knob->region.bbuf->buffer + knob->region.x,
-                      knob->region.xlen, knob->msgs[knob->selected]);
+  ascii_to_bitmap_str(knob->region.bbuf->buffer + knob->region.x, knob->region.xlen,
+                      knob->msgs[knob->selected]);
   board_buffer_draw(knob->region.bbuf);
 }
 

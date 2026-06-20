@@ -44,15 +44,13 @@
 #include "periph/fatfs/ff.h"
 #include "periph/sdcard2/fatfs_rulos.h"
 
-#if defined (RULOS_ARM_stm32f3)
+#if defined(RULOS_ARM_stm32f3)
 #include "stm32f3xx_ll_bus.h"
 #include "stm32f3xx_ll_dma.h"
 #include "stm32f3xx_ll_spi.h"
-#include "stm32f3xx_ll_spi.h"
-#elif defined (RULOS_ARM_stm32g0)
+#elif defined(RULOS_ARM_stm32g0)
 #include "stm32g0xx_ll_bus.h"
 #include "stm32g0xx_ll_dma.h"
-#include "stm32g0xx_ll_spi.h"
 #include "stm32g0xx_ll_spi.h"
 #else
 #error "help"
@@ -60,42 +58,43 @@
 #endif
 
 #if defined(BOARD_RULOS_AUDIO_REV_B)
-#define SD_LL_SPI_CLOCK     LL_APB2_GRP1_PERIPH_SPI1
-#define SD_SPI_PERIPH       SPI1
-#define SD_LL_ALTFUNC       LL_GPIO_AF_5
-#define SD_LL_SCK_PORT      GPIOB
-#define SD_LL_SCK_PIN       LL_GPIO_PIN_3
-#define SD_LL_MISO_PORT     GPIOB
-#define SD_LL_MISO_PIN      LL_GPIO_PIN_4
-#define SD_LL_MOSI_PORT     GPIOB
-#define SD_LL_MOSI_PIN      LL_GPIO_PIN_5
-#define SD_PIN_CHIPENABLE   GPIO_B6
+#define SD_LL_SPI_CLOCK   LL_APB2_GRP1_PERIPH_SPI1
+#define SD_SPI_PERIPH     SPI1
+#define SD_LL_ALTFUNC     LL_GPIO_AF_5
+#define SD_LL_SCK_PORT    GPIOB
+#define SD_LL_SCK_PIN     LL_GPIO_PIN_3
+#define SD_LL_MISO_PORT   GPIOB
+#define SD_LL_MISO_PIN    LL_GPIO_PIN_4
+#define SD_LL_MOSI_PORT   GPIOB
+#define SD_LL_MOSI_PIN    LL_GPIO_PIN_5
+#define SD_PIN_CHIPENABLE GPIO_B6
 
-#elif defined(BOARD_GPS_TEST_RIG_REV_B) || defined(BOARD_GEMINI_DATALOGGER_REV_A) || defined(BOARD_SOLO_LOGGER_REV_A)
+#elif defined(BOARD_GPS_TEST_RIG_REV_B) || defined(BOARD_GEMINI_DATALOGGER_REV_A) || \
+    defined(BOARD_SOLO_LOGGER_REV_A)
 
-#define SD_LL_SPI_CLOCK     LL_APB2_GRP1_PERIPH_SPI1
-#define SD_SPI_PERIPH       SPI1
-#define SD_LL_ALTFUNC       LL_GPIO_AF_0
-#define SD_LL_SCK_PORT      GPIOA
-#define SD_LL_SCK_PIN       LL_GPIO_PIN_5
-#define SD_LL_MISO_PORT     GPIOA
-#define SD_LL_MISO_PIN      LL_GPIO_PIN_6
-#define SD_LL_MOSI_PORT     GPIOA
-#define SD_LL_MOSI_PIN      LL_GPIO_PIN_7
-#define SD_PIN_CHIPENABLE   GPIO_A4
+#define SD_LL_SPI_CLOCK   LL_APB2_GRP1_PERIPH_SPI1
+#define SD_SPI_PERIPH     SPI1
+#define SD_LL_ALTFUNC     LL_GPIO_AF_0
+#define SD_LL_SCK_PORT    GPIOA
+#define SD_LL_SCK_PIN     LL_GPIO_PIN_5
+#define SD_LL_MISO_PORT   GPIOA
+#define SD_LL_MISO_PIN    LL_GPIO_PIN_6
+#define SD_LL_MOSI_PORT   GPIOA
+#define SD_LL_MOSI_PIN    LL_GPIO_PIN_7
+#define SD_PIN_CHIPENABLE GPIO_A4
 
 #elif defined(BOARD_LTETAG_DEV_REV_A)
 
-#define SD_LL_SPI_CLOCK     LL_APB2_GRP1_PERIPH_SPI1
-#define SD_SPI_PERIPH       SPI1
-#define SD_LL_ALTFUNC       LL_GPIO_AF_0
-#define SD_LL_SCK_PORT      GPIOB
-#define SD_LL_SCK_PIN       LL_GPIO_PIN_3
-#define SD_LL_MISO_PORT     GPIOA
-#define SD_LL_MISO_PIN      LL_GPIO_PIN_11
-#define SD_LL_MOSI_PORT     GPIOA
-#define SD_LL_MOSI_PIN      LL_GPIO_PIN_12
-#define SD_PIN_CHIPENABLE   GPIO_A4
+#define SD_LL_SPI_CLOCK   LL_APB2_GRP1_PERIPH_SPI1
+#define SD_SPI_PERIPH     SPI1
+#define SD_LL_ALTFUNC     LL_GPIO_AF_0
+#define SD_LL_SCK_PORT    GPIOB
+#define SD_LL_SCK_PIN     LL_GPIO_PIN_3
+#define SD_LL_MISO_PORT   GPIOA
+#define SD_LL_MISO_PIN    LL_GPIO_PIN_11
+#define SD_LL_MOSI_PORT   GPIOA
+#define SD_LL_MOSI_PIN    LL_GPIO_PIN_12
+#define SD_PIN_CHIPENABLE GPIO_A4
 
 #else
 
@@ -140,7 +139,7 @@ void TM_DELAY_Init();
 void TM_DELAY_SetTime2(uint32_t timeout_time_ms);
 uint32_t TM_DELAY_Time2();
 void TM_SPI_Init();
-void FATFS_DEBUG_SEND_USART(const char* msg);
+void FATFS_DEBUG_SEND_USART(const char *msg);
 void TM_SPI_SetSlow();
 void TM_SPI_SetFast();
 
@@ -148,7 +147,7 @@ void TM_SPI_SetFast();
   do {                 \
   } while (SPIx->SR & SPI_SR_BSY)
 
-static __INLINE uint8_t TM_SPI_Send(SPI_TypeDef* SPIx, uint8_t data) {
+static __INLINE uint8_t TM_SPI_Send(SPI_TypeDef *SPIx, uint8_t data) {
   /* Wait for previous transmissions to complete if DMA TX enabled for SPI */
   SPI_WAIT(SPIx);
 
@@ -170,8 +169,7 @@ static __INLINE uint8_t TM_SPI_Send(SPI_TypeDef* SPIx, uint8_t data) {
  * @param  count: Number of bytes to send/receive over SPI
  * @retval None
  */
-void TM_SPI_SendMulti(SPI_TypeDef* SPIx, uint8_t* dataOut, uint8_t* dataIn,
-                      uint32_t count);
+void TM_SPI_SendMulti(SPI_TypeDef *SPIx, uint8_t *dataOut, uint8_t *dataIn, uint32_t count);
 
 /**
  * @brief  Writes multiple bytes over SPI
@@ -181,7 +179,7 @@ void TM_SPI_SendMulti(SPI_TypeDef* SPIx, uint8_t* dataOut, uint8_t* dataIn,
  * @param  count: Number of elements to send over SPI
  * @retval None
  */
-void TM_SPI_WriteMulti(SPI_TypeDef* SPIx, uint8_t* dataOut, uint32_t count);
+void TM_SPI_WriteMulti(SPI_TypeDef *SPIx, uint8_t *dataOut, uint32_t count);
 
 /**
  * @brief  Receives multiple data bytes over SPI
@@ -194,30 +192,26 @@ void TM_SPI_WriteMulti(SPI_TypeDef* SPIx, uint8_t* dataOut, uint32_t count);
  * @param  count: Number of bytes you want read from device
  * @retval None
  */
-void TM_SPI_ReadMulti(SPI_TypeDef* SPIx, uint8_t* dataIn, uint8_t dummy,
-                      uint32_t count);
+void TM_SPI_ReadMulti(SPI_TypeDef *SPIx, uint8_t *dataIn, uint8_t dummy, uint32_t count);
 
 DSTATUS TM_FATFS_SD_disk_initialize(void);
 
 DSTATUS TM_FATFS_SD_disk_status(void);
 
-DRESULT TM_FATFS_SD_disk_read(
-    BYTE* buff,   /* Data buffer to store read data */
-    DWORD sector, /* Sector address (LBA) */
-    UINT count    /* Number of sectors to read (1..128) */
+DRESULT TM_FATFS_SD_disk_read(BYTE *buff,   /* Data buffer to store read data */
+                              DWORD sector, /* Sector address (LBA) */
+                              UINT count    /* Number of sectors to read (1..128) */
 );
 
 #if _USE_WRITE
-DRESULT TM_FATFS_SD_disk_write(
-    const BYTE* buff, /* Data to be written */
-    DWORD sector,     /* Sector address (LBA) */
-    UINT count        /* Number of sectors to write (1..128) */
+DRESULT TM_FATFS_SD_disk_write(const BYTE *buff, /* Data to be written */
+                               DWORD sector,     /* Sector address (LBA) */
+                               UINT count        /* Number of sectors to write (1..128) */
 );
 #endif
 
 #if _USE_IOCTL
-DRESULT TM_FATFS_SD_disk_ioctl(
-    BYTE cmd,  /* Control code */
-    void* buff /* Buffer to send/receive control data */
+DRESULT TM_FATFS_SD_disk_ioctl(BYTE cmd,  /* Control code */
+                               void *buff /* Buffer to send/receive control data */
 );
 #endif

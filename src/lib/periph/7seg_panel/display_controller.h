@@ -100,8 +100,7 @@
 
 typedef uint8_t SSBitmap;
 
-void display_controller_program_cell(uint8_t board, uint8_t digit,
-                                     SSBitmap bitmap);
+void display_controller_program_cell(uint8_t board, uint8_t digit, SSBitmap bitmap);
 void display_controller_program_board(uint8_t board, SSBitmap *bitmap);
 void display_controller_enter_sleep();
 

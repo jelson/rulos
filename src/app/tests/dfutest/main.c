@@ -73,8 +73,7 @@ int main() {
   LOG("dfutest starting, FW=%s", DFUTEST_FW_VERSION);
 
   snprintf(banner, sizeof(banner), "DFUTEST FW=%s\n", DFUTEST_FW_VERSION);
-  snprintf(connect_banner, sizeof(connect_banner),
-           "INIT DFUTEST FW=%s\n", DFUTEST_FW_VERSION);
+  snprintf(connect_banner, sizeof(connect_banner), "INIT DFUTEST FW=%s\n", DFUTEST_FW_VERSION);
 
   usb_cdc = (usbd_cdc_state_t){
       .connect_cb = on_connect,

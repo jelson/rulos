@@ -62,5 +62,4 @@ typedef struct {
 
 void _tilty_input_issue_event(TiltyInputAct *tia, TiltyInputState evt);
 void tilty_input_update(TiltyInputAct *tia);
-void tilty_input_init(TiltyInputAct *tia, Vect3D *accelValue,
-                      UIEventHandler *event_handler);
+void tilty_input_init(TiltyInputAct *tia, Vect3D *accelValue, UIEventHandler *event_handler);

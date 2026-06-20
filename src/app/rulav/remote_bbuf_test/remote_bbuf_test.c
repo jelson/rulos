@@ -20,7 +20,7 @@
 #include <stdlib.h>
 
 #include "core/rulos.h"
-//#include "core/twi.h"
+// #include "core/twi.h"
 #include "periph/7seg_panel/7seg_panel.h"
 #include "periph/7seg_panel/board_buffer.h"
 

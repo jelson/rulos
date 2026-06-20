@@ -41,8 +41,8 @@ void booster_set(Booster *booster, bool status) {
   if (status) {
     booster->status = TRUE;
     hpam_set_port(booster->hpam, HPAM_BOOSTER, TRUE);
-    ac_skip_to_clip(booster->audioClient, AUDIO_STREAM_BURST_EFFECTS,
-                    sound_booster_start, sound_booster_running);
+    ac_skip_to_clip(booster->audioClient, AUDIO_STREAM_BURST_EFFECTS, sound_booster_start,
+                    sound_booster_running);
     screenblanker_setmode(booster->screenblanker, sb_flicker);
   } else {
     booster->status = FALSE;
@@ -56,11 +56,10 @@ void booster_set(Booster *booster, bool status) {
       // while it's playing, issue the command that starts
       // the right background noises, so they'll appear when the
       // former runs out.
-      schedule_us(100000, (ActivationFuncPtr)ambient_noise_boost_complete,
-                  &booster->ambient_noise);
+      schedule_us(100000, (ActivationFuncPtr)ambient_noise_boost_complete, &booster->ambient_noise);
     } else if (booster->bcontext == bcontext_docking) {
-      ac_skip_to_clip(booster->audioClient, AUDIO_STREAM_BURST_EFFECTS,
-                      sound_booster_flameout, sound_silence);
+      ac_skip_to_clip(booster->audioClient, AUDIO_STREAM_BURST_EFFECTS, sound_booster_flameout,
+                      sound_silence);
     } else {
       assert(false);
     }

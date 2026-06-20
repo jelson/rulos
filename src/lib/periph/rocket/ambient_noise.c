@@ -28,17 +28,16 @@ void ambient_noise_init(AmbientNoise *an, AudioClient *audio_client) {
   an->audio_client = audio_client;
   an->volume = VOL_MIN;
 
-  ac_skip_to_clip(an->audio_client, AUDIO_STREAM_BACKGROUND,
-                  sound_space_background, sound_space_background);
+  ac_skip_to_clip(an->audio_client, AUDIO_STREAM_BACKGROUND, sound_space_background,
+                  sound_space_background);
 
-  schedule_us(AMBIENT_NOISE_DECAY_PERIOD,
-              (ActivationFuncPtr)ambient_noise_decay, an);
+  schedule_us(AMBIENT_NOISE_DECAY_PERIOD, (ActivationFuncPtr)ambient_noise_decay, an);
 }
 
 void ambient_noise_boost_complete(AmbientNoise *an) {
   an->volume = VOL_DEFAULT;
-  ac_skip_to_clip(an->audio_client, AUDIO_STREAM_BACKGROUND,
-                  sound_space_background, sound_space_background);
+  ac_skip_to_clip(an->audio_client, AUDIO_STREAM_BACKGROUND, sound_space_background,
+                  sound_space_background);
   ac_change_volume(an->audio_client, AUDIO_STREAM_BACKGROUND, an->volume);
 }
 
@@ -49,6 +48,5 @@ void ambient_noise_decay(AmbientNoise *an) {
     ac_change_volume(an->audio_client, AUDIO_STREAM_BACKGROUND, an->volume);
   }
 
-  schedule_us(AMBIENT_NOISE_DECAY_PERIOD,
-              (ActivationFuncPtr)ambient_noise_decay, an);
+  schedule_us(AMBIENT_NOISE_DECAY_PERIOD, (ActivationFuncPtr)ambient_noise_decay, an);
 }

@@ -31,7 +31,7 @@ typedef enum {
   sb_black,         // all LED segments off; lights unaffected
   sb_disco,         // flicker panels & lights by color
   sb_flicker,       // mostly on, with segments vanishing intermittently
-  sb_borrowed  // nothing; buffers borrowed by slow_boot. (memory-savings hack)
+  sb_borrowed       // nothing; buffers borrowed by slow_boot. (memory-savings hack)
 } ScreenBlankerMode;
 
 typedef enum {
@@ -54,12 +54,9 @@ typedef struct s_screen_blanker {
   struct s_screenblanker_sender *screenblanker_sender;
 } ScreenBlanker;
 
-void init_screenblanker(ScreenBlanker *screenblanker, HPAM *hpam,
-                        IdleAct *idle);
-void screenblanker_setmode(ScreenBlanker *screenblanker,
-                           ScreenBlankerMode newmode);
-void screenblanker_setdisco(ScreenBlanker *screenblanker,
-                            DiscoColor disco_color);
+void init_screenblanker(ScreenBlanker *screenblanker, HPAM *hpam, IdleAct *idle);
+void screenblanker_setmode(ScreenBlanker *screenblanker, ScreenBlankerMode newmode);
+void screenblanker_setdisco(ScreenBlanker *screenblanker, DiscoColor disco_color);
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -70,8 +67,7 @@ typedef struct s_screenblanker_payload {
 
 typedef struct s_screenblanker_listener {
   ScreenBlanker screenblanker;
-  uint8_t
-      app_receiver_storage[RECEIVE_RING_SIZE(1, sizeof(ScreenblankerPayload))];
+  uint8_t app_receiver_storage[RECEIVE_RING_SIZE(1, sizeof(ScreenblankerPayload))];
   AppReceiver app_receiver;
 } ScreenBlankerListener;
 

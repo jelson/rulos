@@ -33,17 +33,17 @@
 #include <time.h>
 #include <unistd.h>
 
-#define PAIR_GREEN 1
-#define PAIR_YELLOW 2
-#define PAIR_RED 3
-#define PAIR_BLUE 4
-#define PAIR_WHITE 5
+#define PAIR_GREEN          1
+#define PAIR_YELLOW         2
+#define PAIR_RED            3
+#define PAIR_BLUE           4
+#define PAIR_WHITE          5
 #define PAIR_BLACK_ON_WHITE 6
-#define PG PAIR_GREEN,
-#define PY PAIR_YELLOW,
-#define PR PAIR_RED,
-#define PB PAIR_BLUE,
-#define PW PAIR_WHITE,
+#define PG                  PAIR_GREEN,
+#define PY                  PAIR_YELLOW,
+#define PR                  PAIR_RED,
+#define PB                  PAIR_BLUE,
+#define PW                  PAIR_WHITE,
 
 void init_curses();
-WINDOW* curses_get_window();
+WINDOW *curses_get_window();

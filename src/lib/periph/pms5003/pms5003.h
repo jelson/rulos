@@ -53,5 +53,4 @@ typedef struct {
   } inq;
 } pms5003_t;
 
-void pms5003_init(pms5003_t *pms5003, uint8_t uart_number, pms5003_cb_t cb,
-                  void *user_data);
+void pms5003_init(pms5003_t *pms5003, uint8_t uart_number, pms5003_cb_t cb, void *user_data);

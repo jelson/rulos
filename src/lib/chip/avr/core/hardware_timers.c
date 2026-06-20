@@ -84,7 +84,7 @@ ISR(TIMER0_ISR) {
 #define TIMER1_ISR TIMER1_COMPA_vect
 #elif defined(MCUtiny84_line)
 #define TIMER1_ISR TIM1_COMPA_vect
-#elif defined (MCUtiny85_line)
+#elif defined(MCUtiny85_line)
 #undef TIMER1_ISR
 #else
 #error hardware-specific timer code needs help!
@@ -124,9 +124,7 @@ ISR(TIMER2_ISR) {
 
 #endif
 
-
 //////////
-
 
 uint32_t f_cpu_values[] = {
     (1000000),
@@ -145,8 +143,8 @@ void init_f_cpu() {
   // read fuses to determine clock frequency
   uint8_t cksel = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS) & 0x0f;
   hardware_f_cpu = f_cpu_values[cksel - 1];
-#elif defined(MCU328_line) || defined(MCU1284_line) || \
-    defined(MCUtiny84_line) || defined(MCUtiny85_line)
+#elif defined(MCU328_line) || defined(MCU1284_line) || defined(MCUtiny84_line) || \
+    defined(MCUtiny85_line)
   // If we decide to do variable clock rates on 328p, see page 37
   // for prescale configurations.
   CLKPR = 0x80;
@@ -187,14 +185,12 @@ typedef struct {
 } TimerDef;
 
 #ifdef TIMER0_ISR
-static const uint8_t timer0_prescaler_bits[] = {0xff, 0,  3,    6,
-                                                8,    10, 0xff, 0xff};
+static const uint8_t timer0_prescaler_bits[] = {0xff, 0, 3, 6, 8, 10, 0xff, 0xff};
 static const TimerDef timer0 = {timer0_prescaler_bits, 8};
 #endif
 
 #ifdef TIMER1_ISR
-static const uint8_t timer1_prescaler_bits[] = {0xff, 0,  3,    6,
-                                                8,    10, 0xff, 0xff};
+static const uint8_t timer1_prescaler_bits[] = {0xff, 0, 3, 6, 8, 10, 0xff, 0xff};
 static const TimerDef timer1 = {timer1_prescaler_bits, 16};
 #endif
 
@@ -220,8 +216,7 @@ static void find_prescaler(uint32_t req_us_per_period, const TimerDef *timerDef,
       continue;
     }
     uint32_t hs_per_cpu_tick = (HS_FACTOR * 1000000) / hardware_f_cpu;
-    uint32_t hs_per_prescale_tick = hs_per_cpu_tick
-                                    << (timerDef->prescaler_bits[cs]);
+    uint32_t hs_per_prescale_tick = hs_per_cpu_tick << (timerDef->prescaler_bits[cs]);
     uint32_t prescale_tick_per_period =
         ((req_us_per_period * HS_FACTOR) / hs_per_prescale_tick) + 1;
     uint32_t max_prescale_ticks = (((uint32_t)1) << timerDef->ocr_bits) - 1;
@@ -238,8 +233,7 @@ static void find_prescaler(uint32_t req_us_per_period, const TimerDef *timerDef,
       // go try a bigger prescaler
       continue;
     }
-    *out_us_per_period =
-        (prescale_tick_per_period * hs_per_prescale_tick) / HS_FACTOR;
+    *out_us_per_period = (prescale_tick_per_period * hs_per_prescale_tick) / HS_FACTOR;
     *out_cs = cs;
     *out_ocr = prescale_tick_per_period;
     return;
@@ -249,8 +243,7 @@ static void find_prescaler(uint32_t req_us_per_period, const TimerDef *timerDef,
 
 #ifndef PRESCALE_TEST
 
-uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
-                            uint8_t timer_id) {
+uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data, uint8_t timer_id) {
   extern uint8_t g_hal_initted;
   assert(g_hal_initted == HAL_MAGIC);
   uint32_t actual_us_per_period = 0;
@@ -410,8 +403,9 @@ void hal_speedup_clock_ppm(int32_t ratio) {
   new_ocr1a += (uint16_t)adjustment;
 
   OCR1A = new_ocr1a;
-  if (TCNT1 >= new_ocr1a)
+  if (TCNT1 >= new_ocr1a) {
     TCNT1 = new_ocr1a - 1;
+  }
 
   // k_num and k_denom derive from us_per_period (stable across trim),
   // but ocr_scaled depends on OCR1A and must track it.
@@ -424,9 +418,9 @@ void hal_delay_ms(uint16_t __ms) {
   // copied from util/delay.h
   uint16_t __ticks;
   double __tmp = ((hardware_f_cpu) / 4e3) * __ms;
-  if (__tmp < 1.0)
+  if (__tmp < 1.0) {
     __ticks = 1;
-  else if (__tmp > 65535) {
+  } else if (__tmp > 65535) {
     //      __ticks = requested delay in 1/10 ms
     __ticks = (uint16_t)(__ms * 10.0);
     while (__ticks) {
@@ -435,8 +429,9 @@ void hal_delay_ms(uint16_t __ms) {
       __ticks--;
     }
     return;
-  } else
+  } else {
     __ticks = (uint16_t)__tmp;
+  }
   _delay_loop_2(__ticks);
 }
 
@@ -461,8 +456,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  find_prescaler(period,
-                 timerNum == 0 ? &timer0 : (timerNum == 1 ? &timer1 : &timer2),
+  find_prescaler(period, timerNum == 0 ? &timer0 : (timerNum == 1 ? &timer1 : &timer2),
                  &us_per_period, &cs, &ocr);
 
   printf("cpu speed (hz): %d\n", hardware_f_cpu);

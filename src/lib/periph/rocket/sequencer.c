@@ -86,8 +86,7 @@ void launch_init(Launch *launch, Screen4 *s4, Booster *booster, HPAM *hpam,
   board_buffer_init(&launch->code_value_bbuf DBG_BBUF_LABEL("code_value"));
   board_buffer_init(&launch->textentry_bbuf DBG_BBUF_LABEL("launch"));
   RowRegion rowregion = {&launch->textentry_bbuf, 0, NUM_DIGITS};
-  numeric_input_init(&launch->textentry, rowregion, (UIEventHandler *)launch,
-                     NULL, "");
+  numeric_input_init(&launch->textentry, rowregion, (UIEventHandler *)launch, NULL, "");
   raster_big_digit_init(&launch->bigDigit, s4);
 
   launch->main_rtc = NULL;
@@ -116,8 +115,7 @@ void launch_configure_state(Launch *launch, LaunchState newState) {
   }
   if (board_buffer_is_stacked(&launch->textentry_bbuf)) {
     // be sure cursor is removed before we try to pop textentry's bbuf
-    launch->textentry.handler.func((UIEventHandler *)&launch->textentry.handler,
-                                   uie_escape);
+    launch->textentry.handler.func((UIEventHandler *)&launch->textentry.handler, uie_escape);
     board_buffer_pop(&launch->textentry_bbuf);
   }
   if (board_buffer_is_stacked(&launch->dscrlmsg.bbuf)) {
@@ -131,8 +129,7 @@ void launch_configure_state(Launch *launch, LaunchState newState) {
   // setup
   if (launch->state == launch_state_hidden) {
     booster_set(launch->booster, FALSE);
-    ac_skip_to_clip(launch->audioClient, AUDIO_STREAM_BURST_EFFECTS,
-                    sound_silence, sound_silence);
+    ac_skip_to_clip(launch->audioClient, AUDIO_STREAM_BURST_EFFECTS, sound_silence, sound_silence);
 
     launch->launch_code = 0;
   } else {
@@ -158,8 +155,7 @@ void launch_configure_state(Launch *launch, LaunchState newState) {
       lunar_distance_reset(launch->lunar_distance);
     }
   }
-  if (launch->state == launch_state_enter_code ||
-      launch->state == launch_state_wrong_code) {
+  if (launch->state == launch_state_enter_code || launch->state == launch_state_wrong_code) {
     if (launch->state == launch_state_enter_code) {
 #define LAUNCH_ENTER_CODE_MSG "Initiate launch sequence. Enter code xxxx.  "
       assert(strlen(LAUNCH_ENTER_CODE_MSG) < sizeof(launch->launch_code_str));
@@ -173,24 +169,18 @@ void launch_configure_state(Launch *launch, LaunchState newState) {
       code_label_str[5] = ' ';
       code_label_str[6] = ' ';
       code_label_str[7] = ' ';
-      ascii_to_bitmap_str(launch->code_label_bbuf.buffer, NUM_DIGITS,
-                          code_label_str);
+      ascii_to_bitmap_str(launch->code_label_bbuf.buffer, NUM_DIGITS, code_label_str);
 
       char code_value_str[8];
       code_value_str[0] = ' ';
       code_value_str[1] = ' ';
       code_value_str[2] = ' ';
       code_value_str[3] = ' ';
-      code_value_str[4] = launch->launch_code_str[37] =
-          '0' + ((launch->launch_code / 1000) % 10);
-      code_value_str[5] = launch->launch_code_str[38] =
-          '0' + ((launch->launch_code / 100) % 10);
-      code_value_str[6] = launch->launch_code_str[39] =
-          '0' + ((launch->launch_code / 10) % 10);
-      code_value_str[7] = launch->launch_code_str[40] =
-          '0' + ((launch->launch_code / 1) % 10);
-      ascii_to_bitmap_str(launch->code_value_bbuf.buffer, NUM_DIGITS,
-                          code_value_str);
+      code_value_str[4] = launch->launch_code_str[37] = '0' + ((launch->launch_code / 1000) % 10);
+      code_value_str[5] = launch->launch_code_str[38] = '0' + ((launch->launch_code / 100) % 10);
+      code_value_str[6] = launch->launch_code_str[39] = '0' + ((launch->launch_code / 10) % 10);
+      code_value_str[7] = launch->launch_code_str[40] = '0' + ((launch->launch_code / 1) % 10);
+      ascii_to_bitmap_str(launch->code_value_bbuf.buffer, NUM_DIGITS, code_value_str);
 
       dscrlmsg_set_msg(&launch->dscrlmsg, launch->launch_code_str);
 
@@ -207,8 +197,7 @@ void launch_configure_state(Launch *launch, LaunchState newState) {
     board_buffer_push(&launch->code_label_bbuf, launch->s4->board0 + 1);
     board_buffer_push(&launch->code_value_bbuf, launch->s4->board0 + 2);
     board_buffer_push(&launch->textentry_bbuf, launch->s4->board0 + 3);
-    launch->textentry.handler.func((UIEventHandler *)&launch->textentry.handler,
-                                   uie_focus);
+    launch->textentry.handler.func((UIEventHandler *)&launch->textentry.handler, uie_focus);
   }
 
   if (launch->state == launch_state_countdown) {
@@ -216,18 +205,16 @@ void launch_configure_state(Launch *launch, LaunchState newState) {
     launch->bigDigit.startTime = clock_time_us() + LAUNCH_COUNTDOWN_TIME;
     launch->nextEventTimeout = clock_time_us() + LAUNCH_COUNTDOWN_TIME;
     if (launch->main_rtc) {
-      drtc_set_base_time(launch->main_rtc,
-                         clock_time_us() + LAUNCH_COUNTDOWN_TIME);
+      drtc_set_base_time(launch->main_rtc, clock_time_us() + LAUNCH_COUNTDOWN_TIME);
     }
-    ac_skip_to_clip(launch->audioClient, AUDIO_STREAM_BURST_EFFECTS,
-                    sound_apollo_11_countdown, sound_silence);
+    ac_skip_to_clip(launch->audioClient, AUDIO_STREAM_BURST_EFFECTS, sound_apollo_11_countdown,
+                    sound_silence);
 
     launch->thrusterSpinnerOn = FALSE;
     launch->thrusterSpinnerNextThruster = 0;
     launch->thrusterSpinnerPeriod = THRUSTER_SPINNER_INITIAL_PERIOD_US;
-    launch->thrusterSpinnerNextTimeout =
-        clock_time_us() + LAUNCH_COUNTDOWN_TIME -
-        ((uint32_t)THRUSTER_SPINNER_COUNTDOWN_TIME_LEFT_MS * 1000);
+    launch->thrusterSpinnerNextTimeout = clock_time_us() + LAUNCH_COUNTDOWN_TIME -
+                                         ((uint32_t)THRUSTER_SPINNER_COUNTDOWN_TIME_LEFT_MS * 1000);
   }
 
   if (launch->state == launch_state_launching) {
@@ -258,15 +245,13 @@ void launch_configure_state(Launch *launch, LaunchState newState) {
 }
 
 void launch_clock_update(Launch *launch) {
-  schedule_us(LAUNCH_CLOCK_PERIOD, (ActivationFuncPtr)launch_clock_update,
-              launch);
+  schedule_us(LAUNCH_CLOCK_PERIOD, (ActivationFuncPtr)launch_clock_update, launch);
 
   // animation elements -- evaluate every tick
   launch_configure_lunar_distance(launch);
 
   // "animate" thruster spinner
-  if ((launch->state == launch_state_countdown ||
-       launch->state == launch_state_launching) &&
+  if ((launch->state == launch_state_countdown || launch->state == launch_state_launching) &&
       later_than(clock_time_us(), launch->thrusterSpinnerNextTimeout)) {
     // Stop the joystick from overriding our thruster contro
     mute_joystick(launch->thrusterState);
@@ -275,8 +260,7 @@ void launch_clock_update(Launch *launch) {
       // If a thruster is currently off, turn on the next one in line
       thruster_set(launch, launch->thrusterSpinnerNextThruster, TRUE);
       launch->thrusterSpinnerOn = TRUE;
-      launch->thrusterSpinnerNextTimeout =
-          clock_time_us() + THRUSTER_SPINNER_ON_TIME_US;
+      launch->thrusterSpinnerNextTimeout = clock_time_us() + THRUSTER_SPINNER_ON_TIME_US;
     } else {
       // If a thruster is currently on, turn it off, and set the next
       // event to use the next thruster.
@@ -287,14 +271,11 @@ void launch_clock_update(Launch *launch) {
 
       // Reduce the inter-thruster time and set the next timeout.
       launch->thrusterSpinnerPeriod -=
-          ((uint32_t)launch->thrusterSpinnerPeriod *
-           THRUSTER_SPINNER_SPEEDUP_PERCENT) /
-          100;
+          ((uint32_t)launch->thrusterSpinnerPeriod * THRUSTER_SPINNER_SPEEDUP_PERCENT) / 100;
       if (launch->thrusterSpinnerPeriod < THRUSTER_SPINNER_MIN_PERIOD_US) {
         launch->thrusterSpinnerPeriod = THRUSTER_SPINNER_MIN_PERIOD_US;
       }
-      launch->thrusterSpinnerNextTimeout =
-          clock_time_us() + launch->thrusterSpinnerPeriod;
+      launch->thrusterSpinnerNextTimeout = clock_time_us() + launch->thrusterSpinnerPeriod;
     }
   }
 
@@ -334,8 +315,7 @@ void launch_configure_lunar_distance(Launch *launch) {
         ship_velocity_frac = (elapsed_time / 1000 * 256) / L_LAUNCH_DURATION_MS;
       }
       // LOG("elapsed time %d frac %d", elapsed_time, ship_velocity_frac);
-      lunar_distance_set_velocity_256ths(launch->lunar_distance,
-                                         ship_velocity_frac);
+      lunar_distance_set_velocity_256ths(launch->lunar_distance, ship_velocity_frac);
     }
   }
 }
@@ -368,8 +348,7 @@ UIEventDisposition launch_uie_handler(Launch *launch, UIEvent event) {
           case uie_escape:
             break;
           default:
-            launch->textentry.handler.func(
-                (UIEventHandler *)&launch->textentry.handler, event);
+            launch->textentry.handler.func((UIEventHandler *)&launch->textentry.handler, event);
             break;
         }
         break;
@@ -383,8 +362,7 @@ UIEventDisposition launch_uie_handler(Launch *launch, UIEvent event) {
             launch->bigDigit.startTime -= 1000000;
             launch->nextEventTimeout -= 1000000;
             if (launch->main_rtc) {
-              drtc_set_base_time(launch->main_rtc,
-                                 launch->main_rtc->base_time - 1000000);
+              drtc_set_base_time(launch->main_rtc, launch->main_rtc->base_time - 1000000);
             }
             break;
         }

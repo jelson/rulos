@@ -77,5 +77,5 @@ typedef struct s_snake {
   uint8_t explosion_radius;  // during game-over animation
 } Snake;
 
-void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient,
-                uint8_t score_boardnum, uint8_t status_boardnum);
+void snake_init(Snake *snake, Screen4 *s4, AudioClient *audioClient, uint8_t score_boardnum,
+                uint8_t status_boardnum);

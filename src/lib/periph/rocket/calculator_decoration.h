@@ -23,8 +23,7 @@
 
 struct s_decoration_state;
 typedef void (*FetchCalcDecorationValuesFunc)(struct s_decoration_state *state,
-                                              DecimalFloatingPoint *op0,
-                                              DecimalFloatingPoint *op1);
+                                              DecimalFloatingPoint *op0, DecimalFloatingPoint *op1);
 typedef struct s_decoration_state {
   FetchCalcDecorationValuesFunc func;
 } FetchCalcDecorationValuesIfc;

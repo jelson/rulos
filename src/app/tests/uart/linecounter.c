@@ -76,9 +76,8 @@ static void report(void *data) {
     bps = (uint32_t)(((uint64_t)total_bytes * 8 * 1000000) / elapsed_us);
   }
 
-  LOG("lines=%" PRIu32 " expected_len=%" PRIu32
-      " length_mismatches=%" PRIu32 " linereader_overflows=%" PRIu32
-      " bps=%" PRIu32,
+  LOG("lines=%" PRIu32 " expected_len=%" PRIu32 " length_mismatches=%" PRIu32
+      " linereader_overflows=%" PRIu32 " bps=%" PRIu32,
       lines_received, expected_len, length_mismatches, lr.overflows, bps);
 }
 

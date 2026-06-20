@@ -54,8 +54,8 @@ void ps_update(PotSticker *ps) {
   schedule_us(50000, (ActivationFuncPtr)ps_update, ps);
 }
 
-void init_potsticker(PotSticker *ps, uint8_t adc_channel, InputInjectorIfc *ifi,
-                     uint8_t detents, Keystroke fwd, Keystroke back) {
+void init_potsticker(PotSticker *ps, uint8_t adc_channel, InputInjectorIfc *ifi, uint8_t detents,
+                     Keystroke fwd, Keystroke back) {
   ps->adc_channel = adc_channel;
   hal_init_adc_channel(ps->adc_channel);
   ps->ifi = ifi;

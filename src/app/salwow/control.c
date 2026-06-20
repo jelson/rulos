@@ -13,11 +13,7 @@
 // That's one minute for a 360-degree turn.
 #define MOTOR_POWER 75
 
-typedef enum {
-  RUDDER_RIGHT = 0,
-  RUDDER_LEFT = 1,
-  RUDDER_STRAIGHT = 2
-} RudderRequest;
+typedef enum { RUDDER_RIGHT = 0, RUDDER_LEFT = 1, RUDDER_STRAIGHT = 2 } RudderRequest;
 
 void _control_start_observing(void *v_ctl);
 void _control_gps_read(void *v_ctl);

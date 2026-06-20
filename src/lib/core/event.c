@@ -29,13 +29,13 @@ extern void syncdebug(uint8_t spaces, char f, uint16_t line);
   {                 \
   }
 
-void event_init(Event* evt, bool auto_reset) {
+void event_init(Event *evt, bool auto_reset) {
   evt->auto_reset = auto_reset;
   evt->signaled = false;
   evt->waiter_func = NULL;
 }
 
-void event_signal(Event* evt) {
+void event_signal(Event *evt) {
   if (evt->waiter_func != NULL) {
     SYNCDEBUG();
     schedule_now(evt->waiter_func, evt->waiter_data);
@@ -46,11 +46,11 @@ void event_signal(Event* evt) {
   }
 }
 
-void event_reset(Event* evt) {
+void event_reset(Event *evt) {
   evt->signaled = false;
 }
 
-void event_wait(Event* evt, ActivationFuncPtr func, void* data) {
+void event_wait(Event *evt, ActivationFuncPtr func, void *data) {
   if (evt->signaled) {
     SYNCDEBUG();
     schedule_now(func, data);

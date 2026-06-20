@@ -23,8 +23,7 @@
 
 typedef struct serial_reader_t_s serial_reader_t;
 
-typedef void (*serial_reader_cb_t)(serial_reader_t *sr, const char *line,
-                                   void *data);
+typedef void (*serial_reader_cb_t)(serial_reader_t *sr, const char *line, void *data);
 
 struct serial_reader_t_s {
   UartState_t uart;
@@ -39,8 +38,7 @@ struct serial_reader_t_s {
 // initialize a serial reader -- reads from a uart and pipes the output to a
 // flash dumper
 void serial_reader_init(serial_reader_t *sr, uint8_t uart_id, uint32_t baud,
-                        flash_dumper_t *flash_dumper, serial_reader_cb_t cb,
-                        void *data);
+                        flash_dumper_t *flash_dumper, serial_reader_cb_t cb, void *data);
 
 // manually append a line to a serial reader
 void serial_reader_print(serial_reader_t *sr, const char *s);

@@ -29,8 +29,7 @@
 //   can vary the size of those buffers.
 #define I2S_BUFSIZE_BYTES(samples_per_buf) (samples_per_buf * sizeof(int16_t))
 
-#define I2S_STATE_SIZE(samples_per_buf) \
-  (sizeof(i2s_t) + (I2S_BUFSIZE_BYTES(samples_per_buf) * 2))
+#define I2S_STATE_SIZE(samples_per_buf) (sizeof(i2s_t) + (I2S_BUFSIZE_BYTES(samples_per_buf) * 2))
 
 typedef enum {
   EMPTY,
@@ -41,16 +40,16 @@ typedef enum {
 
 // Upcall from library to caller indicating we want another sample
 // buffer filled. Format is 16-bit, signed, little-endian.
-typedef void (*i2s_fill_buffer_cb_t)(void* user_data, int16_t* buf);
+typedef void (*i2s_fill_buffer_cb_t)(void *user_data, int16_t *buf);
 
 // Upcall from library to caller indicating audio play has completed.
-typedef void (*i2s_audio_done_cb_t)(void* user_data);
+typedef void (*i2s_audio_done_cb_t)(void *user_data);
 
 typedef struct {
   // input data from the caller
   uint16_t samples_per_buf;
   uint32_t sample_rate;
-  void* user_data;
+  void *user_data;
   i2s_fill_buffer_cb_t fill_buffer_cb;
   i2s_audio_done_cb_t audio_done_cb;
 
@@ -73,15 +72,14 @@ typedef struct {
 // buffers of depth `samples_per_buf`, the total size of rawbuf
 // provided must be I2S_STATE_SIZE(samples_per_buf). 16-bit samples
 // are assumed.
-i2s_t* i2s_init(uint16_t samples_per_buf, uint32_t sample_rate, void* user_data,
-                i2s_fill_buffer_cb_t fill_buffer,
-                i2s_audio_done_cb_t audio_done, uint8_t* rawbuf,
+i2s_t *i2s_init(uint16_t samples_per_buf, uint32_t sample_rate, void *user_data,
+                i2s_fill_buffer_cb_t fill_buffer, i2s_audio_done_cb_t audio_done, uint8_t *rawbuf,
                 uint16_t allocated_size);
 
 // Start playing audio. Library will call fill_buffer (provided to
 // init) every time a new buffer needs to be filled, and audio_done
 // (provided to init) when the audio has finished playing.
-void i2s_start(i2s_t* i2s);
+void i2s_start(i2s_t *i2s);
 
 // Downcall from app into library that should be called to indicate a
 // buf-fill call requesteded by i2s_fill_buffer_cb_t has been
@@ -90,4 +88,4 @@ void i2s_start(i2s_t* i2s);
 // data. If sample_filled is < samples_per_buf, this is assumed to be
 // the last buffer and audio output will stop once this has been
 // played. Length of 0 is legal.
-void i2s_buf_filled(i2s_t* i2s, int16_t* buf, uint16_t samples_filled);
+void i2s_buf_filled(i2s_t *i2s, int16_t *buf, uint16_t samples_filled);

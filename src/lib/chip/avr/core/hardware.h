@@ -26,9 +26,8 @@
 
 #if defined(MCUatmega1284) || defined(MCUatmega1284p)
 #define MCU1284_line
-#elif defined(MCUatmega88) || defined(MCUatmega88p) || \
-    defined(MCUatmega168) || defined(MCUatmega168p) || \
-    defined(MCUatmega328) || defined(MCUatmega328p)
+#elif defined(MCUatmega88) || defined(MCUatmega88p) || defined(MCUatmega168) || \
+    defined(MCUatmega168p) || defined(MCUatmega328) || defined(MCUatmega328p)
 #define MCU328_line
 #elif defined(MCUatmega8) || defined(MCUatmega16) || defined(MCUatmega32)
 #define MCU8_line
@@ -121,10 +120,11 @@ static inline void gpio_clr(const gpio_pin_t gpio_pin) {
  * assert an output either high or low depending on the 'onoff' parameter
  */
 static inline void gpio_set_or_clr(const gpio_pin_t gpio_pin, uint8_t onoff) {
-  if (onoff)
+  if (onoff) {
     gpio_set(gpio_pin);
-  else
+  } else {
     gpio_clr(gpio_pin);
+  }
 }
 
 /*

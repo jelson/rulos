@@ -18,36 +18,37 @@
 
 #define _GNU_SOURCE
 
-#include <fcntl.h>
-#include <unistd.h>
-#include <signal.h> // XXX yuck
 #include <errno.h>
+#include <fcntl.h>
+#include <signal.h>  // XXX yuck
+#include <unistd.h>
 
 #include "periph/i2s/hal_i2s.h"
 
 static void set_async(int fd);
 static void sim_audio_output_poll(void *data);
 static void poke_fd();
-static void notify_application_trampoline(void* v_done_index);
+static void notify_application_trampoline(void *v_done_index);
 
 static struct {
   hal_i2s_play_done_cb_t play_done_cb;
-  void* user_data;
+  void *user_data;
 
-  int16_t* samples;
+  int16_t *samples;
   uint16_t num_samples_per_halfbuffer;
 
   uint16_t next_buffer_index;
-  uint16_t next_write_offset_bytes; // how many bytes of next_buffer_index have already been emitted
+  uint16_t
+      next_write_offset_bytes;  // how many bytes of next_buffer_index have already been emitted
 
   int audiofd;
-  FILE* debug_teefp;  // capture audio stream for debugging
+  FILE *debug_teefp;  // capture audio stream for debugging
 
   bool outstanding_fill_requests[2];
 } sim_i2s;
 
-void hal_i2s_condition_buffer(int16_t* samples, uint16_t num_samples) {
-    LOG("SIM hal_i2s_condition_buffer");
+void hal_i2s_condition_buffer(int16_t *samples, uint16_t num_samples) {
+  LOG("SIM hal_i2s_condition_buffer");
 }
 
 // Fake a sigio periodically in case we ... lose one!??
@@ -59,14 +60,12 @@ void hal_i2s_condition_buffer(int16_t* samples, uint16_t num_samples) {
 // to bump us out of this state.
 // There's probably a state machine bug or flow interaction with the
 // higher layers we could fix.
-static void fake_sigio(void* context)
-{
+static void fake_sigio(void *context) {
   sim_audio_output_poll(NULL);
   schedule_us(10000, fake_sigio, NULL);
 }
 
-void hal_i2s_init(uint16_t sample_rate, hal_i2s_play_done_cb_t play_done_cb,
-                  void* user_data) {
+void hal_i2s_init(uint16_t sample_rate, hal_i2s_play_done_cb_t play_done_cb, void *user_data) {
   LOG("SIM hal_i2s_init");
   sim_i2s.play_done_cb = play_done_cb;
   sim_i2s.user_data = user_data;
@@ -78,7 +77,7 @@ void hal_i2s_init(uint16_t sample_rate, hal_i2s_play_done_cb_t play_done_cb,
   int pipefd[2];
   int rc = pipe2(pipefd, /*flags*/ 0);
   LOG("XXX i2s readpipe %d writepipe %d", pipefd[0], pipefd[1]);
-  assert(rc==0);
+  assert(rc == 0);
   int pid = fork();
   if (pid == 0) {
     // child
@@ -90,20 +89,21 @@ void hal_i2s_init(uint16_t sample_rate, hal_i2s_play_done_cb_t play_done_cb,
     sigprocmask(SIG_BLOCK, &mask_set, NULL);
 
     // close "all" the other fds, so we're not getting SIGIO on network packets and such.
-    for (int fdi=3; fdi<1000; fdi++) {
+    for (int fdi = 3; fdi < 1000; fdi++) {
       if (fdi != pipefd[0]) {
         close(fdi);
       }
     }
-    dup2(pipefd[0], 0); // read end of pipe becomes stdin
-    const char* const argv[] = {"aplay", "-f", "S16_LE", "--file-type", "raw", "--rate", "50000", "--channels", "2", "-", NULL};
-    execv("/usr/bin/aplay", (char* const*) argv);
+    dup2(pipefd[0], 0);  // read end of pipe becomes stdin
+    const char *const argv[] = {"aplay", "-f",         "S16_LE", "--file-type", "raw", "--rate",
+                                "50000", "--channels", "2",      "-",           NULL};
+    execv("/usr/bin/aplay", (char *const *)argv);
     assert(false);
     exit(-1);
   }
   // Parent.
   close(pipefd[0]);
-  //sim_i2s.audiofd = open("/dev/dsp", O_ASYNC | O_WRONLY);
+  // sim_i2s.audiofd = open("/dev/dsp", O_ASYNC | O_WRONLY);
   sim_i2s.audiofd = pipefd[1];
   assert(sim_i2s.audiofd >= 0);
   set_async(sim_i2s.audiofd);
@@ -118,7 +118,7 @@ void hal_i2s_init(uint16_t sample_rate, hal_i2s_play_done_cb_t play_done_cb,
   schedule_us(1000000, fake_sigio, NULL);
 }
 
-void hal_i2s_start(int16_t* samples, uint16_t num_samples_per_halfbuffer) {
+void hal_i2s_start(int16_t *samples, uint16_t num_samples_per_halfbuffer) {
   LOG("SIM hal_i2s_start");
   sim_i2s.samples = samples;
   sim_i2s.num_samples_per_halfbuffer = num_samples_per_halfbuffer;
@@ -129,7 +129,7 @@ void hal_i2s_start(int16_t* samples, uint16_t num_samples_per_halfbuffer) {
 }
 
 static void sim_audio_output_poll(void *data) {
-  //LOG("SIM wakes on SIGIO");
+  // LOG("SIM wakes on SIGIO");
   poke_fd();
 }
 
@@ -140,7 +140,7 @@ static void request_refill(int buffer_idx) {
   }
   LOG("XXX poke_now upcall fill buf %d", buffer_idx);
   sim_i2s.outstanding_fill_requests[buffer_idx] = true;
-  schedule_now(notify_application_trampoline, (void*)(long int) buffer_idx);
+  schedule_now(notify_application_trampoline, (void *)(long int)buffer_idx);
 }
 
 // Something has changed (start or a SIGIO). Try to push out another halfbuffer.
@@ -149,20 +149,22 @@ static void poke_fd() {
     return;
   }
 
-  int byte_count = sim_i2s.num_samples_per_halfbuffer * sizeof(int16_t) - sim_i2s.next_write_offset_bytes;
-  char* ptr = ((char*) &sim_i2s.samples[sim_i2s.next_buffer_index * sim_i2s.num_samples_per_halfbuffer])
-    + sim_i2s.next_write_offset_bytes;
+  int byte_count =
+      sim_i2s.num_samples_per_halfbuffer * sizeof(int16_t) - sim_i2s.next_write_offset_bytes;
+  char *ptr =
+      ((char *)&sim_i2s.samples[sim_i2s.next_buffer_index * sim_i2s.num_samples_per_halfbuffer]) +
+      sim_i2s.next_write_offset_bytes;
   int rc = write(sim_i2s.audiofd, ptr, byte_count);
-  LOG("Poke samples %p samplesPerHB %08x next_idx %02x next-write-offset %04x -> write took %04x bytes",
-    sim_i2s.samples, sim_i2s.num_samples_per_halfbuffer,
-    sim_i2s.next_buffer_index, sim_i2s.next_write_offset_bytes,
-    rc);
+  LOG("Poke samples %p samplesPerHB %08x next_idx %02x next-write-offset %04x -> write took %04x "
+      "bytes",
+      sim_i2s.samples, sim_i2s.num_samples_per_halfbuffer, sim_i2s.next_buffer_index,
+      sim_i2s.next_write_offset_bytes, rc);
 
   if (sim_i2s.debug_teefp != NULL && rc > 0) {
     // tee away however many bytes went to real audio pipe.
     int rc2 = fwrite(ptr, rc, 1, sim_i2s.debug_teefp);
     fflush(sim_i2s.debug_teefp);
-    assert(rc2==1);
+    assert(rc2 == 1);
   }
 
   if (rc == byte_count) {
@@ -185,7 +187,7 @@ static void poke_fd() {
       assert(false);  // write failed
     }
   } else if (rc > byte_count) {
-    assert(false);   // outside of write()'s spec.
+    assert(false);  // outside of write()'s spec.
   } else {
     assert(0 <= rc);
     assert(rc < byte_count);
@@ -196,8 +198,8 @@ static void poke_fd() {
   }
 }
 
-static void notify_application_trampoline(void* v_done_index) {
-  int done_index = (size_t) v_done_index;
+static void notify_application_trampoline(void *v_done_index) {
+  int done_index = (size_t)v_done_index;
   sim_i2s.outstanding_fill_requests[done_index] = false;
   sim_i2s.play_done_cb(sim_i2s.user_data, done_index);
 }
@@ -218,4 +220,3 @@ static void set_async(int fd) {
   rc = fcntl(fd, F_SETOWN, getpid());
   assert(rc == 0);
 }
-

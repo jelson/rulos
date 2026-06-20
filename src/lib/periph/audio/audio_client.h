@@ -39,8 +39,8 @@ void init_audio_client(AudioClient *ac, Network *network);
  * Stop whatever is playing on stream_idx and skip to cur_effect_id. When that's
  * done playing, play loop_effect_id forever.
  */
-bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx,
-                     SoundEffectId cur_effect_id, SoundEffectId loop_effect_id);
+bool ac_skip_to_clip(AudioClient *ac, uint8_t stream_idx, SoundEffectId cur_effect_id,
+                     SoundEffectId loop_effect_id);
 
 /* Configure volume of effect playing on stream_idx. */
 bool ac_change_volume(AudioClient *ac, uint8_t stream_idx, uint8_t mlvolume);

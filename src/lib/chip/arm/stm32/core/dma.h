@@ -171,10 +171,10 @@ typedef struct {
    * second-half-complete point of a circular buffer (i.e. the wraparound).
    * ht_callback only fires in circular mode, at the half-buffer point.
    */
-  void (*tc_callback)(void* user_data);
-  void (*ht_callback)(void* user_data);
-  void (*error_callback)(void* user_data);
-  void* user_data;
+  void (*tc_callback)(void *user_data);
+  void (*ht_callback)(void *user_data);
+  void (*error_callback)(void *user_data);
+  void *user_data;
 } rulos_dma_config_t;
 
 /*
@@ -187,7 +187,7 @@ typedef struct {
  * The config is copied into the channel state; the caller may discard
  * its local copy after this returns.
  */
-rulos_dma_channel_t* rulos_dma_alloc(const rulos_dma_config_t* config);
+rulos_dma_channel_t *rulos_dma_alloc(const rulos_dma_config_t *config);
 
 /*
  * Re-run channel init with a new config. Must be called while the
@@ -196,7 +196,7 @@ rulos_dma_channel_t* rulos_dma_alloc(const rulos_dma_config_t* config);
  * Used by the SD card driver to flip mem_increment between read and
  * write on the same SPI channel.
  */
-void rulos_dma_reconfigure(rulos_dma_channel_t* ch, const rulos_dma_config_t* new_config);
+void rulos_dma_reconfigure(rulos_dma_channel_t *ch, const rulos_dma_config_t *new_config);
 
 /*
  * Program source/dest addresses and transfer count, then enable the
@@ -204,17 +204,17 @@ void rulos_dma_reconfigure(rulos_dma_channel_t* ch, const rulos_dma_config_t* ne
  * register (e.g. &USART1->TDR) and mem_addr/nitems describe the buffer.
  * `nitems` is in units of the configured data width, not bytes.
  */
-void rulos_dma_start(rulos_dma_channel_t* ch, volatile void* periph_addr, void* mem_addr,
+void rulos_dma_start(rulos_dma_channel_t *ch, volatile void *periph_addr, void *mem_addr,
                      uint32_t nitems);
 
 // Disable the channel. Callbacks stop firing. Channel remains allocated
 // and may be restarted with rulos_dma_start.
-void rulos_dma_stop(rulos_dma_channel_t* ch);
+void rulos_dma_stop(rulos_dma_channel_t *ch);
 
 // Items not yet transferred. For circular mode this decreases from
 // the last `nitems` passed to start, wrapping back up when the buffer
 // wraps. Callers compute current write position as buflen - remaining.
-uint32_t rulos_dma_get_remaining(const rulos_dma_channel_t* ch);
+uint32_t rulos_dma_get_remaining(const rulos_dma_channel_t *ch);
 
 // Return channel to the pool. Disables the channel first if running.
-void rulos_dma_free(rulos_dma_channel_t* ch);
+void rulos_dma_free(rulos_dma_channel_t *ch);

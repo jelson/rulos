@@ -31,8 +31,6 @@ typedef struct {
 static const uint16_t MIN_OBSERVATIONS = 10;
 static const uint16_t MAX_OBSERVATIONS = 40;
 
-bool update_epoch_estimate(const time_observation_t *obs, char *logbuf,
-                           int *logbufcap, uint64_t *offset_usec /* OUT */,
-                           int64_t *freq_ppb /* OUT */);
-uint64_t local_to_epoch(uint64_t local_time_usec, uint64_t offset_usec,
-                        int64_t freq_ppb);
+bool update_epoch_estimate(const time_observation_t *obs, char *logbuf, int *logbufcap,
+                           uint64_t *offset_usec /* OUT */, int64_t *freq_ppb /* OUT */);
+uint64_t local_to_epoch(uint64_t local_time_usec, uint64_t offset_usec, int64_t freq_ppb);

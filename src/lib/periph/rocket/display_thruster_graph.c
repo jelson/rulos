@@ -26,8 +26,7 @@
 
 void dtg_update(DThrusterGraph *act);
 void dtg_update_expwa(DThrusterGraph *dtg, int alpha, int i, uint8_t input);
-void dtg_draw_one_skinny(DThrusterGraph *dtg, int i, uint8_t input,
-                         SSBitmap mask);
+void dtg_draw_one_skinny(DThrusterGraph *dtg, int i, uint8_t input, SSBitmap mask);
 void dtg_draw_skinny_bars(BoardBuffer *bbuf, int v, SSBitmap bm);
 void dtg_draw_fat_bars(BoardBuffer *bbuf, int v, SSBitmap bm0, SSBitmap bm1);
 void dtg_recv_func(MessageRecvBuffer *msg);
@@ -61,18 +60,13 @@ void dtg_update(DThrusterGraph *dtg) {
   for (d = 0; d < NUM_DIGITS; d++) {
     dtg->bbuf.buffer[d] = 0;
   }
-  dtg_draw_one_skinny(
-      dtg, 0, (dtg->thruster_bits & (1 << HPAM_THRUSTER_FRONTLEFT)) ? 16 : 0,
-      0b1000000);
-  dtg_draw_one_skinny(dtg, 1,
-                      (dtg->thruster_bits & (1 << HPAM_THRUSTER_REAR)) ? 16 : 0,
-                      0b0000001);
-  dtg_draw_one_skinny(
-      dtg, 2, (dtg->thruster_bits & (1 << HPAM_THRUSTER_FRONTRIGHT)) ? 16 : 0,
-      0b0001000);
+  dtg_draw_one_skinny(dtg, 0, (dtg->thruster_bits & (1 << HPAM_THRUSTER_FRONTLEFT)) ? 16 : 0,
+                      0b1000000);
+  dtg_draw_one_skinny(dtg, 1, (dtg->thruster_bits & (1 << HPAM_THRUSTER_REAR)) ? 16 : 0, 0b0000001);
+  dtg_draw_one_skinny(dtg, 2, (dtg->thruster_bits & (1 << HPAM_THRUSTER_FRONTRIGHT)) ? 16 : 0,
+                      0b0001000);
 
-  dtg_update_expwa(dtg, BOOSTER_ALPHA, 3,
-                   (dtg->thruster_bits & (1 << HPAM_BOOSTER)) ? 16 : 0);
+  dtg_update_expwa(dtg, BOOSTER_ALPHA, 3, (dtg->thruster_bits & (1 << HPAM_BOOSTER)) ? 16 : 0);
   dtg_draw_fat_bars(&dtg->bbuf, dtg->value[3] >> 16, 0b0000110, 0b0110000);
 
   board_buffer_draw(&dtg->bbuf);
@@ -83,14 +77,12 @@ void dtg_update(DThrusterGraph *dtg) {
 
 void dtg_update_expwa(DThrusterGraph *dtg, int alpha, int i, uint8_t input) {
   uint32_t oldValue = dtg->value[i];
-  dtg->value[i] =
-      ((oldValue * (256 - alpha)) + (((uint32_t)input) << 16) * alpha) >> 8;
+  dtg->value[i] = ((oldValue * (256 - alpha)) + (((uint32_t)input) << 16) * alpha) >> 8;
   //	LOG("Old %08x ~ input %08x => new %08x",
   //		oldValue, (((uint32_t) input) << 16), dtg->value[i]);
 }
 
-void dtg_draw_one_skinny(DThrusterGraph *dtg, int i, uint8_t input,
-                         SSBitmap mask) {
+void dtg_draw_one_skinny(DThrusterGraph *dtg, int i, uint8_t input, SSBitmap mask) {
   dtg_update_expwa(dtg, THRUSTER_ALPHA, i, input);
   dtg_draw_skinny_bars(&dtg->bbuf, dtg->value[i] >> 16, mask);
 }

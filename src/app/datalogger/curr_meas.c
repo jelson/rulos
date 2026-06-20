@@ -44,14 +44,12 @@ static void print_current(currmeas_state_t *cms) {
   }
 
   int32_t current = cms->scale * cms->cum_current / cms->num_measurements;
-  flash_dumper_write(cms->flash_dumper, NULL, 0, "curr,%d,%ld",
-                     cms->channel_num, current);
+  flash_dumper_write(cms->flash_dumper, NULL, 0, "curr,%d,%ld", cms->channel_num, current);
 
-  uint32_t usec =
-      POWERMEASURE_POLLTIME_USEC * (cms->num_ready + cms->num_not_ready);
+  uint32_t usec = POWERMEASURE_POLLTIME_USEC * (cms->num_ready + cms->num_not_ready);
   uint32_t ups = cms->num_ready ? (usec / cms->num_ready) : 0;
-  LOG("chan %d current: %lduA from %d samples; avg %ld usec per sample",
-      cms->channel_num, current, cms->num_measurements, ups);
+  LOG("chan %d current: %lduA from %d samples; avg %ld usec per sample", cms->channel_num, current,
+      cms->num_measurements, ups);
 
   cms->cum_current = 0;
   cms->num_measurements = 0;
@@ -65,16 +63,15 @@ static void monitor_current(void *data) {
 
   measure_current(cms);
 
-  if (cms->loops_since_print ==
-      (PRINT_INTERVAL_USEC / POWERMEASURE_POLLTIME_USEC)) {
+  if (cms->loops_since_print == (PRINT_INTERVAL_USEC / POWERMEASURE_POLLTIME_USEC)) {
     cms->loops_since_print = 0;
     print_current(cms);
   }
 }
 
-void currmeas_init(currmeas_state_t *cms, uint8_t device_addr,
-                   uint32_t prescale, uint16_t calibration, uint32_t scale,
-                   uint32_t channel_num, flash_dumper_t *flash_dumper) {
+void currmeas_init(currmeas_state_t *cms, uint8_t device_addr, uint32_t prescale,
+                   uint16_t calibration, uint32_t scale, uint32_t channel_num,
+                   flash_dumper_t *flash_dumper) {
   memset(cms, 0, sizeof(*cms));
   cms->addr = device_addr;
   cms->scale = scale;

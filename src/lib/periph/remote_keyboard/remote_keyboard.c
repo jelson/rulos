@@ -22,8 +22,7 @@ void rk_send(InputInjectorIfc *injector, Keystroke key);
 void rk_send_complete(SendSlot *sendSlot);
 void rk_recv(MessageRecvBuffer *msg);
 
-void init_remote_keyboard_send(RemoteKeyboardSend *rk, Network *network,
-                               Addr addr, Port port) {
+void init_remote_keyboard_send(RemoteKeyboardSend *rk, Network *network, Addr addr, Port port) {
   rk->network = network;
   rk->port = port;
 

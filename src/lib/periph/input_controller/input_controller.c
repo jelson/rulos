@@ -40,8 +40,7 @@ void input_poller_update(InputPollerAct *ip) {
 
 void input_focus_injector_deliver(InputFocusInjector *ifi, char k);
 
-void input_focus_injector_init(InputFocusInjector *ifi,
-                               UIEventHandler *topHandler) {
+void input_focus_injector_init(InputFocusInjector *ifi, UIEventHandler *topHandler) {
   ifi->func = (InputInjectorFunc)input_focus_injector_deliver;
   ifi->topHandler = topHandler;
   ifi->topHandlerActive = FALSE;

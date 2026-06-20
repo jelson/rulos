@@ -60,7 +60,7 @@ int int_div_with_correct_truncation(int a, int b) {
 
 const char hexmap[] = "0123456789ABCDEF";
 
-void debug_itoha(char* out, uint16_t i) {
+void debug_itoha(char *out, uint16_t i) {
   out[0] = hexmap[(i >> (3 * 4)) & 0xf];
   out[1] = hexmap[(i >> (2 * 4)) & 0xf];
   out[2] = hexmap[(i >> (1 * 4)) & 0xf];
@@ -69,7 +69,7 @@ void debug_itoha(char* out, uint16_t i) {
 }
 
 // places 6 bytes into out.
-void itoda(char* out, uint16_t v) {
+void itoda(char *out, uint16_t v) {
   out[5] = '\0';
   uint8_t i;
   for (i = 0; i < 5; i++) {
@@ -79,7 +79,7 @@ void itoda(char* out, uint16_t v) {
   }
 }
 
-uint16_t atoi_hex(char* in) {
+uint16_t atoi_hex(char *in) {
   uint16_t v = 0;
   uint8_t u;
   while (1) {
@@ -99,10 +99,10 @@ uint16_t atoi_hex(char* in) {
   return v;
 }
 
-int int_to_string2(char* strp, uint8_t min_width, uint8_t min_zeros, int32_t i) {
+int int_to_string2(char *strp, uint8_t min_width, uint8_t min_zeros, int32_t i) {
   int c = 0;
   int neg = 0;
-  char* ptr = NULL;
+  char *ptr = NULL;
 
   // LOG("i %d", );
   if (strp != NULL) {

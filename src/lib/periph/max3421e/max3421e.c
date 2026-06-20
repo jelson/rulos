@@ -127,8 +127,7 @@ static uint8_t execute_transaction(usb_device_t *dev, usb_endpoint_t *endpoint,
     endpoint->last_rx_toggle = (status & bmRCVTOGRD) ? 1 : 0;
     endpoint->last_tx_toggle = (status & bmSNDTOGRD) ? 1 : 0;
 
-    VLOG("transaction executed after %d cycles, result=%d", wait_cycles,
-         result);
+    VLOG("transaction executed after %d cycles, result=%d", wait_cycles, result);
 
     switch (result) {
       case hrNAK:
@@ -154,9 +153,8 @@ static uint8_t execute_transaction(usb_device_t *dev, usb_endpoint_t *endpoint,
   }
 }
 
-uint8_t max3421e_read_data(usb_device_t *dev, usb_endpoint_t *endpoint,
-                           uint8_t *result_buf, uint16_t max_result_len,
-                           uint16_t *result_len_received) {
+uint8_t max3421e_read_data(usb_device_t *dev, usb_endpoint_t *endpoint, uint8_t *result_buf,
+                           uint16_t max_result_len, uint16_t *result_len_received) {
   assert(endpoint->max_packet_len > 0);
   assert(max_result_len > 0);
 
@@ -172,8 +170,8 @@ uint8_t max3421e_read_data(usb_device_t *dev, usb_endpoint_t *endpoint,
     VLOG("....reading %d bytes", bytes_read);
 
     if (bytes_read > max_result_len) {
-      LOG("USB: read %d bytes, then got more bytes (%d) than we expected (%d)!",
-          total_bytes_read, bytes_read, max_result_len);
+      LOG("USB: read %d bytes, then got more bytes (%d) than we expected (%d)!", total_bytes_read,
+          bytes_read, max_result_len);
       bytes_read = max_result_len;
     }
 
@@ -197,8 +195,7 @@ uint8_t max3421e_read_data(usb_device_t *dev, usb_endpoint_t *endpoint,
 // assumed to be filled in with the desired control request with the exception
 // of the wLength field, which this function fills in to match |data_length|.
 // Return value is 0 if successful, an error code otherwise.
-static uint8_t control_common(usb_device_t *dev, usb_endpoint_t *endpoint,
-                              USB_SETUP_PACKET *setup,
+static uint8_t control_common(usb_device_t *dev, usb_endpoint_t *endpoint, USB_SETUP_PACKET *setup,
                               const uint8_t data_length) {
   // Convert the data_length field and write it to the setup packet.
   setup->wLength = host_word_to_usb(data_length);
@@ -220,9 +217,8 @@ static uint8_t control_common(usb_device_t *dev, usb_endpoint_t *endpoint,
 // which is filled automatically from |max_result_len|. The data read is written
 // to |resultbuf|. |result_len_received| indicates how much data was
 // written. Returns zero on success or a non-zero error code in case of failure.
-static uint8_t control_read(usb_device_t *dev, USB_SETUP_PACKET *setup,
-                            uint8_t *resultbuf, const uint16_t max_result_len,
-                            uint16_t *result_len_received) {
+static uint8_t control_read(usb_device_t *dev, USB_SETUP_PACKET *setup, uint8_t *resultbuf,
+                            const uint16_t max_result_len, uint16_t *result_len_received) {
   // The control endpoint is always endpoint 0.
   usb_endpoint_t *control_endpoint = &dev->endpoints[0];
 
@@ -231,8 +227,8 @@ static uint8_t control_read(usb_device_t *dev, USB_SETUP_PACKET *setup,
     return result;
   }
 
-  result = max3421e_read_data(dev, control_endpoint, resultbuf, max_result_len,
-                              result_len_received);
+  result =
+      max3421e_read_data(dev, control_endpoint, resultbuf, max_result_len, result_len_received);
 
   if (result) {
     return result;
@@ -248,8 +244,8 @@ static uint8_t control_read(usb_device_t *dev, USB_SETUP_PACKET *setup,
 // success or a non-zero error code in case of failure.
 //
 // NB: Currently does not support a data phase.
-static uint8_t control_write(usb_device_t *dev, USB_SETUP_PACKET *setup,
-                             uint8_t *data, const uint16_t len) {
+static uint8_t control_write(usb_device_t *dev, USB_SETUP_PACKET *setup, uint8_t *data,
+                             const uint16_t len) {
   // TODO: Support control writes with a data phase.
   assert(len == 0);
 
@@ -275,8 +271,7 @@ static uint8_t control_write(usb_device_t *dev, USB_SETUP_PACKET *setup,
 // Configures the device at |dev| to have new address |addr|. If successful, 0
 // is returned and dev->addr is updated to be addr. On failure, a non-zero
 // result is returned and dev->addr is not changed.
-static uint8_t configure_device_address(max3421e_t *max, usb_device_t *dev,
-                                        const uint8_t addr) {
+static uint8_t configure_device_address(max3421e_t *max, usb_device_t *dev, const uint8_t addr) {
   VLOG("Reconfiguring new device with address %d", addr);
 
   USB_SETUP_PACKET setup = {};
@@ -295,8 +290,7 @@ static uint8_t configure_device_address(max3421e_t *max, usb_device_t *dev,
 
 static uint8_t activate_configuration(max3421e_t *max, usb_device_t *dev,
                                       const uint8_t config_number) {
-  VLOG("Device at address %d, activating configuration %d", dev->addr,
-       config_number);
+  VLOG("Device at address %d, activating configuration %d", dev->addr, config_number);
 
   USB_SETUP_PACKET setup = {};
   setup.ReqType_u.bmRequestType = bmREQ_SET;
@@ -334,8 +328,7 @@ static uint8_t get_device_descriptor(max3421e_t *max, usb_device_t *dev,
   dev->endpoints[0].max_packet_len = udd->bMaxPacketSize0;
 
   // Execute the read again using the now-known max-packet-len for the device.
-  result = control_read(dev, &setup, (uint8_t *)udd,
-                        sizeof(USB_DEVICE_DESCRIPTOR), &received_len);
+  result = control_read(dev, &setup, (uint8_t *)udd, sizeof(USB_DEVICE_DESCRIPTOR), &received_len);
 
   if (result) {
     return result;
@@ -356,18 +349,15 @@ static uint8_t get_device_descriptor(max3421e_t *max, usb_device_t *dev,
 // Get a config descriptor from the device at |dev|, written to |ucd|. Return
 // value is 0 if successful, an error code otherwise.
 static uint8_t get_config_descriptor(max3421e_t *max, usb_device_t *dev,
-                                     const uint8_t config_number,
-                                     uint8_t *resultbuf,
-                                     const uint16_t max_result_len,
-                                     uint16_t *result_len_received) {
+                                     const uint8_t config_number, uint8_t *resultbuf,
+                                     const uint16_t max_result_len, uint16_t *result_len_received) {
   USB_SETUP_PACKET setup = {};
   setup.ReqType_u.bmRequestType = bmREQ_GET_DESCR;
   setup.bRequest = USB_REQUEST_GET_DESCRIPTOR;
   setup.wValue.high = USB_DESCRIPTOR_CONFIGURATION;
   setup.wValue.low = config_number;
 
-  uint8_t result =
-      control_read(dev, &setup, resultbuf, max_result_len, result_len_received);
+  uint8_t result = control_read(dev, &setup, resultbuf, max_result_len, result_len_received);
 
   if (result) {
     return result;
@@ -408,8 +398,7 @@ static uint8_t get_primary_language(max3421e_t *max, usb_device_t *dev,
   // Retrieve the language descriptor
   USB_LANG_DESCRIPTOR *const uld = (USB_LANG_DESCRIPTOR *)max->xferbuf;
   uint16_t received_len;
-  uint8_t result = control_read(dev, &setup, max->xferbuf, sizeof(max->xferbuf),
-                                &received_len);
+  uint8_t result = control_read(dev, &setup, max->xferbuf, sizeof(max->xferbuf), &received_len);
 
   if (result) {
     return result;
@@ -422,24 +411,21 @@ static uint8_t get_primary_language(max3421e_t *max, usb_device_t *dev,
   }
 
   // Count how many languages were returned
-  const uint8_t num_languages =
-      (received_len - sizeof(USB_LANG_DESCRIPTOR)) / sizeof(usb_word_t);
+  const uint8_t num_languages = (received_len - sizeof(USB_LANG_DESCRIPTOR)) / sizeof(usb_word_t);
 
   if (num_languages == 0) {
     LOG("USB: no languages returned!");
     return hrSHORTPACKET;
   }
 
-  VLOG("got %d languages; lang 0 is 0x%02x%02x", num_languages,
-       uld->LANGID[0].high, uld->LANGID[0].low);
+  VLOG("got %d languages; lang 0 is 0x%02x%02x", num_languages, uld->LANGID[0].high,
+       uld->LANGID[0].low);
   *primary_language = uld->LANGID[0];
   return 0;
 }
 
-static uint8_t get_string_descriptor(max3421e_t *max, usb_device_t *dev,
-                                     const uint8_t string_index,
-                                     const usb_word_t language, char *buf,
-                                     uint16_t buflen) {
+static uint8_t get_string_descriptor(max3421e_t *max, usb_device_t *dev, const uint8_t string_index,
+                                     const usb_word_t language, char *buf, uint16_t buflen) {
   USB_SETUP_PACKET setup = {};
   setup.ReqType_u.bmRequestType = bmREQ_GET_DESCR;
   setup.bRequest = USB_REQUEST_GET_DESCRIPTOR;
@@ -448,8 +434,7 @@ static uint8_t get_string_descriptor(max3421e_t *max, usb_device_t *dev,
   setup.wIndex = language;
 
   uint16_t received_len = 0;
-  uint8_t result =
-      control_read(dev, &setup, (uint8_t *)buf, buflen - 1, &received_len);
+  uint8_t result = control_read(dev, &setup, (uint8_t *)buf, buflen - 1, &received_len);
 
   // Do a bodged conversion from utf16 (which is what USB returns) to ASCII.
   char *converted = buf;
@@ -460,18 +445,15 @@ static uint8_t get_string_descriptor(max3421e_t *max, usb_device_t *dev,
   return result;
 }
 
-static void print_one_device_string(max3421e_t *max, usb_device_t *dev,
-                                    const char *prefix,
-                                    USB_DEVICE_DESCRIPTOR *udd,
-                                    const uint8_t index,
+static void print_one_device_string(max3421e_t *max, usb_device_t *dev, const char *prefix,
+                                    USB_DEVICE_DESCRIPTOR *udd, const uint8_t index,
                                     const usb_word_t language) {
   if (index == 0) {
     return;
   }
 
   char buf[100];
-  uint8_t result =
-      get_string_descriptor(max, dev, index, language, buf, sizeof(buf));
+  uint8_t result = get_string_descriptor(max, dev, index, language, buf, sizeof(buf));
   if (result) {
     LOG("USB: error getting string: %d", result);
   } else {
@@ -479,8 +461,7 @@ static void print_one_device_string(max3421e_t *max, usb_device_t *dev,
   }
 }
 
-static void print_device_info(max3421e_t *max, usb_device_t *dev,
-                              USB_DEVICE_DESCRIPTOR *udd) {
+static void print_device_info(max3421e_t *max, usb_device_t *dev, USB_DEVICE_DESCRIPTOR *udd) {
   usb_word_t primary_language;
   uint8_t result = get_primary_language(max, dev, &primary_language);
 
@@ -489,10 +470,8 @@ static void print_device_info(max3421e_t *max, usb_device_t *dev,
     return;
   }
 
-  print_one_device_string(max, dev, "Manufacturer", udd, udd->iManufacturer,
-                          primary_language);
-  print_one_device_string(max, dev, "Device", udd, udd->iProduct,
-                          primary_language);
+  print_one_device_string(max, dev, "Manufacturer", udd, udd->iManufacturer, primary_language);
+  print_one_device_string(max, dev, "Device", udd, udd->iProduct, primary_language);
 }
 
 // Attempt to reset the max3421. Returns true if it's been reset successfully;
@@ -721,10 +700,8 @@ static void parse_endpoint(usb_device_t *dev, const uint8_t interface_id,
 
   LOG("USB: device %d: interface %d has endpoint #%d at addr 0x%x (%s), "
       "max packet len %d",
-      dev->addr, interface_id, dev->num_endpoints - 1,
-      endpoint->endpoint_addr.addr,
-      endpoint->endpoint_addr.direction ? "IN" : "OUT",
-      endpoint->max_packet_len);
+      dev->addr, interface_id, dev->num_endpoints - 1, endpoint->endpoint_addr.addr,
+      endpoint->endpoint_addr.direction ? "IN" : "OUT", endpoint->max_packet_len);
 }
 
 static void get_metadata_one_device(max3421e_t *max, usb_device_t *dev) {
@@ -750,15 +727,13 @@ static void get_metadata_one_device(max3421e_t *max, usb_device_t *dev) {
   }
 
   if (udd.bNumConfigurations > 1) {
-    LOG("USB warning: this device has %d configurations; using the first",
-        udd.bNumConfigurations);
+    LOG("USB warning: this device has %d configurations; using the first", udd.bNumConfigurations);
   }
 
   // Get the configuration descriptor; all interface and endpoint
   // descriptors come with it.
   uint16_t received_len;
-  result = get_config_descriptor(max, dev, 0, max->xferbuf,
-                                 sizeof(max->xferbuf), &received_len);
+  result = get_config_descriptor(max, dev, 0, max->xferbuf, sizeof(max->xferbuf), &received_len);
   if (result) {
     LOG("Couldn't get config descriptor: %d", result);
     return;
@@ -766,15 +741,14 @@ static void get_metadata_one_device(max3421e_t *max, usb_device_t *dev) {
 
   // Parse each block of the configuration descriptor.
   uint8_t *next_to_parse = max->xferbuf;
-  USB_CONFIGURATION_DESCRIPTOR *ucd =
-      (USB_CONFIGURATION_DESCRIPTOR *)next_to_parse;
+  USB_CONFIGURATION_DESCRIPTOR *ucd = (USB_CONFIGURATION_DESCRIPTOR *)next_to_parse;
   next_to_parse += sizeof(USB_CONFIGURATION_DESCRIPTOR);
 
   // Check for sanity.
   if (ucd->bLength != sizeof(USB_CONFIGURATION_DESCRIPTOR) ||
       ucd->bDescriptorType != USB_DESCRIPTOR_CONFIGURATION) {
-    LOG("USB fatal: config descriptor had unexpected len %d, type 0x%x",
-        ucd->bLength, ucd->bDescriptorType);
+    LOG("USB fatal: config descriptor had unexpected len %d, type 0x%x", ucd->bLength,
+        ucd->bDescriptorType);
     return;
   }
 
@@ -782,8 +756,8 @@ static void get_metadata_one_device(max3421e_t *max, usb_device_t *dev) {
   // the header; make sure our transfer buffer is long enough to get the whole
   // thing.
   if (ucd->wTotalLength > sizeof(max->xferbuf)) {
-    LOG("USB fatal: USB xferbuf is only %d bytes, needs to be at least %d",
-        sizeof(max->xferbuf), ucd->wTotalLength);
+    LOG("USB fatal: USB xferbuf is only %d bytes, needs to be at least %d", sizeof(max->xferbuf),
+        ucd->wTotalLength);
     return;
   }
   const uint8_t *descriptor_end = &max->xferbuf[ucd->wTotalLength];
@@ -811,8 +785,7 @@ static void get_metadata_one_device(max3421e_t *max, usb_device_t *dev) {
       }
 
       default: {
-        VLOG("not parsing usb config descriptor type 0x%x",
-             udh->bDescriptorType);
+        VLOG("not parsing usb config descriptor type 0x%x", udh->bDescriptorType);
         break;
       }
     }

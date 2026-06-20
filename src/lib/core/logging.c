@@ -25,14 +25,14 @@
 #include "core/hal.h"
 #include "periph/uart/uart.h"
 
-static UartState_t* logging_uart = NULL;
+static UartState_t *logging_uart = NULL;
 
 // Set up logging system to emit log messages to a particular uart.
-void log_bind_uart(UartState_t* u) {
+void log_bind_uart(UartState_t *u) {
   logging_uart = u;
 }
 
-void log_write(const void* buf, size_t len) {
+void log_write(const void *buf, size_t len) {
   if (logging_uart != NULL) {
     uart_write(logging_uart, buf, len);
   }
@@ -44,7 +44,7 @@ void log_flush() {
   }
 }
 
-void log_format_and_write(const char* fmt, ...) {
+void log_format_and_write(const char *fmt, ...) {
   va_list ap;
   char message[120];
   va_start(ap, fmt);
@@ -72,7 +72,7 @@ void log_format_and_write(const char* fmt, ...) {
   log_write(message, len);
 }
 
-void log_assert(const char* file, const long unsigned int line) {
+void log_assert(const char *file, const long unsigned int line) {
 #if LOG_TO_SERIAL
   log_format_and_write("assertion failed: file %s, line %lu", file, line);
   log_flush();

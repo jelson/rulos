@@ -20,7 +20,7 @@
 
 #include "core/clock.h"
 #include "periph/input_controller/input_controller.h"
-//#include "periph/rocket/rocket.h"
+// #include "periph/rocket/rocket.h"
 
 #ifndef SIM
 #include "core/hardware.h"

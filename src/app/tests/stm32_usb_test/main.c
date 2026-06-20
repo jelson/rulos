@@ -33,8 +33,8 @@ static uint32_t counter = 0;
 // UART for logging
 static UartState_t uart;
 
-static void usb_rx_handler(usbd_cdc_state_t *cdc, void *user_data,
-                           const uint8_t *data, uint32_t len) {
+static void usb_rx_handler(usbd_cdc_state_t *cdc, void *user_data, const uint8_t *data,
+                           uint32_t len) {
   LOG("USB RX: %lu bytes: '%.*s'", len, (int)len, data);
 }
 
@@ -48,13 +48,12 @@ static void hello_task(void *data) {
 
   // Send periodic hello message
   if (!usbd_cdc_tx_ready(&usb_cdc)) {
-    LOG("USB CDC not ready (initted=%d usb_ready=%d tx_busy=%d)",
-        usb_cdc.initted, usb_cdc.usb_ready, usb_cdc.tx_busy);
+    LOG("USB CDC not ready (initted=%d usb_ready=%d tx_busy=%d)", usb_cdc.initted,
+        usb_cdc.usb_ready, usb_cdc.tx_busy);
     return;
   }
 
-  int len = snprintf(tx_buf, sizeof(tx_buf),
-                     "Hello from STM32 CDC! Message #%lu uptime=%lu ms\n",
+  int len = snprintf(tx_buf, sizeof(tx_buf), "Hello from STM32 CDC! Message #%lu uptime=%lu ms\n",
                      counter++, clock_time_us() / 1000);
 
   if (len > 0 && len < sizeof(tx_buf)) {

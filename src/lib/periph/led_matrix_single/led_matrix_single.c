@@ -72,8 +72,8 @@ void led_matrix_single_init(LEDMatrixSingle *lms, uint8_t timer_id) {
   lms_configure(0x20, 0x33f3);
 }
 
-//#define LMDELAY()	{volatile int x; for (int de=0; de<1000; de++) { x+=1;
-//}}
+// #define LMDELAY()	{volatile int x; for (int de=0; de<1000; de++) { x+=1;
+// }}
 #define LMDELAY()                    \
   {                                  \
     volatile int x;                  \
@@ -81,7 +81,7 @@ void led_matrix_single_init(LEDMatrixSingle *lms, uint8_t timer_id) {
       x += 1;                        \
     }                                \
   }
-//#define LMDELAY()	{}
+// #define LMDELAY()	{}
 
 inline static void lms_shift_byte_cols(uint8_t data) {
   uint8_t bit;
@@ -142,8 +142,7 @@ void lms_configure(uint8_t rowdata, uint16_t coldata) {
   //	gpio_clr(LMS_OUTPUT_ENABLE_INV);
 }
 
-uint8_t lms_row_remap_table[8] = {1 << 3, 1 << 4, 1 << 5, 1 << 6,
-                                  1 << 2, 1 << 1, 1 << 0, 1 << 7};
+uint8_t lms_row_remap_table[8] = {1 << 3, 1 << 4, 1 << 5, 1 << 6, 1 << 2, 1 << 1, 1 << 0, 1 << 7};
 uint8_t lms_bitswap[16] = {0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe,
                            0x1, 0x9, 0x5, 0xd, 0x3, 0xb, 0x7, 0xf};
 // void lms_handler(void *arg)

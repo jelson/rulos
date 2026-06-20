@@ -5,18 +5,15 @@
 #include <string.h>
 
 uint8_t split(char *s, uint8_t *index /*OUT*/, uint8_t index_size);
-void _gpsinput_process_sentence(UartState_t *uart, void *user_data,
-                                char *sentence);
+void _gpsinput_process_sentence(UartState_t *uart, void *user_data, char *sentence);
 bool _parse_ddm(char *s, float *out);
 char *_index(char *s, char c);
 float _atofi(char *s);
 
-void gpsinput_init(GPSInput *gpsi, uint8_t uart_id,
-                   ActivationFuncPtr data_ready_cb_func,
+void gpsinput_init(GPSInput *gpsi, uint8_t uart_id, ActivationFuncPtr data_ready_cb_func,
                    void *data_ready_cb_data) {
   uart_init(&gpsi->uart, uart_id, 4800);
-  linereader_init(&gpsi->linereader, &gpsi->uart, _gpsinput_process_sentence,
-                  gpsi);
+  linereader_init(&gpsi->linereader, &gpsi->uart, _gpsinput_process_sentence, gpsi);
 
   gpsi->lat = 0.;
   gpsi->lon = 0.;
@@ -38,12 +35,13 @@ uint8_t split(char *s, uint8_t *index /*OUT*/, uint8_t index_size) {
   return ii;
 }
 
-void _gpsinput_process_sentence(UartState_t *uart, void *user_data,
-                                char *sentence) {
+void _gpsinput_process_sentence(UartState_t *uart, void *user_data, char *sentence) {
   GPSInput *gpsi = (GPSInput *)user_data;
 #ifndef SIM
 #define INVALID(m) \
-  { return; }
+  {                \
+    return;        \
+  }
 #else
   // fprintf(stderr, "gpsinput sees %s\n", sentence);
 #define INVALID(m)                                    \
@@ -58,8 +56,7 @@ void _gpsinput_process_sentence(UartState_t *uart, void *user_data,
   }
 
   uint8_t field_index[15];
-  uint8_t num_fields = split(sentence, field_index,
-                             sizeof(field_index) / sizeof(field_index[0]));
+  uint8_t num_fields = split(sentence, field_index, sizeof(field_index) / sizeof(field_index[0]));
   // $GPGGA,235453,4736.760,N,12219.740,W,1,05,2.2,104.1,M,-18.4,M,,*7A
   if (num_fields != 14) {
     INVALID("num_fields");

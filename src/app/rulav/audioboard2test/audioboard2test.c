@@ -33,27 +33,27 @@
 
 #define SAMPLE_BUF_COUNT 4096
 
-//#define FAT_FILE "silence.bin"
-//#define FAT_FILE "kool50.raw"
-//#define FAT_FILE "chill50.raw"
+// #define FAT_FILE "silence.bin"
+// #define FAT_FILE "kool50.raw"
+// #define FAT_FILE "chill50.raw"
 #define FAT_FILE "music/funky.raw"
 
 typedef struct {
   int num_buffers_filled;
   uint8_t i2s_storage[I2S_STATE_SIZE(SAMPLE_BUF_COUNT)];
-  i2s_t* i2s;
+  i2s_t *i2s;
   int16_t samplebuffer[SAMPLE_BUF_COUNT];
   FATFS fatfs;
   FIL fp;
 } AudioState;
 
-static void recv_keystroke(struct s_input_injector_ifc* iii, Keystroke k) {
+static void recv_keystroke(struct s_input_injector_ifc *iii, Keystroke k) {
   LOG("app got keystroke %c", k.key);
 }
 
-static void start_audio(void* user_data) {
+static void start_audio(void *user_data) {
   LOG("starting audio");
-  AudioState* as = (AudioState*)user_data;
+  AudioState *as = (AudioState *)user_data;
 #ifdef FAT_FILE
   if (f_open(&as->fp, FAT_FILE, FA_OPEN_EXISTING | FA_READ) != FR_OK) {
     LOG("can't open %s", FAT_FILE);
@@ -66,12 +66,11 @@ static void start_audio(void* user_data) {
   i2s_start(as->i2s);
 }
 
-static void fill_buffer_cb(void* user_data, int16_t* buffer_to_fill) {
-  AudioState* as = (AudioState*)user_data;
+static void fill_buffer_cb(void *user_data, int16_t *buffer_to_fill) {
+  AudioState *as = (AudioState *)user_data;
 #ifdef FAT_FILE
   UINT bytes_read;
-  int retval =
-      f_read(&as->fp, buffer_to_fill, SAMPLE_BUF_COUNT * 2, &bytes_read);
+  int retval = f_read(&as->fp, buffer_to_fill, SAMPLE_BUF_COUNT * 2, &bytes_read);
   if (retval != FR_OK) {
     LOG("read error reading from %s: %d", FAT_FILE, retval);
     __builtin_trap();
@@ -87,24 +86,23 @@ static void fill_buffer_cb(void* user_data, int16_t* buffer_to_fill) {
 #endif
 }
 
-static void audio_done_cb(void* user_data) {
+static void audio_done_cb(void *user_data) {
   LOG("audio done");
 
 #ifdef FAT_FILE
-  AudioState* as = (AudioState*)user_data;
+  AudioState *as = (AudioState *)user_data;
   f_close(&as->fp);
 #endif
 
   schedule_us(2000000, start_audio, user_data);
 }
 
-void init_samples(AudioState* as) {
+void init_samples(AudioState *as) {
   int sample = 0;
   // float scalefactor = (1 << 14);
   float scalefactor = (1 << 13);
   for (int i = 0; i < SAMPLE_BUF_COUNT / 2; i++) {
-    float sinewave =
-        (sinf(((float)3.14159 * 2 * i * 32) / (SAMPLE_BUF_COUNT / 2)));
+    float sinewave = (sinf(((float)3.14159 * 2 * i * 32) / (SAMPLE_BUF_COUNT / 2)));
     int32_t intsinewave = sinewave * scalefactor;
     as->samplebuffer[sample++] = intsinewave;
     as->samplebuffer[sample++] = intsinewave;
@@ -156,8 +154,8 @@ int main() {
   init_samples(&as);
 #endif
 
-  as.i2s = i2s_init(SAMPLE_BUF_COUNT, 50000, &as, fill_buffer_cb, audio_done_cb,
-                    as.i2s_storage, sizeof(as.i2s_storage));
+  as.i2s = i2s_init(SAMPLE_BUF_COUNT, 50000, &as, fill_buffer_cb, audio_done_cb, as.i2s_storage,
+                    sizeof(as.i2s_storage));
   schedule_now((ActivationFuncPtr)start_audio, &as);
 
   // network receiver test

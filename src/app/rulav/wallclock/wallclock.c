@@ -112,8 +112,8 @@ static void display_unhappy(WallClockActivation_t *wca, uint16_t interval_ms) {
 
 #define SECONDS_BETWEEN_PULSES 60
 
-static void calibrate_clock(WallClockActivation_t *wca, uint8_t hour,
-                            uint8_t minute, uint8_t second, Time reception_us) {
+static void calibrate_clock(WallClockActivation_t *wca, uint8_t hour, uint8_t minute,
+                            uint8_t second, Time reception_us) {
   // Compute the elapsed time according to our local clock between
   // this packet received and when the previous one was received
   Time reception_diff_us, error;
@@ -128,8 +128,8 @@ static void calibrate_clock(WallClockActivation_t *wca, uint8_t hour,
     error = 0;
   }
 
-  LOG("got pulse at %d, last at %d, diff is %d, error %d", reception_us,
-      wca->last_reception_us, reception_diff_us, error);
+  LOG("got pulse at %d, last at %d, diff is %d, error %d", reception_us, wca->last_reception_us,
+      reception_diff_us, error);
   wca->last_reception_us = reception_us;
   wca->mins_since_last_sync = 0;
 
@@ -164,8 +164,9 @@ static void calibrate_clock(WallClockActivation_t *wca, uint8_t hour,
  */
 static void advance_clock(WallClockActivation_t *wca, uint16_t interval_ms) {
   // if we don't have a valid time, don't change the clock
-  if (wca->hour < 0)
+  if (wca->hour < 0) {
     return;
+  }
 
   wca->hundredth += ((interval_ms + 5) / 10);
 
@@ -190,10 +191,11 @@ static void advance_clock(WallClockActivation_t *wca, uint16_t interval_ms) {
 /******************* main ***********************************/
 
 static uint8_t ascii_digit(uint8_t c) {
-  if (c >= '0' && c <= '9')
+  if (c >= '0' && c <= '9') {
     return c - '0';
-  else
+  } else {
     return 0;
+  }
 }
 
 // Check the UART to see if there's a valid message.  I'll arbitrarily
@@ -246,8 +248,7 @@ done:
 // buffer until there are 8 of them, then schedule the non-interrupt-time
 // upcall.
 //
-static void uart_char_received(UartState_t *uart, void *data, char *buf,
-                               size_t len) {
+static void uart_char_received(UartState_t *uart, void *data, char *buf, size_t len) {
   WallClockActivation_t *wca = (WallClockActivation_t *)data;
   char c = buf[0];
 
@@ -288,10 +289,11 @@ static void update(WallClockActivation_t *wca) {
 
   // display either the time (if the clock has been set)
   // or an unhappy message (if it has not)
-  if (wca->hour < 0)
+  if (wca->hour < 0) {
     display_unhappy(wca, interval_ms);
-  else
+  } else {
     display_clock(wca);
+  }
 
   if (wca->display_flag) {
     wca->display_flag--;

@@ -9,8 +9,8 @@
 #include <unistd.h>
 
 #define _POSIX_SOURCE 1  // POSIX compliant source
-#define FALSE 0
-#define TRUE 1
+#define FALSE         0
+#define TRUE          1
 
 int main(int argc, const char **argv) {
   int rc;

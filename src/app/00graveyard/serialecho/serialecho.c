@@ -18,7 +18,7 @@
 
 #include "core/rulos.h"
 #include "periph/uart/uart.h"
-//#include "graveyard/spiflash.h"
+// #include "graveyard/spiflash.h"
 
 #include "core/hardware.h"  // sorry. Blinky LED.
 
@@ -220,8 +220,9 @@ int wait_ready(void) {
   rcvr_spi();
   int i;
   for (i = 0; i < 1000; i++) {
-    if (rcvr_spi() == 0xff)
+    if (rcvr_spi() == 0xff) {
       return 1;
+    }
   }
   return 0;
 }
@@ -288,8 +289,9 @@ uint8_t start_cmd(uint8_t cmd, uint32_t arg) {
   }  // valid CRC for CMD8(0x1AA)
   xmit_spi(crc);
 
-  if (cmd == CMD12)
+  if (cmd == CMD12) {
     rcvr_spi();  // skip a stuff byte when stop reading
+  }
 
   int n = 10;
   do {
@@ -386,7 +388,9 @@ uint8_t disk_initialize() {
   debug_state(4);
 
   deselect();
-  for (n = 16; n; n--) rcvr_spi(); /* 96 dummy clocks */
+  for (n = 16; n; n--) {
+    rcvr_spi(); /* 96 dummy clocks */
+  }
 
   debug_state(0x10);
 

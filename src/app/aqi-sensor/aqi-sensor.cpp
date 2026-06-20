@@ -156,8 +156,7 @@ void on_upload_success(void) {
   watchdog_keepalive(&watchdog);
 }
 
-DataUploader data_uploader(&hc, BASE_URL, &sensor_name, &sensor_cache,
-                           on_upload_success);
+DataUploader data_uploader(&hc, BASE_URL, &sensor_name, &sensor_cache, on_upload_success);
 
 int main() {
   rulos_hal_init();
@@ -173,8 +172,7 @@ int main() {
   gpio_make_output(LED_PIN);
   schedule_now(show_status, NULL);
 
-  inet_wifi_client_start(wifi_creds,
-                         sizeof(wifi_creds) / sizeof(wifi_creds[0]));
+  inet_wifi_client_start(wifi_creds, sizeof(wifi_creds) / sizeof(wifi_creds[0]));
   ntp.start();
   sensor_name.start();
   data_uploader.start();

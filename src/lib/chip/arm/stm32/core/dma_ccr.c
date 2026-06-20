@@ -169,8 +169,8 @@
  *   [8..15] = DMA2 channels 1..8
  */
 typedef struct {
-  DMA_TypeDef* dma;            // DMA1 or DMA2 (NULL = slot not populated)
-  DMA_Channel_TypeDef* hw_ch;  // DMA1_Channel1, ...
+  DMA_TypeDef *dma;            // DMA1 or DMA2 (NULL = slot not populated)
+  DMA_Channel_TypeDef *hw_ch;  // DMA1_Channel1, ...
   uint32_t ll_channel;         // LL_DMA_CHANNEL_1..8 (values 0..7)
   IRQn_Type irqn;
 } dma_channel_hw_t;
@@ -240,17 +240,17 @@ static const dma_channel_hw_t g_hw[DMA_CHANNEL_SLOTS] = {
  */
 typedef struct {
   bool allocated;
-  void (*tc_callback)(void* user_data);
-  void (*ht_callback)(void* user_data);
-  void (*error_callback)(void* user_data);
-  void* user_data;
+  void (*tc_callback)(void *user_data);
+  void (*ht_callback)(void *user_data);
+  void (*error_callback)(void *user_data);
+  void *user_data;
 } dma_channel_state_t;
 
 static dma_channel_state_t g_state[DMA_CHANNEL_SLOTS];
 
 // Convert an opaque handle back to its slot index.
-static inline int state_to_idx(const rulos_dma_channel_t* ch) {
-  return (const dma_channel_state_t*)ch - g_state;
+static inline int state_to_idx(const rulos_dma_channel_t *ch) {
+  return (const dma_channel_state_t *)ch - g_state;
 }
 
 #if !RULOS_DMA_HAS_DMAMUX
@@ -368,7 +368,7 @@ static const uint32_t g_dmamux_req[RULOS_DMA_REQ_COUNT_] = {
 // value, so we wrap them in switch-based helpers once per file.
 // ----------------------------------------------------------------------------
 
-CCMRAM static bool ll_dma_is_active_flag_tc(DMA_TypeDef* dma, uint32_t ch) {
+CCMRAM static bool ll_dma_is_active_flag_tc(DMA_TypeDef *dma, uint32_t ch) {
   switch (ch) {
     case LL_DMA_CHANNEL_1:
       return LL_DMA_IsActiveFlag_TC1(dma);
@@ -400,7 +400,7 @@ CCMRAM static bool ll_dma_is_active_flag_tc(DMA_TypeDef* dma, uint32_t ch) {
   return false;
 }
 
-CCMRAM static void ll_dma_clear_flag_tc(DMA_TypeDef* dma, uint32_t ch) {
+CCMRAM static void ll_dma_clear_flag_tc(DMA_TypeDef *dma, uint32_t ch) {
   switch (ch) {
     case LL_DMA_CHANNEL_1:
       LL_DMA_ClearFlag_TC1(dma);
@@ -439,7 +439,7 @@ CCMRAM static void ll_dma_clear_flag_tc(DMA_TypeDef* dma, uint32_t ch) {
   }
 }
 
-CCMRAM static bool ll_dma_is_active_flag_ht(DMA_TypeDef* dma, uint32_t ch) {
+CCMRAM static bool ll_dma_is_active_flag_ht(DMA_TypeDef *dma, uint32_t ch) {
   switch (ch) {
     case LL_DMA_CHANNEL_1:
       return LL_DMA_IsActiveFlag_HT1(dma);
@@ -471,7 +471,7 @@ CCMRAM static bool ll_dma_is_active_flag_ht(DMA_TypeDef* dma, uint32_t ch) {
   return false;
 }
 
-CCMRAM static void ll_dma_clear_flag_ht(DMA_TypeDef* dma, uint32_t ch) {
+CCMRAM static void ll_dma_clear_flag_ht(DMA_TypeDef *dma, uint32_t ch) {
   switch (ch) {
     case LL_DMA_CHANNEL_1:
       LL_DMA_ClearFlag_HT1(dma);
@@ -510,7 +510,7 @@ CCMRAM static void ll_dma_clear_flag_ht(DMA_TypeDef* dma, uint32_t ch) {
   }
 }
 
-CCMRAM static bool ll_dma_is_active_flag_te(DMA_TypeDef* dma, uint32_t ch) {
+CCMRAM static bool ll_dma_is_active_flag_te(DMA_TypeDef *dma, uint32_t ch) {
   switch (ch) {
     case LL_DMA_CHANNEL_1:
       return LL_DMA_IsActiveFlag_TE1(dma);
@@ -542,7 +542,7 @@ CCMRAM static bool ll_dma_is_active_flag_te(DMA_TypeDef* dma, uint32_t ch) {
   return false;
 }
 
-CCMRAM static void ll_dma_clear_flag_te(DMA_TypeDef* dma, uint32_t ch) {
+CCMRAM static void ll_dma_clear_flag_te(DMA_TypeDef *dma, uint32_t ch) {
   switch (ch) {
     case LL_DMA_CHANNEL_1:
       LL_DMA_ClearFlag_TE1(dma);
@@ -615,9 +615,9 @@ static uint32_t mem_width_to_ll(rulos_dma_width_t w) {
   return LL_DMA_MDATAALIGN_BYTE;
 }
 
-static void init_channel(int idx, const rulos_dma_config_t* c) {
-  const dma_channel_hw_t* hw = &g_hw[idx];
-  dma_channel_state_t* s = &g_state[idx];
+static void init_channel(int idx, const rulos_dma_config_t *c) {
+  const dma_channel_hw_t *hw = &g_hw[idx];
+  dma_channel_state_t *s = &g_state[idx];
 
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
 
@@ -668,7 +668,7 @@ static void init_channel(int idx, const rulos_dma_config_t* c) {
 // Public API
 // ----------------------------------------------------------------------------
 
-rulos_dma_channel_t* rulos_dma_alloc(const rulos_dma_config_t* config) {
+rulos_dma_channel_t *rulos_dma_alloc(const rulos_dma_config_t *config) {
   if (config == NULL || config->request == RULOS_DMA_REQ_NONE ||
       config->request >= RULOS_DMA_REQ_COUNT_) {
     return NULL;
@@ -723,16 +723,16 @@ rulos_dma_channel_t* rulos_dma_alloc(const rulos_dma_config_t* config) {
   HAL_NVIC_SetPriority(g_hw[found_idx].irqn, 1, 0);
   HAL_NVIC_EnableIRQ(g_hw[found_idx].irqn);
 
-  return (rulos_dma_channel_t*)&g_state[found_idx];
+  return (rulos_dma_channel_t *)&g_state[found_idx];
 }
 
-void rulos_dma_reconfigure(rulos_dma_channel_t* ch, const rulos_dma_config_t* new_config) {
+void rulos_dma_reconfigure(rulos_dma_channel_t *ch, const rulos_dma_config_t *new_config) {
   init_channel(state_to_idx(ch), new_config);
 }
 
-void rulos_dma_start(rulos_dma_channel_t* ch, volatile void* periph_addr, void* mem_addr,
+void rulos_dma_start(rulos_dma_channel_t *ch, volatile void *periph_addr, void *mem_addr,
                      uint32_t nitems) {
-  const dma_channel_hw_t* hw = &g_hw[state_to_idx(ch)];
+  const dma_channel_hw_t *hw = &g_hw[state_to_idx(ch)];
 
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
   LL_DMA_SetDataLength(hw->dma, hw->ll_channel, nitems);
@@ -752,8 +752,8 @@ void rulos_dma_start(rulos_dma_channel_t* ch, volatile void* periph_addr, void* 
   LL_DMA_EnableChannel(hw->dma, hw->ll_channel);
 }
 
-void rulos_dma_stop(rulos_dma_channel_t* ch) {
-  const dma_channel_hw_t* hw = &g_hw[state_to_idx(ch)];
+void rulos_dma_stop(rulos_dma_channel_t *ch) {
+  const dma_channel_hw_t *hw = &g_hw[state_to_idx(ch)];
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
 
   // Clear any TC/HT/TE flags left over from the transfer we just
@@ -771,14 +771,14 @@ void rulos_dma_stop(rulos_dma_channel_t* ch) {
   ll_dma_clear_flag_te(hw->dma, hw->ll_channel);
 }
 
-uint32_t rulos_dma_get_remaining(const rulos_dma_channel_t* ch) {
-  const dma_channel_hw_t* hw = &g_hw[state_to_idx(ch)];
+uint32_t rulos_dma_get_remaining(const rulos_dma_channel_t *ch) {
+  const dma_channel_hw_t *hw = &g_hw[state_to_idx(ch)];
   return LL_DMA_GetDataLength(hw->dma, hw->ll_channel);
 }
 
-void rulos_dma_free(rulos_dma_channel_t* ch) {
+void rulos_dma_free(rulos_dma_channel_t *ch) {
   const int idx = state_to_idx(ch);
-  const dma_channel_hw_t* hw = &g_hw[idx];
+  const dma_channel_hw_t *hw = &g_hw[idx];
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
 
   // Silence this channel at the DMA-hardware level by disabling its
@@ -800,8 +800,8 @@ void rulos_dma_free(rulos_dma_channel_t* ch) {
 // ----------------------------------------------------------------------------
 
 CCMRAM static void dispatch_channel_irq(int idx) {
-  const dma_channel_hw_t* hw = &g_hw[idx];
-  dma_channel_state_t* s = &g_state[idx];
+  const dma_channel_hw_t *hw = &g_hw[idx];
+  dma_channel_state_t *s = &g_state[idx];
   if (hw->dma == NULL || !s->allocated) {
     return;
   }

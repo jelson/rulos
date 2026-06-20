@@ -53,8 +53,7 @@ void hal_idle() {
 // timer_id is ignored for now; we just use the LPC SysTick clock,
 // which is meant for use for a system clock because it doesn't have
 // any pin inputs or outputs.
-uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
-                            uint8_t timer_id) {
+uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data, uint8_t timer_id) {
   // The correct formula for ticks-per-clock-period is just the
   // frequency of the CPU in MHz times the desired period in
   // microseconds. However, we don't want to divide by the clock by 1M

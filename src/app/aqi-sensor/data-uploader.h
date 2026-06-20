@@ -129,8 +129,8 @@ class DataUploader : public HttpsHandlerIfc {
   }
 
  public:
-  DataUploader(HttpsClient *hc, const char *base_url, SensorName *sn,
-               SensorDataCacheIfc *cache, on_success_t on_success)
+  DataUploader(HttpsClient *hc, const char *base_url, SensorName *sn, SensorDataCacheIfc *cache,
+               on_success_t on_success)
       : _hc(hc),
         _base_url(base_url),
         _sn(sn),

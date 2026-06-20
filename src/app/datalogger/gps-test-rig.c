@@ -53,20 +53,18 @@ typedef struct {
   const char *init_seq[][2];
 } serial_init_steps_t;
 
-static serial_init_steps_t sony_init_steps = {
-    .last_init_step = -1,
-    .init_seq = {
-        {"@VER", "[VER] Done"},
-        {"@BSSL 34345967", "[BSSL] Done"},
-        {"@GNS 0x3", "[GNS] Done"},
-        {"@GSOP 1 1000 0", "[GSOP] Done"},
-        {"@GSR", "[GSR] Done"},
-        {"@GCD", "[GCD] Done"},
-        {NULL, NULL},
-    }};
+static serial_init_steps_t sony_init_steps = {.last_init_step = -1,
+                                              .init_seq = {
+                                                  {"@VER", "[VER] Done"},
+                                                  {"@BSSL 34345967", "[BSSL] Done"},
+                                                  {"@GNS 0x3", "[GNS] Done"},
+                                                  {"@GSOP 1 1000 0", "[GSOP] Done"},
+                                                  {"@GSR", "[GSR] Done"},
+                                                  {"@GCD", "[GCD] Done"},
+                                                  {NULL, NULL},
+                                              }};
 
-static void write_config_string(serial_reader_t *sr,
-                                serial_init_steps_t *steps) {
+static void write_config_string(serial_reader_t *sr, serial_init_steps_t *steps) {
   const char *next = steps->init_seq[steps->last_init_step][0];
   if (next == NULL) {
     LOG("uart %d: config done", sr->uart.uart_id);
@@ -75,8 +73,7 @@ static void write_config_string(serial_reader_t *sr,
   }
 
   char s[100];
-  LOG("sending uart %d config step %d", sr->uart.uart_id,
-      steps->last_init_step);
+  LOG("sending uart %d config step %d", sr->uart.uart_id, steps->last_init_step);
   snprintf(s, sizeof(s), "%s\r\n", next);
   serial_reader_print(sr, s);
 }
@@ -102,8 +99,7 @@ static void enable_sony(void *data) {
     write_config_string(sr, &sony_init_steps);
   } else {
     Time now = clock_time_us();
-    LOG("sony seems okay (now %ld, last %ld, %ld ago", now, sr->last_active,
-        now - sr->last_active);
+    LOG("sony seems okay (now %ld, last %ld, %ld ago", now, sr->last_active, now - sr->last_active);
   }
   schedule_us(5000000, enable_sony, data);
 }
@@ -114,11 +110,10 @@ static void enable_sony(void *data) {
 
 static uint8_t ublox_config[] = {
     // Ublox config: UBX-CFG-GNSS, to enable GPS, Galileo, GLONASS
-    0xB5, 0x62, 0x06, 0x3E, 0x34, 0x00, 0x00, 0x00, 0x3F, 0x06, 0x00, 0x08,
-    0x10, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x03, 0x03, 0x00, 0x01, 0x00,
-    0x01, 0x01, 0x02, 0x08, 0x0C, 0x00, 0x01, 0x00, 0x01, 0x01, 0x03, 0x02,
-    0x05, 0x00, 0x00, 0x00, 0x01, 0x01, 0x05, 0x03, 0x04, 0x00, 0x01, 0x00,
-    0x05, 0x01, 0x06, 0x08, 0x0C, 0x00, 0x01, 0x00, 0x01, 0x01, 0x37, 0x04};
+    0xB5, 0x62, 0x06, 0x3E, 0x34, 0x00, 0x00, 0x00, 0x3F, 0x06, 0x00, 0x08, 0x10, 0x00, 0x01,
+    0x00, 0x01, 0x01, 0x01, 0x03, 0x03, 0x00, 0x01, 0x00, 0x01, 0x01, 0x02, 0x08, 0x0C, 0x00,
+    0x01, 0x00, 0x01, 0x01, 0x03, 0x02, 0x05, 0x00, 0x00, 0x00, 0x01, 0x01, 0x05, 0x03, 0x04,
+    0x00, 0x01, 0x00, 0x05, 0x01, 0x06, 0x08, 0x0C, 0x00, 0x01, 0x00, 0x01, 0x01, 0x37, 0x04};
 
 bool ublox_glonass_active = false;
 
@@ -130,16 +125,14 @@ static void enable_ublox(void *data) {
   if (!ublox_glonass_active) {
     LOG("sending ublox gnss config");
     uart_write(&sr->uart, ublox_config, sizeof(ublox_config));
-    flash_dumper_write(sr->flash_dumper, NULL, 0,
-                       "out,%d,<ublox config string>", sr->uart.uart_id);
+    flash_dumper_write(sr->flash_dumper, NULL, 0, "out,%d,<ublox config string>", sr->uart.uart_id);
   }
   ublox_glonass_active = false;
 
   schedule_us(5000000, enable_ublox, data);
 }
 
-static void ublox_data_received(serial_reader_t *sr, const char *line,
-                                void *data) {
+static void ublox_data_received(serial_reader_t *sr, const char *line, void *data) {
   if (!strncmp(line, "$GLGSV", strlen("$GLGSV"))) {
     ublox_glonass_active = true;
   }
@@ -204,14 +197,13 @@ int main() {
   serial_reader_init(&refgps, REFGPS_UART_NUM, 9600, &flash_dumper, NULL, NULL);
 
   // enable sony on dut1
-  serial_reader_init(&dut1, DUT1_UART_NUM, 115200, &flash_dumper,
-                     config_received, &sony_init_steps);
+  serial_reader_init(&dut1, DUT1_UART_NUM, 115200, &flash_dumper, config_received,
+                     &sony_init_steps);
   schedule_us(1000000, enable_sony, &dut1);
 
 #ifdef USE_UBLOX
   // enable ublox on dut2
-  serial_reader_init(&dut2, DUT2_UART_NUM, 38400, &flash_dumper,
-                     ublox_data_received, NULL);
+  serial_reader_init(&dut2, DUT2_UART_NUM, 38400, &flash_dumper, ublox_data_received, NULL);
   schedule_us(1000000, enable_ublox, &dut2);
 #else
   serial_reader_init(&dut2, DUT2_UART_NUM, 115200, &flash_dumper, NULL, NULL);

@@ -38,13 +38,12 @@ static void r6l_bbuf_recv(MessageRecvBuffer *msg) {
   BBufMessage *bbm = (BBufMessage *)msg->data;
 
   if (msg->payload_len != sizeof(BBufMessage)) {
-    LOG("rbr_recv: Error: expected BBufMessage of size %zu, got %d bytes",
-        sizeof(BBufMessage), msg->payload_len);
+    LOG("rbr_recv: Error: expected BBufMessage of size %zu, got %d bytes", sizeof(BBufMessage),
+        msg->payload_len);
     goto done;
   }
 
-  if (bbm->index < FIRST_LINE_IDX ||
-      bbm->index >= FIRST_LINE_IDX + ROCKET6LINE_NUM_ROWS) {
+  if (bbm->index < FIRST_LINE_IDX || bbm->index >= FIRST_LINE_IDX + ROCKET6LINE_NUM_ROWS) {
     LOG("got unexpected row index %d", bbm->index);
     goto done;
   }
@@ -56,8 +55,7 @@ done:
 }
 
 static void init_r6l_bbuf_recv(RemoteBBufRecv *rbr, Network *network) {
-  rbr->app_receiver.recv_complete_func = r6l_bbuf_recv,
-  rbr->app_receiver.port = REMOTE_BBUF_PORT;
+  rbr->app_receiver.recv_complete_func = r6l_bbuf_recv, rbr->app_receiver.port = REMOTE_BBUF_PORT;
   rbr->app_receiver.num_receive_buffers = REMOTE_BBUF_RING_SIZE;
   rbr->app_receiver.payload_capacity = sizeof(BBufMessage);
   rbr->app_receiver.message_recv_buffers = rbr->recv_ring_alloc;

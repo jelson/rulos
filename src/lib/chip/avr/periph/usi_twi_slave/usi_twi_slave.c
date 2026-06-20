@@ -27,7 +27,7 @@
 
 // Debug
 
-//#define ENABLE_DEBUG_STROBE
+// #define ENABLE_DEBUG_STROBE
 
 #ifdef ENABLE_DEBUG_STROBE
 
@@ -66,7 +66,7 @@ typedef enum {
 
 typedef struct {
   uint8_t my_address;
-  MediaRecvSlot* recv_slot;
+  MediaRecvSlot *recv_slot;
   int8_t recv_len;  // must be signed since we use -1 as a sentinel
   usi_slave_send_func send_func;
   UsiTwiSlaveStates state;
@@ -79,24 +79,22 @@ static UsiTwiSlaveContext usi;
 // that overflows during the transition from 15 back to 0, we set it to 14 if
 // we want an overflow interrupt after 1 bit transferred (two clocks to
 // overflow), or zero if we want 8 bits (16 clocks to overflow).
-#define USI_WANT_1_BIT (0xe)
+#define USI_WANT_1_BIT  (0xe)
 #define USI_WANT_8_BITS (0)
 
-static void usi_poll_for_stop(void* data);
+static void usi_poll_for_stop(void *data);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Configures the TWI bus when it's idle, waiting for a start condition.
 static void usi_twi_slave_idle_bus() {
-  USICR =
-      (1 << USISIE) |  // enable start condition interrupt
-      (0 << USIOIE) |  // !enable overflow interrupt
-      (1 << USIWM1) |  // set usi in two-wire mode, disable bit counter overflow
-                       // hold
-      (0 << USIWM0) |
-      (1 << USICS1) |  // shift register clock source = external, positive edge,
-      (0 << USICS0) |  // 4-bit counter source = external, both edges
-      (0 << USICLK) | (0 << USITC);  // don't toggle clock-port pin
+  USICR = (1 << USISIE) |                  // enable start condition interrupt
+          (0 << USIOIE) |                  // !enable overflow interrupt
+          (1 << USIWM1) |                  // set usi in two-wire mode, disable bit counter overflow
+                                           // hold
+          (0 << USIWM0) | (1 << USICS1) |  // shift register clock source = external, positive edge,
+          (0 << USICS0) |                  // 4-bit counter source = external, both edges
+          (0 << USICLK) | (0 << USITC);    // don't toggle clock-port pin
 
   USISR = (0 << USISIF) |  // don't clear start condition flag
           (1 << USIOIF) |  // clear overflow condition flag
@@ -138,23 +136,19 @@ ISR(USI_START_VECT) {
     // wait
   };
 
-  USICR =
-      (1 << USISIE) |  // enable start condition interrupt
-      (1 << USIOIE) |  // enable overflow interrupt
-      (1 << USIWM1) |  // set usi in two-wire mode, enable bit counter overflow
-                       // hold
-      (1 << USIWM0) |
-      (1 << USICS1) |  // shift register clock source = external, positive edge,
-      (0 << USICS0) |  // 4-bit counter source = external, both edges
-      (0 << USICLK) | (0 << USITC);  // don't toggle clock-port pin
+  USICR = (1 << USISIE) |                  // enable start condition interrupt
+          (1 << USIOIE) |                  // enable overflow interrupt
+          (1 << USIWM1) |                  // set usi in two-wire mode, enable bit counter overflow
+                                           // hold
+          (1 << USIWM0) | (1 << USICS1) |  // shift register clock source = external, positive edge,
+          (0 << USICS0) |                  // 4-bit counter source = external, both edges
+          (0 << USICLK) | (0 << USITC);    // don't toggle clock-port pin
 
-  USISR = (1 << USISIF) |  // clear start condition flag
-          (1 << USIOIF) |  // clear overflow condition flag
-          (1 << USIPF) |   // clear stop condition flag
-          (1 << USIDC) |   // clear arbitration error flag
-          (
-              USI_WANT_8_BITS
-              << USICNT0);  // get an interrupt after bits (the address)
+  USISR = (1 << USISIF) |                // clear start condition flag
+          (1 << USIOIF) |                // clear overflow condition flag
+          (1 << USIPF) |                 // clear stop condition flag
+          (1 << USIDC) |                 // clear arbitration error flag
+          (USI_WANT_8_BITS << USICNT0);  // get an interrupt after bits (the address)
 
   DEBUG_STROBE(1);
 }
@@ -213,8 +207,7 @@ ISR(USI_OVF_VECT) {
         // Slave-receive mode. Send an ack only if we have buffer space
         // available; otherwise, NACK.
         DEBUG_STROBE(5);
-        if (usi.recv_slot != NULL && usi.recv_slot->packet_len == 0 &&
-            usi.recv_len == -1) {
+        if (usi.recv_slot != NULL && usi.recv_slot->packet_len == 0 && usi.recv_len == -1) {
           schedule_now(usi_poll_for_stop, NULL);
           usi.recv_len = 0;
           USIDR = 0;
@@ -311,7 +304,7 @@ ISR(USI_OVF_VECT) {
 // stupid. There's no way to detect a stop condition other than to poll for it.
 // Amazing. We start this "userspace" poller when we get the start of an
 // incoming packet and don't exit until we get a STOP.
-static void usi_poll_for_stop(void* data) {
+static void usi_poll_for_stop(void *data) {
   while (!(USISR & _BV(USIPF))) {
     DEBUG_STROBE(7);
   }
@@ -330,8 +323,7 @@ static void usi_poll_for_stop(void* data) {
   usi_twi_slave_idle_bus();
 }
 
-void usi_twi_slave_init(char address, MediaRecvSlot* recv_slot,
-                        usi_slave_send_func send_func) {
+void usi_twi_slave_init(char address, MediaRecvSlot *recv_slot, usi_slave_send_func send_func) {
   DEBUG_STROBE_INIT();
 
   usi.my_address = address;

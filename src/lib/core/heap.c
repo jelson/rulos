@@ -23,17 +23,17 @@
 #include "core/clock.h"
 #include "core/logging.h"
 
-void heap_init(Heap* heap) {
+void heap_init(Heap *heap) {
   heap->heap_count = 0;
 }
 
-void heap_swap(HeapEntry* he, int off0, int off1) {
+void heap_swap(HeapEntry *he, int off0, int off1) {
   HeapEntry tmp = he[off0];
   he[off0] = he[off1];
   he[off1] = tmp;
 }
 
-void heap_bubble(HeapEntry* he, int ptr) {
+void heap_bubble(HeapEntry *he, int ptr) {
   while (ptr > 0) {
     int parent = ptr >> 1;
     if (later_than(he[ptr].key, he[parent].key)) {
@@ -45,7 +45,7 @@ void heap_bubble(HeapEntry* he, int ptr) {
   }
 }
 
-uint8_t heap_insert(Heap* heap, Time key, ActivationFuncPtr func, void* data) {
+uint8_t heap_insert(Heap *heap, Time key, ActivationFuncPtr func, void *data) {
   uint8_t hc = heap->heap_count;
   assert(hc < SCHEDULER_CAPACITY);  // heap overflow
   heap->heap[hc].key = key;
@@ -62,7 +62,7 @@ uint8_t heap_insert(Heap* heap, Time key, ActivationFuncPtr func, void* data) {
 #endif
 }
 
-int heap_peek(Heap* heap, /*out*/ Time* key, /*out*/ ActivationRecord* act) {
+int heap_peek(Heap *heap, /*out*/ Time *key, /*out*/ ActivationRecord *act) {
   int retval = -1;
 
   if (heap->heap_count == 0) {
@@ -76,13 +76,13 @@ done:
   return retval;
 }
 
-void heap_pop(Heap* heap) {
+void heap_pop(Heap *heap) {
   assert(heap->heap_count > 0);  // heap underflow
   heap->heap[0] = heap->heap[heap->heap_count - 1];
   heap->heap_count -= 1;
   const int hc = heap->heap_count;
 
-  HeapEntry* he = heap->heap;
+  HeapEntry *he = heap->heap;
   /* down-heap */
   int ptr = 0;
   while (1) {

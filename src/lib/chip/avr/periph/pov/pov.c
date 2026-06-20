@@ -266,8 +266,7 @@ void pov_paint(uint8_t bitmap) {
 
 void pov_display(PovAct *povAct) {
   uint16_t position =
-      ((clock_time_us() - povAct->curPhase) << (POV_LG_DISPLAY_WIDTH + 3)) /
-      povAct->lastPeriod;
+      ((clock_time_us() - povAct->curPhase) << (POV_LG_DISPLAY_WIDTH + 3)) / povAct->lastPeriod;
 
   // shift phase 90 degrees to center fwd/reverse images
 #define NINETY_DEGREES (1 << (POV_LG_DISPLAY_WIDTH - 2))
@@ -302,8 +301,7 @@ uint8_t pov_write_count(PovAct *povAct, char *msg, uint8_t offset) {
     povAct->message[bit_p] = 0;
   }
   // memset(povAct->message, POV_DISPLAY_WIDTH, 0);
-  for (msg_p = msg, bit_p = offset; *msg_p != 0 && (bit_p < POV_DISPLAY_WIDTH);
-       msg_p++) {
+  for (msg_p = msg, bit_p = offset; *msg_p != 0 && (bit_p < POV_DISPLAY_WIDTH); msg_p++) {
     uint8_t column;
     if (*msg_p == ' ') {
       bit_p += 4;
@@ -316,8 +314,7 @@ uint8_t pov_write_count(PovAct *povAct, char *msg, uint8_t offset) {
     }
 
     Glyph *g = &alphabet[index];
-    for (column = 0; column < g->width && (bit_p < POV_DISPLAY_WIDTH);
-         column++) {
+    for (column = 0; column < g->width && (bit_p < POV_DISPLAY_WIDTH); column++) {
       povAct->message[bit_p] = g->bitmaps[column];
       bit_p += 1;
     }

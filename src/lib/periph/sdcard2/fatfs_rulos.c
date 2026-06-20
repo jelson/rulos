@@ -27,8 +27,8 @@ static void sdcard_dma_init(void);
 ////////////////////////////////////////////////////////////////
 ////// Implementation of the SD module's expecting down-facing API.
 
-void FATFS_DEBUG_SEND_USART(const char* msg) {
-  //LOG("SD card: %s", msg);
+void FATFS_DEBUG_SEND_USART(const char *msg) {
+  // LOG("SD card: %s", msg);
 }
 
 // 10ms-granularity timeout timer
@@ -118,14 +118,13 @@ void TM_SPI_SetFast() {
   LL_SPI_SetBaudRatePrescaler(SD_SPI_PERIPH, LL_SPI_BAUDRATEPRESCALER_DIV4);
 }
 
-//#define DO_NOT_USE_DMA
+// #define DO_NOT_USE_DMA
 
 #ifdef DO_NOT_USE_DMA
 
 // This is the old implementation of SPI writing, using a loop in code
 // rather than DMA. Deprecated but still here in case we need it.
-void TM_SPI_WriteMulti(SPI_TypeDef* SPIx, uint8_t* dataOut,
-                              uint32_t count) {
+void TM_SPI_WriteMulti(SPI_TypeDef *SPIx, uint8_t *dataOut, uint32_t count) {
   uint32_t i;
 
   /* Wait for previous transmissions to complete if DMA TX enabled for SPI */
@@ -145,8 +144,7 @@ void TM_SPI_WriteMulti(SPI_TypeDef* SPIx, uint8_t* dataOut,
 
 // This is the old implementation of SPI reading, using a loop in code
 // rather than DMA. Deprecated but still here in case we need it.
-void TM_SPI_ReadMulti(SPI_TypeDef* SPIx, uint8_t* dataIn, uint8_t dummy,
-                             uint32_t count) {
+void TM_SPI_ReadMulti(SPI_TypeDef *SPIx, uint8_t *dataIn, uint8_t dummy, uint32_t count) {
   uint32_t i;
 
   /* Wait for previous transmissions to complete if DMA TX enabled for SPI */
@@ -164,11 +162,11 @@ void TM_SPI_ReadMulti(SPI_TypeDef* SPIx, uint8_t* dataIn, uint8_t dummy,
   }
 }
 
-#else // DO_NOT_USE_DMA
+#else  // DO_NOT_USE_DMA
 
 static volatile bool transmissionComplete;
-static rulos_dma_channel_t* rx_dma_ch;
-static rulos_dma_channel_t* tx_dma_ch;
+static rulos_dma_channel_t *rx_dma_ch;
+static rulos_dma_channel_t *tx_dma_ch;
 
 // Both channels' TC and error callbacks land here and just wake the
 // busy-wait loop in dma_enable_and_wait. Runs in DMA ISR context.
@@ -176,7 +174,7 @@ static rulos_dma_channel_t* tx_dma_ch;
 // for the last SPI clock cycle to shift in the MISO bit), so the
 // normal path only needs RX. We wire TX too so that a TX DMA error
 // doesn't deadlock the wait loop.
-static void sdcard_dma_done_callback(void* user_data) {
+static void sdcard_dma_done_callback(void *user_data) {
   (void)user_data;
   transmissionComplete = true;
 }
@@ -231,9 +229,8 @@ static void sdcard_dma_init(void) {
   }
 }
 
-static void dma_enable_and_wait(void* rx_mem, void* tx_mem, uint32_t count) {
-  volatile void* const spi_dr =
-      (volatile void*)LL_SPI_DMA_GetRegAddr(SD_SPI_PERIPH);
+static void dma_enable_and_wait(void *rx_mem, void *tx_mem, uint32_t count) {
+  volatile void *const spi_dr = (volatile void *)LL_SPI_DMA_GetRegAddr(SD_SPI_PERIPH);
 
   transmissionComplete = false;
 
@@ -261,7 +258,7 @@ static void dma_enable_and_wait(void* rx_mem, void* tx_mem, uint32_t count) {
   }
 }
 
-void TM_SPI_WriteMulti(SPI_TypeDef* SPIx, uint8_t* dataOut, uint32_t count) {
+void TM_SPI_WriteMulti(SPI_TypeDef *SPIx, uint8_t *dataOut, uint32_t count) {
   uint8_t rx_sink;
 
   // RX side discards incoming bytes into a single dummy location
@@ -275,8 +272,7 @@ void TM_SPI_WriteMulti(SPI_TypeDef* SPIx, uint8_t* dataOut, uint32_t count) {
   dma_enable_and_wait(&rx_sink, dataOut, count);
 }
 
-void TM_SPI_ReadMulti(SPI_TypeDef* SPIx, uint8_t* dataIn, uint8_t dummy,
-                      uint32_t count) {
+void TM_SPI_ReadMulti(SPI_TypeDef *SPIx, uint8_t *dataIn, uint8_t dummy, uint32_t count) {
   // RX side walks through dataIn (mem_increment=true). TX side reads
   // the same dummy byte over and over (mem_increment=false) to clock
   // the SPI bus.
@@ -303,14 +299,14 @@ DSTATUS disk_status(BYTE pdrv) {
   return TM_FATFS_SD_disk_status();
 }
 
-DRESULT disk_read(BYTE pdrv, BYTE* buff, DWORD sector, UINT count) {
+DRESULT disk_read(BYTE pdrv, BYTE *buff, DWORD sector, UINT count) {
   return TM_FATFS_SD_disk_read(buff, sector, count);
 }
 
-DRESULT disk_write(BYTE pdrv, const BYTE* buff, DWORD sector, UINT count) {
+DRESULT disk_write(BYTE pdrv, const BYTE *buff, DWORD sector, UINT count) {
   return TM_FATFS_SD_disk_write(buff, sector, count);
 }
 
-DRESULT disk_ioctl(BYTE pdrv, BYTE cmd, void* buff) {
+DRESULT disk_ioctl(BYTE pdrv, BYTE cmd, void *buff) {
   return TM_FATFS_SD_disk_ioctl(cmd, buff);
 }

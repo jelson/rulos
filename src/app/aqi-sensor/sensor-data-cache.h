@@ -84,12 +84,11 @@ class SensorDataCacheTemplate : public SensorDataCacheIfc {
 
     char log_msg[100];
     int log_len =
-        snprintf(log_msg, sizeof(log_msg),
-                 "data cache: popping %d items; %d remaining", n, _len);
+        snprintf(log_msg, sizeof(log_msg), "data cache: popping %d items; %d remaining", n, _len);
     if (_len > 0) {
-      log_len += snprintf(log_msg + log_len, sizeof(log_msg) - log_len,
-                          " (%llu-%llu)", _cache[0].epoch_time_usec / 1000000,
-                          _cache[_len - 1].epoch_time_usec / 1000000);
+      log_len +=
+          snprintf(log_msg + log_len, sizeof(log_msg) - log_len, " (%llu-%llu)",
+                   _cache[0].epoch_time_usec / 1000000, _cache[_len - 1].epoch_time_usec / 1000000);
     }
     log_msg[log_len++] = '\n';
     log_write(log_msg, log_len);
@@ -103,8 +102,7 @@ class SensorDataCacheTemplate : public SensorDataCacheIfc {
     uint64_t t = _ntp->get_epoch_time_usec();
 
     // print debug
-    LOG("got data:time_usec=%llu.%06llu,%s", t / 1000000, t % 1000000,
-        serialize_one(data));
+    LOG("got data:time_usec=%llu.%06llu,%s", t / 1000000, t % 1000000, serialize_one(data));
 
     if (t == 0) {
       LOG("....dropping sample because NTP is not locked");

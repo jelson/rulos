@@ -22,5 +22,4 @@
 
 typedef uint8_t (*usi_slave_send_func)();
 
-void usi_twi_slave_init(char address, MediaRecvSlot* recv_slot,
-                        usi_slave_send_func send_func);
+void usi_twi_slave_init(char address, MediaRecvSlot *recv_slot, usi_slave_send_func send_func);

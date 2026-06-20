@@ -111,7 +111,9 @@ void tick_init(Tick *tick, NetworkListener *nl) {
   schedule_us(1000000, &tick->act);
 }
 
-void tick_say(Tick *tick, char *msg) { nl_send_str(tick->nl, "tick", 4); }
+void tick_say(Tick *tick, char *msg) {
+  nl_send_str(tick->nl, "tick", 4);
+}
 
 void _tick_update(Activation *act) {
   Tick *tick = (Tick *)act;
@@ -127,7 +129,9 @@ typedef struct {
 } MainContext;
 MainContext mc;
 
-void g_tick_say(char *msg) { tick_say(&mc.tick, msg); }
+void g_tick_say(char *msg) {
+  tick_say(&mc.tick, msg);
+}
 
 int main() {
   audioled_init();

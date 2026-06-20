@@ -50,23 +50,21 @@ static void reg_write(uint8_t device_addr, uint8_t reg_addr, uint16_t value) {
   buf[1] = value >> 8;
   buf[2] = value & 0xff;
 
-  HAL_I2C_Master_Transmit(&i2c_handle, WRITE_ADDR(device_addr), buf,
-                          sizeof(buf), HAL_MAX_DELAY);
+  HAL_I2C_Master_Transmit(&i2c_handle, WRITE_ADDR(device_addr), buf, sizeof(buf), HAL_MAX_DELAY);
 }
 
 // read from one of the 16-bit registers, writing results to inbuf
-static bool reg_read(uint8_t device_addr, uint8_t reg_addr,
-                     uint16_t *value /* OUT */) {
+static bool reg_read(uint8_t device_addr, uint8_t reg_addr, uint16_t *value /* OUT */) {
   uint8_t outbuf[1];
 
   outbuf[0] = reg_addr;
 
-  HAL_I2C_Master_Transmit(&i2c_handle, WRITE_ADDR(device_addr), outbuf,
-                          sizeof(outbuf), HAL_MAX_DELAY);
+  HAL_I2C_Master_Transmit(&i2c_handle, WRITE_ADDR(device_addr), outbuf, sizeof(outbuf),
+                          HAL_MAX_DELAY);
 
   uint8_t inbuf[2];
-  if (HAL_OK != HAL_I2C_Master_Receive(&i2c_handle, READ_ADDR(device_addr),
-                                       inbuf, 2, HAL_MAX_DELAY)) {
+  if (HAL_OK !=
+      HAL_I2C_Master_Receive(&i2c_handle, READ_ADDR(device_addr), inbuf, 2, HAL_MAX_DELAY)) {
     LOG("error reading from INA219 at 0x%x", device_addr);
     *value = 0;
     return false;
@@ -91,13 +89,12 @@ static void start_i2c() {
   // Enable the I2C peripheral
   __HAL_RCC_I2C1_CLK_ENABLE();
   i2c_handle.Instance = I2C1;
-  i2c_handle.Init.Timing =
-      __LL_I2C_CONVERT_TIMINGS(1,   // Prescaler
-                               13,  // SCLDEL, data setup time
-                               13,  // SDADEL, data hold time
-                               54,  // SCLH, clock high period
-                               84   // SCLL, clock low period
-      );
+  i2c_handle.Init.Timing = __LL_I2C_CONVERT_TIMINGS(1,   // Prescaler
+                                                    13,  // SCLDEL, data setup time
+                                                    13,  // SDADEL, data hold time
+                                                    54,  // SCLH, clock high period
+                                                    84   // SCLL, clock low period
+  );
   i2c_handle.Init.OwnAddress1 = 0;
   i2c_handle.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   i2c_handle.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;

@@ -163,8 +163,8 @@ static bool _write_to_file(flash_dumper_t *fd, const void *buf, uint32_t len) {
 // total memory use
 static char prefix_buf[50];
 
-void flash_dumper_write(flash_dumper_t *fd, const void *buf, uint32_t len,
-                        const char *prefix_fmt, ...) {
+void flash_dumper_write(flash_dumper_t *fd, const void *buf, uint32_t len, const char *prefix_fmt,
+                        ...) {
   // prepend all lines with the current time in milliseconds and a comma
   uint32_t sec, usec;
   wallclock_get_uptime(&fd->wallclock, &sec, &usec);
@@ -174,8 +174,8 @@ void flash_dumper_write(flash_dumper_t *fd, const void *buf, uint32_t len,
   if (prefix_fmt != NULL) {
     va_list ap;
     va_start(ap, prefix_fmt);
-    prefix_len += vsnprintf(prefix_buf + prefix_len,
-                            sizeof(prefix_buf) - prefix_len, prefix_fmt, ap);
+    prefix_len +=
+        vsnprintf(prefix_buf + prefix_len, sizeof(prefix_buf) - prefix_len, prefix_fmt, ap);
     va_end(ap);
   }
 

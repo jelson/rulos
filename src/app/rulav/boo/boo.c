@@ -26,13 +26,8 @@ typedef struct {
   const char *msg;
 } BooRec;
 BooRec boos[] = {
-    {5000000, ""},
-    {0250000, "  boo!"},
-    {5000000, ""},
-    {1000000, "Come see"},
-    {1000000, "our new "},
-    {1000000, " rocket!"},
-    {0, NULL},
+    {5000000, ""},         {0250000, "  boo!"},   {5000000, ""}, {1000000, "Come see"},
+    {1000000, "our new "}, {1000000, " rocket!"}, {0, NULL},
 };
 BooRec *booPtr = boos;
 BoardBuffer bbuf;
@@ -56,7 +51,6 @@ int main() {
   rulos_hal_init();
   hal_init_rocketpanel();
   init_clock(10000, TIMER1);
-
 
   // install_handler(ADC, adc_handler);
 

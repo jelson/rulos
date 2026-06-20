@@ -36,8 +36,7 @@ typedef struct s_remote_keyboard_send {
   struct s_remote_keyboard_send *forward_this;
 } RemoteKeyboardSend;
 
-void init_remote_keyboard_send(RemoteKeyboardSend *rk, Network *network,
-                               Addr addr, Port port);
+void init_remote_keyboard_send(RemoteKeyboardSend *rk, Network *network, Addr addr, Port port);
 
 typedef struct s_remote_keyboard_recv {
   uint8_t recv_ring_alloc[RECEIVE_RING_SIZE(1, sizeof(KeystrokeMessage))];

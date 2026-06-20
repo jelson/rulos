@@ -68,8 +68,7 @@ static esp32_uart_t esp32_uart[NUM_UARTS] = {
     },
 };
 
-void hal_uart_init(uint8_t uart_id, uint32_t baud,
-                   void *user_data /* for both rx and tx upcalls */,
+void hal_uart_init(uint8_t uart_id, uint32_t baud, void *user_data /* for both rx and tx upcalls */,
                    size_t *max_tx_len /* OUT */) {
   assert(uart_id >= 0 && uart_id < NUM_UARTS);
   esp32_uart_t *eu = &esp32_uart[uart_id];
@@ -87,13 +86,13 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud,
       .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
       .source_clk = UART_SCLK_APB,
   };
-  ESP_ERROR_CHECK(uart_driver_install(
-      eu->esp32_uart_num, /*rx_buflen=*/UART_BUFLEN,
-      /*tx_buflen=*/UART_BUFLEN, /* queue_size */ 20, &eu->event_queue,
-      /*intr_alloc_flags */ 0));
+  ESP_ERROR_CHECK(uart_driver_install(eu->esp32_uart_num, /*rx_buflen=*/UART_BUFLEN,
+                                      /*tx_buflen=*/UART_BUFLEN, /* queue_size */ 20,
+                                      &eu->event_queue,
+                                      /*intr_alloc_flags */ 0));
   ESP_ERROR_CHECK(uart_param_config(eu->esp32_uart_num, &uart_config));
-  ESP_ERROR_CHECK(uart_set_pin(eu->esp32_uart_num, eu->tx_pin, eu->rx_pin,
-                               UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+  ESP_ERROR_CHECK(uart_set_pin(eu->esp32_uart_num, eu->tx_pin, eu->rx_pin, UART_PIN_NO_CHANGE,
+                               UART_PIN_NO_CHANGE));
 }
 
 void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb) {
@@ -137,8 +136,7 @@ static void rx_task(void *arg) {
     }
 
     // read data from esp32 uart driver's queue
-    const int num_read =
-        uart_read_bytes(eu->esp32_uart_num, eu->rx_buf, eu->rx_buflen, 0);
+    const int num_read = uart_read_bytes(eu->esp32_uart_num, eu->rx_buf, eu->rx_buflen, 0);
 
     // send up to rulos-land
     if (num_read > 0) {
@@ -148,15 +146,13 @@ static void rx_task(void *arg) {
   }
 }
 
-void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf,
-                       size_t buflen) {
+void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf, size_t buflen) {
   assert(uart_id >= 0 && uart_id < NUM_UARTS);
   esp32_uart_t *eu = &esp32_uart[uart_id];
   eu->rx_cb = rx_cb;
   eu->rx_buf = (char *)buf;
   eu->rx_buflen = buflen;
-  xTaskCreate(rx_task, "uart_rx_task", 1024 * 2, eu, configMAX_PRIORITIES,
-              NULL);
+  xTaskCreate(rx_task, "uart_rx_task", 1024 * 2, eu, configMAX_PRIORITIES, NULL);
 }
 
 void hal_uart_rx_cb_done(uint8_t uart_id) {

@@ -39,11 +39,14 @@
 
 /************* glcd ********************/
 
-void glcd_init(GLCD *glcd, ActivationFuncPtr done_func, void *done_data) {}
+void glcd_init(GLCD *glcd, ActivationFuncPtr done_func, void *done_data) {
+}
 
-void glcd_draw_framebuffer(GLCD *glcd) {}
+void glcd_draw_framebuffer(GLCD *glcd) {
+}
 
-void glcd_clear_framebuffer(GLCD *glcd) {}
+void glcd_clear_framebuffer(GLCD *glcd) {
+}
 
 uint8_t glcd_paint_char(GLCD *glcd, char glyph, int16_t dx0, bool invert) {
   return 0;

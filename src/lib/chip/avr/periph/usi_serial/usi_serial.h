@@ -18,4 +18,4 @@
 
 #pragma once
 
-void usi_serial_send(const char* s);
+void usi_serial_send(const char *s);

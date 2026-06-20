@@ -28,8 +28,6 @@ typedef void (*sim_special_input_handler_t)(int c);
 typedef void (*sim_input_handler_stop_t)();
 
 // Register a handler to absorb keystrokes, such as keypad or ADC.
-void sim_maybe_init_and_register_keystroke_handler(
-    sim_keystroke_handler handler);
+void sim_maybe_init_and_register_keystroke_handler(sim_keystroke_handler handler);
 
-void sim_install_modal_handler(sim_special_input_handler_t handler,
-                               sim_input_handler_stop_t stop);
+void sim_install_modal_handler(sim_special_input_handler_t handler, sim_input_handler_stop_t stop);

@@ -67,5 +67,4 @@ typedef struct s_UartMedia {
 // Then another 'multihost' layer will multiplex between the media
 // on the audio board, and maybe even do packet forwarding. Tee hee.
 
-MediaStateIfc *uart_media_init(UartMedia *um, MediaRecvSlot *mrs,
-                               uint8_t uart_id);
+MediaStateIfc *uart_media_init(UartMedia *um, MediaRecvSlot *mrs, uint8_t uart_id);

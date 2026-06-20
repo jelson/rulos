@@ -106,8 +106,7 @@ void hal_uart_init(HalUart *hal_uart, uint32_t baud, uint8_t uart_id) {
   hal_uart->uart_id = uart_id;
 }
 
-static int uart_enqueue_bytes_by_id(const uint8_t uart_id, const char *data,
-                                    uint32_t len) {
+static int uart_enqueue_bytes_by_id(const uint8_t uart_id, const char *data, uint32_t len) {
   uart_t *uart = &g_uarts[uart_id];
   return Chip_UART_SendRB(uart->LPC_UART, &uart->txring, data, len);
 }

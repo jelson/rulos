@@ -22,11 +22,10 @@
  * chips.
  */
 
+#include "../test-pin.h"
 #include "core/hardware.h"
 #include "core/rulos.h"
 #include "soc/timer_group_struct.h"
-
-#include "../test-pin.h"
 
 void print_one_timergroup(timg_dev_t *dev, const char *label) {
   for (int i = 0; i < 2; i++) {

@@ -30,7 +30,9 @@ void hal_init_joystick_button() {
   sim_maybe_init_and_register_keystroke_handler(sim_joystick_keystroke_handler);
 }
 
-bool hal_read_joystick_button() { return g_joystick_trigger_state; }
+bool hal_read_joystick_button() {
+  return g_joystick_trigger_state;
+}
 
 bool sim_joystick_keystroke_handler(char c) {
   switch (c) {

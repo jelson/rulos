@@ -56,8 +56,8 @@ void spiflash_fill_buffer(SPIFlash *spif, SPIBuffer *spib) {
       1 - spif->cur_buf_index, (unsigned)spib->rb);
   spif->spibuf[1 - spif->cur_buf_index] = spib;
 
-  LOG("spiflash_fill_buffer spib %8x spib->count %d spib->rb size %d",
-      (int)spib, spib->count, ring_insert_avail(spib->rb));
+  LOG("spiflash_fill_buffer spib %8x spib->count %d spib->rb size %d", (int)spib, spib->count,
+      ring_insert_avail(spib->rb));
   hal_end_atomic(old_interrupts);
 }
 
@@ -77,9 +77,8 @@ void _spif_start(SPIFlash *spif) {
   spif->addr[2] = start_addr >> 0;
   spif->addrptr = 0;
 
-  LOG("spib %08x (%d) spiflash initiates at %2x %2x %2x, count %d",
-      (unsigned int)spif->spibuf[cbi], cbi, spif->addr[0], spif->addr[1],
-      spif->addr[2], spif->spibuf[spif->cur_buf_index]->count);
+  LOG("spib %08x (%d) spiflash initiates at %2x %2x %2x, count %d", (unsigned int)spif->spibuf[cbi],
+      cbi, spif->addr[0], spif->addr[1], spif->addr[2], spif->spibuf[spif->cur_buf_index]->count);
 
   spif->state = spist_read_send_addr;
   hal_spi_open();
@@ -104,14 +103,14 @@ void _spiflash_receive(SPIFlash *spif, uint8_t byte) {
       SPIBuffer *spib = spif->spibuf[spif->cur_buf_index];
       ring_insert(spib->rb, byte);
       spib->count -= 1;
-      LOG("_spiflash_receive spib %8x spib->count %d spib->rb size %d",
-          (int)spib, spib->count, ring_insert_avail(spib->rb));
+      LOG("_spiflash_receive spib %8x spib->count %d spib->rb size %d", (int)spib, spib->count,
+          ring_insert_avail(spib->rb));
       goto _spiflash_read_more;
     }
   }
   return;
 
-_spiflash_read_more : {
+_spiflash_read_more: {
   SPIBuffer *spib = spif->spibuf[spif->cur_buf_index];
   if (spib->count > 0 && ring_insert_avail(spib->rb) > 0) {
     hal_spi_send(0x00);

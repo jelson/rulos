@@ -40,21 +40,21 @@
 #include "stm32f3xx_ll_i2c.h"
 #include "stm32f3xx_ll_rcc.h"
 
-#define rI2C1_CLK_ENABLE() __HAL_RCC_I2C1_CLK_ENABLE()
+#define rI2C1_CLK_ENABLE()          __HAL_RCC_I2C1_CLK_ENABLE()
 #define rI2C1_SDA_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
 #define rI2C1_SCL_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
-#define rI2C1_FORCE_RESET() __HAL_RCC_I2C1_FORCE_RESET()
-#define rI2C1_RELEASE_RESET() __HAL_RCC_I2C1_RELEASE_RESET()
+#define rI2C1_FORCE_RESET()         __HAL_RCC_I2C1_FORCE_RESET()
+#define rI2C1_RELEASE_RESET()       __HAL_RCC_I2C1_RELEASE_RESET()
 
 #ifdef RULOS_I2C_ALT_MAPPING
-#define rI2C1_SCL_PIN GPIO_PIN_8
+#define rI2C1_SCL_PIN       GPIO_PIN_8
 #define rI2C1_SCL_GPIO_PORT GPIOB
-#define rI2C1_SDA_PIN GPIO_PIN_9
+#define rI2C1_SDA_PIN       GPIO_PIN_9
 #define rI2C1_SDA_GPIO_PORT GPIOB
 #else
-#define rI2C1_SCL_PIN GPIO_PIN_6
+#define rI2C1_SCL_PIN       GPIO_PIN_6
 #define rI2C1_SCL_GPIO_PORT GPIOB
-#define rI2C1_SDA_PIN GPIO_PIN_7
+#define rI2C1_SDA_PIN       GPIO_PIN_7
 #define rI2C1_SDA_GPIO_PORT GPIOB
 #endif
 #define rI2C1_GPIO_ALTFUNC GPIO_AF4_I2C1
@@ -64,29 +64,27 @@
 #include "stm32g0xx_ll_i2c.h"
 #include "stm32g0xx_ll_rcc.h"
 
-#define rI2C1_CLK_ENABLE() __HAL_RCC_I2C1_CLK_ENABLE()
+#define rI2C1_CLK_ENABLE()          __HAL_RCC_I2C1_CLK_ENABLE()
 #define rI2C1_SDA_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
 #define rI2C1_SCL_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
-#define rI2C1_FORCE_RESET() __HAL_RCC_I2C1_FORCE_RESET()
-#define rI2C1_RELEASE_RESET() __HAL_RCC_I2C1_RELEASE_RESET()
+#define rI2C1_FORCE_RESET()         __HAL_RCC_I2C1_FORCE_RESET()
+#define rI2C1_RELEASE_RESET()       __HAL_RCC_I2C1_RELEASE_RESET()
 
-#define rI2C1_SCL_PIN GPIO_PIN_6
+#define rI2C1_SCL_PIN       GPIO_PIN_6
 #define rI2C1_SCL_GPIO_PORT GPIOB
-#define rI2C1_SDA_PIN GPIO_PIN_7
+#define rI2C1_SDA_PIN       GPIO_PIN_7
 #define rI2C1_SDA_GPIO_PORT GPIOB
-#define rI2C1_GPIO_ALTFUNC GPIO_AF4_I2C1
+#define rI2C1_GPIO_ALTFUNC  GPIO_AF4_I2C1
 
 #else
 #error "Your chip's definitions for I2C registers could use some help."
 #include <stophere>
 #endif
 
-#define rI2C1_DMA_TX_REG_ADDR()                       \
-  ((volatile void *)(uintptr_t)LL_I2C_DMA_GetRegAddr( \
-      I2C1, LL_I2C_DMA_REG_DATA_TRANSMIT))
-#define rI2C1_DMA_RX_REG_ADDR()                       \
-  ((volatile void *)(uintptr_t)LL_I2C_DMA_GetRegAddr( \
-      I2C1, LL_I2C_DMA_REG_DATA_RECEIVE))
+#define rI2C1_DMA_TX_REG_ADDR() \
+  ((volatile void *)(uintptr_t)LL_I2C_DMA_GetRegAddr(I2C1, LL_I2C_DMA_REG_DATA_TRANSMIT))
+#define rI2C1_DMA_RX_REG_ADDR() \
+  ((volatile void *)(uintptr_t)LL_I2C_DMA_GetRegAddr(I2C1, LL_I2C_DMA_REG_DATA_RECEIVE))
 
 typedef struct {
   MediaStateIfc media;
@@ -140,8 +138,7 @@ static void reset_bus(TwiState *twi) {
 static void twi_recv_done(TwiState *twi) {
   // Real packet received!
   assert(twi->slaveRecvSlot != NULL);
-  int packet_len = twi->slaveRecvSlot->capacity -
-                   rulos_dma_get_remaining(twi->rx_dma_ch);
+  int packet_len = twi->slaveRecvSlot->capacity - rulos_dma_get_remaining(twi->rx_dma_ch);
 
   if (packet_len > 0) {
     twi->slaveRecvSlot->packet_len = packet_len;
@@ -155,8 +152,7 @@ static void twi_recv_event_interrupt(TwiState *twi) {
   // second TWI interface
   if (LL_I2C_IsActiveFlag_ADDR(I2C1)) {
     // New packet has arrived. Set up a DMA transfer and ack the packet.
-    rulos_dma_start(twi->rx_dma_ch, rI2C1_DMA_RX_REG_ADDR(),
-                    &twi->slaveRecvSlot->data[0],
+    rulos_dma_start(twi->rx_dma_ch, rI2C1_DMA_RX_REG_ADDR(), &twi->slaveRecvSlot->data[0],
                     twi->slaveRecvSlot->capacity);
     LL_I2C_EnableDMAReq_RX(I2C1);
     LL_I2C_ClearFlag_ADDR(I2C1);
@@ -247,13 +243,11 @@ static void twi_tx_dma_tc_callback(void *user_data) {
 // wait for bus idle before actually issuing START, so we either win
 // the next arbitration or ARLO and retry again.
 static void twi_launch_send(TwiState *twi) {
-  rulos_dma_start(twi->tx_dma_ch, rI2C1_DMA_TX_REG_ADDR(),
-                  (void *)twi->send_data, twi->send_len);
+  rulos_dma_start(twi->tx_dma_ch, rI2C1_DMA_TX_REG_ADDR(), (void *)twi->send_data, twi->send_len);
   LL_I2C_EnableDMAReq_TX(I2C1);
   LL_I2C_AcknowledgeNextData(I2C1, LL_I2C_ACK);
-  LL_I2C_HandleTransfer(I2C1, twi->send_addr, LL_I2C_ADDRSLAVE_7BIT,
-                        twi->send_len, LL_I2C_MODE_AUTOEND,
-                        LL_I2C_GENERATE_START_WRITE);
+  LL_I2C_HandleTransfer(I2C1, twi->send_addr, LL_I2C_ADDRSLAVE_7BIT, twi->send_len,
+                        LL_I2C_MODE_AUTOEND, LL_I2C_GENERATE_START_WRITE);
 }
 
 // Scheduled polling activation for the "pure ARLO" retry path: we
@@ -287,9 +281,8 @@ static void twi_arlo_retry_poll(void *data) {
   hal_end_atomic(old_interrupts);
 }
 
-static void twi_send(MediaStateIfc *media, Addr dest_addr, const void *data,
-                     uint8_t len, MediaSendDoneFunc send_done_cb,
-                     void *send_done_cb_data) {
+static void twi_send(MediaStateIfc *media, Addr dest_addr, const void *data, uint8_t len,
+                     MediaSendDoneFunc send_done_cb, void *send_done_cb_data) {
 #ifdef TIMING_DEBUG_PIN
   gpio_set(TIMING_DEBUG_PIN);
 #endif
@@ -485,8 +478,7 @@ void I2C1_EV_IRQHandler(void) {
   // the send as retry-pending and fall through to the slave-receive
   // path; the retry will be kicked once the winning master's
   // transaction completes.
-  if (LL_I2C_IsActiveFlag_ADDR(I2C1) && MASTER_ACTIVE(twi) &&
-      !twi->send_retry_pending) {
+  if (LL_I2C_IsActiveFlag_ADDR(I2C1) && MASTER_ACTIVE(twi) && !twi->send_retry_pending) {
     // Clear ARLO ourselves if it's set; otherwise, when ER does
     // finally run (after we clear ADDR), it would find no error
     // flags set and would misdispatch to twi_recv_error_interrupt,

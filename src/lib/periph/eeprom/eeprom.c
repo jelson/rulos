@@ -22,7 +22,9 @@
 
 #if SIM
 #define eeprom_write_word(x, y) \
-  { (void)y; }
+  {                             \
+    (void)y;                    \
+  }
 #define eeprom_write_block(x, y, z) \
   {                                 \
     (void)x;                        \
@@ -64,7 +66,7 @@ void eeprom_write(uint8_t *buf, int len) {
 }
 
 bool eeprom_read(uint8_t *buf, int len) {
-  uint16_t magic = eeprom_read_word((uint16_t*)EEPROM_BASE);
+  uint16_t magic = eeprom_read_word((uint16_t *)EEPROM_BASE);
   syncdebug(1, 'm', magic);
   if (magic != EEPROM_MAGIC) {
     SYNCDEBUG();

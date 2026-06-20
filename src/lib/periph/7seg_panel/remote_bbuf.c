@@ -49,8 +49,7 @@ void init_remote_bbuf_send(RemoteBBufSend *rbs, Network *network) {
   schedule_us(1, (ActivationFuncPtr)rbs_refresh, rbs);
 }
 
-void send_remote_bbuf(RemoteBBufSend *rbs, SSBitmap *bm, uint8_t index,
-                      uint8_t mask) {
+void send_remote_bbuf(RemoteBBufSend *rbs, SSBitmap *bm, uint8_t index, uint8_t mask) {
   assert(0 <= index && index < NUM_REMOTE_BOARDS);
 
   for (int di = 0; di < NUM_DIGITS; di++) {
@@ -79,10 +78,9 @@ int rbs_find_changed_index(RemoteBBufSend *rbs) {
 
 // Extract the remote address mappings from the DBOARD definitions into a
 // static.
-#define DBOARD(name, syms, x, y, remote_addr, remote_idx) \
-  { remote_addr, remote_idx }
-#define B_NO_BOARD /**/
-#define B_END      /**/
+#define DBOARD(name, syms, x, y, remote_addr, remote_idx) {remote_addr, remote_idx}
+#define B_NO_BOARD                                        /**/
+#define B_END                                             /**/
 #include "periph/7seg_panel/display_tree.ch"
 
 typedef struct {
@@ -137,8 +135,7 @@ void rbs_update(RemoteBBufSend *rbs) {
 // This thread periodically marks all boards changed to ensure that dropped
 // messages are eventually cleaned up.
 void rbs_refresh(RemoteBBufSend *rbs) {
-  schedule_us(REMOTE_BBUF_REFRESH_PERIOD_US, (ActivationFuncPtr)rbs_refresh,
-              rbs);
+  schedule_us(REMOTE_BBUF_REFRESH_PERIOD_US, (ActivationFuncPtr)rbs_refresh, rbs);
 #if NUM_REMOTE_BOARDS > 0
   int idx;
   for (idx = 0; idx < NUM_REMOTE_BOARDS; idx++) {
@@ -167,15 +164,14 @@ void rbr_recv(MessageRecvBuffer *msg) {
   BBufMessage *bbm = (BBufMessage *)msg->data;
 
   if (msg->payload_len != sizeof(BBufMessage)) {
-    LOG("rbr_recv: Error: expected BBufMessage of size %zu, got %d bytes",
-        sizeof(BBufMessage), msg->payload_len);
+    LOG("rbr_recv: Error: expected BBufMessage of size %zu, got %d bytes", sizeof(BBufMessage),
+        msg->payload_len);
     goto done;
   }
 
 #if BBDEBUG
-  LOG("rbs: updating board %d with data %x%x%x%x%x%x%x%x", bbm->index,
-      bbm->buf[0], bbm->buf[1], bbm->buf[2], bbm->buf[3], bbm->buf[4],
-      bbm->buf[5], bbm->buf[6], bbm->buf[7]);
+  LOG("rbs: updating board %d with data %x%x%x%x%x%x%x%x", bbm->index, bbm->buf[0], bbm->buf[1],
+      bbm->buf[2], bbm->buf[3], bbm->buf[4], bbm->buf[5], bbm->buf[6], bbm->buf[7]);
 #endif
 
   board_buffer_paint(bbm->buf, bbm->index, 0xff);

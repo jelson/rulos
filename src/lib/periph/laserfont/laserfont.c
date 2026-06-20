@@ -20,8 +20,7 @@
 
 #include "laserfont.ch"
 
-#define LF_CHAR_WIDTH(lf, i) \
-  (((lf->widthpairs[i >> 1]) >> ((1 - (i & 1)) << 2)) & 0x0f)
+#define LF_CHAR_WIDTH(lf, i) (((lf->widthpairs[i >> 1]) >> ((1 - (i & 1)) << 2)) & 0x0f)
 
 uint8_t laserfont_draw_char(LaserFont *lf, SSBitmap *bm, int size, char c) {
   if (c < LASERFONT_LOWEST_CHAR || c > LASERFONT_HIGHEST_CHAR) {

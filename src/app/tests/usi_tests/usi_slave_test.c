@@ -33,8 +33,9 @@
 uint8_t counter = 'a';
 
 static uint8_t return_next_char() {
-  if (counter == 'z' + 1)
+  if (counter == 'z' + 1) {
     counter = 'a';
+  }
 
   return counter++;
 }

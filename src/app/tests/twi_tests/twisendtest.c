@@ -18,7 +18,7 @@
 
 // Enable this if the sender is a rocket panel that can display a status message
 // describing what message number it's currently sending.
-//#define STATUS_TO_LOCAL_PANEL
+// #define STATUS_TO_LOCAL_PANEL
 
 #include <stdio.h>
 #include <stdlib.h>

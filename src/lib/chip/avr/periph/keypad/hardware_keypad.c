@@ -39,7 +39,7 @@
 #include <stophere>
 #endif
 
-#define KEY_SCAN_INTERVAL_US 10000
+#define KEY_SCAN_INTERVAL_US   10000
 #define KEY_REFRACTORY_TIME_US 30000
 
 typedef struct {
@@ -52,7 +52,9 @@ static KeypadState g_theKeypad;
 static void init_keypad(KeypadState *keypad);
 static void keypad_update(KeypadState *key);
 
-void hal_init_keypad() { init_keypad(&g_theKeypad); }
+void hal_init_keypad() {
+  init_keypad(&g_theKeypad);
+}
 
 char hal_read_keybuf() {
   char k;
@@ -135,10 +137,18 @@ static uint8_t scan_row() {
    * Scan the four columns in of the row.  Return 1..4 if any of
    * them are low.  Return 0 if they're all high.
    */
-  if (gpio_is_clr(KEYPAD_COL0)) return 1;
-  if (gpio_is_clr(KEYPAD_COL1)) return 2;
-  if (gpio_is_clr(KEYPAD_COL2)) return 3;
-  if (gpio_is_clr(KEYPAD_COL3)) return 4;
+  if (gpio_is_clr(KEYPAD_COL0)) {
+    return 1;
+  }
+  if (gpio_is_clr(KEYPAD_COL1)) {
+    return 2;
+  }
+  if (gpio_is_clr(KEYPAD_COL2)) {
+    return 3;
+  }
+  if (gpio_is_clr(KEYPAD_COL3)) {
+    return 4;
+  }
 
   return 0;
 }
@@ -152,10 +162,18 @@ char hal_scan_keypad() {
   gpio_set(KEYPAD_ROW2);
   gpio_set(KEYPAD_ROW3);
   col = scan_row();
-  if (col == 1) return '1';
-  if (col == 2) return '2';
-  if (col == 3) return '3';
-  if (col == 4) return 'a';
+  if (col == 1) {
+    return '1';
+  }
+  if (col == 2) {
+    return '2';
+  }
+  if (col == 3) {
+    return '3';
+  }
+  if (col == 4) {
+    return 'a';
+  }
 
   /* Scan second row */
   gpio_set(KEYPAD_ROW0);
@@ -163,10 +181,18 @@ char hal_scan_keypad() {
   gpio_set(KEYPAD_ROW2);
   gpio_set(KEYPAD_ROW3);
   col = scan_row();
-  if (col == 1) return '4';
-  if (col == 2) return '5';
-  if (col == 3) return '6';
-  if (col == 4) return 'b';
+  if (col == 1) {
+    return '4';
+  }
+  if (col == 2) {
+    return '5';
+  }
+  if (col == 3) {
+    return '6';
+  }
+  if (col == 4) {
+    return 'b';
+  }
 
   /* Scan third row */
   gpio_set(KEYPAD_ROW0);
@@ -174,10 +200,18 @@ char hal_scan_keypad() {
   gpio_clr(KEYPAD_ROW2);
   gpio_set(KEYPAD_ROW3);
   col = scan_row();
-  if (col == 1) return '7';
-  if (col == 2) return '8';
-  if (col == 3) return '9';
-  if (col == 4) return 'c';
+  if (col == 1) {
+    return '7';
+  }
+  if (col == 2) {
+    return '8';
+  }
+  if (col == 3) {
+    return '9';
+  }
+  if (col == 4) {
+    return 'c';
+  }
 
   /* Scan fourth row */
   gpio_set(KEYPAD_ROW0);
@@ -185,10 +219,18 @@ char hal_scan_keypad() {
   gpio_set(KEYPAD_ROW2);
   gpio_clr(KEYPAD_ROW3);
   col = scan_row();
-  if (col == 1) return 's';
-  if (col == 2) return '0';
-  if (col == 3) return 'p';
-  if (col == 4) return 'd';
+  if (col == 1) {
+    return 's';
+  }
+  if (col == 2) {
+    return '0';
+  }
+  if (col == 3) {
+    return 'p';
+  }
+  if (col == 4) {
+    return 'd';
+  }
 
   return 0;
 }

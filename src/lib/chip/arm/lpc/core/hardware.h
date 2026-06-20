@@ -94,8 +94,8 @@ typedef uint8_t CHIP_IOCON_PIO_T;
  * IOCON abstracted away to work on either the platforms that take a port/pin
  * and those that take an IOCON constant.
  */
-static inline void gpio_iocon(const uint8_t port, const uint8_t pin,
-                              const CHIP_IOCON_PIO_T iocon, uint32_t modefunc) {
+static inline void gpio_iocon(const uint8_t port, const uint8_t pin, const CHIP_IOCON_PIO_T iocon,
+                              uint32_t modefunc) {
 #if defined(CHIP_LPC11UXX) || defined(CHIP_LPC11EXX) || defined(CHIP_LPC11AXX)
   Chip_IOCON_PinMuxSet(LPC_IOCON, port, pin, modefunc);
 #else
@@ -122,8 +122,7 @@ static inline void gpio_make_input(const uint8_t port, const uint8_t pin,
 /*
  * configure a pin as input, and enable its internal pullUP resistor
  */
-static inline void gpio_make_input_enable_pullup(const uint8_t port,
-                                                 const uint8_t pin,
+static inline void gpio_make_input_enable_pullup(const uint8_t port, const uint8_t pin,
                                                  const CHIP_IOCON_PIO_T iocon) {
   gpio_make_input(port, pin, iocon);
   gpio_iocon(port, pin, iocon, IOCON_FUNC0 | IOCON_MODE_PULLUP);
@@ -132,8 +131,8 @@ static inline void gpio_make_input_enable_pullup(const uint8_t port,
 /*
  * configure a pin as input, and enable its internal pullDOWN resistor
  */
-static inline void gpio_make_input_enable_pulldown(
-    const uint8_t port, const uint8_t pin, const CHIP_IOCON_PIO_T iocon) {
+static inline void gpio_make_input_enable_pulldown(const uint8_t port, const uint8_t pin,
+                                                   const CHIP_IOCON_PIO_T iocon) {
   gpio_make_input(port, pin, iocon);
   gpio_iocon(port, pin, iocon, IOCON_FUNC0 | IOCON_MODE_PULLDOWN);
 }
@@ -141,8 +140,8 @@ static inline void gpio_make_input_enable_pulldown(
 /*
  * configure a pin as input and disable its pullup and pulldown resistors.
  */
-static inline void gpio_make_input_disable_pullup(
-    const uint8_t port, const uint8_t pin, const CHIP_IOCON_PIO_T iocon) {
+static inline void gpio_make_input_disable_pullup(const uint8_t port, const uint8_t pin,
+                                                  const CHIP_IOCON_PIO_T iocon) {
   gpio_make_input(port, pin, iocon);
   gpio_iocon(port, pin, iocon, IOCON_FUNC0 | IOCON_MODE_INACT);
 }
@@ -150,22 +149,19 @@ static inline void gpio_make_input_disable_pullup(
 /*
  * assert an output pin HIGH
  */
-static inline void gpio_set(const uint8_t port, const uint8_t pin,
-                            const CHIP_IOCON_PIO_T iocon) {
+static inline void gpio_set(const uint8_t port, const uint8_t pin, const CHIP_IOCON_PIO_T iocon) {
   Chip_GPIO_SetPinOutHigh(LPC_GPIO, port, pin);
 }
 
 /*
  * assert an output pin LOW
  */
-static inline void gpio_clr(const uint8_t port, const uint8_t pin,
-                            const CHIP_IOCON_PIO_T iocon) {
+static inline void gpio_clr(const uint8_t port, const uint8_t pin, const CHIP_IOCON_PIO_T iocon) {
   Chip_GPIO_SetPinOutLow(LPC_GPIO, port, pin);
 }
 
 static inline void gpio_set_or_clr(const uint8_t port, const uint8_t pin,
-                                   const CHIP_IOCON_PIO_T iocon,
-                                   uint8_t onoff) {
+                                   const CHIP_IOCON_PIO_T iocon, uint8_t onoff) {
   if (onoff) {
     gpio_set(port, pin, iocon);
   } else {
@@ -173,12 +169,10 @@ static inline void gpio_set_or_clr(const uint8_t port, const uint8_t pin,
   }
 }
 
-static inline int gpio_is_set(const uint8_t port, const uint8_t pin,
-                              const CHIP_IOCON_PIO_T iocon) {
+static inline int gpio_is_set(const uint8_t port, const uint8_t pin, const CHIP_IOCON_PIO_T iocon) {
   return Chip_GPIO_GetPinState(LPC_GPIO, port, pin);
 }
 
-static inline int gpio_is_clr(const uint8_t port, const uint8_t pin,
-                              const CHIP_IOCON_PIO_T iocon) {
+static inline int gpio_is_clr(const uint8_t port, const uint8_t pin, const CHIP_IOCON_PIO_T iocon) {
   return !gpio_is_set(port, pin, iocon);
 }

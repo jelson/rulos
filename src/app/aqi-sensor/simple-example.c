@@ -20,8 +20,8 @@
 #include "periph/pms5003/pms5003.h"
 
 static void data_received(pms5003_data_t *data, void *user_data) {
-  LOG("data:pm1.0=%d,pm2.5=%d,pm10.0=%d", data->pm10_standard,
-      data->pm25_standard, data->pm100_standard);
+  LOG("data:pm1.0=%d,pm2.5=%d,pm10.0=%d", data->pm10_standard, data->pm25_standard,
+      data->pm100_standard);
 }
 
 int main() {

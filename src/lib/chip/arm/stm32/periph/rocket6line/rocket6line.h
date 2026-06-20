@@ -22,7 +22,7 @@
 
 #include "periph/7seg_panel/display_controller.h"
 
-#define ROCKET6LINE_NUM_ROWS 6
+#define ROCKET6LINE_NUM_ROWS    6
 #define ROCKET6LINE_NUM_COLUMNS 8
 
 // Note that there's a single, global rocket6line object, so there's

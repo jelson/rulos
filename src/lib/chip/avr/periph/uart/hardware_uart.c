@@ -190,8 +190,7 @@ avr_uart_state_t g_uart_state[2] = {};
 
 #endif
 
-void hal_uart_init(uint8_t uart_id, uint32_t baud, void *user_data,
-                   size_t *max_tx_len) {
+void hal_uart_init(uint8_t uart_id, uint32_t baud, void *user_data, size_t *max_tx_len) {
   *max_tx_len = 1;
   switch (uart_id) {
 #if HAVE_UARTID0
@@ -209,8 +208,7 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud, void *user_data,
   }
 }
 
-void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf,
-                       size_t len) {
+void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf, size_t len) {
   switch (uart_id) {
 #if HAVE_UARTID0
     case 0:

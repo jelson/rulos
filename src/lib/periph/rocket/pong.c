@@ -87,12 +87,11 @@ void pong_intersect_paddle(Pong *pong, uint8_t player, int by1) {
   int py0 = PS(pong->paddley[player]);
   int py1 = PS(pong->paddley[player] + PADDLEHEIGHT);
   if (by1 < py0 || by0 > py1) {
-    ac_skip_to_clip(pong->audioClient, AUDIO_STREAM_BURST_EFFECTS,
-                    sound_pong_score, sound_silence);
+    ac_skip_to_clip(pong->audioClient, AUDIO_STREAM_BURST_EFFECTS, sound_pong_score, sound_silence);
     pong_score_one(pong, 1 - player);
   } else {
-    ac_skip_to_clip(pong->audioClient, AUDIO_STREAM_BURST_EFFECTS,
-                    sound_pong_paddle_bounce, sound_silence);
+    ac_skip_to_clip(pong->audioClient, AUDIO_STREAM_BURST_EFFECTS, sound_pong_paddle_bounce,
+                    sound_silence);
     pong->dx += PS((deadbeef_rand() % 5) - 2);
     pong->dy += PS((deadbeef_rand() % 5) - 2);
   }
@@ -114,14 +113,14 @@ void pong_advance_ball(Pong *pong) {
   if (newy > BALLMAXY) {
     pong->dy = -pong->dy;
     newy = BALLMAXY - (newy - BALLMAXY);
-    ac_skip_to_clip(pong->audioClient, AUDIO_STREAM_BURST_EFFECTS,
-                    sound_pong_wall_bounce, sound_silence);
+    ac_skip_to_clip(pong->audioClient, AUDIO_STREAM_BURST_EFFECTS, sound_pong_wall_bounce,
+                    sound_silence);
   }
   if (newy < BALLMINY) {
     pong->dy = -pong->dy;
     newy = BALLMINY + (BALLMINY - newy);
-    ac_skip_to_clip(pong->audioClient, AUDIO_STREAM_BURST_EFFECTS,
-                    sound_pong_wall_bounce, sound_silence);
+    ac_skip_to_clip(pong->audioClient, AUDIO_STREAM_BURST_EFFECTS, sound_pong_wall_bounce,
+                    sound_silence);
   }
   pong->x = newx;
   pong->y = newy;
@@ -165,8 +164,7 @@ void pong_paint_once(Pong *pong) {
     int xo, yo;
     for (xo = 0; xo < BALLDIA; xo++) {
       for (yo = 0; yo < BALLDIA; yo++) {
-        raster_paint_pixel(rrect, (pong->x >> PONG_SCALE2) + xo,
-                           (pong->y >> PONG_SCALE2) + yo);
+        raster_paint_pixel(rrect, (pong->x >> PONG_SCALE2) + xo, (pong->y >> PONG_SCALE2) + yo);
       }
     }
   }
@@ -187,8 +185,7 @@ void pong_paint_paddle(Pong *pong, int x, int y) {
   }
 }
 
-UIEventDisposition pong_event_handler(UIEventHandler *raw_handler,
-                                      UIEvent evt) {
+UIEventDisposition pong_event_handler(UIEventHandler *raw_handler, UIEvent evt) {
   Pong *pong = ((PongHandler *)raw_handler)->pong;
 
   UIEventDisposition result = uied_accepted;

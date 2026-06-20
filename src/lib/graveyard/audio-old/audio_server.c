@@ -26,7 +26,8 @@ extern void syncdebug(uint8_t spaces, char f, uint16_t line);
 
 #if defined(SIM) || defined(RULOS_ARM)
 #define SYNCPRINT(x, y, z) \
-  {}
+  {                        \
+  }
 #else
 #define SYNCPRINT(x, y, z) syncdebug(x, y, z)
 #endif
@@ -102,9 +103,8 @@ void aserv_fetch_start(AudioServer *aserv) {
 
   uint8_t *start_addr = (uint8_t *)&aserv->magic;
   uint16_t count = sizeof(aserv->magic) + sizeof(aserv->index);
-  bool rc =
-      sdc_start_transaction(aserv->borrowed_sdc, 0, start_addr, count,
-                            (ActivationFuncPtr)aserv_fetch_complete, aserv);
+  bool rc = sdc_start_transaction(aserv->borrowed_sdc, 0, start_addr, count,
+                                  (ActivationFuncPtr)aserv_fetch_complete, aserv);
 #if !SIM
   SYNCPRINT(4, 'a', (uint16_t)(aserv));
   SYNCPRINT(4, 'b', (uint16_t)(aserv->borrowed_sdc));
@@ -222,16 +222,14 @@ void aserv_recv_mcm(MessageRecvBuffer *msg) {
       SYNCPRINT(0, 's', 0x5eed);
       // first use? jump to a random song. random seed is 1/10ths of sec since
       // boot.
-      aserv->music_offset = (SoundToken)(
-          ((clock_time_us() / 100000) % (aserv->num_music_tokens)));
+      aserv->music_offset = (SoundToken)(((clock_time_us() / 100000) % (aserv->num_music_tokens)));
       aserv->music_random_seeded = TRUE;
     }
 
     // now advance one or retreat one, based on request
     SYNCPRINT(1, 'o', aserv->music_offset);
     aserv->music_offset =
-        (aserv->music_offset + mcm->advance + aserv->num_music_tokens) %
-        (aserv->num_music_tokens);
+        (aserv->music_offset + mcm->advance + aserv->num_music_tokens) % (aserv->num_music_tokens);
     SYNCPRINT(1, 'o', aserv->music_offset);
     aserv->audio_stream[AUDIO_STREAM_MUSIC].skip_cmd.token =
         (SoundToken)(aserv->music_offset + aserv->music_first_token);
@@ -259,8 +257,7 @@ void aserv_start_play(AudioServer *aserv) {
   if (stream->skip_cmd.token == sound_silence) {
     SYNCDEBUG();
     as_stop_streaming(&aserv->audio_streamer);
-  } else if (stream->skip_cmd.token < 0 ||
-             stream->skip_cmd.token >= sound_num_tokens) {
+  } else if (stream->skip_cmd.token < 0 || stream->skip_cmd.token >= sound_num_tokens) {
     // error: invalid token.
     stream->skip_cmd.token = sound_silence;
     as_stop_streaming(&aserv->audio_streamer);
@@ -283,9 +280,8 @@ void aserv_start_play(AudioServer *aserv) {
     SYNCPRINT(5, 't', stream->skip_cmd.token);
     SYNCPRINT(5, 'v', stream->mlvolume);
     as_set_volume(&aserv->audio_streamer, stream->mlvolume);
-    bool rc = as_play(&aserv->audio_streamer, airec->start_offset,
-                      airec->block_offset, airec->end_offset,
-                      (ActivationFuncPtr)aserv_advance, aserv);
+    bool rc = as_play(&aserv->audio_streamer, airec->start_offset, airec->block_offset,
+                      airec->end_offset, (ActivationFuncPtr)aserv_advance, aserv);
     if (!rc) {
       SYNCDEBUG();
       // Retry rapidly, so we can get ahold of sdc as soon as it's
@@ -301,8 +297,7 @@ void aserv_advance(AudioServer *aserv) {
       aserv->audio_stream[aserv->active_stream].loop_cmd;
   // drop down the stream stack until we find some non-silence.
   for (; aserv->active_stream >= 0 &&
-         aserv->audio_stream[aserv->active_stream].skip_cmd.token ==
-             sound_silence;
+         aserv->audio_stream[aserv->active_stream].skip_cmd.token == sound_silence;
        aserv->active_stream--) {
   }
 

@@ -22,11 +22,9 @@
 
 void dgg_update(DGratuitousGraph *act);
 void draw_skinny_bars(DGratuitousGraph *dgg, DriftAnim *da, SSBitmap bm);
-void draw_fat_bars(DGratuitousGraph *dgg, DriftAnim *da, SSBitmap bm0,
-                   SSBitmap bm1);
+void draw_fat_bars(DGratuitousGraph *dgg, DriftAnim *da, SSBitmap bm0, SSBitmap bm1);
 
-void dgg_init(DGratuitousGraph *dgg, uint8_t board, char *name,
-              Time impulse_frequency_us) {
+void dgg_init(DGratuitousGraph *dgg, uint8_t board, char *name, Time impulse_frequency_us) {
   board_buffer_init(&dgg->bbuf DBG_BBUF_LABEL("dgg"));
   board_buffer_push(&dgg->bbuf, board);
   int i;
@@ -100,8 +98,7 @@ void draw_skinny_bars(DGratuitousGraph *dgg, DriftAnim *da, SSBitmap bm) {
   }
 }
 
-void draw_fat_bars(DGratuitousGraph *dgg, DriftAnim *da, SSBitmap bm0,
-                   SSBitmap bm1) {
+void draw_fat_bars(DGratuitousGraph *dgg, DriftAnim *da, SSBitmap bm0, SSBitmap bm1) {
   int d;
   int v = da_read(da);
   for (d = 0; d < NUM_DIGITS; d++) {

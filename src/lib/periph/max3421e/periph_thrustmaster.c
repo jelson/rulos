@@ -32,8 +32,7 @@ bool thrustmaster_read(max3421e_t *max, JoystickState_t *joystate) {
   usb_device_t *dev = NULL;
 
   for (int i = 0; i < MAX_USB_DEVICES; i++) {
-    if (max->devices[i].ready && max->devices[i].vid == 0x7b5 &&
-        max->devices[i].pid == 0x316) {
+    if (max->devices[i].ready && max->devices[i].vid == 0x7b5 && max->devices[i].pid == 0x316) {
       dev = &max->devices[i];
       break;
     }
@@ -45,8 +44,7 @@ bool thrustmaster_read(max3421e_t *max, JoystickState_t *joystate) {
 
   uint8_t buf[6];
   uint16_t result_len;
-  uint8_t result = max3421e_read_data(dev, &dev->endpoints[1], buf, sizeof(buf),
-                                      &result_len);
+  uint8_t result = max3421e_read_data(dev, &dev->endpoints[1], buf, sizeof(buf), &result_len);
 
   // NAK means data has not changed since last call. Return true without
   // touching the state.

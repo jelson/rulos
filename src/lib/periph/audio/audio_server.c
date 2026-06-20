@@ -29,11 +29,9 @@ void aserv_fetch_complete(AudioServer *as);
 void aserv_start_play(AudioServer *as);
 void aserv_advance(AudioServer *as);
 
-static int count_music(AudioServer *aserv, int limit, char *opt_path,
-                       int opt_path_capacity);
+static int count_music(AudioServer *aserv, int limit, char *opt_path, int opt_path_capacity);
 
-void init_music_metadata_sender(MusicMetadataSender *mms, Network *network)
-{
+void init_music_metadata_sender(MusicMetadataSender *mms, Network *network) {
   mms->network = network;
 
   mms->sendSlot.func = NULL;
@@ -44,19 +42,17 @@ void init_music_metadata_sender(MusicMetadataSender *mms, Network *network)
   mms->sendSlot.sending = FALSE;
 }
 
-MusicMetadataMessage* music_metadata_message_buffer(MusicMetadataSender *mms)
-{
+MusicMetadataMessage *music_metadata_message_buffer(MusicMetadataSender *mms) {
   return (MusicMetadataMessage *)&mms->sendSlot.wire_msg->data;
 }
 
-void music_metadata_send(MusicMetadataSender* mms) {
+void music_metadata_send(MusicMetadataSender *mms) {
   if (mms->sendSlot.sending) {
     LOG("MusicMetadata drops an outbound message due to full send queue.");
     return;
   }
   net_send_message(mms->network, &mms->sendSlot);
 }
-
 
 void init_audio_server(AudioServer *aserv, Network *network, uint8_t timer_id) {
   // Listen on network socket for AudioRequestMessage to play sound effects.
@@ -131,8 +127,7 @@ void safecat(char *dst, int capacity, const char *src) {
 // pathname.
 // if rc < limit && opt_path!=null, opt_path contains the limit'th path
 // in the directory.
-static int count_music(AudioServer *aserv, int limit, char *opt_path,
-                       int opt_path_capacity) {
+static int count_music(AudioServer *aserv, int limit, char *opt_path, int opt_path_capacity) {
   DIR dp;
   FILINFO fno;
   int count = 0;
@@ -182,9 +177,8 @@ void aserv_recv_arm(MessageRecvBuffer *msg) {
   AudioRequestMessage *arm = (AudioRequestMessage *)&msg->data;
   assert(arm->stream_idx < AUDIO_NUM_STREAMS);
 
-  LOG("audio_server receives index %d arm skip %d loop %d volume %d",
-    arm->stream_idx, arm->skip_effect_id, arm->loop_effect_id,
-    arm->volume);
+  LOG("audio_server receives index %d arm skip %d loop %d volume %d", arm->stream_idx,
+      arm->skip_effect_id, arm->loop_effect_id, arm->volume);
   aserv->audio_stream[arm->stream_idx].volume = arm->volume;
   aserv->audio_stream[arm->stream_idx].loop_effect_id = arm->loop_effect_id;
   if (arm->skip) {
@@ -203,8 +197,7 @@ void aserv_recv_avm(MessageRecvBuffer *msg) {
   assert(avm->stream_idx < AUDIO_NUM_STREAMS);
   aserv->audio_stream[avm->stream_idx].volume = avm->volume;
   if (aserv->active_stream == avm->stream_idx) {
-    LOG("aserv_recv_avm setting volume idx %d vol %d",
-      avm->stream_idx, avm->volume);
+    LOG("aserv_recv_avm setting volume idx %d vol %d", avm->stream_idx, avm->volume);
     as_set_volume(&aserv->audio_streamer, avm->volume);
   }
 
@@ -219,8 +212,7 @@ void aserv_recv_mcm(MessageRecvBuffer *msg) {
   if (!aserv->music_random_seeded) {
     // first use? jump to a random song. random seed is 1/10ths of sec since
     // boot.
-    aserv->music_offset = (SoundEffectId)(
-        ((clock_time_us() / 100000) % (aserv->music_file_count)));
+    aserv->music_offset = (SoundEffectId)(((clock_time_us() / 100000) % (aserv->music_file_count)));
     aserv->music_random_seeded = TRUE;
   }
 
@@ -229,8 +221,7 @@ void aserv_recv_mcm(MessageRecvBuffer *msg) {
 
   // now advance one or retreat one, based on request
   aserv->music_offset =
-      (aserv->music_offset + mcm->advance + aserv->music_file_count) %
-      (aserv->music_file_count);
+      (aserv->music_offset + mcm->advance + aserv->music_file_count) % (aserv->music_file_count);
   aserv->audio_stream[AUDIO_STREAM_MUSIC].skip_effect_id = sound_music;
 
   // and start it playin'
@@ -239,8 +230,7 @@ void aserv_recv_mcm(MessageRecvBuffer *msg) {
   net_free_received_message_buffer(msg);
 }
 
-static void find_music_filename(AudioServer *aserv, char *out_path,
-                                int out_capacity) {
+static void find_music_filename(AudioServer *aserv, char *out_path, int out_capacity) {
   if (aserv->active_stream == AUDIO_STREAM_MUSIC) {
     // filename is the n'th file in the directory
     int rc = count_music(aserv, aserv->music_offset, out_path, out_capacity);
@@ -267,13 +257,12 @@ void aserv_start_play(AudioServer *aserv) {
   AudioEffectsStream *stream = &aserv->audio_stream[aserv->active_stream];
   if (stream->skip_effect_id == sound_silence) {
     as_stop_streaming(&aserv->audio_streamer);
-  } else if (stream->skip_effect_id < 0 ||
-             stream->skip_effect_id >= sound_num_ids) {
+  } else if (stream->skip_effect_id < 0 || stream->skip_effect_id >= sound_num_ids) {
     // error: invalid token.
     stream->skip_effect_id = sound_silence;
     as_stop_streaming(&aserv->audio_streamer);
   } else {
-    MusicMetadataMessage* mms = music_metadata_message_buffer(&aserv->music_metadata_sender);
+    MusicMetadataMessage *mms = music_metadata_message_buffer(&aserv->music_metadata_sender);
     mms->path[0] = '\0';
     find_music_filename(aserv, mms->path, sizeof(mms->path));
     music_metadata_send(&aserv->music_metadata_sender);
@@ -281,8 +270,7 @@ void aserv_start_play(AudioServer *aserv) {
     as_set_volume(&aserv->audio_streamer, stream->volume);
     LOG("audio_server stream %d volume %d", aserv->active_stream, stream->volume);
     // NB we sleazily re-use the message buffer to cart the path to as_play.
-    bool rc = as_play(&aserv->audio_streamer, mms->path,
-                      (ActivationFuncPtr)aserv_advance, aserv);
+    bool rc = as_play(&aserv->audio_streamer, mms->path, (ActivationFuncPtr)aserv_advance, aserv);
     if (!rc) {
       // Retry rapidly, so we can get ahold of sdc as soon as it's
       // idle. (Yeah, I could have a callback from SD to alert the
@@ -297,8 +285,7 @@ void aserv_advance(AudioServer *aserv) {
       aserv->audio_stream[aserv->active_stream].loop_effect_id;
   // drop down the stream stack until we find some non-silence.
   for (; aserv->active_stream >= 0 &&
-         aserv->audio_stream[aserv->active_stream].skip_effect_id ==
-             sound_silence;
+         aserv->audio_stream[aserv->active_stream].skip_effect_id == sound_silence;
        aserv->active_stream--) {
   }
 

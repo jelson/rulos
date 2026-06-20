@@ -25,8 +25,7 @@
 
 void dscrlmsg_update(DScrollMsgAct *act);
 
-void dscrlmsg_init(DScrollMsgAct *act, uint8_t board, const char *msg,
-                   uint8_t speed_ms) {
+void dscrlmsg_init(DScrollMsgAct *act, uint8_t board, const char *msg, uint8_t speed_ms) {
   board_buffer_init(&act->bbuf DBG_BBUF_LABEL("scrlmsg"));
   board_buffer_push(&act->bbuf, board);
   act->len = 0;
@@ -57,8 +56,7 @@ void dscrlmsg_update_once(DScrollMsgAct *act) {
 
 void dscrlmsg_update(DScrollMsgAct *act) {
   if (act->speed_ms > 0) {
-    schedule_us(((Time)act->speed_ms) * 1000,
-                (ActivationFuncPtr)dscrlmsg_update, act);
+    schedule_us(((Time)act->speed_ms) * 1000, (ActivationFuncPtr)dscrlmsg_update, act);
     if (act->len > NUM_DIGITS) {
       act->index = dscrlmsg_nexti(act, act->index);
     } else {

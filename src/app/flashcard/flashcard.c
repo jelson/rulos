@@ -158,10 +158,8 @@ void _lma_update(LMAnimation *lma) {
       if (lma->star_index >= (sizeof(starbitmap) / sizeof(starbitmap[0]))) {
         lma->star_index = 0;
       }
-      memcpy(lms->bitmap.red, starbitmap[lma->star_index],
-             sizeof(lms->bitmap.red));
-      memcpy(lms->bitmap.green, starbitmap[lma->star_index],
-             sizeof(lms->bitmap.green));
+      memcpy(lms->bitmap.red, starbitmap[lma->star_index], sizeof(lms->bitmap.red));
+      memcpy(lms->bitmap.green, starbitmap[lma->star_index], sizeof(lms->bitmap.green));
       break;
   }
 
@@ -171,10 +169,8 @@ void _lma_update(LMAnimation *lma) {
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct s_problem_set ProblemSet;
-typedef void(select_f)(ProblemSet *ps, uint8_t *operands,
-                       uint8_t *problem_reference);
-typedef bool(check_f)(ProblemSet *ps, uint8_t problem_reference,
-                      uint8_t answer);
+typedef void(select_f)(ProblemSet *ps, uint8_t *operands, uint8_t *problem_reference);
+typedef bool(check_f)(ProblemSet *ps, uint8_t problem_reference, uint8_t answer);
 
 struct s_problem_set {
   select_f *select;
@@ -185,8 +181,8 @@ struct s_problem_set {
   uint8_t bits[0];
 };
 
-void _problem_set_init(ProblemSet *ps, select_f *select, check_f *check,
-                       char operator_, uint8_t num_problems, bool storage) {
+void _problem_set_init(ProblemSet *ps, select_f *select, check_f *check, char operator_,
+                       uint8_t num_problems, bool storage) {
   ps->select = select;
   ps->check = check;
   ps->operator_ = operator_;
@@ -236,15 +232,13 @@ typedef struct {
 } TimesProblemSet;
 
 bool _times_check(ProblemSet *ps, uint8_t problem_reference, uint8_t answer);
-void _times_select(ProblemSet *ps, uint8_t *operands,
-                   uint8_t *problem_reference);
+void _times_select(ProblemSet *ps, uint8_t *operands, uint8_t *problem_reference);
 
 void times_problem_set_init(TimesProblemSet *tps) {
   _problem_set_init(&tps->ps, &_times_select, &_times_check, 't', 100, true);
 }
 
-void _times_select(ProblemSet *ps, uint8_t *operands,
-                   uint8_t *problem_reference) {
+void _times_select(ProblemSet *ps, uint8_t *operands, uint8_t *problem_reference) {
   // SYNCDEBUG();
   TimesProblemSet *tps = (TimesProblemSet *)ps;
   // SYNCDEBUG();
@@ -291,8 +285,7 @@ void sum_problem_set_init(SumProblemSet *sps) {
   _problem_set_init(&sps->ps, &_sum_select, &_sum_check, 'p', 100, false);
 }
 
-void _sum_select(ProblemSet *ps, uint8_t *operands,
-                 uint8_t *problem_reference) {
+void _sum_select(ProblemSet *ps, uint8_t *operands, uint8_t *problem_reference) {
   // SYNCDEBUG();
   // SumProblemSet *sps = (SumProblemSet *) ps;
   deadbeef_srand(clock_time_us());
@@ -584,13 +577,11 @@ inline static uint8_t digit_value(char digit) {
 }
 
 void _flashcard_enter(Flashcard *fl) {
-  uint8_t entered_value =
-      digit_value(fl->digit[0]) * 10 + digit_value(fl->digit[1]);
+  uint8_t entered_value = digit_value(fl->digit[0]) * 10 + digit_value(fl->digit[1]);
   syncdebug(2, 'd', digit_value(fl->digit[1]));
   syncdebug(3, 'd', digit_value(fl->digit[0]));
   syncdebug(3, 'l', _fl_num_problems_left(fl));
-  bool correct = (fl->curProblem->check)(fl->curProblem, fl->problem_reference,
-                                         entered_value);
+  bool correct = (fl->curProblem->check)(fl->curProblem, fl->problem_reference, entered_value);
   if (correct) {
     _flashcard_paint(fl, "W");
     fl->lma.mode = lma_green_disc;

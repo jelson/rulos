@@ -135,7 +135,7 @@ void board_buffer_push(BoardBuffer *buf, int board) {
   buf->next = foreground[board];
   foreground[board] = buf;
   _board_buffer_compute_mask(buf, FALSE);  // no redraw because...
-  board_buffer_draw(buf);  // ...this line will overwrite existing
+  board_buffer_draw(buf);                  // ...this line will overwrite existing
 #if BBDEBUG
   dump(" after push");
 #endif  // BBDEBUG
@@ -152,8 +152,7 @@ void board_buffer_set_alpha(BoardBuffer *buf, uint8_t alpha) {
 void board_buffer_draw(BoardBuffer *buf) {
   uint8_t board_index = buf->board_index;
 #if BBDEBUG
-  LOG("bb_draw(3, buf %016" PRIxPTR " %s, mask %x)", (uintptr_t)buf, buf->label,
-      buf->mask);
+  LOG("bb_draw(3, buf %016" PRIxPTR " %s, mask %x)", (uintptr_t)buf, buf->label, buf->mask);
 #endif  // BBDEBUG
 
 // draw locally, if we can.
@@ -168,8 +167,7 @@ void board_buffer_draw(BoardBuffer *buf) {
     // jonh hard-codes remote send ability, rather than getting all
     // objecty about it, because doing this well with polymorphism
     // really wants a dynamic memory allocator.
-    send_remote_bbuf(g_remote_bbuf_send, buf->buffer,
-                     board_index - NUM_LOCAL_BOARDS, buf->mask);
+    send_remote_bbuf(g_remote_bbuf_send, buf->buffer, board_index - NUM_LOCAL_BOARDS, buf->mask);
   }
 #endif  // NUM_REMOTE_BOARDS > 0
 }
@@ -186,8 +184,7 @@ void board_buffer_paint(SSBitmap *bm, uint8_t board_index, uint8_t mask) {
 }
 
 uint8_t board_buffer_is_foreground(BoardBuffer *buf) {
-  return (buf->board_index < NUM_TOTAL_BOARDS &&
-          foreground[buf->board_index] == buf);
+  return (buf->board_index < NUM_TOTAL_BOARDS && foreground[buf->board_index] == buf);
 }
 
 bool board_buffer_is_stacked(BoardBuffer *buf) {

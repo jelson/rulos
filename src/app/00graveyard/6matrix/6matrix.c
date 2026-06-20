@@ -53,18 +53,23 @@ void update_matrix(drawCtx *draw) {
   schedule_us(100000, (ActivationFuncPtr)update_matrix, draw);
 
   for (rowNum = 0, red = draw->cycle; rowNum < 16; rowNum++, red++) {
-    if (red >= 16) red = 0;
+    if (red >= 16) {
+      red = 0;
+    }
 
-    for (colNum = 0, green = draw->cycle; colNum < SIXMATRIX_NUM_COLS;
-         colNum++, green++) {
-      if (green >= 16) green = 0;
+    for (colNum = 0, green = draw->cycle; colNum < SIXMATRIX_NUM_COLS; colNum++, green++) {
+      if (green >= 16) {
+        green = 0;
+      }
       colBytes[colNum] = MAKE_COLOR(red, green);
     }
     hal_6matrix_setRow_8bit(&(draw->matrix), colBytes, rowNum);
   }
   draw->cycle++;
 
-  if (draw->cycle > 16) draw->cycle = 0;
+  if (draw->cycle > 16) {
+    draw->cycle = 0;
+  }
 }
 
 void one_gradient_row(drawCtx *draw) {
@@ -74,7 +79,9 @@ void one_gradient_row(drawCtx *draw) {
   for (i = 0; i < SIXMATRIX_NUM_COLS; i++) {
     bytes[i] = MAKE_COLOR(color, 0);
 
-    if (color < 15) color++;
+    if (color < 15) {
+      color++;
+    }
   }
   hal_6matrix_setRow_8bit(&(draw->matrix), bytes, 0);
   // schedule_us(1000000, (ActivationFuncPtr) one_gradient_row, draw);
@@ -87,20 +94,24 @@ void one_led(drawCtx *draw) {
 
   schedule_us(2500000, (ActivationFuncPtr)one_led, draw);
 
-  if (draw->cycle < SIXMATRIX_NUM_COLS)
+  if (draw->cycle < SIXMATRIX_NUM_COLS) {
     color = MAKE_COLOR(0xf, 0);
-  else
+  } else {
     color = MAKE_COLOR(0, 0xf);
+  }
 
   for (i = 0; i < SIXMATRIX_NUM_COLS; i++) {
-    if (i == draw->cycle || i + SIXMATRIX_NUM_COLS == draw->cycle)
+    if (i == draw->cycle || i + SIXMATRIX_NUM_COLS == draw->cycle) {
       bytes[i] = color;
-    else
+    } else {
       bytes[i] = 0;
+    }
   }
 
   hal_6matrix_setRow_8bit(&(draw->matrix), bytes, 0);
-  if (++draw->cycle == 2 * SIXMATRIX_NUM_COLS) draw->cycle = 0;
+  if (++draw->cycle == 2 * SIXMATRIX_NUM_COLS) {
+    draw->cycle = 0;
+  }
 }
 
 void allon(drawCtx *draw) {
@@ -108,7 +119,9 @@ void allon(drawCtx *draw) {
   uint8_t i;
 
   memset(bytes, 0xff, sizeof(bytes));
-  for (i = 0; i < 16; i++) hal_6matrix_setRow_8bit(&draw->matrix, bytes, i);
+  for (i = 0; i < 16; i++) {
+    hal_6matrix_setRow_8bit(&draw->matrix, bytes, i);
+  }
 }
 
 void rowtest(drawCtx *draw) {
@@ -116,15 +129,21 @@ void rowtest(drawCtx *draw) {
   uint8_t i;
 
   memset(bytes, 0, sizeof(bytes));
-  for (i = 0; i < 8; i++) bytes[i] = 0xf;
+  for (i = 0; i < 8; i++) {
+    bytes[i] = 0xf;
+  }
   hal_6matrix_setRow_8bit(&draw->matrix, bytes, 0);
 
   memset(bytes, 0, sizeof(bytes));
-  for (i = 8; i < 16; i++) bytes[i] = 0xf;
+  for (i = 8; i < 16; i++) {
+    bytes[i] = 0xf;
+  }
   hal_6matrix_setRow_8bit(&draw->matrix, bytes, 4);
 
   memset(bytes, 0, sizeof(bytes));
-  for (i = 16; i < 24; i++) bytes[i] = 0xf;
+  for (i = 16; i < 24; i++) {
+    bytes[i] = 0xf;
+  }
   hal_6matrix_setRow_8bit(&draw->matrix, bytes, 5);
 }
 

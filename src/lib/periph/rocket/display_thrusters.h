@@ -39,9 +39,8 @@ typedef struct {
   bool joystick_muted;
 } ThrusterState_t;
 
-void thrusters_init(ThrusterState_t *ts, uint8_t board,
-                    JoystickState_t *joystick, HPAM *hpam, IdleAct *idle,
-                    AudioClient *audioClient);
+void thrusters_init(ThrusterState_t *ts, uint8_t board, JoystickState_t *joystick, HPAM *hpam,
+                    IdleAct *idle, AudioClient *audioClient);
 
 void mute_joystick(ThrusterState_t *ts);
 void unmute_joystick(ThrusterState_t *ts);

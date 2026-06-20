@@ -25,14 +25,13 @@
 
 void audioled_set(bool red, bool yellow);
 
-void _um_send(MediaStateIfc *media, Addr dest_addr, const void *data,
-              uint8_t len, MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
+void _um_send(MediaStateIfc *media, Addr dest_addr, const void *data, uint8_t len,
+              MediaSendDoneFunc sendDoneCB, void *sendDoneCBData);
 
 void _um_recv_handler(struct s_HalUart *u, char c);
 bool _um_send_handler(struct s_HalUart *u, char *c /*OUT*/);
 
-MediaStateIfc *uart_media_init(UartMedia *um, MediaRecvSlot *mrs,
-                               uint8_t uart_id) {
+MediaStateIfc *uart_media_init(UartMedia *um, MediaRecvSlot *mrs, uint8_t uart_id) {
   //  um->uart_handler.send = _um_send_handler;
   // um->uart_handler.recv = _um_recv_handler;
   um->uart_media_ptr.media.send = _um_send;
@@ -78,8 +77,8 @@ bool _um_send_handler(struct s_HalUart *u, char *c /*OUT*/) {
   }
 }
 
-void _um_send(MediaStateIfc *media, Addr dest_addr, const void *data,
-              uint8_t len, MediaSendDoneFunc sendDoneCB, void *sendDoneCBData) {
+void _um_send(MediaStateIfc *media, Addr dest_addr, const void *data, uint8_t len,
+              MediaSendDoneFunc sendDoneCB, void *sendDoneCBData) {
   UartMedia *um = ((UartMediaPtr *)media)->uart_media;
   if (um->send_which != US_none) {
     return;

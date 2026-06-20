@@ -34,8 +34,7 @@ UIEventDisposition remote_uie_handler(RemoteUIE *ruie, UIEvent evt) {
 
 void cii_deliver(CascadedInputInjector *cii, char k);
 
-void init_cascaded_input_injector(CascadedInputInjector *cii,
-                                  UIEventHandler *uie_handler,
+void init_cascaded_input_injector(CascadedInputInjector *cii, UIEventHandler *uie_handler,
                                   InputInjectorIfc *escape_ifi) {
   cii->func = (InputInjectorFunc)cii_deliver;
   cii->uie_handler = uie_handler;

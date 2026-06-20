@@ -64,19 +64,17 @@ void ht_update(HTAct *ht) {
 #define DBG_BONK 0
 #if DBG_BONK
   memset(ht->state_bbuf.buffer, 0, NUM_DIGITS);
-  ht->state_bbuf.buffer[NUM_DIGITS - 1] =
-      ascii_to_bitmap('0' + ((clock_time_us() >> 20) & 7));
+  ht->state_bbuf.buffer[NUM_DIGITS - 1] = ascii_to_bitmap('0' + ((clock_time_us() >> 20) & 7));
   ht->state_bbuf.buffer[NUM_DIGITS - 2] = ascii_to_bitmap('t');
-  ht->state_bbuf.buffer[NUM_DIGITS - 4] =
-      ascii_to_bitmap(hal_read_joystick_button() ? '*' : '_');
+  ht->state_bbuf.buffer[NUM_DIGITS - 4] = ascii_to_bitmap(hal_read_joystick_button() ? '*' : '_');
   board_buffer_draw(&ht->state_bbuf);
   return;
 #endif  // DBG_BONK
 
   joystick_poll(&ht->js);
-  int8_t new_dir = (ht->js.state & JOYSTICK_STATE_LEFT)
-                       ? -1
-                       : (ht->js.state & JOYSTICK_STATE_RIGHT) ? +1 : 0;
+  int8_t new_dir = (ht->js.state & JOYSTICK_STATE_LEFT)    ? -1
+                   : (ht->js.state & JOYSTICK_STATE_RIGHT) ? +1
+                                                           : 0;
   if (new_dir != ht->dir) {
     if (ht->dir == -1) {
       ht->idx = (ht->idx - 1 + HPAM_END) % HPAM_END;
@@ -100,12 +98,10 @@ void ht_update(HTAct *ht) {
   memset(ht->state_bbuf.buffer, 0, NUM_DIGITS);
   ascii_to_bitmap_str(ht->state_bbuf.buffer, NUM_DIGITS,
                       hpam_get_port(&ht->hpam, ht->idx) ? "on" : "off");
-  ht->state_bbuf.buffer[NUM_DIGITS - 1] =
-      ascii_to_bitmap('0' + ((clock_time_us() >> 20) & 7));
+  ht->state_bbuf.buffer[NUM_DIGITS - 1] = ascii_to_bitmap('0' + ((clock_time_us() >> 20) & 7));
   ht->state_bbuf.buffer[NUM_DIGITS - 2] = ascii_to_bitmap('t');
   ht->state_bbuf.buffer[NUM_DIGITS - 3] = ascii_to_bitmap(new_btn ? '-' : '_');
-  ht->state_bbuf.buffer[NUM_DIGITS - 4] =
-      ascii_to_bitmap(hal_read_joystick_button() ? '*' : '_');
+  ht->state_bbuf.buffer[NUM_DIGITS - 4] = ascii_to_bitmap(hal_read_joystick_button() ? '*' : '_');
   board_buffer_draw(&ht->state_bbuf);
 }
 

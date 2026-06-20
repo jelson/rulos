@@ -44,8 +44,7 @@ static void reg_write(uint8_t reg_addr, uint8_t value) {
   buf[0] = reg_addr;
   buf[1] = value;
 
-  HAL_I2C_Master_Transmit(&i2c_handle, ACCEL_WRITE_ADDR, buf, sizeof(buf),
-                          HAL_MAX_DELAY);
+  HAL_I2C_Master_Transmit(&i2c_handle, ACCEL_WRITE_ADDR, buf, sizeof(buf), HAL_MAX_DELAY);
 }
 
 // read from one or more accelerometer registers, writing results to inbuf
@@ -54,10 +53,8 @@ static void reg_read(uint8_t reg_addr, void *inbuf, uint8_t len) {
 
   outbuf[0] = reg_addr;
 
-  HAL_I2C_Master_Transmit(&i2c_handle, ACCEL_WRITE_ADDR, outbuf, sizeof(outbuf),
-                          HAL_MAX_DELAY);
-  HAL_I2C_Master_Receive(&i2c_handle, ACCEL_READ_ADDR, (uint8_t*) inbuf, len,
-                         HAL_MAX_DELAY);
+  HAL_I2C_Master_Transmit(&i2c_handle, ACCEL_WRITE_ADDR, outbuf, sizeof(outbuf), HAL_MAX_DELAY);
+  HAL_I2C_Master_Receive(&i2c_handle, ACCEL_READ_ADDR, (uint8_t *)inbuf, len, HAL_MAX_DELAY);
 }
 
 // convert one axis of acclerometer data to a 16-bit value. It's only 14 bits
@@ -99,13 +96,12 @@ void start_accel() {
   // Enable the I2C peripheral
   __HAL_RCC_I2C2_CLK_ENABLE();
   i2c_handle.Instance = I2C2;
-  i2c_handle.Init.Timing =
-      __LL_I2C_CONVERT_TIMINGS(1,   // Prescaler
-                               13,  // SCLDEL, data setup time
-                               13,  // SDADEL, data hold time
-                               54,  // SCLH, clock high period
-                               84   // SCLL, clock low period
-      );
+  i2c_handle.Init.Timing = __LL_I2C_CONVERT_TIMINGS(1,   // Prescaler
+                                                    13,  // SCLDEL, data setup time
+                                                    13,  // SDADEL, data hold time
+                                                    54,  // SCLH, clock high period
+                                                    84   // SCLL, clock low period
+  );
   i2c_handle.Init.OwnAddress1 = 0;
   i2c_handle.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   i2c_handle.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;

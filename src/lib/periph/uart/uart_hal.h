@@ -25,23 +25,20 @@
 // At the HAL layer, UARTs are identified by integers. hal_uart_init initializes
 // a UART. max_tx_len is an out parameter that describes the maximum length of a
 // tx the UART can accept at a time.
-void hal_uart_init(uint8_t uart_id, uint32_t baud,
-                   void *user_data /* for both rx and tx upcalls */,
+void hal_uart_init(uint8_t uart_id, uint32_t baud, void *user_data /* for both rx and tx upcalls */,
                    size_t *max_tx_len /* OUT */);
 
 // Callback for incoming serial data. If a callback is set using
 // hal_uart_set_receive_cb, incoming characters will be passed into that
 // callback at interrupt time.
-typedef void (*hal_uart_receive_cb)(uint8_t uart_id, void *user_data, char *buf,
-                                    size_t len);
+typedef void (*hal_uart_receive_cb)(uint8_t uart_id, void *user_data, char *buf, size_t len);
 
 // Enable reception on this UART. Buffer and its capacity must be provided.
 // Buffer must be even length since it's divided into two halves. The driver
 // will fill half the buffer while providing an upcall to the given callback on
 // the other half. Warning: upcalls *might* be at interrupt time, but will not
 // be if called in response to hal_uart_trigger_rx();
-void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf,
-                       size_t buflen);
+void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf, size_t buflen);
 
 // Downcall to indicate the top layer has finished processing the last data
 // passed up by rx_cb, and it's ready to receive the next.
@@ -58,8 +55,7 @@ void hal_uart_rx_cb_done(uint8_t uart_id);
 //
 // If there is no more data to send, len should be set to 0.
 typedef void (*hal_uart_next_sendbuf_cb)(uint8_t uart_id, void *user_data,
-                                         const char **tx_buf /*OUT*/,
-                                         uint16_t *len /*OUT*/);
+                                         const char **tx_buf /*OUT*/, uint16_t *len /*OUT*/);
 void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb);
 
 // write stats to the log

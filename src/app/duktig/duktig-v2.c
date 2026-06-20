@@ -165,7 +165,7 @@ void power_down() {
   HAL_PWR_EnterSTANDBYMode();
 #endif
 
-#else   // USE_SHUTDOWN
+#else  // USE_SHUTDOWN
   HAL_SuspendTick();
 
 #if defined(STM32C0)
@@ -207,8 +207,7 @@ static void duktig_update(DuktigState_t *duktig) {
   }
 
   const bool but_pushed = but1_pushed || but2_pushed;
-  const bool light_on =
-      duktig->light1_state != LIGHT_OFF || duktig->light2_state != LIGHT_OFF;
+  const bool light_on = duktig->light1_state != LIGHT_OFF || duktig->light2_state != LIGHT_OFF;
 
   // If a light was just turned on, set the timeout to turn it back off
   if (but_pushed && light_on) {
@@ -222,8 +221,7 @@ static void duktig_update(DuktigState_t *duktig) {
   }
 
   // advance the pwrled flasher, if there's been a recent flash
-  if (duktig->pwrled_count > 0 &&
-      later_than(clock_time_us(), duktig->pwrled_next_transition)) {
+  if (duktig->pwrled_count > 0 && later_than(clock_time_us(), duktig->pwrled_next_transition)) {
     if (duktig->pwrled_on) {
       gpio_clr(PWRLED);
       duktig->pwrled_on = false;

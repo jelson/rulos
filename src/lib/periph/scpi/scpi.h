@@ -52,7 +52,7 @@ typedef struct {
   //              (USBD_SERIAL_PREFIX + STM32 96-bit UID)
   //   <firmware> "<version>-<git_commit>" if version is non-NULL, else just
   //              "<git_commit>" (GIT_COMMIT is a global build -D).
-  const char *version;   // optional, NULL = git commit only
+  const char *version;  // optional, NULL = git commit only
 
   // Called when *RST is received. May be NULL.
   void (*on_reset)(void);
@@ -105,15 +105,13 @@ bool scpi_consume_recent_activity(void);
 
 // Case-insensitive keyword match. Returns the position in s after the
 // matched keyword (long or short form), or NULL if neither matched.
-const char *scpi_match_kw(const char *s, const char *full,
-                          const char *short_);
+const char *scpi_match_kw(const char *s, const char *full, const char *short_);
 
 // If s starts with a digit in 0..(max_channel-1), set *ch to that digit
 // and return s advanced past it. Otherwise set *ch to 0 and return s
 // unchanged. Used for the optional 0-based channel suffix on commands
 // like INPut3:.
-const char *scpi_parse_channel_suffix(const char *s, int max_channel,
-                                      int *ch);
+const char *scpi_parse_channel_suffix(const char *s, int max_channel, int *ch);
 
 // Parse decimal seconds (with optional fraction and optional `e`/`E`
 // exponent) into picoseconds. Returns false on syntax error.
