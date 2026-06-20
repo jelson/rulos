@@ -20,7 +20,7 @@ import sys
 sys.path.insert(0, "../../util")
 from build_tools import *
 
-# Target: STM32G474xB (Cortex-M4F, has HRTIM, 2 output channels).
+# Target: STM32G474xE (Cortex-M4F, LQFP64; HRTIM + GP timers drive 4 channels).
 #
 # Clock: 10 MHz active oscillator (rubidium / GPS-disciplined) on OSC_IN
 # via HSE bypass, multiplied by PLL to 125 MHz SYSCLK.

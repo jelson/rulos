@@ -40,6 +40,22 @@
  * (Timer E / PC8 is AF3, the rest AF13) and the GP AF differs on every pin, so AF is a per-channel
  * field, never a constant. See PCB_NOTES.md for the full verification.
  *
+ * TIMER MAP (every hardware timer this firmware touches):
+ *   HRTIM1 master    fast-regime sync timebase; also the burst-mode-controller clock in SYNC
+ *   HRTIM1 Timer A   ch2 fast output (PA9)
+ *   HRTIM1 Timer B   ch3 fast output (PA10)
+ *   HRTIM1 Timer E   ch0 fast output (PC8)
+ *   HRTIM1 Timer F   ch1 fast output (PC6)
+ *   HRTIM1 BMC       burst gating in the fast regime (hardware-exact pulse count)
+ *   TIM1             ch3 slow (GP) output, and the GP-regime sync master (TRGO = update)
+ *   TIM2 (32-bit)    ch2 slow (GP) output
+ *   TIM3             ch1 slow (GP) output
+ *   TIM8             ch0 slow (GP) output
+ *   TIM5 (32-bit)    burst-repetition timer: times the gap between burst frames; drives no pin
+ *   SysTick          RULOS scheduler jiffy (LEDs, SCPI, housekeeping) -- never time-critical
+ * A channel's HRTIM timer and GP timer are mutually exclusive in time (the pin's AF switches at the
+ * ~524 us crossover), so the two are never driving the same output at once.
+ *
  * DESIGN RULE: full feature parity across the two regimes. The handoff between HRTIM and the GP
  * timer is invisible -- you set a period anywhere in the range and the firmware picks the timer.
  * Width, delay, sync, and burst all behave identically on both sides. The ONLY thing that changes
@@ -72,8 +88,10 @@
  * Burst: a domain can emit exactly N pulses, rest, and repeat at a programmable interval. Same
  * behavior in both regimes, two implementations: the HRTIM burst-mode controller gates the outputs
  * in hardware when fast (software can't count MHz pulses), and a software per-period count gates
- * them when slow (the update interrupt runs below ~2 kHz there, so counting is exact). Each
- * repetition is software-scheduled (~10 ms granularity); the count within a burst stays exact.
+ * them when slow (the update interrupt runs below ~2 kHz there, so counting is exact). The
+ * repetition interval is timed by a dedicated hardware timer (TIM5), not the scheduler, so the
+ * cadence is locked to the 125 MHz clock -- phase-coherent with the pulses and free of scheduler
+ * jitter; the count within a burst stays exact.
  *
  * SCPI command surface:
  *   *IDN?
@@ -152,16 +170,19 @@ static const uint16_t hrtim_min_per[6] = {0x0060, 0x0030, 0x0018, 0x000C, 0x0006
 
 // ---- Burst -----------------------------------------------------------------
 
-// Each HRTIM burst frame is idle_ticks + ncyc pulse periods, counted by the BMC's 16-bit period
-// register. The idle window is the deadline for the arm sequence and the burst-end work, so keep
-// it generous: at least BURST_IDLE_MIN periods, which caps ncyc at 65536 - BURST_IDLE_MIN.
-#define BURST_IDLE_MIN 2048U
-#define BURST_IDLE_MAX 8192U
-#define BURST_NCYC_MAX (65536U - BURST_IDLE_MIN)
+// Each HRTIM burst frame is a short idle window followed by ncyc pulse periods, both counted by the
+// BMC's 16-bit period register (so idle + ncyc <= 65536). The idle window holds the outputs off
+// while burst_arm_frame enables them and -- because the controller runs continuous and is stopped
+// in the BMPER ISR -- it is the grace period for that ISR to disable the outputs before the next
+// idle window would end and they'd resume. It is therefore sized by absolute time (worst-case ISR
+// latency), not a fixed period count, so it does not balloon into seconds at slow periods.
+#define BURST_IDLE_TARGET_PS (200ULL * 1000 * 1000)  // ~200 us: BMPER-ISR latency budget + arm
+#define BURST_IDLE_MIN       2U                      // period floor (near-ceiling periods only)
+#define BURST_NCYC_MAX       (65536U - BURST_IDLE_MIN)
 
 #define BURST_REP_DEFAULT_PS PS_PER_SEC
-#define BURST_REP_MARGIN_PS  (50ULL * PS_PER_SEC / 1000)  // 50 ms re-arm margin
-#define BURST_REP_MAX_PS     (60ULL * PS_PER_SEC)         // scheduler 32-bit us headroom
+#define BURST_REP_MARGIN_PS  (PS_PER_SEC / 1000)   // 1 ms guard past the frame for ISR latency
+#define BURST_REP_MAX_PS     (60ULL * PS_PER_SEC)  // TIM5 32-bit reach (16 ns tick at div 2)
 
 // ---- LEDs (unchanged from Rev A; none collide with the Rev B outputs) ------
 
@@ -317,10 +338,8 @@ static int g_gp_burst_count_ch = -1;
 static uint32_t g_gp_burst_out_mask;
 static volatile uint32_t g_gp_burst_remaining;
 static volatile bool g_gp_burst_arming;
-// Common to both: the repetition schedule.
-static Time g_burst_rep_us;
-static bool g_burst_task_live;
-static bool g_burst_active;  // a burst (either regime) is armed this config
+// A burst (either regime) is armed this config; TIM5's update ISR re-arms each frame while set.
+static bool g_burst_active;
 
 // Channel-LED policy. A fast channel (period < LED_SLOW_PERIOD_PS, i.e. freq > 2 Hz -- always the
 // case in the HRTIM regime) blinks at the fixed heartbeat in update_leds. A slow continuous channel
@@ -546,23 +565,41 @@ static bool config_gp_channel(int ch, bool sync, bool burst) {
 
 // ---- Burst -----------------------------------------------------------------
 
-static uint32_t burst_idle_ticks(uint32_t ncyc) {
-  uint32_t idle = 65536U - ncyc;
-  if (idle > BURST_IDLE_MAX) {
-    idle = BURST_IDLE_MAX;
+// Size the BMC idle window that precedes the ncyc run pulses (see the constant block). Convert the
+// absolute-time target to whole periods so the window does not balloon at slow periods; floor it at
+// BURST_IDLE_MIN, and never let the whole frame (idle + ncyc) overflow the 16-bit period register.
+static uint32_t burst_idle_ticks(uint64_t period_ps, uint32_t ncyc) {
+  uint32_t idle = (uint32_t)((BURST_IDLE_TARGET_PS + period_ps - 1) / period_ps);
+  if (idle < BURST_IDLE_MIN) {
+    idle = BURST_IDLE_MIN;
+  }
+  if (idle > 65536U - ncyc) {
+    idle = 65536U - ncyc;
   }
   return idle;
 }
 
-// Arm one burst, then reschedule for the next repetition. At most one instance of this task is in
-// the scheduler (apply_all() clears g_burst_active to make a stale one die).
-static void burst_rep_task(void* data) {
-  if (!g_burst_active) {
-    g_burst_task_live = false;
-    return;
+// Pick prescaler + ARR for the repetition timer (TIM5, 32-bit) to count one burst-repeat interval.
+// Smallest prescaler that fits the 32-bit counter, for the finest cadence step. rep_ps is already
+// validated into [frame + 50 ms, 60 s], so it always fits (div 1 reaches ~34 s, div 2 ~69 s).
+static void select_rep_timer(uint64_t rep_ps, uint32_t* out_psc, uint32_t* out_arr) {
+  const uint64_t span = GP_TICK_PS * ((uint64_t)GP_ARR32_MAX + 1);  // reach at div 1
+  uint64_t div = (rep_ps + span - 1) / span;
+  if (div < 1) {
+    div = 1;
   }
-  schedule_us(g_burst_rep_us, burst_rep_task, NULL);
+  uint64_t ticks = rep_ps / (GP_TICK_PS * div);
+  if (ticks < 1) {
+    ticks = 1;
+  }
+  *out_psc = (uint32_t)(div - 1);
+  *out_arr = (uint32_t)(ticks - 1);
+}
 
+// Arm one burst frame: start the HRTIM burst controller (it self-stops at its BMPER interrupt) or
+// open the GP software count. Called inline from apply_all for the first frame, and from the
+// repetition timer's (TIM5) update ISR for every frame after.
+static void burst_arm_frame(void) {
   if (g_hrtim_burst_outputs) {
     // HRTIM regime: start the controller with outputs disabled (the burst begins idle), then
     // enable the outputs while the controller holds them idle.
@@ -580,6 +617,19 @@ static void burst_rep_task(void* data) {
     TIM_TypeDef* ct = channel_hw[g_gp_burst_count_ch].gp_timer;
     LL_TIM_ClearFlag_UPDATE(ct);
     LL_TIM_EnableIT_UPDATE(ct);
+  }
+}
+
+// Repetition timer (TIM5) update: one overflow per burst-repeat interval -- re-arm the next frame.
+// Hardware-timed off the 125 MHz clock, so the cadence stays phase-coherent with the burst and free
+// of the scheduler's jitter. g_burst_active guards a stale tick during reconfiguration.
+void TIM5_IRQHandler(void) {
+  if (!LL_TIM_IsActiveFlag_UPDATE(TIM5)) {
+    return;
+  }
+  LL_TIM_ClearFlag_UPDATE(TIM5);
+  if (g_burst_active) {
+    burst_arm_frame();
   }
 }
 
@@ -621,7 +671,7 @@ static int gp_ch_for_timer(TIM_TypeDef* t) {
 //   1. Per-pulse LED: toggle this timer's channel LED if it's blinking per pulse (slow continuous).
 //   2. Burst counting, when this timer is the bursting domain's count timer: the arming update
 //      opens the run window on every gated output (a period boundary, so the first pulse is whole);
-//      ncyc updates later it closes the window. burst_rep_task re-arms at the next repetition.
+//      ncyc updates later it closes the window. The repetition timer (TIM5) re-arms the next frame.
 // A channel is never both (per-pulse requires not-bursting), so the two paths don't fight over the
 // timer's update interrupt.
 static void gp_update(TIM_TypeDef* t) {
@@ -669,7 +719,7 @@ void TIM8_UP_IRQHandler(void) {
 // Program the HRTIM burst mode controller for the bursting HRTIM-regime domain represented by ch.
 static void config_hrtim_burst(int ch, uint32_t outputs) {
   const uint32_t ncyc = chan[ch].burst_ncyc;
-  const uint32_t idle = burst_idle_ticks(ncyc);
+  const uint32_t idle = burst_idle_ticks(chan[ch].period_ps, ncyc);
 
   uint32_t clk_src;
   if (g_mode == MODE_SYNC) {
@@ -752,7 +802,12 @@ static int validate(int ch) {
     if (chan[ch].burst_rep_ps > BURST_REP_MAX_PS) {
       return -9;
     }
-    if (chan[ch].burst_rep_ps <= T * (uint64_t)(n + 1) + BURST_REP_MARGIN_PS) {
+    // The repetition must outlast one whole burst frame plus a guard for ISR latency. The HRTIM
+    // frame is the BMC idle window ahead of the ncyc pulses; the GP frame is the ncyc pulses plus
+    // the one-period arming gap.
+    uint64_t frame_ps =
+        uses_hrtim(ch) ? (uint64_t)(burst_idle_ticks(T, n) + n) * T : (uint64_t)(n + 1) * T;
+    if (chan[ch].burst_rep_ps <= frame_ps + BURST_REP_MARGIN_PS) {
       return -8;
     }
   }
@@ -763,8 +818,11 @@ static int validate(int ch) {
 
 // Tear down and rebuild the entire timer configuration from the current state.
 static void apply_all(void) {
-  // Quiesce burst first.
+  // Quiesce burst first: stop the repetition timer so no stale tick re-arms mid-rebuild.
   g_burst_active = false;
+  LL_TIM_DisableIT_UPDATE(TIM5);
+  LL_TIM_DisableCounter(TIM5);
+  LL_TIM_ClearFlag_UPDATE(TIM5);
   g_hrtim_burst_outputs = 0;
   g_gp_burst_count_ch = -1;
   g_gp_burst_out_mask = 0;
@@ -890,7 +948,6 @@ static void apply_all(void) {
   // Arm burst, if any (the bursting domain's counter is now running).
   if (burst_ch >= 0) {
     g_burst_active = true;
-    g_burst_rep_us = (Time)(chan[burst_ch].burst_rep_ps / 1000000);
     if (burst_is_gp) {
       // Gate every on GP output in the bursting domain; count the domain's timebase -- the TIM1
       // master channel in sync (it always runs there), the single channel itself in async.
@@ -904,10 +961,19 @@ static void apply_all(void) {
     } else {
       config_hrtim_burst(burst_ch, hrtim_burst_outs);
     }
-    if (!g_burst_task_live) {
-      g_burst_task_live = true;
-      schedule_us(1, burst_rep_task, NULL);
-    }
+    // Fire the first frame now, then let the repetition timer (TIM5) re-arm each subsequent frame
+    // at the programmed interval -- hardware-timed and phase-coherent, no scheduler in the path.
+    uint32_t rep_psc, rep_arr;
+    select_rep_timer(chan[burst_ch].burst_rep_ps, &rep_psc, &rep_arr);
+    LL_TIM_SetCounterMode(TIM5, LL_TIM_COUNTERMODE_UP);
+    LL_TIM_SetPrescaler(TIM5, rep_psc);
+    LL_TIM_SetAutoReload(TIM5, rep_arr);
+    LL_TIM_DisableARRPreload(TIM5);
+    LL_TIM_SetCounter(TIM5, 0);
+    burst_arm_frame();
+    LL_TIM_ClearFlag_UPDATE(TIM5);
+    LL_TIM_EnableIT_UPDATE(TIM5);
+    LL_TIM_EnableCounter(TIM5);
   }
 
   // LED policy: a slow continuous channel (freq <= 2 Hz, always GP regime, not bursting) toggles
@@ -944,11 +1010,11 @@ static const char* err_for_rc(int rc) {
     case -5:
       return "-200,\"Delay + width must be <= period\"";
     case -6:
-      return "-200,\"Burst count out of range (1 .. 63488)\"";
+      return "-200,\"Burst count out of range (1 .. 65534)\"";
     case -7:
       return "-200,\"Only one domain can burst at a time\"";
     case -8:
-      return "-200,\"Burst interval too short (needs burst length + 50 ms)\"";
+      return "-200,\"Burst interval too short (must exceed one burst frame)\"";
     case -9:
       return "-200,\"Burst interval out of range (max 60 s)\"";
     default:
@@ -1132,13 +1198,17 @@ static void init_gp_timers(void) {
   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM3);
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM1);
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM8);
+  // TIM5: the burst-repetition timer (32-bit, no output pins -- counter + update IRQ only).
+  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM5);
 
-  // GP burst update interrupts (only enabled per-burst; arm the NVIC lines once). Same relaxed
-  // priority as the HRTIM burst-end interrupt.
+  // Burst interrupts (the GP per-channel update counts plus the TIM5 repetition tick) are enabled
+  // per-burst; arm the NVIC lines once, at the same relaxed priority as the HRTIM burst-end IRQ.
   for (int ch = 0; ch < NUM_CHANNELS; ch++) {
     HAL_NVIC_SetPriority(channel_hw[ch].gp_up_irqn, 6, 0);
     HAL_NVIC_EnableIRQ(channel_hw[ch].gp_up_irqn);
   }
+  HAL_NVIC_SetPriority(TIM5_IRQn, 6, 0);
+  HAL_NVIC_EnableIRQ(TIM5_IRQn);
 }
 
 static void init_gpio(void) {
