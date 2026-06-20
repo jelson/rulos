@@ -1,0 +1,4 @@
+[tool.black]
+line-length = 100
+preview = true
+enable-unstable-feature = ["hug_parens_with_braces_and_square_brackets"]
