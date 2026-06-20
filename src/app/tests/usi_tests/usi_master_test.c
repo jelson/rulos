@@ -19,7 +19,7 @@
 #include <ctype.h>
 #include <inttypes.h>
 
-#include "chip/avr/periph/usi_twi_master/usi_twi_master.h"
+#include "periph/usi_twi_master/usi_twi_master.h"
 #include "core/clock.h"
 #include "core/hal.h"
 #include "core/hardware.h"

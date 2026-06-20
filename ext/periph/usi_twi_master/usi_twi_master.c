@@ -33,7 +33,7 @@
 
 #define TWI_FAST_MODE
 
-#include "chip/avr/periph/usi_twi_master/usi_twi_master.h"
+#include "periph/usi_twi_master/usi_twi_master.h"
 
 unsigned char USI_TWI_Master_Transfer(unsigned char);
 unsigned char USI_TWI_Master_Stop(void);

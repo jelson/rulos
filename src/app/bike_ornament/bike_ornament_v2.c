@@ -37,7 +37,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "chip/avr/periph/usi_twi_master/usi_twi_master.h"
+#include "periph/usi_twi_master/usi_twi_master.h"
 #include "core/clock.h"
 #include "core/hardware.h"
 #include "core/rulos.h"
