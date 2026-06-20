@@ -83,11 +83,13 @@ class Platform:
             if periph_name in SpecialRules.PERIPHERALS:
                 src_files.extend(SpecialRules.PERIPHERALS[periph_name]['src'])
             else:
-                # check both the hardware-agnostic and hardware-specific peripheral
-                # directories for a subdirectory matching the peripheral name
+                # check the hardware-agnostic, hardware-specific, and
+                # third-party peripheral directories for a subdirectory
+                # matching the peripheral name
                 periph_dirs = [
                     os.path.join(SRC_ROOT, "lib", "periph", periph_name),
                     os.path.join(SRC_ROOT, "lib", "chip", self.periph_dir(), periph_name),
+                    os.path.join(PROJECT_ROOT, "ext", "periph", periph_name),
                 ]
                 dir_found = False
                 for periph_dir in periph_dirs:
@@ -116,6 +118,9 @@ class Platform:
     def common_include_dirs(self, target):
         inc_dirs = [
             os.path.join(SRC_ROOT, "lib"),
+            # third-party libraries live under ext/; rooting here lets them
+            # be included the same way as src/lib (e.g. "periph/fatfs/ff.h")
+            os.path.join(PROJECT_ROOT, "ext"),
             ".", # app source code directory
         ]
 
