@@ -1,0 +1,7 @@
+#!/bin/sh
+# Reject a commit that stages unformatted source under src/. Bypass once (e.g.
+# a WIP commit) with `git commit --no-verify`.
+ROOT="$(git rev-parse --show-toplevel)"
+files=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -z "$files" ] && exit 0
+exec "$ROOT/src/util/autoformat" --check $files

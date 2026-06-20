@@ -1,0 +1,9 @@
+Git hooks for this repo. They are not active in a fresh clone until you
+point git at this directory:
+
+    git config core.hooksPath .githooks
+
+pre-commit runs `src/util/autoformat --check` on the staged source files and
+rejects the commit if any are not formatted (clang-format for C/C++, black for
+Python), naming the files and the fix command. To bypass once -- e.g. a WIP
+commit -- use `git commit --no-verify`.

@@ -3,10 +3,15 @@
 # autoformat: format RULOS source in place -- C/C++ with clang-format (to
 # .clang-format) and Python with black (to pyproject.toml).
 #
-#   autoformat          format the source files changed in git
-#   autoformat --all    format every source file under src/
+#   autoformat                format the source files changed in git
+#   autoformat --all          format every source file under src/
+#   autoformat FILE...         format exactly the given files
+#   autoformat --check [...]   don't modify anything; list files that need
+#                              formatting and exit nonzero. Combine with --all
+#                              or a FILE list (the pre-commit hook passes the
+#                              staged files).
 #
-# Both modes skip the vendored/third-party and generated files in EXCLUDE:
+# Any selection skips the vendored/third-party and generated files in EXCLUDE:
 # reformatting vendored code buries the local changes and ruins diffs against
 # upstream, and generated files are overwritten by the build. Vendored code
 # under ext/ lives outside src/, so it is never touched either.
@@ -30,23 +35,55 @@ src/app/salwow/gps-sim\.py$
 '
 exclude_re=$(echo "$EXCLUDE" | grep -vE '^[[:space:]]*(#|$)' | paste -sd '|' -)
 
-if [ "$1" = "--all" ]; then
+all=0
+check=0
+argfiles=""
+for arg in "$@"; do
+    case "$arg" in
+        --all) all=1 ;;
+        --check) check=1 ;;
+        -*) echo "usage: autoformat [--all] [--check] [file ...]" >&2; exit 1 ;;
+        *) argfiles="$argfiles
+$arg" ;;
+    esac
+done
+
+if [ -n "$argfiles" ]; then
+    files="$argfiles"
+elif [ "$all" = 1 ]; then
     files=$(find src -type f \
         \( -name '*.c' -o -name '*.h' -o -name '*.cpp' -o -name '*.py' \))
-elif [ -n "$1" ]; then
-    echo "usage: autoformat [--all]" >&2
-    exit 1
 else
     files=$( { git diff --name-only; git diff --cached --name-only; } )
 fi
 
-files=$(echo "$files" | grep -Ev "$exclude_re")
+# keep only existing source files, minus the exclusions
+files=$(echo "$files" | grep -E '\.(c|h|cpp|py)$' | grep -Ev "$exclude_re" \
+    | while read f; do [ -f "$f" ] && echo "$f"; done)
 cfiles=$(echo "$files" | grep -E '\.(c|h|cpp)$')
 pyfiles=$(echo "$files" | grep -E '\.py$')
 
 if [ -z "$cfiles" ] && [ -z "$pyfiles" ]; then
-    echo "No files to format"
-    exit
+    [ "$check" = 1 ] || echo "No files to format"
+    exit 0
+fi
+
+if [ "$check" = 1 ]; then
+    bad=$(
+        [ -n "$cfiles" ] && clang-format --dry-run -Werror $cfiles 2>&1 \
+            | sed -nE 's/^(.+):[0-9]+:[0-9]+:.*/\1/p'
+        [ -n "$pyfiles" ] && black --check $pyfiles 2>&1 \
+            | sed -nE 's/^would reformat (.+)$/\1/p'
+    )
+    bad=$(echo "$bad" | grep -v '^$' | sort -u)
+    if [ -n "$bad" ]; then
+        echo "These files are not formatted:" >&2
+        echo "$bad" | sed 's/^/  /' >&2
+        echo >&2
+        echo "Fix with:  src/util/autoformat $(echo "$bad" | tr '\n' ' ')" >&2
+        exit 1
+    fi
+    exit 0
 fi
 
 if [ -n "$cfiles" ]; then
