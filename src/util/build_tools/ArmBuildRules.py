@@ -24,6 +24,7 @@ ARM_ROOT = os.path.join(util.SRC_ROOT, "lib", "chip", "arm")
 STM32_ROOT = os.path.join(ARM_ROOT, "stm32")
 STM32_VENDOR_ROOT = os.path.join(util.PROJECT_ROOT, "ext", "stm32")
 LPC_ROOT = os.path.join(ARM_ROOT, "lpc")
+LPC_VENDOR_ROOT = os.path.join(util.PROJECT_ROOT, "ext", "lpc")
 
 created_programming_target = False
 
@@ -333,10 +334,10 @@ class ArmStmPlatform(ArmPlatform):
 
 class ArmNxpPlatform(ArmPlatform):
     """NXP LPC11xx (Cortex-M0) support. The chip driver library is NXP's
-    LPCOpen vendor code under lib/chip/arm/lpc/vendor_libraries; it ships
-    its own CMSIS core headers, so unlike STM32 it does not depend on any
-    shared CMSIS copy. The recipe (chip family define, flash/ram, driver
-    lib, startup, linker) mirrors the pre-SCons Makefile build."""
+    LPCOpen vendor code under ext/lpc; it ships its own CMSIS core
+    headers, so unlike STM32 it does not depend on any shared CMSIS copy.
+    The recipe (chip family define, flash/ram, driver lib, startup,
+    linker) mirrors the pre-SCons Makefile build."""
 
     class Chip:
         def __init__(self, name, chip_family, flashk, ramk, arch_name,
@@ -361,7 +362,7 @@ class ArmNxpPlatform(ArmPlatform):
         self.chip = self.CHIPS[chip_name]
         self.arch = ArmPlatform.ARCHITECTURES[self.chip.arch_name]
         self.driver_lib_path = os.path.join(
-            LPC_ROOT, "vendor_libraries", self.chip.driver_lib)
+            LPC_VENDOR_ROOT, self.chip.driver_lib)
 
     def part_name(self):
         return self.chip.name
