@@ -24,14 +24,13 @@
 #include "stm32.h"
 
 typedef struct {
-  GPIO_TypeDef *port;
+  GPIO_TypeDef* port;
   uint32_t pin;
 } gpio_pin_t;
 
 #include "autogen-pins-stm32.h"
 
-static inline void stm32_gpio_configure(const gpio_pin_t gpio_pin,
-                                        const uint32_t ll_mode,
+static inline void stm32_gpio_configure(const gpio_pin_t gpio_pin, const uint32_t ll_mode,
                                         const uint32_t ll_pull) {
   LL_GPIO_InitTypeDef ll_gpio_init;
   ll_gpio_init.Pin = gpio_pin.pin;
@@ -39,8 +38,7 @@ static inline void stm32_gpio_configure(const gpio_pin_t gpio_pin,
   ll_gpio_init.Pull = ll_pull;
 
   // These only have an effect if an output mode is selected
-  ll_gpio_init.OutputType =
-      LL_GPIO_OUTPUT_PUSHPULL;  // open-drain is possible too!
+  ll_gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;  // open-drain is possible too!
   ll_gpio_init.Speed = LL_GPIO_SPEED_FREQ_HIGH;
 
   LL_GPIO_Init(gpio_pin.port, &ll_gpio_init);
@@ -106,8 +104,7 @@ static inline void gpio_clr(const gpio_pin_t gpio_pin) {
 /*
  * assert an output either high or low depending on the 'onoff' parameter
  */
-static inline void gpio_set_or_clr(const gpio_pin_t gpio_pin,
-                                   const uint32_t state) {
+static inline void gpio_set_or_clr(const gpio_pin_t gpio_pin, const uint32_t state) {
   if (state) {
     gpio_set(gpio_pin);
   } else {

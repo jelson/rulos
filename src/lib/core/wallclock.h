@@ -26,7 +26,7 @@ typedef struct {
   uint32_t curr_second_start_us;
 } wallclock_t;
 
-void wallclock_init(wallclock_t *wallclock);
-void wallclock_get_uptime(wallclock_t *wallclock, uint32_t *sec /* OUT */,
-                          uint32_t *usec /* OUT */);
-uint64_t wallclock_get_uptime_usec(wallclock_t *wallclock);
+void wallclock_init(wallclock_t* wallclock);
+void wallclock_get_uptime(wallclock_t* wallclock, uint32_t* sec /* OUT */,
+                          uint32_t* usec /* OUT */);
+uint64_t wallclock_get_uptime_usec(wallclock_t* wallclock);

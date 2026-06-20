@@ -56,10 +56,9 @@ void hal_reset();
 #define TIMER1 (1)
 #define TIMER2 (2)
 
-typedef void (*clock_handler_t)(void *data);
+typedef void (*clock_handler_t)(void* data);
 
-uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data,
-                            uint8_t timer_id);
+uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void* data, uint8_t timer_id);
 bool hal_clock_interrupt_is_pending();
 // microseconds elapsed since the last clock interrupt; range
 // 0..(us_per_period - 1). Must be called from within hal_start_atomic.
@@ -69,8 +68,7 @@ void hal_delay_ms(uint16_t ms);
 
 //// 7-segment panel HAL
 
-void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment,
-                         uint8_t onoff);
+void hal_program_segment(uint8_t board, uint8_t digit, uint8_t segment, uint8_t onoff);
 void hal_7seg_bus_enter_sleep();  // Call to stop driving 7seg bus
 
 //// keypad
@@ -89,13 +87,12 @@ bool hal_read_joystick_button();
 
 /////////////// TWI ///////////////////////////////////////////////
 
-MediaStateIfc *hal_twi_init(uint32_t speed_khz, Addr local_addr,
-                            MediaRecvSlot *trs);
+MediaStateIfc* hal_twi_init(uint32_t speed_khz, Addr local_addr, MediaRecvSlot* trs);
 
 ////////////////// Audio ////////////////////////////////////////////
 
 typedef struct s_HALSPIHandler {
-  void (*func)(struct s_HALSPIHandler *handler, uint8_t data);
+  void (*func)(struct s_HALSPIHandler* handler, uint8_t data);
 } HALSPIHandler;
 
 #define SPIFLASH_CMD_READ_DATA (0x03)

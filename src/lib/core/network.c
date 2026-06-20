@@ -26,7 +26,7 @@
 
 QUEUE_DEFINE(SendSlotPtr)
 
-#define SendQueue(n) ((SendSlotPtrQueue *)n->sendQueue_storage)
+#define SendQueue(n) ((SendSlotPtrQueue*)n->sendQueue_storage)
 
 ///////////////// Utilities ////////////////////////////////////
 
@@ -44,9 +44,9 @@ void net_log_buffer(uint8_t *buf, int len)
 
 //////////// Network Init ////////////////////////////////////
 
-static void net_recv_interrupt_handler(MediaRecvSlot *mrs);
+static void net_recv_interrupt_handler(MediaRecvSlot* mrs);
 
-void init_network(Network *net) {
+void init_network(Network* net) {
   memset(net, 0, sizeof(Network));
   for (uint8_t i = 0; i < MAX_LISTENERS; i++) {
     net->app_receivers[i] = NULL;
@@ -54,35 +54,33 @@ void init_network(Network *net) {
 
   SendSlotPtrQueue_init(SendQueue(net), sizeof(net->sendQueue_storage));
 
-  MediaRecvSlot *mrs = &net->media_recv_alloc.media_recv_slot;
+  MediaRecvSlot* mrs = &net->media_recv_alloc.media_recv_slot;
   mrs->func = net_recv_interrupt_handler;
   mrs->capacity = sizeof(net->media_recv_alloc) - sizeof(MediaRecvSlot);
   mrs->packet_len = 0;
   mrs->user_data = net;
 }
 
-void net_bind_media(Network *net, MediaStateIfc *media) {
+void net_bind_media(Network* net, MediaStateIfc* media) {
   // Set up underlying physical network
   net->media = media;
 }
 
 /////////////// Receiving /////////////////////////////////
 
-void net_free_received_message_buffer(MessageRecvBuffer *msg) {
+void net_free_received_message_buffer(MessageRecvBuffer* msg) {
   // Mark buffer as unallocated.
   msg->payload_len = 0;
 }
 
 // Given a receiver, find a free message buffer in that receiver.
-static MessageRecvBuffer *net_allocate_free_buffer(AppReceiver *app_receiver) {
+static MessageRecvBuffer* net_allocate_free_buffer(AppReceiver* app_receiver) {
   const uint8_t buf_size = RECEIVE_BUFFER_SIZE(app_receiver->payload_capacity);
   const uint8_t num_receive_buffers = app_receiver->num_receive_buffers;
   uint8_t idx;
   uint16_t offset;
-  for (idx = 0, offset = 0; idx < num_receive_buffers;
-       idx++, offset += buf_size) {
-    MessageRecvBuffer *buffer =
-        (MessageRecvBuffer *)(app_receiver->message_recv_buffers + offset);
+  for (idx = 0, offset = 0; idx < num_receive_buffers; idx++, offset += buf_size) {
+    MessageRecvBuffer* buffer = (MessageRecvBuffer*)(app_receiver->message_recv_buffers + offset);
     if (buffer->payload_len == 0) {
       return buffer;
     }
@@ -91,7 +89,7 @@ static MessageRecvBuffer *net_allocate_free_buffer(AppReceiver *app_receiver) {
 }
 
 // Find a registered listener by port number.
-static AppReceiver *net_find_receiver(Network *net, Port port) {
+static AppReceiver* net_find_receiver(Network* net, Port port) {
   for (uint8_t i = 0; i < MAX_LISTENERS; i++) {
     if (net->app_receivers[i] == NULL) {
       continue;
@@ -104,7 +102,7 @@ static AppReceiver *net_find_receiver(Network *net, Port port) {
 }
 
 // Where to register a new listener.
-static int net_find_empty_receive_slot(Network *net) {
+static int net_find_empty_receive_slot(Network* net) {
   for (uint8_t i = 0; i < MAX_LISTENERS; i++) {
     if (net->app_receivers[i] == NULL) {
       return i;
@@ -114,7 +112,7 @@ static int net_find_empty_receive_slot(Network *net) {
 }
 
 // Public API function to start listening on a port
-void net_bind_receiver(Network *net, AppReceiver *app_receiver) {
+void net_bind_receiver(Network* net, AppReceiver* app_receiver) {
   assert(app_receiver != NULL);
   assert(app_receiver->recv_complete_func != NULL);
   assert(app_receiver->port > 0);
@@ -129,25 +127,23 @@ void net_bind_receiver(Network *net, AppReceiver *app_receiver) {
   const uint8_t buf_size = RECEIVE_BUFFER_SIZE(app_receiver->payload_capacity);
   uint8_t idx;
   uint16_t offset;
-  for (idx = 0, offset = 0; idx < app_receiver->num_receive_buffers;
-       idx++, offset += buf_size) {
-    MessageRecvBuffer *buffer =
-        (MessageRecvBuffer *)(app_receiver->message_recv_buffers + offset);
+  for (idx = 0, offset = 0; idx < app_receiver->num_receive_buffers; idx++, offset += buf_size) {
+    MessageRecvBuffer* buffer = (MessageRecvBuffer*)(app_receiver->message_recv_buffers + offset);
     buffer->app_receiver = app_receiver;  // provide back pointer to user data
     buffer->payload_len = 0;              // mark unoccupied
   }
 
-  LOG("netstack: listener bound to port %d (0x%x), slot %d", app_receiver->port,
-      app_receiver->port, slotIdx);
+  LOG("netstack: listener bound to port %d (0x%x), slot %d", app_receiver->port, app_receiver->port,
+      slotIdx);
 }
 
 // Called by the media layer when a packet arrives in our receive slot.
 // WARNING: Runs on interrupt stack! Some sort of locking discipline required.
 // Returning from this function releases access to mrs, so better copy out
 // the packet before we leave.
-static void net_recv_interrupt_handler(MediaRecvSlot *mrs) {
-  Network *const net = (Network *)mrs->user_data;
-  WireMessage *const wire_msg = (WireMessage *)mrs->data;
+static void net_recv_interrupt_handler(MediaRecvSlot* mrs) {
+  Network* const net = (Network*)mrs->user_data;
+  WireMessage* const wire_msg = (WireMessage*)mrs->data;
   const uint8_t packet_len = mrs->packet_len;
   if (packet_len < sizeof(WireMessage)) {
     LOG("netstack error: got short pkt only %d bytes", packet_len);
@@ -159,25 +155,23 @@ static void net_recv_interrupt_handler(MediaRecvSlot *mrs) {
   // we'll discard before transferring to the scheduler stack.
   uint8_t incoming_checksum = wire_msg->checksum;
   wire_msg->checksum = 0;
-  if (net_compute_checksum((unsigned char *)wire_msg, packet_len) !=
-      incoming_checksum) {
+  if (net_compute_checksum((unsigned char*)wire_msg, packet_len) != incoming_checksum) {
     LOG("netstack error: checksum mismatch");
     return;
   }
 
   // Now we know the port is valid; find the receiver.
-  AppReceiver *app_receiver = net_find_receiver(net, wire_msg->dest_port);
+  AppReceiver* app_receiver = net_find_receiver(net, wire_msg->dest_port);
   if (app_receiver == NULL) {
-    LOG("netstack error: dropped packet to port %d (0x%x) with no listener",
-        wire_msg->dest_port, wire_msg->dest_port);
+    LOG("netstack error: dropped packet to port %d (0x%x) with no listener", wire_msg->dest_port,
+        wire_msg->dest_port);
     return;
   }
 
   const uint8_t payload_len = packet_len - sizeof(WireMessage);
   if (payload_len == 0) {
     // Hey, that's our unused-buffer signal!
-    LOG("netstack error: dropping zero-length payload (port %d).",
-        wire_msg->dest_port);
+    LOG("netstack error: dropping zero-length payload (port %d).", wire_msg->dest_port);
     return;
   }
 
@@ -189,27 +183,26 @@ static void net_recv_interrupt_handler(MediaRecvSlot *mrs) {
   }
 
   // Find a buffer to copy into from the MediaRecvSlot.
-  MessageRecvBuffer *recv_buffer = net_allocate_free_buffer(app_receiver);
+  MessageRecvBuffer* recv_buffer = net_allocate_free_buffer(app_receiver);
   if (recv_buffer == NULL) {
-    LOG("netstack error: dropped packet of length %d (port 0x%x); ring full",
-        payload_len, wire_msg->dest_port);
+    LOG("netstack error: dropped packet of length %d (port 0x%x); ring full", payload_len,
+        wire_msg->dest_port);
     return;
   }
   recv_buffer->payload_len = payload_len;
   memcpy(recv_buffer->data, mrs->data + sizeof(WireMessage), payload_len);
 
   // Schedule the upcall.
-  schedule_now((ActivationFuncPtr)app_receiver->recv_complete_func,
-               recv_buffer);
+  schedule_now((ActivationFuncPtr)app_receiver->recv_complete_func, recv_buffer);
 }
 
 /////////////// Sending ///////////////////////////////////////////////
 
-static void maybe_net_send_next_message_down(Network *net);
-static void net_send_done_cb(void *user_data);
+static void maybe_net_send_next_message_down(Network* net);
+static void net_send_done_cb(void* user_data);
 
 // External visible API from above to launch a packet.
-bool net_send_message(Network *net, SendSlot *sendSlot) {
+bool net_send_message(Network* net, SendSlot* sendSlot) {
 #if 0
   LOG("netstack: queueing %d-byte payload to %d:%d (0x%x:0x%x)",
       sendSlot->msg->payload_len, sendSlot->dest_addr, sendSlot->msg->dest_port,
@@ -223,9 +216,9 @@ bool net_send_message(Network *net, SendSlot *sendSlot) {
 }
 
 // Send a message down the stack.
-static void maybe_net_send_next_message_down(Network *net) {
+static void maybe_net_send_next_message_down(Network* net) {
   // Get the next sendSlot out of our queue.  Return if none.
-  SendSlot *sendSlot;
+  SendSlot* sendSlot;
   bool rc = SendSlotPtrQueue_peek(SendQueue(net), &sendSlot);
 
   if (rc == FALSE) {
@@ -250,19 +243,18 @@ static void maybe_net_send_next_message_down(Network *net) {
   assert(packet_len > 0);
   sendSlot->wire_msg->checksum = 0;
   sendSlot->wire_msg->checksum =
-      net_compute_checksum((unsigned char *)sendSlot->wire_msg, packet_len);
+      net_compute_checksum((unsigned char*)sendSlot->wire_msg, packet_len);
 
   // send down
-  (net->media->send)(net->media, sendSlot->dest_addr,
-                     (unsigned char *)sendSlot->wire_msg, packet_len,
-                     net_send_done_cb, net);
+  (net->media->send)(net->media, sendSlot->dest_addr, (unsigned char*)sendSlot->wire_msg,
+                     packet_len, net_send_done_cb, net);
 }
 
 // Called when media has finished sending down the stack.
 // Mark the SendSlot's buffer as free and call the callback.
-static void net_send_done_cb(void *user_data) {
-  Network *net = (Network *)user_data;
-  SendSlot *sendSlot = NULL;
+static void net_send_done_cb(void* user_data) {
+  Network* net = (Network*)user_data;
+  SendSlot* sendSlot = NULL;
   bool rc = SendSlotPtrQueue_pop(SendQueue(net), &sendSlot);
 
   assert(rc);
@@ -282,8 +274,7 @@ static void net_send_done_cb(void *user_data) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void init_twi_network(Network *net, uint32_t speed_khz, Addr local_addr) {
+void init_twi_network(Network* net, uint32_t speed_khz, Addr local_addr) {
   init_network(net);
-  net_bind_media(net, hal_twi_init(speed_khz, local_addr,
-                                   &net->media_recv_alloc.media_recv_slot));
+  net_bind_media(net, hal_twi_init(speed_khz, local_addr, &net->media_recv_alloc.media_recv_slot));
 }

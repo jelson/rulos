@@ -28,5 +28,5 @@ typedef struct {
   Time next_deadline;
 } watchdog_t;
 
-void watchdog_init(watchdog_t *watchdog, uint32_t timeout_sec);
-void watchdog_keepalive(watchdog_t *watchdog);
+void watchdog_init(watchdog_t* watchdog, uint32_t timeout_sec);
+void watchdog_keepalive(watchdog_t* watchdog);

@@ -444,8 +444,9 @@ CCMRAM static inline uint32_t safe_cur(channel_t* chan, uint8_t s) {
 // recent_pulse is set once. Records that don't fit in the ring are dropped and counted.
 CCMRAM static void drain_sub_fast(channel_t* chan, uint8_t s, uint32_t cur) {
   uint32_t pos = chan->sub[s].drain_pos;
-  if (pos == cur)
+  if (pos == cur) {
     return;
+  }
   chan->recent_pulse = true;
   chan->sub[s].drain_pos = cur;
 
@@ -455,8 +456,9 @@ CCMRAM static void drain_sub_fast(channel_t* chan, uint8_t s, uint32_t cur) {
   if (__builtin_expect(count > available, 0)) {
     chan->buf_overflows += count - available;
     count = available;
-    if (count == 0)
+    if (count == 0) {
       return;
+    }
   }
 
   const uint32_t tag = chan->sub[s].counter_tag;
@@ -465,8 +467,9 @@ CCMRAM static void drain_sub_fast(channel_t* chan, uint8_t s, uint32_t cur) {
 
   while (count > 0) {
     uint32_t seg = DMA_CAPTURE_BUFLEN - pos;
-    if (seg > count)
+    if (seg > count) {
       seg = count;
+    }
     // Pointer-based iteration so the compiler doesn't spill the count.
     volatile uint32_t* src = buf + pos;
     volatile uint32_t* const end = src + seg;
@@ -475,8 +478,9 @@ CCMRAM static void drain_sub_fast(channel_t* chan, uint8_t s, uint32_t cur) {
       uint32_t seconds = counter < (CLOCK_FREQ_HZ / 2) ? seconds_A : seconds_B;
       if (__builtin_expect(divider != 1, 0)) {
         chan->count++;
-        if (chan->count < divider)
+        if (chan->count < divider) {
           continue;
+        }
         chan->count = 0;
       }
       timestamp_buffer[head].seconds = seconds;
@@ -492,8 +496,9 @@ CCMRAM static void drain_sub_fast(channel_t* chan, uint8_t s, uint32_t cur) {
 // Which sub-streams a slope selects. A selected sub-stream is armed in hardware and emitted; a
 // deselected one's capture channel is disabled.
 static bool sub_active(timestamper_slope_t sl, uint8_t s) {
-  if (sl == TIMESTAMPER_SLOPE_BOTH)
+  if (sl == TIMESTAMPER_SLOPE_BOTH) {
     return true;
+  }
   return (sl == TIMESTAMPER_SLOPE_FALLING) ? (s == SUB_FALLING) : (s == SUB_RISING);
 }
 
@@ -580,21 +585,24 @@ static void apply_channel_config(int ch, timestamper_slope_t slope) {
   }
   __disable_irq();
   for (int k = 0; k < NUM_HW_CAPTURE; k++) {
-    if (capture_hw[k].channel == ch)
+    if (capture_hw[k].channel == ch) {
       set_capture_enabled(k, false);
+    }
   }
   service_channel(c);
   c->slope = slope;
   c->divider = c->divider_set / hw;
   c->count = 0;
   for (int k = 0; k < NUM_HW_CAPTURE; k++) {
-    if (capture_hw[k].channel != ch)
+    if (capture_hw[k].channel != ch) {
       continue;
+    }
     uint8_t s = capture_hw[k].sub;
     LL_TIM_IC_SetPrescaler(capture_hw[k].tim, capture_hw[k].ll_channel, ic_prescaler_ll(hw));
     c->sub[s].drain_pos = safe_cur(c, s);
-    if (sub_active(slope, s))
+    if (sub_active(slope, s)) {
       set_capture_enabled(k, true);
+    }
   }
   __enable_irq();
 }
@@ -613,8 +621,9 @@ static int format_timestamp(timestamp_t* t, char* buf, int buf_size) {
   if (format_mode == TIMESTAMPER_FORMAT_BINARY) {
     _Static_assert(sizeof(timestamp_t) == TIMESTAMPER_BINARY_RECORD_LEN,
                    "binary wire format mirrors timestamp_t layout");
-    if (buf_size < (int)sizeof(timestamp_t))
+    if (buf_size < (int)sizeof(timestamp_t)) {
       return 0;
+    }
     memcpy(buf, t, sizeof(timestamp_t));
     return sizeof(timestamp_t);
   }
@@ -711,8 +720,9 @@ static void try_send_timestamps(void) {
     }
     return;
   }
-  if (!stream_enabled)
+  if (!stream_enabled) {
     return;
+  }
   if (tx_fill_pos == 0 || !usbd_cdc_tx_ready(scpi_usb_cdc_handle())) {
     return;
   }
@@ -749,8 +759,9 @@ static void flush_dma_captures(void) {
 
   for (int i = 0; i < NUM_CHANNELS; i++) {
     channel_t* ch = &channels[i];
-    if (!ch->has_hw)
+    if (!ch->has_hw) {
       continue;
+    }
 
     // Disable interrupts so we don't race the DMA ISR's call into service_channel (shared drain_pos
     // / ring head).
@@ -772,8 +783,9 @@ static void periodic_task(void* data) {
     LL_TIM_DisableCounter(TIM5);
     LL_TIM_DisableCounter(TIM15);
     for (int i = 0; i < NUM_CHANNELS; i++) {
-      if (!channels[i].has_hw)
+      if (!channels[i].has_hw) {
         continue;
+      }
       for (int s = 0; s < NUM_SUBS; s++) {
         rulos_dma_stop(channels[i].sub[s].dma_ch);
       }
@@ -981,8 +993,9 @@ static void init_timers() {
 }
 
 void timestamper_set_slope(int ch, timestamper_slope_t slope) {
-  if (ch < 0 || ch >= NUM_CHANNELS)
+  if (ch < 0 || ch >= NUM_CHANNELS) {
     return;
+  }
   channel_t* c = &channels[ch];
   if (!c->has_hw || c->slope == slope) {
     c->slope = slope;
@@ -994,14 +1007,16 @@ void timestamper_set_slope(int ch, timestamper_slope_t slope) {
 }
 
 timestamper_slope_t timestamper_get_slope(int ch) {
-  if (ch < 0 || ch >= NUM_CHANNELS)
+  if (ch < 0 || ch >= NUM_CHANNELS) {
     return TIMESTAMPER_SLOPE_RISING;
+  }
   return channels[ch].slope;
 }
 
 void timestamper_set_divider(int ch, uint32_t n) {
-  if (ch < 0 || ch >= NUM_CHANNELS || n == 0)
+  if (ch < 0 || ch >= NUM_CHANNELS || n == 0) {
     return;
+  }
   channel_t* c = &channels[ch];
   c->divider_set = n;
   if (!c->has_hw) {
@@ -1015,8 +1030,9 @@ void timestamper_set_divider(int ch, uint32_t n) {
 }
 
 uint32_t timestamper_get_divider(int ch) {
-  if (ch < 0 || ch >= NUM_CHANNELS)
+  if (ch < 0 || ch >= NUM_CHANNELS) {
     return 1;
+  }
   return channels[ch].divider_set;
 }
 
@@ -1117,8 +1133,9 @@ void timestamper_discard_pending(void) {
     channels[i].num_missed = 0;
     channels[i].buf_overflows = 0;
     channels[i].count = 0;
-    if (!channels[i].has_hw)
+    if (!channels[i].has_hw) {
       continue;
+    }
     // Skip past everything captured so far: the next edge becomes the first one the host sees.
     for (uint8_t s = 0; s < NUM_SUBS; s++) {
       channels[i].sub[s].drain_pos = safe_cur(&channels[i], s);

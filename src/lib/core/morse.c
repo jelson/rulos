@@ -83,8 +83,7 @@ morse_state_t morse_state;
 static void morse_go(morse_state_t* morse_state);
 
 static void morse_wait(morse_state_t* morse_state, uint8_t dot_times) {
-  schedule_us(dot_times * morse_state->dot_time_us, (ActivationFuncPtr)morse_go,
-              morse_state);
+  schedule_us(dot_times * morse_state->dot_time_us, (ActivationFuncPtr)morse_go, morse_state);
 }
 
 static void morse_go(morse_state_t* morse_state) {
@@ -157,8 +156,7 @@ static void morse_go(morse_state_t* morse_state) {
 }
 
 void emit_morse(const char* send_string, const uint32_t dot_time_us,
-                MorseOutputToggleFunc* toggle_func,
-                MorseOutputDoneFunc* done_func) {
+                MorseOutputToggleFunc* toggle_func, MorseOutputDoneFunc* done_func) {
   morse_state.send_string = send_string;
   morse_state.dot_time_us = dot_time_us;
   morse_state.toggle_func = toggle_func;

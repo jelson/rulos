@@ -18,12 +18,12 @@
 
 #include "core/watchdog.h"
 
-#include "core/rulos.h"
-
 #include <inttypes.h>
 
-static void watchdog_tick(void *data) {
-  watchdog_t *watchdog = (watchdog_t *)data;
+#include "core/rulos.h"
+
+static void watchdog_tick(void* data) {
+  watchdog_t* watchdog = (watchdog_t*)data;
   if (later_than(clock_time_us(), watchdog->next_deadline)) {
     LOG("WATCHDOG: %" PRIu32 "-sec timeout expired, resetting", watchdog->timeout_sec);
     hal_reset();
@@ -32,11 +32,11 @@ static void watchdog_tick(void *data) {
   schedule_us(500000, watchdog_tick, watchdog);
 }
 
-void watchdog_keepalive(watchdog_t *watchdog) {
+void watchdog_keepalive(watchdog_t* watchdog) {
   watchdog->next_deadline = clock_time_us() + watchdog->timeout_sec * 1000000;
 }
 
-void watchdog_init(watchdog_t *watchdog, uint32_t timeout_sec) {
+void watchdog_init(watchdog_t* watchdog, uint32_t timeout_sec) {
   memset(watchdog, 0, sizeof(*watchdog));
   watchdog->timeout_sec = timeout_sec;
   watchdog_keepalive(watchdog);

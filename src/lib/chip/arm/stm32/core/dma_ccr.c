@@ -33,12 +33,11 @@
  * dma.c.
  */
 
-#include "dma.h"
-
 #include <stddef.h>
 
 #include "core/hal.h"
 #include "core/hardware.h"  // for CCMRAM
+#include "dma.h"
 #include "stm32.h"
 
 // ============================================================================
@@ -54,12 +53,10 @@
 // dispatcher use LL macros that are defined identically across all
 // six families.
 // ============================================================================
-#if defined(RULOS_ARM_stm32c0) || defined(RULOS_ARM_stm32f0) || \
-    defined(RULOS_ARM_stm32f1) || defined(RULOS_ARM_stm32f3) || \
-    defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4)
+#if defined(RULOS_ARM_stm32c0) || defined(RULOS_ARM_stm32f0) || defined(RULOS_ARM_stm32f1) || \
+    defined(RULOS_ARM_stm32f3) || defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4)
 
-#if defined(RULOS_ARM_stm32c0) || defined(RULOS_ARM_stm32g0) || \
-    defined(RULOS_ARM_stm32g4)
+#if defined(RULOS_ARM_stm32c0) || defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4)
 #define RULOS_DMA_HAS_DMAMUX 1
 #else
 #define RULOS_DMA_HAS_DMAMUX 0
@@ -78,84 +75,83 @@
  *     so it doesn't need a Ch4+ merged line. Multiple slots holding
  *     the same IRQ number is fine -- NVIC_EnableIRQ is idempotent.
  */
-#if defined(RULOS_ARM_stm32g4) || defined(RULOS_ARM_stm32f1) || \
-    defined(RULOS_ARM_stm32f3)
+#if defined(RULOS_ARM_stm32g4) || defined(RULOS_ARM_stm32f1) || defined(RULOS_ARM_stm32f3)
 // Per-channel IRQ families.
-#define RULOS_DMA1_CH1_IRQN  DMA1_Channel1_IRQn
-#define RULOS_DMA1_CH2_IRQN  DMA1_Channel2_IRQn
-#define RULOS_DMA1_CH3_IRQN  DMA1_Channel3_IRQn
-#define RULOS_DMA1_CH4_IRQN  DMA1_Channel4_IRQn
-#define RULOS_DMA1_CH5_IRQN  DMA1_Channel5_IRQn
+#define RULOS_DMA1_CH1_IRQN DMA1_Channel1_IRQn
+#define RULOS_DMA1_CH2_IRQN DMA1_Channel2_IRQn
+#define RULOS_DMA1_CH3_IRQN DMA1_Channel3_IRQn
+#define RULOS_DMA1_CH4_IRQN DMA1_Channel4_IRQn
+#define RULOS_DMA1_CH5_IRQN DMA1_Channel5_IRQn
 #ifdef DMA1_Channel6_BASE
-#define RULOS_DMA1_CH6_IRQN  DMA1_Channel6_IRQn
+#define RULOS_DMA1_CH6_IRQN DMA1_Channel6_IRQn
 #endif
 #ifdef DMA1_Channel7_BASE
-#define RULOS_DMA1_CH7_IRQN  DMA1_Channel7_IRQn
+#define RULOS_DMA1_CH7_IRQN DMA1_Channel7_IRQn
 #endif
 #ifdef DMA1_Channel8_BASE
-#define RULOS_DMA1_CH8_IRQN  DMA1_Channel8_IRQn
+#define RULOS_DMA1_CH8_IRQN DMA1_Channel8_IRQn
 #endif
 #ifdef DMA2_Channel1_BASE
-#define RULOS_DMA2_CH1_IRQN  DMA2_Channel1_IRQn
-#define RULOS_DMA2_CH2_IRQN  DMA2_Channel2_IRQn
-#define RULOS_DMA2_CH3_IRQN  DMA2_Channel3_IRQn
+#define RULOS_DMA2_CH1_IRQN DMA2_Channel1_IRQn
+#define RULOS_DMA2_CH2_IRQN DMA2_Channel2_IRQn
+#define RULOS_DMA2_CH3_IRQN DMA2_Channel3_IRQn
 #if defined(RULOS_ARM_stm32f1)
 // F1 high/XL-density merges DMA2 Ch4-5. CMSIS aliases DMA2_Channel4_IRQn
 // to DMA2_Channel4_5_IRQn via a macro, so the Ch4 line below already
 // points at the merged IRQn; we just have to use that same macro for
 // Ch5 since DMA2_Channel5_IRQn doesn't exist on F1.
-#define RULOS_DMA2_CH4_IRQN  DMA2_Channel4_IRQn
-#define RULOS_DMA2_CH5_IRQN  DMA2_Channel4_IRQn
+#define RULOS_DMA2_CH4_IRQN DMA2_Channel4_IRQn
+#define RULOS_DMA2_CH5_IRQN DMA2_Channel4_IRQn
 #else
-#define RULOS_DMA2_CH4_IRQN  DMA2_Channel4_IRQn
-#define RULOS_DMA2_CH5_IRQN  DMA2_Channel5_IRQn
+#define RULOS_DMA2_CH4_IRQN DMA2_Channel4_IRQn
+#define RULOS_DMA2_CH5_IRQN DMA2_Channel5_IRQn
 #endif
 #ifdef DMA2_Channel6_BASE
-#define RULOS_DMA2_CH6_IRQN  DMA2_Channel6_IRQn
+#define RULOS_DMA2_CH6_IRQN DMA2_Channel6_IRQn
 #endif
 #ifdef DMA2_Channel7_BASE
-#define RULOS_DMA2_CH7_IRQN  DMA2_Channel7_IRQn
+#define RULOS_DMA2_CH7_IRQN DMA2_Channel7_IRQn
 #endif
 #ifdef DMA2_Channel8_BASE
-#define RULOS_DMA2_CH8_IRQN  DMA2_Channel8_IRQn
+#define RULOS_DMA2_CH8_IRQN DMA2_Channel8_IRQn
 #endif
 #endif  // DMA2_Channel1_BASE
 #elif defined(RULOS_ARM_stm32g0)
 // G0: merged IRQ lines.
-#define RULOS_DMA1_CH1_IRQN  DMA1_Channel1_IRQn
-#define RULOS_DMA1_CH2_IRQN  DMA1_Channel2_3_IRQn
-#define RULOS_DMA1_CH3_IRQN  DMA1_Channel2_3_IRQn
+#define RULOS_DMA1_CH1_IRQN DMA1_Channel1_IRQn
+#define RULOS_DMA1_CH2_IRQN DMA1_Channel2_3_IRQn
+#define RULOS_DMA1_CH3_IRQN DMA1_Channel2_3_IRQn
 #if defined(STM32G0B1xx)
-#define RULOS_DMA_MERGED_IRQN  DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn
+#define RULOS_DMA_MERGED_IRQN DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQn
 #else
-#define RULOS_DMA_MERGED_IRQN  DMA1_Ch4_5_DMAMUX1_OVR_IRQn
+#define RULOS_DMA_MERGED_IRQN DMA1_Ch4_5_DMAMUX1_OVR_IRQn
 #endif
-#define RULOS_DMA1_CH4_IRQN  RULOS_DMA_MERGED_IRQN
-#define RULOS_DMA1_CH5_IRQN  RULOS_DMA_MERGED_IRQN
+#define RULOS_DMA1_CH4_IRQN RULOS_DMA_MERGED_IRQN
+#define RULOS_DMA1_CH5_IRQN RULOS_DMA_MERGED_IRQN
 #ifdef DMA1_Channel6_BASE
-#define RULOS_DMA1_CH6_IRQN  RULOS_DMA_MERGED_IRQN
+#define RULOS_DMA1_CH6_IRQN RULOS_DMA_MERGED_IRQN
 #endif
 #ifdef DMA1_Channel7_BASE
-#define RULOS_DMA1_CH7_IRQN  RULOS_DMA_MERGED_IRQN
+#define RULOS_DMA1_CH7_IRQN RULOS_DMA_MERGED_IRQN
 #endif
 #ifdef DMA2_Channel1_BASE
-#define RULOS_DMA2_CH1_IRQN  RULOS_DMA_MERGED_IRQN
-#define RULOS_DMA2_CH2_IRQN  RULOS_DMA_MERGED_IRQN
-#define RULOS_DMA2_CH3_IRQN  RULOS_DMA_MERGED_IRQN
-#define RULOS_DMA2_CH4_IRQN  RULOS_DMA_MERGED_IRQN
-#define RULOS_DMA2_CH5_IRQN  RULOS_DMA_MERGED_IRQN
+#define RULOS_DMA2_CH1_IRQN RULOS_DMA_MERGED_IRQN
+#define RULOS_DMA2_CH2_IRQN RULOS_DMA_MERGED_IRQN
+#define RULOS_DMA2_CH3_IRQN RULOS_DMA_MERGED_IRQN
+#define RULOS_DMA2_CH4_IRQN RULOS_DMA_MERGED_IRQN
+#define RULOS_DMA2_CH5_IRQN RULOS_DMA_MERGED_IRQN
 #endif
 #elif defined(RULOS_ARM_stm32c0)
 // C0: Channel1 standalone, Ch2-3 merged. Only 3 channels total.
-#define RULOS_DMA1_CH1_IRQN  DMA1_Channel1_IRQn
-#define RULOS_DMA1_CH2_IRQN  DMA1_Channel2_3_IRQn
-#define RULOS_DMA1_CH3_IRQN  DMA1_Channel2_3_IRQn
+#define RULOS_DMA1_CH1_IRQN DMA1_Channel1_IRQn
+#define RULOS_DMA1_CH2_IRQN DMA1_Channel2_3_IRQn
+#define RULOS_DMA1_CH3_IRQN DMA1_Channel2_3_IRQn
 #else  // F0: Channel1 standalone, Ch2-3 and Ch4-5 merged.
-#define RULOS_DMA1_CH1_IRQN  DMA1_Channel1_IRQn
-#define RULOS_DMA1_CH2_IRQN  DMA1_Channel2_3_IRQn
-#define RULOS_DMA1_CH3_IRQN  DMA1_Channel2_3_IRQn
-#define RULOS_DMA1_CH4_IRQN  DMA1_Channel4_5_IRQn
-#define RULOS_DMA1_CH5_IRQN  DMA1_Channel4_5_IRQn
+#define RULOS_DMA1_CH1_IRQN DMA1_Channel1_IRQn
+#define RULOS_DMA1_CH2_IRQN DMA1_Channel2_3_IRQn
+#define RULOS_DMA1_CH3_IRQN DMA1_Channel2_3_IRQn
+#define RULOS_DMA1_CH4_IRQN DMA1_Channel4_5_IRQn
+#define RULOS_DMA1_CH5_IRQN DMA1_Channel4_5_IRQn
 #endif  // per-channel vs merged IRQ naming
 
 /*
@@ -173,9 +169,9 @@
  *   [8..15] = DMA2 channels 1..8
  */
 typedef struct {
-  DMA_TypeDef *dma;              // DMA1 or DMA2 (NULL = slot not populated)
-  DMA_Channel_TypeDef *hw_ch;    // DMA1_Channel1, ...
-  uint32_t ll_channel;           // LL_DMA_CHANNEL_1..8 (values 0..7)
+  DMA_TypeDef* dma;            // DMA1 or DMA2 (NULL = slot not populated)
+  DMA_Channel_TypeDef* hw_ch;  // DMA1_Channel1, ...
+  uint32_t ll_channel;         // LL_DMA_CHANNEL_1..8 (values 0..7)
   IRQn_Type irqn;
 } dma_channel_hw_t;
 
@@ -244,17 +240,17 @@ static const dma_channel_hw_t g_hw[DMA_CHANNEL_SLOTS] = {
  */
 typedef struct {
   bool allocated;
-  void (*tc_callback)(void *user_data);
-  void (*ht_callback)(void *user_data);
-  void (*error_callback)(void *user_data);
-  void *user_data;
+  void (*tc_callback)(void* user_data);
+  void (*ht_callback)(void* user_data);
+  void (*error_callback)(void* user_data);
+  void* user_data;
 } dma_channel_state_t;
 
 static dma_channel_state_t g_state[DMA_CHANNEL_SLOTS];
 
 // Convert an opaque handle back to its slot index.
-static inline int state_to_idx(const rulos_dma_channel_t *ch) {
-  return (const dma_channel_state_t *)ch - g_state;
+static inline int state_to_idx(const rulos_dma_channel_t* ch) {
+  return (const dma_channel_state_t*)ch - g_state;
 }
 
 #if !RULOS_DMA_HAS_DMAMUX
@@ -279,19 +275,19 @@ static const uint8_t g_fixed_slot_plus_one[RULOS_DMA_REQ_COUNT_] = {
 #if defined(RULOS_ARM_stm32f0)
     [RULOS_DMA_REQ_USART1_TX] = 1 + 1,  // DMA1 Ch2 (conflicts with I2C1_TX/SPI1_RX)
     [RULOS_DMA_REQ_USART1_RX] = 2 + 1,  // DMA1 Ch3 (conflicts with I2C1_RX/SPI1_TX)
-    [RULOS_DMA_REQ_I2C1_TX]   = 1 + 1,  // DMA1 Ch2 (conflicts with USART1_TX/SPI1_RX)
-    [RULOS_DMA_REQ_I2C1_RX]   = 2 + 1,  // DMA1 Ch3 (conflicts with USART1_RX/SPI1_TX)
-    [RULOS_DMA_REQ_SPI1_RX]   = 1 + 1,  // DMA1 Ch2 (conflicts with USART1_TX/I2C1_TX)
-    [RULOS_DMA_REQ_SPI1_TX]   = 2 + 1,  // DMA1 Ch3 (conflicts with USART1_RX/I2C1_RX)
-    [RULOS_DMA_REQ_SPI2_TX]   = 4 + 1,  // DMA1 Ch5
+    [RULOS_DMA_REQ_I2C1_TX] = 1 + 1,    // DMA1 Ch2 (conflicts with USART1_TX/SPI1_RX)
+    [RULOS_DMA_REQ_I2C1_RX] = 2 + 1,    // DMA1 Ch3 (conflicts with USART1_RX/SPI1_TX)
+    [RULOS_DMA_REQ_SPI1_RX] = 1 + 1,    // DMA1 Ch2 (conflicts with USART1_TX/I2C1_TX)
+    [RULOS_DMA_REQ_SPI1_TX] = 2 + 1,    // DMA1 Ch3 (conflicts with USART1_RX/I2C1_RX)
+    [RULOS_DMA_REQ_SPI2_TX] = 4 + 1,    // DMA1 Ch5
 #elif defined(RULOS_ARM_stm32f1) || defined(RULOS_ARM_stm32f3)
-    [RULOS_DMA_REQ_SPI1_RX]   = 1 + 1,  // DMA1 Ch2
-    [RULOS_DMA_REQ_SPI1_TX]   = 2 + 1,  // DMA1 Ch3
+    [RULOS_DMA_REQ_SPI1_RX] = 1 + 1,    // DMA1 Ch2
+    [RULOS_DMA_REQ_SPI1_TX] = 2 + 1,    // DMA1 Ch3
     [RULOS_DMA_REQ_USART1_TX] = 3 + 1,  // DMA1 Ch4
     [RULOS_DMA_REQ_USART1_RX] = 4 + 1,  // DMA1 Ch5 (conflicts with SPI2_TX)
-    [RULOS_DMA_REQ_I2C1_TX]   = 5 + 1,  // DMA1 Ch6
-    [RULOS_DMA_REQ_I2C1_RX]   = 6 + 1,  // DMA1 Ch7
-    [RULOS_DMA_REQ_SPI2_TX]   = 4 + 1,  // DMA1 Ch5 (conflicts with USART1_RX)
+    [RULOS_DMA_REQ_I2C1_TX] = 5 + 1,    // DMA1 Ch6
+    [RULOS_DMA_REQ_I2C1_RX] = 6 + 1,    // DMA1 Ch7
+    [RULOS_DMA_REQ_SPI2_TX] = 4 + 1,    // DMA1 Ch5 (conflicts with USART1_RX)
 #endif
 };
 #endif  // !RULOS_DMA_HAS_DMAMUX
@@ -372,7 +368,7 @@ static const uint32_t g_dmamux_req[RULOS_DMA_REQ_COUNT_] = {
 // value, so we wrap them in switch-based helpers once per file.
 // ----------------------------------------------------------------------------
 
-CCMRAM static bool ll_dma_is_active_flag_tc(DMA_TypeDef *dma, uint32_t ch) {
+CCMRAM static bool ll_dma_is_active_flag_tc(DMA_TypeDef* dma, uint32_t ch) {
   switch (ch) {
     case LL_DMA_CHANNEL_1:
       return LL_DMA_IsActiveFlag_TC1(dma);
@@ -404,7 +400,7 @@ CCMRAM static bool ll_dma_is_active_flag_tc(DMA_TypeDef *dma, uint32_t ch) {
   return false;
 }
 
-CCMRAM static void ll_dma_clear_flag_tc(DMA_TypeDef *dma, uint32_t ch) {
+CCMRAM static void ll_dma_clear_flag_tc(DMA_TypeDef* dma, uint32_t ch) {
   switch (ch) {
     case LL_DMA_CHANNEL_1:
       LL_DMA_ClearFlag_TC1(dma);
@@ -443,7 +439,7 @@ CCMRAM static void ll_dma_clear_flag_tc(DMA_TypeDef *dma, uint32_t ch) {
   }
 }
 
-CCMRAM static bool ll_dma_is_active_flag_ht(DMA_TypeDef *dma, uint32_t ch) {
+CCMRAM static bool ll_dma_is_active_flag_ht(DMA_TypeDef* dma, uint32_t ch) {
   switch (ch) {
     case LL_DMA_CHANNEL_1:
       return LL_DMA_IsActiveFlag_HT1(dma);
@@ -475,7 +471,7 @@ CCMRAM static bool ll_dma_is_active_flag_ht(DMA_TypeDef *dma, uint32_t ch) {
   return false;
 }
 
-CCMRAM static void ll_dma_clear_flag_ht(DMA_TypeDef *dma, uint32_t ch) {
+CCMRAM static void ll_dma_clear_flag_ht(DMA_TypeDef* dma, uint32_t ch) {
   switch (ch) {
     case LL_DMA_CHANNEL_1:
       LL_DMA_ClearFlag_HT1(dma);
@@ -514,7 +510,7 @@ CCMRAM static void ll_dma_clear_flag_ht(DMA_TypeDef *dma, uint32_t ch) {
   }
 }
 
-CCMRAM static bool ll_dma_is_active_flag_te(DMA_TypeDef *dma, uint32_t ch) {
+CCMRAM static bool ll_dma_is_active_flag_te(DMA_TypeDef* dma, uint32_t ch) {
   switch (ch) {
     case LL_DMA_CHANNEL_1:
       return LL_DMA_IsActiveFlag_TE1(dma);
@@ -546,7 +542,7 @@ CCMRAM static bool ll_dma_is_active_flag_te(DMA_TypeDef *dma, uint32_t ch) {
   return false;
 }
 
-CCMRAM static void ll_dma_clear_flag_te(DMA_TypeDef *dma, uint32_t ch) {
+CCMRAM static void ll_dma_clear_flag_te(DMA_TypeDef* dma, uint32_t ch) {
   switch (ch) {
     case LL_DMA_CHANNEL_1:
       LL_DMA_ClearFlag_TE1(dma);
@@ -619,9 +615,9 @@ static uint32_t mem_width_to_ll(rulos_dma_width_t w) {
   return LL_DMA_MDATAALIGN_BYTE;
 }
 
-static void init_channel(int idx, const rulos_dma_config_t *c) {
-  const dma_channel_hw_t *hw = &g_hw[idx];
-  dma_channel_state_t *s = &g_state[idx];
+static void init_channel(int idx, const rulos_dma_config_t* c) {
+  const dma_channel_hw_t* hw = &g_hw[idx];
+  dma_channel_state_t* s = &g_state[idx];
 
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
 
@@ -640,12 +636,10 @@ static void init_channel(int idx, const rulos_dma_config_t *c) {
   // #defines that expand to the vendor LL constants). Width needs a
   // small conversion because LL_DMA_PDATAALIGN_* and LL_DMA_MDATAALIGN_*
   // land in different CCR bit fields.
-  uint32_t cfg =
-      c->direction | c->mode |
-      (c->periph_increment ? LL_DMA_PERIPH_INCREMENT : LL_DMA_PERIPH_NOINCREMENT) |
-      (c->mem_increment ? LL_DMA_MEMORY_INCREMENT : LL_DMA_MEMORY_NOINCREMENT) |
-      periph_width_to_ll(c->periph_width) | mem_width_to_ll(c->mem_width) |
-      c->priority;
+  uint32_t cfg = c->direction | c->mode |
+                 (c->periph_increment ? LL_DMA_PERIPH_INCREMENT : LL_DMA_PERIPH_NOINCREMENT) |
+                 (c->mem_increment ? LL_DMA_MEMORY_INCREMENT : LL_DMA_MEMORY_NOINCREMENT) |
+                 periph_width_to_ll(c->periph_width) | mem_width_to_ll(c->mem_width) | c->priority;
   LL_DMA_ConfigTransfer(hw->dma, hw->ll_channel, cfg);
 
 #if RULOS_DMA_HAS_DMAMUX
@@ -674,7 +668,7 @@ static void init_channel(int idx, const rulos_dma_config_t *c) {
 // Public API
 // ----------------------------------------------------------------------------
 
-rulos_dma_channel_t *rulos_dma_alloc(const rulos_dma_config_t *config) {
+rulos_dma_channel_t* rulos_dma_alloc(const rulos_dma_config_t* config) {
   if (config == NULL || config->request == RULOS_DMA_REQ_NONE ||
       config->request >= RULOS_DMA_REQ_COUNT_) {
     return NULL;
@@ -691,8 +685,12 @@ rulos_dma_channel_t *rulos_dma_alloc(const rulos_dma_config_t *config) {
   }
   // First-fit scan: any free channel can serve any peripheral.
   for (int i = 0; i < DMA_CHANNEL_SLOTS; i++) {
-    if (g_hw[i].dma == NULL) continue;  // slot not populated on this variant
-    if (g_state[i].allocated) continue;
+    if (g_hw[i].dma == NULL) {
+      continue;  // slot not populated on this variant
+    }
+    if (g_state[i].allocated) {
+      continue;
+    }
     g_state[i].allocated = true;
     found_idx = i;
     break;
@@ -725,17 +723,16 @@ rulos_dma_channel_t *rulos_dma_alloc(const rulos_dma_config_t *config) {
   HAL_NVIC_SetPriority(g_hw[found_idx].irqn, 1, 0);
   HAL_NVIC_EnableIRQ(g_hw[found_idx].irqn);
 
-  return (rulos_dma_channel_t *)&g_state[found_idx];
+  return (rulos_dma_channel_t*)&g_state[found_idx];
 }
 
-void rulos_dma_reconfigure(rulos_dma_channel_t *ch,
-                           const rulos_dma_config_t *new_config) {
+void rulos_dma_reconfigure(rulos_dma_channel_t* ch, const rulos_dma_config_t* new_config) {
   init_channel(state_to_idx(ch), new_config);
 }
 
-void rulos_dma_start(rulos_dma_channel_t *ch, volatile void *periph_addr,
-                     void *mem_addr, uint32_t nitems) {
-  const dma_channel_hw_t *hw = &g_hw[state_to_idx(ch)];
+void rulos_dma_start(rulos_dma_channel_t* ch, volatile void* periph_addr, void* mem_addr,
+                     uint32_t nitems) {
+  const dma_channel_hw_t* hw = &g_hw[state_to_idx(ch)];
 
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
   LL_DMA_SetDataLength(hw->dma, hw->ll_channel, nitems);
@@ -743,21 +740,20 @@ void rulos_dma_start(rulos_dma_channel_t *ch, volatile void *periph_addr,
   // Direction was already written to CCR by init_channel; we only pick
   // src/dst address ordering here based on what LL_DMA_ConfigAddresses
   // expects for the current direction.
-  const uint32_t ccr_dir =
-      LL_DMA_GetDataTransferDirection(hw->dma, hw->ll_channel);
+  const uint32_t ccr_dir = LL_DMA_GetDataTransferDirection(hw->dma, hw->ll_channel);
   if (ccr_dir == LL_DMA_DIRECTION_MEMORY_TO_PERIPH) {
-    LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, (uint32_t)mem_addr,
-                           (uint32_t)periph_addr, ccr_dir);
+    LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, (uint32_t)mem_addr, (uint32_t)periph_addr,
+                           ccr_dir);
   } else {
-    LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, (uint32_t)periph_addr,
-                           (uint32_t)mem_addr, ccr_dir);
+    LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, (uint32_t)periph_addr, (uint32_t)mem_addr,
+                           ccr_dir);
   }
 
   LL_DMA_EnableChannel(hw->dma, hw->ll_channel);
 }
 
-void rulos_dma_stop(rulos_dma_channel_t *ch) {
-  const dma_channel_hw_t *hw = &g_hw[state_to_idx(ch)];
+void rulos_dma_stop(rulos_dma_channel_t* ch) {
+  const dma_channel_hw_t* hw = &g_hw[state_to_idx(ch)];
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
 
   // Clear any TC/HT/TE flags left over from the transfer we just
@@ -775,14 +771,14 @@ void rulos_dma_stop(rulos_dma_channel_t *ch) {
   ll_dma_clear_flag_te(hw->dma, hw->ll_channel);
 }
 
-uint32_t rulos_dma_get_remaining(const rulos_dma_channel_t *ch) {
-  const dma_channel_hw_t *hw = &g_hw[state_to_idx(ch)];
+uint32_t rulos_dma_get_remaining(const rulos_dma_channel_t* ch) {
+  const dma_channel_hw_t* hw = &g_hw[state_to_idx(ch)];
   return LL_DMA_GetDataLength(hw->dma, hw->ll_channel);
 }
 
-void rulos_dma_free(rulos_dma_channel_t *ch) {
+void rulos_dma_free(rulos_dma_channel_t* ch) {
   const int idx = state_to_idx(ch);
-  const dma_channel_hw_t *hw = &g_hw[idx];
+  const dma_channel_hw_t* hw = &g_hw[idx];
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
 
   // Silence this channel at the DMA-hardware level by disabling its
@@ -804,8 +800,8 @@ void rulos_dma_free(rulos_dma_channel_t *ch) {
 // ----------------------------------------------------------------------------
 
 CCMRAM static void dispatch_channel_irq(int idx) {
-  const dma_channel_hw_t *hw = &g_hw[idx];
-  dma_channel_state_t *s = &g_state[idx];
+  const dma_channel_hw_t* hw = &g_hw[idx];
+  dma_channel_state_t* s = &g_state[idx];
   if (hw->dma == NULL || !s->allocated) {
     return;
   }
@@ -842,8 +838,7 @@ CCMRAM static void dispatch_channel_irq(int idx) {
  * channels is essentially free (one load + one early return).
  */
 
-#if defined(RULOS_ARM_stm32g4) || defined(RULOS_ARM_stm32f1) || \
-    defined(RULOS_ARM_stm32f3)
+#if defined(RULOS_ARM_stm32g4) || defined(RULOS_ARM_stm32f1) || defined(RULOS_ARM_stm32f3)
 
 #ifdef DMA1_Channel1_BASE
 CCMRAM void DMA1_Channel1_IRQHandler(void) {

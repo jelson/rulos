@@ -18,51 +18,49 @@
 
 #include "core/arm-hal.h"
 #include "core/clock_split.h"
+#include "core/dfu.h"
 #include "core/hal.h"
 #include "core/hardware.h"
-#include "core/dfu.h"
 
 #if defined(RULOS_ARM_stm32c0)
 /**
-  * @brief  System Clock Configuration
-  *         The system Clock is configured as follow :
-  *            System Clock source            = HSI
-  *            SYSCLK(Hz)                     = 48000000
-  *            HCLK(Hz)                       = 48000000
-  *            AHB Pre-scaler                 = 1
-  *            APB1 Pre-scaler                = 1
-  *            VDD(V)                         = 3.3
-  *            Flash Latency(WS)              = 1
-  * @param  None
-  * @retval None
-  */
-void SystemClock_Config(void)
-{
+ * @brief  System Clock Configuration
+ *         The system Clock is configured as follow :
+ *            System Clock source            = HSI
+ *            SYSCLK(Hz)                     = 48000000
+ *            HCLK(Hz)                       = 48000000
+ *            AHB Pre-scaler                 = 1
+ *            APB1 Pre-scaler                = 1
+ *            VDD(V)                         = 3.3
+ *            Flash Latency(WS)              = 1
+ * @param  None
+ * @retval None
+ */
+void SystemClock_Config(void) {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
   /* Activate HSI as clock system source  */
-  RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_HSE | RCC_OSCILLATORTYPE_LSE;
+  RCC_OscInitStruct.OscillatorType =
+      RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_HSE | RCC_OSCILLATORTYPE_LSE;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.HSEState            = RCC_HSE_OFF;
-  RCC_OscInitStruct.LSEState            = RCC_LSE_OFF;
-  RCC_OscInitStruct.HSIState            = RCC_HSI_ON;
-  RCC_OscInitStruct.HSIDiv              = RCC_HSI_DIV1;
+  RCC_OscInitStruct.HSEState = RCC_HSE_OFF;
+  RCC_OscInitStruct.LSEState = RCC_LSE_OFF;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSIDiv = RCC_HSI_DIV1;
 
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
     /* Initialization Error */
     __builtin_trap();
   }
 
   /* Initializes the SYS, AHB and APB busses clocks  */
-  RCC_ClkInitStruct.ClockType      = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1);
-  RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_HSI;
-  RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1);
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
-  {
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK) {
     /* Initialization Error */
     __builtin_trap();
   }
@@ -104,8 +102,7 @@ void SystemClock_Config(void) {
 
   /* Select PLL as system clock source and configure the HCLK, PCLK1 clocks
    * dividers */
-  RCC_ClkInitStruct.ClockType =
-      (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1);
+  RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1);
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
@@ -154,8 +151,8 @@ void SystemClock_Config(void) {
 
   /* Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2
      clocks dividers */
-  clkinitstruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK |
-                             RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
+  clkinitstruct.ClockType =
+      (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
   clkinitstruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   clkinitstruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   clkinitstruct.APB2CLKDivider = RCC_HCLK_DIV1;
@@ -202,8 +199,8 @@ static void SystemClock_Config(void) {
     __builtin_trap();
   }
 
-  RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK |
-                                 RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
+  RCC_ClkInitStruct.ClockType =
+      (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
@@ -256,8 +253,7 @@ static void SystemClock_Config(void) {
     __builtin_trap();
   }
   /** Initializes the CPU, AHB and APB busses clocks */
-  RCC_ClkInitStruct.ClockType =
-      RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1;
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1;
 #ifdef RULOS_HSI_SYSCLOCK
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
 #else
@@ -302,7 +298,7 @@ static void SystemClock_Config(void) {
 #define RULOS_PLLN HSI_PLLN
 #endif
 
-static void config_hsi_pll(RCC_OscInitTypeDef *osc) {
+static void config_hsi_pll(RCC_OscInitTypeDef* osc) {
   osc->OscillatorType = RCC_OSCILLATORTYPE_HSI;
   osc->HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   osc->HSIState = RCC_HSI_ON;
@@ -348,8 +344,8 @@ static void SystemClock_Config(void) {
 
   /* Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2
      clocks dividers */
-  RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK |
-                                 RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
+  RCC_ClkInitStruct.ClockType =
+      (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
@@ -379,7 +375,7 @@ static void SystemClock_Config(void) {
  * for 250 MHz at VOS0 per RM0481. FLASH_PROGRAMMING_DELAY_2 sets
  * WRHIGHFREQ to the 168+ MHz band.
  */
-static void config_hsi_pll_h5(RCC_OscInitTypeDef *osc) {
+static void config_hsi_pll_h5(RCC_OscInitTypeDef* osc) {
   osc->OscillatorType = RCC_OSCILLATORTYPE_HSI;
   osc->HSIState = RCC_HSI_ON;
   osc->HSIDiv = RCC_HSI_DIV1;
@@ -434,9 +430,8 @@ static void SystemClock_Config(void) {
   }
 #endif
 
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
-                                RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2 |
-                                RCC_CLOCKTYPE_PCLK3;
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 |
+                                RCC_CLOCKTYPE_PCLK2 | RCC_CLOCKTYPE_PCLK3;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
@@ -597,9 +592,8 @@ void SysTick_Handler() {
 static uint32_t g_systick_k_num;
 static uint32_t g_systick_load_scaled;
 
-void arm_hal_start_clock_us(uint32_t ticks_per_interrupt,
-                            uint32_t us_per_period, clock_handler_t handler,
-                            void* data) {
+void arm_hal_start_clock_us(uint32_t ticks_per_interrupt, uint32_t us_per_period,
+                            clock_handler_t handler, void* data) {
   g_timer_handler = handler;
   g_timer_data = data;
 
@@ -610,8 +604,7 @@ void arm_hal_start_clock_us(uint32_t ticks_per_interrupt,
   // HAL_IncTick() adds uwTickFreq (in ms) on each SysTick interrupt.
   // HAL_Init() configures SysTick for 1ms ticks with uwTickFreq=1;
   // if RULOS changes the SysTick period, we must update uwTickFreq to match.
-  uint32_t ms_per_tick =
-      ticks_per_interrupt / (HAL_RCC_GetSysClockFreq() / 1000);
+  uint32_t ms_per_tick = ticks_per_interrupt / (HAL_RCC_GetSysClockFreq() / 1000);
   if (ms_per_tick < 1) {
     ms_per_tick = 1;
   }

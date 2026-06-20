@@ -23,11 +23,11 @@
 
 #include "core/rulos.h"
 
-void minmax_init(MinMaxMean_t *mmm) {
+void minmax_init(MinMaxMean_t* mmm) {
   memset(mmm, 0, sizeof(MinMaxMean_t));
 }
 
-void minmax_add_sample(MinMaxMean_t *mmm, const int32_t sample) {
+void minmax_add_sample(MinMaxMean_t* mmm, const int32_t sample) {
   // There's a race in the routine that gets precise time that I'm not
   // sure how to resolve; it sometimes results in negative time
   // reports. Until it's fixed we'll just drop those.
@@ -47,12 +47,11 @@ void minmax_add_sample(MinMaxMean_t *mmm, const int32_t sample) {
   mmm->count++;
 }
 
-void minmax_log(MinMaxMean_t *mmm, const char *label) {
+void minmax_log(MinMaxMean_t* mmm, const char* label) {
   if (mmm->count == 0) {
     LOG("%s stats: no stats", label);
     return;
   }
-  LOG("%s stats: min=%" PRIi32 ", mean=%" PRIi32 ", max=%" PRIi32 "(n=%" PRIu32
-      ")",
-      label, mmm->min, mmm->sum / mmm->count, mmm->max, mmm->count);
+  LOG("%s stats: min=%" PRIi32 ", mean=%" PRIi32 ", max=%" PRIi32 "(n=%" PRIu32 ")", label,
+      mmm->min, mmm->sum / mmm->count, mmm->max, mmm->count);
 }

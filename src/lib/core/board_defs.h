@@ -232,8 +232,7 @@
 #endif
 
 #ifndef AVAILABLE_ADCS
-#define AVAILABLE_ADCS \
-  0xff  // Good luck, board designer -- no safety check here
+#define AVAILABLE_ADCS 0xff  // Good luck, board designer -- no safety check here
 #endif
 
 #endif  // SIM

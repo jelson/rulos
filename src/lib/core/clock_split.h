@@ -43,8 +43,7 @@ typedef struct {
   uint32_t k_denom;
 } clock_split_t;
 
-static inline clock_split_t clock_split(uint32_t us_per_period,
-                                        uint32_t elapsed_max) {
+static inline clock_split_t clock_split(uint32_t us_per_period, uint32_t elapsed_max) {
   // Pick the smallest k_denom such that us_per_period / k_denom times
   // elapsed_max fits in u32. Uses u64 for this one init-time calc to
   // dodge the very overflow we're engineering around in the hot path.

@@ -29,8 +29,7 @@
 // the two functions below touch it; `volatile` because it is written
 // on one side of a reset and read on the other.
 #define DFU_REBOOT_MAGIC 0xDF00B007u
-static volatile uint32_t __attribute__((section(".noinit"), used))
-    g_dfu_reboot_magic;
+static volatile uint32_t __attribute__((section(".noinit"), used)) g_dfu_reboot_magic;
 
 // System (ROM) bootloader entry address per chip family. This is the
 // fixed address of the factory bootloader's vector table; *base is its
@@ -48,17 +47,17 @@ static volatile uint32_t __attribute__((section(".noinit"), used))
 // rather than ever guessing an address (a wrong guess bricks USB until
 // an SWD reflash).
 #define DFU_HAVE_SYSMEM 1
-#if defined(STM32H523xx) || defined(STM32H533xx) || \
-    defined(STM32H562xx) || defined(STM32H563xx) || defined(STM32H573xx)
+#if defined(STM32H523xx) || defined(STM32H533xx) || defined(STM32H562xx) || \
+    defined(STM32H563xx) || defined(STM32H573xx)
 #define DFU_SYSMEM_BASE 0x0BF97000u
 #elif defined(STM32H503xx)
 #define DFU_SYSMEM_BASE 0x0BF87000u
 #else
-#error "dfu: unknown STM32H5 device -- add its ROM bootloader \
+#error \
+    "dfu: unknown STM32H5 device -- add its ROM bootloader \
 base address (see ST's NUCLEO-H5xx ROT examples: BOOTLOADER_BASE)."
 #endif
-#elif defined(RULOS_ARM_stm32g4) || defined(RULOS_ARM_stm32g0) || \
-    defined(RULOS_ARM_stm32f3)
+#elif defined(RULOS_ARM_stm32g4) || defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32f3)
 #define DFU_HAVE_SYSMEM 1
 #define DFU_SYSMEM_BASE 0x1FFF0000u
 // The legacy ROM bootloader on these parts is linked to run at
@@ -74,12 +73,11 @@ base address (see ST's NUCLEO-H5xx ROT examples: BOOTLOADER_BASE)."
 // remap (against SYSCFG->CFGR1 rather than MEMRMP) before their DFU
 // path works -- not wired up here.
 #if defined(RULOS_ARM_stm32g4)
-#define DFU_REMAP_SYSMEM()                                                 \
-  do {                                                                     \
-    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;                                  \
-    (void)RCC->APB2ENR;                                                    \
-    SYSCFG->MEMRMP = (SYSCFG->MEMRMP & ~SYSCFG_MEMRMP_MEM_MODE) |          \
-                     SYSCFG_MEMRMP_MEM_MODE_0;                             \
+#define DFU_REMAP_SYSMEM()                                                                  \
+  do {                                                                                      \
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;                                                   \
+    (void)RCC->APB2ENR;                                                                     \
+    SYSCFG->MEMRMP = (SYSCFG->MEMRMP & ~SYSCFG_MEMRMP_MEM_MODE) | SYSCFG_MEMRMP_MEM_MODE_0; \
   } while (0)
 #endif
 #else
@@ -114,8 +112,8 @@ void rulos_dfu_check_and_jump(void) {
   // table at the bootloader, load its stack pointer, and branch to its
   // reset entry.
   const uint32_t base = DFU_SYSMEM_BASE;
-  const uint32_t boot_sp = *(volatile uint32_t *)base;
-  const uint32_t boot_pc = *(volatile uint32_t *)(base + 4u);
+  const uint32_t boot_sp = *(volatile uint32_t*)base;
+  const uint32_t boot_pc = *(volatile uint32_t*)(base + 4u);
 
   __disable_irq();
   SysTick->CTRL = 0;

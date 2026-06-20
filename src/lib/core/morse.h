@@ -37,5 +37,4 @@ typedef void(MorseOutputDoneFunc)();
 // done.  Assumes the RulOS scheduler is running, i.e. schedule_us()
 // works.
 void emit_morse(const char* send_string, const uint32_t dot_time_us,
-                MorseOutputToggleFunc* toggle_func,
-                MorseOutputDoneFunc* done_func);
+                MorseOutputToggleFunc* toggle_func, MorseOutputDoneFunc* done_func);

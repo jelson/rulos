@@ -25,4 +25,4 @@
 // 0xEDB88320, initial value 0xFFFFFFFF, final XOR 0xFFFFFFFF. Table-
 // free bitwise implementation -- meant for short buffers (config
 // blocks, frames), not bulk throughput.
-uint32_t crc32(const void *data, size_t len);
+uint32_t crc32(const void* data, size_t len);

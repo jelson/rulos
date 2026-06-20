@@ -29,6 +29,6 @@ typedef struct {
   uint32_t count;
 } MinMaxMean_t;
 
-void minmax_init(MinMaxMean_t *mmm);
-void minmax_add_sample(MinMaxMean_t *mmm, int32_t sample);
-void minmax_log(MinMaxMean_t *mmm, const char *label);
+void minmax_init(MinMaxMean_t* mmm);
+void minmax_add_sample(MinMaxMean_t* mmm, int32_t sample);
+void minmax_log(MinMaxMean_t* mmm, const char* label);

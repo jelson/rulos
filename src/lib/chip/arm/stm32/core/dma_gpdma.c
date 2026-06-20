@@ -45,26 +45,26 @@
 
 #if defined(RULOS_ARM_stm32h5)
 typedef struct {
-  DMA_TypeDef *dma;              // GPDMA1 or GPDMA2
-  DMA_Channel_TypeDef *hw_ch;    // GPDMA1_Channel0, ...
-  uint32_t ll_channel;           // LL_DMA_CHANNEL_0..7
+  DMA_TypeDef* dma;            // GPDMA1 or GPDMA2
+  DMA_Channel_TypeDef* hw_ch;  // GPDMA1_Channel0, ...
+  uint32_t ll_channel;         // LL_DMA_CHANNEL_0..7
   IRQn_Type irqn;
 } dma_channel_hw_t;
 
 #define DMA_CHANNEL_SLOTS 16  // GPDMA1 ch0-7 + GPDMA2 ch0-7
 
 static const dma_channel_hw_t g_hw[DMA_CHANNEL_SLOTS] = {
-    [0]  = {GPDMA1, GPDMA1_Channel0, LL_DMA_CHANNEL_0, GPDMA1_Channel0_IRQn},
-    [1]  = {GPDMA1, GPDMA1_Channel1, LL_DMA_CHANNEL_1, GPDMA1_Channel1_IRQn},
-    [2]  = {GPDMA1, GPDMA1_Channel2, LL_DMA_CHANNEL_2, GPDMA1_Channel2_IRQn},
-    [3]  = {GPDMA1, GPDMA1_Channel3, LL_DMA_CHANNEL_3, GPDMA1_Channel3_IRQn},
-    [4]  = {GPDMA1, GPDMA1_Channel4, LL_DMA_CHANNEL_4, GPDMA1_Channel4_IRQn},
-    [5]  = {GPDMA1, GPDMA1_Channel5, LL_DMA_CHANNEL_5, GPDMA1_Channel5_IRQn},
-    [6]  = {GPDMA1, GPDMA1_Channel6, LL_DMA_CHANNEL_6, GPDMA1_Channel6_IRQn},
-    [7]  = {GPDMA1, GPDMA1_Channel7, LL_DMA_CHANNEL_7, GPDMA1_Channel7_IRQn},
+    [0] = {GPDMA1, GPDMA1_Channel0, LL_DMA_CHANNEL_0, GPDMA1_Channel0_IRQn},
+    [1] = {GPDMA1, GPDMA1_Channel1, LL_DMA_CHANNEL_1, GPDMA1_Channel1_IRQn},
+    [2] = {GPDMA1, GPDMA1_Channel2, LL_DMA_CHANNEL_2, GPDMA1_Channel2_IRQn},
+    [3] = {GPDMA1, GPDMA1_Channel3, LL_DMA_CHANNEL_3, GPDMA1_Channel3_IRQn},
+    [4] = {GPDMA1, GPDMA1_Channel4, LL_DMA_CHANNEL_4, GPDMA1_Channel4_IRQn},
+    [5] = {GPDMA1, GPDMA1_Channel5, LL_DMA_CHANNEL_5, GPDMA1_Channel5_IRQn},
+    [6] = {GPDMA1, GPDMA1_Channel6, LL_DMA_CHANNEL_6, GPDMA1_Channel6_IRQn},
+    [7] = {GPDMA1, GPDMA1_Channel7, LL_DMA_CHANNEL_7, GPDMA1_Channel7_IRQn},
 #ifdef GPDMA2_Channel0_BASE_NS
-    [8]  = {GPDMA2, GPDMA2_Channel0, LL_DMA_CHANNEL_0, GPDMA2_Channel0_IRQn},
-    [9]  = {GPDMA2, GPDMA2_Channel1, LL_DMA_CHANNEL_1, GPDMA2_Channel1_IRQn},
+    [8] = {GPDMA2, GPDMA2_Channel0, LL_DMA_CHANNEL_0, GPDMA2_Channel0_IRQn},
+    [9] = {GPDMA2, GPDMA2_Channel1, LL_DMA_CHANNEL_1, GPDMA2_Channel1_IRQn},
     [10] = {GPDMA2, GPDMA2_Channel2, LL_DMA_CHANNEL_2, GPDMA2_Channel2_IRQn},
     [11] = {GPDMA2, GPDMA2_Channel3, LL_DMA_CHANNEL_3, GPDMA2_Channel3_IRQn},
     [12] = {GPDMA2, GPDMA2_Channel4, LL_DMA_CHANNEL_4, GPDMA2_Channel4_IRQn},
@@ -77,10 +77,10 @@ static const dma_channel_hw_t g_hw[DMA_CHANNEL_SLOTS] = {
 typedef struct {
   bool allocated;
   bool circular;  // true if this channel uses linked-list circular mode
-  void (*tc_callback)(void *user_data);
-  void (*ht_callback)(void *user_data);
-  void (*error_callback)(void *user_data);
-  void *user_data;
+  void (*tc_callback)(void* user_data);
+  void (*ht_callback)(void* user_data);
+  void (*error_callback)(void* user_data);
+  void* user_data;
   // Saved config for circular channels — needed by rulos_dma_start to
   // build the linked-list node (which requires direction, request,
   // widths, and increments that were specified at alloc time).
@@ -92,8 +92,8 @@ typedef struct {
 
 static dma_channel_state_t g_state[DMA_CHANNEL_SLOTS];
 
-static inline int state_to_idx(const rulos_dma_channel_t *ch) {
-  return (const dma_channel_state_t *)ch - g_state;
+static inline int state_to_idx(const rulos_dma_channel_t* ch) {
+  return (const dma_channel_state_t*)ch - g_state;
 }
 
 // RULOS request -> GPDMA LL request code. On H5 the channel's request
@@ -157,18 +157,24 @@ static const uint32_t g_gpdma_req[RULOS_DMA_REQ_COUNT_] = {
 // conversion helpers rather than one.
 static uint32_t width_to_gpdma_src(rulos_dma_width_t w) {
   switch (w) {
-    case RULOS_DMA_WIDTH_BYTE:     return LL_DMA_SRC_DATAWIDTH_BYTE;
-    case RULOS_DMA_WIDTH_HALFWORD: return LL_DMA_SRC_DATAWIDTH_HALFWORD;
-    case RULOS_DMA_WIDTH_WORD:     return LL_DMA_SRC_DATAWIDTH_WORD;
+    case RULOS_DMA_WIDTH_BYTE:
+      return LL_DMA_SRC_DATAWIDTH_BYTE;
+    case RULOS_DMA_WIDTH_HALFWORD:
+      return LL_DMA_SRC_DATAWIDTH_HALFWORD;
+    case RULOS_DMA_WIDTH_WORD:
+      return LL_DMA_SRC_DATAWIDTH_WORD;
   }
   return LL_DMA_SRC_DATAWIDTH_BYTE;
 }
 
 static uint32_t width_to_gpdma_dest(rulos_dma_width_t w) {
   switch (w) {
-    case RULOS_DMA_WIDTH_BYTE:     return LL_DMA_DEST_DATAWIDTH_BYTE;
-    case RULOS_DMA_WIDTH_HALFWORD: return LL_DMA_DEST_DATAWIDTH_HALFWORD;
-    case RULOS_DMA_WIDTH_WORD:     return LL_DMA_DEST_DATAWIDTH_WORD;
+    case RULOS_DMA_WIDTH_BYTE:
+      return LL_DMA_DEST_DATAWIDTH_BYTE;
+    case RULOS_DMA_WIDTH_HALFWORD:
+      return LL_DMA_DEST_DATAWIDTH_HALFWORD;
+    case RULOS_DMA_WIDTH_WORD:
+      return LL_DMA_DEST_DATAWIDTH_WORD;
   }
   return LL_DMA_DEST_DATAWIDTH_BYTE;
 }
@@ -177,10 +183,9 @@ static uint32_t width_to_gpdma_dest(rulos_dma_width_t w) {
 // on the transfer direction. Used by both init_channel (for NORMAL
 // mode register writes) and setup_circular_node (for linked-list
 // node creation). DRY: one place for the direction-dependent swap.
-static void gpdma_get_src_dest_params(
-    const rulos_dma_config_t *c,
-    uint32_t *src_inc, uint32_t *dest_inc,
-    uint32_t *src_width, uint32_t *dest_width) {
+static void gpdma_get_src_dest_params(const rulos_dma_config_t* c, uint32_t* src_inc,
+                                      uint32_t* dest_inc, uint32_t* src_width,
+                                      uint32_t* dest_width) {
   if (c->direction == RULOS_DMA_DIR_MEM_TO_PERIPH) {
     *src_inc = c->mem_increment ? LL_DMA_SRC_INCREMENT : LL_DMA_SRC_FIXED;
     *dest_inc = c->periph_increment ? LL_DMA_DEST_INCREMENT : LL_DMA_DEST_FIXED;
@@ -198,9 +203,12 @@ static void gpdma_get_src_dest_params(
 // item-count API contract and GPDMA's CBR1.BNDT byte-count register.
 static uint32_t width_bytes(rulos_dma_width_t w) {
   switch (w) {
-    case RULOS_DMA_WIDTH_BYTE:     return 1;
-    case RULOS_DMA_WIDTH_HALFWORD: return 2;
-    case RULOS_DMA_WIDTH_WORD:     return 4;
+    case RULOS_DMA_WIDTH_BYTE:
+      return 1;
+    case RULOS_DMA_WIDTH_HALFWORD:
+      return 2;
+    case RULOS_DMA_WIDTH_WORD:
+      return 4;
   }
   return 1;  // unreachable
 }
@@ -208,16 +216,16 @@ static uint32_t width_bytes(rulos_dma_width_t w) {
 // Source-side bytes per transfer item, derived from direction. CBR1.BNDT
 // counts source-side bytes -- it decrements by one source item each
 // transfer, multiplied by that item's width.
-static uint32_t source_bytes_per_item(const rulos_dma_config_t *c) {
+static uint32_t source_bytes_per_item(const rulos_dma_config_t* c) {
   if (c->direction == RULOS_DMA_DIR_MEM_TO_PERIPH) {
     return width_bytes(c->mem_width);
   }
   return width_bytes(c->periph_width);
 }
 
-static void init_channel(int idx, const rulos_dma_config_t *c) {
-  const dma_channel_hw_t *hw = &g_hw[idx];
-  dma_channel_state_t *s = &g_state[idx];
+static void init_channel(int idx, const rulos_dma_config_t* c) {
+  const dma_channel_hw_t* hw = &g_hw[idx];
+  dma_channel_state_t* s = &g_state[idx];
 
   s->circular = (c->mode == RULOS_DMA_MODE_CIRCULAR);
 
@@ -261,13 +269,12 @@ static void init_channel(int idx, const rulos_dma_config_t *c) {
   s->user_data = c->user_data;
 }
 
-rulos_dma_channel_t *rulos_dma_alloc(const rulos_dma_config_t *config) {
+rulos_dma_channel_t* rulos_dma_alloc(const rulos_dma_config_t* config) {
   if (config == NULL || config->request == RULOS_DMA_REQ_NONE ||
       config->request >= RULOS_DMA_REQ_COUNT_) {
     return NULL;
   }
-  if (g_gpdma_req[config->request] == 0 &&
-      config->request != RULOS_DMA_REQ_USART1_TX) {
+  if (g_gpdma_req[config->request] == 0 && config->request != RULOS_DMA_REQ_USART1_TX) {
     // Guard against asking for a request enum value this chip's
     // GPDMA doesn't support. USART1_TX happens to be the request
     // code 0x16 on H5, not 0 -- but in general, an unset entry in
@@ -287,8 +294,12 @@ rulos_dma_channel_t *rulos_dma_alloc(const rulos_dma_config_t *config) {
   int found_idx = -1;
   rulos_irq_state_t irq = hal_start_atomic();
   for (int i = 0; i < DMA_CHANNEL_SLOTS; i++) {
-    if (g_hw[i].dma == NULL) continue;
-    if (g_state[i].allocated) continue;
+    if (g_hw[i].dma == NULL) {
+      continue;
+    }
+    if (g_state[i].allocated) {
+      continue;
+    }
     g_state[i].allocated = true;
     found_idx = i;
     break;
@@ -302,19 +313,18 @@ rulos_dma_channel_t *rulos_dma_alloc(const rulos_dma_config_t *config) {
   init_channel(found_idx, config);
   HAL_NVIC_SetPriority(g_hw[found_idx].irqn, 1, 0);
   HAL_NVIC_EnableIRQ(g_hw[found_idx].irqn);
-  return (rulos_dma_channel_t *)&g_state[found_idx];
+  return (rulos_dma_channel_t*)&g_state[found_idx];
 }
 
-void rulos_dma_reconfigure(rulos_dma_channel_t *ch,
-                           const rulos_dma_config_t *new_config) {
+void rulos_dma_reconfigure(rulos_dma_channel_t* ch, const rulos_dma_config_t* new_config) {
   init_channel(state_to_idx(ch), new_config);
 }
 
-void rulos_dma_start(rulos_dma_channel_t *ch, volatile void *periph_addr,
-                     void *mem_addr, uint32_t nitems) {
+void rulos_dma_start(rulos_dma_channel_t* ch, volatile void* periph_addr, void* mem_addr,
+                     uint32_t nitems) {
   const int idx = state_to_idx(ch);
-  const dma_channel_hw_t *hw = &g_hw[idx];
-  dma_channel_state_t *s = &g_state[idx];
+  const dma_channel_hw_t* hw = &g_hw[idx];
+  dma_channel_state_t* s = &g_state[idx];
 
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
 
@@ -324,7 +334,7 @@ void rulos_dma_start(rulos_dma_channel_t *ch, volatile void *periph_addr,
     // of each block, creating continuous circular transfer. The node
     // persists in g_state[].lld_node. Based on the NUCLEO-H563ZI
     // ADC circular DMA example in STM32CubeH5.
-    const rulos_dma_config_t *c = &s->saved_config;
+    const rulos_dma_config_t* c = &s->saved_config;
 
     uint32_t si, di, sw, dw;
     gpdma_get_src_dest_params(c, &si, &di, &sw, &dw);
@@ -359,16 +369,13 @@ void rulos_dma_start(rulos_dma_channel_t *ch, volatile void *periph_addr,
     // BNDT (block data length) is in BYTES regardless of transfer width;
     // convert from caller's item count.
     node_cfg.BlkDataLength = nitems * source_bytes_per_item(c);
-    node_cfg.UpdateRegisters =
-        LL_DMA_UPDATE_CTR1 | LL_DMA_UPDATE_CTR2 |
-        LL_DMA_UPDATE_CBR1 | LL_DMA_UPDATE_CSAR |
-        LL_DMA_UPDATE_CDAR | LL_DMA_UPDATE_CLLR;
+    node_cfg.UpdateRegisters = LL_DMA_UPDATE_CTR1 | LL_DMA_UPDATE_CTR2 | LL_DMA_UPDATE_CBR1 |
+                               LL_DMA_UPDATE_CSAR | LL_DMA_UPDATE_CDAR | LL_DMA_UPDATE_CLLR;
 
     LL_DMA_CreateLinkNode(&node_cfg, &s->lld_node);
 
     // Self-connect: node points to itself → circular.
-    LL_DMA_ConnectLinkNode(&s->lld_node, LL_DMA_CLLR_OFFSET5,
-                           &s->lld_node, LL_DMA_CLLR_OFFSET5);
+    LL_DMA_ConnectLinkNode(&s->lld_node, LL_DMA_CLLR_OFFSET5, &s->lld_node, LL_DMA_CLLR_OFFSET5);
 
     // Initialize channel for linked-list operation.
     LL_DMA_InitLinkedListTypeDef ll_cfg = {0};
@@ -379,17 +386,14 @@ void rulos_dma_start(rulos_dma_channel_t *ch, volatile void *periph_addr,
     LL_DMA_List_Init(hw->dma, hw->ll_channel, &ll_cfg);
 
     // Point the channel at our self-referencing node.
-    LL_DMA_SetLinkedListBaseAddr(hw->dma, hw->ll_channel,
-                                (uint32_t)&s->lld_node);
-    LL_DMA_ConfigLinkUpdate(hw->dma, hw->ll_channel,
-                            node_cfg.UpdateRegisters,
+    LL_DMA_SetLinkedListBaseAddr(hw->dma, hw->ll_channel, (uint32_t)&s->lld_node);
+    LL_DMA_ConfigLinkUpdate(hw->dma, hw->ll_channel, node_cfg.UpdateRegisters,
                             (uint32_t)&s->lld_node);
 
     // Set addresses and block length for the first iteration (the
     // linked-list reload handles subsequent iterations). BNDT is in
     // bytes; convert from item count.
-    LL_DMA_SetBlkDataLength(hw->dma, hw->ll_channel,
-                            nitems * source_bytes_per_item(c));
+    LL_DMA_SetBlkDataLength(hw->dma, hw->ll_channel, nitems * source_bytes_per_item(c));
     LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, src_addr, dst_addr);
 
     LL_DMA_EnableChannel(hw->dma, hw->ll_channel);
@@ -399,22 +403,19 @@ void rulos_dma_start(rulos_dma_channel_t *ch, volatile void *periph_addr,
     LL_DMA_SetBlkDataLength(hw->dma, hw->ll_channel,
                             nitems * source_bytes_per_item(&s->saved_config));
 
-    const uint32_t dir =
-        LL_DMA_GetDataTransferDirection(hw->dma, hw->ll_channel);
+    const uint32_t dir = LL_DMA_GetDataTransferDirection(hw->dma, hw->ll_channel);
     if (dir == LL_DMA_DIRECTION_MEMORY_TO_PERIPH) {
-      LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, (uint32_t)mem_addr,
-                             (uint32_t)periph_addr);
+      LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, (uint32_t)mem_addr, (uint32_t)periph_addr);
     } else {
-      LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, (uint32_t)periph_addr,
-                             (uint32_t)mem_addr);
+      LL_DMA_ConfigAddresses(hw->dma, hw->ll_channel, (uint32_t)periph_addr, (uint32_t)mem_addr);
     }
 
     LL_DMA_EnableChannel(hw->dma, hw->ll_channel);
   }
 }
 
-void rulos_dma_stop(rulos_dma_channel_t *ch) {
-  const dma_channel_hw_t *hw = &g_hw[state_to_idx(ch)];
+void rulos_dma_stop(rulos_dma_channel_t* ch) {
+  const dma_channel_hw_t* hw = &g_hw[state_to_idx(ch)];
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
 
   // Same flag-clearing semantics as classic rulos_dma_stop: after
@@ -424,18 +425,18 @@ void rulos_dma_stop(rulos_dma_channel_t *ch) {
   LL_DMA_ClearFlag_DTE(hw->dma, hw->ll_channel);
 }
 
-uint32_t rulos_dma_get_remaining(const rulos_dma_channel_t *ch) {
+uint32_t rulos_dma_get_remaining(const rulos_dma_channel_t* ch) {
   const int idx = state_to_idx(ch);
-  const dma_channel_hw_t *hw = &g_hw[idx];
+  const dma_channel_hw_t* hw = &g_hw[idx];
   // BNDT counts bytes remaining; the API contract is items remaining.
   // Convert using the saved source-side item width.
   return LL_DMA_GetBlkDataLength(hw->dma, hw->ll_channel) /
          source_bytes_per_item(&g_state[idx].saved_config);
 }
 
-void rulos_dma_free(rulos_dma_channel_t *ch) {
+void rulos_dma_free(rulos_dma_channel_t* ch) {
   const int idx = state_to_idx(ch);
-  const dma_channel_hw_t *hw = &g_hw[idx];
+  const dma_channel_hw_t* hw = &g_hw[idx];
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
 
   // Silence this channel at the DMA-hardware level; all H5 GPDMA
@@ -453,8 +454,8 @@ void rulos_dma_free(rulos_dma_channel_t *ch) {
 }
 
 static void dispatch_channel_irq(int idx) {
-  const dma_channel_hw_t *hw = &g_hw[idx];
-  dma_channel_state_t *s = &g_state[idx];
+  const dma_channel_hw_t* hw = &g_hw[idx];
+  dma_channel_state_t* s = &g_state[idx];
   if (hw->dma == NULL || !s->allocated) {
     return;
   }
@@ -483,23 +484,55 @@ static void dispatch_channel_irq(int idx) {
 
 // Per-channel IRQ handlers. H523 has 16 dedicated lines, so these
 // are one-to-one -- no merged dispatching like the G0/F0 backends.
-void GPDMA1_Channel0_IRQHandler(void) { dispatch_channel_irq(0); }
-void GPDMA1_Channel1_IRQHandler(void) { dispatch_channel_irq(1); }
-void GPDMA1_Channel2_IRQHandler(void) { dispatch_channel_irq(2); }
-void GPDMA1_Channel3_IRQHandler(void) { dispatch_channel_irq(3); }
-void GPDMA1_Channel4_IRQHandler(void) { dispatch_channel_irq(4); }
-void GPDMA1_Channel5_IRQHandler(void) { dispatch_channel_irq(5); }
-void GPDMA1_Channel6_IRQHandler(void) { dispatch_channel_irq(6); }
-void GPDMA1_Channel7_IRQHandler(void) { dispatch_channel_irq(7); }
+void GPDMA1_Channel0_IRQHandler(void) {
+  dispatch_channel_irq(0);
+}
+void GPDMA1_Channel1_IRQHandler(void) {
+  dispatch_channel_irq(1);
+}
+void GPDMA1_Channel2_IRQHandler(void) {
+  dispatch_channel_irq(2);
+}
+void GPDMA1_Channel3_IRQHandler(void) {
+  dispatch_channel_irq(3);
+}
+void GPDMA1_Channel4_IRQHandler(void) {
+  dispatch_channel_irq(4);
+}
+void GPDMA1_Channel5_IRQHandler(void) {
+  dispatch_channel_irq(5);
+}
+void GPDMA1_Channel6_IRQHandler(void) {
+  dispatch_channel_irq(6);
+}
+void GPDMA1_Channel7_IRQHandler(void) {
+  dispatch_channel_irq(7);
+}
 #ifdef GPDMA2_Channel0_BASE_NS
-void GPDMA2_Channel0_IRQHandler(void) { dispatch_channel_irq(8); }
-void GPDMA2_Channel1_IRQHandler(void) { dispatch_channel_irq(9); }
-void GPDMA2_Channel2_IRQHandler(void) { dispatch_channel_irq(10); }
-void GPDMA2_Channel3_IRQHandler(void) { dispatch_channel_irq(11); }
-void GPDMA2_Channel4_IRQHandler(void) { dispatch_channel_irq(12); }
-void GPDMA2_Channel5_IRQHandler(void) { dispatch_channel_irq(13); }
-void GPDMA2_Channel6_IRQHandler(void) { dispatch_channel_irq(14); }
-void GPDMA2_Channel7_IRQHandler(void) { dispatch_channel_irq(15); }
+void GPDMA2_Channel0_IRQHandler(void) {
+  dispatch_channel_irq(8);
+}
+void GPDMA2_Channel1_IRQHandler(void) {
+  dispatch_channel_irq(9);
+}
+void GPDMA2_Channel2_IRQHandler(void) {
+  dispatch_channel_irq(10);
+}
+void GPDMA2_Channel3_IRQHandler(void) {
+  dispatch_channel_irq(11);
+}
+void GPDMA2_Channel4_IRQHandler(void) {
+  dispatch_channel_irq(12);
+}
+void GPDMA2_Channel5_IRQHandler(void) {
+  dispatch_channel_irq(13);
+}
+void GPDMA2_Channel6_IRQHandler(void) {
+  dispatch_channel_irq(14);
+}
+void GPDMA2_Channel7_IRQHandler(void) {
+  dispatch_channel_irq(15);
+}
 #endif
 
 #endif  // RULOS_ARM_stm32h5

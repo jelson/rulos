@@ -44,7 +44,7 @@ void bss_canary_init() {
 extern uint8_t BSS_END_SYM;
 #define BSS_CANARY_MAGIC 0xca
 
-static void bss_canary_update(void *data) {
+static void bss_canary_update(void* data) {
   assert(BSS_END_SYM == BSS_CANARY_MAGIC);
   schedule_us(250000, bss_canary_update, NULL);
 }

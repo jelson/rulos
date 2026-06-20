@@ -25,14 +25,14 @@ typedef struct {
   bool auto_reset;
   bool signaled;
   ActivationFuncPtr waiter_func;
-  void *waiter_data;
+  void* waiter_data;
 } Event;
 
-void event_init(Event *evt, bool auto_reset);
-void event_signal(Event *evt);
-void event_reset(Event *evt);
-void event_wait(Event *evt, ActivationFuncPtr func, void *data);
+void event_init(Event* evt, bool auto_reset);
+void event_signal(Event* evt);
+void event_reset(Event* evt);
+void event_wait(Event* evt, ActivationFuncPtr func, void* data);
 
-static inline bool event_is_signaled(Event *evt) {
+static inline bool event_is_signaled(Event* evt) {
   return evt->signaled;
 }

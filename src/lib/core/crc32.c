@@ -18,8 +18,8 @@
 
 #include "core/crc32.h"
 
-uint32_t crc32(const void *data, size_t len) {
-  const uint8_t *p = (const uint8_t *)data;
+uint32_t crc32(const void* data, size_t len) {
+  const uint8_t* p = (const uint8_t*)data;
   uint32_t crc = 0xFFFFFFFFu;
   for (size_t i = 0; i < len; i++) {
     crc ^= p[i];

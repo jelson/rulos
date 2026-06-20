@@ -22,11 +22,11 @@
 
 #include "core/time.h"
 
-typedef void (*ActivationFuncPtr)(void *data);
+typedef void (*ActivationFuncPtr)(void* data);
 
 typedef struct {
   ActivationFuncPtr func;
-  void *data;
+  void* data;
 } ActivationRecord;
 
 typedef struct {
@@ -43,10 +43,10 @@ typedef struct {
   uint8_t heap_count;
 } Heap;
 
-void heap_init(Heap *heap);
+void heap_init(Heap* heap);
 // NB: got an old ref to heap_init() (no args) in your main()?
 // Just discard it; it's now handeld by init_clock().
-uint8_t heap_insert(Heap *heap, Time key, ActivationFuncPtr func, void *data);
-int heap_peek(Heap *heap, /*out*/ Time *key, /*out*/ ActivationRecord *act);
+uint8_t heap_insert(Heap* heap, Time key, ActivationFuncPtr func, void* data);
+int heap_peek(Heap* heap, /*out*/ Time* key, /*out*/ ActivationRecord* act);
 /* rc nonzero => heap empty */
-void heap_pop(Heap *heap);
+void heap_pop(Heap* heap);

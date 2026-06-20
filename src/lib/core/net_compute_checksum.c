@@ -18,7 +18,7 @@
 
 #include "core/net_compute_checksum.h"
 
-uint8_t net_compute_checksum(const unsigned char *buf, int size) {
+uint8_t net_compute_checksum(const unsigned char* buf, int size) {
   int i;
   uint8_t cksum = 0x67;
   for (i = 0; i < size; i++) {

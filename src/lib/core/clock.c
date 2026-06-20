@@ -34,7 +34,7 @@
 #define SCHEDULER_NOW_QUEUE_CAPACITY 4
 #endif
 
-void schedule_us_internal(Time offset_us, ActivationFuncPtr func, void *data);
+void schedule_us_internal(Time offset_us, ActivationFuncPtr func, void* data);
 
 // usec between timer interrupts
 static Time g_rtc_interval_us;
@@ -77,16 +77,15 @@ static void reset_stats() {
 
 void clock_log_stats() {
 #if LOG_CLOCK_STATS
-  LOG("peak %d scheduled, range %d (%p) to %d (%p); now peak %d",
-      sched_state.peak_heap, sched_state.min_period,
-      sched_state.min_period_func, sched_state.max_period,
+  LOG("peak %d scheduled, range %d (%p) to %d (%p); now peak %d", sched_state.peak_heap,
+      sched_state.min_period, sched_state.min_period_func, sched_state.max_period,
       sched_state.max_period_func, sched_state.peak_now);
 
   reset_stats();
 #endif
 }
 
-static void clock_handler(void *data) {
+static void clock_handler(void* data) {
   // NB we assume this runs in interrupt context and is hence
   // automatically atomic.
   g_interrupt_driven_jiffy_clock_us += g_rtc_interval_us;
@@ -108,18 +107,17 @@ void init_clock(Time interval_us, uint8_t timer_id) {
   // Initialize the clock to 20 seconds before rollover time so that
   // rollover bugs happen quickly during testing
   g_interrupt_driven_jiffy_clock_us = (Time)UINT32_MAX - time_sec(20);
-  g_rtc_interval_us =
-      hal_start_clock_us(interval_us, clock_handler, NULL, timer_id);
+  g_rtc_interval_us = hal_start_clock_us(interval_us, clock_handler, NULL, timer_id);
 }
 
-void schedule_us(Time offset_us, ActivationFuncPtr func, void *data) {
+void schedule_us(Time offset_us, ActivationFuncPtr func, void* data) {
   // warning: scheduling something for "now" will re-run the scheduler
   // immediately, which may not be what you want
   assert(offset_us >= 0);
   schedule_us_internal(offset_us, func, data);
 }
 
-void scheduler_insert(Time key, ActivationFuncPtr func, void *data) {
+void scheduler_insert(Time key, ActivationFuncPtr func, void* data) {
 #if LOG_CLOCK_STATS
   uint8_t heap_count =
 #endif
@@ -132,7 +130,7 @@ void scheduler_insert(Time key, ActivationFuncPtr func, void *data) {
 #endif
 }
 
-void schedule_now(ActivationFuncPtr func, void *data) {
+void schedule_now(ActivationFuncPtr func, void* data) {
   rulos_irq_state_t old_interrupts = hal_start_atomic();
   if (sched_state.now_queue_size < SCHEDULER_NOW_QUEUE_CAPACITY) {
     sched_state.now_queue[sched_state.now_queue_size].func = func;
@@ -151,7 +149,7 @@ void schedule_now(ActivationFuncPtr func, void *data) {
   run_scheduler_now = true;
 }
 
-void schedule_us_internal(Time offset_us, ActivationFuncPtr func, void *data) {
+void schedule_us_internal(Time offset_us, ActivationFuncPtr func, void* data) {
 #if LOG_CLOCK_STATS
   if (sched_state.min_period == 0 || sched_state.min_period > offset_us) {
     sched_state.min_period = offset_us;
@@ -166,7 +164,7 @@ void schedule_us_internal(Time offset_us, ActivationFuncPtr func, void *data) {
   schedule_absolute(clock_time_us() + offset_us, func, data);
 }
 
-void schedule_absolute(Time at_time, ActivationFuncPtr func, void *data) {
+void schedule_absolute(Time at_time, ActivationFuncPtr func, void* data) {
   // LOG("scheduling act %08x func %08x", (int) act, (int) act->func);
   rulos_irq_state_t old_interrupts = hal_start_atomic();
   scheduler_insert(at_time, func, data);
