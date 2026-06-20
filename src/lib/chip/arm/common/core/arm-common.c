@@ -29,6 +29,7 @@
 void _start() {
   extern int main(void);
   main();
+  __builtin_unreachable();
 }
 
 rulos_irq_state_t hal_start_atomic() {

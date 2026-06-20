@@ -84,7 +84,6 @@ class ArmPlatform(BaseRules.Platform):
     def platform_include_dirs(self, target):
         return self.common_include_dirs(target) + [
             os.path.join(ARM_ROOT, "common"),
-            os.path.join(ARM_ROOT, "common", "CMSIS", "Include"),
         ]
 
     def arm_platform_lib_source_files(self):
@@ -263,6 +262,7 @@ class ArmStmPlatform(ArmPlatform):
             self.arch = ArmPlatform.ARCHITECTURES[arch_name]
             driver_root = os.path.join(STM32_VENDOR_ROOT, "STM32Cube" + name[-2:], "Drivers")
             self.cmsis_root = os.path.join(driver_root, "CMSIS", "Device", "ST", name+"xx")
+            self.cmsis_core_root = os.path.join(driver_root, "CMSIS", "Include")
             self.hal_root = os.path.join(driver_root, name+"xx_HAL_Driver")
             self.sources = os.path.join(self.cmsis_root, "Source", "Templates", "system_"+name.lower()+"xx.c")
 
@@ -298,6 +298,7 @@ class ArmStmPlatform(ArmPlatform):
     def include_dirs(self, target):
         return self.platform_include_dirs(target) + [
             STM32_ROOT,
+            self.major_family.cmsis_core_root,
             os.path.join(self.major_family.cmsis_root, "Include"),
             os.path.join(self.major_family.hal_root, "Inc"),
         ]
