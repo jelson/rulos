@@ -71,10 +71,7 @@ def build(rev):
     tree via --build-dir, so RevA and RevB coexist. Returns the
     (elf, bin) paths; the build system emits the .bin automatically."""
     build_dir = os.path.join(tempfile.gettempdir(), f"dfutest-build-{rev}")
-    run(["scons",
-         f"--build-dir={build_dir}",
-         f'--define=DFUTEST_FW_VERSION=\\"{rev}\\"'],
-        cwd=HERE)
+    run(["scons", f"--build-dir={build_dir}", f'--define=DFUTEST_FW_VERSION=\\"{rev}\\"'], cwd=HERE)
     stem = os.path.join(build_dir, "dfutest", "arm-stm32h523xc", "dfutest")
     return stem + ".elf", stem + ".bin"
 
@@ -128,22 +125,30 @@ def dfu_update(binpath):
     'File downloaded successfully' is the real success signal (the
     [5/5] banner read is the definitive proof)."""
     # dfu-util needs raw USB access -> sudo.
-    cmd = ["sudo", "dfu-util",
-           "-d", f"{RUNTIME_USB_ID},{ROM_DFU_USB_ID}",
-           "-a", "0",
-           "-s", f"0x{FLASH_ORIGIN:08x}:leave",
-           "-D", binpath]
+    cmd = [
+        "sudo",
+        "dfu-util",
+        "-d",
+        f"{RUNTIME_USB_ID},{ROM_DFU_USB_ID}",
+        "-a",
+        "0",
+        "-s",
+        f"0x{FLASH_ORIGIN:08x}:leave",
+        "-D",
+        binpath,
+    ]
     print(f"  $ {' '.join(cmd)}")
     p = subprocess.run(cmd, capture_output=True, text=True)
     sys.stdout.write(p.stdout)
     if "File downloaded successfully" not in p.stdout:
         sys.stdout.write(p.stderr)
-        sys.exit(f"FAIL: dfu-util update did not complete "
-                 f"(exit {p.returncode})")
+        sys.exit(f"FAIL: dfu-util update did not complete " f"(exit {p.returncode})")
     if p.returncode != 0:
-        print(f"  (dfu-util exit {p.returncode} after a successful "
-              f"download is the benign get_status-after-leave quirk; "
-              f"the banner check below is authoritative)")
+        print(
+            f"  (dfu-util exit {p.returncode} after a successful "
+            f"download is the benign get_status-after-leave quirk; "
+            f"the banner check below is authoritative)"
+        )
 
 
 def main():

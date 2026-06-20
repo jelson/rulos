@@ -2,15 +2,17 @@ import os
 from .util import *
 from .BaseRules import Platform
 
+
 class RulosBuildTarget:
-    def __init__(self, name, sources, platforms, peripherals = [],
-                 extra_cflags = [], extra_converters = []):
+    def __init__(
+        self, name, sources, platforms, peripherals=[], extra_cflags=[], extra_converters=[]
+    ):
         self.name = name
         self.sources = [os.path.relpath(s, PROJECT_ROOT) for s in sources]
         self.platforms = platforms
-        assert(type(self.platforms)==type([]))
+        assert type(self.platforms) == type([])
         for p in self.platforms:
-            assert(isinstance(p, Platform))
+            assert isinstance(p, Platform)
         self.peripherals = parse_peripherals(peripherals)
         self.extra_cflags = extra_cflags
         self.extra_converters = extra_converters

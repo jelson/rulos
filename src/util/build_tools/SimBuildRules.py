@@ -18,8 +18,9 @@ import os
 from . import BaseRules, util
 from SCons.Script import *
 
+
 class SimulatorPlatform(BaseRules.Platform):
-    def __init__(self, extra_peripherals = [], extra_cflags = []):
+    def __init__(self, extra_peripherals=[], extra_cflags=[]):
         super().__init__(extra_peripherals, extra_cflags)
 
         # Simulator always requires uart peripheral since it's involved with
@@ -35,10 +36,10 @@ class SimulatorPlatform(BaseRules.Platform):
     def configure_env(self, env):
         self.configure_compiler(env, "")
 
-        env.Append(LIBS = ["m", "ncurses"])
+        env.Append(LIBS=["m", "ncurses"])
 
         # needed for 6-matrix
-        #env.Append(LIBS = pkgconfig("--libs", "gtk+-2.0"))
+        # env.Append(LIBS = pkgconfig("--libs", "gtk+-2.0"))
 
     def periph_dir(self):
         return os.path.join("sim", "periph")
@@ -47,13 +48,11 @@ class SimulatorPlatform(BaseRules.Platform):
         return util.cglob(util.SRC_ROOT, "lib", "chip", "sim", "core")
 
     def cflags(self):
-        return self.common_cflags() + [
-            "-DSIM"
-        ]
+        return self.common_cflags() + ["-DSIM"]
         # add for 6matrix: pkgconfig("--cflags", "gtk+-2.0")
 
     def ld_flags(self, target):
-        return  self.common_ld_flags(target)
+        return self.common_ld_flags(target)
 
     def include_dirs(self, target):
         return self.common_include_dirs(target) + [

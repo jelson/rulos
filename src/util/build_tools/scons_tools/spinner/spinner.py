@@ -17,9 +17,9 @@ _progress_set = False
 # Internal marker protocol. These strings are placed into *COMSTR
 # variables and recognized by the print function to trigger spinner
 # behavior.
-_MARKER = '<<spinner>>'
-_SOURCE = 'src'
-_TARGET = 'trg'
+_MARKER = "<<spinner>>"
+_SOURCE = "src"
+_TARGET = "trg"
 
 
 def spinner_comstr(action_name, use_source=True):
@@ -58,7 +58,7 @@ class SpinnerPrinter:
         """
         self._project_root = project_root
         is_tty = sys.stdout.isatty()
-        pretend = os.environ.get('PRETEND_ISATTY', '').lower() not in ('', '0', 'false', 'no')
+        pretend = os.environ.get("PRETEND_ISATTY", "").lower() not in ("", "0", "false", "no")
         self._use_ansi = is_tty or pretend
 
     def __call__(self, s, target, source, env):
@@ -73,15 +73,15 @@ class SpinnerPrinter:
             return
 
         # Parse the marker: <<spinner>>{src|trg}{ActionName}
-        rest = s[len(_MARKER):]
+        rest = s[len(_MARKER) :]
         which = rest[0:3]
         action_name = rest[3:]
 
         # Build the prefix: optional [platform] + action name
-        prefix = action_name + ' '
-        spinner_prefix = env.get('SPINNER_PREFIX', '')
+        prefix = action_name + " "
+        spinner_prefix = env.get("SPINNER_PREFIX", "")
         if spinner_prefix:
-            prefix = f'[{spinner_prefix}] {prefix}'
+            prefix = f"[{spinner_prefix}] {prefix}"
 
         # Choose source or target filename to display. Compile-like
         # steps show the source; link/archive steps show the target.
@@ -99,7 +99,7 @@ class SpinnerPrinter:
         fn_display = os.path.relpath(fn_abs, self._project_root)
 
         # If the file is outside the project tree, show the absolute path
-        if fn_display.startswith('..'):
+        if fn_display.startswith(".."):
             fn_display = fn_abs
 
         if not self._use_ansi:
@@ -113,8 +113,8 @@ class SpinnerPrinter:
 
         # Keep truncating pathname parts from the left until the
         # filename fits on the screen
-        while len(fn_display) > spaces_avail and '/' in fn_display:
-            fn_display = fn_display[fn_display.index('/') + 1:]
+        while len(fn_display) > spaces_avail and "/" in fn_display:
+            fn_display = fn_display[fn_display.index("/") + 1 :]
 
         out = f"{prefix}{fn_display}"
 
@@ -124,7 +124,6 @@ class SpinnerPrinter:
         # Net effect: overwrite this line with the next step's output
         sys.stdout.write(f"\x1b[K{out}\n\x1b[1A")
         sys.stdout.flush()
-
 
 
 def _spinner_action(env, cmd, action_name, use_source=True):
@@ -154,7 +153,7 @@ def _spinner_action(env, cmd, action_name, use_source=True):
         action_name: Human-readable name, e.g. 'Creating hex'.
         use_source: If True, display source filename; if False, target.
     """
-    if env.get('SPINNER_DISABLE'):
+    if env.get("SPINNER_DISABLE"):
         return Action(cmd)
     return Action(cmd, spinner_comstr(action_name, use_source))
 
@@ -163,62 +162,55 @@ def _spinner_action(env, cmd, action_name, use_source=True):
 # Each entry is (COMSTR_variable, action_name, use_source).
 _STANDARD_BUILDERS = [
     # C / C++
-    ('CCCOMSTR',          'Compiling',        True),
-    ('CXXCOMSTR',         'Compiling',        True),
-    ('SHCCCOMSTR',        'Compiling',        True),
-    ('SHCXXCOMSTR',       'Compiling',        True),
-
+    ("CCCOMSTR", "Compiling", True),
+    ("CXXCOMSTR", "Compiling", True),
+    ("SHCCCOMSTR", "Compiling", True),
+    ("SHCXXCOMSTR", "Compiling", True),
     # Assembler
-    ('ASCOMSTR',          'Assembling',       True),
-    ('ASPPCOMSTR',        'Assembling',       True),
-
+    ("ASCOMSTR", "Assembling", True),
+    ("ASPPCOMSTR", "Assembling", True),
     # Fortran
-    ('FORTRANCOMSTR',     'Compiling',        True),
-    ('SHFORTRANCOMSTR',   'Compiling',        True),
-    ('FORTRANPPCOMSTR',   'Compiling',        True),
-    ('SHFORTRANPPCOMSTR', 'Compiling',        True),
-    ('F77COMSTR',         'Compiling',        True),
-    ('SHF77COMSTR',       'Compiling',        True),
-    ('F77PPCOMSTR',       'Compiling',        True),
-    ('SHF77PPCOMSTR',     'Compiling',        True),
-    ('F90COMSTR',         'Compiling',        True),
-    ('SHF90COMSTR',       'Compiling',        True),
-    ('F90PPCOMSTR',       'Compiling',        True),
-    ('SHF90PPCOMSTR',     'Compiling',        True),
-    ('F95COMSTR',         'Compiling',        True),
-    ('SHF95COMSTR',       'Compiling',        True),
-    ('F95PPCOMSTR',       'Compiling',        True),
-    ('SHF95PPCOMSTR',     'Compiling',        True),
-    ('F03COMSTR',         'Compiling',        True),
-    ('SHF03COMSTR',       'Compiling',        True),
-    ('F03PPCOMSTR',       'Compiling',        True),
-    ('SHF03PPCOMSTR',     'Compiling',        True),
-    ('F08COMSTR',         'Compiling',        True),
-    ('SHF08COMSTR',       'Compiling',        True),
-    ('F08PPCOMSTR',       'Compiling',        True),
-    ('SHF08PPCOMSTR',     'Compiling',        True),
-
+    ("FORTRANCOMSTR", "Compiling", True),
+    ("SHFORTRANCOMSTR", "Compiling", True),
+    ("FORTRANPPCOMSTR", "Compiling", True),
+    ("SHFORTRANPPCOMSTR", "Compiling", True),
+    ("F77COMSTR", "Compiling", True),
+    ("SHF77COMSTR", "Compiling", True),
+    ("F77PPCOMSTR", "Compiling", True),
+    ("SHF77PPCOMSTR", "Compiling", True),
+    ("F90COMSTR", "Compiling", True),
+    ("SHF90COMSTR", "Compiling", True),
+    ("F90PPCOMSTR", "Compiling", True),
+    ("SHF90PPCOMSTR", "Compiling", True),
+    ("F95COMSTR", "Compiling", True),
+    ("SHF95COMSTR", "Compiling", True),
+    ("F95PPCOMSTR", "Compiling", True),
+    ("SHF95PPCOMSTR", "Compiling", True),
+    ("F03COMSTR", "Compiling", True),
+    ("SHF03COMSTR", "Compiling", True),
+    ("F03PPCOMSTR", "Compiling", True),
+    ("SHF03PPCOMSTR", "Compiling", True),
+    ("F08COMSTR", "Compiling", True),
+    ("SHF08COMSTR", "Compiling", True),
+    ("F08PPCOMSTR", "Compiling", True),
+    ("SHF08PPCOMSTR", "Compiling", True),
     # Lex / Yacc
-    ('LEXCOMSTR',         'Generating lexer', True),
-    ('YACCCOMSTR',        'Generating parser', True),
-
+    ("LEXCOMSTR", "Generating lexer", True),
+    ("YACCCOMSTR", "Generating parser", True),
     # Java
-    ('JAVACCOMSTR',       'Compiling',        True),
-    ('JARCOMSTR',         'Creating JAR',     False),
-    ('RMICCOMSTR',        'Generating RMI stubs', True),
-    ('JAVAHCOMSTR',       'Generating JNI headers', True),
-
+    ("JAVACCOMSTR", "Compiling", True),
+    ("JARCOMSTR", "Creating JAR", False),
+    ("RMICCOMSTR", "Generating RMI stubs", True),
+    ("JAVAHCOMSTR", "Generating JNI headers", True),
     # Linker
-    ('LINKCOMSTR',        'Linking',          False),
-    ('SHLINKCOMSTR',      'Linking',          False),
-    ('LDMODULECOMSTR',    'Linking',          False),
-
+    ("LINKCOMSTR", "Linking", False),
+    ("SHLINKCOMSTR", "Linking", False),
+    ("LDMODULECOMSTR", "Linking", False),
     # Archive / library
-    ('ARCOMSTR',          'Creating library', False),
-    ('RANLIBCOMSTR',      'Indexing library', False),
-
+    ("ARCOMSTR", "Creating library", False),
+    ("RANLIBCOMSTR", "Indexing library", False),
     # Install
-    ('INSTALLSTR',        'Installing',       True),
+    ("INSTALLSTR", "Installing", True),
 ]
 
 
@@ -249,24 +241,26 @@ def generate(env):
             Return an Action with spinner display for use in
             custom Builder() definitions.
     """
-    env.AddMethod(_spinner_action, 'SpinnerAction')
+    env.AddMethod(_spinner_action, "SpinnerAction")
 
-    if env.get('SPINNER_DISABLE'):
+    if env.get("SPINNER_DISABLE"):
         return
 
     global _progress_set
     if not _progress_set:
-        def _progress_spinner(node, _chars=['-', '\\', '|', '/'], _count=[0]):
+
+        def _progress_spinner(node, _chars=["-", "\\", "|", "/"], _count=[0]):
             _count[0] += 1
             ch = _chars[_count[0] % len(_chars)]
-            sys.stdout.write(f'\x1b[K{ch}\n\x1b[1A')
+            sys.stdout.write(f"\x1b[K{ch}\n\x1b[1A")
             sys.stdout.flush()
+
         Progress(_progress_spinner, interval=5)
         _progress_set = True
 
-    project_root = env.Dir('#').get_abspath()
+    project_root = env.Dir("#").get_abspath()
     printer = SpinnerPrinter(project_root)
-    env['PRINT_CMD_LINE_FUNC'] = printer
+    env["PRINT_CMD_LINE_FUNC"] = printer
 
     for comstr_var, action_name, use_source in _STANDARD_BUILDERS:
         env[comstr_var] = spinner_comstr(action_name, use_source)

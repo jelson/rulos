@@ -79,9 +79,14 @@ class Siggen:
         self.output_on()
 
         self.verify([
-            ":SOUR1:FUNC?", ":SOUR1:FREQ?", ":SOUR1:VOLT:HIGH?",
-            ":SOUR1:VOLT:LOW?", ":SOUR1:PULS:WIDT?", ":SOUR1:BURS:STAT?",
-            ":OUTP1?", ":SYST:ERR?",
+            ":SOUR1:FUNC?",
+            ":SOUR1:FREQ?",
+            ":SOUR1:VOLT:HIGH?",
+            ":SOUR1:VOLT:LOW?",
+            ":SOUR1:PULS:WIDT?",
+            ":SOUR1:BURS:STAT?",
+            ":OUTP1?",
+            ":SYST:ERR?",
         ])
         return float(self.query(":SOUR1:FREQ?"))
 
@@ -109,11 +114,17 @@ class Siggen:
         self.output_on()
 
         self.verify([
-            ":SOUR1:FUNC?", ":SOUR1:FREQ?", ":SOUR1:VOLT:HIGH?",
-            ":SOUR1:VOLT:LOW?", ":SOUR1:PULS:WIDT?",
-            ":SOUR1:BURS:STAT?", ":SOUR1:BURS:MODE?",
-            ":SOUR1:BURS:NCYC?", ":SOUR1:BURS:INT:PER?",
-            ":OUTP1?", ":SYST:ERR?",
+            ":SOUR1:FUNC?",
+            ":SOUR1:FREQ?",
+            ":SOUR1:VOLT:HIGH?",
+            ":SOUR1:VOLT:LOW?",
+            ":SOUR1:PULS:WIDT?",
+            ":SOUR1:BURS:STAT?",
+            ":SOUR1:BURS:MODE?",
+            ":SOUR1:BURS:NCYC?",
+            ":SOUR1:BURS:INT:PER?",
+            ":OUTP1?",
+            ":SYST:ERR?",
         ])
         actual_freq = float(self.query(":SOUR1:FREQ?"))
         return 1e9 / actual_freq

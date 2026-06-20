@@ -22,34 +22,37 @@ import glob
 import sys
 import os.path
 
+
 class ImageCat:
-	def __init__(self):
-		self.arrays = []
+    def __init__(self):
+        self.arrays = []
 
-	def catimage(self, filename):
-		img = Image.open(filename)
-		binary = PIL.ImageOps.invert(img.convert("RGB")).convert("1")
-		#binary.save("binary.%s.png" % os.path.basename(filename))
-		imagebytes = binary.tobytes()
-		imagedata = "".join(map(lambda b: "0x%02x, " % b, imagebytes))
-		array = "{ %s }" % imagedata
-		self.arrays.append(array)
+    def catimage(self, filename):
+        img = Image.open(filename)
+        binary = PIL.ImageOps.invert(img.convert("RGB")).convert("1")
+        # binary.save("binary.%s.png" % os.path.basename(filename))
+        imagebytes = binary.tobytes()
+        imagedata = "".join(map(lambda b: "0x%02x, " % b, imagebytes))
+        array = "{ %s }" % imagedata
+        self.arrays.append(array)
 
-	def emit(self, symname, filename):
-		ofp = open(filename, "w")
-		ofp.write("uint8_t %s[][8] = {\n" % symname);
-		for array in self.arrays:
-			ofp.write("\t%s,\n" % array);
-		ofp.write("};\n");
+    def emit(self, symname, filename):
+        ofp = open(filename, "w")
+        ofp.write("uint8_t %s[][8] = {\n" % symname)
+        for array in self.arrays:
+            ofp.write("\t%s,\n" % array)
+        ofp.write("};\n")
+
 
 def main():
-	flist = glob.glob("%s/star*.png" % (sys.argv[2]))
-	flist.sort()
+    flist = glob.glob("%s/star*.png" % (sys.argv[2]))
+    flist.sort()
 
-	cat = ImageCat()
-	for fn in flist:
-		cat.catimage(fn)
+    cat = ImageCat()
+    for fn in flist:
+        cat.catimage(fn)
 
-	cat.emit("starbitmap", sys.argv[1])
+    cat.emit("starbitmap", sys.argv[1])
+
 
 main()

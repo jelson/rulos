@@ -42,5 +42,5 @@
 f = open("4meg.bin", "wb")
 
 for i in range(1 << 20):
-    num = i * 4093;
-    f.write(bytes(num.to_bytes(4, byteorder='big')))
+    num = i * 4093
+    f.write(bytes(num.to_bytes(4, byteorder="big")))

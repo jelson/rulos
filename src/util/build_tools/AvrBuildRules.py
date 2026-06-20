@@ -18,8 +18,9 @@ import os
 from . import BaseRules, util
 from SCons.Script import *
 
+
 class AvrPlatform(BaseRules.Platform):
-    def __init__(self, mcu, extra_peripherals = [], extra_cflags = []):
+    def __init__(self, mcu, extra_peripherals=[], extra_cflags=[]):
         super().__init__(extra_peripherals, extra_cflags)
         self.mcu = mcu
 
@@ -40,7 +41,7 @@ class AvrPlatform(BaseRules.Platform):
 
     def cflags(self):
         return self.common_cflags() + [
-            "-mmcu="+self.mcu,
+            "-mmcu=" + self.mcu,
             f"-DMCU{self.mcu}=1",
             "-DRULOS_AVR",
             "-funsigned-char",
@@ -48,7 +49,7 @@ class AvrPlatform(BaseRules.Platform):
             "-fpack-struct",
             "-fshort-enums",
             "-fdata-sections",
-            "-ffunction-sections", # Put all funcs/data in their own sections
+            "-ffunction-sections",  # Put all funcs/data in their own sections
             "-gdwarf-2",
             "-Os",
         ]
@@ -66,10 +67,17 @@ class AvrPlatform(BaseRules.Platform):
 
     def post_configure(self, env, outputs):
         HEX_FLASH_FLAGS = "-R .eeprom -R .fuse -R .lock -R .signature"
-        env.Append(BUILDERS = {"MakeHex": Builder(
-            src_suffix = ".elf",
-            suffix = ".hex",
-            action = env.SpinnerAction(
-                f"avr-objcopy -O ihex {HEX_FLASH_FLAGS}  $SOURCE $TARGET",
-                'Creating hex', use_source=False))})
+        env.Append(
+            BUILDERS={
+                "MakeHex": Builder(
+                    src_suffix=".elf",
+                    suffix=".hex",
+                    action=env.SpinnerAction(
+                        f"avr-objcopy -O ihex {HEX_FLASH_FLAGS}  $SOURCE $TARGET",
+                        "Creating hex",
+                        use_source=False,
+                    ),
+                )
+            }
+        )
         Default(env.MakeHex(outputs[0]))

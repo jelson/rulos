@@ -18,6 +18,7 @@
 
 import sys
 
+
 class LineReader:
     def __init__(self, inputName):
         self.inputName = inputName
@@ -33,7 +34,7 @@ class LineReader:
         retval = self.lines[self.line_num]
         return retval.strip()
 
-    def get_line(self, eofOK = False, skipBlanks = True):
+    def get_line(self, eofOK=False, skipBlanks=True):
         line = None
 
         while not line:
@@ -51,13 +52,14 @@ class LineReader:
         return line
 
     def error(self, s):
-        sys.stderr.write("%s: line %d: %s\n" % (self.inputName, self.line_num+1, s))
+        sys.stderr.write("%s: line %d: %s\n" % (self.inputName, self.line_num + 1, s))
         sys.exit(-1)
 
 
 def check_bit(lr, line, position, char):
     if len(line) <= position or line[position] != char:
-        lr.error("Expected column %d to be '%s'" % (position+1, char))
+        lr.error("Expected column %d to be '%s'" % (position + 1, char))
+
 
 def get_bit(lr, line, position, truechar):
     if len(line) <= position:
@@ -68,23 +70,23 @@ def get_bit(lr, line, position, truechar):
     elif line[position] == " ":
         return 0
     else:
-        lr.error("Expected column %d to be '%s' or ' '" % (
-            position, truechar))
+        lr.error("Expected column %d to be '%s' or ' '" % (position, truechar))
+
 
 def get_bitmap(lr):
     bitmap = [0] * 8
 
-    l1 = lr.get_line(skipBlanks = False)
+    l1 = lr.get_line(skipBlanks=False)
     check_bit(lr, l1, 0, ".")
     bitmap[0] = get_bit(lr, l1, 2, "_")
 
-    l2 = lr.get_line(skipBlanks = False)
+    l2 = lr.get_line(skipBlanks=False)
     check_bit(lr, l2, 0, ".")
     bitmap[5] = get_bit(lr, l2, 1, "|")
     bitmap[6] = get_bit(lr, l2, 2, "_")
     bitmap[1] = get_bit(lr, l2, 3, "|")
 
-    l3 = lr.get_line(skipBlanks = False)
+    l3 = lr.get_line(skipBlanks=False)
     check_bit(lr, l3, 0, ".")
     bitmap[4] = get_bit(lr, l3, 1, "|")
     bitmap[3] = get_bit(lr, l3, 2, "_")
@@ -93,13 +95,14 @@ def get_bitmap(lr):
 
     return bitmap
 
+
 def main():
     bitmap_map = {}
 
     lr = LineReader(sys.argv[1])
 
     while True:
-        line = lr.get_line(eofOK = True)
+        line = lr.get_line(eofOK=True)
 
         if not line:
             break
@@ -124,7 +127,6 @@ def main():
             sys.stdout.write(",  // '%s' (chr %d)\n" % (char, ord(char)))
         else:
             sys.stdout.write("0b00000000,  // '%s' (chr %d) - MISSING\n" % (char, ord(char)))
-
 
 
 main()

@@ -27,16 +27,17 @@ def detect_bmp():
     """Path of the BMP GDB server. The probe exposes two CDC-ACM
     interfaces: -if00 is the GDB server (driven here), -if02 its UART
     passthrough. Raises RuntimeError if not exactly one is present."""
-    matches = sorted(glob.glob(
-        "/dev/serial/by-id/usb-Black_Magic*-if00"))
+    matches = sorted(glob.glob("/dev/serial/by-id/usb-Black_Magic*-if00"))
     if not matches:
         raise RuntimeError(
             "no Black Magic Probe found (looked for "
             "/dev/serial/by-id/usb-Black_Magic*-if00). Plugged in? "
-            "Pass port= to override.")
+            "Pass port= to override."
+        )
     if len(matches) > 1:
-        raise RuntimeError("multiple Black Magic Probes:\n  " +
-                           "\n  ".join(matches) + "\nPass port= to pick one.")
+        raise RuntimeError(
+            "multiple Black Magic Probes:\n  " + "\n  ".join(matches) + "\nPass port= to pick one."
+        )
     return os.path.realpath(matches[0])
 
 
@@ -66,20 +67,34 @@ def read_serial(uid_base, prefix="", port=None):
     RuntimeError if no probe is attached."""
     port = port or detect_bmp()
     out = subprocess.run(
-        ["gdb-multiarch",
-         "-ex", "set confirm off",
-         "-ex", "set pagination off",
-         # The UID lives outside the probe's declared flash/RAM map;
-         # without this gdb refuses the read as "Cannot access memory".
-         "-ex", "set mem inaccessible-by-default off",
-         "-ex", f"tar ext {port}",
-         "-ex", "mon connect_rst disable",
-         "-ex", "mon swd",
-         "-ex", "at 1",
-         "-ex", f"x/3xw {uid_base:#x}",
-         "-ex", "detach",
-         "-ex", "quit"],
-        capture_output=True, text=True)
+        [
+            "gdb-multiarch",
+            "-ex",
+            "set confirm off",
+            "-ex",
+            "set pagination off",
+            # The UID lives outside the probe's declared flash/RAM map;
+            # without this gdb refuses the read as "Cannot access memory".
+            "-ex",
+            "set mem inaccessible-by-default off",
+            "-ex",
+            f"tar ext {port}",
+            "-ex",
+            "mon connect_rst disable",
+            "-ex",
+            "mon swd",
+            "-ex",
+            "at 1",
+            "-ex",
+            f"x/3xw {uid_base:#x}",
+            "-ex",
+            "detach",
+            "-ex",
+            "quit",
+        ],
+        capture_output=True,
+        text=True,
+    )
     text = out.stdout + out.stderr
     # The x/3xw dump prints the three words as 0x-prefixed tokens on the
     # line(s) following the address label; collect them in order.
@@ -105,17 +120,28 @@ def _gdb(port, elf=None, load=False, mass_erase=False):
     cmd = ["gdb-multiarch"]
     if elf is not None:
         cmd.append(elf)
-    cmd += ["-ex", "set confirm off",
-            "-ex", "set pagination off",
-            "-ex", f"tar ext {port}",
-            "-ex", "mon conn enable",
-            "-ex", "mon swd",
-            "-ex", "at 1",
-            *(["-ex", "mon erase_mass"] if mass_erase else []),
-            *(["-ex", "load", "-ex", "compare-sections"] if load else []),
-            "-ex", "mon reset",
-            "-ex", "kill",
-            "-ex", "quit"]
+    cmd += [
+        "-ex",
+        "set confirm off",
+        "-ex",
+        "set pagination off",
+        "-ex",
+        f"tar ext {port}",
+        "-ex",
+        "mon conn enable",
+        "-ex",
+        "mon swd",
+        "-ex",
+        "at 1",
+        *(["-ex", "mon erase_mass"] if mass_erase else []),
+        *(["-ex", "load", "-ex", "compare-sections"] if load else []),
+        "-ex",
+        "mon reset",
+        "-ex",
+        "kill",
+        "-ex",
+        "quit",
+    ]
     return subprocess.run(cmd).returncode
 
 
@@ -124,8 +150,7 @@ def flash_elf(elf, port=None, mass_erase=False):
     Optionally mass-erase first (clears reserved/nvconfig sectors --
     the only way to recover a unit bricked by torn flash). Returns
     gdb's exit code (0 = success)."""
-    return _gdb(port or detect_bmp(), elf=elf, load=True,
-                mass_erase=mass_erase)
+    return _gdb(port or detect_bmp(), elf=elf, load=True, mass_erase=mass_erase)
 
 
 def reset(port=None):
@@ -137,17 +162,22 @@ def reset(port=None):
 
 def main():
     p = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("elf", nargs="?", default=None,
-                   help="ELF to flash (omit with --reset-only)")
-    p.add_argument("--reset-only", action="store_true",
-                   help="just reset the target (no flash); proves "
-                        "flash-persisted state survives a cold restart")
-    p.add_argument("--erase", action="store_true",
-                   help="mass-erase the whole chip before flashing "
-                        "(clears reserved/nvconfig sectors; recovers a "
-                        "unit bricked by torn flash)")
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    p.add_argument("elf", nargs="?", default=None, help="ELF to flash (omit with --reset-only)")
+    p.add_argument(
+        "--reset-only",
+        action="store_true",
+        help="just reset the target (no flash); proves "
+        "flash-persisted state survives a cold restart",
+    )
+    p.add_argument(
+        "--erase",
+        action="store_true",
+        help="mass-erase the whole chip before flashing "
+        "(clears reserved/nvconfig sectors; recovers a "
+        "unit bricked by torn flash)",
+    )
     p.add_argument("--port", help="override BMP autodetection")
     args = p.parse_args()
     try:

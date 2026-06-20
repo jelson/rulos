@@ -25,6 +25,7 @@ PROJECT_ROOT = os.path.relpath(os.path.join(os.path.dirname(__file__), "..", "..
 SRC_ROOT = os.path.join(PROJECT_ROOT, "src")
 BUILD_ROOT = os.path.join(PROJECT_ROOT, "build")
 
+
 def ensure_cachedir_tag():
     """Create CACHEDIR.TAG in the build directory to prevent backup tools from backing it up."""
     tag_path = os.path.join(BUILD_ROOT, "CACHEDIR.TAG")
@@ -35,24 +36,29 @@ def ensure_cachedir_tag():
             f.write("# This file marks the directory as a cache directory.\n")
             f.write("# For more info see https://bford.info/cachedir/\n")
 
+
 ensure_cachedir_tag()
 
+
 def cwd_to_project_root(inp):
-    if type(inp)==type([]):
+    if type(inp) == type([]):
         return [os.path.relpath(s, PROJECT_ROOT) for s in inp]
     else:
-        assert(type(inp)==type(""))
+        assert type(inp) == type("")
         return os.path.relpath(inp, PROJECT_ROOT)
 
+
 def parse_peripherals(peripherals):
-    if type(peripherals)==type(""):
+    if type(peripherals) == type(""):
         return peripherals.split()
-    assert(type(peripherals)==type([]))
+    assert type(peripherals) == type([])
     return peripherals
 
+
 def die(msg):
-    sys.stderr.write(msg+"\n")
+    sys.stderr.write(msg + "\n")
     sys.exit(1)
+
 
 def cglob(*kargs):
     retval = []
@@ -61,25 +67,31 @@ def cglob(*kargs):
         retval.extend(cwd_to_project_root(glob.glob(os.path.join(*globpath))))
     return retval
 
+
 def template_free_cglob(*kargs):
     return [f for f in cglob(*kargs) if not f.endswith("_template.c")]
 
+
 def pkgconfig(mode, package):
     return subprocess.check_output(["pkg-config", mode, package]).decode("utf-8").split()
+
 
 def get_shell_output(args):
     retval = subprocess.run(args, stdout=subprocess.PIPE)
     if retval.returncode != 0:
         raise Exception(f"Running '{args}' gave non-zero exit code {retval.returncode}")
-    return retval.stdout.decode('utf-8').rstrip()
+    return retval.stdout.decode("utf-8").rstrip()
+
 
 @functools.cache
 def repo_is_dirty():
     return len(get_shell_output(["git", "status", "--porcelain"])) > 0
 
+
 @functools.cache
 def commit_hash():
     return get_shell_output(["git", "describe", "--dirty", "--always", "--tags"])
+
 
 @functools.cache
 def which(bin_name):
