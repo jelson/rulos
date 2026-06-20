@@ -31,10 +31,10 @@
  * is fully independent across the whole 24 ns - 34 s range:
  *
  *   Ch  Pin   HRTIM (fast, 250 ps)     GP timer (slow, 8 ns)
- *   0   PA9   Timer A, CHA2   AF13     TIM2 (32-bit) CH3 [+CH4]  AF10
- *   1   PA10  Timer B, CHB1   AF13     TIM1 CH3 [+CH4]           AF6
- *   2   PC6   Timer F, CHF1   AF13     TIM3 CH1 [+CH2]           AF2
- *   3   PC8   Timer E, CHE1   AF3      TIM8 CH3 [+CH4]           AF4
+ *   0   PC8   Timer E, CHE1   AF3      TIM8 CH3 [+CH4]           AF4
+ *   1   PC6   Timer F, CHF1   AF13     TIM3 CH1 [+CH2]           AF2
+ *   2   PA9   Timer A, CHA2   AF13     TIM2 (32-bit) CH3 [+CH4]  AF10
+ *   3   PA10  Timer B, CHB1   AF13     TIM1 CH3 [+CH4]           AF6
  *
  * Every AF above is verified against DS12288 Rev 6 Table 13; note the HRTIM AF is NOT uniform
  * (Timer E / PC8 is AF3, the rest AF13) and the GP AF differs on every pin, so AF is a per-channel
@@ -193,47 +193,12 @@ typedef struct {
   gpio_pin_t led;
 } channel_hw_t;
 
+// Channel -> pin assignment is the Rev B layout (driven by board routing); the per-pin hardware
+// (HRTIM timer/output/AF, GP timer/channel/AF) is fixed by the silicon, verified in PCB_NOTES.
+//   ch0 = PC8 (Timer E / TIM8), ch1 = PC6 (Timer F / TIM3),
+//   ch2 = PA9 (Timer A / TIM2), ch3 = PA10 (Timer B / TIM1).
 static const channel_hw_t channel_hw[NUM_CHANNELS] = {
-    [0] = {.gpio = GPIOA,
-           .ll_pin = LL_GPIO_PIN_9,
-           .hrtim_af = 13,
-           .hrtim_timer = LL_HRTIM_TIMER_A,
-           .hrtim_output = LL_HRTIM_OUTPUT_TA2,
-           .gp_timer = TIM2,
-           .gp_out_ch = LL_TIM_CHANNEL_CH3,
-           .gp_sib_ch = LL_TIM_CHANNEL_CH4,
-           .gp_af = 10,
-           .gp_advanced = false,
-           .gp_up_irqn = TIM2_IRQn,
-           .gp_32bit = true,
-           .led = LED_CHAN0},
-    [1] = {.gpio = GPIOA,
-           .ll_pin = LL_GPIO_PIN_10,
-           .hrtim_af = 13,
-           .hrtim_timer = LL_HRTIM_TIMER_B,
-           .hrtim_output = LL_HRTIM_OUTPUT_TB1,
-           .gp_timer = TIM1,
-           .gp_out_ch = LL_TIM_CHANNEL_CH3,
-           .gp_sib_ch = LL_TIM_CHANNEL_CH4,
-           .gp_af = 6,
-           .gp_advanced = true,
-           .gp_up_irqn = TIM1_UP_TIM16_IRQn,
-           .gp_32bit = false,
-           .led = LED_CHAN1},
-    [2] = {.gpio = GPIOC,
-           .ll_pin = LL_GPIO_PIN_6,
-           .hrtim_af = 13,
-           .hrtim_timer = LL_HRTIM_TIMER_F,
-           .hrtim_output = LL_HRTIM_OUTPUT_TF1,
-           .gp_timer = TIM3,
-           .gp_out_ch = LL_TIM_CHANNEL_CH1,
-           .gp_sib_ch = LL_TIM_CHANNEL_CH2,
-           .gp_af = 2,
-           .gp_advanced = false,
-           .gp_up_irqn = TIM3_IRQn,
-           .gp_32bit = false,
-           .led = LED_CHAN2},
-    [3] = {.gpio = GPIOC,
+    [0] = {.gpio = GPIOC,
            .ll_pin = LL_GPIO_PIN_8,
            .hrtim_af = 3,
            .hrtim_timer = LL_HRTIM_TIMER_E,
@@ -245,8 +210,57 @@ static const channel_hw_t channel_hw[NUM_CHANNELS] = {
            .gp_advanced = true,
            .gp_up_irqn = TIM8_UP_IRQn,
            .gp_32bit = false,
+           .led = LED_CHAN0},
+    [1] = {.gpio = GPIOC,
+           .ll_pin = LL_GPIO_PIN_6,
+           .hrtim_af = 13,
+           .hrtim_timer = LL_HRTIM_TIMER_F,
+           .hrtim_output = LL_HRTIM_OUTPUT_TF1,
+           .gp_timer = TIM3,
+           .gp_out_ch = LL_TIM_CHANNEL_CH1,
+           .gp_sib_ch = LL_TIM_CHANNEL_CH2,
+           .gp_af = 2,
+           .gp_advanced = false,
+           .gp_up_irqn = TIM3_IRQn,
+           .gp_32bit = false,
+           .led = LED_CHAN1},
+    [2] = {.gpio = GPIOA,
+           .ll_pin = LL_GPIO_PIN_9,
+           .hrtim_af = 13,
+           .hrtim_timer = LL_HRTIM_TIMER_A,
+           .hrtim_output = LL_HRTIM_OUTPUT_TA2,
+           .gp_timer = TIM2,
+           .gp_out_ch = LL_TIM_CHANNEL_CH3,
+           .gp_sib_ch = LL_TIM_CHANNEL_CH4,
+           .gp_af = 10,
+           .gp_advanced = false,
+           .gp_up_irqn = TIM2_IRQn,
+           .gp_32bit = true,
+           .led = LED_CHAN2},
+    [3] = {.gpio = GPIOA,
+           .ll_pin = LL_GPIO_PIN_10,
+           .hrtim_af = 13,
+           .hrtim_timer = LL_HRTIM_TIMER_B,
+           .hrtim_output = LL_HRTIM_OUTPUT_TB1,
+           .gp_timer = TIM1,
+           .gp_out_ch = LL_TIM_CHANNEL_CH3,
+           .gp_sib_ch = LL_TIM_CHANNEL_CH4,
+           .gp_af = 6,
+           .gp_advanced = true,
+           .gp_up_irqn = TIM1_UP_TIM16_IRQn,
+           .gp_32bit = false,
            .led = LED_CHAN3},
 };
+
+// The GP-regime sync master is whichever channel owns TIM1 (it emits the TRGO the other GP timers
+// slave to). Found by table, not hardcoded, so a channel<->pin remap can't desync it.
+static int gp_master_ch(void) {
+  for (int ch = 0; ch < NUM_CHANNELS; ch++) {
+    if (channel_hw[ch].gp_timer == TIM1)
+      return ch;
+  }
+  return -1;
+}
 
 // ---- Channel runtime state -------------------------------------------------
 
@@ -558,15 +572,16 @@ void HRTIM1_Master_IRQHandler(void) {
   }
 }
 
-// GP burst counting, on the bursting domain's timebase. The arming update opens the run window on
-// every gated output (a period boundary, so the first pulse is whole); ncyc updates later it
-// closes the window. burst_rep_task re-arms at the next repetition.
-static void gp_burst_update(int ch) {
-  TIM_TypeDef* t = channel_hw[ch].gp_timer;
+// GP burst counting, on the bursting domain's timebase. The handler is told its hardware timer
+// (not a channel index), so it stays correct under any channel<->pin remap: it acts only when its
+// timer IS the bursting domain's count timer. The arming update opens the run window on every
+// gated output (a period boundary, so the first pulse is whole); ncyc updates later it closes the
+// window. burst_rep_task re-arms at the next repetition.
+static void gp_burst_update(TIM_TypeDef* t) {
   if (!LL_TIM_IsActiveFlag_UPDATE(t))
     return;
   LL_TIM_ClearFlag_UPDATE(t);
-  if (ch != g_gp_burst_count_ch)
+  if (g_gp_burst_count_ch < 0 || channel_hw[g_gp_burst_count_ch].gp_timer != t)
     return;
   if (g_gp_burst_arming) {
     gp_burst_set_outputs(g_gp_burst_out_mask, true);
@@ -582,16 +597,16 @@ static void gp_burst_update(int ch) {
 }
 
 void TIM2_IRQHandler(void) {
-  gp_burst_update(0);
+  gp_burst_update(TIM2);
 }
 void TIM1_UP_TIM16_IRQHandler(void) {
-  gp_burst_update(1);
+  gp_burst_update(TIM1);
 }
 void TIM3_IRQHandler(void) {
-  gp_burst_update(2);
+  gp_burst_update(TIM3);
 }
 void TIM8_UP_IRQHandler(void) {
-  gp_burst_update(3);
+  gp_burst_update(TIM8);
 }
 
 // Program the HRTIM burst mode controller for the bursting HRTIM-regime domain represented by ch.
@@ -730,13 +745,14 @@ static void apply_all(void) {
       hrtim_run_mask = LL_HRTIM_TIMER_MASTER;
     }
   } else if (sync_gp) {
-    // TIM1 is the GP-regime sync master: it must run with the shared period and drive the slaves'
-    // ITR0 even when its own channel (ch1) output is off. (Its output is configured separately, in
-    // the per-channel loop, only if ch1 is on.)
+    // The TIM1-owning channel is the GP-regime sync master: it must run with the shared period and
+    // drive the slaves' ITR0 even when its own output is off. (Its output is configured separately,
+    // in the per-channel loop, only if that channel is on.)
+    const int mch = gp_master_ch();
     uint32_t arr;
     uint64_t tick;
-    if (config_gp_timebase(1, chan_period_ps[0], /*sync=*/true, &arr, &tick))
-      gp_run_mask |= (1u << 1);
+    if (mch >= 0 && config_gp_timebase(mch, chan_period_ps[0], /*sync=*/true, &arr, &tick))
+      gp_run_mask |= (1u << mch);
   }
 
   for (int ch = 0; ch < NUM_CHANNELS; ch++) {
@@ -803,13 +819,13 @@ static void apply_all(void) {
     g_burst_rep_us = (Time)(chan_burst_rep_ps[burst_ch] / 1000000);
     if (burst_is_gp) {
       // Gate every on GP output in the bursting domain; count the domain's timebase -- the TIM1
-      // master in sync (it always runs there), the single channel itself in async.
+      // master channel in sync (it always runs there), the single channel itself in async.
       g_gp_burst_out_mask = 0;
       for (int c = 0; c < NUM_CHANNELS; c++) {
         if (chan_on[c] && (gp_run_mask & (1u << c)) && same_domain(burst_ch, c))
           g_gp_burst_out_mask |= (1u << c);
       }
-      g_gp_burst_count_ch = sync ? 1 : burst_ch;
+      g_gp_burst_count_ch = sync ? gp_master_ch() : burst_ch;
     } else {
       config_hrtim_burst(burst_ch, hrtim_burst_outs);
     }

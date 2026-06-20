@@ -20,16 +20,22 @@ and builds against it.
 
 ## Output timers (the load-bearing choice)
 
+Channel→pin assignment is the laid-out Rev B routing (2026-06-14); the
+per-pin hardware is fixed by the silicon.
+
 | Ch | Pin  | HRTIM (fast)   | HRTIM AF | GP timer (slow)        | GP AF |
 |----|------|----------------|----------|------------------------|-------|
-| 0  | PA9  | Timer A, CHA2  | AF13     | TIM2_CH3 (TIM2 32-bit) | AF10  |
-| 1  | PA10 | Timer B, CHB1  | AF13     | TIM1_CH3               | AF6   |
-| 2  | PC6  | Timer F, CHF1  | AF13     | TIM3_CH1               | AF2   |
-| 3  | PC8  | Timer E, CHE1  | AF3      | TIM8_CH3               | AF4   |
+| 0  | PC8  | Timer E, CHE1  | AF3      | TIM8_CH3               | AF4   |
+| 1  | PC6  | Timer F, CHF1  | AF13     | TIM3_CH1               | AF2   |
+| 2  | PA9  | Timer A, CHA2  | AF13     | TIM2_CH3 (TIM2 32-bit) | AF10  |
+| 3  | PA10 | Timer B, CHB1  | AF13     | TIM1_CH3               | AF6   |
 
 All AF numbers are **verified against DS12288 Rev 6 Table 13** by column
 position (2026-06-14). Four distinct HRTIM timers (A/B/E/F), four distinct
-GP timers (TIM2/TIM1/TIM3/TIM8), TIM2 is 32-bit. The HRTIM AF is per-pin
+GP timers (TIM2/TIM1/TIM3/TIM8), TIM2 is 32-bit. (The firmware maps each
+channel to its pin via a per-channel table, so this assignment can be
+re-routed without touching logic -- the GP-sync master, found as whichever
+channel owns TIM1, and the GP-burst ISRs, keyed by timer, both follow.) The HRTIM AF is per-pin
 (PC8/Timer E is AF3, the other three AF13) and the GP AF differs on every
 pin (AF10/AF6/AF2/AF4) — so the firmware MUST keep AF as a per-channel
 field, never a shared constant. (A web snippet during verification showed
@@ -45,15 +51,15 @@ load-bearing; LEDs are flexible (change in `pulsegen.c` if rerouted).
 
 | Net          | MCU pin | Why |
 |--------------|---------|-----|
-| PULSE_OUT_0  | **PA9**  | HRTIM1_CHA2 **AF13** (fast) + TIM2_CH3 **AF10** (slow, 32-bit). |
-| PULSE_OUT_1  | **PA10** | HRTIM1_CHB1 **AF13** + TIM1_CH3 **AF6** (advanced timer → BDTR.MOE). |
-| PULSE_OUT_2  | **PC6**  | HRTIM1_CHF1 **AF13** + TIM3_CH1 **AF2**. |
-| PULSE_OUT_3  | **PC8**  | HRTIM1_CHE1 **AF3** (NOT AF13 — Timer E differs!) + TIM8_CH3 **AF4** (advanced → MOE). |
+| PULSE_OUT_0  | **PC8**  | HRTIM1_CHE1 **AF3** (NOT AF13 — Timer E differs!) + TIM8_CH3 **AF4** (advanced → BDTR.MOE). |
+| PULSE_OUT_1  | **PC6**  | HRTIM1_CHF1 **AF13** + TIM3_CH1 **AF2**. |
+| PULSE_OUT_2  | **PA9**  | HRTIM1_CHA2 **AF13** + TIM2_CH3 **AF10** (slow, 32-bit). |
+| PULSE_OUT_3  | **PA10** | HRTIM1_CHB1 **AF13** + TIM1_CH3 **AF6** (advanced → MOE). |
 | OSC_IN       | PF0     | 10 MHz HSE input (bypass; PF1/OSC_OUT free for GPIO). |
 | USB_DM       | PA11    | Fixed by silicon. |
 | USB_DP       | PA12    | Fixed by silicon. |
-| UART_TX      | **PB6** | USART1_TX, AF7 (rulos `uart_id=0`). Moved off PA9 vs Rev A. |
-| UART_RX      | **PB7** | USART1_RX, AF7. Moved off PA10 vs Rev A. |
+| UART_TX      | **PB6** | USART1_TX, AF7 (rulos `uart_id=0`). Off the output pins. |
+| UART_RX      | **PB7** | USART1_RX, AF7. |
 | SWDIO        | PA13    | Fixed by silicon. |
 | SWCLK        | PA14    | Fixed by silicon. |
 | LED ch0      | PC0     | (flexible) |
@@ -66,9 +72,9 @@ load-bearing; LEDs are flexible (change in `pulsegen.c` if rerouted).
 **Internal-only (no pin to route):** the slow-regime Combined-PWM output
 uses each channel's *sibling* timer channel for the second edge, with its
 output stage **disabled** (CCyE=0), so it consumes a CCR register but
-drives no pin: ch0 TIM2_CH4, ch1 TIM1_CH4, ch2 TIM3_CH2, ch3 TIM8_CH4.
+drives no pin: ch0 TIM8_CH4, ch1 TIM3_CH2, ch2 TIM2_CH4, ch3 TIM1_CH4.
 Two of those siblings happen to map to pins used by other nets
-(TIM2_CH4 → PA10 = PULSE_OUT_1; TIM1_CH4 → PA11 = USB_DP) — harmless,
+(TIM2_CH4 → PA10 = PULSE_OUT_3; TIM1_CH4 → PA11 = USB_DP) — harmless,
 because the sibling's output is never enabled, so its timer doesn't drive
 the pin. PC7 and PC9 (the old Rev A outputs) are free.
 
@@ -152,8 +158,8 @@ precision detail, not a behavior change, and 8 ns is ~15 ppm at 524 µs
   - sibling channel: **PWM mode 1 (OCyM=0110)**, CCR = D+W (high 0..D+W),
     output NOT enabled (CCyE=0).
   - AND ⇒ high only in [D, D+W]. Works for D=0, so it's the single uniform
-    GP output path. Siblings (all free on this pinout): ch0 TIM2_CH4,
-    ch1 TIM1_CH4 (output off → PA11 stays USB), ch2 TIM3_CH2, ch3 TIM8_CH4.
+    GP output path. Siblings: ch0 TIM8_CH4, ch1 TIM3_CH2, ch2 TIM2_CH4,
+    ch3 TIM1_CH4 (output off → PA11 stays USB).
     Advanced timers (TIM1/TIM8) need BDTR.MOE=1.
 - **SYNC master follows the regime:** ≤524 µs → HRTIM master resets slaves
   A/B/E/F on MASTER_PER; above → TIM1 master (TRGO=update), TIM2/TIM3/TIM8
