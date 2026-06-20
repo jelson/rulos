@@ -81,7 +81,6 @@ import serial
 import serial.tools.list_ports
 import sys
 
-
 PULSEGEN_VID = 0x1209  # pid.codes
 PULSEGEN_PID = 0x71C5  # Lectrobox Pulsegen
 IDN_PREFIX = "Lectrobox,PG-4"
@@ -90,12 +89,17 @@ NUM_CHANNELS = 4
 
 def autodetect_port():
     """Return the device path of the (single) attached Pulsegen."""
-    candidates = [p.device for p in serial.tools.list_ports.comports()
-                  if p.vid == PULSEGEN_VID and p.pid == PULSEGEN_PID]
+    candidates = [
+        p.device
+        for p in serial.tools.list_ports.comports()
+        if p.vid == PULSEGEN_VID and p.pid == PULSEGEN_PID
+    ]
     if not candidates:
-        sys.exit(f"No Pulsegen found (VID:PID "
-                 f"{PULSEGEN_VID:04x}:{PULSEGEN_PID:04x}). "
-                 f"Try --port.")
+        sys.exit(
+            f"No Pulsegen found (VID:PID "
+            f"{PULSEGEN_VID:04x}:{PULSEGEN_PID:04x}). "
+            f"Try --port."
+        )
     matches = []
     for dev in candidates:
         try:
@@ -112,8 +116,9 @@ def autodetect_port():
         finally:
             ser.close()
     if not matches:
-        sys.exit("Found device(s) at the Pulsegen VID:PID but none "
-                 "answered *IDN? as a Pulsegen.")
+        sys.exit(
+            "Found device(s) at the Pulsegen VID:PID but none " "answered *IDN? as a Pulsegen."
+        )
     if len(matches) > 1:
         sys.exit(f"Multiple Pulsegens found: {matches}. Use --port.")
     return matches[0]
@@ -130,8 +135,9 @@ class Pulsegen:
     class Mode(enum.Enum):
         """Channel timing mode for set_mode(). The value is the SCPI
         keyword sent to the device."""
+
         ASYNC = "ASYNC"  # four independent channels
-        SYNC = "SYNC"    # all four channels share one phase-locked period
+        SYNC = "SYNC"  # all four channels share one phase-locked period
 
     # Expose the members on the class so callers can write Pulsegen.SYNC.
     ASYNC = Mode.ASYNC
@@ -150,9 +156,14 @@ class Pulsegen:
         """The USB iSerialNumber for this device (USBD_SERIAL_PREFIX +
         STM32 96-bit unique ID as hex); equals the serial field of *IDN?.
         None if it can't be read."""
-        return next((p.serial_number
-                     for p in serial.tools.list_ports.comports()
-                     if p.device == self._ser.port), None)
+        return next(
+            (
+                p.serial_number
+                for p in serial.tools.list_ports.comports()
+                if p.device == self._ser.port
+            ),
+            None,
+        )
 
     def close(self):
         self._ser.close()
@@ -196,8 +207,7 @@ class Pulsegen:
         """Select Pulsegen.SYNC (all channels one phase-locked period) or
         Pulsegen.ASYNC (four independent channels)."""
         if not isinstance(mode, self.Mode):
-            raise TypeError(
-                f"mode must be Pulsegen.SYNC or Pulsegen.ASYNC, got {mode!r}")
+            raise TypeError(f"mode must be Pulsegen.SYNC or Pulsegen.ASYNC, got {mode!r}")
         self.send(f"MODE {mode.value}")
 
     def get_mode(self):
@@ -264,8 +274,7 @@ class Pulsegen:
         self.set_delay(channel, delay_s)
         self.set_state(channel, True)
 
-    def burst(self, channel, period_s, width_s, ncyc, rep_s=1.0,
-              delay_s=0.0):
+    def burst(self, channel, period_s, width_s, ncyc, rep_s=1.0, delay_s=0.0):
         """Configure and start N-cycle bursts: ncyc pulses at period_s
         spacing and width_s width, repeating every rep_s seconds."""
         self.set_period(channel, period_s)
@@ -312,10 +321,10 @@ class Pulsegen:
     # fast-regime only -- the spacing must land in the HRTIM range -- so
     # pulse_burst() quantizes to the 250 ps grid and rejects spacings > ~524 us.
 
-    MIN_HZ = 0.03              # continuous floor (~34 s period)
+    MIN_HZ = 0.03  # continuous floor (~34 s period)
     MIN_BURST_SPACING_NS = 48  # tightest spacing offered: leaves a clean
-                               # half-period each way above the HRTIM
-                               # minimum-compare limit
+    # half-period each way above the HRTIM
+    # minimum-compare limit
     _TICK_PS = 250
     _PER_MAX = 0xFFDF
     _MIN_PER = (0x60, 0x30, 0x18, 0xC, 0x6, 0x3)
@@ -346,8 +355,7 @@ class Pulsegen:
         rate, and coherent with a shared reference). Raises if `hz` is
         below the ~0.03 Hz floor (34 s period)."""
         if hz < self.MIN_HZ:
-            raise ValueError(f"{hz:g} Hz is below the PG-4's "
-                             f"~{self.MIN_HZ:g} Hz floor")
+            raise ValueError(f"{hz:g} Hz is below the PG-4's " f"~{self.MIN_HZ:g} Hz floor")
         period_s = 1.0 / hz
         if width_s is None:
             width_s = min(5e-6, period_s / 4)
@@ -355,8 +363,7 @@ class Pulsegen:
         self._check(f"{hz:g} Hz x {width_s:g} s")
         return hz
 
-    def pulse_burst(self, channel, spacing_ns, ncyc, width_s=None,
-                    rep_s=1.0):
+    def pulse_burst(self, channel, spacing_ns, ncyc, width_s=None, rep_s=1.0):
         """Drive `channel` with `ncyc` pulses `spacing_ns` apart,
         repeating every `rep_s`. The spacing is clamped up to the PG-4's
         ~48 ns floor and quantized to the HRTIM grid; the actual spacing
@@ -365,8 +372,9 @@ class Pulsegen:
         spacing_ns = max(spacing_ns, self.MIN_BURST_SPACING_NS)
         actual_ps = self.quantize_period_ps(round(spacing_ns * 1000))
         if actual_ps is None:
-            raise ValueError(f"{spacing_ns:g} ns spacing is beyond the "
-                             f"PG-4's ~524 us period ceiling")
+            raise ValueError(
+                f"{spacing_ns:g} ns spacing is beyond the " f"PG-4's ~524 us period ceiling"
+            )
         if width_s is None:
             width_s = min(50e-9, actual_ps * 1e-12 / 2)
         self.burst(channel, actual_ps * 1e-12, width_s, ncyc, rep_s=rep_s)
@@ -376,13 +384,14 @@ class Pulsegen:
 
 # ---- CLI ------------------------------------------------------------------
 
+
 def _report(pg):
     """Read back the latched error in the same connection a setter just used
     and surface it. The device clears its error latch when the port is
     reopened, so a separate `pgctl.py error` invocation can't see it -- check
     here, while still connected."""
     err = pg.get_error()
-    if not err.startswith('0,'):
+    if not err.startswith("0,"):
         sys.exit(err)
 
 
@@ -460,11 +469,13 @@ def cmd_raw(pg, args):
 
 def main():
     p = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--port", default=None,
-                   help="Serial port (default: autodetect via USB VID/PID + "
-                        "*IDN? probe)")
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    p.add_argument(
+        "--port",
+        default=None,
+        help="Serial port (default: autodetect via USB VID/PID + " "*IDN? probe)",
+    )
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sp = sub.add_parser("idn", help="Read *IDN? identification string")
@@ -474,9 +485,9 @@ def main():
     sp.set_defaults(func=cmd_reset)
 
     sp = sub.add_parser("mode", help="Set or query ASYNC/SYNC mode")
-    sp.add_argument("value", nargs="?",
-                    choices=["async", "sync", "ASYNC", "SYNC"],
-                    help="Omit to query")
+    sp.add_argument(
+        "value", nargs="?", choices=["async", "sync", "ASYNC", "SYNC"], help="Omit to query"
+    )
     sp.set_defaults(func=cmd_mode)
 
     sp = sub.add_parser("state", help="Enable or disable a channel output")
@@ -484,8 +495,7 @@ def main():
     sp.add_argument("value", choices=["on", "off", "ON", "OFF", "1", "0"])
     sp.set_defaults(func=cmd_state)
 
-    sp = sub.add_parser("period",
-                        help="Set period in seconds (this channel async, all sync)")
+    sp = sub.add_parser("period", help="Set period in seconds (this channel async, all sync)")
     sp.add_argument("channel", type=int, choices=range(NUM_CHANNELS))
     sp.add_argument("seconds", type=float)
     sp.set_defaults(func=cmd_period)
@@ -495,55 +505,53 @@ def main():
     sp.add_argument("seconds", type=float)
     sp.set_defaults(func=cmd_width)
 
-    sp = sub.add_parser("delay",
-                        help="Set rising-edge offset in seconds (per channel)")
+    sp = sub.add_parser("delay", help="Set rising-edge offset in seconds (per channel)")
     sp.add_argument("channel", type=int, choices=range(NUM_CHANNELS))
     sp.add_argument("seconds", type=float)
     sp.set_defaults(func=cmd_delay)
 
-    sp = sub.add_parser("pulse",
-                        help="Configure period + width and turn the channel on")
+    sp = sub.add_parser("pulse", help="Configure period + width and turn the channel on")
     sp.add_argument("channel", type=int, choices=range(NUM_CHANNELS))
     sp.add_argument("period", type=float, help="Period in seconds")
     sp.add_argument("width", type=float, help="Width in seconds")
     sp.set_defaults(func=cmd_pulse)
 
-    sp = sub.add_parser("freq",
-                        help="Drive a channel at a given frequency and duty cycle")
+    sp = sub.add_parser("freq", help="Drive a channel at a given frequency and duty cycle")
     sp.add_argument("channel", type=int, choices=range(NUM_CHANNELS))
     sp.add_argument("hz", type=float, help="Frequency in Hz")
-    sp.add_argument("duty", nargs="?", type=float, default=50.0,
-                    help="Duty cycle in percent (default: 50)")
+    sp.add_argument(
+        "duty", nargs="?", type=float, default=50.0, help="Duty cycle in percent (default: 50)"
+    )
     sp.set_defaults(func=cmd_freq)
 
-    sp = sub.add_parser("stair",
-                        help="SYNC 4-channel staircase: ch n delayed by n*step")
+    sp = sub.add_parser("stair", help="SYNC 4-channel staircase: ch n delayed by n*step")
     sp.add_argument("period", type=float, help="Period in seconds")
     sp.add_argument("width", type=float, help="Width in seconds")
     sp.add_argument("step", type=float, help="Per-channel delay step in seconds")
     sp.set_defaults(func=cmd_stair)
 
-    sp = sub.add_parser("burst",
-                        help="N-cycle bursts: configure and start")
+    sp = sub.add_parser("burst", help="N-cycle bursts: configure and start")
     sp.add_argument("channel", type=int, choices=range(NUM_CHANNELS))
     sp.add_argument("period", type=float, help="Pulse spacing in seconds")
     sp.add_argument("width", type=float, help="Width in seconds")
     sp.add_argument("ncyc", type=int, help="Pulses per burst (1..63488)")
-    sp.add_argument("rep", nargs="?", type=float, default=1.0,
-                    help="Burst repetition interval in seconds (default: 1)")
+    sp.add_argument(
+        "rep",
+        nargs="?",
+        type=float,
+        default=1.0,
+        help="Burst repetition interval in seconds (default: 1)",
+    )
     sp.set_defaults(func=cmd_burst)
 
-    sp = sub.add_parser("off",
-                        help="Turn off one channel (or every channel if omitted)")
-    sp.add_argument("channel", nargs="?", type=int,
-                    choices=range(NUM_CHANNELS))
+    sp = sub.add_parser("off", help="Turn off one channel (or every channel if omitted)")
+    sp.add_argument("channel", nargs="?", type=int, choices=range(NUM_CHANNELS))
     sp.set_defaults(func=cmd_off)
 
     sp = sub.add_parser("error", help="Read the latched SYSTem:ERRor?")
     sp.set_defaults(func=cmd_error)
 
-    sp = sub.add_parser("raw",
-                        help="Send a raw SCPI command (queries auto-read)")
+    sp = sub.add_parser("raw", help="Send a raw SCPI command (queries auto-read)")
     sp.add_argument("command")
     sp.set_defaults(func=cmd_raw)
 

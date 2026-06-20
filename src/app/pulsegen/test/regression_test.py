@@ -67,6 +67,7 @@ NS = 1_000_000_000  # ns per second
 
 # ---- Measurement helpers --------------------------------------------------
 
+
 def collect(ts, duration_s, channels=(0, 1)):
     """Read the timestamp stream for duration_s and return a list of
     (channel, abs_ns) for the requested channels, abs_ns = seconds*1e9 +
@@ -86,7 +87,8 @@ def collect(ts, duration_s, channels=(0, 1)):
                 raise RuntimeError(
                     f"timestamper lost pulses on ch{rec.channel}: "
                     f"{rec.overcaptures} overcaptures, "
-                    f"{rec.buf_overflows} buffer overflows")
+                    f"{rec.buf_overflows} buffer overflows"
+                )
         elif isinstance(rec, OscillatorFailure):
             raise RuntimeError("timestamper reported oscillator failure")
     return records
@@ -140,15 +142,15 @@ def zipper_gaps(records, period_ns):
     if len(ch0) != len(ch1):
         raise RuntimeError(
             f"channel pulse counts differ ({len(ch0)} vs {len(ch1)}) -- "
-            f"a pulse was missed or duplicated")
+            f"a pulse was missed or duplicated"
+        )
     deltas = [b - a for a, b in zip(ch0, ch1)]
     if any(not (0 <= d < period_ns) for d in deltas):
         raise RuntimeError(
-            "a ch0/ch1 pair does not fall within one period -- "
-            "a pulse was missed or duplicated")
+            "a ch0/ch1 pair does not fall within one period -- " "a pulse was missed or duplicated"
+        )
     for seq in (ch0, ch1):
-        if any(seq[i + 1] - seq[i] > period_ns * 3 // 2
-               for i in range(len(seq) - 1)):
+        if any(seq[i + 1] - seq[i] > period_ns * 3 // 2 for i in range(len(seq) - 1)):
             raise RuntimeError("a period is missing from the capture")
     return deltas
 
@@ -167,7 +169,8 @@ def strict_interval(times, tol_ns=12):
         raise RuntimeError(
             f"a gap deviates {worst - med:+.1f} ns from the "
             f"{med:.1f} ns median -- a pulse was dropped, duplicated, "
-            f"or misplaced")
+            f"or misplaced"
+        )
     return sum(diffs) / len(diffs)
 
 
@@ -237,10 +240,12 @@ def test_sync_gaps(ts, pg, duration_s):
         tol = gap_tolerance_ns(gap)
         ok = abs(err) <= tol
         all_ok = all_ok and ok
-        print(f"  gap {gap:5d} ns: avg {mean:8.2f}  "
-              f"min {mn:6d}  max {mx:6d}  "
-              f"err {err:+6.2f}  tol +-{tol:.1f}  "
-              f"({n} pairs)  {'PASS' if ok else 'FAIL'}")
+        print(
+            f"  gap {gap:5d} ns: avg {mean:8.2f}  "
+            f"min {mn:6d}  max {mx:6d}  "
+            f"err {err:+6.2f}  tol +-{tol:.1f}  "
+            f"({n} pairs)  {'PASS' if ok else 'FAIL'}"
+        )
     return all_ok
 
 
@@ -255,7 +260,7 @@ def measure_rate(ts, pg, freq_hz, duration_s):
     period_ns = NS / freq_hz
     divider = max(1, round(freq_hz / 10_000))
     pg.set_mode(Pulsegen.ASYNC)
-    pg.set_period(0, period_ns / NS)   # async: ch0 + its Timer-F sibling ch1
+    pg.set_period(0, period_ns / NS)  # async: ch0 + its Timer-F sibling ch1
     pg.set_width(0, period_ns / 2 / NS)
     pg.set_width(1, period_ns / 2 / NS)
     pg.set_delay(0, 0)
@@ -295,8 +300,10 @@ def test_async_freq(ts, pg, duration_s):
             line_ok = line_ok and ch_ok
             parts.append(f"ch{ch} {measured[ch]:.1f} ns ({err_pct:+.3f}%)")
         all_ok = all_ok and line_ok
-        print(f"  {f:7d} Hz (expect {expect:.1f} ns): "
-              f"{'  '.join(parts)}  {'PASS' if line_ok else 'FAIL'}")
+        print(
+            f"  {f:7d} Hz (expect {expect:.1f} ns): "
+            f"{'  '.join(parts)}  {'PASS' if line_ok else 'FAIL'}"
+        )
     return all_ok
 
 
@@ -321,8 +328,7 @@ def test_async_pairing(ts, pg, duration_s):
     times = by_channel(records)
     expect_ns = NS / f2
     all_ok = True
-    print(f"  set ch0={f1} Hz then ch1={f2} Hz; both should track {f2} Hz "
-          f"({expect_ns:.1f} ns)")
+    print(f"  set ch0={f1} Hz then ch1={f2} Hz; both should track {f2} Hz " f"({expect_ns:.1f} ns)")
     for ch in (0, 1):
         iv = strict_interval(times.get(ch, []))
         if iv is None or len(times.get(ch, [])) < 50:
@@ -385,13 +391,15 @@ def measure_burst(ts, pg, ncyc, spacing_ns, rep_s, duration_s):
     times = sorted(t for _, t in records)
     bursts = group_bursts(times, int(rep_s * NS / 2))
     if len(bursts) < 4:
-        raise RuntimeError(f"only {len(bursts)} bursts captured "
-                           f"(need >=4 to have interior bursts)")
+        raise RuntimeError(
+            f"only {len(bursts)} bursts captured " f"(need >=4 to have interior bursts)"
+        )
     interior = bursts[1:-1]
     sizes = [len(b) for b in interior]
-    worst_err = max((abs((b - a) - spacing_ns)
-                     for burst in interior
-                     for a, b in zip(burst, burst[1:])), default=0)
+    worst_err = max(
+        (abs((b - a) - spacing_ns) for burst in interior for a, b in zip(burst, burst[1:])),
+        default=0,
+    )
     rep_gaps = [(b[0] - a[0]) / NS for a, b in zip(interior, interior[1:])]
     return sizes, worst_err, rep_gaps
 
@@ -402,19 +410,19 @@ def test_burst(ts, pg, duration_s):
     all_ok = True
 
     for ncyc, spacing_ns, rep_s in BURST_CASES:
-        sizes, worst_err, rep_gaps = measure_burst(
-            ts, pg, ncyc, spacing_ns, rep_s, duration_s)
+        sizes, worst_err, rep_gaps = measure_burst(ts, pg, ncyc, spacing_ns, rep_s, duration_s)
         count_ok = all(s == ncyc for s in sizes)
         spacing_ok = worst_err <= BURST_SPACING_TOL_NS
-        rep_ok = all(rep_s - BURST_REP_EARLY_S <= g <= rep_s + BURST_REP_LATE_S
-                     for g in rep_gaps)
+        rep_ok = all(rep_s - BURST_REP_EARLY_S <= g <= rep_s + BURST_REP_LATE_S for g in rep_gaps)
         ok = count_ok and spacing_ok and rep_ok
         all_ok = all_ok and ok
-        print(f"  ncyc {ncyc:5d} @ {spacing_ns} ns, rep {rep_s} s: "
-              f"counts {min(sizes)}..{max(sizes)} ({len(sizes)} bursts)  "
-              f"spacing err {worst_err:.0f} ns  "
-              f"rep {min(rep_gaps):.3f}..{max(rep_gaps):.3f} s  "
-              f"{'PASS' if ok else 'FAIL'}")
+        print(
+            f"  ncyc {ncyc:5d} @ {spacing_ns} ns, rep {rep_s} s: "
+            f"counts {min(sizes)}..{max(sizes)} ({len(sizes)} bursts)  "
+            f"spacing err {worst_err:.0f} ns  "
+            f"rep {min(rep_gaps):.3f}..{max(rep_gaps):.3f} s  "
+            f"{'PASS' if ok else 'FAIL'}"
+        )
 
     # Error latching: each invalid parameter against a running burst.
     for cmd, want_code in BURST_ERROR_CASES:
@@ -435,8 +443,10 @@ def test_burst(ts, pg, duration_s):
     records = collect(ts, 1.0, channels=(0,))
     ok = len(records) == 0
     all_ok = all_ok and ok
-    print(f"  burst off -> outputs off: {len(records)} pulses in 1 s "
-          f"(expect 0)  {'PASS' if ok else 'FAIL'}")
+    print(
+        f"  burst off -> outputs off: {len(records)} pulses in 1 s "
+        f"(expect 0)  {'PASS' if ok else 'FAIL'}"
+    )
 
     # Reconfiguring through pulse() does return the channel to a
     # continuous train (it clears burst state and re-enables the
@@ -449,30 +459,32 @@ def test_burst(ts, pg, duration_s):
     expect_min = int(0.5 * NS / 10_000)  # half the window at 10 us periods
     ok = len(records) >= expect_min
     all_ok = all_ok and ok
-    print(f"  pulse() after burst -> continuous: {len(records)} pulses "
-          f"in 1 s (>= {expect_min})  {'PASS' if ok else 'FAIL'}")
+    print(
+        f"  pulse() after burst -> continuous: {len(records)} pulses "
+        f"in 1 s (>= {expect_min})  {'PASS' if ok else 'FAIL'}"
+    )
     return all_ok
 
 
 # ---- Driver ---------------------------------------------------------------
 
+
 def main():
     p = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--ts-port", default=None,
-                   help="Timestamper serial port (default: autodetect)")
-    p.add_argument("--pg-port", default=None,
-                   help="Pulsegen serial port (default: autodetect)")
-    p.add_argument("--duration", type=float, default=2.0,
-                   help="Capture seconds per measurement (default: 2.0)")
-    p.add_argument("--only", choices=["sync", "async", "burst"], default=None,
-                   help="Run only one test group")
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    p.add_argument("--ts-port", default=None, help="Timestamper serial port (default: autodetect)")
+    p.add_argument("--pg-port", default=None, help="Pulsegen serial port (default: autodetect)")
+    p.add_argument(
+        "--duration", type=float, default=2.0, help="Capture seconds per measurement (default: 2.0)"
+    )
+    p.add_argument(
+        "--only", choices=["sync", "async", "burst"], default=None, help="Run only one test group"
+    )
     args = p.parse_args()
 
     results = {}
-    with Pulsegen(port=args.pg_port) as pg, \
-         LectroTIC4(port=args.ts_port) as ts:
+    with Pulsegen(port=args.pg_port) as pg, LectroTIC4(port=args.ts_port) as ts:
         print(f"Pulsegen:    {pg.idn()}")
         print(f"Timestamper: {ts.idn()}")
         try:

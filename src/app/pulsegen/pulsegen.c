@@ -142,10 +142,10 @@ static const uint16_t hrtim_min_per[6] = {0x0060, 0x0030, 0x0018, 0x000C, 0x0006
 // ---- GP (slow) regime ------------------------------------------------------
 
 // General-purpose timers run at 125 MHz -> 8 ns/tick (CK_INT, APBx prescaler = 1).
-#define GP_TICK_PS    8000ULL
-#define GP_PSC_MAX    0xFFFFU      // 16-bit prescaler on every GP timer
-#define GP_ARR16_MAX  0xFFFFU      // 16-bit timers (TIM1/3/8)
-#define GP_ARR32_MAX  0xFFFFFFFFU  // 32-bit timer (TIM2)
+#define GP_TICK_PS   8000ULL
+#define GP_PSC_MAX   0xFFFFU      // 16-bit prescaler on every GP timer
+#define GP_ARR16_MAX 0xFFFFU      // 16-bit timers (TIM1/3/8)
+#define GP_ARR32_MAX 0xFFFFFFFFU  // 32-bit timer (TIM2)
 // Longest period offered on every channel, capped to the 16-bit timers' reach so all four behave
 // identically (TIM2's 32-bit counter could go further, but uniformity wins): 65536 * 65536 * 8 ns.
 #define GP_MAX_PERIOD_PS (((uint64_t)GP_ARR16_MAX + 1) * (GP_PSC_MAX + 1) * GP_TICK_PS)
@@ -405,8 +405,8 @@ static void config_hrtim_channel(int ch, uint8_t ckpsc, uint32_t per, bool sync,
 
   const uint32_t out = hw->hrtim_output;
   LL_HRTIM_OUT_SetPolarity(HRTIM1, out, LL_HRTIM_OUT_POSITIVE_POLARITY);
-  LL_HRTIM_OUT_SetOutputSetSrc(
-      HRTIM1, out, zero_delay ? LL_HRTIM_OUTPUTSET_TIMPER : LL_HRTIM_OUTPUTSET_TIMCMP1);
+  LL_HRTIM_OUT_SetOutputSetSrc(HRTIM1, out,
+                               zero_delay ? LL_HRTIM_OUTPUTSET_TIMPER : LL_HRTIM_OUTPUTSET_TIMCMP1);
   LL_HRTIM_OUT_SetOutputResetSrc(HRTIM1, out, LL_HRTIM_OUTPUTRESET_TIMCMP2);
   LL_HRTIM_OUT_SetIdleMode(HRTIM1, out,
                            burst ? LL_HRTIM_OUT_IDLE_WHEN_BURST : LL_HRTIM_OUT_NO_IDLE);
@@ -726,8 +726,8 @@ static void apply_all(void) {
   const bool sync_hrtim = sync && uses_hrtim(0);
   const bool sync_gp = sync && !uses_hrtim(0);
 
-  uint32_t hrtim_run_mask = 0;   // HRTIM timers to enable together
-  uint32_t gp_run_mask = 0;      // bitmask of channels whose GP timer should be enabled
+  uint32_t hrtim_run_mask = 0;  // HRTIM timers to enable together
+  uint32_t gp_run_mask = 0;     // bitmask of channels whose GP timer should be enabled
   uint32_t hrtim_burst_outs = 0;
   int burst_ch = -1;
   bool burst_is_gp = false;
