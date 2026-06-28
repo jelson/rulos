@@ -15,11 +15,12 @@ width, delay, sync, and burst behave the same on both sides. Setting a
 channel's period sets just that channel in async, or all four in sync.
 Width and delay are always per channel.
 
-A domain can also run in burst mode: exactly N pulses (1..63488), then
+A domain can also run in burst mode: exactly N pulses (1..65534), then
 quiet, repeating at a programmable interval. The pulse count and
-intra-burst spacing are hardware-exact; the repetition interval is
-software-scheduled on the device (~10 ms granularity). One domain bursts
-at a time in async; sync mode bursts all four channels coherently.
+intra-burst spacing are hardware-exact; the repetition interval is timed
+by a dedicated hardware timer on the device, so it is jitter-free. One
+domain bursts at a time in async; sync mode bursts all four channels
+coherently.
 
 CLI usage examples:
   pgctl.py idn
@@ -247,16 +248,16 @@ class Pulsegen:
         return self.query(f"SOUR{channel}:BURS:STAT?") == "ON"
 
     def set_burst_ncycles(self, channel, ncyc):
-        """Pulses per burst (1..63488), hardware-counted."""
+        """Pulses per burst (1..65534), hardware-counted."""
         self.send(f"SOUR{channel}:BURS:NCYC {ncyc}")
 
     def get_burst_ncycles(self, channel):
         return int(self.query(f"SOUR{channel}:BURS:NCYC?"))
 
     def set_burst_period(self, channel, seconds):
-        """Burst repetition interval in seconds (default 1.0). Software-
-        scheduled on the device (~10 ms granularity); must exceed the
-        burst length by at least 50 ms, max 60 s."""
+        """Burst repetition interval in seconds (default 1.0). Timed by a
+        hardware timer on the device (jitter-free); must exceed one whole
+        burst frame, max 60 s."""
         self.send(f"SOUR{channel}:BURS:INT:PER {seconds:.12g}")
 
     def get_burst_period(self, channel):
@@ -534,7 +535,7 @@ def main():
     sp.add_argument("channel", type=int, choices=range(NUM_CHANNELS))
     sp.add_argument("period", type=float, help="Pulse spacing in seconds")
     sp.add_argument("width", type=float, help="Width in seconds")
-    sp.add_argument("ncyc", type=int, help="Pulses per burst (1..63488)")
+    sp.add_argument("ncyc", type=int, help="Pulses per burst (1..65534)")
     sp.add_argument(
         "rep",
         nargs="?",

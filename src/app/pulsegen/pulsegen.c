@@ -581,7 +581,7 @@ static uint32_t burst_idle_ticks(uint64_t period_ps, uint32_t ncyc) {
 
 // Pick prescaler + ARR for the repetition timer (TIM5, 32-bit) to count one burst-repeat interval.
 // Smallest prescaler that fits the 32-bit counter, for the finest cadence step. rep_ps is already
-// validated into [frame + 50 ms, 60 s], so it always fits (div 1 reaches ~34 s, div 2 ~69 s).
+// validated into [frame + 1 ms, 60 s], so it always fits (div 1 reaches ~34 s, div 2 ~69 s).
 static void select_rep_timer(uint64_t rep_ps, uint32_t *out_psc, uint32_t *out_arr) {
   const uint64_t span = GP_TICK_PS * ((uint64_t)GP_ARR32_MAX + 1);  // reach at div 1
   uint64_t div = (rep_ps + span - 1) / span;

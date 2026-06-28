@@ -198,6 +198,11 @@ only be confirmed on a real board:
 - **HRTIM AF per pin** (PA9/PA10/PC6 = AF13, PC8 = AF3) and **GP AF per pin**
   (AF10/AF6/AF2/AF4): drive every channel in both regimes and confirm all four
   actually emit (the Rev A Timer-E-silent bug was exactly a wrong AF).
+- **Burst repetition timer (TIM5).** The interval between burst frames is timed
+  by TIM5 in hardware, not the scheduler, so it should be jitter-free and
+  phase-coherent with the pulses. Confirm the burst-to-burst start interval
+  holds to its setpoint two-sided (scope, or the regression test's rep check),
+  and that a repetition as short as one frame + 1 ms still emits clean frames.
 
 ## Design-review findings already fixed in firmware (2026-06-14)
 
@@ -209,6 +214,22 @@ whole domain off the master count; (3) GP burst wasn't pulse-exact -- now it
 opens/closes the run window on period boundaries in the update ISR. Plus parity
 polish: all channels capped uniformly at ~34 s (TIM2's 32-bit reach deliberately
 not exposed) and an O(1) prescaler calc.
+
+## Burst on a hardware timer + idle/margin fix (2026-06-28)
+
+The burst repetition interval moved off the RULOS scheduler onto a dedicated
+hardware timer (TIM5, 32-bit, no pins): its update ISR re-arms each frame, so
+the cadence is locked to the 125 MHz clock -- phase-coherent and jitter-free,
+and the scheduler is out of every time-critical path. Two coupled fixes rode
+along: the HRTIM BMC idle window is now sized by absolute time (~200 us, the
+BMPER-ISR grace period) rather than a flat 8192 periods that ballooned to
+seconds of dead time at slow periods; and validate() now requires the
+repetition to exceed the *real* frame duration -- (idle + ncyc) periods for
+HRTIM, (ncyc + 1) for GP -- plus a 1 ms guard, closing a hole where a too-short
+interval re-armed the controller mid-frame. Side effects: max ncyc rose
+63488 -> 65534, and the minimum repetition interval dropped from ~frame + 50 ms
+to ~frame + 1 ms. None of this has run on hardware yet -- see the TIM5 bring-up
+item above.
 
 ## Firmware patterns these checks enable (reuse, not hardware checks)
 

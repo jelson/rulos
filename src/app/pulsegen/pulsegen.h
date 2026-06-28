@@ -26,28 +26,29 @@
 
 #define NUM_CHANNELS 4
 
-#define PULSEGEN_FW_VERSION "0.3.0"
+#define PULSEGEN_FW_VERSION "0.4.0"
 
 // Setters for each SCPI-controllable parameter. Each stashes the new value
 // and rebuilds the HRTIM configuration. Returns NULL on success, or a static
 // SCPI error string (e.g. `"-200,\"Period out of range\""`) describing why
 // the targeted channel is invalid.
 //
-// period applies to the channel's whole domain: its group (the other channel
-// on the same HRTIM timer) in async mode, all four channels in sync mode.
-// width and delay (rising-edge offset) are per channel.
+// period applies to the channel's whole domain: just that channel in async
+// mode (each channel is fully independent, on its own HRTIM and GP timers),
+// all four channels in sync mode. width and delay (rising-edge offset) are
+// per channel.
 const char *pulsegen_set_state(int ch, bool on);
 const char *pulsegen_set_period_ps(int ch, uint64_t ps);
 const char *pulsegen_set_width_ps(int ch, uint64_t ps);
 const char *pulsegen_set_delay_ps(int ch, uint64_t ps);
 
 // Burst parameters apply to the channel's whole domain, like period. With
-// burst on, the domain emits exactly ncyc pulses (hardware-counted by the
-// HRTIM burst mode controller, 1..63488), rests low, and repeats every
-// interval. The interval is software-scheduled (~10 ms granularity); the
-// count and intra-burst spacing are hardware-exact. Only one domain can
-// burst at a time in async mode; sync mode bursts all four channels
-// coherently.
+// burst on, the domain emits exactly ncyc pulses (1..65534), rests low, and
+// repeats every interval. The count and intra-burst spacing are hardware-exact
+// (the HRTIM burst controller in the fast regime, a software per-period count
+// in the slow regime); the repetition interval is timed by a hardware timer,
+// so it is jitter-free. Only one domain can burst at a time in async mode;
+// sync mode bursts all four channels coherently.
 //
 // Disabling a live burst also disables the domain's outputs (re-enable
 // them explicitly): the domain period is the intra-burst spacing, so
@@ -63,7 +64,7 @@ bool pulsegen_get_burst_state(int ch);
 uint32_t pulsegen_get_burst_ncyc(int ch);
 uint64_t pulsegen_get_burst_period_ps(int ch);
 
-// Select ASYNC (two independent frequency groups) or SYNC (all channels share
+// Select ASYNC (four independent channels) or SYNC (all channels share
 // one period, phase-locked). Returns NULL (never fails).
 const char *pulsegen_set_mode(bool sync);
 
