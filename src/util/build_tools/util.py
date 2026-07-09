@@ -90,7 +90,8 @@ def repo_is_dirty():
 
 @functools.cache
 def commit_hash():
-    return get_shell_output(["git", "describe", "--dirty", "--always", "--tags"])
+    h = get_shell_output(["git", "rev-parse", "HEAD"])[:8]
+    return h + "-dirty" if repo_is_dirty() else h
 
 
 @functools.cache
