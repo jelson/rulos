@@ -186,11 +186,24 @@ _Static_assert(CLOCK_FREQ_HZ - 1 <= COUNTER_VALUE_MASK,
 #define LED_CHAN3 GPIO_A6  // channel 3
 #define LED_USB   GPIO_A7  // USB state
 
-// 10 MHz HSE health; the one LED that moved between board revisions.
+// Two Rev B LED routings must never be driven -- each toggle edge
+// phase-slips the PLL by one 10 MHz reference period, corrupting
+// timestamps (both measured on hardware):
+//  - the clock LED on PC15, which is fed by the current-limited
+//    RTC-domain power switch that the datasheet forbids sourcing LED
+//    current from;
+//  - ch0's activity LED on PH1, the OSC_OUT pin adjacent to the 10 MHz
+//    input on PH0 (Rev A shares the PH1 routing but does not exhibit
+//    the coupling).
+// So on Rev B there is no clock LED and ch0's LED stays dark;
+// oscillator failure still shows as the remaining channel LEDs
+// flashing in unison. LED_CHAN_FIRST is where the channel-LED loops
+// start.
 #if defined(TIMESTAMPER_REV_B)
-#define LED_CLOCK GPIO_C15
+#define LED_CHAN_FIRST 1
 #elif defined(TIMESTAMPER_REV_A)
-#define LED_CLOCK GPIO_B5
+#define LED_CLOCK      GPIO_B5
+#define LED_CHAN_FIRST 0
 #else
 #error "timestamper: board rev not set -- define TIMESTAMPER_REV_A or _REV_B (see SConstruct)"
 #endif
@@ -663,12 +676,14 @@ static void update_leds(void) {
   static bool on_phase = false;
   on_phase = !on_phase;
 
+#ifdef LED_CLOCK
   // 10 MHz HSE health: a steady heartbeat regardless of input activity. Off when HSE has failed.
   if (g_rulos_hse_failed) {
     gpio_clr(LED_CLOCK);
   } else {
     gpio_set_or_clr(LED_CLOCK, on_phase);
   }
+#endif
 
   // Each activity LED has an idle state and a "blink" state opposite to idle. The blink shows up
   // during whichever phase is opposite the idle level: on_phase for channels (idle off), off_phase
@@ -678,7 +693,7 @@ static void update_leds(void) {
   // phase with the clock LED. A single pulse produces one visible 100 ms blink the next time the
   // LED's active phase comes around.
 
-  for (int i = 0; i < NUM_CHANNELS; i++) {
+  for (int i = LED_CHAN_FIRST; i < NUM_CHANNELS; i++) {
     gpio_set_or_clr(led_chan_pins[i], on_phase && received_recent_pulse(i));
   }
 
@@ -784,8 +799,8 @@ static void periodic_task(void *data) {
 
   // HSE failed at boot or mid-stream (the latter detected by CSS via the NMI handler in
   // stm32-hardware.c). HSI fallback can't produce measurement-accurate timestamps, so refuse to
-  // operate and surface the error to the user. Per LED policy, LED_CLOCK is now off (handled by
-  // update_leds), and we flash the channel LEDs in unison as a "this device is broken" indicator.
+  // operate and surface the error to the user. The clock LED (if this rev has one) goes off in
+  // update_leds, and we flash the channel LEDs in unison as a "this device is broken" indicator.
   if (g_rulos_hse_failed) {
     LL_TIM_DisableCounter(TIM2);
     LL_TIM_DisableCounter(TIM5);
@@ -802,7 +817,7 @@ static void periodic_task(void *data) {
 
     static bool on = false;
     on = !on;
-    for (int i = 0; i < NUM_CHANNELS; i++) {
+    for (int i = LED_CHAN_FIRST; i < NUM_CHANNELS; i++) {
       gpio_set_or_clr(led_chan_pins[i], on);
     }
 
@@ -1203,9 +1218,11 @@ int main() {
   led_chan_pins[1] = LED_CHAN1;
   led_chan_pins[2] = LED_CHAN2;
   led_chan_pins[3] = LED_CHAN3;
+#ifdef LED_CLOCK
   gpio_make_output(LED_CLOCK);
+#endif
   gpio_make_output(LED_USB);
-  for (int i = 0; i < NUM_CHANNELS; i++) {
+  for (int i = LED_CHAN_FIRST; i < NUM_CHANNELS; i++) {
     gpio_make_output(led_chan_pins[i]);
   }
 
