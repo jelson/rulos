@@ -26,7 +26,7 @@
 
 #define NUM_CHANNELS 4
 
-#define PULSEGEN_FW_VERSION "0.5.0"
+#define PULSEGEN_FW_VERSION "1.0.0"
 
 // Setters for each SCPI-controllable parameter. Each stashes the new value
 // and rebuilds the HRTIM configuration. Returns NULL on success, or a static
