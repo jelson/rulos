@@ -583,9 +583,12 @@ def main():
         print(f"Pulsegen:    {pg.idn()}")
         print(f"Timestamper: {ts.idn()}")
         try:
-            pg.reset()
-            configure_ts(ts)
             for name in selected:
+                # Every test starts from silence and default capture config, so
+                # no test's leftover state (e.g. channels still emitting) can
+                # poison the next one's capture.
+                pg.reset()
+                configure_ts(ts)
                 results[name] = TESTS[name](ts, pg, args.duration)
         finally:
             pg.off()
