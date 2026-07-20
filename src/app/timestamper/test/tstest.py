@@ -478,15 +478,19 @@ class Source:
     def off(self):
         self.pg.off()
 
-    def _async_base(self):
-        # Outputs off FIRST: clearing burst state while an output is live momentarily runs it
+    def _bursts_off(self):
+        # Rev B: every channel is its own period domain, so burst state must be cleared per channel.
+        # Call only with outputs already off -- clearing a live channel's burst momentarily runs it
         # CONTINUOUSLY at the old intra-burst spacing (a ~20 MHz blast after a minimum-spacing
         # burst phase), which sets overcapture flags on the device under test.
         for c in CHANNELS:
+            self.pg.set_burst_state(c, False)
+
+    def _async_base(self):
+        for c in CHANNELS:  # outputs off FIRST; see _bursts_off
             self.pg.set_state(c, False)
         self.pg.set_mode(Pulsegen.ASYNC)
-        for domain in (0, 2):  # one burst controller per period domain
-            self.pg.set_burst_state(domain, False)
+        self._bursts_off()
 
     def periodic(self, channel, hz, width_s):
         """One channel running continuously; everything else off."""
@@ -511,10 +515,10 @@ class Source:
     def sync(self, delays_ns, period_ns, width_ns=1000):
         """All four channels phase-locked at one period with the given per-channel rising-edge
         delays (ns)."""
-        for c in CHANNELS:  # outputs off first; see _async_base
+        for c in CHANNELS:  # outputs off first; see _bursts_off
             self.pg.set_state(c, False)
         self.pg.set_mode(Pulsegen.SYNC)
-        self.pg.set_burst_state(0, False)  # sync = one domain
+        self._bursts_off()
         for c in CHANNELS:
             self.pg.set_period(c, period_ns / NS)
             self.pg.set_width(c, width_ns / NS)
