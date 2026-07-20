@@ -29,10 +29,17 @@ but need hardware, per PCB_NOTES.md bring-up checklist):
   6. PER-PIN AF. Drive every channel in both regimes and confirm all four emit
      (the Rev A Timer-E-silent bug was a wrong AF; Rev B AFs are per-pin,
      AF13/AF13/AF13/AF3 fast and AF10/AF6/AF2/AF4 slow).
+  7. SUB-TICK (250 ps) PLACEMENT. Sweep a SYNC delay in 250 ps steps at a
+     CKPSC=0 period and watch the timestamper's 4 ns-quantized mean phase
+     advance: physical jitter dithers edges across bin boundaries, so the mean
+     interpolates below the tick. Working placement shows one 4 ns bin per
+     sixteen 250 ps steps with crossings positioned by the analog base phase;
+     a shifted second sweep must move the crossings accordingly (~4-5 min).
 
 Caveats:
   - The two devices share the 10 MHz clock, so sub-2-tick gaps resolve only to
-    +-1 timestamper tick (4 ns); wider gaps are tight.
+    +-1 timestamper tick (4 ns); wider gaps are tight (the subtick sweep gets
+    below the tick only statistically, via jitter dither).
 
 Run:
   regression_test.py
@@ -553,6 +560,143 @@ def test_per_pin_af(ts, pg, duration_s):
     return all_ok
 
 
+# ---- Test 7: sub-tick (250 ps) delay placement ----------------------------
+
+# SYNC at a CKPSC=0 period (250 ps grid), ch0 fixed and ch1 swept in 250 ps
+# steps. Each channel's phase is timestamp mod period -- exact, because both
+# instruments share the reference -- and although the timestamper quantizes to
+# 4 ns, physical jitter dithers edges across bin boundaries so the mean over
+# thousands of pulses interpolates below the tick. Working 250 ps placement
+# shows one 4 ns bin per SIXTEEN steps, with crossing positions set by the
+# analog base phase; sweep B moves the common base +1 ns and every crossing
+# must move ~4 steps earlier (mod 16). A delay path internally quantized to
+# 4 ns can do neither.
+SUBTICK_PERIOD_NS = 10_000  # CKPSC=0 (<= ~16.4 us)
+SUBTICK_WIDTH_NS = 1_000
+SUBTICK_BASE_PS = 1_000_000
+SUBTICK_STEP_PS = 250
+SUBTICK_STEPS = 64  # 16 ns span = 4 bin transitions
+SUBTICK_DIVIDER = 32  # keeps 2 x 100 kHz within the record budget
+SUBTICK_CAPTURE_S = 1.0
+
+
+def subtick_phase(times):
+    """Circular-safe mean of (t mod period), centered on the median."""
+    mods = [t % SUBTICK_PERIOD_NS for t in times]
+    m = statistics.median(mods)
+    half = SUBTICK_PERIOD_NS // 2
+    return m + statistics.fmean(((x - m + half) % SUBTICK_PERIOD_NS) - half for x in mods)
+
+
+def subtick_measure(ts):
+    ts.discard_pending(settle_s=0.2)
+    times = by_channel(collect(ts, SUBTICK_CAPTURE_S, channels=(0, 1)))
+    if len(times.get(0, [])) < 500 or len(times.get(1, [])) < 500:
+        raise RuntimeError(
+            f"subtick: too few samples ({len(times.get(0, []))}/{len(times.get(1, []))})"
+        )
+    d = (subtick_phase(times[1]) - subtick_phase(times[0])) % SUBTICK_PERIOD_NS
+    return d - SUBTICK_PERIOD_NS if d > SUBTICK_PERIOD_NS / 2 else d
+
+
+def subtick_sweep(ts, pg, base_ps, label):
+    """Set both channels' base, wait for the relative phase to settle (a full
+    reconfig is followed by a slow ns-scale drift), then sweep ch1."""
+    pg.set_delay(0, base_ps / 1e12)
+    pg.set_delay(1, base_ps / 1e12)
+    err = pg.get_error()
+    if not err.startswith("0,"):
+        raise RuntimeError(f"subtick base config: {err}")
+    prev = subtick_measure(ts)
+    for i in range(20):
+        cur = subtick_measure(ts)
+        if abs(cur - prev) < 0.15:
+            break
+        prev = cur
+    print(f"  {label}: settled after {i + 1} checks (drift now {abs(cur - prev):.3f} ns)")
+
+    deltas = []
+    for k in range(SUBTICK_STEPS):
+        pg.set_delay(1, (base_ps + k * SUBTICK_STEP_PS) / 1e12)
+        err = pg.get_error()
+        if not err.startswith("0,"):
+            raise RuntimeError(f"subtick k={k}: {err}")
+        deltas.append(subtick_measure(ts))
+    return deltas
+
+
+def subtick_centers(deltas):
+    """First k at which the mean rises past each bin midpoint (2, 6, 10, 14 ns
+    above the sweep's starting plateau)."""
+    base = deltas[0]
+    centers = []
+    for level in (2.0, 6.0, 10.0, 14.0):
+        for k, d in enumerate(deltas):
+            if d - base >= level:
+                centers.append(k)
+                break
+    return centers
+
+
+def test_subtick(ts, pg, duration_s):
+    print("\n=== Sub-tick (250 ps) delay placement ===")
+    pg.set_mode(Pulsegen.SYNC)
+    for c in range(NUM_CHANNELS):
+        pg.set_period(c, SUBTICK_PERIOD_NS / NS)
+        pg.set_width(c, SUBTICK_WIDTH_NS / NS)
+        pg.set_delay(c, SUBTICK_BASE_PS / 1e12)
+        pg.set_state(c, c in (0, 1))
+    err = pg.get_error()
+    if not err.startswith("0,"):
+        raise RuntimeError(f"subtick setup: {err}")
+    for c in (0, 1):
+        ts.set_divider(c, SUBTICK_DIVIDER)
+
+    a = subtick_sweep(ts, pg, SUBTICK_BASE_PS, "sweep A")
+    b = subtick_sweep(ts, pg, SUBTICK_BASE_PS + 1_000, "sweep B (+1 ns base)")
+
+    all_ok = True
+    ks = range(SUBTICK_STEPS)
+    mean_k = statistics.fmean(ks)
+    denom = sum((k - mean_k) ** 2 for k in ks)
+    for name, d in (("A", a), ("B", b)):
+        mean_d = statistics.fmean(d)
+        slope = sum((k - mean_k) * (x - mean_d) for k, x in zip(ks, d)) / denom
+        slope /= SUBTICK_STEP_PS / 1000  # ns of motion per ns commanded
+        ok = 0.85 <= slope <= 1.15
+        all_ok = all_ok and ok
+        print(
+            f"  sweep {name}: slope {slope:.3f} (1.0 = each 250 ps step moves the "
+            f"edge 250 ps)  {'PASS' if ok else 'FAIL'}"
+        )
+
+    ca, cb = subtick_centers(a), subtick_centers(b)
+    for name, c in (("A", ca), ("B", cb)):
+        spacings = [j - i for i, j in zip(c, c[1:])]
+        ok = len(c) >= 3 and all(14 <= s <= 18 for s in spacings)
+        all_ok = all_ok and ok
+        print(
+            f"  sweep {name}: bin transitions at k={c} (spacings {spacings}; "
+            f"expect 16 +-2)  {'PASS' if ok else 'FAIL'}"
+        )
+
+    # +1 ns base = +4 steps: crossings arrive ~4 steps earlier, modulo the
+    # 16-step bin. Compare per-sweep crossing phase within the bin cycle.
+    if ca and cb:
+        shifts = [(((j - i) + 8) % 16) - 8 for i, j in zip(ca, cb)]
+        med = statistics.median(shifts)
+        ok = -6.0 <= med <= -2.0
+        all_ok = all_ok and ok
+        print(
+            f"  base shift moved crossings {shifts} steps mod 16 (median {med:+.1f}; "
+            f"expect ~-4)  {'PASS' if ok else 'FAIL'}"
+        )
+    else:
+        all_ok = False
+        print("  FAIL: too few crossings to compare sweeps")
+    return all_ok
+
+
 # ---- Driver ---------------------------------------------------------------
 
 TESTS = {
@@ -562,6 +706,7 @@ TESTS = {
     "sync": test_sync_stair,
     "burst": test_burst,
     "af": test_per_pin_af,
+    "subtick": test_subtick,
 }
 
 
