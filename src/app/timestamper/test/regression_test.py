@@ -12,9 +12,10 @@ Hardware setup: a Lectrobox PG-4 wired straight through (PG-4 ch N -> LectroTIC-
 both devices on USB and on the same 10 MHz reference.
 
 Usage:
-  regression_test.py
-  regression_test.py --channel 1
-  regression_test.py --phase rising --skip binary"""
+  regression_test.py                       # all four channels
+  regression_test.py --channel 1           # one channel only
+  regression_test.py --phase rising --skip binary
+  regression_test.py --skip ch3            # phase labels include [chN wire]"""
 
 import argparse
 import os
@@ -55,11 +56,16 @@ WIRES = ("text", "binary")
 PHASES = []
 
 
-def phase(label, wires=WIRES, releases_port=False, needs_bmp=False, **params):
+def phase(label, wires=WIRES, releases_port=False, needs_bmp=False, per_channel=None, **params):
     """Register the decorated function as a phase. One function can be registered several times with
     different `params` (bound as keyword arguments at run time), so a parameterized test reads as
     one visible spec plus a list of declared variants. Decorators stack bottom-up: the bottom
-    registration runs first."""
+    registration runs first.
+
+    per_channel phases run once per selected input channel (ctx.channel). Wire-parameterized phases
+    are per-channel by definition -- they all drive ctx.channel through the shared capture path --
+    so the flag defaults to True for them and False for run-once (wires=None) phases; pass it
+    explicitly only to override (a run-once phase that reads ctx.channel meaningfully)."""
 
     def register(fn):
         PHASES.append(
@@ -69,6 +75,7 @@ def phase(label, wires=WIRES, releases_port=False, needs_bmp=False, **params):
                 wires=wires,
                 releases_port=releases_port,
                 needs_bmp=needs_bmp,
+                per_channel=per_channel if per_channel is not None else wires is not None,
                 params=params,
             )
         )
@@ -402,7 +409,7 @@ def phase_reset(ctx):
     ctx.ph.expect(tic.get_stream_enabled() is True, "post-RST stream on")
 
 
-@phase("slope switch", wires=None)
+@phase("slope switch", wires=None, per_channel=True)
 def phase_slope_switch(ctx):
     """Switch POS -> NEG mid-capture and confirm the device starts detecting the opposite edge --
     coverage the steady POS/BOTH phases don't give. Capturing rising edges gives period-long gaps;
@@ -506,7 +513,7 @@ def phase_idn_serial(ctx):
     )
 
 
-@phase("divider semantics", wires=None)
+@phase("divider semantics", wires=None, per_channel=True)
 def phase_divider_semantics(ctx):
     """Two fine points of the divider contract. In BOTH mode the divider counts EDGES -- each
     pulse contributes its rising and falling edge -- so divider N yields 2*rate/N records with
@@ -980,12 +987,10 @@ def main():
     p.add_argument("--pg-port", default=None, help="PG-4 serial port (default: autodetect)")
     p.add_argument(
         "--channel",
-        type=int,
-        choices=[0, 1, 2, 3],
-        default=0,
-        help="Input channel under test for the per-channel "
-        "phases (the PG-4 output wired straight "
-        "through to it is driven)",
+        choices=["0", "1", "2", "3", "all"],
+        default="all",
+        help="Input channel(s) for the per-channel phases (each drives the "
+        "PG-4 output wired straight through to it); default: all four",
     )
     p.add_argument(
         "--duration", type=float, default=5.0, help="Capture window per steady phase, s (default 5)"
@@ -1016,31 +1021,52 @@ def main():
         pd.fn(ctx, **pd.params)
         results.append((name, ctx.ph.ok))
 
+    channels = [0, 1, 2, 3] if args.channel == "all" else [int(args.channel)]
+
     sg = Pulsegen(port=args.pg_port)
     src = tstest.Source(sg)
     print(f"Pulse source: {sg.idn()} (PG-4; base rate {PULSE_HZ:g} Hz)")
 
     with LectroTIC4(args.port) as tic:
-        print(f"LectroTIC-4: {tic.port}; channel {args.channel}")
+        print(f"LectroTIC-4: {tic.port}; channels {channels}")
         port_path = tic.port
         print(f"Connected: {tic.idn()}")
         ctx = SimpleNamespace(
-            tic=tic, src=src, channel=args.channel, duration=args.duration, wire=None, port=None
+            tic=tic, src=src, channel=channels[0], duration=args.duration, wire=None, port=None
         )
         try:
-            for wire in WIRES:
-                ctx.wire = wire
+            # Per-channel phases run for every selected channel, grouped by channel so a bad jack
+            # reads as one contiguous block of failures.
+            for ch in channels:
+                ctx.channel = ch
+                for wire in WIRES:
+                    ctx.wire = wire
+                    for pd in PHASES:
+                        if (
+                            pd.wires
+                            and wire in pd.wires
+                            and not pd.releases_port
+                            and want(f"{pd.label} [ch{ch} {wire}]")
+                        ):
+                            run(pd, f"{pd.label} [ch{ch} {wire}]", ctx)
+                ctx.wire = None
                 for pd in PHASES:
                     if (
-                        pd.wires
-                        and wire in pd.wires
+                        pd.wires is None
+                        and pd.per_channel
                         and not pd.releases_port
-                        and want(f"{pd.label} [{wire}]")
+                        and want(f"{pd.label} [ch{ch}]")
                     ):
-                        run(pd, f"{pd.label} [{wire}]", ctx)
+                        run(pd, f"{pd.label} [ch{ch}]", ctx)
             ctx.wire = None
+            ctx.channel = channels[0]
             for pd in PHASES:
-                if pd.wires is None and not pd.releases_port and want(pd.label):
+                if (
+                    pd.wires is None
+                    and not pd.per_channel
+                    and not pd.releases_port
+                    and want(pd.label)
+                ):
                     run(pd, pd.label, ctx)
         finally:
             tic.set_stream_enabled(False)
