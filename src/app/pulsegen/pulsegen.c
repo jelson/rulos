@@ -180,6 +180,10 @@ static const uint16_t hrtim_min_per[6] = {0x0060, 0x0030, 0x0018, 0x000C, 0x0006
 #define BURST_IDLE_MIN       2U                      // period floor (near-ceiling periods only)
 #define BURST_NCYC_MAX       (65536U - BURST_IDLE_MIN)
 
+// GP rising-edge guard past the period boundary: the update-ISR latency budget for the software
+// burst gating (see config_gp_output). 16 us against a >= ~524 us GP period.
+#define GP_GATE_GUARD_PS (16ULL * 1000 * 1000)
+
 #define BURST_REP_DEFAULT_PS PS_PER_SEC
 #define BURST_REP_MARGIN_PS  (PS_PER_SEC / 1000)   // 1 ms guard past the frame for ISR latency
 #define BURST_REP_MAX_PS     (60ULL * PS_PER_SEC)  // TIM5 32-bit reach (16 ns tick at div 2)
@@ -426,6 +430,14 @@ static void config_hrtim_channel(int ch, uint8_t ckpsc, uint32_t per, bool sync,
                             sync ? LL_HRTIM_RESETTRIG_MASTER_PER : LL_HRTIM_RESETTRIG_NONE);
 
   uint32_t delay_t = (uint32_t)(chan[ch].delay_ps / tick_ps);
+  // SYNC: shift every channel's rising edge by one min_t so that sub-min_t delays are placeable as
+  // compares (RM0440: CMPx must be >= 3 fHRTIM periods; without the shift, a delay under ~24 ns
+  // silently collapses to the period event, flattening fine stairs). The shift is common to all
+  // channels, so the relative offsets -- the only thing SYNC promises -- are preserved exactly; it
+  // wraps at the shared period.
+  if (sync) {
+    delay_t = (delay_t + min_t) % per;
+  }
   // A bursting output must not set on the period event (it races the burst controller's idle
   // release); clamp the rising edge to the first usable compare value instead.
   if (burst && delay_t < min_t) {
@@ -527,7 +539,13 @@ static bool config_gp_timebase(int ch, uint64_t period_ps, bool sync, uint32_t *
 static void config_gp_output(int ch, uint32_t arr, uint64_t tick_ps, bool burst) {
   const channel_hw_t *hw = &channel_hw[ch];
   TIM_TypeDef *t = hw->gp_timer;
-  uint32_t delay_t = (uint32_t)(chan[ch].delay_ps / tick_ps);
+  // Every GP rising edge gets a guard offset past the period boundary, so the burst-gating update
+  // ISR (which runs at the boundary) always opens or closes the run window before the period's
+  // pulse begins. Without it, a delay-0 pulse races the ISR: the close loses by the interrupt
+  // latency and the scope sees an extra truncated pulse. Applied uniformly (burst or not), so SYNC
+  // relative offsets are preserved; wraps at the period like the HRTIM sync shift.
+  const uint32_t guard_t = (uint32_t)(GP_GATE_GUARD_PS / tick_ps);
+  uint32_t delay_t = (uint32_t)((chan[ch].delay_ps / tick_ps + guard_t) % ((uint64_t)arr + 1));
   uint32_t width_t = (uint32_t)(chan[ch].width_ps / tick_ps);
   if (width_t < 1) {
     width_t = 1;
