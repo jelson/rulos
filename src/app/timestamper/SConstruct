@@ -47,6 +47,7 @@ RulosBuildTarget(
                 '-DRULOS_PLLM=1',
                 '-DRULOS_PLLN=50',
                 '-DSCHEDULER_CAPACITY=4',
+                '-DTIMESTAMPER_REV_B',
                 # USB identity (pid.codes registration pending; see
                 # https://github.com/pidcodes/pidcodes.github.com/pull/1201).
                 # Note: this drops the cdc_acm DISABLE_ECHO quirk that the

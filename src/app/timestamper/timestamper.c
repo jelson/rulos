@@ -184,8 +184,16 @@ _Static_assert(CLOCK_FREQ_HZ - 1 <= COUNTER_VALUE_MASK,
 #define LED_CHAN1 GPIO_A4  // channel 1
 #define LED_CHAN2 GPIO_A5  // channel 2
 #define LED_CHAN3 GPIO_A6  // channel 3
-#define LED_CLOCK GPIO_B5  // 10 MHz HSE health
 #define LED_USB   GPIO_A7  // USB state
+
+// 10 MHz HSE health; the one LED that moved between board revisions.
+#if defined(TIMESTAMPER_REV_B)
+#define LED_CLOCK GPIO_C15
+#elif defined(TIMESTAMPER_REV_A)
+#define LED_CLOCK GPIO_B5
+#else
+#error "timestamper: board rev not set -- define TIMESTAMPER_REV_A or _REV_B (see SConstruct)"
+#endif
 
 // A channel's two hardware capture sub-streams.
 #define SUB_RISING  0
