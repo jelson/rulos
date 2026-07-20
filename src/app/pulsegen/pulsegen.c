@@ -1239,11 +1239,17 @@ static void init_gpio(void) {
   }
 
   gpio_make_output(LED_CHAN0);
+  gpio_set_speed(LED_CHAN0, GPIO_OSPEED_LOW);
   gpio_make_output(LED_CHAN1);
+  gpio_set_speed(LED_CHAN1, GPIO_OSPEED_LOW);
   gpio_make_output(LED_CHAN2);
+  gpio_set_speed(LED_CHAN2, GPIO_OSPEED_LOW);
   gpio_make_output(LED_CHAN3);
+  gpio_set_speed(LED_CHAN3, GPIO_OSPEED_LOW);
   gpio_make_output(LED_CLOCK);
+  gpio_set_speed(LED_CLOCK, GPIO_OSPEED_LOW);
   gpio_make_output(LED_USB);
+  gpio_set_speed(LED_USB, GPIO_OSPEED_LOW);
 }
 
 int main(void) {

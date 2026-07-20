@@ -1220,10 +1220,13 @@ int main() {
   led_chan_pins[3] = LED_CHAN3;
 #ifdef LED_CLOCK
   gpio_make_output(LED_CLOCK);
+  gpio_set_speed(LED_CLOCK, GPIO_OSPEED_LOW);
 #endif
   gpio_make_output(LED_USB);
+  gpio_set_speed(LED_USB, GPIO_OSPEED_LOW);
   for (int i = LED_CHAN_FIRST; i < NUM_CHANNELS; i++) {
     gpio_make_output(led_chan_pins[i]);
+    gpio_set_speed(led_chan_pins[i], GPIO_OSPEED_LOW);
   }
 
   // Initialise the SCPI front-end. This also brings up the USB CDC connection used both for

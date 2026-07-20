@@ -50,6 +50,27 @@ static inline void gpio_make_output(const gpio_pin_t gpio_pin) {
   stm32_gpio_configure(gpio_pin, LL_GPIO_MODE_OUTPUT, LL_GPIO_PULL_DOWN);
 }
 
+/* Output edge-rate (slew) control, mirroring the STM32 OSPEEDR levels. (The natural GPIO_SPEED_*
+ * names are taken by ST's legacy-compat macros, hence the register's OSPEED spelling.) Outputs
+ * default to GPIO_OSPEED_HIGH (see stm32_gpio_configure); slower settings reduce switching
+ * transients and EMI for human-speed loads (LEDs, enables) near sensitive nets. */
+typedef enum {
+  GPIO_OSPEED_LOW,
+  GPIO_OSPEED_MEDIUM,
+  GPIO_OSPEED_HIGH,
+  GPIO_OSPEED_VERY_HIGH,
+} gpio_speed_t;
+
+static inline void gpio_set_speed(const gpio_pin_t gpio_pin, const gpio_speed_t speed) {
+  static const uint32_t ll_speed[] = {
+      [GPIO_OSPEED_LOW] = LL_GPIO_SPEED_FREQ_LOW,
+      [GPIO_OSPEED_MEDIUM] = LL_GPIO_SPEED_FREQ_MEDIUM,
+      [GPIO_OSPEED_HIGH] = LL_GPIO_SPEED_FREQ_HIGH,
+      [GPIO_OSPEED_VERY_HIGH] = LL_GPIO_SPEED_FREQ_VERY_HIGH,
+  };
+  LL_GPIO_SetPinSpeed(gpio_pin.port, gpio_pin.pin, ll_speed[speed]);
+}
+
 /*
  * Configure a pin as input, and enable its internal pullup resistor.
  */
