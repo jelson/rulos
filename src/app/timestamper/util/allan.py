@@ -119,9 +119,9 @@ def main():
                 f"# {len(times)} samples over {span_ns / tsctl.NS:.1f} s, "
                 f"mean frequency {tsctl.format_freq(measured, span_ns)}"
             )
-            print(f"#\n# {'tau':>10}   {'ADEV':>10}   {'terms':>8}")
+            print(f"#\n# {'tau':>13}   {'ADEV':>10}   {'terms':>8}")
             for tau_s, adev, terms in adev_table(x, mean_tick):
-                print(f"{tsctl.format_time_ns(tau_s * tsctl.NS):>12}   {adev:10.3e}   {terms:8d}")
+                print(f"{tsctl.format_time_ns(tau_s * tsctl.NS):>15}   {adev:10.3e}   {terms:8d}")
             return 0
         finally:
             tic.set_divider(args.channel, 1)

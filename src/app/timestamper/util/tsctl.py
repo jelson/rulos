@@ -672,17 +672,31 @@ def format_freq(hz, span_ns):
 
 
 def format_time_ns(t_ns):
-    """Engineering-format a time interval given in (possibly
-    fractional) nanoseconds."""
-    for unit, scale in (("s", 1e9), ("ms", 1e6), ("us", 1e3), ("ns", 1.0)):
+    """Engineering-format a time interval given in (possibly fractional) nanoseconds,
+    with enough decimals in every unit to show the instrument's nanosecond digit
+    (measured intervals are ns-exact, so "22.000 us" is honest where "22 us" hides
+    three digits of real resolution)."""
+    for unit, scale, decimals in (("s", 1e9, 9), ("ms", 1e6, 6), ("us", 1e3, 3), ("ns", 1.0, 0)):
         if abs(t_ns) >= scale or unit == "ns":
-            return f"{t_ns / scale:.4g} {unit}"
+            return f"{t_ns / scale:.{decimals}f} {unit}"
 
 
 def status(line):
-    """Overwrite the current terminal line (live one-line display,
-    used by the demo utilities)."""
-    print(f"\r{line:<96}", end="", flush=True)
+    """Overwrite the current terminal line (live one-line display, used by the demo
+    utilities). Transient by nature, so when stdout is not a terminal (a pipe or file,
+    where in-place overwriting is impossible) it prints nothing; commit results with
+    reading() instead."""
+    if sys.stdout.isatty():
+        print(f"\r{line:<96}", end="", flush=True)
+
+
+def reading(line, live):
+    """A committed reading from a demo utility: overwritten in place on a live terminal
+    display, emitted as a plain line otherwise (--updates mode, pipes, files)."""
+    if live and sys.stdout.isatty():
+        status(line)
+    else:
+        print(line, flush=True)
 
 
 # ---- CLI ------------------------------------------------------------------

@@ -121,10 +121,11 @@ def main():
                 freq_b, span_b = tsctl.span_freq(times[ch_b], divider[ch_b])
                 if freq_a is None or freq_b is None:
                     missing = [f"ch{ch}" for ch, f in ((ch_a, freq_a), (ch_b, freq_b)) if f is None]
-                    tsctl.status(f"{'no signal':>16}   [{', '.join(missing)}]")
+                    tsctl.reading(
+                        f"{'no signal':>16}   [{', '.join(missing)}]", live=args.updates is None
+                    )
                     history.clear()
                     if args.updates is not None:
-                        print()
                         shown += 1
                     continue
 
@@ -153,10 +154,8 @@ def main():
 
                 if overrun:
                     line += "   OVERRUN"
-                tsctl.status(line)
+                tsctl.reading(line, live=args.updates is None)
                 shown += 1
-                if args.updates is not None:
-                    print()
         except KeyboardInterrupt:
             pass
         finally:

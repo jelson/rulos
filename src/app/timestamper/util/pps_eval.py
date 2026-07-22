@@ -110,6 +110,7 @@ def analyze(args, filename, d):
     ax.grid(which="minor", linestyle=":")
     ax.grid(which="major", color="red")
     ax.figure.savefig(f"{filename}.time.plot.png", dpi=150, bbox_inches="tight")
+    print(f"Wrote {filename}.time.plot.png")
 
     # Plot frequency-corrected data
     if args.plot_freq_corrected:
@@ -127,6 +128,7 @@ def analyze(args, filename, d):
         ax.grid(which="minor", linestyle=":")
         ax.grid(which="major", color="red")
         ax.figure.savefig(f"{filename}.residuals.plot.png", dpi=150, bbox_inches="tight")
+        print(f"Wrote {filename}.residuals.plot.png")
 
 
 def parse(filename):

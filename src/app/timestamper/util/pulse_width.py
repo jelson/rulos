@@ -94,13 +94,12 @@ def main():
                     tsctl.status(f"{'ranging...':>16}")
                     freq, _ = tic.autorange_and_acquire([ch])[ch]
                     if freq is not None and freq > MAX_PULSE_HZ:
-                        tsctl.status(
+                        tsctl.reading(
                             f"{'too fast':>16}   [{tsctl.format_freq(freq, 10**6)}: width "
-                            f"mode needs every edge; max {MAX_PULSE_HZ} pulses/s]"
+                            f"mode needs every edge; max {MAX_PULSE_HZ} pulses/s]",
+                            live=args.updates is None,
                         )
                         shown += 1
-                        if args.updates is not None:
-                            print()
                         continue
                     tic.set_divider(ch, 1)
                     tic.set_slope(ch, "BOTH")
@@ -125,20 +124,18 @@ def main():
                     )
                     if overrun:
                         line += "   OVERRUN"
-                    tsctl.status(line)
+                    tsctl.reading(line, live=args.updates is None)
                     shown += 1
-                    if args.updates is not None:
-                        print()
                     gate_s = min(MAX_GATE_S, max(BASE_GATE_S, MIN_PULSES * per / tsctl.NS))
                 elif gate_s < MAX_GATE_S:
                     gate_s = min(MAX_GATE_S, gate_s * 2)
                     tsctl.status(f"{'measuring...':>16}   [gate {gate_s:.2f} s]")
                 else:
-                    tsctl.status(f"{'no signal':>16}   [gate {gate_s:.2f} s]")
+                    tsctl.reading(
+                        f"{'no signal':>16}   [gate {gate_s:.2f} s]", live=args.updates is None
+                    )
                     ready = False  # re-probe in case the signal returns at a new rate
                     shown += 1
-                    if args.updates is not None:
-                        print()
         except KeyboardInterrupt:
             pass
         finally:
