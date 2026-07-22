@@ -18,14 +18,18 @@ Usage:
   regression_test.py --skip ch3            # phase labels include [chN wire]"""
 
 import argparse
+import glob
 import os
 import random
 import re
 import statistics
 import subprocess
 import sys
+import threading
 import time
 from types import SimpleNamespace
+
+import serial
 
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "util"))
@@ -34,6 +38,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "ut
 
 import bmpflash
 from pgctl import Pulsegen
+import tsctl
 from tsctl import LectroTIC4
 import tstest
 
@@ -54,6 +59,11 @@ WIRES = ("text", "binary")
 # --------------------------------------------------------------------
 
 PHASES = []
+
+
+class PhaseSkip(Exception):
+    """Raised by a phase that cannot run on this rig (e.g. optional hardware absent). Recorded as
+    SKIP in the summary -- visible, never a vacuous pass."""
 
 
 def phase(label, wires=WIRES, releases_port=False, needs_bmp=False, per_channel=None, **params):
@@ -385,6 +395,125 @@ def phase_scpi_errors(ctx):
         ctx.ph.expect(code in err, f"`{cmd}` -> {code} (got {err!r})")
     ctx.ph.expect(tic.get_error().startswith("0,"), "SYST:ERR? auto-clears after read")
     ctx.ph.expect(tic.idn().startswith("Lectrobox,LectroTIC-4"), "device still answers *IDN?")
+
+
+@phase("serial ctl", wires=None)
+def phase_serial_ctl(ctx):
+    """Auxiliary serial input control protocol: off by default, baud/state set+query roundtrips,
+    range validation, *RST restore. (The data path needs a serial source on PA10, which the
+    automated rig doesn't have.)"""
+    tic = ctx.tic
+    ph = ctx.ph
+    tic.send("FORM:DATA TEXT")
+    tic.set_stream_enabled(False)
+    tic.discard_pending()
+    tic.send("*RST")
+    time.sleep(0.3)
+    ph.expect(not tic.get_serial_enabled(), "serial input OFF by default after *RST")
+    ph.expect(tic.get_serial_baud() == 115200, "default baud 115200")
+
+    tic.set_serial_baud(9600)
+    ph.expect(tic.get_serial_baud() == 9600, "baud set+query roundtrip (9600)")
+    tic.set_serial_enabled(True)
+    ph.expect(tic.get_serial_enabled(), "SER:STAT ON roundtrip")
+
+    tic.clear_errors()
+    tic.set_serial_baud(99)
+    err = tic.get_error()
+    ph.expect("-222" in err, f"baud 99 rejected with -222 (got {err!r})")
+    ph.expect(tic.get_serial_baud() == 9600, "rejected baud leaves setting untouched")
+    tic.clear_errors()
+
+    tic.set_serial_enabled(False)
+    ph.expect(not tic.get_serial_enabled(), "SER:STAT OFF roundtrip")
+
+    tic.set_serial_baud(230400)
+    tic.set_serial_enabled(True)
+    tic.send("*RST")
+    time.sleep(0.3)
+    ph.expect(
+        not tic.get_serial_enabled() and tic.get_serial_baud() == 115200,
+        "*RST restores serial defaults (off, 115200)",
+    )
+    ph.expect(tic.idn().startswith("Lectrobox,LectroTIC-4"), "device still answers *IDN?")
+
+
+@phase("serial data", wires=None)
+def phase_serial_data(ctx):
+    """End-to-end serial input: lines driven into PA10 by the BMP's auxiliary UART come back as
+    timestamped records -- intact at the binary framing's 8-byte group boundaries, in order, no
+    loss, stamped at the send cadence. Skips when the BMP aux UART is absent or not wired to this
+    unit's serial input."""
+    uarts = glob.glob("/dev/serial/by-id/*Black_Magic*-if02")
+    if not uarts:
+        raise PhaseSkip("no BMP auxiliary UART on this host")
+    tic = ctx.tic
+    ph = ctx.ph
+
+    tic.set_serial_baud(115200)
+    tic.set_serial_enabled(True)
+    tic.discard_pending()
+    src = serial.Serial(uarts[0], 115200, timeout=1)
+    try:
+        # Wiring probe: if the first line never arrives, the UART isn't cabled to this unit.
+        # Sent on a delay so it lands inside read_for's marker-synced window.
+        probe = threading.Timer(0.5, lambda: (src.write(b"probe\n"), src.flush()))
+        probe.start()
+        found = any(isinstance(r, tsctl.SerialLine) for r in tic.read_for(2.0))
+        probe.join()
+        if not found:
+            raise PhaseSkip("BMP aux UART TX is not wired to this unit's serial input (PA10)")
+
+        # Lengths straddling the (1 + len) 8-byte payload-group boundaries, a long line, then a
+        # periodic tail so the timestamp check sees a decent train.
+        lines = ["a", "1234567", "12345678", "123456ab7890123", "123456ab78901234", "x" * 100]
+        lines += [f"periodic {i}" for i in range(6)]
+        spacing_s = 0.15
+        tic.discard_pending()
+
+        host_times = []
+
+        def send():
+            time.sleep(0.4)
+            for l in lines:
+                host_times.append(time.monotonic())
+                src.write((l + "\n").encode())
+                src.flush()
+                time.sleep(spacing_s)
+
+        sender = threading.Thread(target=send)
+        sender.start()
+        got, lost = [], 0
+        for r in tic.read_for(0.4 + spacing_s * len(lines) + 1.0):
+            if isinstance(r, tsctl.SerialLine):
+                got.append(r)
+            elif isinstance(r, tsctl.SerialLinesLost):
+                lost += r.count
+        sender.join()
+
+        ph.expect([r.text for r in got] == lines, f"all {len(lines)} lines intact and in order")
+        ph.expect(lost == 0, "no lines dropped")
+        times = [r.seconds * tstest.NS + r.nanoseconds for r in got]
+        ph.expect(all(b > a for a, b in zip(times, times[1:])), "timestamps strictly increasing")
+        if len(got) == len(lines):
+            # Device timestamps must agree with the host's independent clock, interval by
+            # interval. Budget: host sleep/USB jitter plus the device's task-level stamping
+            # latency -- a wrong timebase or misassembled seconds/ticks blows this immediately.
+            budget_s = 0.03
+            errs = [
+                (dt - dh)
+                for (a, b, ha, hb) in zip(times, times[1:], host_times, host_times[1:])
+                for (dt, dh) in [((b - a) / 1e9, hb - ha)]
+            ]
+            worst = max(abs(e) for e in errs)
+            ph.expect(
+                worst < budget_s,
+                f"device intervals match the host clock within {budget_s * 1000:.0f} ms "
+                f"(worst {worst * 1000:+.1f} ms over {len(errs)} intervals)",
+            )
+    finally:
+        src.close()
+        tic.set_serial_enabled(False)
 
 
 @phase("reset", wires=None)
@@ -1018,7 +1147,12 @@ def main():
     def run(pd, name, ctx):
         print(f"\n=== {name} ===")
         ctx.ph = tstest.Phase()
-        pd.fn(ctx, **pd.params)
+        try:
+            pd.fn(ctx, **pd.params)
+        except PhaseSkip as skip:
+            print(f"  SKIP: {skip}")
+            results.append((name, None))
+            return
         results.append((name, ctx.ph.ok))
 
     channels = [0, 1, 2, 3] if args.channel == "all" else [int(args.channel)]
@@ -1099,8 +1233,8 @@ def main():
     print("\n=== Summary ===")
     all_ok = True
     for name, ok in results:
-        print(f"  {'PASS' if ok else 'FAIL'}: {name}")
-        all_ok &= ok
+        print(f"  {'SKIP' if ok is None else 'PASS' if ok else 'FAIL'}: {name}")
+        all_ok &= ok is not False
     sys.exit(0 if all_ok else 1)
 
 
