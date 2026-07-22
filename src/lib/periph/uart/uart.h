@@ -68,6 +68,10 @@ struct UartState_t_s {
 // initialize an instance of a uart
 void uart_init(UartState_t *u, uint8_t uart_id, uint32_t baud);
 
+// Change the baud rate of an initialized UART in place. RX/TX state is
+// preserved; characters in flight during the switch may be corrupted.
+void uart_set_baud(UartState_t *u, uint32_t baud);
+
 // Registers a data-received callback to be called at task time each time
 // another batch of data arrives from the serial port.
 void uart_start_rx(UartState_t *u, uart_rx_cb rx_cb, void *user_data);

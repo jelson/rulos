@@ -28,6 +28,11 @@
 void hal_uart_init(uint8_t uart_id, uint32_t baud, void *user_data /* for both rx and tx upcalls */,
                    size_t *max_tx_len /* OUT */);
 
+// Change the baud rate of an already-initialized UART. RX and TX state
+// (queues, DMA, interrupt enables) are preserved; in-flight characters may be
+// corrupted, so quiesce traffic first if that matters.
+void hal_uart_set_baud(uint8_t uart_id, uint32_t baud);
+
 // Callback for incoming serial data. If a callback is set using
 // hal_uart_set_receive_cb, incoming characters will be passed into that
 // callback at interrupt time.

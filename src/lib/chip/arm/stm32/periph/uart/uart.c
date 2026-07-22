@@ -901,6 +901,38 @@ static void config_gpio(const stm32_uart_config_t *config, bool rx) {
   }
 }
 
+// (Re)program a USART's line parameters. LL_USART_Init only modifies its own
+// CR fields, so interrupt enables, FIFO mode, and DMA request bits survive --
+// which is what lets hal_uart_set_baud retune a live UART.
+static void usart_configure(const stm32_uart_config_t *config, uint32_t baud) {
+  LL_USART_Disable(config->instance);
+  LL_USART_InitTypeDef usart_init = {
+#if defined(RULOS_ARM_stm32c0) || defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4) || \
+    defined(RULOS_ARM_stm32h5)
+      // PrescalerValue is a modern-era field. F0/F1/F3 predate the
+      // USART prescaler and don't have it in LL_USART_InitTypeDef.
+      .PrescalerValue = LL_USART_PRESCALER_DIV1,
+#endif
+      .BaudRate = baud,
+      .DataWidth = LL_USART_DATAWIDTH_8B,
+      .StopBits = LL_USART_STOPBITS_1,
+      .Parity = LL_USART_PARITY_NONE,
+      .TransferDirection = LL_USART_DIRECTION_TX_RX,
+      .HardwareFlowControl = LL_USART_HWCONTROL_NONE,
+      .OverSampling = LL_USART_OVERSAMPLING_16,
+  };
+  if (LL_USART_Init(config->instance, &usart_init) != SUCCESS) {
+    __builtin_trap();
+  }
+  LL_USART_Enable(config->instance);
+}
+
+void hal_uart_set_baud(uint8_t uart_id, uint32_t baud) {
+  assert(uart_id < NUM_UARTS);
+  assert(g_stm32_uarts[uart_id].initted);
+  usart_configure(&stm32_uart_config[uart_id], baud);
+}
+
 void hal_uart_init(uint8_t uart_id, uint32_t baud, void *user_data /* for both rx and tx upcalls */,
                    size_t *max_tx_len /* OUT */) {
   assert(uart_id < NUM_UARTS);
@@ -957,26 +989,7 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud, void *user_data /* for both r
   }
 
   // Configure USART via the LL layer.
-  LL_USART_Disable(config->instance);
-  LL_USART_InitTypeDef usart_init = {
-#if defined(RULOS_ARM_stm32c0) || defined(RULOS_ARM_stm32g0) || defined(RULOS_ARM_stm32g4) || \
-    defined(RULOS_ARM_stm32h5)
-      // PrescalerValue is a modern-era field. F0/F1/F3 predate the
-      // USART prescaler and don't have it in LL_USART_InitTypeDef.
-      .PrescalerValue = LL_USART_PRESCALER_DIV1,
-#endif
-      .BaudRate = baud,
-      .DataWidth = LL_USART_DATAWIDTH_8B,
-      .StopBits = LL_USART_STOPBITS_1,
-      .Parity = LL_USART_PARITY_NONE,
-      .TransferDirection = LL_USART_DIRECTION_TX_RX,
-      .HardwareFlowControl = LL_USART_HWCONTROL_NONE,
-      .OverSampling = LL_USART_OVERSAMPLING_16,
-  };
-  if (LL_USART_Init(config->instance, &usart_init) != SUCCESS) {
-    __builtin_trap();
-  }
-  LL_USART_Enable(config->instance);
+  usart_configure(config, baud);
 
   // Cache the TDR address so the TX DMA path can reach it without a
   // config struct lookup on every transmit. F1 is the odd one out:

@@ -62,6 +62,10 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud, void *user_data /* for both r
   memset(recent_uart_buf, 0, sizeof(recent_uart_buf));
 }
 
+void hal_uart_set_baud(uint8_t uart_id, uint32_t baud) {
+  // Baud rate is meaningless in simulation.
+}
+
 void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf, size_t buflen) {
   uart_recv_cb = rx_cb;
 }

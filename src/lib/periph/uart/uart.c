@@ -182,3 +182,8 @@ void uart_init(UartState_t *u, uint8_t uart_id, uint32_t baud) {
   hal_uart_init(uart_id, baud, u, &u->max_tx_len);
   u->initted = true;
 }
+
+void uart_set_baud(UartState_t *u, uint32_t baud) {
+  assert(u->initted);
+  hal_uart_set_baud(u->uart_id, baud);
+}

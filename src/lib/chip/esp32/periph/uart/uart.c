@@ -95,6 +95,10 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud, void *user_data /* for both r
                                UART_PIN_NO_CHANGE));
 }
 
+void hal_uart_set_baud(uint8_t uart_id, uint32_t baud) {
+  assert(false);  // not implemented on ESP32
+}
+
 void hal_uart_start_send(uint8_t uart_id, hal_uart_next_sendbuf_cb cb) {
   assert(uart_id >= 0 && uart_id < NUM_UARTS);
   esp32_uart_t *eu = &esp32_uart[uart_id];
