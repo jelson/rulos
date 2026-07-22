@@ -464,6 +464,8 @@ typedef struct {
   uint8_t len;
   char text[LINEREADER_MAX_LINE_LEN];
 } serial_line_t;
+_Static_assert(LINEREADER_MAX_LINE_LEN <= 256,
+               "serial line length must fit the wire format's one-byte length field");
 
 // Line texts ride this queue while their MSG_SERIAL_LINE entries travel the timestamp ring; both
 // are FIFO and produced together, so fill_tx_buf pops them in lockstep. Every access is task
@@ -764,7 +766,7 @@ static void serial_line_cb(UartState_t *u, void *user_data, char *line) {
   }
   serial_line_t *slot = &serial_lines[serial_line_head];
   size_t len = 0;
-  while (line[len] != 0 && len < sizeof(slot->text)) {
+  while (line[len] != 0 && len < sizeof(slot->text) - 1) {
     slot->text[len] = line[len];
     len++;
   }

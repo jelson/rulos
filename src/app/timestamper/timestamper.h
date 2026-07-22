@@ -113,4 +113,4 @@ bool timestamper_serial_get_enabled(void);
 void timestamper_serial_set_baud(uint32_t baud);
 uint32_t timestamper_serial_get_baud(void);
 
-#define TIMESTAMPER_FW_VERSION "0.24.0"
+#define TIMESTAMPER_FW_VERSION "0.25.0"

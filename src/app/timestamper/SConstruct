@@ -48,6 +48,9 @@ RulosBuildTarget(
                 '-DRULOS_PLLN=50',
                 '-DSCHEDULER_CAPACITY=4',
                 '-DTIMESTAMPER_REV_B',
+                # Serial-input line capacity; the binary wire format's
+                # one-byte length field caps usable length at 255.
+                '-DLINEREADER_MAX_LINE_LEN=256',
                 # USB identity (pid.codes registration pending; see
                 # https://github.com/pidcodes/pidcodes.github.com/pull/1201).
                 # Note: this drops the cdc_acm DISABLE_ECHO quirk that the

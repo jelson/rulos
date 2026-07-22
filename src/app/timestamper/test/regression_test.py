@@ -466,7 +466,7 @@ def phase_serial_data(ctx):
 
         # Lengths straddling the (1 + len) 8-byte payload-group boundaries, a long line, then a
         # periodic tail so the timestamp check sees a decent train.
-        lines = ["a", "1234567", "12345678", "123456ab7890123", "123456ab78901234", "x" * 100]
+        lines = ["a", "1234567", "12345678", "123456ab7890123", "123456ab78901234", "x" * 255]
         lines += [f"periodic {i}" for i in range(6)]
         spacing_s = 0.15
         tic.discard_pending()
