@@ -482,24 +482,43 @@ static void config_hrtim_channel(int ch, uint8_t ckpsc, uint32_t per, bool sync,
 // value (period in prescaled ticks - 1). Computed directly, no scan.
 static bool select_gp_psc(int ch, uint64_t period_ps, uint32_t *out_psc, uint32_t *out_arr,
                           uint64_t *out_tick_ps) {
-  // div = ceil(period_ps / (GP_TICK_PS * (GP_ARR16_MAX + 1))): the fewest prescaled ticks need
-  // (GP_ARR16_MAX + 1) of them at most.
-  const uint64_t span = GP_TICK_PS * (GP_ARR16_MAX + 1);
-  uint64_t div = (period_ps + span - 1) / span;
-  if (div < 1) {
-    div = 1;
-  }
-  if (div > GP_PSC_MAX + 1) {
+  // The period is N base ticks (rounded to the 8 ns grid) split into prescaler * counter. The
+  // minimum prescaler always fits, but its coarse tick truncates the period by up to half a
+  // prescaled tick: ppm-scale error at second-long periods (a 1 s period was 9.6 ppm short).
+  // Different prescalers leave different remainders, so search them all for the factorization
+  // that lands closest, stopping early on exact. Config-time cost only; e.g. 1 s resolves
+  // exactly as 2000 * 62500.
+  const uint64_t target = (period_ps + GP_TICK_PS / 2) / GP_TICK_PS;
+  const uint64_t div_min = (target + GP_ARR16_MAX) / (GP_ARR16_MAX + 1);
+  if (div_min > GP_PSC_MAX + 1) {
     return false;  // longer than GP_MAX_PERIOD_PS
   }
-  uint64_t tick_ps = GP_TICK_PS * div;
-  uint64_t ticks = period_ps / tick_ps;
-  if (ticks < 2) {
+  uint64_t best_div = 0, best_ticks = 0, best_err = UINT64_MAX;
+  for (uint64_t div = div_min < 1 ? 1 : div_min; div <= GP_PSC_MAX + 1; div++) {
+    uint64_t ticks = (target + div / 2) / div;
+    if (ticks > GP_ARR16_MAX + 1) {
+      continue;
+    }
+    if (ticks < 2) {
+      break;  // still shorter at every larger prescaler
+    }
+    uint64_t actual = ticks * div;
+    uint64_t err = actual > target ? actual - target : target - actual;
+    if (err < best_err) {
+      best_err = err;
+      best_div = div;
+      best_ticks = ticks;
+      if (err == 0) {
+        break;
+      }
+    }
+  }
+  if (best_div == 0) {
     return false;  // shorter than the GP timer can express -- caller should have used HRTIM
   }
-  *out_psc = (uint32_t)(div - 1);
-  *out_arr = (uint32_t)(ticks - 1);
-  *out_tick_ps = tick_ps;
+  *out_psc = (uint32_t)(best_div - 1);
+  *out_arr = (uint32_t)(best_ticks - 1);
+  *out_tick_ps = GP_TICK_PS * best_div;
   return true;
 }
 
