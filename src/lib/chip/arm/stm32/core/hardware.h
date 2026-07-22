@@ -66,7 +66,12 @@ static inline void gpio_set_speed(const gpio_pin_t gpio_pin, const gpio_speed_t 
       [GPIO_OSPEED_LOW] = LL_GPIO_SPEED_FREQ_LOW,
       [GPIO_OSPEED_MEDIUM] = LL_GPIO_SPEED_FREQ_MEDIUM,
       [GPIO_OSPEED_HIGH] = LL_GPIO_SPEED_FREQ_HIGH,
+#ifdef LL_GPIO_SPEED_FREQ_VERY_HIGH
       [GPIO_OSPEED_VERY_HIGH] = LL_GPIO_SPEED_FREQ_VERY_HIGH,
+#else
+      // Families with three OSPEEDR levels (F0): very-high maps to their fastest.
+      [GPIO_OSPEED_VERY_HIGH] = LL_GPIO_SPEED_FREQ_HIGH,
+#endif
   };
   LL_GPIO_SetPinSpeed(gpio_pin.port, gpio_pin.pin, ll_speed[speed]);
 }
