@@ -106,4 +106,11 @@ void timestamper_config_save(void);
 // format, stream enable) is preserved.
 void timestamper_discard_pending(void);
 
-#define TIMESTAMPER_FW_VERSION "0.23.0"
+// Auxiliary serial input (see "SERIAL INPUT" in timestamper.c): received lines are timestamped
+// and emitted in-stream. Off by default.
+void timestamper_serial_set_enabled(bool enabled);
+bool timestamper_serial_get_enabled(void);
+void timestamper_serial_set_baud(uint32_t baud);
+uint32_t timestamper_serial_get_baud(void);
+
+#define TIMESTAMPER_FW_VERSION "0.24.0"

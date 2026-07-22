@@ -86,6 +86,9 @@ Timestamp = namedtuple("Timestamp", "channel seconds nanoseconds polarity")
 PulsesLost = namedtuple("PulsesLost", "channel overcaptures buf_overflows")
 OutputCleared = namedtuple("OutputCleared", [])
 OscillatorFailure = namedtuple("OscillatorFailure", [])
+# A timestamped line from the auxiliary serial input (1.024 us timestamp resolution).
+SerialLine = namedtuple("SerialLine", "seconds nanoseconds text")
+SerialLinesLost = namedtuple("SerialLinesLost", "count")
 
 TIMESTAMPER_VID = 0x1209  # pid.codes
 TIMESTAMPER_PID = 0x71C4  # LectroTIC-4
@@ -121,6 +124,11 @@ _COUNTER_MSGTYPE_MASK = 0xFF
 _MSG_OUTPUT_CLEARED = 0
 _MSG_PULSES_LOST = 1
 _MSG_OSC_FAIL = 2
+# Serial line: counter [27:8] are the timestamp's tick bits [27:8]; the record is followed by
+# ceil((1 + len) / 8) zero-padded 8-byte groups holding one length byte then `len` line bytes.
+_MSG_SERIAL_LINE = 3
+_MSG_SERIAL_LOST = 4
+_COUNTER_SERIAL_TICK_MASK = 0x0FFFFF00
 # The OUTPUT_CLEARED record is a fixed 8-byte pattern (channel 0, special bit, type 0, zero payload)
 # -- the binary-mode framing anchor.
 _OUTPUT_CLEARED_BYTES = (0).to_bytes(4, "little") + (
@@ -137,11 +145,33 @@ def _decode_chunks(chunks):
     intermediate
     locals on the hot (non-special) arm."""
     leftover = b""
+    # In-progress serial line: header timestamp, bytes gathered so far, payload bytes still owed
+    # (-1 = the next group carries the length byte). Payload groups are raw text, so they must be
+    # intercepted before record interpretation.
+    serial_hdr = None
+    serial_buf = b""
+    serial_need = 0
     for data in chunks:
         if leftover:
             data = leftover + data
         end = len(data) & ~(_BINARY_RECORD_LEN - 1)
         for sec, cnt in struct.iter_unpack("<II", memoryview(data)[:end]):
+            if serial_need:
+                raw = struct.pack("<II", sec, cnt)
+                if serial_need == -1:
+                    groups = (1 + raw[0] + 7) // 8
+                    serial_buf = raw
+                    serial_need = (groups - 1) * 8
+                else:
+                    serial_buf += raw
+                    serial_need -= 8
+                if serial_need == 0:
+                    yield SerialLine(
+                        serial_hdr[0],
+                        serial_hdr[1],
+                        serial_buf[1 : 1 + serial_buf[0]].decode("ascii", "replace"),
+                    )
+                continue
             if cnt & _COUNTER_SPECIAL_BIT:
                 msgtype = cnt & _COUNTER_MSGTYPE_MASK
                 if msgtype == _MSG_OUTPUT_CLEARED:
@@ -150,6 +180,11 @@ def _decode_chunks(chunks):
                     yield PulsesLost(cnt >> 30, sec & 0xFFFF, sec >> 16)
                 elif msgtype == _MSG_OSC_FAIL:
                     yield OscillatorFailure()
+                elif msgtype == _MSG_SERIAL_LINE:
+                    serial_hdr = (sec, (cnt & _COUNTER_SERIAL_TICK_MASK) * _NS_PER_TICK)
+                    serial_need = -1
+                elif msgtype == _MSG_SERIAL_LOST:
+                    yield SerialLinesLost(sec)
                 # unknown special types: skip (forward-compatible)
             else:
                 yield Timestamp(
@@ -438,6 +473,18 @@ class LectroTIC4:
     def get_divider(self, channel):
         return self.query(f"INP{channel}:DIV?")
 
+    def set_serial_baud(self, baud):
+        self.send(f"SER:BAUD {baud}")
+
+    def get_serial_baud(self):
+        return int(self.query("SER:BAUD?"))
+
+    def set_serial_enabled(self, on):
+        self.send(f"SER:STAT {'ON' if on else 'OFF'}")
+
+    def get_serial_enabled(self):
+        return self.query("SER:STAT?") == "1"
+
     def set_stream_enabled(self, on):
         """Enable or disable continuous timestamp output. Normally the library manages this for you
         (queries briefly disable, exit re-enables); call this only to explicitly silence the
@@ -675,6 +722,26 @@ def cmd_format(tic, args):
         tic.send(f"FORM:DATA {fmt}")
 
 
+def cmd_serial(tic, args):
+    # Explicitly silence the stream: queries then don't interleave OUTP:STAT toggles, whose
+    # success would clear the error latch before we can read it.
+    tic.set_stream_enabled(False)
+    if args.value is None:
+        on = tic.get_serial_enabled()
+        print(f"{'on' if on else 'off'} {tic.get_serial_baud()}")
+    elif args.value.lower() == "off":
+        tic.set_serial_enabled(False)
+    else:
+        tic.set_serial_baud(int(args.value))
+        err = tic.get_error()
+        if not err.startswith("0,"):
+            sys.exit(f"device error: {err}")
+        tic.set_serial_enabled(True)
+    err = tic.get_error()
+    if not err.startswith("0,"):
+        sys.exit(f"device error: {err}")
+
+
 def cmd_raw(tic, args):
     cmd = args.command
     if "?" in cmd:
@@ -694,6 +761,10 @@ def cmd_stream(tic, args):
                     f"# ch{r.channel}: {r.overcaptures} overcaptures, "
                     f"{r.buf_overflows} buf overflows\n"
                 )
+            elif isinstance(r, SerialLine):
+                sys.stdout.write(f"S {r.seconds}.{r.nanoseconds:09d} {r.text}\n")
+            elif isinstance(r, SerialLinesLost):
+                sys.stdout.write(f"# serial: {r.count} lines dropped\n")
             elif isinstance(r, OutputCleared):
                 sys.stdout.write("# output cleared\n")
             elif isinstance(r, OscillatorFailure):
@@ -757,6 +828,14 @@ def main():
         help="Omit to query",
     )
     sp.set_defaults(func=cmd_format)
+
+    sp = sub.add_parser(
+        "serial", help="Auxiliary serial input: query, enable at a baud rate, or disable"
+    )
+    sp.add_argument(
+        "value", nargs="?", default=None, help="baud rate to enable at, 'off', or omit to query"
+    )
+    sp.set_defaults(func=cmd_serial)
 
     sp = sub.add_parser("raw", help="Send a raw SCPI command (queries auto-read)")
     sp.add_argument("command")

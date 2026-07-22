@@ -59,6 +59,30 @@
  * find the running device, auto-detach it into the bootloader, flash, and restart (:leave). If
  * interrupted it stays in the bootloader and the same command retries. Verify with `tsctl.py idn`.
  *
+ * SERIAL INPUT
+ *
+ * An auxiliary serial input (PA10, 3.3 V logic) timestamps line-oriented data -- log output, NMEA
+ * sentences from a GPS receiver -- against the same timebase as the pulse channels. Off by
+ * default; SCPI:
+ *
+ *   SERial:BAUD <rate>      (SERial:BAUD? to query; default 115200)
+ *   SERial:STATe ON|OFF     (SERial:STATe? to query; default OFF)
+ *
+ * Each received line is emitted in-stream, ordered with the pulse timestamps. Text mode:
+ *
+ *   S 5293.585203496 $GPRMC,...
+ *
+ * Binary mode: a special record (type 3) whose counter bits [27:8] are the timestamp's tick bits
+ * [27:8] (1.024 us resolution) and whose seconds word is the seconds, followed by the line as
+ * zero-padded 8-byte groups -- one length byte, then that many line bytes. Timestamps mark line
+ * completion as observed at task level: accurate to the scheduler latency (typically well under a
+ * millisecond), not capture-grade. Lines arriving faster than USB drains are dropped and counted
+ * (type 4 special / "# serial:" comment).
+ *
+ * The same port's TX pin (PA9) carries the firmware's debug log output; it is a development aid,
+ * not part of the public interface. While the serial input is enabled the whole port runs at the
+ * configured baud (debug output included); when disabled the port returns to 1 Mbaud.
+ *
  * IMPLEMENTATION NOTES
  *
  * The target is an STM32H523, a Cortex-M33 running at 250 MHz. TIM2 is a 32-bit timer configured to
@@ -115,6 +139,7 @@
 #include "core/rulos.h"
 #include "periph/nvconfig/nvconfig.h"
 #include "periph/scpi/scpi.h"
+#include "periph/uart/linereader.h"
 #include "periph/uart/uart.h"
 #include "periph/usb_cdc/usb_cdc.h"
 #include "scpi.h"
@@ -177,6 +202,13 @@ _Static_assert(CLOCK_FREQ_HZ - 1 <= COUNTER_VALUE_MASK,
 // all-zero payload; reference-clock failure -- the device has halted (binary analog of the "# FATAL
 // ..." oscillator line)
 #define MSG_OSC_FAIL 2u
+// serial line received: counter [27:8] hold the timestamp's tick bits [27:8] (1.024 us
+// resolution); the record is followed by ceil((1 + len) / 8) zero-padded 8-byte groups holding one
+// length byte and then `len` line bytes
+#define MSG_SERIAL_LINE 3u
+// payload: number of serial lines dropped since the last report
+#define MSG_SERIAL_LOST          4u
+#define COUNTER_SERIAL_TICK_MASK 0x0FFFFF00u
 
 // PH1 is freed by HSE bypass (the otherwise-OSC_OUT pin on H5, same trick as the G4 board freeing
 // PF1).
@@ -422,6 +454,26 @@ static volatile uint32_t ts_tail = 0;  // next read position (USB output)
 // Output devices. The USB CDC connection is owned by the SCPI library (src/lib/periph/scpi); this
 // app shares the same connection for streaming timestamps using scpi_usb_cdc_handle().
 static UartState_t uart;
+
+// ---- Serial input (see SERIAL INPUT in the header comment) ---------------------------------
+#define SERIAL_DEBUG_BAUD   1000000  // debug-log baud while the serial input is off
+#define SERIAL_DEFAULT_BAUD 115200
+#define SERIAL_LINE_SLOTS   8
+
+typedef struct {
+  uint8_t len;
+  char text[LINEREADER_MAX_LINE_LEN];
+} serial_line_t;
+
+// Line texts ride this queue while their MSG_SERIAL_LINE entries travel the timestamp ring; both
+// are FIFO and produced together, so fill_tx_buf pops them in lockstep. Every access is task
+// context (linereader upcall, fill, discard) -- only the ring push needs the irq guard.
+static serial_line_t serial_lines[SERIAL_LINE_SLOTS];
+static uint32_t serial_line_head = 0, serial_line_tail = 0;
+static uint32_t serial_drops = 0;
+static bool serial_enabled = false;
+static uint32_t serial_baud = SERIAL_DEFAULT_BAUD;
+static LineReader_t serial_linereader;
 
 // Ping-pong USB TX buffers. While USB is sending one buffer, the periodic task fills the other with
 // formatted timestamps. When the TX complete callback fires, the pre-filled buffer is handed to USB
@@ -701,19 +753,120 @@ static void update_leds(void) {
   gpio_set_or_clr(LED_USB, scpi_usb_ready() && !usb_blink_off);
 }
 
-// Format timestamps from the ring buffer into the current filling buffer until it's full or the
-// ring is empty. Called eagerly from periodic_task so the buffer is pre-filled by the time USB
-// finishes the previous send.
+static void serial_line_cb(UartState_t *u, void *user_data, char *line) {
+  if (!serial_enabled) {
+    return;
+  }
+  uint32_t next_slot = (serial_line_head + 1) % SERIAL_LINE_SLOTS;
+  if (next_slot == serial_line_tail) {
+    serial_drops++;
+    return;
+  }
+  serial_line_t *slot = &serial_lines[serial_line_head];
+  size_t len = 0;
+  while (line[len] != 0 && len < sizeof(slot->text)) {
+    slot->text[len] = line[len];
+    len++;
+  }
+  slot->len = len;
+
+  // The ring push races the capture ISRs; the timestamp is read in the same guarded section so it
+  // can't straddle a TIM15 seconds update.
+  __disable_irq();
+  uint32_t ticks = TIM2->CNT;
+  uint32_t secs = ticks < (CLOCK_FREQ_HZ / 2) ? seconds_A : seconds_B;
+  uint32_t next_ring = (ts_head + 1) % TIMESTAMP_BUFLEN;
+  if (next_ring == ts_tail) {
+    __enable_irq();
+    serial_drops++;
+    return;
+  }
+  timestamp_buffer[ts_head].seconds = secs;
+  timestamp_buffer[ts_head].counter =
+      COUNTER_SPECIAL_BIT | (ticks & COUNTER_SERIAL_TICK_MASK) | MSG_SERIAL_LINE;
+  ts_head = next_ring;
+  __enable_irq();
+  serial_line_head = next_slot;
+}
+
+void timestamper_serial_set_baud(uint32_t baud) {
+  serial_baud = baud;
+  if (serial_enabled) {
+    uart_set_baud(&uart, baud);
+  }
+}
+
+uint32_t timestamper_serial_get_baud(void) {
+  return serial_baud;
+}
+
+void timestamper_serial_set_enabled(bool enabled) {
+  if (enabled == serial_enabled) {
+    return;
+  }
+  if (enabled) {
+    // RX starts once and stays armed; the enable flag gates line handling.
+    static bool rx_started = false;
+    if (!rx_started) {
+      rx_started = true;
+      linereader_init(&serial_linereader, &uart, serial_line_cb, NULL);
+    }
+    uart_set_baud(&uart, serial_baud);
+    serial_enabled = true;
+  } else {
+    serial_enabled = false;
+    uart_set_baud(&uart, SERIAL_DEBUG_BAUD);
+  }
+}
+
+bool timestamper_serial_get_enabled(void) {
+  return serial_enabled;
+}
+
+// Format ring records into the current filling buffer until it's full or the ring is empty. Called
+// eagerly from periodic_task so the buffer is pre-filled by the time USB finishes the previous
+// send. A record is peeked first and popped only once it is known to fit, so a serial line and its
+// framing never split across buffers.
 static void fill_tx_buf(void) {
   while (ts_tail != ts_head) {
-    // Max formatted length: "3 4294967295.999999996 +\n" = 25 bytes.
-    if (tx_fill_pos + 25 > USB_TX_BUFLEN) {
+    timestamp_t t = timestamp_buffer[ts_tail];
+    const bool is_serial =
+        (t.counter & COUNTER_SPECIAL_BIT) && (t.counter & COUNTER_MSGTYPE_MASK) == MSG_SERIAL_LINE;
+    // Always a valid pointer (only read when is_serial): the compiler may hoist the len load
+    // above the is_serial select, and a speculated NULL load hard-faults on the M33.
+    const serial_line_t *line = &serial_lines[serial_line_tail];
+    int need;
+    if (format_mode == TIMESTAMPER_FORMAT_BINARY) {
+      need = sizeof(timestamp_t) + (is_serial ? 8 * ((1 + line->len + 7) / 8) : 0);
+    } else {
+      // Timestamp: "3 4294967295.999999996 +\n" = 25 bytes. Serial: "S ", the same seconds field,
+      // the line, "\n", NUL.
+      need = is_serial ? 25 + line->len : 25;
+    }
+    if (tx_fill_pos + need > USB_TX_BUFLEN) {
       break;
     }
-    timestamp_t t = timestamp_buffer[ts_tail];
     ts_tail = (ts_tail + 1) % TIMESTAMP_BUFLEN;
-    tx_fill_pos +=
-        format_timestamp(&t, usb_tx_bufs[tx_filling] + tx_fill_pos, USB_TX_BUFLEN - tx_fill_pos);
+    char *out = usb_tx_bufs[tx_filling] + tx_fill_pos;
+    if (!is_serial) {
+      tx_fill_pos += format_timestamp(&t, out, USB_TX_BUFLEN - tx_fill_pos);
+      continue;
+    }
+    serial_line_tail = (serial_line_tail + 1) % SERIAL_LINE_SLOTS;
+    if (format_mode == TIMESTAMPER_FORMAT_BINARY) {
+      memcpy(out, &t, sizeof(timestamp_t));
+      out += sizeof(timestamp_t);
+      int groups = (1 + line->len + 7) / 8;
+      memset(out, 0, 8 * groups);
+      out[0] = line->len;
+      memcpy(out + 1, line->text, line->len);
+      tx_fill_pos += sizeof(timestamp_t) + 8 * groups;
+    } else {
+      uint32_t ns = (t.counter & COUNTER_SERIAL_TICK_MASK) * NS_PER_TICK;
+      tx_fill_pos +=
+          snprintf(out, USB_TX_BUFLEN - tx_fill_pos, "S %lu.%09lu %.*s\n", (unsigned long)t.seconds,
+                   (unsigned long)ns, (int)line->len, line->text);
+    }
   }
 }
 
@@ -871,6 +1024,19 @@ static void periodic_task(void *data) {
         }
         return;  // one message per period; USB will drain the rest
       }
+    }
+    if (serial_drops) {
+      uint32_t dropped = serial_drops;
+      serial_drops = 0;
+      if (format_mode == TIMESTAMPER_FORMAT_BINARY) {
+        send_special(0, MSG_SERIAL_LOST, dropped);
+      } else {
+        int len = snprintf(usb_tx_bufs[tx_filling], USB_TX_BUFLEN, "# serial: %lu lines dropped\n",
+                           (unsigned long)dropped);
+        usbd_cdc_write(scpi_usb_cdc_handle(), usb_tx_bufs[tx_filling], len);
+        tx_filling = 1 - tx_filling;
+      }
+      return;
     }
   }
 
@@ -1137,6 +1303,8 @@ void timestamper_reset_all(void) {
   }
   timestamper_set_stream_enabled(true);
   timestamper_set_format(TIMESTAMPER_FORMAT_TEXT);
+  timestamper_serial_set_enabled(false);
+  timestamper_serial_set_baud(SERIAL_DEFAULT_BAUD);
   timestamper_discard_pending();
 
   // Full factory reset: persist the defaults now (interrupt-masked, same as CONFig:SAVE).
@@ -1152,6 +1320,9 @@ void timestamper_discard_pending(void) {
   ts_head = 0;
   ts_tail = 0;
   tx_fill_pos = 0;
+  serial_line_head = 0;
+  serial_line_tail = 0;
+  serial_drops = 0;
   for (int i = 0; i < NUM_CHANNELS; i++) {
     channels[i].num_missed = 0;
     channels[i].buf_overflows = 0;
@@ -1210,7 +1381,7 @@ int main() {
   cfg_last_saved_valid = true;
 
   // initialize uart for debug logging
-  uart_init(&uart, /*uart_id=*/0, 1000000);
+  uart_init(&uart, /*uart_id=*/0, SERIAL_DEBUG_BAUD);
   log_bind_uart(&uart);
 
   // initialize the output LEDs

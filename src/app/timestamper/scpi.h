@@ -30,6 +30,10 @@
  *   INPut[n]:SLOPe?                    query
  *   INPut[n]:DIVider <N>               report only every Nth pulse
  *   INPut[n]:DIVider?                  query
+ *   SERial:BAUD <rate>                 auxiliary serial input baud (300..3000000)
+ *   SERial:BAUD?                       query
+ *   SERial:STATe ON|OFF                enable/disable the serial input (default OFF)
+ *   SERial:STATe?                      query
  *
  * Hardware mutation happens in timestamper.c via the timestamper_*
  * setters declared in timestamper.h.

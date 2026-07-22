@@ -213,6 +213,51 @@ static bool dispatch_line(const char *line) {
     }
   }
 
+  // SERial subsystem: the auxiliary serial input (line timestamping).
+  {
+    const char *p = scpi_match_kw(line, "SERIAL", "SER");
+    if (p && *p == ':') {
+      p++;
+      const char *q;
+      if ((q = scpi_match_kw(p, "STATE", "STAT"))) {
+        if (*q == '?' && (q[1] == 0 || q[1] == ' ')) {
+          scpi_print(timestamper_serial_get_enabled() ? "1" : "0");
+          return true;
+        }
+        if (*q == ' ') {
+          bool on;
+          if (!scpi_parse_bool(q + 1, &on)) {
+            scpi_set_error("-104,\"Bad boolean\"");
+            return true;
+          }
+          timestamper_serial_set_enabled(on);
+          scpi_clear_error();
+          return true;
+        }
+      }
+      if ((q = scpi_match_kw(p, "BAUD", "BAUD"))) {
+        if (*q == '?' && (q[1] == 0 || q[1] == ' ')) {
+          send_uint(NULL, timestamper_serial_get_baud());
+          return true;
+        }
+        if (*q == ' ') {
+          uint32_t n;
+          if (!scpi_parse_uint(q + 1, &n)) {
+            scpi_set_error("-104,\"Bad number\"");
+            return true;
+          }
+          if (n < 300 || n > 3000000) {
+            scpi_set_error("-222,\"Baud rate out of range (300 .. 3000000)\"");
+            return true;
+          }
+          timestamper_serial_set_baud(n);
+          scpi_clear_error();
+          return true;
+        }
+      }
+    }
+  }
+
   // INPut[n]:{SLOPe|DIVider}
   const char *p = scpi_match_kw(line, "INPUT", "INP");
   if (!p) {
