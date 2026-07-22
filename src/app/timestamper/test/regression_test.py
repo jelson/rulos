@@ -442,8 +442,10 @@ def phase_serial_ctl(ctx):
 def phase_serial_data(ctx):
     """End-to-end serial input: lines driven into PA10 by the BMP's auxiliary UART come back as
     timestamped records -- intact at the binary framing's 8-byte group boundaries, in order, no
-    loss, stamped at the send cadence. Skips when the BMP aux UART is absent or not wired to this
-    unit's serial input."""
+    loss, stamped at the send cadence -- while a pulse channel streams alongside, since sharing
+    one timeline with pulses is the feature's whole point: the pulse stream must stay
+    gap-perfect with serial payloads interleaved through it, and vice versa. Skips when the BMP
+    aux UART is absent or not wired to this unit's serial input."""
     uarts = glob.glob("/dev/serial/by-id/*Black_Magic*-if02")
     if not uarts:
         raise PhaseSkip("no BMP auxiliary UART on this host")
@@ -464,6 +466,12 @@ def phase_serial_data(ctx):
         if not found:
             raise PhaseSkip("BMP aux UART TX is not wired to this unit's serial input (PA10)")
 
+        # Pulse traffic on one channel for the whole capture: serial records must interleave
+        # with a live timestamp stream without disturbing it.
+        pulse_hz = 5000
+        ctx.src.periodic(ctx.channel, pulse_hz, PULSE_WIDTH_S)
+        tstest.configure(tic, slopes={ctx.channel: "POS"}, dividers={ctx.channel: 1})
+
         # Lengths straddling the (1 + len) 8-byte payload-group boundaries, a long line, then a
         # periodic tail so the timestamp check sees a decent train.
         lines = ["a", "1234567", "12345678", "123456ab7890123", "123456ab78901234", "x" * 255]
@@ -483,13 +491,24 @@ def phase_serial_data(ctx):
 
         sender = threading.Thread(target=send)
         sender.start()
-        got, lost = [], 0
-        for r in tic.read_for(0.4 + spacing_s * len(lines) + 1.0):
+        got, lost, pulses = [], 0, []
+        window_s = 0.4 + spacing_s * len(lines) + 1.0
+        for r in tic.read_for(window_s):
             if isinstance(r, tsctl.SerialLine):
                 got.append(r)
             elif isinstance(r, tsctl.SerialLinesLost):
                 lost += r.count
+            elif isinstance(r, tsctl.Timestamp) and r.channel == ctx.channel:
+                pulses.append(r.seconds * tstest.NS + r.nanoseconds)
         sender.join()
+
+        ph.expect(
+            len(pulses) > 0.8 * pulse_hz * window_s,
+            f"pulse stream flowed throughout ({len(pulses)} records at {pulse_hz} Hz)",
+        )
+        tstest.expect_cadence(
+            ph, pulses, tstest.NS // pulse_hz, "pulse cadence with serial interleaved"
+        )
 
         ph.expect([r.text for r in got] == lines, f"all {len(lines)} lines intact and in order")
         ph.expect(lost == 0, "no lines dropped")
@@ -513,6 +532,7 @@ def phase_serial_data(ctx):
             )
     finally:
         src.close()
+        ctx.src.off()
         tic.set_serial_enabled(False)
 
 
