@@ -212,32 +212,36 @@ _Static_assert(CLOCK_FREQ_HZ - 1 <= COUNTER_VALUE_MASK,
 
 // PH1 is freed by HSE bypass (the otherwise-OSC_OUT pin on H5, same trick as the G4 board freeing
 // PF1).
-#define LED_CHAN0 GPIO_H1  // channel 0
 #define LED_CHAN1 GPIO_A4  // channel 1
 #define LED_CHAN2 GPIO_A5  // channel 2
 #define LED_CHAN3 GPIO_A6  // channel 3
 #define LED_USB   GPIO_A7  // USB state
 
-// Two Rev B LED routings must never be driven -- each toggle edge
-// phase-slips the PLL by one 10 MHz reference period, corrupting
-// timestamps (both measured on hardware):
-//  - the clock LED on PC15, which is fed by the current-limited
-//    RTC-domain power switch that the datasheet forbids sourcing LED
-//    current from;
-//  - ch0's activity LED on PH1, the OSC_OUT pin adjacent to the 10 MHz
-//    input on PH0 (Rev A shares the PH1 routing but does not exhibit
-//    the coupling).
-// So on Rev B there is no clock LED and ch0's LED stays dark;
-// oscillator failure still shows as the remaining channel LEDs
-// flashing in unison. LED_CHAN_FIRST is where the channel-LED loops
-// start.
-#if defined(TIMESTAMPER_REV_B)
+// The clock and channel-0 LEDs are rev-dependent. Two Rev B routings must never be driven -- each
+// toggle edge phase-slips the PLL by one 10 MHz reference period, corrupting timestamps (both
+// measured on hardware):
+//  - the clock LED on PC15, which is fed by the current-limited RTC-domain power switch that the
+//    datasheet forbids sourcing LED current from;
+//  - ch0's activity LED on PH1, the OSC_OUT pin adjacent to the 10 MHz input on PH0 (Rev A shares
+//    the PH1 routing but does not exhibit the coupling).
+// So on Rev B there is no clock LED and ch0's LED stays dark; oscillator failure still shows as
+// the remaining channel LEDs flashing in unison. Rev C moves both to pins measured slip-free
+// (PB5 also carries Rev A's with-load track record) and restores all six LEDs. LED_CHAN_FIRST is
+// where the channel-LED loops start.
+#if defined(TIMESTAMPER_REV_C)
+#define LED_CLOCK      GPIO_B5
+#define LED_CHAN0      GPIO_B6
+#define LED_CHAN_FIRST 0
+#elif defined(TIMESTAMPER_REV_B)
+#define LED_CHAN0      GPIO_H1  // populated but never driven (LED_CHAN_FIRST skips it)
 #define LED_CHAN_FIRST 1
 #elif defined(TIMESTAMPER_REV_A)
 #define LED_CLOCK      GPIO_B5
+#define LED_CHAN0      GPIO_H1
 #define LED_CHAN_FIRST 0
 #else
-#error "timestamper: board rev not set -- define TIMESTAMPER_REV_A or _REV_B (see SConstruct)"
+#error \
+    "timestamper: board rev not set -- define TIMESTAMPER_REV_A, _REV_B, or _REV_C (see SConstruct)"
 #endif
 
 // A channel's two hardware capture sub-streams.
