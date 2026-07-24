@@ -110,6 +110,9 @@ def main():
             # Time-error series: each sample's deviation from a perfect grid at the mean period.
             # Subtracting the mean period only removes the frequency offset (which the Allan
             # second difference cancels anyway); it keeps x small so float math stays exact.
+            # A single sub-stream arrives time-ordered, but the phase-record math depends on
+            # order, so sort rather than rely on it (already-sorted input costs O(n)).
+            times.sort()
             t0 = times[0]
             mean_tick = (times[-1] - t0) / (len(times) - 1)
             x = [(t - t0) - i * mean_tick for i, t in enumerate(times)]

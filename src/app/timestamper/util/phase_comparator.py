@@ -39,6 +39,9 @@ def phase_offset_ns(times_a, times_b, period_ns):
     record minus its nearest A record, reduced modulo the period. Divider decimation only changes
     WHICH edges each channel reports, so the reduction recovers the same offset regardless of how
     the two dividers align."""
+    # The bisect below requires time order. A single sub-stream arrives time-ordered, but sort
+    # anyway so the function is safe for any caller (sorting an already-sorted list is cheap).
+    times_a = sorted(times_a)
     offsets = []
     for tb in times_b:
         i = bisect.bisect_left(times_a, tb)

@@ -651,11 +651,12 @@ class LectroTIC4:
 
 def span_freq(times_ns, divider):
     """Count-based frequency over a gate's full span: (n - 1) intervals against integer-ns
-    endpoints. Returns (freq_hz, span_ns),
-    or (None, 0) given fewer than two records."""
+    endpoints. Order-independent (the span is min to max), so it accepts records in arrival
+    order even where that is not time order. Returns (freq_hz, span_ns), or (None, 0) given
+    fewer than two records."""
     if len(times_ns) < 2:
         return None, 0
-    span_ns = times_ns[-1] - times_ns[0]
+    span_ns = max(times_ns) - min(times_ns)
     return divider * (len(times_ns) - 1) * NS / span_ns, span_ns
 
 
