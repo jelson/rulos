@@ -15,7 +15,8 @@ Usage:
   regression_test.py                       # all four channels
   regression_test.py --channel 1           # one channel only
   regression_test.py --phase rising --skip binary
-  regression_test.py --skip ch3            # phase labels include [chN wire]"""
+  regression_test.py --skip ch3            # phase labels include [chN wire]
+  regression_test.py --factory             # abbreviated per-unit hardware verification"""
 
 import argparse
 import glob
@@ -483,9 +484,9 @@ def phase_serial_data(ctx):
 
         def send():
             time.sleep(0.4)
-            for l in lines:
+            for text in lines:
                 host_times.append(time.monotonic())
-                src.write((l + "\n").encode())
+                src.write((text + "\n").encode())
                 src.flush()
                 time.sleep(spacing_s)
 
@@ -1142,7 +1143,18 @@ def main():
         "PG-4 output wired straight through to it); default: all four",
     )
     p.add_argument(
-        "--duration", type=float, default=5.0, help="Capture window per steady phase, s (default 5)"
+        "--duration",
+        type=float,
+        default=None,
+        help="Capture window per steady phase, s (default 5, or 1 with --factory)",
+    )
+    p.add_argument(
+        "--factory",
+        action="store_true",
+        help="Abbreviated per-unit hardware verification for manufacturing: every "
+        "channel receives with strict cadence, the serial input receives, and the "
+        "USB identity is sane. Verifies an INSTANCE, not the design -- run the "
+        "full suite for that.",
     )
     p.add_argument(
         "--phase",
@@ -1156,8 +1168,18 @@ def main():
         help="skip phases whose name contains this substring (case-insensitive)",
     )
     args = p.parse_args()
+    if args.duration is None:
+        args.duration = 1.0 if args.factory else 5.0
+
+    # The factory selection: the bare minimum proving this unit's hardware works. Strict cadence
+    # on each channel doubles as an assembly screen (a marginal joint that still conducts tends to
+    # glitch, and one glitched gap fails the 12 ns check); rising and falling together exercise
+    # both capture sub-streams on every channel.
+    FACTORY_LABELS = {"rising", "falling", "serial data", "idn serial"}
 
     def want(name):
+        if args.factory and not any(name.startswith(fl) for fl in FACTORY_LABELS):
+            return False
         if args.skip is not None and args.skip.lower() in name.lower():
             return False
         return args.phase is None or args.phase.lower() in name.lower()
@@ -1176,6 +1198,7 @@ def main():
         results.append((name, ctx.ph.ok))
 
     channels = [0, 1, 2, 3] if args.channel == "all" else [int(args.channel)]
+    wires = ("binary",) if args.factory else WIRES
 
     sg = Pulsegen(port=args.pg_port)
     src = tstest.Source(sg)
@@ -1184,7 +1207,8 @@ def main():
     with LectroTIC4(args.port) as tic:
         print(f"LectroTIC-4: {tic.port}; channels {channels}")
         port_path = tic.port
-        print(f"Connected: {tic.idn()}")
+        unit_idn = tic.idn()
+        print(f"Connected: {unit_idn}")
         ctx = SimpleNamespace(
             tic=tic, src=src, channel=channels[0], duration=args.duration, wire=None, port=None
         )
@@ -1193,7 +1217,7 @@ def main():
             # reads as one contiguous block of failures.
             for ch in channels:
                 ctx.channel = ch
-                for wire in WIRES:
+                for wire in wires:
                     ctx.wire = wire
                     for pd in PHASES:
                         if (
@@ -1255,6 +1279,9 @@ def main():
     for name, ok in results:
         print(f"  {'SKIP' if ok is None else 'PASS' if ok else 'FAIL'}: {name}")
         all_ok &= ok is not False
+    if args.factory:
+        serial_no = unit_idn.split(",")[2] if unit_idn.count(",") >= 2 else unit_idn
+        print(f"\n######## FACTORY TEST {'PASS' if all_ok else 'FAIL'}: {serial_no} ########")
     sys.exit(0 if all_ok else 1)
 
 
