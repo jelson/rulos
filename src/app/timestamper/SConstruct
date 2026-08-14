@@ -47,7 +47,7 @@ RulosBuildTarget(
                 '-DRULOS_PLLM=1',
                 '-DRULOS_PLLN=50',
                 '-DSCHEDULER_CAPACITY=4',
-                '-DTIMESTAMPER_REV_B',
+                '-DTIMESTAMPER_REV_C',
                 # Serial-input line capacity; the binary wire format's
                 # one-byte length field caps usable length at 255.
                 '-DLINEREADER_MAX_LINE_LEN=256',
