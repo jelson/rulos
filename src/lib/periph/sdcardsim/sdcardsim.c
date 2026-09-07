@@ -20,27 +20,26 @@ DSTATUS disk_initialize(BYTE pdrv) {
   return 0;
 }
 
+static bool valid_range(DWORD sector, UINT count) {
+  // Check in sectors before multiplying, including ranges ending exactly at capacity.
+  return count > 0 && sector < NUM_SECTORS && count <= NUM_SECTORS - sector;
+}
+
 DRESULT disk_read(BYTE pdrv, BYTE *buff, DWORD sector, UINT count) {
   LOG("read %d from sector %d", count, sector);
-  int addr = sector * SECTOR_SIZE;
-  count *= SECTOR_SIZE;
-  assert(addr >= 0);
-  assert(addr < SDSIZE);
-  assert(addr + count < SDSIZE);
-  // LOG("-->read %d from sector %d", count, addr);
-  memcpy(buff, &sdbuf[addr], count);
+  if (!valid_range(sector, count)) {
+    return RES_PARERR;
+  }
+  memcpy(buff, &sdbuf[(size_t)sector * SECTOR_SIZE], (size_t)count * SECTOR_SIZE);
   return RES_OK;
 }
 
 DRESULT disk_write(BYTE pdrv, const BYTE *buff, DWORD sector, UINT count) {
   LOG("write %d to sector %d", count, sector);
-  int addr = sector * SECTOR_SIZE;
-  count *= SECTOR_SIZE;
-  assert(addr >= 0);
-  assert(addr < SDSIZE);
-  assert(addr + count < SDSIZE);
-  // LOG("-->write %d to sector %d", count, addr);
-  memcpy(&sdbuf[addr], buff, count);
+  if (!valid_range(sector, count)) {
+    return RES_PARERR;
+  }
+  memcpy(&sdbuf[(size_t)sector * SECTOR_SIZE], buff, (size_t)count * SECTOR_SIZE);
   return RES_OK;
 }
 

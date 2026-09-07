@@ -12,6 +12,11 @@ LIB = ROOT / "src/lib"
 with tempfile.TemporaryDirectory(prefix="rulos-fat-") as build:
     for test in sorted(HERE.glob("*_test.c")):
         binary = Path(build) / test.stem
+        sources = [test, LIB / "core/time.c"]
+        flags = []
+        if test.stem == "sdcardsim_test":
+            sources += [ROOT / "ext/periph/fatfs" / name for name in ("ff.c", "ffunicode.c")]
+            flags += ["-DFF_USE_MKFS=1"]
         subprocess.run(
             [
                 "cc",
@@ -30,8 +35,8 @@ with tempfile.TemporaryDirectory(prefix="rulos-fat-") as build:
                 "-I" + str(LIB / "chip/sim"),
                 "-I" + str(LIB / "chip/arm/stm32"),
                 "-I" + str(ROOT / "ext"),
-                str(test),
-                str(LIB / "core/time.c"),
+                *flags,
+                *map(str, sources),
                 "-o",
                 str(binary),
             ],
