@@ -621,11 +621,9 @@ static void rx_send_up(uint8_t uart_id, stm32_uart_t *u, char *buf, size_t len) 
 // Maybe flush the RX buffer -- if there's data, and the upper layer is ready to
 // receive
 static void maybe_flush_rx_buf(uint8_t uart_id, stm32_uart_t *u, const stm32_uart_config_t *c) {
-  if (!u->rx_cb_ready) {
-    return;
-  }
-
-  if (!u->rx_data_ready) {
+  rulos_irq_state_t irq = hal_start_atomic();
+  if (!u->rx_cb_ready || !u->rx_data_ready) {
+    hal_end_atomic(irq);
     return;
   }
 
@@ -635,7 +633,6 @@ static void maybe_flush_rx_buf(uint8_t uart_id, stm32_uart_t *u, const stm32_uar
     // stopping DMA, clamp to the current half-boundary (HT/TC own
     // transitions), and deliver whatever's new. Mirrors the timestamper's
     // flush_dma_captures pattern.
-    __disable_irq();
     uint32_t buflen = 2 * u->rx_half_buflen;
     uint32_t remaining = rulos_dma_get_remaining(u->rx_dma_ch);
     uint32_t current_pos = buflen - remaining;
@@ -656,12 +653,11 @@ static void maybe_flush_rx_buf(uint8_t uart_id, stm32_uart_t *u, const stm32_uar
       u->tot_rx_bytes += len;
       u->rx_dma_processed_pos = current_pos;
     }
-    __enable_irq();
-
     u->rx_data_ready = false;
     if (len > 0) {
       rx_send_up(uart_id, u, u->rx_buf + last, len);
     }
+    hal_end_atomic(irq);
     return;
   }
 #endif
@@ -671,6 +667,7 @@ static void maybe_flush_rx_buf(uint8_t uart_id, stm32_uart_t *u, const stm32_uar
   char *oldbuf = switch_rx_buffers(u);
   launch_next_rx(u, c);
   rx_send_up(uart_id, u, oldbuf, len);
+  hal_end_atomic(irq);
 }
 
 static void on_rx_buffer_full(uint8_t uart_id, stm32_uart_t *u, const stm32_uart_config_t *c) {

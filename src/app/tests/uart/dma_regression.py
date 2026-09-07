@@ -47,6 +47,17 @@ def main():
         assert command("N") == "RXNE 1", "UART ISR consumed a byte owned by RX DMA"
         print("PASS: IDLE ISR leaves DMA-owned RXNE data alone")
 
+        assert command("P") == "RAW"
+        uart.write(b"A")
+        uart.flush()
+        time.sleep(0.03)
+        # No acknowledgement yet: the second idle batch waits for rx_cb_done.
+        uart.write(b"B")
+        uart.flush()
+        time.sleep(0.03)
+        assert command("A") == "RAW 2 MASK 1 RESTORED 1"
+        print("PASS: deferred IDLE flush preserves the caller's interrupt mask")
+
 
 if __name__ == "__main__":
     main()
