@@ -14,7 +14,8 @@
 
 // returns true if a is later than b
 bool later_than(Time a, Time b) {
-  return a - b < HALF_RANGE;
+  Time delta = a - b;
+  return delta != 0 && delta <= HALF_RANGE;
 }
 
 bool later_than_or_eq(Time a, Time b) {

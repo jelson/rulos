@@ -118,6 +118,11 @@ void test_later_than_case(Time a, Time b) {
 }
 
 void test_later_than() {
+  assert(!later_than(0, 0));
+  assert(!later_than(UINT32_MAX, UINT32_MAX));
+  assert(later_than_or_eq(0, 0));
+  assert(later_than_or_eq(UINT32_MAX, UINT32_MAX));
+  test_later_than_case(UINT32_MAX / 2, 0);
   test_later_than_case(1, 0);
   test_later_than_case(2000000000u, 0);
   test_later_than_case(0, 3000000000u);
