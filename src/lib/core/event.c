@@ -38,6 +38,7 @@ void event_init(Event *evt, bool auto_reset) {
 void event_signal(Event *evt) {
   if (evt->waiter_func != NULL) {
     SYNCDEBUG();
+    evt->signaled = !evt->auto_reset;
     schedule_now(evt->waiter_func, evt->waiter_data);
     evt->waiter_func = NULL;
   } else {
