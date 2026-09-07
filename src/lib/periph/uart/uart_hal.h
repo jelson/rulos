@@ -34,8 +34,9 @@ void hal_uart_init(uint8_t uart_id, uint32_t baud, void *user_data /* for both r
 void hal_uart_set_baud(uint8_t uart_id, uint32_t baud);
 
 // Callback for incoming serial data. If a callback is set using
-// hal_uart_set_receive_cb, incoming characters will be passed into that
-// callback at interrupt time.
+// hal_uart_start_rx, incoming characters will be passed into that callback.
+// The buffer is valid during this call only: circular RX DMA may reuse it
+// afterward. Copy any data whose processing is deferred to task time.
 typedef void (*hal_uart_receive_cb)(uint8_t uart_id, void *user_data, char *buf, size_t len);
 
 // Enable reception on this UART. Buffer and its capacity must be provided.
@@ -45,8 +46,8 @@ typedef void (*hal_uart_receive_cb)(uint8_t uart_id, void *user_data, char *buf,
 // be if called in response to hal_uart_trigger_rx();
 void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf, size_t buflen);
 
-// Downcall to indicate the top layer has finished processing the last data
-// passed up by rx_cb, and it's ready to receive the next.
+// Downcall to indicate the top layer is ready for the next rx_cb. This gates
+// callbacks, not hardware writes to the receive buffer.
 void hal_uart_rx_cb_done(uint8_t uart_id);
 
 // Begin a train of transmissions to a uart. When each completes, the send_next

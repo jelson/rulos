@@ -71,7 +71,9 @@ static void _uart_receive(uint8_t uart_id, void *user_data, char *buf, size_t le
   // previous one was complete
   assert(u->rx_pending_cb_buf == NULL);
 
-  u->rx_pending_cb_buf = buf;
+  assert(len <= sizeof(u->rx_pending_storage));
+  memcpy(u->rx_pending_storage, buf, len);
+  u->rx_pending_cb_buf = u->rx_pending_storage;
   u->rx_pending_cb_len = len;
   schedule_now(_uart_receive_trampoline, u);
 }

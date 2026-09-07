@@ -57,6 +57,8 @@ struct UartState_t_s {
   uart_rx_cb rx_cb;
   void *rx_user_data;
   char rx_queue[UART_RX_QUEUE_LEN];
+  // Snapshot owned by the scheduler callback; RX DMA may already be reusing rx_queue.
+  char rx_pending_storage[UART_RX_QUEUE_LEN];
   char *rx_pending_cb_buf;
   size_t rx_pending_cb_len;
   uint32_t rx_overflow_bytes;
