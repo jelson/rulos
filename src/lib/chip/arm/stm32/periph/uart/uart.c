@@ -766,7 +766,7 @@ static void on_usart_interrupt(uint8_t uart_id) {
 
   // if this uart is expecting to rx, and a character arrived, add it to the rx
   // buffer
-  if (u->rx_buf) {
+  if (u->rx_buf && !USART_USING_RX_DMA(c)) {
     int num_read = 0;
     while (u->rx_buf && LL_USART_IsActiveFlag_RXNE(c->instance)) {
       // note: we have to read the character whether or not we send it anywhere;

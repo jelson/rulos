@@ -45,3 +45,11 @@ for testprog in ["recv", "send", "charecho", "lineecho", "linecounter"]:
             "-DLINEREADER_MAX_LINE_LEN=512",
         ],
     ).build()
+
+RulosBuildTarget(
+    name="stm32_uart_regression",
+    sources=["dma_regression.c"],
+    platforms=[ArmStmPlatform("stm32g431x8"), ArmStmPlatform("stm32h523xc")],
+    peripherals="uart usb-cdc-stm32",
+    extra_cflags=["-DSCHEDULER_CAPACITY=16", "-DUART_RX_QUEUE_LEN=64"],
+).build()
