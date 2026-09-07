@@ -31,32 +31,6 @@ void FATFS_DEBUG_SEND_USART(const char *msg) {
   // LOG("SD card: %s", msg);
 }
 
-// 10ms-granularity timeout timer
-
-// Absolute time of next timeout.
-static Time timeout_time_us = 0;
-
-void TM_DELAY_Init() {
-}
-
-void TM_DELAY_SetTime2(uint32_t timeout_ms) {
-  timeout_time_us = clock_time_us() + (timeout_ms * 1000);
-}
-
-uint32_t TM_DELAY_Time2() {
-  Time now = clock_time_us();
-  Time remaining = (timeout_time_us - now) / 1000;
-
-  if (remaining > 0) {
-    return remaining;
-  } else {
-    // If the timeout has already expired, move the timeout time
-    // forward to avoid rollover problems
-    timeout_time_us = now;
-    return 0;
-  }
-}
-
 void TM_SPI_Init() {
   // Disable SD_SPI_PERIPH so parameters can be changed
   LL_SPI_Disable(SD_SPI_PERIPH);

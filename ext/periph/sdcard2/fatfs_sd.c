@@ -41,9 +41,6 @@ static BYTE TM_FATFS_SD_CardType;			/* Card type flags */
 
 /* Initialize MMC interface */
 static void init_spi (void) {
-	/* Init delay functions */
-	TM_DELAY_Init();
-
 	/* Init SPI */
 	TM_SPI_Init();
 
@@ -51,8 +48,8 @@ static void init_spi (void) {
 	FATFS_CS_HIGH;
 
 	/* Wait for stable */
-	TM_DELAY_SetTime2(20);
-	while (TM_DELAY_Time2() > 0) {
+	const Time deadline = clock_time_us() + time_msec(20);
+	while (later_than(deadline, clock_time_us())) {
 		__WFI();
 	}
 }
@@ -93,12 +90,11 @@ static int wait_ready (	/* 1:Ready, 0:Timeout */
 	BYTE d;
 	Time start = clock_time_us();
 
-	/* Set down counter */
-	TM_DELAY_SetTime2(wt);
+	const Time deadline = start + time_msec(wt);
 
 	do {
 		d = TM_SPI_Send(FATFS_SPI, 0xFF);
-	} while (d != 0xFF && TM_DELAY_Time2());	/* Wait for card goes ready or timeout */
+	} while (d != 0xFF && later_than(deadline, clock_time_us()));
 	if (d == 0xFF) {
 		FATFS_DEBUG_SEND_USART("wait_ready: OK");
 	} else {
@@ -154,14 +150,12 @@ static int rcvr_datablock (	/* 1:OK, 0:Error */
 {
 	BYTE token;
 
-	//Timer1 = 200;
-
 	FATFS_DEBUG_SEND_USART("rcvr_datablock: inside");
-	TM_DELAY_SetTime2(200);
+	const Time deadline = clock_time_us() + time_msec(200);
 	do {							// Wait for DataStart token in timeout of 200ms
 		token = TM_SPI_Send(FATFS_SPI, 0xFF);
 		// This loop will take a time. Insert rot_rdq() here for multitask envilonment.
-	} while ((token == 0xFF) && TM_DELAY_Time2());
+	} while ((token == 0xFF) && later_than(deadline, clock_time_us()));
 	if (token != 0xFE) {
 		FATFS_DEBUG_SEND_USART("rcvr_datablock: bad token or timeout");
 		return 0;		// Function fails if invalid DataStart token or timeout
@@ -325,14 +319,15 @@ DSTATUS TM_FATFS_SD_disk_initialize (void) {
 	}
 	ty = 0;
 	if (send_cmd(CMD0, 0) == 1) {				/* Put the card SPI/Idle state */
-		TM_DELAY_SetTime2(1000);				/* Initialization timeout = 1 sec */
+		/* Keep the overall deadline independent of nested command waits. */
+		const Time deadline = clock_time_us() + time_msec(1000);
 		if (send_cmd(CMD8, 0x1AA) == 1) {	/* SDv2? */
 			for (n = 0; n < 4; n++) {
 				ocr[n] = TM_SPI_Send(FATFS_SPI, 0xFF);	/* Get 32 bit return value of R7 resp */
 			}
 			if (ocr[2] == 0x01 && ocr[3] == 0xAA) {				/* Is the card supports vcc of 2.7-3.6V? */
-				while (TM_DELAY_Time2() && send_cmd(ACMD41, 1UL << 30)) ;	/* Wait for end of initialization with ACMD41(HCS) */
-				if (TM_DELAY_Time2() && send_cmd(CMD58, 0) == 0) {		/* Check CCS bit in the OCR */
+				while (later_than(deadline, clock_time_us()) && send_cmd(ACMD41, 1UL << 30)) ;
+				if (later_than(deadline, clock_time_us()) && send_cmd(CMD58, 0) == 0) {
 					for (n = 0; n < 4; n++) {
 						ocr[n] = TM_SPI_Send(FATFS_SPI, 0xFF);
 					}
@@ -345,8 +340,8 @@ DSTATUS TM_FATFS_SD_disk_initialize (void) {
 			} else {
 				ty = CT_MMC; cmd = CMD1;	/* MMCv3 (CMD1(0)) */
 			}
-			while (TM_DELAY_Time2() && send_cmd(cmd, 0));			/* Wait for end of initialization */
-			if (!TM_DELAY_Time2() || send_cmd(CMD16, 512) != 0) {	/* Set block length: 512 */
+			while (later_than(deadline, clock_time_us()) && send_cmd(cmd, 0));
+			if (!later_than(deadline, clock_time_us()) || send_cmd(CMD16, 512) != 0) {
 				ty = 0;
 			}
 		}

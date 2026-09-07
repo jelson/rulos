@@ -135,9 +135,6 @@
 #define FATFS_CS_LOW  gpio_clr(SD_PIN_CHIPENABLE)
 #define FATFS_CS_HIGH gpio_set(SD_PIN_CHIPENABLE)
 
-void TM_DELAY_Init();
-void TM_DELAY_SetTime2(uint32_t timeout_time_ms);
-uint32_t TM_DELAY_Time2();
 void TM_SPI_Init();
 void FATFS_DEBUG_SEND_USART(const char *msg);
 void TM_SPI_SetSlow();
