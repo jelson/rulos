@@ -193,6 +193,11 @@ static rulos_dma_config_t make_tx_cfg(bool mem_increment) {
 }
 
 static void sdcard_dma_init(void) {
+  // Card initialization can be retried without resetting the MCU. Keep
+  // ownership of the same channels across those retries.
+  if (rx_dma_ch != NULL && tx_dma_ch != NULL) {
+    return;
+  }
   // Default direction: write (RX discards to a dummy, TX increments
   // through source). The actual mem_increment flags are reconfigured
   // on every call to TM_SPI_WriteMulti / TM_SPI_ReadMulti.

@@ -161,6 +161,10 @@ static void test_transfer(bool read, unsigned count) {
 int main(void) {
   TM_SPI_Init();
   assert(allocations == 2);
+  for (unsigned i = 0; i < 4; i++) {
+    TM_SPI_Init();
+    assert(allocations == 2);
+  }
   const unsigned sizes[] = {16, 512};
   for (unsigned i = 0; i < sizeof(sizes) / sizeof(sizes[0]); i++) {
     for (unsigned read = 0; read < 2; read++) {
@@ -171,6 +175,8 @@ int main(void) {
       complete_on_enable = true;
       test_transfer(read, sizes[i]);
       complete_on_enable = false;
+      TM_SPI_Init();
+      assert(allocations == 2);
     }
   }
   starts = wakeups = 0;
@@ -178,4 +184,5 @@ int main(void) {
   assert(TM_SPI_WriteMulti(SPI1, NULL, 0));
   assert(starts == 0 && wakeups == 0 && allocations == 2);
   puts("sd DMA: RX completion, error ordering, FIFO cleanup, and read/write recovery passed");
+  puts("sd DMA: repeated initialization reuses the original channels");
 }
