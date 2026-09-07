@@ -19,8 +19,21 @@
 import argparse
 import glob
 import os
+import shlex
 import subprocess
 import sys
+import tempfile
+
+# compare-sections only warns on mismatches. Require positive verification of
+# every reported section, including at least one section, before resetting.
+_VERIFY_FLASH = """python
+result = gdb.execute("compare-sections", to_string=True)
+gdb.write(result)
+lines = result.strip().splitlines()
+if not lines or any(not (line.startswith("Section ") and line.endswith(": matched."))
+                    for line in lines):
+    raise gdb.GdbError("Flash verification failed")
+end"""
 
 
 def detect_bmp():
@@ -112,37 +125,35 @@ def read_serial(uid_base, prefix="", port=None):
 def _gdb(port, elf=None, load=False, mass_erase=False):
     """Drive the BMP: attach, optionally mass-erase, optionally
     load+verify, reset, detach. `elf` supplies symbols for `load`; a
-    reset-only run needs no file. Returns gdb's exit code.
+    reset-only run needs no file. Returns nonzero on any command or
+    verification failure. Requires Python-enabled gdb-multiarch.
 
     The monitor command spelling is BMP-firmware-version sensitive;
     this exact vector is the known-good one -- do not "simplify" it."""
     print(f"bmpflash: BMP GDB port: {port}", file=sys.stderr)
-    cmd = ["gdb-multiarch"]
+    commands = ["set confirm off", "set pagination off"]
     if elf is not None:
-        cmd.append(elf)
-    cmd += [
-        "-ex",
-        "set confirm off",
-        "-ex",
-        "set pagination off",
-        "-ex",
+        commands.append(f"file {shlex.quote(os.fspath(elf))}")
+    commands += [
         f"tar ext {port}",
-        "-ex",
         "mon conn enable",
-        "-ex",
         "mon swd",
-        "-ex",
         "at 1",
-        *(["-ex", "mon erase_mass"] if mass_erase else []),
-        *(["-ex", "load", "-ex", "compare-sections"] if load else []),
-        "-ex",
+        *(["mon erase_mass"] if mass_erase else []),
+        *(["load", _VERIFY_FLASH] if load else []),
         "mon reset",
-        "-ex",
         "kill",
-        "-ex",
         "quit",
     ]
-    return subprocess.run(cmd).returncode
+    # A command-file error stops execution before reset/quit. Separate -ex
+    # commands continue after errors, and the final quit can hide the failure.
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".gdb") as script:
+        script.write("\n".join(commands) + "\n")
+        script.flush()
+        return subprocess.run(
+            ["gdb-multiarch", "--batch", "--nx", "-x", script.name],
+            env={**os.environ, "LC_ALL": "C"},
+        ).returncode
 
 
 def flash_elf(elf, port=None, mass_erase=False):
