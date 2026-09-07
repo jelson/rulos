@@ -7,6 +7,8 @@
 SPI_TypeDef sd_test_spi;
 static Time now, started, spi_step;
 static bool selected, force_busy, respond;
+static bool transfer_ok;
+static unsigned read_count, write_count;
 static unsigned card_type, ready_after, op_count, init_count;
 static uint8_t command[6], response[8];
 static unsigned command_len, response_len, response_pos;
@@ -107,20 +109,26 @@ void TM_SPI_SetFast(void) {
 void FATFS_DEBUG_SEND_USART(const char *msg) {
   (void)msg;
 }
-void TM_SPI_ReadMulti(SPI_TypeDef *spi, uint8_t *buffer, uint8_t dummy, uint32_t count) {
+bool TM_SPI_ReadMulti(SPI_TypeDef *spi, uint8_t *buffer, uint8_t dummy, uint32_t count) {
   (void)spi;
   memset(buffer, dummy, count);
+  read_count++;
+  return transfer_ok;
 }
-void TM_SPI_WriteMulti(SPI_TypeDef *spi, uint8_t *buffer, uint32_t count) {
+bool TM_SPI_WriteMulti(SPI_TypeDef *spi, uint8_t *buffer, uint32_t count) {
   (void)spi;
   (void)buffer;
   (void)count;
+  write_count++;
+  return transfer_ok;
 }
 
 static void reset(Time start) {
   now = started = start;
   spi_step = 100;
   selected = force_busy = respond = false;
+  transfer_ok = true;
+  read_count = write_count = 0;
   card_type = CT_SD2;
   ready_after = op_count = init_count = 0;
   command_len = response_len = response_pos = 0;
@@ -175,6 +183,29 @@ static void test_initialization(Time start, unsigned type, bool succeeds) {
   }
 }
 
+static void test_transfer_errors(void) {
+  BYTE block[512];
+  for (unsigned ok = 0; ok <= 1; ok++) {
+    reset(0);
+    selected = true;
+    transfer_ok = ok;
+    response[0] = 0xfe;
+    response_len = 1;
+    assert(rcvr_datablock(block, sizeof(block)) == (int)ok);
+    assert(read_count == 1);
+
+    reset(0);
+    selected = true;
+    transfer_ok = ok;
+    // Ready, token, two CRC bytes, then accepted data response.
+    const BYTE reply[] = {0xff, 0xff, 0xff, 0xff, 0x05};
+    memcpy(response, reply, sizeof(reply));
+    response_len = sizeof(reply);
+    assert(xmit_datablock(block, 0xfe) == (int)ok);
+    assert(write_count == 1);
+  }
+}
+
 int main(void) {
   const Time starts[] = {0, UINT32_MAX - 5000};
   const unsigned types[] = {CT_SD2, CT_SD1, CT_MMC};
@@ -185,5 +216,7 @@ int main(void) {
       test_initialization(starts[i], types[j], true);
     }
   }
+  test_transfer_errors();
   puts("sd protocol: local deadlines, late polls, rollover, and card initialization passed");
+  puts("sd protocol: transfer errors propagate from SPI reads and writes");
 }

@@ -22,7 +22,9 @@
 #include "core/hardware.h"
 #include "core/rulos.h"
 
+#ifndef DO_NOT_USE_DMA
 static void sdcard_dma_init(void);
+#endif
 
 ////////////////////////////////////////////////////////////////
 ////// Implementation of the SD module's expecting down-facing API.
@@ -98,7 +100,7 @@ void TM_SPI_SetFast() {
 
 // This is the old implementation of SPI writing, using a loop in code
 // rather than DMA. Deprecated but still here in case we need it.
-void TM_SPI_WriteMulti(SPI_TypeDef *SPIx, uint8_t *dataOut, uint32_t count) {
+bool TM_SPI_WriteMulti(SPI_TypeDef *SPIx, uint8_t *dataOut, uint32_t count) {
   uint32_t i;
 
   /* Wait for previous transmissions to complete if DMA TX enabled for SPI */
@@ -114,11 +116,12 @@ void TM_SPI_WriteMulti(SPI_TypeDef *SPIx, uint8_t *dataOut, uint32_t count) {
     /* Read data register */
     (void)SPIx->DR;
   }
+  return true;
 }
 
 // This is the old implementation of SPI reading, using a loop in code
 // rather than DMA. Deprecated but still here in case we need it.
-void TM_SPI_ReadMulti(SPI_TypeDef *SPIx, uint8_t *dataIn, uint8_t dummy, uint32_t count) {
+bool TM_SPI_ReadMulti(SPI_TypeDef *SPIx, uint8_t *dataIn, uint8_t dummy, uint32_t count) {
   uint32_t i;
 
   /* Wait for previous transmissions to complete if DMA TX enabled for SPI */
@@ -134,22 +137,26 @@ void TM_SPI_ReadMulti(SPI_TypeDef *SPIx, uint8_t *dataIn, uint8_t dummy, uint32_
     /* Save data to buffer */
     *dataIn++ = LL_SPI_ReceiveData8(SPIx);
   }
+  return true;
 }
 
 #else  // DO_NOT_USE_DMA
 
 static volatile bool transmissionComplete;
+static volatile bool transmissionFailed;
 static rulos_dma_channel_t *rx_dma_ch;
 static rulos_dma_channel_t *tx_dma_ch;
 
-// Both channels' TC and error callbacks land here and just wake the
-// busy-wait loop in dma_enable_and_wait. Runs in DMA ISR context.
-// RX TC always fires last on a successful transfer (it has to wait
-// for the last SPI clock cycle to shift in the MISO bit), so the
-// normal path only needs RX. We wire TX too so that a TX DMA error
-// doesn't deadlock the wait loop.
+// Only RX completion proves the last byte has crossed the SPI bus.
+// TX completion merely means the last byte was queued in the TX FIFO.
 static void sdcard_dma_done_callback(void *user_data) {
   (void)user_data;
+  transmissionComplete = true;
+}
+
+static void sdcard_dma_error_callback(void *user_data) {
+  (void)user_data;
+  transmissionFailed = true;
   transmissionComplete = true;
 }
 
@@ -167,7 +174,7 @@ static rulos_dma_config_t make_rx_cfg(bool mem_increment) {
       .mem_increment = mem_increment,
       .priority = RULOS_DMA_PRIORITY_HIGH,
       .tc_callback = sdcard_dma_done_callback,
-      .error_callback = sdcard_dma_done_callback,
+      .error_callback = sdcard_dma_error_callback,
   };
 }
 
@@ -181,8 +188,7 @@ static rulos_dma_config_t make_tx_cfg(bool mem_increment) {
       .periph_increment = false,
       .mem_increment = mem_increment,
       .priority = RULOS_DMA_PRIORITY_HIGH,
-      .tc_callback = sdcard_dma_done_callback,
-      .error_callback = sdcard_dma_done_callback,
+      .error_callback = sdcard_dma_error_callback,
   };
 }
 
@@ -203,10 +209,14 @@ static void sdcard_dma_init(void) {
   }
 }
 
-static void dma_enable_and_wait(void *rx_mem, void *tx_mem, uint32_t count) {
+static bool dma_enable_and_wait(void *rx_mem, void *tx_mem, uint32_t count) {
+  if (count == 0) {
+    return true;
+  }
   volatile void *const spi_dr = (volatile void *)LL_SPI_DMA_GetRegAddr(SD_SPI_PERIPH);
 
   transmissionComplete = false;
+  transmissionFailed = false;
 
   rulos_dma_start(rx_dma_ch, spi_dr, rx_mem, count);
   rulos_dma_start(tx_dma_ch, spi_dr, tx_mem, count);
@@ -214,8 +224,7 @@ static void dma_enable_and_wait(void *rx_mem, void *tx_mem, uint32_t count) {
   LL_SPI_EnableDMAReq_RX(SD_SPI_PERIPH);
   LL_SPI_EnableDMAReq_TX(SD_SPI_PERIPH);
 
-  // Block until a DMA callback fires (TC on successful completion,
-  // or error_callback on DMA error on either channel).
+  // Block until RX completes or either DMA channel fails.
   while (!transmissionComplete) {
     __WFI();
   }
@@ -225,14 +234,20 @@ static void dma_enable_and_wait(void *rx_mem, void *tx_mem, uint32_t count) {
   rulos_dma_stop(rx_dma_ch);
   rulos_dma_stop(tx_dma_ch);
 
+  // On error, bytes already queued in SPI can still be shifting. Let
+  // them finish before draining RX and returning control to the card protocol.
+  while (LL_SPI_IsActiveFlag_BSY(SD_SPI_PERIPH)) {
+  }
   // Drain any residual bytes from the SPI RX FIFO so they don't
   // contaminate subsequent TM_SPI_Send byte-at-a-time reads.
   while (LL_SPI_IsActiveFlag_RXNE(SD_SPI_PERIPH)) {
     (void)LL_SPI_ReceiveData8(SD_SPI_PERIPH);
   }
+  LL_SPI_ClearFlag_OVR(SD_SPI_PERIPH);
+  return !transmissionFailed;
 }
 
-void TM_SPI_WriteMulti(SPI_TypeDef *SPIx, uint8_t *dataOut, uint32_t count) {
+bool TM_SPI_WriteMulti(SPI_TypeDef *SPIx, uint8_t *dataOut, uint32_t count) {
   uint8_t rx_sink;
 
   // RX side discards incoming bytes into a single dummy location
@@ -243,10 +258,10 @@ void TM_SPI_WriteMulti(SPI_TypeDef *SPIx, uint8_t *dataOut, uint32_t count) {
   const rulos_dma_config_t tx_cfg = make_tx_cfg(true);
   rulos_dma_reconfigure(tx_dma_ch, &tx_cfg);
 
-  dma_enable_and_wait(&rx_sink, dataOut, count);
+  return dma_enable_and_wait(&rx_sink, dataOut, count);
 }
 
-void TM_SPI_ReadMulti(SPI_TypeDef *SPIx, uint8_t *dataIn, uint8_t dummy, uint32_t count) {
+bool TM_SPI_ReadMulti(SPI_TypeDef *SPIx, uint8_t *dataIn, uint8_t dummy, uint32_t count) {
   // RX side walks through dataIn (mem_increment=true). TX side reads
   // the same dummy byte over and over (mem_increment=false) to clock
   // the SPI bus.
@@ -255,7 +270,7 @@ void TM_SPI_ReadMulti(SPI_TypeDef *SPIx, uint8_t *dataIn, uint8_t dummy, uint32_
   const rulos_dma_config_t tx_cfg = make_tx_cfg(false);
   rulos_dma_reconfigure(tx_dma_ch, &tx_cfg);
 
-  dma_enable_and_wait(dataIn, &dummy, count);
+  return dma_enable_and_wait(dataIn, &dummy, count);
 }
 
 #endif

@@ -56,25 +56,25 @@ static void init_spi (void) {
 
 
 /* Receive multiple byte */
-static void rcvr_spi_multi (
+static bool rcvr_spi_multi (
 	BYTE *buff,		/* Pointer to data buffer */
 	UINT btr		/* Number of bytes to receive (even number) */
 )
 {
 	/* Read multiple bytes, send 0xFF as dummy */
-	TM_SPI_ReadMulti(FATFS_SPI, buff, 0xFF, btr);
+	return TM_SPI_ReadMulti(FATFS_SPI, buff, 0xFF, btr);
 }
 
 
 #if _USE_WRITE
 /* Send multiple byte */
-static void xmit_spi_multi (
+static bool xmit_spi_multi (
 	const BYTE *buff,	/* Pointer to the data */
 	UINT btx			/* Number of bytes to send (even number) */
 )
 {
 	/* Write multiple bytes */
-	TM_SPI_WriteMulti(FATFS_SPI, (uint8_t *)buff, btx);
+	return TM_SPI_WriteMulti(FATFS_SPI, (uint8_t *)buff, btx);
 }
 #endif
 
@@ -161,7 +161,7 @@ static int rcvr_datablock (	/* 1:OK, 0:Error */
 		return 0;		// Function fails if invalid DataStart token or timeout
 	}
 
-	rcvr_spi_multi(buff, btr);		// Store trailing data to the buffer
+	if (!rcvr_spi_multi(buff, btr)) return 0;
 	TM_SPI_Send(FATFS_SPI, 0xFF); TM_SPI_Send(FATFS_SPI, 0xFF);			// Discard CRC
 	FATFS_DEBUG_SEND_USART("rcvr_datablock: success");
 	return 1;						// Function succeeded
@@ -189,7 +189,7 @@ static int xmit_datablock (	/* 1:OK, 0:Failed */
 	}
 
 	TM_SPI_Send(FATFS_SPI, token);					/* Send token */
-	xmit_spi_multi(buff, 512);		/* Data */
+	if (!xmit_spi_multi(buff, 512)) return 0;
 
 	/* Dummy CRC */
 	TM_SPI_Send(FATFS_SPI, 0xFF);

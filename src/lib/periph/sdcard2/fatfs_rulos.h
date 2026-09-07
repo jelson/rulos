@@ -37,6 +37,7 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "core/hardware.h"
@@ -174,9 +175,9 @@ void TM_SPI_SendMulti(SPI_TypeDef *SPIx, uint8_t *dataOut, uint8_t *dataIn, uint
  * to 6
  * @param  *dataOut: Pointer to array with data to send over SPI
  * @param  count: Number of elements to send over SPI
- * @retval None
+ * @retval true on complete transfer, false on DMA error
  */
-void TM_SPI_WriteMulti(SPI_TypeDef *SPIx, uint8_t *dataOut, uint32_t count);
+bool TM_SPI_WriteMulti(SPI_TypeDef *SPIx, uint8_t *dataOut, uint32_t count);
 
 /**
  * @brief  Receives multiple data bytes over SPI
@@ -187,9 +188,9 @@ void TM_SPI_WriteMulti(SPI_TypeDef *SPIx, uint8_t *dataOut, uint32_t count);
  * @param  dummy: Dummy byte  to be sent over SPI, to receive data back. In most
  * cases 0x00 or 0xFF
  * @param  count: Number of bytes you want read from device
- * @retval None
+ * @retval true on complete transfer, false on DMA error
  */
-void TM_SPI_ReadMulti(SPI_TypeDef *SPIx, uint8_t *dataIn, uint8_t dummy, uint32_t count);
+bool TM_SPI_ReadMulti(SPI_TypeDef *SPIx, uint8_t *dataIn, uint8_t dummy, uint32_t count);
 
 DSTATUS TM_FATFS_SD_disk_initialize(void);
 
