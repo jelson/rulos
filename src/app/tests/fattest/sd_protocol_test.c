@@ -9,6 +9,8 @@ static Time now, started, spi_step;
 static bool selected, force_busy, respond;
 static bool transfer_ok;
 static unsigned read_count, write_count;
+static bool writing, programming, data_response, fail_program, fail_stop, busy_forever;
+static unsigned crc_left, busy_bytes, stop_tokens;
 static unsigned card_type, ready_after, op_count, init_count;
 static uint8_t command[6], response[8];
 static unsigned command_len, response_len, response_pos;
@@ -49,6 +51,33 @@ static uint8_t exchange(uint8_t byte) {
   if (response_pos < response_len) {
     return response[response_pos++];
   }
+  if (crc_left) {
+    crc_left--;
+    return 0xff;
+  }
+  if (data_response) {
+    data_response = false;
+    programming = true;
+    busy_bytes = 2;
+    busy_forever = fail_program;
+    return 0x05;
+  }
+  if (programming) {
+    if (busy_forever || busy_bytes > 0) {
+      if (busy_bytes) {
+        busy_bytes--;
+      }
+      return 0;
+    }
+    programming = false;
+  }
+  if (writing && byte == 0xfd) {
+    stop_tokens++;
+    programming = true;
+    busy_bytes = 2;
+    busy_forever = fail_stop;
+    return 0xff;
+  }
   if (respond && (command_len || (byte & 0xc0) == 0x40)) {
     command[command_len++] = byte;
     if (command_len == sizeof(command)) {
@@ -82,6 +111,16 @@ static uint8_t exchange(uint8_t byte) {
         }
         case CMD16:
           response[0] = 0;
+          break;
+        case CMD24:
+        case CMD25:
+          response[0] = 0;
+          writing = true;
+          break;
+        case CMD17:
+          response[0] = 0;
+          response[1] = 0xfe;
+          response_len = 2;
           break;
       }
     }
@@ -120,6 +159,10 @@ bool TM_SPI_WriteMulti(SPI_TypeDef *spi, uint8_t *buffer, uint32_t count) {
   (void)buffer;
   (void)count;
   write_count++;
+  if (writing && transfer_ok) {
+    crc_left = 2;
+    data_response = true;
+  }
   return transfer_ok;
 }
 
@@ -129,6 +172,8 @@ static void reset(Time start) {
   selected = force_busy = respond = false;
   transfer_ok = true;
   read_count = write_count = 0;
+  writing = programming = data_response = fail_program = fail_stop = busy_forever = false;
+  crc_left = busy_bytes = stop_tokens = 0;
   card_type = CT_SD2;
   ready_after = op_count = init_count = 0;
   command_len = response_len = response_pos = 0;
@@ -203,7 +248,36 @@ static void test_transfer_errors(void) {
     response_len = sizeof(reply);
     assert(xmit_datablock(block, 0xfe) == (int)ok);
     assert(write_count == 1);
+
+    reset(0);
+    respond = true;
+    transfer_ok = ok;
+    TM_FATFS_SD_Stat = 0;
+    TM_FATFS_SD_CardType = CT_SD2 | CT_BLOCK;
+    assert(TM_FATFS_SD_disk_read(block, 0, 1) == (ok ? RES_OK : RES_ERROR));
+    assert(read_count == 1);
+    assert(TM_FATFS_SD_disk_write(block, 0, 1) == (ok ? RES_OK : RES_ERROR));
+    assert(write_count == 1);
   }
+}
+
+static void test_write_completion(Time start, unsigned count, bool program_timeout,
+                                  bool stop_timeout) {
+  reset(start);
+  respond = true;
+  fail_program = program_timeout;
+  fail_stop = stop_timeout;
+  TM_FATFS_SD_Stat = 0;
+  TM_FATFS_SD_CardType = CT_SD2 | CT_BLOCK;
+  BYTE blocks[1024] = {0};
+  DRESULT result = TM_FATFS_SD_disk_write(blocks, 0, count);
+  assert(!selected);
+  if (program_timeout || stop_timeout) {
+    assert(result == RES_ERROR && now - started >= time_msec(5000));
+  } else {
+    assert(result == RES_OK && now - started < time_msec(100));
+  }
+  assert(stop_tokens == (count > 1 && !program_timeout ? 1U : 0U));
 }
 
 int main(void) {
@@ -215,8 +289,14 @@ int main(void) {
       test_initialization(starts[i], types[j], false);
       test_initialization(starts[i], types[j], true);
     }
+    test_write_completion(starts[i], 1, false, false);
+    test_write_completion(starts[i], 2, false, false);
+    test_write_completion(starts[i], 1, true, false);
+    test_write_completion(starts[i], 2, true, false);
+    test_write_completion(starts[i], 2, false, true);
   }
   test_transfer_errors();
   puts("sd protocol: local deadlines, late polls, rollover, and card initialization passed");
   puts("sd protocol: transfer errors propagate from SPI reads and writes");
+  puts("sd protocol: single/multiple writes report programming and stop-token timeouts");
 }

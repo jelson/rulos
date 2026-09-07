@@ -463,6 +463,7 @@ DRESULT TM_FATFS_SD_disk_write (
 )
 {
 	//LOG("writing blocks %ld-%ld", sector, sector+count);
+	DRESULT res = RES_ERROR;
 	FATFS_DEBUG_SEND_USART("disk_write: inside");
 	if (!TM_FATFS_Detect()) {
 		return RES_ERROR;
@@ -525,12 +526,14 @@ DRESULT TM_FATFS_SD_disk_write (
 	// wait for the write to complete
 	if (!wait_ready(5000)) {
 		LOG("timed out waiting for block ack");
+		goto done;
 	}
+	res = count ? RES_ERROR : RES_OK;
 
 done:
 	deselect_card();
 
-	return count ? RES_ERROR : RES_OK;	/* Return result */
+	return res;
 }
 #endif
 
