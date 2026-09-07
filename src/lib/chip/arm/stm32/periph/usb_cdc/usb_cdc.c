@@ -189,6 +189,9 @@ static int8_t CDC_Receive_FS(uint8_t *buf, uint32_t *len) {
 
     // Deliver to application (runs synchronously)
     schedule_now(rx_delivery_task, cdc_device);
+  } else {
+    // A ZLP consumes the armed OUT transaction too, but needs no delivery task.
+    USBD_CDC_ReceivePacket(&cdc_device->usbd_handle);
   }
 
   return USBD_OK;
