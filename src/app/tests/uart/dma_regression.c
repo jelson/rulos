@@ -10,9 +10,33 @@ static char tx[2048];
 static unsigned rx_count;
 static unsigned rx_calls;
 static unsigned char observed[512];
+static bool delay_next_rx;
+static unsigned masks_done;
+static unsigned masked_flags;
 static char raw_buffer[64];
 static unsigned raw_calls;
 static unsigned raw_primask;
+
+static void spin_us(unsigned us) {
+  uint32_t start = DWT->CYCCNT;
+  uint32_t cycles = us * (SystemCoreClock / 1000000);
+  while ((uint32_t)(DWT->CYCCNT - start) < cycles) {
+  }
+}
+
+static void mask_task(void *data) {
+  rulos_irq_state_t irq = hal_start_atomic();
+  spin_us(100000);
+  // This fixture allocates UART TX first and RX second, with no other DMA users.
+#if defined(RULOS_ARM_stm32h5)
+  masked_flags = LL_DMA_IsActiveFlag_TC(GPDMA1, LL_DMA_CHANNEL_1) |
+                 (LL_DMA_IsActiveFlag_HT(GPDMA1, LL_DMA_CHANNEL_1) << 1);
+#else
+  masked_flags = LL_DMA_IsActiveFlag_TC2(DMA1) | (LL_DMA_IsActiveFlag_HT2(DMA1) << 1);
+#endif
+  hal_end_atomic(irq);
+  masks_done++;
+}
 
 static void raw_rx(uint8_t id, void *data, char *buf, size_t len) {
   raw_calls++;
@@ -20,6 +44,10 @@ static void raw_rx(uint8_t id, void *data, char *buf, size_t len) {
 }
 
 static void uart_rx(UartState_t *u, void *data, char *buf, size_t len) {
+  if (delay_next_rx) {
+    delay_next_rx = false;
+    spin_us(50000);
+  }
   if (rx_count + len <= sizeof(observed)) {
     memcpy(observed + rx_count, buf, len);
   }
@@ -37,9 +65,17 @@ static void usb_rx(usbd_cdc_state_t *cdc, void *data, const uint8_t *buf, uint32
       out = snprintf(tx, sizeof(tx), "UART regression: %lu Hz\n", SystemCoreClock);
       break;
     case 'R':
-      rx_count = rx_calls = 0;
+      rx_count = rx_calls = masks_done = masked_flags = 0;
       memset(observed, 0, sizeof(observed));
       out = snprintf(tx, sizeof(tx), "RESET\n");
+      break;
+    case 'D':
+      delay_next_rx = true;
+      out = snprintf(tx, sizeof(tx), "DELAY\n");
+      break;
+    case 'M':
+      schedule_us(20000, mask_task, NULL);
+      out = snprintf(tx, sizeof(tx), "MASK\n");
       break;
     case 'E':
       LL_USART_DisableDMAReq_RX(USART1);
@@ -69,7 +105,8 @@ static void usb_rx(usbd_cdc_state_t *cdc, void *data, const uint8_t *buf, uint32
       out = snprintf(tx, sizeof(tx), "TX\n");
       break;
     case 'Q':
-      out = snprintf(tx, sizeof(tx), "RX %u CALLS %u HEX ", rx_count, rx_calls);
+      out = snprintf(tx, sizeof(tx), "RX %u CALLS %u MASKS %u FLAGS %u HEX ", rx_count, rx_calls,
+                     masks_done, masked_flags);
       for (unsigned i = 0; i < r_min(rx_count, sizeof(observed)); i++) {
         out += snprintf(tx + out, sizeof(tx) - out, "%02x", observed[i]);
       }
@@ -84,6 +121,9 @@ static void usb_rx(usbd_cdc_state_t *cdc, void *data, const uint8_t *buf, uint32
 int main(void) {
   rulos_hal_init();
   init_clock(1000, TIMER1);
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  DWT->CYCCNT = 0;
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
   uart_init(&uart, 0, 115200);
   uart_start_rx(&uart, uart_rx, NULL);
   usb.rx_cb = usb_rx;

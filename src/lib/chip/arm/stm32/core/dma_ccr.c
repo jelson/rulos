@@ -240,6 +240,8 @@ static const dma_channel_hw_t g_hw[DMA_CHANNEL_SLOTS] = {
  */
 typedef struct {
   bool allocated;
+  bool circular;
+  uint32_t nitems;
   void (*tc_callback)(void *user_data);
   void (*ht_callback)(void *user_data);
   void (*error_callback)(void *user_data);
@@ -585,7 +587,7 @@ CCMRAM static void ll_dma_clear_flag_te(DMA_TypeDef *dma, uint32_t ch) {
 // Channel init (called from alloc and reconfigure)
 //
 // Programs the DMA hardware registers from `config`, and caches the
-// small set of fields the ISR dispatcher needs (callbacks + user_data)
+// small set of fields the ISR dispatcher needs (mode + callbacks + user_data)
 // into g_state[idx]. Everything else in `config` is applied to the
 // hardware and then dropped on the floor -- no per-channel copy of
 // the full rulos_dma_config_t is retained.
@@ -619,6 +621,7 @@ static void init_channel(int idx, const rulos_dma_config_t *c) {
   const dma_channel_hw_t *hw = &g_hw[idx];
   dma_channel_state_t *s = &g_state[idx];
 
+  s->circular = (c->mode == RULOS_DMA_MODE_CIRCULAR);
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
 
   // Clear any stale TC/HT/TE flags left over from a previous owner of
@@ -652,12 +655,13 @@ static void init_channel(int idx, const rulos_dma_config_t *c) {
   // Enable the interrupts corresponding to the callbacks we'll dispatch.
   LL_DMA_EnableIT_TC(hw->dma, hw->ll_channel);
   LL_DMA_EnableIT_TE(hw->dma, hw->ll_channel);
-  if (c->mode == RULOS_DMA_MODE_CIRCULAR) {
+  if (s->circular) {
     LL_DMA_EnableIT_HT(hw->dma, hw->ll_channel);
+  } else {
+    LL_DMA_DisableIT_HT(hw->dma, hw->ll_channel);
   }
 
-  // Cache only the callbacks + user_data -- the rest of the config is
-  // in the hardware now.
+  // Cache the callbacks alongside the mode for IRQ dispatch.
   s->tc_callback = c->tc_callback;
   s->ht_callback = c->ht_callback;
   s->error_callback = c->error_callback;
@@ -732,9 +736,11 @@ void rulos_dma_reconfigure(rulos_dma_channel_t *ch, const rulos_dma_config_t *ne
 
 void rulos_dma_start(rulos_dma_channel_t *ch, volatile void *periph_addr, void *mem_addr,
                      uint32_t nitems) {
-  const dma_channel_hw_t *hw = &g_hw[state_to_idx(ch)];
+  const int idx = state_to_idx(ch);
+  const dma_channel_hw_t *hw = &g_hw[idx];
 
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
+  g_state[idx].nitems = nitems;
   LL_DMA_SetDataLength(hw->dma, hw->ll_channel, nitems);
 
   // Direction was already written to CCR by init_channel; we only pick
@@ -799,34 +805,7 @@ void rulos_dma_free(rulos_dma_channel_t *ch) {
 // IRQ dispatch
 // ----------------------------------------------------------------------------
 
-CCMRAM static void dispatch_channel_irq(int idx) {
-  const dma_channel_hw_t *hw = &g_hw[idx];
-  dma_channel_state_t *s = &g_state[idx];
-  if (hw->dma == NULL || !s->allocated) {
-    return;
-  }
-
-  if (ll_dma_is_active_flag_tc(hw->dma, hw->ll_channel)) {
-    ll_dma_clear_flag_tc(hw->dma, hw->ll_channel);
-    if (s->tc_callback) {
-      s->tc_callback(s->user_data);
-    }
-  }
-
-  if (ll_dma_is_active_flag_ht(hw->dma, hw->ll_channel)) {
-    ll_dma_clear_flag_ht(hw->dma, hw->ll_channel);
-    if (s->ht_callback) {
-      s->ht_callback(s->user_data);
-    }
-  }
-
-  if (ll_dma_is_active_flag_te(hw->dma, hw->ll_channel)) {
-    ll_dma_clear_flag_te(hw->dma, hw->ll_channel);
-    if (s->error_callback) {
-      s->error_callback(s->user_data);
-    }
-  }
-}
+#include "dma_irq_impl.h"
 
 /*
  * Per-chip IRQ handlers. Each handler dispatches to one or more

@@ -28,16 +28,31 @@ def main():
             time.sleep(0.02)
             return response
 
+        position = 0
+
+        def send(data, settle=0.03):
+            nonlocal position
+            uart.write(data)
+            uart.flush()
+            position = (position + len(data)) % 64
+            time.sleep(settle)
+
+        def align():
+            if position:
+                send(b"x" * (64 - position))
+            assert command("R") == "RESET"
+
+        def received():
+            return bytes.fromhex(command("Q").split(" HEX ")[1])
+
         print(command("I"))
         uart.reset_input_buffer()
         assert command("T") == "TX"
         assert uart.readline() == b"UART-TX-OK\n"
         assert command("R") == "RESET"
         marker = b"hello-uart\n"
-        uart.write(marker)
-        uart.flush()
-        time.sleep(0.03)
-        assert bytes.fromhex(command("Q").split(" HEX ")[1]) == marker
+        send(marker)
+        assert received() == marker
         print("PASS: UART TX and DMA RX baseline")
 
         assert command("E") == "DMA PAUSED"
@@ -46,6 +61,26 @@ def main():
         time.sleep(0.03)
         assert command("N") == "RXNE 1", "UART ISR consumed a byte owned by RX DMA"
         print("PASS: IDLE ISR leaves DMA-owned RXNE data alone")
+
+        align()
+        assert command("D") == "DELAY"
+        send(b"A" * 32, settle=0.008)
+        send(b"B" * 32 + b"C" * 32, settle=0.12)
+        assert received().startswith(b"A" * 32), "DMA overwrote the pending callback's bytes"
+        print("PASS: delayed application callback retains its original DMA data")
+
+        for burst_len in (64, 96):
+            align()
+            assert command("M") == "MASK"
+            time.sleep(0.015)
+            send(b"F" * burst_len, settle=0.15)
+            report = command("Q")
+            assert "MASKS 1 FLAGS 3" in report, report
+            before = bytes.fromhex(report.split(" HEX ")[1])
+            send(b"N" * 16)
+            after = received()
+            assert after == before + b"N" * 16, (burst_len, before, after)
+        print("PASS: RX resumes in either half after simultaneous DMA HT/TC flags")
 
         assert command("P") == "RAW"
         uart.write(b"A")

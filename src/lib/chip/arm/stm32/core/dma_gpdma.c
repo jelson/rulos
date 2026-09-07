@@ -77,6 +77,7 @@ static const dma_channel_hw_t g_hw[DMA_CHANNEL_SLOTS] = {
 typedef struct {
   bool allocated;
   bool circular;  // true if this channel uses linked-list circular mode
+  uint32_t nitems;
   void (*tc_callback)(void *user_data);
   void (*ht_callback)(void *user_data);
   void (*error_callback)(void *user_data);
@@ -261,6 +262,8 @@ static void init_channel(int idx, const rulos_dma_config_t *c) {
   LL_DMA_EnableIT_DTE(hw->dma, hw->ll_channel);
   if (s->circular) {
     LL_DMA_EnableIT_HT(hw->dma, hw->ll_channel);
+  } else {
+    LL_DMA_DisableIT_HT(hw->dma, hw->ll_channel);
   }
 
   s->tc_callback = c->tc_callback;
@@ -327,6 +330,7 @@ void rulos_dma_start(rulos_dma_channel_t *ch, volatile void *periph_addr, void *
   dma_channel_state_t *s = &g_state[idx];
 
   LL_DMA_DisableChannel(hw->dma, hw->ll_channel);
+  s->nitems = nitems;
 
   if (s->circular) {
     // CIRCULAR mode: build a linked-list node that points to itself.
@@ -453,34 +457,13 @@ void rulos_dma_free(rulos_dma_channel_t *ch) {
   hal_end_atomic(irq);
 }
 
-static void dispatch_channel_irq(int idx) {
-  const dma_channel_hw_t *hw = &g_hw[idx];
-  dma_channel_state_t *s = &g_state[idx];
-  if (hw->dma == NULL || !s->allocated) {
-    return;
-  }
-
-  if (LL_DMA_IsActiveFlag_TC(hw->dma, hw->ll_channel)) {
-    LL_DMA_ClearFlag_TC(hw->dma, hw->ll_channel);
-    if (s->tc_callback) {
-      s->tc_callback(s->user_data);
-    }
-  }
-
-  if (LL_DMA_IsActiveFlag_HT(hw->dma, hw->ll_channel)) {
-    LL_DMA_ClearFlag_HT(hw->dma, hw->ll_channel);
-    if (s->ht_callback) {
-      s->ht_callback(s->user_data);
-    }
-  }
-
-  if (LL_DMA_IsActiveFlag_DTE(hw->dma, hw->ll_channel)) {
-    LL_DMA_ClearFlag_DTE(hw->dma, hw->ll_channel);
-    if (s->error_callback) {
-      s->error_callback(s->user_data);
-    }
-  }
-}
+#define ll_dma_is_active_flag_tc LL_DMA_IsActiveFlag_TC
+#define ll_dma_is_active_flag_ht LL_DMA_IsActiveFlag_HT
+#define ll_dma_is_active_flag_te LL_DMA_IsActiveFlag_DTE
+#define ll_dma_clear_flag_tc     LL_DMA_ClearFlag_TC
+#define ll_dma_clear_flag_ht     LL_DMA_ClearFlag_HT
+#define ll_dma_clear_flag_te     LL_DMA_ClearFlag_DTE
+#include "dma_irq_impl.h"
 
 // Per-channel IRQ handlers. H523 has 16 dedicated lines, so these
 // are one-to-one -- no merged dispatching like the G0/F0 backends.
