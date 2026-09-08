@@ -60,6 +60,17 @@ PG measurements use the existing PG regression helpers and `tsctl` reader.
 Keep timestamps as integer nanoseconds and retain the shared 12 ns timing
 tolerance unless a test explicitly accounts for a coarser GP timer tick.
 
+For `gp-burst-boundary` SYNC phase only, each group run first measures a
+separate flat continuous GP waveform: all channels at a 1 ms period, 750 us
+width, and zero programmed delay. Its stable per-channel mean offsets from
+channel 0 account for fixed master/slave trigger and fixture/input skew.
+Every control width and period must pass the normal timing checks, and
+control phase samples must remain within 12 ns of their channel mean. The
+finite burst's expected relative phase then includes these independently
+measured offsets; every phase residual must still be within 12 ns. Never fit
+offsets to the burst under test. Calibration does not alter pulse counts,
+widths, period spacing, or the requirement to retain the entire finite frame.
+
 Arrival order is not global time order: the LT4 sends rising/falling DMA
 sub-streams in separate batches. Sort when comparing chronological edges,
 but check exact selected edges, polarity, cadence, and loss diagnostics;
@@ -79,11 +90,19 @@ must establish framing before enabling the source and must not clear or
 discard afterward. Ring-backlog tests must select the wire and clear before
 filling the ring, then capture with `discard=False`. First-edge and
 first-period regressions must not trim away the first samples or bursts.
+Finite-frame tests capture the entire source frame, so neither first/last
+pulses nor unmatched edges may be discarded. Their exact counts and edge
+selections are independent of the host's capture-window alignment.
 USB command completion is not a timestamped enable marker: startup checks
 score the first observed waveform, not command-to-first-edge latency. Wide
 startup pulses keep the known stale-prescaler waveform within LT4 capture
 capability; there is no claim that an entirely absent first pulse can always
 be distinguished from the capture boundary.
+
+The sparse BOTH test separately checks host-visible delivery before a
+known later falling edge. It bounds source acknowledgement, read completion,
+and source stop times. A failed host timing bound invalidates that attempt;
+inspect its diagnostic rather than attributing it to capture firmware.
 
 New failure cases assert the intended behavior, not the current faulty
 output. A hardware failure is a reproduction to investigate, not an expected
@@ -105,9 +124,15 @@ python3 src/app/pulsegen/test/regression_test.py \
 python3 src/app/pulsegen/test/regression_test.py \
   --ts-port "$LT4" --pg-port "$PG4" --only gp-wrap
 python3 src/app/pulsegen/test/regression_test.py \
+  --ts-port "$LT4" --pg-port "$PG4" --only gp-burst-boundary
+python3 src/app/pulsegen/test/regression_test.py \
   --ts-port "$LT4" --pg-port "$PG4" --only rep-startup
 python3 src/app/timestamper/test/regression_test.py \
   --port "$LT4" --pg-port "$PG4" --channel 0 --phase 'divider both'
+python3 src/app/timestamper/test/regression_test.py \
+  --port "$LT4" --pg-port "$PG4" --channel 0 --phase 'divider both burst'
+python3 src/app/timestamper/test/regression_test.py \
+  --port "$LT4" --pg-port "$PG4" --channel 0 --phase 'divider both sparse'
 python3 src/app/timestamper/test/regression_test.py \
   --port "$LT4" --pg-port "$PG4" --channel 0 --phase 'divider ring pressure'
 ```
@@ -119,23 +144,51 @@ python3 src/app/timestamper/test/regression_test.py \
   primed at 1 s, then enabled again at 1 s with a 750 ms pulse width. The
   first observed edge, width, and gap are scored without startup trimming.
   This isolates an output-initialization glitch from stale PSC startup
-  behavior. The baseline hardware run reproduced a short extra leading
-  pulse on all four channels with PSC unchanged; both defects may
-  ultimately share a timer-initialization fix.
+  behavior: no extra leading pulse is permitted even with PSC unchanged.
 - `gp-wrap` sweeps delays near a 1 ms period boundary with 10 us-wide pulses,
   in ASYNC and SYNC. Every complete pulse must have the requested width;
   missing or repeated polarities are failures, not pairs to skip silently.
+- `gp-burst-boundary` captures complete first frames of one or three pulses
+  at a 1 ms period. ASYNC checks every channel with 10 us pulses starting
+  at delay zero or ending exactly at the period boundary. SYNC uses 750 us
+  pulses with staggered delays whose high intervals collectively cover the
+  whole period; burst gating cannot rely on a shared low interval. Exact
+  rising/falling counts, every width, period spacing, and calibrated SYNC
+  relative phase must hold, including both frame boundaries. Capture is armed
+  before one final source command starts the frame; preparatory SYNC frames
+  are cleared first. The capture window excludes the next repetition.
 - `rep-startup` changes TIM5's repetition prescaler in both directions.
   Its long case includes a 41-second capture: a 40-second interval requires
   a different prescaler from the ordinary short burst tests. The first frame
   and first repetition are part of the measurement.
-- `divider both` checks divisors 2, 3, and 5 against chronological edge
-  selection. Even divisors must retain one polarity; odd divisors must
-  alternate polarity with the corresponding short/long selected-edge gaps.
+- `divider both2`, `divider both3`, and `divider both5` check steady periodic
+  chronological edge selection. Even divisors must retain one polarity;
+  odd divisors must alternate polarity with the corresponding short/long
+  selected-edge gaps.
+- `divider both burst3` and `divider both burst5` preload a complete
+  1,031-pulse HRTIM frame at 1 us spacing and 50 ns width. Every retained edge
+  must match the exact chronological division in count, polarity, and timing,
+  including the DMA batch's final tail. A second two-pulse frame, without a
+  clear or divider change, checks residual carry: divisor 3 emits one falling
+  edge; divisor 5 emits one rising edge. No window trimming is allowed.
+- `divider both sparse` primes divisor 3 with one short pulse, leaving two
+  edges of progress. A 1 s GP waveform with a 750 ms high pulse must then
+  deliver its eligible rising edge within 300 ms, before its falling edge
+  exists. The falling edge must advance carry without emitting a record;
+  a final short pulse checks that progress by emitting one falling edge.
+  Source start acknowledgement must take less than 50 ms; the long waveform
+  is stopped after its natural fall and before a second rise. This phase
+  requires correct PG startup behavior: an initialization glitch would add
+  unintended input edges. It does not depend on a common GP delay offset.
 - `divider ring pressure` preloads 16,000 records with output gated off,
   then adds 1,148 pulses at divider 3. The 382 new records fit without loss.
   After draining, one more pulse must emit a record because the divider has
   two edges of progress left over. No marker clear occurs between stages.
+
+LT4 phase filters match label substrings: `--phase 'divider both'` includes
+the periodic, finite-frame, and sparse tests. Use a narrower label to isolate
+one family, and omit `--channel 0` to check every channel. Each family covers
+both text and binary output unless excluded with `--skip`.
 
 Hardware-free scorer and sequencing checks:
 
@@ -145,9 +198,18 @@ python3 src/app/timestamper/test/regression_test_test.py
 python3 src/app/timestamper/test/control_test_test.py
 python3 src/app/timestamper/test/util_test.py --only reader_error
 python3 src/app/timestamper/test/util_test.py --only allan_math
+python3 src/app/tests/pulsegen/run_tests.py
+python3 src/app/tests/timestamper/run_tests.py
+python3 src/app/tests/uart/run_tests.py
 ```
 
 The first two commands exercise accepted and deliberately faulty traces,
 including the previously observed failure patterns. Actual reproductions
 on the paired boards remain necessary; synthetic passes are not bench
 results.
+
+The production-code host runners exercise GP timing and burst preloads,
+timestamper draining and chronological merging at small and real buffer
+sizes, and the STM32 completed-write DMA accessors. Their register fixtures
+cover in-flight writes and capture/configuration boundaries that are hard
+to force deterministically on a live board.
