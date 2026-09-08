@@ -25,6 +25,7 @@
 #define DUT_BAUD     9600
 
 UartState_t console, dut;
+static UartRxBuffer_t console_rx_buffer, dut_rx_buffer;
 uint32_t console_rx_chars = 0, last_console_rx_chars = 0;
 uint32_t dut_rx_chars = 0, last_dut_rx_chars = 0;
 
@@ -60,10 +61,10 @@ int main() {
   log_bind_uart(&console);
   LOG("Log output running");
 
-  uart_start_rx(&console, _buf_received, NULL);
+  uart_start_rx(&console, &console_rx_buffer, _buf_received, NULL);
 
   uart_init(&dut, /* uart_id= */ DUT_UART_NUM, DUT_BAUD);
-  uart_start_rx(&dut, _buf_received, NULL);
+  uart_start_rx(&dut, &dut_rx_buffer, _buf_received, NULL);
 
   init_clock(10000, TIMER1);
   schedule_now(print_stats, NULL);

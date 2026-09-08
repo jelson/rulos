@@ -120,6 +120,7 @@ void blink_init(BlinkAct *ba) {
 
 typedef struct {
   UartState_t uart;
+  UartRxBuffer_t rx_buffer;
   LineReader_t linereader;
   BlinkAct ba;
 } Shell;
@@ -130,7 +131,7 @@ void print_func(Shell *shell);
 void shell_init(Shell *shell) {
   uart_init(&shell->uart, 0, 38400);
   log_bind_uart(&shell->uart);
-  linereader_init(&shell->linereader, &shell->uart, shell_func, shell);
+  linereader_init(&shell->linereader, &shell->uart, &shell->rx_buffer, shell_func, shell);
   print_func(shell);
   blink_init(&shell->ba);
   SYNCDEBUG();

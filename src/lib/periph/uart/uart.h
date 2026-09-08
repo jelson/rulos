@@ -32,6 +32,17 @@
 #define UART_RX_QUEUE_LEN 64
 #endif
 
+#if UART_RX_QUEUE_LEN < 2 || UART_RX_QUEUE_LEN % 2 != 0
+#error "UART_RX_QUEUE_LEN must be at least 2 and even"
+#endif
+
+// Allocate only for UARTs that receive data. The HAL fills rx_queue while the
+// scheduler callback owns a snapshot of at most one half-buffer.
+typedef struct {
+  char rx_queue[UART_RX_QUEUE_LEN];
+  char rx_pending_storage[UART_RX_QUEUE_LEN / 2];
+} UartRxBuffer_t;
+
 struct UartState_t_s;
 typedef struct UartState_t_s UartState_t;
 
@@ -56,10 +67,7 @@ struct UartState_t_s {
   // receive
   uart_rx_cb rx_cb;
   void *rx_user_data;
-  char rx_queue[UART_RX_QUEUE_LEN];
-  // Snapshot owned by the scheduler callback; RX DMA may already be reusing rx_queue.
-  char rx_pending_storage[UART_RX_QUEUE_LEN];
-  char *rx_pending_cb_buf;
+  UartRxBuffer_t *rx_storage;
   size_t rx_pending_cb_len;
   uint32_t rx_overflow_bytes;
   uint32_t rx_overflow_bytes_last_reported;
@@ -75,8 +83,11 @@ void uart_init(UartState_t *u, uint8_t uart_id, uint32_t baud);
 void uart_set_baud(UartState_t *u, uint32_t baud);
 
 // Registers a data-received callback to be called at task time each time
-// another batch of data arrives from the serial port.
-void uart_start_rx(UartState_t *u, uart_rx_cb rx_cb, void *user_data);
+// another batch of data arrives from the serial port. Storage must be unique
+// to this UART, remain alive for as long as it receives data, and stay the same
+// on repeated calls. Each callback receives at most UART_RX_QUEUE_LEN / 2 bytes,
+// valid until it returns.
+void uart_start_rx(UartState_t *u, UartRxBuffer_t *storage, uart_rx_cb rx_cb, void *user_data);
 
 // Sends binary data to the UART, specified with a length.
 void uart_write(UartState_t *u, const void *buf, size_t len);

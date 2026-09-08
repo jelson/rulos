@@ -37,6 +37,7 @@
 #include "periph/uart/uart.h"
 
 UartState_t console;
+static UartRxBuffer_t rx_buffer;
 LineReader_t lr;
 
 static uint32_t expected_len = 0;
@@ -87,7 +88,7 @@ int main() {
   log_bind_uart(&console);
   LOG("linecounter up and running");
 
-  linereader_init(&lr, &console, line_received, NULL);
+  linereader_init(&lr, &console, &rx_buffer, line_received, NULL);
 
   init_clock(10000, TIMER1);
   schedule_us(REPORT_PERIOD_USEC, report, NULL);

@@ -114,5 +114,5 @@ void pms5003_init(pms5003_t *pms, uint8_t uart_id, pms5003_cb_t cb, void *user_d
   pms->cb = cb;
   pms->user_data = user_data;
   uart_init(&pms->uart, uart_id, 9600);
-  uart_start_rx(&pms->uart, _rx_cb, pms);
+  uart_start_rx(&pms->uart, &pms->rx_buffer, _rx_cb, pms);
 }

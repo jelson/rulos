@@ -486,7 +486,8 @@ static stm32_uart_t g_stm32_uarts[NUM_UARTS] = {};
 
 static void on_rx_buffer_full(uint8_t uart_id, stm32_uart_t *u, const stm32_uart_config_t *c);
 static char *switch_rx_buffers(stm32_uart_t *u);
-static void rx_send_up(uint8_t uart_id, stm32_uart_t *u, char *buf, size_t len);
+
+#include "uart_rx_impl.h"
 
 //// Receiving: DMA Version
 
@@ -496,14 +497,11 @@ static void rx_send_up(uint8_t uart_id, stm32_uart_t *u, char *buf, size_t len);
  * CIRCULAR-mode RX DMA. DMA runs continuously over the full RX buffer
  * (2 * rx_half_buflen bytes), wrapping automatically. HT fires at the
  * halfway point, TC fires at the wrap. The IDLE interrupt reads partial
- * progress without stopping DMA. No gap, no lost bytes.
+ * progress without stopping DMA. Delayed handling may lose overwritten data.
  *
  * Mirrors the timestamper's circular input-capture DMA architecture
  * (see on_dma_ht / on_dma_tc / flush_dma_captures in timestamper.c).
  */
-static void hal_uart_on_rx_dma_ht(void *user_data);
-static void hal_uart_on_rx_dma_tc(void *user_data);
-
 static void hal_uart_start_rx_dma(stm32_uart_t *u, const stm32_uart_config_t *config) {
   u->rx_dma_processed_pos = 0;
   LL_USART_EnableDMAReq_RX(config->instance);
@@ -511,46 +509,6 @@ static void hal_uart_start_rx_dma(stm32_uart_t *u, const stm32_uart_config_t *co
       u->rx_dma_ch,
       (volatile void *)LL_USART_DMA_GetRegAddr(config->instance, LL_USART_DMA_REG_DATA_RECEIVE),
       u->rx_buf, 2 * u->rx_half_buflen);
-}
-
-// Shared helper for HT and TC callbacks: deliver bytes from
-// rx_dma_processed_pos up to `boundary`, then advance the cursor
-// to `next_pos`. Runs in DMA ISR context; DMA never stops.
-static void rx_dma_deliver(uint8_t uart_id, uint32_t boundary, uint32_t next_pos) {
-  stm32_uart_t *u = &g_stm32_uarts[uart_id];
-  if (!u->initted) {
-    return;
-  }
-  u->tot_ints++;
-
-  uint32_t last = u->rx_dma_processed_pos;
-  if (last >= boundary) {
-    // Already processed (periodic flush got here first). Just advance.
-    u->rx_dma_processed_pos = next_pos;
-    return;
-  }
-
-  size_t len = boundary - last;
-  u->tot_rx_bytes += len;
-  u->rx_dma_processed_pos = next_pos;
-
-  if (u->rx_cb_ready) {
-    rx_send_up(uart_id, u, u->rx_buf + last, len);
-  } else {
-    u->dropped_rx_bytes += len;
-  }
-}
-
-static void hal_uart_on_rx_dma_ht(void *user_data) {
-  uint8_t uart_id = (uint8_t)(uintptr_t)user_data;
-  stm32_uart_t *u = &g_stm32_uarts[uart_id];
-  rx_dma_deliver(uart_id, u->rx_half_buflen, u->rx_half_buflen);
-}
-
-static void hal_uart_on_rx_dma_tc(void *user_data) {
-  uint8_t uart_id = (uint8_t)(uintptr_t)user_data;
-  stm32_uart_t *u = &g_stm32_uarts[uart_id];
-  rx_dma_deliver(uart_id, 2 * u->rx_half_buflen, 0);
 }
 
 #else  // USE_RX_DMA_FOR_CHIP
@@ -607,17 +565,6 @@ static void launch_next_rx(stm32_uart_t *u, const stm32_uart_config_t *config) {
   }
 }
 
-static void rx_send_up(uint8_t uart_id, stm32_uart_t *u, char *buf, size_t len) {
-  assert(u->rx_cb_ready);
-  if (len > 0) {
-    u->rx_cb_ready = false;
-    u->rx_cb(uart_id, u->user_data, buf, len);
-    if (len > u->max_chars_per_rx_batch) {
-      u->max_chars_per_rx_batch = len;
-    }
-  }
-}
-
 // Maybe flush the RX buffer -- if there's data, and the upper layer is ready to
 // receive
 static void maybe_flush_rx_buf(uint8_t uart_id, stm32_uart_t *u, const stm32_uart_config_t *c) {
@@ -629,34 +576,8 @@ static void maybe_flush_rx_buf(uint8_t uart_id, stm32_uart_t *u, const stm32_uar
 
 #if USE_RX_DMA_FOR_CHIP
   if (USART_USING_RX_DMA(c)) {
-    // Circular-mode DMA flush: read the current write position without
-    // stopping DMA, clamp to the current half-boundary (HT/TC own
-    // transitions), and deliver whatever's new. Mirrors the timestamper's
-    // flush_dma_captures pattern.
-    uint32_t buflen = 2 * u->rx_half_buflen;
     uint32_t remaining = rulos_dma_get_remaining(u->rx_dma_ch);
-    uint32_t current_pos = buflen - remaining;
-    if (current_pos >= buflen) {
-      current_pos = 0;  // CNDTR reads 0 right at wrap
-    }
-
-    // Never cross a half-boundary — HT/TC callbacks handle those.
-    uint32_t last = u->rx_dma_processed_pos;
-    uint32_t limit = (last < u->rx_half_buflen) ? u->rx_half_buflen : buflen;
-    if (current_pos > limit) {
-      current_pos = limit;
-    }
-
-    size_t len = 0;
-    if (current_pos > last) {
-      len = current_pos - last;
-      u->tot_rx_bytes += len;
-      u->rx_dma_processed_pos = current_pos;
-    }
-    u->rx_data_ready = false;
-    if (len > 0) {
-      rx_send_up(uart_id, u, u->rx_buf + last, len);
-    }
+    rx_dma_flush(uart_id, u, remaining);
     hal_end_atomic(irq);
     return;
   }
@@ -698,6 +619,8 @@ void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf, si
    * length up front and shut down when it's reached.
    */
   assert(uart_id < NUM_UARTS);
+  assert(buf != NULL && rx_cb != NULL);
+  assert(buflen >= 2 && buflen % 2 == 0);
   stm32_uart_t *u = &g_stm32_uarts[uart_id];
   const stm32_uart_config_t *config = &stm32_uart_config[uart_id];
   if (!u->rx_gpio_initted) {

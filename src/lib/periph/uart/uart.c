@@ -45,10 +45,9 @@ static void _uart_receive_trampoline(void *data) {
   UartState_t *u = (UartState_t *)data;
 
   // call the user callback
-  u->rx_cb(u, u->rx_user_data, u->rx_pending_cb_buf, u->rx_pending_cb_len);
+  u->rx_cb(u, u->rx_user_data, u->rx_storage->rx_pending_storage, u->rx_pending_cb_len);
 
   // indicate to the HAL that we're ready for the next callback
-  u->rx_pending_cb_buf = NULL;
   u->rx_pending_cb_len = 0;
   hal_uart_rx_cb_done(u->uart_id);
 
@@ -69,19 +68,23 @@ static void _uart_receive(uint8_t uart_id, void *user_data, char *buf, size_t le
 
   // hal should never give us an RX callback unless we called down to say the
   // previous one was complete
-  assert(u->rx_pending_cb_buf == NULL);
+  assert(u->rx_pending_cb_len == 0);
 
-  assert(len <= sizeof(u->rx_pending_storage));
-  memcpy(u->rx_pending_storage, buf, len);
-  u->rx_pending_cb_buf = u->rx_pending_storage;
+  assert(len > 0 && len <= sizeof(u->rx_storage->rx_pending_storage));
+  memcpy(u->rx_storage->rx_pending_storage, buf, len);
   u->rx_pending_cb_len = len;
   schedule_now(_uart_receive_trampoline, u);
 }
 
-void uart_start_rx(UartState_t *u, uart_rx_cb rx_cb, void *user_data) {
+void uart_start_rx(UartState_t *u, UartRxBuffer_t *storage, uart_rx_cb rx_cb, void *user_data) {
+  assert(u->initted);
+  assert(storage != NULL);
+  assert(rx_cb != NULL);
+  assert(u->rx_storage == NULL || u->rx_storage == storage);
+  u->rx_storage = storage;
   u->rx_cb = rx_cb;
   u->rx_user_data = user_data;
-  hal_uart_start_rx(u->uart_id, _uart_receive, &u->rx_queue, UART_RX_QUEUE_LEN);
+  hal_uart_start_rx(u->uart_id, _uart_receive, storage->rx_queue, sizeof(storage->rx_queue));
 }
 
 //// sending

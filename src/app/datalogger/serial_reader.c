@@ -28,7 +28,7 @@ void serial_reader_init(serial_reader_t *sr, uint8_t uart_id, uint32_t baud,
   sr->cb = cb;
   sr->data = data;
   uart_init(&sr->uart, uart_id, baud);
-  linereader_init(&sr->linereader, &sr->uart, sr_line_received, sr);
+  linereader_init(&sr->linereader, &sr->uart, &sr->rx_buffer, sr_line_received, sr);
 }
 
 void serial_reader_print(serial_reader_t *sr, const char *s) {

@@ -457,6 +457,7 @@ static volatile uint32_t ts_tail = 0;  // next read position (USB output)
 // Output devices. The USB CDC connection is owned by the SCPI library (src/lib/periph/scpi); this
 // app shares the same connection for streaming timestamps using scpi_usb_cdc_handle().
 static UartState_t uart;
+static UartRxBuffer_t uart_rx_buffer;
 
 // ---- Serial input (see SERIAL INPUT in the header comment) ---------------------------------
 #define SERIAL_DEBUG_BAUD 1000000  // debug-log baud while the serial input is off
@@ -813,7 +814,7 @@ void timestamper_serial_set_enabled(bool enabled) {
     static bool rx_started = false;
     if (!rx_started) {
       rx_started = true;
-      linereader_init(&serial_linereader, &uart, serial_line_cb, NULL);
+      linereader_init(&serial_linereader, &uart, &uart_rx_buffer, serial_line_cb, NULL);
     }
     uart_set_baud(&uart, serial_baud);
     serial_enabled = true;

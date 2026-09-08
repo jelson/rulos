@@ -7,6 +7,7 @@
 typedef struct {
   float lon, lat;
   UartState_t uart;
+  UartRxBuffer_t rx_buffer;
   LineReader_t linereader;
   ActivationFuncPtr data_ready_cb_func;
   void *data_ready_cb_data;

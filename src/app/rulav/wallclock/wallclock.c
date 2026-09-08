@@ -316,6 +316,7 @@ int main() {
 
   // start the uart running at 38.4k baud
   UartState_t uart;
+  static UartRxBuffer_t rx_buffer;
   uart_init(&uart, /* uart_id= */ 0, 38400);
   log_bind_uart(&uart);
 
@@ -333,7 +334,7 @@ int main() {
   board_buffer_push(&wca.bbuf, 0);
 
   // set up uart receiver callback
-  uart_start_rx(&uart, uart_char_received, &wca);
+  uart_start_rx(&uart, &rx_buffer, uart_char_received, &wca);
 
   // have the callback get called immediately
   schedule_us(1, (ActivationFuncPtr)update, &wca);

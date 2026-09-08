@@ -47,9 +47,10 @@ typedef struct {
 } LineReader_t;
 
 // Wires the linereader to a UART: on each batch of received bytes, the
-// linereader splits them into lines and produces one upcall per line.
-void linereader_init(LineReader_t *linereader, UartState_t *uart, linereader_cb cb,
-                     void *user_data);
+// linereader splits them into lines and produces one upcall per line. RX
+// storage has the same ownership and lifetime requirements as uart_start_rx.
+void linereader_init(LineReader_t *linereader, UartState_t *uart, UartRxBuffer_t *storage,
+                     linereader_cb cb, void *user_data);
 
 // Same as linereader_init but does not bind to a UART. Use linereader_feed
 // to push bytes from another source (e.g. USB CDC RX). Upcalls receive the

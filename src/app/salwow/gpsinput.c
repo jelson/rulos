@@ -13,7 +13,8 @@ float _atofi(char *s);
 void gpsinput_init(GPSInput *gpsi, uint8_t uart_id, ActivationFuncPtr data_ready_cb_func,
                    void *data_ready_cb_data) {
   uart_init(&gpsi->uart, uart_id, 4800);
-  linereader_init(&gpsi->linereader, &gpsi->uart, _gpsinput_process_sentence, gpsi);
+  linereader_init(&gpsi->linereader, &gpsi->uart, &gpsi->rx_buffer, _gpsinput_process_sentence,
+                  gpsi);
 
   gpsi->lat = 0.;
   gpsi->lon = 0.;

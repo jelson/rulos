@@ -27,6 +27,7 @@
 
 typedef struct {
   UartState_t uart;
+  UartRxBuffer_t rx_buffer;
   LineReader_t lr;
   int line_num;
 } serial_state;
@@ -51,11 +52,11 @@ int main() {
   log_bind_uart(&console.uart);
   LOG("lineecho up and running");
 
-  linereader_init(&console.lr, &console.uart, line_received, &console);
+  linereader_init(&console.lr, &console.uart, &console.rx_buffer, line_received, &console);
 
 #if DUT_UART
   uart_init(&dut.uart, /* uart_id= */ DUT_UART, DUT_UART_SPEED);
-  linereader_init(&dut.lr, &dut.uart, line_received, &dut);
+  linereader_init(&dut.lr, &dut.uart, &dut.rx_buffer, line_received, &dut);
   LOG("reading from dut, uart %d, too!", DUT_UART);
 #endif
 

@@ -45,6 +45,7 @@ typedef void (*pms5003_cb_t)(pms5003_data_t *data, void *user_data);
 
 typedef struct {
   UartState_t uart;
+  UartRxBuffer_t rx_buffer;
   pms5003_cb_t cb;
   void *user_data;
   union {

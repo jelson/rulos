@@ -140,7 +140,7 @@ static void rx_task(void *arg) {
     }
 
     // read data from esp32 uart driver's queue
-    const int num_read = uart_read_bytes(eu->esp32_uart_num, eu->rx_buf, eu->rx_buflen, 0);
+    const int num_read = uart_read_bytes(eu->esp32_uart_num, eu->rx_buf, eu->rx_buflen / 2, 0);
 
     // send up to rulos-land
     if (num_read > 0) {
@@ -152,6 +152,9 @@ static void rx_task(void *arg) {
 
 void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf, size_t buflen) {
   assert(uart_id >= 0 && uart_id < NUM_UARTS);
+  assert(rx_cb != NULL);
+  assert(buf != NULL);
+  assert(buflen >= 2 && buflen % 2 == 0);
   esp32_uart_t *eu = &esp32_uart[uart_id];
   eu->rx_cb = rx_cb;
   eu->rx_buf = (char *)buf;

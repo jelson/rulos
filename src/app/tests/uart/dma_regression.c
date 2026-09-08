@@ -5,6 +5,7 @@
 #include "periph/usb_cdc/usb_cdc.h"
 
 static UartState_t uart;
+static UartRxBuffer_t rx_buffer;
 static usbd_cdc_state_t usb;
 static char tx[2048];
 static unsigned rx_count;
@@ -125,7 +126,7 @@ int main(void) {
   DWT->CYCCNT = 0;
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
   uart_init(&uart, 0, 115200);
-  uart_start_rx(&uart, uart_rx, NULL);
+  uart_start_rx(&uart, &rx_buffer, uart_rx, NULL);
   usb.rx_cb = usb_rx;
   usbd_cdc_init(&usb);
   scheduler_run();

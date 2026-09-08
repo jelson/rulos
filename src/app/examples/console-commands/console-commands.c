@@ -32,11 +32,12 @@ int main() {
   init_clock(JIFFY_CLOCK_US, TIMER0);
 
   UartState_t u;
+  static UartRxBuffer_t rx_buffer;
   uart_init(&u, /* uart_id= */ 0, 1000000);
   log_bind_uart(&u);
 
   LineReader_t lr;
-  linereader_init(&lr, &u, command_received, NULL);
+  linereader_init(&lr, &u, &rx_buffer, command_received, NULL);
 
   LOG("Console command reader is waiting for your commands.");
   scheduler_run();

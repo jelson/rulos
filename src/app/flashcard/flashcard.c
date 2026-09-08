@@ -751,6 +751,7 @@ void _ledpoke_handler(InputInjectorIfc *iii, char key)
 
 typedef struct {
   UartState_t uart;
+  UartRxBuffer_t rx_buffer;
   LineReader_t linereader;
   Flashcard *fl;
   uint8_t rowdata;
@@ -762,7 +763,7 @@ void shell_func(UartState_t *uart, void *data, char *line);
 void shell_init(Shell *shell, Flashcard *fl) {
   uart_init(&shell->uart, 0, 38400);
   log_bind_uart(&shell->uart);
-  linereader_init(&shell->linereader, &shell->uart, shell_func, shell);
+  linereader_init(&shell->linereader, &shell->uart, &shell->rx_buffer, shell_func, shell);
   shell->fl = fl;
 
   SYNCDEBUG();

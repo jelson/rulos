@@ -20,6 +20,7 @@
 #include "periph/uart/uart.h"
 
 UartState_t uart;
+static UartRxBuffer_t rx_buffer;
 
 void char_received(UartState_t *s, void *user_data, char *buf, size_t len) {
   char termbuf[UART_RX_QUEUE_LEN + 1];
@@ -32,7 +33,7 @@ int main() {
   rulos_hal_init();
 
   uart_init(&uart, /* uart_id= */ 0, 38400);
-  uart_start_rx(&uart, char_received, NULL);
+  uart_start_rx(&uart, &rx_buffer, char_received, NULL);
   log_bind_uart(&uart);
   LOG("uartecho up and running");
 

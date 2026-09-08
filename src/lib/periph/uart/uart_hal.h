@@ -35,12 +35,13 @@ void hal_uart_set_baud(uint8_t uart_id, uint32_t baud);
 
 // Callback for incoming serial data. If a callback is set using
 // hal_uart_start_rx, incoming characters will be passed into that callback.
+// Each upcall has a nonzero length of at most half the supplied RX capacity.
 // The buffer is valid during this call only: circular RX DMA may reuse it
 // afterward. Copy any data whose processing is deferred to task time.
 typedef void (*hal_uart_receive_cb)(uint8_t uart_id, void *user_data, char *buf, size_t len);
 
 // Enable reception on this UART. Buffer and its capacity must be provided.
-// Buffer must be even length since it's divided into two halves. The driver
+// Buffer must have an even length of at least two bytes. The driver
 // will fill half the buffer while providing an upcall to the given callback on
 // the other half. Warning: upcalls *might* be at interrupt time, but will not
 // be if called in response to hal_uart_trigger_rx();

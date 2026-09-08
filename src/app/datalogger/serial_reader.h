@@ -27,6 +27,7 @@ typedef void (*serial_reader_cb_t)(serial_reader_t *sr, const char *line, void *
 
 struct serial_reader_t_s {
   UartState_t uart;
+  UartRxBuffer_t rx_buffer;
   LineReader_t linereader;
   flash_dumper_t *flash_dumper;
   int num_total_lines;

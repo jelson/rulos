@@ -28,6 +28,7 @@ typedef struct {
   BoardBuffer bbuf_k;
   BoardBuffer bbuf_u;
   UartState_t uart;
+  UartRxBuffer_t rx_buffer;
   LineReader_t linereader;
 } KeyTestActivation_t;
 
@@ -95,7 +96,7 @@ int main() {
   KeyTestActivation_t kta;
   uart_init(&kta.uart, /*uart_id=*/0, 38400);
   log_bind_uart(&kta.uart);
-  linereader_init(&kta.linereader, &kta.uart, uart_line_received, &kta);
+  linereader_init(&kta.linereader, &kta.uart, &kta.rx_buffer, uart_line_received, &kta);
   LOG(TEST_STR);
 
   board_buffer_init(&kta.bbuf_k);

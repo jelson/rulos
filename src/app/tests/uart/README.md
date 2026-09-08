@@ -12,6 +12,47 @@ shared STM32 DMA IRQ dispatcher. It checks callback data ownership, pending
 HT/TC ordering in both buffer halves, disabled HT interrupts, cancellation
 from a callback, and boundaries arriving during dispatch.
 
+## Datalogger RAM
+
+RX storage is caller-owned: only UARTs that receive data allocate a
+`UartRxBuffer_t`. Its DMA/interrupt buffer is `UART_RX_QUEUE_LEN` bytes,
+and its deferred-callback snapshot is half that size. TX-only consoles
+must not allocate RX storage. The host suite checks this layout with the
+default queue length and the dataloggers' 1536- and 8192-byte overrides.
+
+Build all four dataloggers in an isolated directory without changing the
+working revision. Put the configured ARM toolchain on `PATH` for the size
+command, or use its absolute path:
+
+```sh
+build_dir=/tmp/rulos-uart-ram
+scons -C src/app/datalogger --build-dir="$build_dir" -j4
+arm-none-eabi-size -A \
+  "$build_dir/solo-logger/arm-stm32g031x6/solo-logger.elf" \
+  "$build_dir/gps-test-rig/arm-stm32g0b1xe/gps-test-rig.elf" \
+  "$build_dir/gemini-logger/arm-stm32g0b1xe/gemini-logger.elf" \
+  "$build_dir/ltetag-dev1/arm-stm32g0b1xe/ltetag-dev1.elf"
+```
+
+Count `.data`, `.bss`, `.noinit`, and `._user_heap_stack` when measuring
+occupied RAM. The generated linker scripts reserve zero stack and heap
+space, so remaining RAM is the actual space available to both, not a
+margin beyond a stack reservation. The adjacent `.map` files show each
+UART object's contribution.
+
+Measured with GCC 15.2.1 when introducing explicit RX storage:
+
+| Application | RAM capacity | Previous RAM used | New RAM used | New RAM left |
+| --- | ---: | ---: | ---: | ---: |
+| solo-logger | 8192 | 9792 | 5952 | 2240 |
+| gps-test-rig | 131072 | 72024 | 43352 | 87720 |
+| gemini-logger | 131072 | 89032 | 56264 | 74808 |
+| ltetag-dev1 | 131072 | 37472 | 16992 | 114080 |
+
+All figures are bytes. "Previous" means the full-snapshot layout at
+`4b959c86`, which fails to link solo-logger. Simply halving the two embedded
+snapshots would still leave solo-logger 64 bytes over its RAM limit.
+
 ## H5/G4 Hardware
 
 `stm32_uart_regression` uses native USB for control and USART1 at 115200 baud

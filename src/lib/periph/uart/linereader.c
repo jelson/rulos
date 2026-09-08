@@ -103,7 +103,8 @@ void linereader_init_unbound(LineReader_t *l, UartState_t *uart, linereader_cb c
   CharQueue_init(&l->line_queue.q, sizeof(l->line_queue));
 }
 
-void linereader_init(LineReader_t *l, UartState_t *uart, linereader_cb cb, void *user_data) {
+void linereader_init(LineReader_t *l, UartState_t *uart, UartRxBuffer_t *storage, linereader_cb cb,
+                     void *user_data) {
   linereader_init_unbound(l, uart, cb, user_data);
-  uart_start_rx(uart, _buf_received, l);
+  uart_start_rx(uart, storage, _buf_received, l);
 }
