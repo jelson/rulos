@@ -211,10 +211,17 @@ void rulos_dma_start(rulos_dma_channel_t *ch, volatile void *periph_addr, void *
 // and may be restarted with rulos_dma_start.
 void rulos_dma_stop(rulos_dma_channel_t *ch);
 
-// Items not yet transferred. For circular mode this decreases from
-// the last `nitems` passed to start, wrapping back up when the buffer
-// wraps. Callers compute current write position as buflen - remaining.
+// Source items not yet transferred. In circular mode this decreases from the last `nitems`
+// passed to start, wrapping back up for each block. H5 GPDMA can still hold these source reads
+// in its FIFO; use get_write_address() for the completed receive position in memory.
 uint32_t rulos_dma_get_remaining(const rulos_dma_channel_t *ch);
+
+// Address immediately after the completed writes of an incrementing peripheral-to-memory
+// transfer. Unlike get_remaining(), this excludes data still in a DMA FIFO. The caller owns the
+// buffer base and item width; circular transfers can report its one-past-end address briefly
+// before wrapping to the base. Normalize that address before indexing a circular buffer.
+// The transfer must remain configured and its destination must be CPU-coherent while reading.
+uintptr_t rulos_dma_get_write_address(const rulos_dma_channel_t *ch);
 
 // Return channel to the pool. Disables the channel first if running.
 void rulos_dma_free(rulos_dma_channel_t *ch);

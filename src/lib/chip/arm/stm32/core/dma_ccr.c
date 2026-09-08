@@ -782,6 +782,8 @@ uint32_t rulos_dma_get_remaining(const rulos_dma_channel_t *ch) {
   return LL_DMA_GetDataLength(hw->dma, hw->ll_channel);
 }
 
+#include "dma_write_address_impl.h"
+
 void rulos_dma_free(rulos_dma_channel_t *ch) {
   const int idx = state_to_idx(ch);
   const dma_channel_hw_t *hw = &g_hw[idx];

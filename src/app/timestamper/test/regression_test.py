@@ -242,30 +242,179 @@ def phase_both_divider(ctx, divider):
 RING_PREFIX_PULSES = 16000
 RING_PROBE_PULSES = 1148
 RING_PROBE_DIVIDER = 3
-RING_SPACING_NS = 1000
-RING_SINGLE_FRAME_REP_S = 60.0
-RING_SINGLE_FRAME_DEADLINE_S = 5.0
+FINITE_SPACING_NS = 1000
+FINITE_WIDTH_NS = 50  # Source.burst's HRTIM pulse width at this spacing.
+FINITE_FRAME_REP_S = 60.0
+FINITE_FRAME_DEADLINE_S = 5.0
 
 
-def _ring_input_burst(ctx, ncyc, settle_s):
+def _finite_input_burst(ctx, ncyc, settle_s):
     """Emit exactly one finite HRTIM burst, then stop before any repetition can occur."""
     started = time.monotonic()
     try:
-        actual_ns = ctx.src.burst(ctx.channel, RING_SPACING_NS, ncyc, rep_s=RING_SINGLE_FRAME_REP_S)
+        actual_ns = ctx.src.burst(ctx.channel, FINITE_SPACING_NS, ncyc, rep_s=FINITE_FRAME_REP_S)
         time.sleep(settle_s)
     finally:
         # Every PG configuration command rebuilds its enabled outputs. A generic off() clears
         # channels in numeric order and can re-arm an enabled higher channel before reaching it.
         ctx.src.pg.set_state(ctx.channel, False)
     elapsed = time.monotonic() - started
-    if elapsed >= RING_SINGLE_FRAME_DEADLINE_S:
+    if elapsed >= FINITE_FRAME_DEADLINE_S:
         raise RuntimeError(
             f"single-burst source deadline exceeded ({elapsed:.3f} s); "
             "cannot trust the finite input count"
         )
     ctx.src._check(f"stop finite burst on ch{ctx.channel}")
-    if actual_ns != RING_SPACING_NS:
-        raise RuntimeError(f"source quantized {RING_SPACING_NS} ns to {actual_ns} ns")
+    if actual_ns != FINITE_SPACING_NS:
+        raise RuntimeError(f"source quantized {FINITE_SPACING_NS} ns to {actual_ns} ns")
+
+
+def _prepare_backlog_capture(ctx, slope="POS", divider=1):
+    """Clear before any input, then retain every subsequent edge without further marker syncs."""
+    ctx.src.off()
+    tstest.configure(ctx.tic, slopes={ctx.channel: slope}, dividers={ctx.channel: divider})
+    ctx.tic.set_serial_enabled(False)
+    ctx.tic.send(f"FORM:DATA {'TEXT' if ctx.wire == 'text' else 'BIN'}")
+    ctx.tic.set_stream_enabled(False)
+    ctx.tic.discard_pending()
+
+
+def _expect_finite_both_divider(ph, cap, channel, pulses, divider, progress=0):
+    """Compare the entire finite edge selection, allowing only its unknown absolute start time.
+    No window trimming applies: the source is off before and after the silenced input stage."""
+    tstest.expect_no_loss(ph, cap)
+    tstest.expect_quiet_others(ph, cap, {channel})
+    records = cap.records(channel)
+    tstest.expect_substreams_monotonic(ph, records)
+    records = sorted(records)
+    expected = [
+        (
+            edge // 2 * FINITE_SPACING_NS + (FINITE_WIDTH_NS if edge % 2 else 0),
+            "-" if edge % 2 else "+",
+        )
+        for edge in range(divider - progress - 1, 2 * pulses, divider)
+    ]
+    if not ph.expect(
+        len(records) == len(expected),
+        f"finite divider{divider} carry{progress}: exactly {len(expected)} records "
+        f"({len(records)} found)",
+    ):
+        return
+    ph.expect(
+        [pol for _, pol in records] == [pol for _, pol in expected],
+        "every retained finite-burst polarity matches chronological division",
+    )
+    if not expected:
+        return
+    origin = records[0][0] - expected[0][0]
+    wrong = [
+        i
+        for i, ((stamp, _), (offset, _)) in enumerate(zip(records, expected))
+        if abs(stamp - origin - offset) > tstest.GAP_TOL_NS
+    ]
+    ph.expect(
+        not wrong,
+        f"all finite-burst edges at their selected offsets within {tstest.GAP_TOL_NS} ns "
+        f"({len(wrong)} wrong)",
+    )
+
+
+BOTH_FINITE_PULSES = 1031
+
+
+@phase("divider both burst5", divider=5)
+@phase("divider both burst3", divider=3)
+def phase_both_divider_burst(ctx, divider):
+    """Exact finite BOTH selection across a DMA half-buffer and its sparse final tail. The second
+    two-pulse frame retains the first frame's divider progress: div3 emits one fall, div5 one rise.
+    This catches an otherwise-correct merger that resets or loses carry when a frame goes quiet."""
+    _prepare_backlog_capture(ctx, "BOTH", divider)
+    _finite_input_burst(ctx, BOTH_FINITE_PULSES, 0.25)
+    ctx.tic.set_stream_enabled(True)
+    cap = tstest.capture(ctx.tic, ctx.wire, 1.0, discard=False)
+    _expect_finite_both_divider(ctx.ph, cap, ctx.channel, BOTH_FINITE_PULSES, divider)
+
+    ctx.tic.set_stream_enabled(False)
+    _finite_input_burst(ctx, 2, 0.25)
+    ctx.tic.set_stream_enabled(True)
+    cap = tstest.capture(ctx.tic, ctx.wire, 0.5, discard=False)
+    progress = (2 * BOTH_FINITE_PULSES) % divider
+    _expect_finite_both_divider(ctx.ph, cap, ctx.channel, 2, divider, progress)
+
+
+SPARSE_PERIOD_S = 1.0
+SPARSE_WIDTH_S = 0.75
+SPARSE_START_DEADLINE_S = 0.05
+SPARSE_READ_S = 0.25
+SPARSE_DEADLINE_S = 0.3
+SPARSE_STOP_S = 0.85
+SPARSE_STOP_DEADLINE_S = 0.95
+
+
+@phase("divider both sparse")
+def phase_both_divider_sparse(ctx):
+    """An eligible rising tail must reach USB before the opposite falling capture exists. A short
+    pulse primes carry2 at div3; the following long pulse must emit R within 300 ms, not wait for
+    F 750 ms later. Requires the PG initialization fixes, so starting it contributes no extra edge.
+    After the natural fall, a final short pulse must emit F, proving the unselected tail advanced
+    carry too. No assertion depends on the GP timer's common guard offset."""
+    _prepare_backlog_capture(ctx, "BOTH", 3)
+    _finite_input_burst(ctx, 1, 0.25)
+
+    # The finite helper left every source output off and the source in ASYNC mode. Stage the long
+    # pulse without touching LT4's capture state or divider carry.
+    pg = ctx.src.pg
+    pg.set_burst_state(ctx.channel, False)
+    pg.set_period(ctx.channel, SPARSE_PERIOD_S)
+    pg.set_width(ctx.channel, SPARSE_WIDTH_S)
+    pg.set_delay(ctx.channel, 0)
+    ctx.src._check("staging sparse BOTH pulse")
+    ctx.tic.set_stream_enabled(True)
+
+    started = time.monotonic()
+    try:
+        pg.set_state(ctx.channel, True)
+        ctx.src._check("starting sparse BOTH pulse")
+        acknowledged = time.monotonic() - started
+        # The query acknowledges the enable after it executes. Bound that latency so the natural
+        # 750 ms fall precedes our stop, while the second rise still cannot have happened.
+        if not ctx.ph.expect(
+            acknowledged < SPARSE_START_DEADLINE_S,
+            f"source start acknowledged before the natural-fall deadline ({acknowledged:.3f} s)",
+        ):
+            return
+        budget = max(0.0, SPARSE_READ_S - acknowledged)
+        cap = tstest.capture(ctx.tic, ctx.wire, budget, discard=False)
+        elapsed = time.monotonic() - started
+        ctx.ph.expect(
+            elapsed <= SPARSE_DEADLINE_S,
+            f"early capture completed within 300 ms of enable ({elapsed:.3f} s)",
+        )
+        ctx.ph.expect(
+            len(cap.records(ctx.channel)) == 1,
+            "eligible rising edge delivered before the long pulse's falling edge",
+        )
+        tstest.expect_polarity(ctx.ph, cap.pols(ctx.channel), "+")
+        tstest.expect_no_loss(ctx.ph, cap)
+        tstest.expect_quiet_others(ctx.ph, cap, {ctx.channel})
+        time.sleep(max(0.0, SPARSE_STOP_S - elapsed))
+    finally:
+        pg.set_state(ctx.channel, False)
+    elapsed = time.monotonic() - started
+    if not ctx.ph.expect(
+        elapsed < SPARSE_STOP_DEADLINE_S,
+        f"source stopped before its second rising edge ({elapsed:.3f} s)",
+    ):
+        return
+    ctx.src._check("stopping sparse BOTH pulse")
+    cap = tstest.capture(ctx.tic, ctx.wire, 0.25, discard=False)
+    ctx.ph.expect(not cap.records(ctx.channel), "unselected long-pulse fall emits no record")
+    tstest.expect_no_loss(ctx.ph, cap)
+    tstest.expect_quiet_others(ctx.ph, cap, {ctx.channel})
+
+    _finite_input_burst(ctx, 1, 0.25)
+    cap = tstest.capture(ctx.tic, ctx.wire, 0.5, discard=False)
+    _expect_finite_both_divider(ctx.ph, cap, ctx.channel, 1, 3, progress=1)
 
 
 def _expect_ring_backlog(ph, cap, channel):
@@ -289,7 +438,7 @@ def _expect_ring_backlog(ph, cap, channel):
         ),
     ):
         ph.expect(len(burst) == count, f"{label}: exactly {count} records ({len(burst)} found)")
-        tstest.expect_cadence(ph, burst, stride * RING_SPACING_NS, f"{label} cadence")
+        tstest.expect_cadence(ph, burst, stride * FINITE_SPACING_NS, f"{label} cadence")
 
 
 @phase("divider ring pressure")
@@ -303,24 +452,19 @@ def phase_divider_ring_pressure(ctx):
     alignment is assumed. A final isolated input after draining must emit: 1148 leaves progress 2.
     This pressure argument assumes at most one 100 ms flush during the 1.148 ms probe; the exact
     healthy output contract does not depend on that scheduling assumption."""
-    ctx.src.off()
-    tstest.configure(ctx.tic)
-    ctx.tic.set_serial_enabled(False)
-    ctx.tic.send(f"FORM:DATA {'TEXT' if ctx.wire == 'text' else 'BIN'}")
-    ctx.tic.set_stream_enabled(False)
-    ctx.tic.discard_pending()
+    _prepare_backlog_capture(ctx)
 
     # These commands precede all input. From here onward, a marker sync or format-switching
     # capture would erase the very backlog and divider progress this phase needs to observe.
-    _ring_input_burst(ctx, RING_PREFIX_PULSES, 0.75)
+    _finite_input_burst(ctx, RING_PREFIX_PULSES, 0.75)
     ctx.tic.set_divider(ctx.channel, RING_PROBE_DIVIDER)
-    _ring_input_burst(ctx, RING_PROBE_PULSES, 0.2)
+    _finite_input_burst(ctx, RING_PROBE_PULSES, 0.2)
 
     ctx.tic.set_stream_enabled(True)
     cap = tstest.capture(ctx.tic, ctx.wire, 3.0, discard=False)
     _expect_ring_backlog(ctx.ph, cap, ctx.channel)
 
-    _ring_input_burst(ctx, 1, 0.2)
+    _finite_input_burst(ctx, 1, 0.2)
     cap = tstest.capture(ctx.tic, ctx.wire, 1.0, discard=False)
     ctx.ph.expect(
         len(cap.records(ctx.channel)) == 1,

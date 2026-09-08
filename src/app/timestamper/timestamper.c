@@ -103,11 +103,10 @@
  * by TIM2's TRGO) so all four channels share one timeline and timestamps are directly comparable
  * across channels. See sync_tim5_to_tim2.
  *
- * Emission order is per sub-stream, not global. Each (channel, polarity) sub-stream is emitted in
- * timestamp order, but rising/falling records are not merged into one globally sorted stream. Hosts
- * that need total order sort by timestamp. Doing that on-device would put a record-by-record merge,
- * hold-back rule, stash buffers, quiescence detection, and end-of-burst drains in the capture hot
- * path.
+ * Emission order is normally per sub-stream, not global. Each (channel, polarity) sub-stream is
+ * emitted in timestamp order. BOTH-mode software division merges a channel's two DMA sub-streams
+ * before selecting every Nth edge; otherwise the result would depend on DMA batch arrival order.
+ * The undivided hot path remains unmerged, and hosts needing total order sort by timestamp.
  *
  * The high-order seconds value is maintained in software. A naive rollover interrupt can race with
  * input capture: if TIM2 rolls over after an edge is captured but before firmware pairs that CCR
@@ -253,6 +252,11 @@ _Static_assert(CLOCK_FREQ_HZ - 1 <= COUNTER_VALUE_MASK,
 #define NUM_HW_CAPTURE 8
 static volatile uint32_t capture_buf[NUM_HW_CAPTURE][DMA_CAPTURE_BUFLEN];
 
+typedef struct {
+  uint32_t seconds;
+  uint32_t counter;  // Capture ticks, optionally carrying the COUNTER_* channel/message tags.
+} timestamp_t;
+
 // Per-channel state. Each channel owns two capture sub-streams off the same timer input (one armed
 // rising, one armed falling); every record it emits carries a precomputed channel/polarity tag.
 // Channels 0 and 2 capture on TIM2 (PA0/PA2), channels 1 and 3 on the phase-locked TIM5 (PA1/PA3).
@@ -262,9 +266,13 @@ typedef struct {
     uint32_t drain_pos;      // next DMA index to drain (circular)
     rulos_dma_channel_t *dma_ch;
     uint32_t counter_tag;  // channel + polarity bits ORed into CCR ticks
+    bool discard_before_epoch;
   } sub[NUM_SUBS];
   bool has_hw;  // every channel has capture hardware now;
                 // kept for the generic init/teardown loops
+  TIM_TypeDef *capture_tim;
+  uint32_t capture_if_mask;
+  timestamp_t capture_epoch;
 
   // statistics
   uint32_t num_missed;
@@ -443,13 +451,6 @@ volatile uint32_t seconds_A = 0;
 volatile uint32_t seconds_B = 0;
 
 // Circular buffer for timestamps not yet written to USB
-typedef struct {
-  uint32_t seconds;
-  uint32_t counter;  // [31:30] channel, [29] edge polarity,
-                     // [28] special-message flag, [27:0] tick value / message type (see the
-                     // COUNTER_* / MSG_* defines above)
-} timestamp_t;
-
 timestamp_t timestamp_buffer[TIMESTAMP_BUFLEN];
 static volatile uint32_t ts_head = 0;  // next write position (ISR)
 static volatile uint32_t ts_tail = 0;  // next read position (USB output)
@@ -506,25 +507,7 @@ CCMRAM void TIM15_IRQHandler() {
   }
 }
 
-// DMA-safe end-of-region for sub `s`: records [drain_pos, cur) are captured and safe to read (cur
-// is exclusive). Single-owner cursor: per-channel service is serialized by the same-priority DMA
-// ISRs plus the irq-guarded flush.
-CCMRAM static inline uint32_t safe_cur(channel_t *chan, uint8_t s) {
-  uint32_t rem = rulos_dma_get_remaining(chan->sub[s].dma_ch);
-  uint32_t cur = DMA_CAPTURE_BUFLEN - rem;
-  return (cur == DMA_CAPTURE_BUFLEN) ? 0 : cur;
-}
-
 #include "capture_drain_impl.h"
-
-// Which sub-streams a slope selects. A selected sub-stream is armed in hardware and emitted; a
-// deselected one's capture channel is disabled.
-static bool sub_active(timestamper_slope_t sl, uint8_t s) {
-  if (sl == TIMESTAMPER_SLOPE_BOTH) {
-    return true;
-  }
-  return (sl == TIMESTAMPER_SLOPE_FALLING) ? (s == SUB_FALLING) : (s == SUB_RISING);
-}
 
 // Arm or disarm capture sub-stream k. A disabled capture channel latches nothing: no CCR update, no
 // DMA request, no overcapture flag. Its GPDMA channel stays armed but starves, so the drain cursor
@@ -540,34 +523,14 @@ static void set_capture_enabled(int k, bool on) {
   }
 }
 
-// Service a channel: drain each slope-selected sub-stream straight into the ring. A deselected
-// sub-stream is disarmed and captures nothing, but its cursor is still resynced here: a capture in
-// flight at the instant of disarm can land one final buffer entry, which this skips so it can't be
-// misread later. Each sub-stream is emitted in time order; the two sub-streams are NOT interleaved
-// into one ordered sequence (see the top-of-file EMISSION ORDER note).
-//
-// The drain assumes the input stays within the capture envelope. The cursor arithmetic is modular:
-// if a sub's write head ever gained a full buffer on its cursor between services, the overrun would
-// alias to a small advance and the overwritten records would go unnoticed. In-regime inputs can't
-// get there -- every half-buffer crossing wakes this drain, which empties faster than a spec'd
-// input can fill.
-CCMRAM static void service_channel(channel_t *chan) {
-  for (uint8_t s = 0; s < NUM_SUBS; s++) {
-    uint32_t cur = safe_cur(chan, s);
-    if (sub_active(chan->slope, s)) {
-      drain_sub_fast(chan, s, cur);
-    } else {
-      chan->sub[s].drain_pos = cur;
-    }
-  }
-}
+#include "capture_service_impl.h"
 
-// TIM2 capture DMA HT/TC callback (one per in-use sub). The NDTR- driven drain doesn't distinguish
-// HT from TC, so both map here as pure wake-ups. All capture DMA ISRs share one NVIC priority
+// Capture DMA HT/TC callback (one per in-use sub). Completed write cursors determine the drain
+// range, so HT and TC both map here as pure wake-ups. All DMA ISRs share one NVIC priority
 // (cannot preempt each other), so per-channel service is serialized without masking.
 CCMRAM static void on_dma(void *user_data) {
   sub_ctx_t *ctx = (sub_ctx_t *)user_data;
-  service_channel(ctx->chan);
+  service_channel(ctx->chan, false);
 }
 
 static uint32_t ic_prescaler_ll(uint32_t hw) {
@@ -590,9 +553,9 @@ static uint32_t ic_prescaler_ll(uint32_t hw) {
 // Only single-slope modes take the hardware share: the BOTH-mode divider counts interleaved edges
 // of both polarities with one counter, which per-sub-stream prescalers can't express.
 //
-// Sequence: disarm the channel's capture pair, emit the backlog captured under the old
-// configuration, reprogram, then re-sync both cursors and arm the subs the new slope selects -- so
-// the first record emitted under the new configuration is an edge captured after the command.
+// Sequence: disarm the capture pair, emit its completed old backlog, reprogram, establish a new
+// capture epoch, then arm the new slope. Old captures still in the peripheral/DMA pipeline are
+// discarded when they arrive; they must not advance the new configuration's divider phase.
 // Disarming a capture channel (CCxE = 0) also resets its prescaler's internal edge count, so the
 // hardware share starts a fresh group just like the zeroed software count.
 static void apply_channel_config(int ch, timestamper_slope_t slope) {
@@ -613,17 +576,16 @@ static void apply_channel_config(int ch, timestamper_slope_t slope) {
       set_capture_enabled(k, false);
     }
   }
-  service_channel(c);
+  service_channel(c, true);
   c->slope = slope;
   c->divider = c->divider_set / hw;
-  c->count = 0;
+  begin_capture_epoch(c);
   for (int k = 0; k < NUM_HW_CAPTURE; k++) {
     if (capture_hw[k].channel != ch) {
       continue;
     }
     uint8_t s = capture_hw[k].sub;
     LL_TIM_IC_SetPrescaler(capture_hw[k].tim, capture_hw[k].ll_channel, ic_prescaler_ll(hw));
-    c->sub[s].drain_pos = safe_cur(c, s);
     if (sub_active(slope, s)) {
       set_capture_enabled(k, true);
     }
@@ -893,7 +855,7 @@ static void flush_dma_captures(void) {
     // Disable interrupts so we don't race the DMA ISR's call into service_channel (shared drain_pos
     // / ring head).
     __disable_irq();
-    service_channel(ch);
+    service_channel(ch, false);
     __enable_irq();
   }
 }
@@ -1064,6 +1026,8 @@ static void init_timers() {
     channel_t *ch = &channels[capture_hw[k].channel];
     uint8_t s = capture_hw[k].sub;
     ch->has_hw = true;
+    ch->capture_tim = capture_hw[k].tim;
+    ch->capture_if_mask |= capture_hw[k].sr_of_bit >> 8;
     ch->sub[s].buf = capture_buf[k];
     ch->sub[s].counter_tag = ((uint32_t)capture_hw[k].channel << COUNTER_CHAN_SHIFT) |
                              ((s == SUB_RISING) ? COUNTER_POLARITY_BIT : 0);
@@ -1219,10 +1183,8 @@ void timestamper_discard_pending(void) {
     if (!channels[i].has_hw) {
       continue;
     }
-    // Skip past everything captured so far: the next edge becomes the first one the host sees.
-    for (uint8_t s = 0; s < NUM_SUBS; s++) {
-      channels[i].sub[s].drain_pos = safe_cur(&channels[i], s);
-    }
+    // Include in-flight pre-clear captures in the discard, even if DMA has not written them yet.
+    begin_capture_epoch(&channels[i]);
   }
   // Clear any pending overcapture flags along with the counters they feed: a CCxOF latched before
   // this discard would otherwise be sampled by the next periodic flush and reported as in-window
