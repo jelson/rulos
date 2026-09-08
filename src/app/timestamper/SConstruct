@@ -31,7 +31,7 @@ from build_tools import *
 # RCC_PLLM_DIVn macros.
 RulosBuildTarget(
     name = "timestamper",
-    sources = ["timestamper.c", "scpi.c"],
+    sources = ["timestamper.c", "scpi.c", "config.c"],
     peripherals = "uart usb-cdc-stm32 scpi nvconfig",
     platforms = [
         ArmStmPlatform(

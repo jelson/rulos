@@ -22,7 +22,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define NUM_CHANNELS 4
+#define NUM_CHANNELS        4
+#define SERIAL_DEFAULT_BAUD 115200
 
 // Per-channel slope. Each input has a rising-armed and a falling-armed timer capture channel; slope
 // selects which of the pair are enabled. Unselected edge directions are not captured at all (no DMA
@@ -90,15 +91,19 @@ timestamper_format_t timestamper_get_format(void);
 
 // *RST: restore all channels to defaults (rising-edge, divider=1), switch back to TEXT format,
 // re-enable streaming, and persist the defaults to flash (a full factory reset that survives power
-// loss).
-void timestamper_reset_all(void);
+// loss). Returns false if persisting the defaults fails; runtime defaults still apply.
+bool timestamper_reset_all(void);
+
+// Load channel config at startup, before capture hardware is initialized. Channels without a
+// persisted config start with rising-edge, divider=1 defaults.
+void timestamper_config_load(void);
 
 // Persist the current channel config (slope + divider) to flash so it survives power loss.
 // Synchronous and DESTRUCTIVE to sampling: it masks interrupts for the flash erase/program (tens of
 // ms), so pulses arriving during the save are missed -- by design. Driven by the explicit
 // CONFig:SAVE command (and *RST, which persists defaults). A change that matches what's already
-// stored is skipped.
-void timestamper_config_save(void);
+// stored is skipped. Returns false if the save fails; the same configuration can then be retried.
+bool timestamper_config_save(void);
 
 // Discard everything currently pending: drop the timestamp ring, the in-flight TX-buffer half, the
 // per-channel missed/overflow counters, and any latched overcapture flags. After this returns, the

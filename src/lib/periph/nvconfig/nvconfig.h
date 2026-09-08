@@ -48,10 +48,14 @@
 // the caller then keeps its compiled defaults.
 bool nvconfig_load(void *out, size_t len, uint16_t version);
 
-// Erase the reserved region and write `data` (`len` bytes) with a
+// Erase the inactive slot and write `data` (`len` bytes) with a
 // fresh header and CRC. Synchronous: the core stalls on flash-busy for
 // the erase+program (tens of ms), briefly interrupting anything the
 // app is streaming -- call only while reconfiguring, never on a hot
 // path. `len` must be <= NVCONFIG_MAX_PAYLOAD and fit the reserved
-// region; an oversize request is a no-op.
-void nvconfig_save(const void *data, size_t len, uint16_t version);
+// region. Returns true only after the write completes successfully;
+// invalid requests or flash errors return false. The previous valid
+// slot remains intact on failure, and the same request can be retried.
+// A failure may occur after some or all data was written; callers must
+// not assume the newest persisted contents are unchanged on false.
+bool nvconfig_save(const void *data, size_t len, uint16_t version);

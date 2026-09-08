@@ -242,10 +242,10 @@ static bool try_standard(const char *line) {
     return true;
   }
   if (strncasecmp(line, "*RST", 4) == 0) {
+    scpi_clear_error();
     if (cfg.on_reset) {
       cfg.on_reset();
     }
-    scpi_clear_error();
     return true;
   }
   if (strncasecmp(line, "*CLS", 4) == 0) {

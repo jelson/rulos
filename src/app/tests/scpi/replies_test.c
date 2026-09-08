@@ -18,6 +18,10 @@ static bool on_line(const char *line) {
   return false;
 }
 
+static void on_reset(void) {
+  scpi_set_error("-240,\"Configuration save failed\"");
+}
+
 static void on_tx_complete(void) {
   usbd_cdc_state_t *cdc = scpi_usb_cdc_handle();
   if (stream_enabled && usbd_cdc_tx_ready(cdc)) {
@@ -110,6 +114,9 @@ static void test_error_snapshots(void) {
   expect_reply("-2,\"new\"\n");
   receive("SYST:ERR?\n");
   expect_reply("0,\"No error\"\n");
+
+  receive("*RST\nSYST:ERR?\n");
+  expect_reply("-240,\"Configuration save failed\"\n");
 }
 
 static void test_disconnect(void) {
@@ -265,6 +272,7 @@ static void test_disconnect(void) {
 int main(void) {
   scpi_config_t config = {
       .on_line = on_line,
+      .on_reset = on_reset,
       .on_usb_tx_complete = on_tx_complete,
   };
   scpi_init(&config);

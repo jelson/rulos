@@ -54,7 +54,8 @@ typedef struct {
   //              "<git_commit>" (GIT_COMMIT is a global build -D).
   const char *version;  // optional, NULL = git commit only
 
-  // Called when *RST is received. May be NULL.
+  // Called when *RST is received, after clearing the old error. May report
+  // a reset failure with scpi_set_error(). May be NULL.
   void (*on_reset)(void);
 
   // Called for any line that doesn't match an IEEE 488.2 mandatory command.

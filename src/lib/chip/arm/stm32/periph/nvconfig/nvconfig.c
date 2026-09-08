@@ -179,10 +179,10 @@ bool nvconfig_load(void *out, size_t len, uint16_t version) {
   return nv_active >= 0;
 }
 
-void nvconfig_save(const void *data, size_t len, uint16_t version) {
-  if (len > NVCONFIG_MAX_PAYLOAD || NV_IMG(len) > NV_SLOT_BYTES ||
+bool nvconfig_save(const void *data, size_t len, uint16_t version) {
+  if (data == NULL || len > NVCONFIG_MAX_PAYLOAD || NV_IMG(len) > NV_SLOT_BYTES ||
       nv_region() < NV_NSLOTS * NV_SLOT_BYTES) {
-    return;
+    return false;
   }
   // The active slot/seq come from RAM (the boot scan), never a fresh
   // pre-erase flash read. Lazily scan once only if save runs before
@@ -219,7 +219,9 @@ void nvconfig_save(const void *data, size_t len, uint16_t version) {
   uint32_t bank = (off < FLASH_BANK_SIZE) ? FLASH_BANK_1 : FLASH_BANK_2;
   uint32_t sector = (off % FLASH_BANK_SIZE) / FLASH_SECTOR_SIZE;
 
-  HAL_FLASH_Unlock();
+  if (HAL_FLASH_Unlock() != HAL_OK) {
+    return false;
+  }
   FLASH_EraseInitTypeDef erase = {
       .TypeErase = FLASH_TYPEERASE_SECTORS,
       .Banks = bank,
@@ -240,7 +242,9 @@ void nvconfig_save(const void *data, size_t len, uint16_t version) {
       }
     }
   }
-  HAL_FLASH_Lock();
+  if (HAL_FLASH_Lock() != HAL_OK) {
+    ok = false;
+  }
 
   // Promote the new slot only on a fully successful write. On failure
   // the cached active slot is unchanged, so it still points at the
@@ -253,4 +257,5 @@ void nvconfig_save(const void *data, size_t len, uint16_t version) {
   // Drop ICACHE lines for the rewritten sector so a later read sees
   // the new block, not a stale line.
   HAL_ICACHE_Invalidate();
+  return ok;
 }
