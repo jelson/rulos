@@ -78,6 +78,7 @@ As a library, open a Pulsegen instance and call methods on it.
 
 import argparse
 import enum
+import os
 import serial
 import serial.tools.list_ports
 import sys
@@ -156,12 +157,14 @@ class Pulsegen:
     def usb_serial(self):
         """The USB iSerialNumber for this device (USBD_SERIAL_PREFIX +
         STM32 96-bit unique ID as hex); equals the serial field of *IDN?.
-        None if it can't be read."""
+        None if it can't be read. Port aliases such as /dev/serial/by-id
+        resolve to the device paths reported by the OS."""
+        port = os.path.realpath(self._ser.port)
         return next(
             (
                 p.serial_number
                 for p in serial.tools.list_ports.comports()
-                if p.device == self._ser.port
+                if os.path.realpath(p.device) == port
             ),
             None,
         )

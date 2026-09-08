@@ -303,13 +303,14 @@ class LectroTIC4:
 
         We already know our port; this is only a metadata lookup for it. pyserial surfaces USB
         descriptor fields solely through the port list (no handle-/path-keyed accessor), so we
-        pick our
-        known port's row out of comports()."""
+        pick our known port's row out of comports(), resolving aliases such as /dev/serial/by-id
+        to the device paths reported by the OS."""
+        port = os.path.realpath(self._ser.port)
         return next(
             (
                 p.serial_number
                 for p in serial.tools.list_ports.comports()
-                if p.device == self._ser.port
+                if os.path.realpath(p.device) == port
             ),
             None,
         )
