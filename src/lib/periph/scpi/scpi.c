@@ -28,9 +28,9 @@
 #include "periph/uart/linereader.h"
 #include "periph/usb_cdc/usb_cdc.h"
 
-// Reply scratch big enough for the longest single response. SCPI replies
-// are only emitted in reaction to commands, so there's no risk of two
-// writes stepping on the same buffer mid-flight.
+// Dispatch stops after each reply until this buffer is available again.
+// The unconsumed USB OUT packet stays in the CDC buffer with RX paused,
+// so arbitrarily large command bursts use bounded RAM and host backpressure.
 #define SCPI_TX_BUFLEN 128
 
 // *IDN? response buffer. The format "<vendor>,<model>,<serial>,<firmware>"
@@ -42,20 +42,29 @@
 static usbd_cdc_state_t scpi_usb_cdc;
 static LineReader_t linereader;
 static char tx_buf[SCPI_TX_BUFLEN];
+static uint32_t tx_len;
+static bool tx_in_flight;
+static const uint8_t *rx_data;
+static uint32_t rx_len;
 static char idn_buf[SCPI_IDN_BUFLEN];
 static volatile bool recent_activity = false;
 static scpi_config_t cfg;
 
 // Last error reported, returned by the next SYST:ERR?.
 static char err_msg[80] = "0,\"No error\"";
+static uint32_t err_generation;
+static uint32_t reply_error_generation;
+static bool reply_is_error;
 
 void scpi_set_error(const char *msg) {
   strncpy(err_msg, msg, sizeof(err_msg) - 1);
   err_msg[sizeof(err_msg) - 1] = 0;
+  err_generation++;
 }
 
 void scpi_clear_error(void) {
   strcpy(err_msg, "0,\"No error\"");
+  err_generation++;
 }
 
 const char *scpi_match_kw(const char *s, const char *full, const char *short_) {
@@ -250,8 +259,10 @@ static bool try_standard(const char *line) {
       p++;
     }
     if (scpi_match_kw(p, "ERROR?", "ERR?")) {
-      scpi_print(err_msg);
-      scpi_clear_error();
+      if (scpi_print(err_msg)) {
+        reply_error_generation = err_generation;
+        reply_is_error = true;
+      }
       return true;
     }
   }
@@ -278,9 +289,15 @@ static void handle_line(char *line) {
 
 // ---- USB CDC plumbing ------------------------------------------------------
 
-void scpi_print(const char *line) {
-  if (!usbd_cdc_tx_ready(&scpi_usb_cdc)) {
-    return;
+static void send_reply(void) {
+  if (tx_len && !tx_in_flight && usbd_cdc_tx_ready(&scpi_usb_cdc)) {
+    tx_in_flight = usbd_cdc_write(&scpi_usb_cdc, tx_buf, tx_len) == 0;
+  }
+}
+
+bool scpi_print(const char *line) {
+  if (tx_len) {
+    return false;
   }
   size_t n = strlen(line);
   if (n + 1 > SCPI_TX_BUFLEN) {
@@ -288,8 +305,10 @@ void scpi_print(const char *line) {
   }
   memcpy(tx_buf, line, n);
   tx_buf[n++] = '\n';
-  usbd_cdc_write(&scpi_usb_cdc, tx_buf, n);
+  tx_len = n;
+  send_reply();
   recent_activity = true;
+  return true;
 }
 
 bool scpi_usb_ready(void) {
@@ -312,20 +331,94 @@ static void on_line(UartState_t *uart, void *user_data, char *line) {
   handle_line(line);
 }
 
+static void process_rx(void) {
+  if (!scpi_usb_ready()) {
+    return;
+  }
+  send_reply();
+  while (rx_len && !tx_len) {
+    // Feed at most one line: linereader callbacks are synchronous, so the
+    // next command cannot overwrite a reply or clear an undelivered error.
+    uint32_t n = 0;
+    while (n < rx_len) {
+      uint8_t c = rx_data[n++];
+      if (c == '\r' || c == '\n') {
+        break;
+      }
+    }
+    linereader_feed(&linereader, (const char *)rx_data, n);
+    rx_data += n;
+    rx_len -= n;
+  }
+  if (!rx_len && !tx_len) {
+    usbd_cdc_resume_rx(&scpi_usb_cdc);
+  }
+}
+
 static void on_usb_rx(usbd_cdc_state_t *cdc, void *user_data, const uint8_t *data, uint32_t len) {
   recent_activity = true;
-  linereader_feed(&linereader, (const char *)data, len);
+  if (!scpi_usb_ready()) {
+    return;
+  }
+  usbd_cdc_pause_rx(cdc);
+  rx_data = data;
+  rx_len = len;
+  process_rx();
 }
 
 static void on_usb_tx_complete(usbd_cdc_state_t *cdc, void *user_data) {
   recent_activity = true;
-  if (cfg.on_usb_tx_complete) {
+  bool was_reply = tx_in_flight;
+  if (was_reply) {
+    if (reply_is_error && reply_error_generation == err_generation) {
+      scpi_clear_error();
+    }
+    reply_is_error = false;
+    tx_in_flight = false;
+    tx_len = 0;
+  }
+
+  // Alternate pending replies and application streaming transfers. A reply
+  // waiting behind stream data wins the next turn; after a reply, the app
+  // can start one stream transfer before the following command is handled.
+  if (was_reply && cfg.on_usb_tx_complete) {
+    cfg.on_usb_tx_complete();
+  }
+  process_rx();
+  if (!was_reply && cfg.on_usb_tx_complete) {
     cfg.on_usb_tx_complete();
   }
 }
 
+static void on_usb_connect(usbd_cdc_state_t *cdc, void *user_data) {
+  process_rx();
+}
+
+static void on_usb_disconnect(usbd_cdc_state_t *cdc, void *user_data) {
+  rx_data = NULL;
+  rx_len = 0;
+  linereader_init_unbound(&linereader, NULL, on_line, NULL);
+  // DTR deassertion does not cancel an in-flight transfer. Do not reuse its
+  // storage until completion; a physical USB deinit does cancel it.
+  // A new application transfer can start before this deferred callback, so
+  // identify our buffer rather than treating every busy TX as our response.
+  if (cdc->tx_buf_in_flight != tx_buf) {
+    tx_in_flight = false;
+  }
+  if (!tx_in_flight) {
+    tx_len = 0;
+    reply_is_error = false;
+  }
+  usbd_cdc_resume_rx(cdc);
+}
+
 void scpi_init(const scpi_config_t *config) {
   cfg = *config;
+  tx_len = 0;
+  tx_in_flight = false;
+  rx_data = NULL;
+  rx_len = 0;
+  reply_is_error = false;
 
   // Build the IEEE 488.2 *IDN? response once. The vendor and model fields are
   // the USB iManufacturer / iProduct strings (USBD_MANUFACTURER_STRING /
@@ -349,6 +442,8 @@ void scpi_init(const scpi_config_t *config) {
   scpi_usb_cdc = (usbd_cdc_state_t){
       .rx_cb = on_usb_rx,
       .tx_complete_cb = on_usb_tx_complete,
+      .connect_cb = on_usb_connect,
+      .disconnect_cb = on_usb_disconnect,
       .user_data = NULL,
   };
   usbd_cdc_init(&scpi_usb_cdc);

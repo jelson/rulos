@@ -61,19 +61,74 @@ void USBD_free(void *ptr) {
   // Nothing to do since it's statically allocated
 }
 
+static void disconnect_task(void *data);
+
+// Equal-deadline scheduler tasks need not run FIFO. Every delivery drains
+// old-session cleanup first, so a reordered connect/RX/TX callback cannot
+// revive canceled work or be followed by cleanup that discards new work.
+static void deliver_disconnect(usbd_cdc_state_t *cdc) {
+  if (cdc->disconnect_pending) {
+    cdc->disconnect_pending = false;
+    if (cdc->disconnect_cb) {
+      cdc->disconnect_cb(cdc, cdc->user_data);
+    }
+  }
+}
+
+static void queue_disconnect(usbd_cdc_state_t *cdc) {
+  if (!cdc->disconnect_pending) {
+    cdc->disconnect_pending = true;
+    schedule_now(disconnect_task, cdc);
+  }
+}
+
+static void arm_rx(usbd_cdc_state_t *cdc) {
+  if (!cdc->rx_paused && !cdc->rx_armed && cdc->rx_pending_len == 0) {
+    cdc->rx_armed = true;
+    if (USBD_CDC_ReceivePacket(&cdc->usbd_handle) != USBD_OK) {
+      cdc->rx_armed = false;
+    }
+  }
+}
+
 // Task to deliver RX data to application callback (can't call from ISR)
 static void rx_delivery_task(void *data) {
-  usbd_cdc_state_t *cdc = (usbd_cdc_state_t *)data;
+  usbd_cdc_state_t *cdc = cdc_device;
+  deliver_disconnect(cdc);
+  rulos_irq_state_t irq = hal_start_atomic();
+  uint32_t len = cdc->rx_pending_len;
+  if (cdc->rx_generation != (uint32_t)(uintptr_t)data) {
+    hal_end_atomic(irq);
+    return;  // A bus reset invalidated this delivery, possibly before reinit.
+  }
+  if (cdc->rx_retained) {
+    cdc->rx_delivery_blocked = true;
+    hal_end_atomic(irq);
+    return;
+  }
+  // ST always arms a fresh hardware packet on bus reinitialization, even
+  // while paused. Keep callback storage separate and copy before a USB ISR
+  // can replace the hardware buffer or change this packet's generation.
+  memcpy(cdc->rx_delivery_buf, cdc->rx_buf, len);
+  cdc->rx_retained = true;
+  hal_end_atomic(irq);
 
   // Deliver to application callback
-  // Buffer is valid until next USBD_CDC_ReceivePacket() call
-  if (cdc->rx_pending_len > 0 && cdc->rx_cb) {
-    cdc->rx_cb(cdc, cdc->user_data, cdc->rx_buf, cdc->rx_pending_len);
+  // A paused callback retains this snapshot until usbd_cdc_resume_rx().
+  if (len > 0 && cdc->rx_cb) {
+    cdc->rx_cb(cdc, cdc->user_data, cdc->rx_delivery_buf, len);
+  }
+  irq = hal_start_atomic();
+  if (cdc->rx_generation == (uint32_t)(uintptr_t)data) {
     cdc->rx_pending_len = 0;
   }
+  if (!cdc->rx_paused) {
+    cdc->rx_retained = false;
+  }
+  hal_end_atomic(irq);
 
   // Prepare to receive more data
-  USBD_CDC_ReceivePacket(&cdc->usbd_handle);
+  arm_rx(cdc);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -84,12 +139,11 @@ static int8_t CDC_Init_FS(void) {
   // Called when USB CDC interface is initialized
   if (cdc_device) {
     USBD_CDC_SetRxBuffer(&cdc_device->usbd_handle, cdc_device->rx_buf);
-    USBD_CDC_ReceivePacket(&cdc_device->usbd_handle);
+    // ST's class Init arms OUT unconditionally after this callback returns.
+    cdc_device->rx_armed = true;
   }
   return USBD_OK;
 }
-
-static void disconnect_task(void *data);
 
 static int8_t CDC_DeInit_FS(void) {
   if (cdc_device) {
@@ -98,9 +152,16 @@ static int8_t CDC_DeInit_FS(void) {
     // If USB drops mid-transfer, TransmitComplete will never fire.
     // Reset tx state so the device can TX again after reconnect.
     cdc_device->tx_busy = false;
+    cdc_device->tx_generation++;
     cdc_device->tx_buf_in_flight = NULL;
-    if (was_ready) {
-      schedule_now(disconnect_task, cdc_device);
+    cdc_device->rx_armed = false;
+    cdc_device->rx_pending_len = 0;
+    cdc_device->rx_delivery_blocked = false;
+    cdc_device->rx_generation++;
+    // A preceding DTR close may have left a TX buffer in flight. Notify
+    // cancellation even if the port was already closed, so owners release it.
+    if (was_ready || cdc_device->disconnect_cb) {
+      queue_disconnect(cdc_device);
     }
   }
   return USBD_OK;
@@ -124,15 +185,13 @@ static void dfu_detach_task(void *data) {
 // callback context, like rx/tx.
 static void connect_task(void *data) {
   usbd_cdc_state_t *cdc = (usbd_cdc_state_t *)data;
-  if (cdc->connect_cb) {
+  deliver_disconnect(cdc);
+  if (cdc->usb_ready && cdc->connect_cb) {
     cdc->connect_cb(cdc, cdc->user_data);
   }
 }
 static void disconnect_task(void *data) {
-  usbd_cdc_state_t *cdc = (usbd_cdc_state_t *)data;
-  if (cdc->disconnect_cb) {
-    cdc->disconnect_cb(cdc, cdc->user_data);
-  }
+  deliver_disconnect((usbd_cdc_state_t *)data);
 }
 
 static int8_t CDC_Control_FS(uint8_t cmd, uint8_t *pbuf, uint16_t length) {
@@ -159,12 +218,20 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t *pbuf, uint16_t length) {
   if (cmd == CDC_SET_CONTROL_LINE_STATE) {
     USBD_SetupReqTypedef *req = (USBD_SetupReqTypedef *)pbuf;
     bool dtr = (req->wValue & 0x01) != 0;
+    if (dtr != cdc_device->usb_ready) {
+      // Queued packets belong to the session in which they arrived. Cancel
+      // old/closed-session deliveries before opening or closing the port.
+      cdc_device->rx_generation++;
+      cdc_device->rx_pending_len = 0;
+      cdc_device->rx_delivery_blocked = false;
+      arm_rx(cdc_device);
+    }
     if (dtr && !cdc_device->usb_ready) {
       cdc_device->usb_ready = true;
       schedule_now(connect_task, cdc_device);
     } else if (!dtr && cdc_device->usb_ready) {
       cdc_device->usb_ready = false;
-      schedule_now(disconnect_task, cdc_device);
+      queue_disconnect(cdc_device);
     }
   }
   return USBD_OK;
@@ -183,15 +250,17 @@ static int8_t CDC_Receive_FS(uint8_t *buf, uint32_t *len) {
   }
 
   // If data received, deliver to application
+  cdc_device->rx_armed = false;
   if (*len > 0) {
     // buf already points to cdc_device->rx_buf (set in CDC_Init_FS)
     cdc_device->rx_pending_len = *len;
 
     // Deliver to application (runs synchronously)
-    schedule_now(rx_delivery_task, cdc_device);
+    cdc_device->rx_generation++;
+    schedule_now(rx_delivery_task, (void *)(uintptr_t)cdc_device->rx_generation);
   } else {
     // A ZLP consumes the armed OUT transaction too, but needs no delivery task.
-    USBD_CDC_ReceivePacket(&cdc_device->usbd_handle);
+    arm_rx(cdc_device);
   }
 
   return USBD_OK;
@@ -199,7 +268,11 @@ static int8_t CDC_Receive_FS(uint8_t *buf, uint32_t *len) {
 
 // Task to deliver TX complete to application callback (can't call from ISR)
 static void tx_complete_task(void *data) {
-  usbd_cdc_state_t *cdc = (usbd_cdc_state_t *)data;
+  usbd_cdc_state_t *cdc = cdc_device;
+  deliver_disconnect(cdc);
+  if (cdc->tx_generation != (uint32_t)(uintptr_t)data) {
+    return;  // A USB deinit cancelled this queued completion.
+  }
 
   // Mark TX as complete just before invoking callback, so tx_ready()
   // returns true exactly when the callback runs (not before)
@@ -226,7 +299,8 @@ static int8_t CDC_TransmitComplete(uint8_t *buf, uint32_t *len, uint8_t epnum) {
   // Notify application via scheduler (not from ISR context)
   // Note: tx_busy is cleared in tx_complete_task, not here, so that
   // tx_ready() returns false until the callback actually runs
-  schedule_now(tx_complete_task, cdc_device);
+  cdc_device->tx_generation++;
+  schedule_now(tx_complete_task, (void *)(uintptr_t)cdc_device->tx_generation);
 
   return USBD_OK;
 }
@@ -450,7 +524,14 @@ void usbd_cdc_init(usbd_cdc_state_t *cdc) {
   cdc->initted = false;
   cdc->usb_ready = false;
   cdc->tx_busy = false;
+  cdc->tx_generation = 0;
+  cdc->disconnect_pending = false;
   cdc->rx_pending_len = 0;
+  cdc->rx_paused = false;
+  cdc->rx_armed = false;
+  cdc->rx_retained = false;
+  cdc->rx_delivery_blocked = false;
+  cdc->rx_generation = 0;
   cdc->tx_buf_in_flight = NULL;
 
   // Set global device pointer BEFORE any USB calls
@@ -485,6 +566,20 @@ void usbd_cdc_init(usbd_cdc_state_t *cdc) {
 
 bool usbd_cdc_tx_ready(usbd_cdc_state_t *cdc) {
   return cdc->initted && cdc->usb_ready && !cdc->tx_busy;
+}
+
+void usbd_cdc_pause_rx(usbd_cdc_state_t *cdc) {
+  cdc->rx_paused = true;
+}
+
+void usbd_cdc_resume_rx(usbd_cdc_state_t *cdc) {
+  cdc->rx_paused = false;
+  cdc->rx_retained = false;
+  if (cdc->rx_delivery_blocked) {
+    cdc->rx_delivery_blocked = false;
+    schedule_now(rx_delivery_task, (void *)(uintptr_t)cdc->rx_generation);
+  }
+  arm_rx(cdc);
 }
 
 int usbd_cdc_write(usbd_cdc_state_t *cdc, const void *buf, uint32_t len) {

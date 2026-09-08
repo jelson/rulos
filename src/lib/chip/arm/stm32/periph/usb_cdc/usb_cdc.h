@@ -64,6 +64,8 @@ typedef void (*usbd_cdc_tx_complete_cb)(usbd_cdc_state_t *cdc, void *user_data);
 // DTR) and when it closes it or the cable is pulled. The right place
 // to emit a greeting: tx is ready when connect_cb runs. Optional;
 // leave NULL if unused.
+// Bus deinitialization also notifies disconnect_cb if DTR was already low,
+// because it cancels transfers that a DTR close alone leaves in flight.
 typedef void (*usbd_cdc_connect_cb)(usbd_cdc_state_t *cdc, void *user_data);
 
 // State structure - caller allocates this
@@ -80,10 +82,18 @@ struct usbd_cdc_state_s {
   bool initted;
   bool usb_ready;
   bool tx_busy;
+  uint32_t tx_generation;
+  bool disconnect_pending;
 
   // RX buffer - USB Full Speed max packet size (64 bytes)
   uint8_t rx_buf[64];
+  uint8_t rx_delivery_buf[64];
   uint32_t rx_pending_len;
+  bool rx_paused;
+  bool rx_armed;
+  bool rx_retained;
+  bool rx_delivery_blocked;
+  uint32_t rx_generation;
 
   // pointer to pending TX
   const void *tx_buf_in_flight;
@@ -103,6 +113,13 @@ int usbd_cdc_write(usbd_cdc_state_t *cdc, const void *buf, uint32_t len);
 
 // Check if ready to transmit (true if USB enumerated and not busy)
 bool usbd_cdc_tx_ready(usbd_cdc_state_t *cdc);
+
+// Pause OUT endpoint rearming, applying backpressure to the host. An already
+// armed packet is still delivered. Call from task context; in particular an
+// RX callback can pause to retain its buffer until usbd_cdc_resume_rx().
+// Resume is idempotent and may also be called from the RX callback itself.
+void usbd_cdc_pause_rx(usbd_cdc_state_t *cdc);
+void usbd_cdc_resume_rx(usbd_cdc_state_t *cdc);
 
 // Convenience: transmit a null-terminated string.
 // Buffer must remain valid until tx_complete callback is invoked.

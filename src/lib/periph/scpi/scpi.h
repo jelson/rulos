@@ -75,10 +75,12 @@ typedef struct {
 // Call after rulos_hal_init().
 void scpi_init(const scpi_config_t *config);
 
-// Send a single line to the host. A trailing '\n' is appended. No-op if
-// USB is not enumerated or a previous transmission is still in flight, so
-// callers should only emit lines they are willing to drop.
-void scpi_print(const char *line);
+// Copy one response line, appending '\n', and transmit when CDC is ready.
+// A command callback may emit one line: later commands are backpressured
+// until it completes. Unsolicited producers must retry if false is returned
+// (the previous response still owns the buffer). Unsent responses and partial
+// commands are discarded on disconnect. In-flight USB transfers may complete.
+bool scpi_print(const char *line);
 
 // Replace the latched error string returned by the next SYST:ERR? query.
 // The msg argument is copied; SCPI convention is `<num>,"<message>"`.
