@@ -515,61 +515,7 @@ CCMRAM static inline uint32_t safe_cur(channel_t *chan, uint8_t s) {
   return (cur == DMA_CAPTURE_BUFLEN) ? 0 : cur;
 }
 
-// Drain sub `s` from drain_pos up to cur straight into the timestamp ring -- the single-slope hot
-// path. Capture sustains one record per 100 ns across a 16k-record burst, so the inner loop must
-// stay at the ~16-cycle cost of a load, an A/B seconds select, two stores, and a masked increment:
-// ring space is pre-checked per batch, the precomputed channel/polarity tag is loaded once, and
-// recent_pulse is set once. Records that don't fit in the ring are dropped and counted.
-CCMRAM static void drain_sub_fast(channel_t *chan, uint8_t s, uint32_t cur) {
-  uint32_t pos = chan->sub[s].drain_pos;
-  if (pos == cur) {
-    return;
-  }
-  chan->recent_pulse = true;
-  chan->sub[s].drain_pos = cur;
-
-  uint32_t count = (cur - pos) & (DMA_CAPTURE_BUFLEN - 1);
-  uint32_t head = ts_head;
-  uint32_t available = (ts_tail - head - 1) % TIMESTAMP_BUFLEN;
-  if (__builtin_expect(count > available, 0)) {
-    chan->buf_overflows += count - available;
-    count = available;
-    if (count == 0) {
-      return;
-    }
-  }
-
-  const uint32_t tag = chan->sub[s].counter_tag;
-  const uint32_t divider = chan->divider;
-  volatile uint32_t *const buf = chan->sub[s].buf;
-
-  while (count > 0) {
-    uint32_t seg = DMA_CAPTURE_BUFLEN - pos;
-    if (seg > count) {
-      seg = count;
-    }
-    // Pointer-based iteration so the compiler doesn't spill the count.
-    volatile uint32_t *src = buf + pos;
-    volatile uint32_t *const end = src + seg;
-    while (src < end) {
-      uint32_t counter = *src++;
-      uint32_t seconds = counter < (CLOCK_FREQ_HZ / 2) ? seconds_A : seconds_B;
-      if (__builtin_expect(divider != 1, 0)) {
-        chan->count++;
-        if (chan->count < divider) {
-          continue;
-        }
-        chan->count = 0;
-      }
-      timestamp_buffer[head].seconds = seconds;
-      timestamp_buffer[head].counter = counter | tag;
-      head = (head + 1) % TIMESTAMP_BUFLEN;
-    }
-    pos = (pos + seg) & (DMA_CAPTURE_BUFLEN - 1);
-    count -= seg;
-  }
-  ts_head = head;
-}
+#include "capture_drain_impl.h"
 
 // Which sub-streams a slope selects. A selected sub-stream is armed in hardware and emitted; a
 // deselected one's capture channel is disabled.
