@@ -82,13 +82,14 @@
  *
  * SYNC master follows the regime: in the HRTIM regime the HRTIM master resets all slave timers
  * each period; in the GP regime TIM1 is master (TRGO = update) and TIM2/TIM3/TIM8 slave-reset on
- * ITR0 = tim1_trgo. Either way all counters are preset to 0 before a single coordinated enable, so
- * they start phase-aligned.
+ * ITR0 = tim1_trgo. The GP slaves wait stopped for the master's first update, which starts them
+ * and loads the first active waveform together.
  *
  * Burst: a domain can emit exactly N pulses, rest, and repeat at a programmable interval. Same
  * behavior in both regimes, two implementations: the HRTIM burst-mode controller gates the outputs
- * in hardware when fast (software can't count MHz pulses), and a software per-period count gates
- * them when slow (the update interrupt runs below ~2 kHz there, so counting is exact). The
+ * in hardware when fast (software can't count MHz pulses), and a software per-period count stages
+ * GP compare preloads when slow (updates run below ~2 kHz). Hardware applies those preloads at
+ * the period boundary, so even zero-delay and end-of-period pulses stay whole. The
  * repetition interval is timed by a dedicated hardware timer (TIM5), not the scheduler, so the
  * cadence is locked to the 125 MHz clock -- phase-coherent with the pulses and free of scheduler
  * jitter; the count within a burst stays exact.
@@ -121,6 +122,7 @@
 
 #include "core/hardware.h"
 #include "core/rulos.h"
+#include "gp_timing.h"
 #include "periph/scpi/scpi.h"
 #include "periph/uart/uart.h"
 #include "scpi.h"
@@ -160,13 +162,7 @@ static const uint16_t hrtim_min_per[6] = {0x0060, 0x0030, 0x0018, 0x000C, 0x0006
 // ---- GP (slow) regime ------------------------------------------------------
 
 // General-purpose timers run at 125 MHz -> 8 ns/tick (CK_INT, APBx prescaler = 1).
-#define GP_TICK_PS   8000ULL
-#define GP_PSC_MAX   0xFFFFU      // 16-bit prescaler on every GP timer
-#define GP_ARR16_MAX 0xFFFFU      // 16-bit timers (TIM1/3/8)
 #define GP_ARR32_MAX 0xFFFFFFFFU  // 32-bit timer (TIM2)
-// Longest period offered on every channel, capped to the 16-bit timers' reach so all four behave
-// identically (TIM2's 32-bit counter could go further, but uniformity wins): 65536 * 65536 * 8 ns.
-#define GP_MAX_PERIOD_PS (((uint64_t)GP_ARR16_MAX + 1) * (GP_PSC_MAX + 1) * GP_TICK_PS)
 
 // ---- Burst -----------------------------------------------------------------
 
@@ -180,9 +176,9 @@ static const uint16_t hrtim_min_per[6] = {0x0060, 0x0030, 0x0018, 0x000C, 0x0006
 #define BURST_IDLE_MIN       2U                      // period floor (near-ceiling periods only)
 #define BURST_NCYC_MAX       (65536U - BURST_IDLE_MIN)
 
-// GP rising-edge guard past the period boundary: the update-ISR latency budget for the software
-// burst gating (see config_gp_output). 16 us against a >= ~524 us GP period.
-#define GP_GATE_GUARD_PS (16ULL * 1000 * 1000)
+// Atomic GP compare-preload batch budget. An arm too close to rollover waits for the update ISR;
+// this guard affects only arming latency, never the pulse's programmed delay or width.
+#define GP_ARM_GUARD_PS (16ULL * 1000 * 1000)
 
 #define BURST_REP_DEFAULT_PS PS_PER_SEC
 #define BURST_REP_MARGIN_PS  (PS_PER_SEC / 1000)   // 1 ms guard past the frame for ISR latency
@@ -308,6 +304,9 @@ typedef struct {
   uint32_t burst_ncyc;
   uint64_t burst_rep_ps;
 
+  uint32_t gp_fall_t;       // active sibling compare, staged only when the output should run
+  uint32_t gp_arm_guard_t;  // whole ticks needed for an atomic domain-wide preload batch
+
   // LED: when led_per_pulse, the LED is toggled (led_state) once per pulse by the GP update ISR
   // rather than blinking at the heartbeat (see the LED policy note below).
   bool led_per_pulse;
@@ -340,8 +339,7 @@ static uint32_t g_hrtim_burst_outputs;  // OENR/ODISR mask; 0 = no active HRTIM 
 // g_gp_burst_out_mask on period boundaries so the run window holds exactly ncyc whole pulses.
 static int g_gp_burst_count_ch = -1;
 static uint32_t g_gp_burst_out_mask;
-static volatile uint32_t g_gp_burst_remaining;
-static volatile bool g_gp_burst_arming;
+static volatile gp_burst_t g_gp_burst;
 // A burst (either regime) is armed this config; TIM5's update ISR re-arms each frame while set.
 static bool g_burst_active;
 
@@ -477,68 +475,24 @@ static void config_hrtim_channel(int ch, uint8_t ckpsc, uint32_t per, bool sync,
 
 // ---- GP (slow) regime ------------------------------------------------------
 
-// Pick the smallest prescaler whose period fits in GP_MAX_PERIOD_PS worth of 16-bit-counter ticks
-// (uniform across channels). out_psc is the PSC register value (divisor - 1); out_arr is the ARR
-// value (period in prescaled ticks - 1). Computed directly, no scan.
-static bool select_gp_psc(int ch, uint64_t period_ps, uint32_t *out_psc, uint32_t *out_arr,
-                          uint64_t *out_tick_ps) {
-  // The period is N base ticks (rounded to the 8 ns grid) split into prescaler * counter. The
-  // minimum prescaler always fits, but its coarse tick truncates the period by up to half a
-  // prescaled tick: ppm-scale error at second-long periods (a 1 s period was 9.6 ppm short).
-  // Different prescalers leave different remainders, so search them all for the factorization
-  // that lands closest, stopping early on exact. Config-time cost only; e.g. 1 s resolves
-  // exactly as 2000 * 62500.
-  const uint64_t target = (period_ps + GP_TICK_PS / 2) / GP_TICK_PS;
-  const uint64_t div_min = (target + GP_ARR16_MAX) / (GP_ARR16_MAX + 1);
-  if (div_min > GP_PSC_MAX + 1) {
-    return false;  // longer than GP_MAX_PERIOD_PS
-  }
-  uint64_t best_div = 0, best_ticks = 0, best_err = UINT64_MAX;
-  for (uint64_t div = div_min < 1 ? 1 : div_min; div <= GP_PSC_MAX + 1; div++) {
-    uint64_t ticks = (target + div / 2) / div;
-    if (ticks > GP_ARR16_MAX + 1) {
-      continue;
-    }
-    if (ticks < 2) {
-      break;  // still shorter at every larger prescaler
-    }
-    uint64_t actual = ticks * div;
-    uint64_t err = actual > target ? actual - target : target - actual;
-    if (err < best_err) {
-      best_err = err;
-      best_div = div;
-      best_ticks = ticks;
-      if (err == 0) {
-        break;
-      }
-    }
-  }
-  if (best_div == 0) {
-    return false;  // shorter than the GP timer can express -- caller should have used HRTIM
-  }
-  *out_psc = (uint32_t)(best_div - 1);
-  *out_arr = (uint32_t)(best_ticks - 1);
-  *out_tick_ps = GP_TICK_PS * best_div;
-  return true;
-}
-
 // Configure a GP timer's counter (mode / prescaler / ARR) and its master-or-slave role for the
 // given period. TIM1 is always the GP-regime sync master (TRGO = update, drives the slaves' ITR0);
-// the others slave-reset off it when sync, else free-run. Split out from the output stage so the
-// master timebase can run even when its own channel (ch1) is off. Returns ARR + tick via out
-// params; false if the period doesn't fit.
+// the others reset and start off it when sync, else free-run. Split out from the output stage so
+// the master timebase can run even when its own channel is off. Returns ARR + tick via out params;
+// false if the period doesn't fit.
 static bool config_gp_timebase(int ch, uint64_t period_ps, uint32_t *out_arr,
                                uint64_t *out_tick_ps) {
   TIM_TypeDef *t = channel_hw[ch].gp_timer;
   uint32_t psc, arr;
   uint64_t tick_ps;
-  if (!select_gp_psc(ch, period_ps, &psc, &arr, &tick_ps)) {
+  if (!gp_select_timebase(period_ps, &psc, &arr, &tick_ps)) {
     return false;
   }
   LL_TIM_SetCounterMode(t, LL_TIM_COUNTERMODE_UP);
   LL_TIM_SetPrescaler(t, psc);
   LL_TIM_SetAutoReload(t, arr);
   LL_TIM_DisableARRPreload(t);
+  chan[ch].gp_arm_guard_t = gp_arm_guard_ticks(GP_ARM_GUARD_PS, tick_ps);
   if (t == TIM1) {
     LL_TIM_SetTriggerOutput(t, LL_TIM_TRGO_UPDATE);
   } else {
@@ -556,25 +510,17 @@ static bool config_gp_timebase(int ch, uint64_t period_ps, uint32_t *out_arr,
 static void config_gp_output(int ch, uint32_t arr, uint64_t tick_ps) {
   const channel_hw_t *hw = &channel_hw[ch];
   TIM_TypeDef *t = hw->gp_timer;
-  // Every GP rising edge gets a guard offset past the period boundary, so the burst-gating update
-  // ISR (which runs at the boundary) always opens or closes the run window before the period's
-  // pulse begins. Without it, a delay-0 pulse races the ISR: the close loses by the interrupt
-  // latency and the scope sees an extra truncated pulse. Applied uniformly (burst or not), so SYNC
-  // relative offsets are preserved; wraps at the period like the HRTIM sync shift.
-  const uint32_t guard_t = (uint32_t)(GP_GATE_GUARD_PS / tick_ps);
-  uint32_t delay_t = (uint32_t)((chan[ch].delay_ps / tick_ps + guard_t) % ((uint64_t)arr + 1));
-  uint32_t width_t = (uint32_t)(chan[ch].width_ps / tick_ps);
-  if (width_t < 1) {
-    width_t = 1;
-  }
-  uint32_t fall_t = delay_t + width_t;
-  if (fall_t > arr) {
-    fall_t = arr;
-  }
+  uint32_t delay_t, fall_t;
+  gp_select_edges(chan[ch].delay_ps, chan[ch].width_ps, arr, tick_ps, &delay_t, &fall_t);
+  chan[ch].gp_fall_t = fall_t;
   LL_TIM_OC_SetMode(t, hw->gp_out_ch, LL_TIM_OCMODE_COMBINED_PWM2);
   LL_TIM_OC_SetMode(t, hw->gp_sib_ch, LL_TIM_OCMODE_PWM1);
+  LL_TIM_OC_DisablePreload(t, hw->gp_out_ch);
+  LL_TIM_OC_EnablePreload(t, hw->gp_sib_ch);
   gp_set_compare(t, hw->gp_out_ch, delay_t);
-  gp_set_compare(t, hw->gp_sib_ch, fall_t);
+  // Latch an inactive waveform before exposing the pin. Later writes affect only the shadow:
+  // the update event itself starts or stops pulses, including delay=0 and delay+width=period.
+  gp_set_compare(t, hw->gp_sib_ch, 0);
   LL_TIM_OC_SetPolarity(t, hw->gp_out_ch, LL_TIM_OCPOLARITY_HIGH);
   LL_TIM_CC_DisableChannel(t, hw->gp_sib_ch);  // sibling drives no pin
 }
@@ -632,6 +578,31 @@ static void select_rep_timer(uint64_t rep_ps, uint32_t *out_psc, uint32_t *out_a
   *out_arr = (uint32_t)(ticks - 1);
 }
 
+// Stage the whole GP domain for the next update, never change the live output mid-pulse. Call
+// with interrupts masked so higher-priority work cannot split this batch across a boundary.
+static void gp_burst_stage_outputs(bool on) {
+  for (int c = 0; c < NUM_CHANNELS; c++) {
+    if (g_gp_burst_out_mask & (1u << c)) {
+      const channel_hw_t *hw = &channel_hw[c];
+      gp_set_compare(hw->gp_timer, hw->gp_sib_ch, on ? chan[c].gp_fall_t : 0);
+    }
+  }
+}
+
+// A TIM5 frame tick can arrive anywhere in the GP period. Defer an arm too close to rollover
+// until that update's ISR; otherwise all shadows are ready for the very next hardware update.
+static void gp_burst_try_arm(TIM_TypeDef *t) {
+  uint32_t remaining = LL_TIM_GetAutoReload(t) - LL_TIM_GetCounter(t);
+  if (remaining < chan[g_gp_burst_count_ch].gp_arm_guard_t) {
+    return;
+  }
+  gp_burst_stage_outputs(true);
+  // A rollover between the caller's flag clear and the counter sample still belonged to idle.
+  // The guard guarantees no new rollover between that sample and these completed shadow writes.
+  LL_TIM_ClearFlag_UPDATE(t);
+  g_gp_burst.arm_pending = false;
+}
+
 // Arm one burst frame: start the HRTIM burst controller (it self-stops at its BMPER interrupt) or
 // open the GP software count. Called inline from apply_all for the first frame, and from the
 // repetition timer's (TIM5) update ISR for every frame after.
@@ -645,14 +616,16 @@ static void burst_arm_frame(void) {
     LL_HRTIM_BM_Start(HRTIM1);
     LL_HRTIM_EnableOutput(HRTIM1, g_hrtim_burst_outputs);
   } else if (g_gp_burst_count_ch >= 0) {
-    // GP regime: arm the software count. The first update opens the run window (so the first pulse
-    // is whole), then ncyc more updates close it. The update IRQ runs below ~2 kHz here, so the
-    // count is exact.
-    g_gp_burst_remaining = chan[g_gp_burst_count_ch].burst_ncyc;
-    g_gp_burst_arming = true;
+    // The sibling's active compare remains zero until hardware latches the prepared waveform.
+    // The existing one-period arming allowance plus 1 ms margin also covers the 16 us deferral.
+    rulos_irq_state_t irq = hal_start_atomic();
+    g_gp_burst.remaining = chan[g_gp_burst_count_ch].burst_ncyc;
+    g_gp_burst.arm_pending = true;
     TIM_TypeDef *ct = channel_hw[g_gp_burst_count_ch].gp_timer;
     LL_TIM_ClearFlag_UPDATE(ct);
+    gp_burst_try_arm(ct);
     LL_TIM_EnableIT_UPDATE(ct);
+    hal_end_atomic(irq);
   }
 }
 
@@ -666,20 +639,6 @@ void TIM5_IRQHandler(void) {
   LL_TIM_ClearFlag_UPDATE(TIM5);
   if (g_burst_active) {
     burst_arm_frame();
-  }
-}
-
-// Enable or disable every gated GP output (the bursting domain) together.
-static void gp_burst_set_outputs(uint32_t mask, bool on) {
-  for (int c = 0; c < NUM_CHANNELS; c++) {
-    if (mask & (1u << c)) {
-      const channel_hw_t *hw = &channel_hw[c];
-      if (on) {
-        LL_TIM_CC_EnableChannel(hw->gp_timer, hw->gp_out_ch);
-      } else {
-        LL_TIM_CC_DisableChannel(hw->gp_timer, hw->gp_out_ch);
-      }
-    }
   }
 }
 
@@ -705,9 +664,9 @@ static int gp_ch_for_timer(TIM_TypeDef *t) {
 // GP timer update (rollover) handler, told its hardware timer (not a channel index) so it stays
 // correct under any channel<->pin remap. Two jobs:
 //   1. Per-pulse LED: toggle this timer's channel LED if it's blinking per pulse (slow continuous).
-//   2. Burst counting, when this timer is the bursting domain's count timer: the arming update
-//      opens the run window on every gated output (a period boundary, so the first pulse is whole);
-//      ncyc updates later it closes the window. The repetition timer (TIM5) re-arms the next frame.
+//   2. Burst counting: each update has already started a full pulse in hardware. At the final
+//      pulse's start, stage an inactive waveform for the next update, leaving this pulse whole.
+//      TIM5 re-arms the next frame; an arm deferred near rollover is completed here first.
 // A channel is never both (per-pulse requires not-bursting), so the two paths don't fight over the
 // timer's update interrupt.
 static void gp_update(TIM_TypeDef *t) {
@@ -725,16 +684,17 @@ static void gp_update(TIM_TypeDef *t) {
   if (g_gp_burst_count_ch < 0 || channel_hw[g_gp_burst_count_ch].gp_timer != t) {
     return;
   }
-  if (g_gp_burst_arming) {
-    gp_burst_set_outputs(g_gp_burst_out_mask, true);
-    g_gp_burst_arming = false;
+  gp_burst_action_t action = gp_burst_on_update(&g_gp_burst);
+  if (action == GP_BURST_STAGE_ACTIVE) {
+    rulos_irq_state_t irq = hal_start_atomic();
+    gp_burst_try_arm(t);
+    hal_end_atomic(irq);
     return;
   }
-  if (g_gp_burst_remaining == 0) {
-    return;
-  }
-  if (--g_gp_burst_remaining == 0) {
-    gp_burst_set_outputs(g_gp_burst_out_mask, false);
+  if (action == GP_BURST_STAGE_INACTIVE) {
+    rulos_irq_state_t irq = hal_start_atomic();
+    gp_burst_stage_outputs(false);
+    hal_end_atomic(irq);
     LL_TIM_DisableIT_UPDATE(t);
   }
 }
@@ -819,7 +779,7 @@ static int validate(int ch) {
   } else {
     uint32_t psc, arr;
     uint64_t tick;
-    if (!select_gp_psc(ch, T, &psc, &arr, &tick)) {
+    if (!gp_select_timebase(T, &psc, &arr, &tick)) {
       return -4;
     }
   }
@@ -862,7 +822,8 @@ static void apply_all(void) {
   g_hrtim_burst_outputs = 0;
   g_gp_burst_count_ch = -1;
   g_gp_burst_out_mask = 0;
-  g_gp_burst_arming = false;
+  g_gp_burst.remaining = 0;
+  g_gp_burst.arm_pending = false;
   LL_HRTIM_DisableIT_BMPER(HRTIM1);
   LL_HRTIM_BM_Disable(HRTIM1);
   LL_HRTIM_ClearFlag_BMPER(HRTIM1);
@@ -974,28 +935,35 @@ static void apply_all(void) {
   if (gp_run_mask) {
     for (int ch = 0; ch < NUM_CHANNELS; ch++) {
       if (gp_run_mask & (1u << ch)) {
-        reset_gp_timebase(channel_hw[ch].gp_timer);
+        TIM_TypeDef *t = channel_hw[ch].gp_timer;
+        reset_gp_timebase(t);
+        if (!sync_gp || t == TIM1) {
+          // The first clock tick generates an update and starts a full first pulse, without
+          // exposing an active waveform while CEN is still clear.
+          LL_TIM_SetCounter(t, LL_TIM_GetAutoReload(t));
+        }
       }
     }
     for (int ch = 0; ch < NUM_CHANNELS; ch++) {
       const channel_hw_t *hw = &channel_hw[ch];
       if ((gp_run_mask & (1u << ch)) && sync_gp && hw->gp_timer != TIM1) {
-        LL_TIM_SetSlaveMode(hw->gp_timer, LL_TIM_SLAVEMODE_RESET);
+        LL_TIM_SetSlaveMode(hw->gp_timer, LL_TIM_SLAVEMODE_COMBINED_RESETTRIGGER);
       }
       if (gp_output_mask & (1u << ch)) {
+        if (!chan[ch].burst_on) {
+          gp_set_compare(hw->gp_timer, hw->gp_sib_ch, chan[ch].gp_fall_t);
+        }
         set_pin_af(ch, hw->gp_af);
         if (hw->gp_advanced) {
           LL_TIM_EnableAllOutputs(hw->gp_timer);
         }
-        if (!chan[ch].burst_on) {
-          LL_TIM_CC_EnableChannel(hw->gp_timer, hw->gp_out_ch);
-        }
+        LL_TIM_CC_EnableChannel(hw->gp_timer, hw->gp_out_ch);
       }
     }
-    // Reset-mode slaves start counting now; TIM1's first natural update phase-aligns them.
-    // Enabling TIM1 last preserves the existing master/slave start sequence.
+    // SYNC slaves stay stopped until TIM1's first update both starts them and loads their
+    // preloads. In ASYNC the timers start independently, as before.
     for (int ch = 0; ch < NUM_CHANNELS; ch++) {
-      if ((gp_run_mask & (1u << ch)) && channel_hw[ch].gp_timer != TIM1) {
+      if ((gp_run_mask & (1u << ch)) && !sync_gp && channel_hw[ch].gp_timer != TIM1) {
         LL_TIM_EnableCounter(channel_hw[ch].gp_timer);
       }
     }

@@ -68,6 +68,9 @@ class FakeTimestamper:
     def set_divider(self, ch, divider):
         self.events.append(("divider", ch, divider))
 
+    def discard_pending(self, settle_s):
+        self.events.append(("discard", settle_s))
+
 
 class FakePulsegen:
     def __init__(self, events):
@@ -247,6 +250,184 @@ class CaptureTests(unittest.TestCase):
                 self.assertEqual(events[index + 1], ("state", 0, True))
                 self.assertEqual(events[index + 2], "read")
         self.assertEqual(events.count(("state", 0, True)), 2)
+
+
+class BurstBoundaryTests(unittest.TestCase):
+    def score(self, records, delays=None, width=10_000, ncyc=3, sync=False, offsets=None):
+        if delays is None:
+            delays = {0: 0}
+        with patch("sys.stdout", new=io.StringIO()):
+            return regression.check_gp_burst_frame(
+                records, delays, width, ncyc, 1_000_000, sync=sync, phase_offsets_ns=offsets
+            )
+
+    def test_complete_single_and_three_pulse_frames_have_no_boundary_trimming(self):
+        for count in (1, 3):
+            for delay in (0, 990_000):
+                records = pulses([delay + i * 1_000_000 for i in range(count)], 10_000)
+                self.assertTrue(self.score(records, {0: delay}, ncyc=count))
+                self.assertFalse(self.score(records[:-1], {0: delay}, ncyc=count))
+
+    def test_every_first_last_and_interior_fault_fails(self):
+        records = pulses([0, 1_000_000, 2_000_000], 10_000)
+        faulty = {
+            "missing first pulse": records[2:],
+            "missing last pulse": records[:-2],
+            "missing first rise": records[1:],
+            "missing last fall": records[:-1],
+            "extra first pulse": pulses([-100_000], 3852) + records,
+            "extra last pulse": records + pulses([3_000_000], 1000),
+            "duplicate edge": records + [records[2]],
+            "short first width": [(0, 0, "+"), (0, 3852, "-")] + records[2:],
+            "short last width": records[:-1] + [(0, 2_003_852, "-")],
+            "wrong interior period": pulses([0, 1_000_100, 2_000_000], 10_000),
+            "repeated interior polarity": records[:3] + [(0, 1_010_000, "+")] + records[4:],
+        }
+        for name, edges in faulty.items():
+            with self.subTest(name=name):
+                self.assertFalse(self.score(edges))
+
+    def test_sync_wide_frames_score_every_indexed_phase_without_pair_trimming(self):
+        delays = dict(enumerate((0, 100_000, 200_000, 250_000)))
+        records = [
+            record
+            for ch, delay in delays.items()
+            for record in pulses([delay + i * 1_000_000 for i in range(3)], 750_000, ch)
+        ]
+        # Delivery order can be batched independently, but all finite-frame edges must survive.
+        records = records[::2] + records[1::2]
+        self.assertTrue(self.score(records, delays, 750_000, sync=True))
+        shifted = [(ch, t + (1_000_000 if ch == 3 else 0), pol) for ch, t, pol in records]
+        self.assertFalse(self.score(shifted, delays, 750_000, sync=True))
+        self.assertFalse(self.score([r for r in records if r[0] != 0], delays, 750_000, sync=True))
+
+    def test_fixed_offsets_require_independent_calibration_and_residual_stays_strict(self):
+        delays = dict(enumerate((0, 100_000, 200_000, 250_000)))
+        offsets = {0: 0, 1: -4, 2: 0, 3: -16}
+        records = [
+            record
+            for ch, delay in delays.items()
+            for record in pulses([delay + offsets[ch]], 750_000, ch)
+        ]
+        self.assertFalse(self.score(records, delays, 750_000, ncyc=1, sync=True))
+        self.assertTrue(self.score(records, delays, 750_000, ncyc=1, sync=True, offsets=offsets))
+        changed = [(ch, t + (16 if ch == 3 else 0), pol) for ch, t, pol in records]
+        self.assertFalse(self.score(changed, delays, 750_000, ncyc=1, sync=True, offsets=offsets))
+
+    def test_calibration_is_a_separate_flat_continuous_capture(self):
+        events = []
+        offsets = {0: 0, 1: -4, 2: 0, 3: -16}
+        records = [
+            record
+            for ch, offset in offsets.items()
+            for record in pulses([i * 1_000_000 + offset for i in range(1, 31)], 750_000, ch)
+        ]
+        ts, pg = FakeTimestamper(events, timestamps(records)), FakePulsegen(events)
+        with patch("sys.stdout", new=io.StringIO()):
+            measured = regression.measure_gp_sync_offsets(ts, pg, 750_000, 0.1)
+        self.assertEqual(measured, offsets)
+        self.assertEqual(ts.windows, [0.3])
+        arm = events.index("arm")
+        self.assertEqual(events[arm - 1], ("discard", 0.1))
+        self.assertEqual(events[arm + 1], "read")
+        for ch in offsets:
+            self.assertIn(("state", ch, True), events[:arm])
+            self.assertIn(("delay", ch, 0), events[:arm])
+            self.assertIn(("width", ch, 750_000), events[:arm])
+            self.assertNotIn(("burst", ch, True), events)
+
+    def test_calibration_does_not_accept_a_broken_control_waveform(self):
+        events = []
+        records = [
+            record
+            for ch in range(4)
+            for record in pulses(
+                [i * 1_000_000 for i in range(30) if ch != 3 or i != 15], 750_000, ch
+            )
+        ]
+        ts, pg = FakeTimestamper(events, timestamps(records)), FakePulsegen(events)
+        with patch("sys.stdout", new=io.StringIO()), self.assertRaisesRegex(
+            RuntimeError, "invalid GP SYNC control"
+        ):
+            regression.measure_gp_sync_offsets(ts, pg, 750_000, 0.1)
+        self.assertEqual(events[-1], "off")
+
+    def test_async_arm_precedes_its_only_enable_and_includes_flush_budget(self):
+        events = []
+        records = pulses([990_000], 10_000, 2)
+        ts = FakeTimestamper(events, timestamps(records))
+        pg = FakePulsegen(events)
+        with patch("sys.stdout", new=io.StringIO()):
+            self.assertTrue(
+                regression.run_gp_burst_boundary_case(
+                    ts, pg, regression.Pulsegen.ASYNC, {2: 990_000}, 10_000, 1, 0.01
+                )
+            )
+        arm = events.index("arm")
+        self.assertEqual(events[arm + 1 : arm + 3], [("state", 2, True), "read"])
+        self.assertEqual(events.count(("state", 2, True)), 1)
+        self.assertIn(("repeat", 2, 60.0), events[:arm])
+        self.assertEqual(ts.windows, [0.3])
+        self.assertEqual(events[-2:], ["close", "off"])
+
+    def test_sync_configuration_frames_settle_before_one_armed_restart(self):
+        events = []
+        delays = dict(enumerate((0, 100_000, 200_000, 250_000)))
+        records = [
+            record
+            for ch, delay in delays.items()
+            for record in pulses([delay + i * 1_000_000 for i in range(3)], 750_000, ch)
+        ]
+        ts = FakeTimestamper(events, timestamps(records))
+        pg = FakePulsegen(events)
+        with patch.object(
+            regression.time, "sleep", side_effect=lambda seconds: events.append(("settle", seconds))
+        ), patch("sys.stdout", new=io.StringIO()):
+            self.assertTrue(
+                regression.run_gp_burst_boundary_case(
+                    ts, pg, regression.Pulsegen.SYNC, delays, 750_000, 3, 60.0
+                )
+            )
+        arm = events.index("arm")
+        settle = events.index(("settle", 0.3))
+        self.assertLess(settle, arm)
+        for ch in delays:
+            self.assertLess(events.index(("state", ch, True)), settle)
+        self.assertEqual(events[arm + 1 : arm + 3], [("cycles", 0, 3), "read"])
+        self.assertEqual(events.count(("cycles", 0, 3)), 2)
+        self.assertEqual(ts.windows, [1.0])
+
+    def test_group_covers_all_channels_counts_modes_and_boundaries(self):
+        events = []
+        ts, pg = FakeTimestamper(events, []), FakePulsegen(events)
+        offsets = {0: 0, 1: 0, 2: 0, 3: -16}
+        with patch.object(regression, "prime_gp_prescalers"), patch.object(
+            regression, "run_gp_burst_boundary_case", return_value=True
+        ) as run, patch.object(
+            regression, "measure_gp_sync_offsets", return_value=offsets
+        ) as calibrate, patch(
+            "sys.stdout", new=io.StringIO()
+        ):
+            self.assertTrue(regression.test_gp_burst_boundary(ts, pg, 0.1))
+        calibrate.assert_called_once_with(ts, pg, 750_000, 0.1)
+        self.assertEqual(run.call_count, 18)
+        for count in (1, 3):
+            for ch in range(4):
+                for delay in (0, 990_000):
+                    run.assert_any_call(
+                        ts, pg, regression.Pulsegen.ASYNC, {ch: delay}, 10_000, count, 0.1
+                    )
+            run.assert_any_call(
+                ts,
+                pg,
+                regression.Pulsegen.SYNC,
+                dict(enumerate((0, 100_000, 200_000, 250_000))),
+                750_000,
+                count,
+                0.1,
+                phase_offsets_ns=offsets,
+            )
+        self.assertIs(regression.TESTS["gp-burst-boundary"], regression.test_gp_burst_boundary)
 
 
 class WidthTests(unittest.TestCase):

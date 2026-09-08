@@ -47,6 +47,7 @@ Run:
   regression_test.py --only gp-startup
   regression_test.py --only gp-enable
   regression_test.py --only gp-wrap
+  regression_test.py --only gp-burst-boundary
   regression_test.py --only rep-startup  # includes a 41-second capture
   regression_test.py --ts-port /dev/ttyACM0 --pg-port /dev/ttyACM2
 """
@@ -577,6 +578,168 @@ def test_gp_wrap(ts, pg, duration_s):
     return all_ok
 
 
+def measure_gp_sync_offsets(ts, pg, width_ns, duration_s):
+    """Measure a separate flat continuous control, never calibrate from the tested burst.
+
+    TIM1 drives ch3 directly; ch0/1/2 follow its TRGO through slave reset controllers. Their fixed
+    trigger-path delay, plus cable/input skew, is not a burst framing error. Check every control
+    period/width and phase sample before using the signed mean offsets for burst comparisons.
+    """
+    channels = tuple(range(NUM_CHANNELS))
+    pg.off()
+    pg.set_mode(Pulsegen.SYNC)
+    stage_gp(pg, channels, GP_WRAP_PERIOD_NS, width_ns)
+    try:
+        for ch in channels:
+            pg.set_state(ch, True)
+        check_pg_error(pg, "configuring flat GP SYNC control")
+        ts.discard_pending(settle_s=0.1)
+        records = collect(ts, min(max(duration_s, 0.3), 1.0))
+        rising = by_channel(records)
+        offsets = {}
+        for ch in channels:
+            if not check_gp_pulses(records, ch, GP_WRAP_PERIOD_NS, width_ns):
+                raise RuntimeError(f"invalid GP SYNC control waveform on ch{ch}")
+            phases = [
+                (timestamp - rising[0][0] + GP_WRAP_PERIOD_NS // 2) % GP_WRAP_PERIOD_NS
+                - GP_WRAP_PERIOD_NS // 2
+                for timestamp in rising[ch]
+            ]
+            offset = statistics.mean(phases)
+            if any(abs(phase - offset) > GP_PULSE_TOL_NS for phase in phases):
+                raise RuntimeError(f"unstable GP SYNC control phase on ch{ch}")
+            offsets[ch] = offset
+        print(f"  flat continuous SYNC offsets (ns): {offsets}")
+        return offsets
+    finally:
+        pg.off()
+
+
+def check_gp_burst_frame(
+    records, delays_ns, width_ns, ncyc, period_ns, sync=False, phase_offsets_ns=None
+):
+    """Score one complete, armed frame, retaining every first/last edge and pulse."""
+    rising = by_channel(records)
+    falling = by_channel(records, "-")
+    reference_ch = min(delays_ns)
+    reference = rising.get(reference_ch, [])
+    offsets = phase_offsets_ns if phase_offsets_ns is not None else dict.fromkeys(delays_ns, 0)
+    all_ok = True
+    for ch, delay_ns in delays_ns.items():
+        rises, falls = rising.get(ch, []), falling.get(ch, [])
+        try:
+            # No coverage clipping: the finite frame ended well before the collection deadline.
+            widths = pulse_widths(records, ch, allow_leading_fall=False)
+        except RuntimeError as exc:
+            print(f"  ch{ch}: {exc}  FAIL")
+            all_ok = False
+            continue
+        gaps = [b - a for a, b in zip(rises, rises[1:])]
+        ok = len(rises) == len(falls) == len(widths) == ncyc
+        ok = ok and all(abs(width - width_ns) <= GP_PULSE_TOL_NS for width in widths)
+        ok = ok and all(abs(gap - period_ns) <= GP_PULSE_TOL_NS for gap in gaps)
+        phase_errors = []
+        if sync:
+            phase_errors = [
+                (other - ref)
+                - (delay_ns - delays_ns[reference_ch])
+                - (offsets[ch] - offsets[reference_ch])
+                for ref, other in zip(reference, rises)
+            ]
+            ok = ok and len(reference) == ncyc
+            ok = ok and all(abs(error) <= GP_PULSE_TOL_NS for error in phase_errors)
+        print(
+            f"  ch{ch}: {len(rises)} rises/{len(falls)} falls, expect {ncyc}; "
+            f"widths {widths[:4]}, gaps {gaps[:4]}, phase errors {phase_errors[:4]} ns  "
+            f"{'PASS' if ok else 'FAIL'}"
+        )
+        all_ok = ok and all_ok
+    return all_ok
+
+
+def run_gp_burst_boundary_case(
+    ts, pg, mode, delays_ns, width_ns, ncyc, duration_s, phase_offsets_ns=None
+):
+    """Stage a finite first frame, then start it with exactly one post-marker PG command."""
+    channels = tuple(delays_ns)
+    control_ch = channels[0]
+    pg.off()
+    pg.set_mode(mode)
+    stage_gp(pg, channels, GP_WRAP_PERIOD_NS, width_ns)
+    for ch, delay_ns in delays_ns.items():
+        pg.set_delay(ch, delay_ns / NS)
+    pg.set_burst_ncycles(control_ch, ncyc)
+    pg.set_burst_period(control_ch, 60.0)
+    pg.set_burst_state(control_ch, True)
+
+    if mode == Pulsegen.SYNC:
+        # Enabling channels is not atomic and each setter restarts all enabled outputs. Let all
+        # configuration frames finish and reach LT4 before its framing clear; the unchanged count
+        # setter then restarts all four outputs together after the capture is armed.
+        for ch in channels:
+            pg.set_state(ch, True)
+        time.sleep(0.3)
+        start = lambda: pg.set_burst_ncycles(control_ch, ncyc)
+    else:
+        start = lambda: pg.set_state(control_ch, True)
+    check_pg_error(pg, "staging GP boundary burst")
+    # A longer window cannot add first-frame coverage, and must not reach the next repeat.
+    window = min(max(duration_s, 0.3), 1.0)
+    try:
+        records = collect_started(ts, window, start, channels=channels)
+        check_pg_error(pg, "starting GP boundary burst")
+        print(f"  {mode.value}: {ncyc} pulses, delays {delays_ns}, width {width_ns} ns")
+        return check_gp_burst_frame(
+            records,
+            delays_ns,
+            width_ns,
+            ncyc,
+            GP_WRAP_PERIOD_NS,
+            sync=mode == Pulsegen.SYNC,
+            phase_offsets_ns=phase_offsets_ns,
+        )
+    finally:
+        pg.off()
+
+
+def test_gp_burst_boundary(ts, pg, duration_s):
+    print("\n=== GP complete first bursts at both period boundaries ===")
+    channels = tuple(range(NUM_CHANNELS))
+    prime_gp_prescalers(ts, pg, channels, GP_WRAP_PERIOD_NS)
+    pg.off()
+    for ch in channels:
+        ts.set_slope(ch, "BOTH")
+        ts.set_divider(ch, 1)
+    all_ok = True
+    try:
+        phase_offsets = measure_gp_sync_offsets(ts, pg, 750_000, duration_s)
+        for ncyc in (1, 3):
+            for ch in channels:
+                for delay_ns in (0, GP_WRAP_PERIOD_NS - GP_WRAP_WIDTH_NS):
+                    ok = run_gp_burst_boundary_case(
+                        ts, pg, Pulsegen.ASYNC, {ch: delay_ns}, GP_WRAP_WIDTH_NS, ncyc, duration_s
+                    )
+                    all_ok = ok and all_ok
+            # These high windows collectively cover the entire period, so a software gating
+            # scheme cannot rely on finding a shared idle gap in which to toggle the outputs.
+            ok = run_gp_burst_boundary_case(
+                ts,
+                pg,
+                Pulsegen.SYNC,
+                dict(enumerate((0, 100_000, 200_000, 250_000))),
+                750_000,
+                ncyc,
+                duration_s,
+                phase_offsets_ns=phase_offsets,
+            )
+            all_ok = ok and all_ok
+    finally:
+        pg.off()
+        for ch in channels:
+            ts.set_slope(ch, "POS")
+    return all_ok
+
+
 # ---- Test 4: cross-timer sync (stair) -------------------------------------
 
 # A SYNC staircase: channel n's rising edge delayed n*step from ch0. Every
@@ -1017,6 +1180,7 @@ TESTS = {
     "gp-startup": test_gp_startup,
     "gp-enable": test_gp_enable,
     "gp-wrap": test_gp_wrap,
+    "gp-burst-boundary": test_gp_burst_boundary,
     "sync": test_sync_stair,
     "burst": test_burst,
     "rep-startup": test_rep_startup,
