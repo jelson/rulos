@@ -47,10 +47,16 @@ void wallclock_init(wallclock_t *wallclock) {
 
 void wallclock_get_uptime(wallclock_t *wallclock, uint32_t *sec /* OUT */,
                           uint32_t *usec /* OUT */) {
-  // This should be correct even there's a callback pending. In that
-  // case, us_since_last_tick might be greater than 1,000,000.
+  // Snapshot both fields and the clock together so an interrupt-context
+  // caller cannot observe the tick handler between its two updates.
+  rulos_irq_state_t old_intr = hal_start_atomic();
+  const uint32_t seconds = wallclock->seconds_since_boot;
   const uint32_t us_since_last_tick = precise_clock_time_us() - wallclock->curr_second_start_us;
-  *sec = wallclock->seconds_since_boot + us_since_last_tick / 1000000;
+  hal_end_atomic(old_intr);
+
+  // This is correct even when a tick callback is overdue; in that case
+  // us_since_last_tick exceeds 1,000,000 and the division carries it over.
+  *sec = seconds + us_since_last_tick / 1000000;
   *usec = us_since_last_tick % 1000000;
 }
 
