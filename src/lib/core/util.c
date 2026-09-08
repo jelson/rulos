@@ -31,10 +31,18 @@ int32_t bound(int32_t v, int32_t l, int32_t h) {
 }
 
 uint32_t isqrt(uint32_t v) {
-  // http://www.embedded.com/98/9802fe2.htm, listing 2
+  // http://www.embedded.com/98/9802fe2.htm, listing 2: walk consecutive
+  // squares, where square == n*n and delta == 2n+1 for the candidate n.
+  // 65536*65536 does not fit in 32 bits, so the largest root is clamped
+  // rather than letting square wrap around.
+  if (v >= 65535u * 65535u) {
+    return 65535;
+  }
   uint32_t square = 1;
   uint32_t delta = 3;
-  while (square < v) {
+  // Stop after the first square that exceeds v, so perfect squares return
+  // their exact root.
+  while (square <= v) {
     square += delta;
     delta += 2;
   }
