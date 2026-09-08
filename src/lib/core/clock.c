@@ -207,9 +207,12 @@ Time precise_clock_time_us() {
   return t;
 }
 
-// The goal of this is to delay without ever disabling interrupts.
+// Wait at least `delay` microseconds without disabling interrupts. The
+// count is rounded up to whole jiffies, plus one more because the first
+// tick can arrive at any point within the current jiffy.
 void delay_us(uint32_t delay) {
-  g_jiffy_timer = (delay + 1) / g_rtc_interval_us;
+  assert(g_rtc_interval_us > 0);  // init_clock must run first
+  g_jiffy_timer = (delay + g_rtc_interval_us - 1) / g_rtc_interval_us + 1;
   while (g_jiffy_timer > 0) {
     hal_idle();
   }
