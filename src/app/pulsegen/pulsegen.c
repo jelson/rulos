@@ -527,7 +527,7 @@ static bool select_gp_psc(int ch, uint64_t period_ps, uint32_t *out_psc, uint32_
 // the others slave-reset off it when sync, else free-run. Split out from the output stage so the
 // master timebase can run even when its own channel (ch1) is off. Returns ARR + tick via out
 // params; false if the period doesn't fit.
-static bool config_gp_timebase(int ch, uint64_t period_ps, bool sync, uint32_t *out_arr,
+static bool config_gp_timebase(int ch, uint64_t period_ps, uint32_t *out_arr,
                                uint64_t *out_tick_ps) {
   TIM_TypeDef *t = channel_hw[ch].gp_timer;
   uint32_t psc, arr;
@@ -541,10 +541,8 @@ static bool config_gp_timebase(int ch, uint64_t period_ps, bool sync, uint32_t *
   LL_TIM_DisableARRPreload(t);
   if (t == TIM1) {
     LL_TIM_SetTriggerOutput(t, LL_TIM_TRGO_UPDATE);
-    LL_TIM_SetSlaveMode(t, LL_TIM_SLAVEMODE_DISABLED);
   } else {
     LL_TIM_SetTriggerInput(t, LL_TIM_TS_ITR0);
-    LL_TIM_SetSlaveMode(t, sync ? LL_TIM_SLAVEMODE_RESET : LL_TIM_SLAVEMODE_DISABLED);
   }
   *out_arr = arr;
   *out_tick_ps = tick_ps;
@@ -553,9 +551,9 @@ static bool config_gp_timebase(int ch, uint64_t period_ps, bool sync, uint32_t *
 
 // Configure a channel's Combined-PWM output (timebase already set up by config_gp_timebase). The
 // output channel's ref is PWM mode 2 (high CCR..ARR, CCR = delay); the sibling is PWM mode 1 (high
-// 0..CCR, CCR = delay+width); the AND is high only in [delay, delay+width]. burst leaves the
-// output channel disabled (the burst gating enables it on a period boundary).
-static void config_gp_output(int ch, uint32_t arr, uint64_t tick_ps, bool burst) {
+// 0..CCR, CCR = delay+width); the AND is high only in [delay, delay+width]. Outputs stay disabled
+// until every timer has latched its new timebase and reset its counter.
+static void config_gp_output(int ch, uint32_t arr, uint64_t tick_ps) {
   const channel_hw_t *hw = &channel_hw[ch];
   TIM_TypeDef *t = hw->gp_timer;
   // Every GP rising edge gets a guard offset past the period boundary, so the burst-gating update
@@ -579,25 +577,26 @@ static void config_gp_output(int ch, uint32_t arr, uint64_t tick_ps, bool burst)
   gp_set_compare(t, hw->gp_sib_ch, fall_t);
   LL_TIM_OC_SetPolarity(t, hw->gp_out_ch, LL_TIM_OCPOLARITY_HIGH);
   LL_TIM_CC_DisableChannel(t, hw->gp_sib_ch);  // sibling drives no pin
-  set_pin_af(ch, hw->gp_af);
-  if (hw->gp_advanced) {
-    LL_TIM_EnableAllOutputs(t);  // BDTR.MOE
-  }
-  if (!burst) {
-    LL_TIM_CC_EnableChannel(t, hw->gp_out_ch);
-  }
 }
 
 // Configure both timebase and output for an on channel; park it low on a period that doesn't fit.
-static bool config_gp_channel(int ch, bool sync, bool burst) {
+static bool config_gp_channel(int ch) {
   uint32_t arr;
   uint64_t tick_ps;
-  if (!config_gp_timebase(ch, chan[ch].period_ps, sync, &arr, &tick_ps)) {
+  if (!config_gp_timebase(ch, chan[ch].period_ps, &arr, &tick_ps)) {
     drive_pin_low(ch);
     return false;
   }
-  config_gp_output(ch, arr, tick_ps, burst);
+  config_gp_output(ch, arr, tick_ps);
   return true;
+}
+
+// PSC is always buffered. Load it and reset its internal divider while the counter, outputs,
+// update IRQ and slave-reset inputs are disabled; the synthetic update is not a pulse/frame.
+static void reset_gp_timebase(TIM_TypeDef *t) {
+  LL_TIM_SetCounter(t, 0);
+  LL_TIM_GenerateEvent_UPDATE(t);
+  LL_TIM_ClearFlag_UPDATE(t);
 }
 
 // ---- Burst -----------------------------------------------------------------
@@ -877,6 +876,11 @@ static void apply_all(void) {
     LL_TIM_DisableIT_UPDATE(t);
     LL_TIM_DisableCounter(t);
     LL_TIM_CC_DisableChannel(t, channel_hw[ch].gp_out_ch);
+    if (channel_hw[ch].gp_advanced) {
+      LL_TIM_DisableAllOutputs(t);
+    }
+    LL_TIM_SetSlaveMode(t, LL_TIM_SLAVEMODE_DISABLED);
+    drive_pin_low(ch);
   }
 
   if (!hrtim_dll_ready) {
@@ -893,6 +897,7 @@ static void apply_all(void) {
 
   uint32_t hrtim_run_mask = 0;  // HRTIM timers to enable together
   uint32_t gp_run_mask = 0;     // bitmask of channels whose GP timer should be enabled
+  uint32_t gp_output_mask = 0;  // excludes a sync master whose output is off or invalid
   uint32_t hrtim_burst_outs = 0;
   int burst_ch = -1;
   bool burst_is_gp = false;
@@ -916,7 +921,7 @@ static void apply_all(void) {
     const int mch = gp_master_ch();
     uint32_t arr;
     uint64_t tick;
-    if (mch >= 0 && config_gp_timebase(mch, chan[0].period_ps, /*sync=*/true, &arr, &tick)) {
+    if (mch >= 0 && config_gp_timebase(mch, chan[0].period_ps, &arr, &tick)) {
       gp_run_mask |= (1u << mch);
     }
   }
@@ -944,8 +949,11 @@ static void apply_all(void) {
         }
       }
     } else {
-      config_gp_channel(ch, sync, burst);
+      if (!config_gp_channel(ch)) {
+        continue;
+      }
       gp_run_mask |= (1u << ch);
+      gp_output_mask |= (1u << ch);
       if (burst) {
         if (burst_ch < 0) {
           burst_ch = ch;
@@ -961,15 +969,31 @@ static void apply_all(void) {
     LL_HRTIM_TIM_CounterEnable(HRTIM1, hrtim_run_mask);
   }
 
-  // Enable the GP timers. In sync, TIM1 (master) is enabled last and resets the slaves; preset all
-  // counters to 0 so the first shared period is aligned.
+  // Prepare all stopped GP timers before exposing any pin. Slave inputs remain disarmed during
+  // UG, so TIM1's synthetic TRGO cannot reset another timer or advance a burst's frame count.
   if (gp_run_mask) {
     for (int ch = 0; ch < NUM_CHANNELS; ch++) {
       if (gp_run_mask & (1u << ch)) {
-        LL_TIM_SetCounter(channel_hw[ch].gp_timer, 0);
+        reset_gp_timebase(channel_hw[ch].gp_timer);
       }
     }
-    // Enable slaves first (they wait for the master's trigger in sync), then TIM1.
+    for (int ch = 0; ch < NUM_CHANNELS; ch++) {
+      const channel_hw_t *hw = &channel_hw[ch];
+      if ((gp_run_mask & (1u << ch)) && sync_gp && hw->gp_timer != TIM1) {
+        LL_TIM_SetSlaveMode(hw->gp_timer, LL_TIM_SLAVEMODE_RESET);
+      }
+      if (gp_output_mask & (1u << ch)) {
+        set_pin_af(ch, hw->gp_af);
+        if (hw->gp_advanced) {
+          LL_TIM_EnableAllOutputs(hw->gp_timer);
+        }
+        if (!chan[ch].burst_on) {
+          LL_TIM_CC_EnableChannel(hw->gp_timer, hw->gp_out_ch);
+        }
+      }
+    }
+    // Reset-mode slaves start counting now; TIM1's first natural update phase-aligns them.
+    // Enabling TIM1 last preserves the existing master/slave start sequence.
     for (int ch = 0; ch < NUM_CHANNELS; ch++) {
       if ((gp_run_mask & (1u << ch)) && channel_hw[ch].gp_timer != TIM1) {
         LL_TIM_EnableCounter(channel_hw[ch].gp_timer);
@@ -990,7 +1014,7 @@ static void apply_all(void) {
       // master channel in sync (it always runs there), the single channel itself in async.
       g_gp_burst_out_mask = 0;
       for (int c = 0; c < NUM_CHANNELS; c++) {
-        if (chan[c].on && (gp_run_mask & (1u << c)) && same_domain(burst_ch, c)) {
+        if ((gp_output_mask & (1u << c)) && same_domain(burst_ch, c)) {
           g_gp_burst_out_mask |= (1u << c);
         }
       }
@@ -1006,7 +1030,7 @@ static void apply_all(void) {
     LL_TIM_SetPrescaler(TIM5, rep_psc);
     LL_TIM_SetAutoReload(TIM5, rep_arr);
     LL_TIM_DisableARRPreload(TIM5);
-    LL_TIM_SetCounter(TIM5, 0);
+    reset_gp_timebase(TIM5);
     burst_arm_frame();
     LL_TIM_ClearFlag_UPDATE(TIM5);
     LL_TIM_EnableIT_UPDATE(TIM5);
