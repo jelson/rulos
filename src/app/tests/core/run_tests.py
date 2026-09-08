@@ -8,12 +8,17 @@ import tempfile
 HERE = Path(__file__).resolve().parent
 LIB = HERE.parents[2] / "lib"
 
+# Core sources each test needs beyond its namesake.
+EXTRA_SOURCES = {
+    "heap_test": ["time.c"],
+    "time_test": ["clock.c", "heap.c"],
+}
+
 with tempfile.TemporaryDirectory(prefix="rulos-core-") as build:
     for test in sorted(HERE.glob("*_test.c")):
         binary = Path(build) / test.stem
         sources = [test, LIB / "core" / (test.stem.removesuffix("_test") + ".c")]
-        if test.stem == "time_test":
-            sources += [LIB / "core/clock.c", LIB / "core/heap.c"]
+        sources += [LIB / "core" / dep for dep in EXTRA_SOURCES.get(test.stem, [])]
         subprocess.run(
             [
                 "cc",

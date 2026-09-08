@@ -33,9 +33,11 @@ void heap_swap(HeapEntry *he, int off0, int off1) {
   he[off1] = tmp;
 }
 
+// Standard 0-based layout: the children of node i are 2i+1 and 2i+2, and
+// the parent of node i is (i-1)/2.
 void heap_bubble(HeapEntry *he, int ptr) {
   while (ptr > 0) {
-    int parent = ptr >> 1;
+    int parent = (ptr - 1) >> 1;
     if (later_than(he[ptr].key, he[parent].key)) {
       return;
     }  // already correct
@@ -86,7 +88,7 @@ void heap_pop(Heap *heap) {
   /* down-heap */
   int ptr = 0;
   while (1) {
-    int c0 = ptr * 2;
+    int c0 = ptr * 2 + 1;
     int c1 = c0 + 1;
     int candidate = ptr;
     if (c0 < hc && later_than(he[candidate].key, he[c0].key)) {
