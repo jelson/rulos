@@ -228,21 +228,48 @@ def test_allan_math():
     check(table[1][1] == 0.0, f"ADEV(m=2) exactly zero ({table[1][1]})")
 
 
+def parse_allan_rows(lines):
+    rows = []
+    for line in lines:
+        m = re.fullmatch(r"([0-9.]+) (ns|us|ms|s)\s+(\S+)\s+([0-9]+)", line.strip())
+        if m:
+            scale = {"ns": 1e-9, "us": 1e-6, "ms": 1e-3, "s": 1.0}[m.group(2)]
+            rows.append((float(m.group(1)) * scale, float(m.group(3)), int(m.group(4))))
+    return rows
+
+
+def allan_rows_sane(rows):
+    """A one-bin timestamp error has |x[i+2m] - 2*x[i+m] + x[i]| <= 2 ticks,
+    so ADEV <= sqrt(2)*tick/tau, without assuming independent quantization errors. Preserve
+    the existing 1e-5 stability ceiling once that quantization bound drops below it."""
+    for tau_s, adev, terms in rows:
+        if not math.isfinite(tau_s) or tau_s <= 0 or not math.isfinite(adev) or adev < 0:
+            return False
+        if terms < 8:
+            return False
+        # The display rounds tau to the nearest ns and ADEV to four significant digits.
+        tau_min_s = max(tau_s - 0.5 / tsctl.NS, 0.5 / tsctl.NS)
+        bound = max(1e-5, math.sqrt(2) * tstest.TICK_NS / tsctl.NS / tau_min_s)
+        if adev > bound * (1 + 5e-4):
+            return False
+    return bool(rows)
+
+
 def test_allan_hardware(src):
-    # 100 kHz for 8 s: the divider auto-ranges to ~1 kHz of phase samples and the run must
-    # complete loss-free with a sane stability table (PG-4 crystal against the lab reference).
+    # The current 40 krecord/s budget selects divider 4 at 100 kHz, giving tau0 = 40 us.
+    # Score actual taus so future autorange changes still respect the 4 ns timestamp floor.
     src.periodic(0, 100_000, 2.5e-6)
     rc, lines = run_util("allan.py", "--duration", 8, timeout_s=90)
     check(rc == 0, f"allan exits 0 (rc={rc}; {lines[-1] if lines else 'no output'})")
-    rows = []
-    for line in lines:
-        m = re.match(r"[0-9.]+ (?:ns|us|ms|s)\s+([0-9.]+e[+-][0-9]+)\s+[0-9]+$", line)
-        if m:
-            rows.append(float(m.group(1)))
+    rows = parse_allan_rows(lines)
     check(len(rows) >= 6, f"stability table spans the ladder ({len(rows)} taus)")
     # Exactly 0 is legitimate: a source phase-locked to the instrument's own reference can sit
     # below the 4 ns quantization floor for the whole run, leaving every gap bit-identical.
-    check(rows and all(0 <= v < 1e-5 for v in rows), f"ADEV values sane ({rows[:3]}...)")
+    check(allan_rows_sane(rows), f"ADEV within quantization/stability bounds ({rows[:3]}...)")
+    check(
+        not any("reported loss" in line or "OVERRUN" in line for line in lines),
+        "allan reports no capture loss",
+    )
     check(
         any("mean frequency 100.00" in line for line in lines),
         "mean frequency reported at 100 kHz",
