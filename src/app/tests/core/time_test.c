@@ -25,6 +25,9 @@ uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data, ui
 void hal_idle(void) {
   tick(tick_data);
 }
+void hal_idle_atomic(void) {
+  tick(tick_data);
+}
 uint32_t hal_elapsed_us_in_tick(void) {
   return 0;
 }

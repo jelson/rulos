@@ -169,6 +169,16 @@ void hal_idle() {
   select(0, NULL, NULL, NULL, &tv);
 }
 
+void hal_idle_atomic() {
+  // pselect unblocks the interrupt signals only for the duration of the wait,
+  // so a signal that is already pending is delivered immediately and the
+  // caller's block is back in place on return.
+  sigset_t unblocked;
+  sigemptyset(&unblocked);
+  struct timespec timeout = {.tv_sec = 1, .tv_nsec = 0};
+  pselect(0, NULL, NULL, NULL, &timeout, &unblocked);
+}
+
 void hal_delay_ms(uint16_t ms) {
   static struct timeval tv;
   tv.tv_sec = ms / 1000;

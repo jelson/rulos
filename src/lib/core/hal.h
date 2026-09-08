@@ -47,6 +47,14 @@ bool hal_is_in_isr(void);
 void hal_deep_sleep();
 void hal_idle();  // hw: spin. sim: sleep
 
+// Wait for the next interrupt while the caller holds a hal_start_atomic
+// section. Handlers run either during the wait or after the caller's
+// hal_end_atomic, depending on the platform, so callers must loop and
+// re-check their wake condition after this returns. Holding the atomic
+// section across the check and the wait is what keeps a wakeup that arrives
+// between them from being lost.
+void hal_idle_atomic();
+
 // reboot
 void hal_reset();
 

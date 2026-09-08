@@ -126,6 +126,15 @@ void hal_idle() {
   vTaskDelay(1);
 }
 
+void hal_idle_atomic() {
+  // vTaskDelay cannot run inside a FreeRTOS critical section, so release it
+  // around the yield. A wakeup that arrives during the yield is picked up by
+  // the caller's re-check after at most one FreeRTOS tick.
+  taskEXIT_CRITICAL(&mux);
+  vTaskDelay(1);
+  taskENTER_CRITICAL(&mux);
+}
+
 void hal_delay_ms(uint16_t ms) {
   vTaskDelay(pdMS_TO_TICKS(ms));
 }

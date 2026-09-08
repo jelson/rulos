@@ -75,6 +75,15 @@ void hal_idle() {
   // just busy-wait on microcontroller.
 }
 
+void hal_idle_atomic() {
+  // The AVR busy-waits rather than sleeping, so instead open a one-instruction
+  // window for pending handlers to run: sei takes effect after the following
+  // instruction, and cli closes the window again.
+  sei();
+  __asm__ __volatile__("nop");
+  cli();
+}
+
 void hal_deep_sleep() {
 #ifdef PRR
   uint8_t prr_old = PRR;

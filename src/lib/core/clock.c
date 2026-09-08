@@ -259,14 +259,28 @@ static void scheduler_run_once() {
   }
 }
 
+// Sleep until an interrupt handler asks for another scheduler pass. The
+// flag check and the sleep happen inside one atomic section, so a request
+// that lands between them wakes the sleep instead of waiting for the next
+// unrelated interrupt.
+static void idle_until_scheduler_wakeup() {
+  while (true) {
+    rulos_irq_state_t old_interrupts = hal_start_atomic();
+    bool wakeup = run_scheduler_now;
+    if (!wakeup) {
+      hal_idle_atomic();
+    }
+    hal_end_atomic(old_interrupts);
+    if (wakeup) {
+      return;
+    }
+  }
+}
+
 void scheduler_run() {
   while (true) {
     run_scheduler_now = false;
-
     scheduler_run_once();
-
-    do {
-      hal_idle();
-    } while (!run_scheduler_now);
+    idle_until_scheduler_wakeup();
   }
 }

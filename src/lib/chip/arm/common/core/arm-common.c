@@ -50,6 +50,12 @@ void hal_idle() {
   __WFI();
 }
 
+void hal_idle_atomic() {
+  // WFI wakes when an interrupt becomes pending even while PRIMASK masks
+  // it; the handler then runs at the caller's hal_end_atomic.
+  __WFI();
+}
+
 // timer_id is ignored for now; we just use the LPC SysTick clock,
 // which is meant for use for a system clock because it doesn't have
 // any pin inputs or outputs.
