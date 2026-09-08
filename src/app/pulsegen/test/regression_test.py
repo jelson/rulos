@@ -44,6 +44,10 @@ Caveats:
 Run:
   regression_test.py
   regression_test.py --only sync --duration 3
+  regression_test.py --only gp-startup
+  regression_test.py --only gp-enable
+  regression_test.py --only gp-wrap
+  regression_test.py --only rep-startup  # includes a 41-second capture
   regression_test.py --ts-port /dev/ttyACM0 --pg-port /dev/ttyACM2
 """
 
@@ -63,13 +67,15 @@ from tsctl import LectroTIC4, Timestamp, PulsesLost, OscillatorFailure
 NS = 1_000_000_000  # ns per second
 NUM_CHANNELS = 4
 CROSSOVER_NS = 524_000  # ~ the HRTIM period ceiling; above it a channel is on its GP timer
+# Match the LT4 suite's allowance for independently delivered polarity batches.
+EDGE_BATCH_SKEW_NS = 250_000_000
 
 
 # ---- Measurement helpers --------------------------------------------------
 
 
-def collect(ts, duration_s, channels=range(NUM_CHANNELS)):
-    """Read the timestamp stream for duration_s and return a list of
+def decode_records(records, channels=range(NUM_CHANNELS)):
+    """Decode an already-armed timestamp stream into
     (channel, abs_ns, polarity) for the requested channels. abs_ns =
     seconds*1e9 + nanoseconds, kept as an exact int (the library's
     seconds/nanoseconds are ints, so no float ever touches a timestamp);
@@ -79,11 +85,10 @@ def collect(ts, duration_s, channels=range(NUM_CHANNELS)):
     buffer overflow) or an oscillator failure -- a regression test must see
     every pulse, so any loss is a failure, not something to tolerate."""
     channels = set(channels)
-    records = []
-    for rec in ts.read_for(duration_s):
+    for rec in records:
         if isinstance(rec, Timestamp):
             if rec.channel in channels:
-                records.append((rec.channel, rec.seconds * NS + rec.nanoseconds, rec.polarity))
+                yield (rec.channel, rec.seconds * NS + rec.nanoseconds, rec.polarity)
         elif isinstance(rec, PulsesLost):
             if rec.overcaptures or rec.buf_overflows:
                 raise RuntimeError(
@@ -93,7 +98,26 @@ def collect(ts, duration_s, channels=range(NUM_CHANNELS)):
                 )
         elif isinstance(rec, OscillatorFailure):
             raise RuntimeError("timestamper reported oscillator failure")
-    return records
+
+
+def collect_started(ts, duration_s, start, channels=range(NUM_CHANNELS)):
+    """Arm/framing-sync LT4 before starting the source, preserving its very first pulse.
+
+    read_for() performs its marker sync eagerly, before returning the lazy record iterator. Do
+    not call read_for(), discard_pending(), or any LT4 query again between start and consumption.
+    """
+    records = ts.read_for(duration_s)
+    try:
+        if start is not None:
+            start()
+        return list(decode_records(records, channels))
+    finally:
+        records.close()
+
+
+def collect(ts, duration_s, channels=range(NUM_CHANNELS)):
+    """Collect a normal marker-synchronized window after source configuration."""
+    return collect_started(ts, duration_s, None, channels)
 
 
 def by_channel(records, polarity="+"):
@@ -167,19 +191,57 @@ def zipper_pair(ref, other, period_ns):
     return deltas
 
 
-def pulse_widths(records, channel):
+def pulse_widths(records, channel, allow_leading_fall=True, period_ns=None):
     """Per-pulse high time (ns) on `channel` from a both-edges capture: pair
     each rising edge with the next falling edge. Records must include both
-    polarities (set the channel's slope to BOTH first)."""
+    polarities (set the channel's slope to BOTH first). Every interior edge must alternate.
+    With period_ns, restrict widths to the two polarity streams' common coverage: independent
+    DMA batches can leave several boundary edges without their partners. Discarded coverage may
+    not exceed one nominal period plus EDGE_BATCH_SKEW_NS. Set allow_leading_fall=False for an armed startup capture:
+    its leading edge is never trimmed, and it must be rising. Rising-edge cadence is scored
+    separately on the full, untrimmed capture.
+    """
     edges = sorted((t, pol) for ch, t, pol in records if ch == channel)
+    if any(b[0] <= a[0] for a, b in zip(edges, edges[1:])):
+        raise RuntimeError(f"ch{channel}: duplicate or coincident edges")
+    if any(pol not in ("+", "-") for _, pol in edges):
+        raise RuntimeError(f"ch{channel}: invalid edge polarity")
+    if period_ns is not None and edges:
+        if period_ns <= 0:
+            raise ValueError("pulse period must be positive")
+        rises = [t for t, pol in edges if pol == "+"]
+        falls = [t for t, pol in edges if pol == "-"]
+        if not rises or not falls:
+            raise RuntimeError(f"ch{channel}: missing rising or falling sub-stream")
+        # A complete pulse can span at most one period. Keep the rise preceding the first
+        # observed fall and the fall following the last observed rise, when present.
+        lo = max(rises[0], falls[0] - period_ns) if allow_leading_fall else edges[0][0]
+        hi = min(rises[-1] + period_ns, falls[-1])
+        # The window can stop between two edges of a slow pulse, even without batching skew.
+        coverage_allowance_ns = period_ns + EDGE_BATCH_SKEW_NS
+        if lo - edges[0][0] > coverage_allowance_ns or edges[-1][0] - hi > coverage_allowance_ns:
+            raise RuntimeError(
+                f"ch{channel}: polarity coverage differs by more than one period + 250 ms"
+            )
+        if lo > hi:
+            raise RuntimeError(f"ch{channel}: no common rising/falling coverage")
+        edges = [(t, pol) for t, pol in edges if lo <= t <= hi]
     widths = []
     rising = None
-    for t, pol in edges:
+    for index, (t, pol) in enumerate(edges):
         if pol == "+":
+            if rising is not None:
+                raise RuntimeError(f"ch{channel}: two rising edges without a falling edge")
             rising = t
+        elif pol != "-":
+            raise RuntimeError(f"ch{channel}: invalid edge polarity {pol!r}")
         elif rising is not None:
+            if t <= rising:
+                raise RuntimeError(f"ch{channel}: pulse width must be positive")
             widths.append(t - rising)
             rising = None
+        elif index != 0 or not allow_leading_fall:
+            raise RuntimeError(f"ch{channel}: falling edge without a preceding rising edge")
     return widths
 
 
@@ -294,7 +356,7 @@ def test_handoff(ts, pg, duration_s):
 
             rising = by_channel(records).get(0, [])
             meas_period = strict_interval(rising, tol_ns=40)
-            widths = pulse_widths(records, 0)
+            widths = pulse_widths(records, 0, period_ns=period_ns)
             if meas_period is None or len(widths) < 20:
                 raise RuntimeError(f"too few samples at {period_ns} ns")
             meas_width = statistics.median(widths)
@@ -348,6 +410,170 @@ def test_long_periods(ts, pg, duration_s):
             f"{iv/1000:8.1f} us ({err_pct:+.3f}%)  ({len(seq)} edges)  "
             f"{'PASS' if ok else 'FAIL'}"
         )
+    return all_ok
+
+
+# ---- GP startup and guard-offset regressions ------------------------------
+
+GP_PULSE_TOL_NS = 12
+GP_START_PERIODS_NS = (1_000_000, NS)
+GP_WRAP_PERIOD_NS = 1_000_000
+GP_WRAP_WIDTH_NS = 10_000
+GP_WRAP_DELAYS_NS = (970_000, 974_000, 980_000, 984_000, 990_000)
+
+
+def check_pg_error(pg, context):
+    err = pg.get_error()
+    if not err.startswith("0,"):
+        raise RuntimeError(f"pulsegen error {context}: {err}")
+
+
+def stage_gp(pg, channels, period_ns, width_ns, delay_ns=0):
+    """Leave all outputs OFF, with the selected channels ready for one final enable command."""
+    pg.off()
+    for ch in range(NUM_CHANNELS):
+        pg.set_burst_state(ch, False)
+    for ch in channels:
+        pg.set_period(ch, period_ns / NS)
+        pg.set_width(ch, width_ns / NS)
+        pg.set_delay(ch, delay_ns / NS)
+
+
+def prime_gp_prescalers(ts, pg, channels, period_ns):
+    """Observe two stable natural periods per timer before testing its next configuration.
+
+    *RST does not reset timer registers. The first old-prescaler cycle may last nearly 34 seconds
+    if an earlier test used the maximum prescaler, so bound the wait generously but return as soon
+    as the observed periods establish the requested prescaler. Priming, unlike the measurement,
+    deliberately ignores initial transients.
+    """
+    channels = tuple(channels)
+    pg.off()
+    pg.set_mode(Pulsegen.ASYNC)
+    stage_gp(pg, channels, period_ns, period_ns // 4)
+    for ch in channels:
+        ts.set_slope(ch, "POS")
+        ts.set_divider(ch, 1)
+        pg.set_state(ch, True)
+    check_pg_error(pg, "priming GP timers")
+
+    recent = {ch: [] for ch in channels}
+    ready = set()
+    records = ts.read_for(35.0 + 3 * period_ns / NS)
+    try:
+        for ch, timestamp, polarity in decode_records(records, channels):
+            if polarity != "+":
+                raise RuntimeError(f"unexpected falling edge while priming ch{ch}")
+            recent[ch].append(timestamp)
+            recent[ch] = recent[ch][-3:]
+            if len(recent[ch]) == 3 and all(
+                abs((b - a) - period_ns) <= GP_PULSE_TOL_NS
+                for a, b in zip(recent[ch], recent[ch][1:])
+            ):
+                ready.add(ch)
+            else:
+                ready.discard(ch)
+            if ready == set(channels):
+                return
+    finally:
+        records.close()
+    raise RuntimeError(
+        f"GP timers never reached their priming period: {sorted(set(channels) - ready)}"
+    )
+
+
+def check_gp_pulses(records, ch, period_ns, width_ns, startup=False):
+    """Check every observed period/width, including the first, without window trimming.
+
+    There is no timestamped hardware enable marker, so this cannot prove that an entire first
+    pulse was absent. Startup cases deliberately choose a wide pulse that remains observable
+    under the known stale-prescaler failure; USB wall-clock counts are not a substitute for that.
+    """
+    rising = by_channel(records).get(ch, [])
+    widths = pulse_widths(records, ch, allow_leading_fall=not startup, period_ns=period_ns)
+    minimum = 3 if startup else 20
+    if len(rising) < minimum or len(widths) < minimum - 1:
+        raise RuntimeError(
+            f"too few complete pulses on ch{ch} ({len(rising)} rises, {len(widths)} widths)"
+        )
+    gaps = [b - a for a, b in zip(rising, rising[1:])]
+    bad_gaps = sum(abs(gap - period_ns) > GP_PULSE_TOL_NS for gap in gaps)
+    bad_widths = sum(abs(width - width_ns) > GP_PULSE_TOL_NS for width in widths)
+    ok = not (bad_gaps or bad_widths)
+    print(
+        f"  ch{ch}: first gap {gaps[0]:.0f} ns, first width {widths[0]:.0f} ns; "
+        f"wrong gaps {bad_gaps}/{len(gaps)}, widths {bad_widths}/{len(widths)}  "
+        f"{'PASS' if ok else 'FAIL'}"
+    )
+    if not ok:
+        print(f"    first gaps (ns): {gaps[:4]}; first widths (ns): {widths[:4]}")
+    return ok
+
+
+def run_gp_startup_case(ts, pg, ch, seed_ns, target_ns, width_ns, duration_s):
+    """Prime one timer, stage it while off, then score its first enabled pulses."""
+    prime_gp_prescalers(ts, pg, (ch,), seed_ns)
+    stage_gp(pg, (ch,), target_ns, width_ns)
+    ts.set_slope(ch, "BOTH")
+    window = max(duration_s, 3 * max(seed_ns, target_ns) / NS + 0.3)
+    records = collect_started(ts, window, lambda: pg.set_state(ch, True), channels=(ch,))
+    check_pg_error(pg, "starting GP output")
+    print(f"  ch{ch}: {seed_ns / NS:g} s -> {target_ns / NS:g} s, width {width_ns / NS:g} s")
+    return check_gp_pulses(records, ch, target_ns, width_ns, startup=True)
+
+
+def test_gp_startup(ts, pg, duration_s):
+    print("\n=== GP first period and width after prescaler changes ===")
+    all_ok = True
+    for ch in range(NUM_CHANNELS):
+        for seed_ns, target_ns in (GP_START_PERIODS_NS, GP_START_PERIODS_NS[::-1]):
+            # Both directions remain observable even with the stale prescaler: the nominal
+            # 250 ms pulse becomes 250 us at the old fast rate, rather than disappearing below
+            # LT4's capture bandwidth. The reverse direction can stretch a cycle to one second.
+            ok = run_gp_startup_case(ts, pg, ch, seed_ns, target_ns, target_ns // 4, duration_s)
+            all_ok = ok and all_ok
+    return all_ok
+
+
+def test_gp_enable(ts, pg, duration_s):
+    print("\n=== GP output enable with unchanged prescaler ===")
+    all_ok = True
+    for ch in range(NUM_CHANNELS):
+        # Keeping the latched prescaler unchanged isolates output-enable ordering. A wide pulse
+        # exposes an output enabled while CNT still holds its pre-reset position.
+        ok = run_gp_startup_case(ts, pg, ch, NS, NS, 3 * NS // 4, duration_s)
+        all_ok = ok and all_ok
+    return all_ok
+
+
+def test_gp_wrap(ts, pg, duration_s):
+    print("\n=== GP width across the guard-shifted period boundary ===")
+    channels = tuple(range(NUM_CHANNELS))
+    prime_gp_prescalers(ts, pg, channels, GP_WRAP_PERIOD_NS)
+    for ch in channels:
+        ts.set_slope(ch, "BOTH")
+        ts.set_divider(ch, 1)
+    all_ok = True
+    try:
+        for mode in (Pulsegen.ASYNC, Pulsegen.SYNC):
+            pg.off()
+            pg.set_mode(mode)
+            for delay_ns in GP_WRAP_DELAYS_NS:
+                stage_gp(pg, channels, GP_WRAP_PERIOD_NS, GP_WRAP_WIDTH_NS, delay_ns)
+                for ch in channels:
+                    pg.set_state(ch, True)
+                check_pg_error(pg, f"configuring guard-boundary delay {delay_ns} ns")
+                # This measures steady-state wrapping, not startup. The GP prescalers above are
+                # already latched; allow the multi-command output setup to finish before capture.
+                ts.discard_pending(settle_s=0.1)
+                records = collect(ts, max(duration_s, 0.1))
+                print(f"  {mode.value}: delay {delay_ns} ns, width {GP_WRAP_WIDTH_NS} ns")
+                for ch in channels:
+                    ok = check_gp_pulses(records, ch, GP_WRAP_PERIOD_NS, GP_WRAP_WIDTH_NS)
+                    all_ok = ok and all_ok
+    finally:
+        for ch in channels:
+            ts.set_slope(ch, "POS")
     return all_ok
 
 
@@ -528,6 +754,91 @@ def test_burst(ts, pg, duration_s):
     return all_ok
 
 
+REP_START_SPACING_NS = 100_000
+REP_START_WIDTH_NS = 25_000
+REP_START_NCYC = 3
+
+
+def stage_repetition(pg, rep_s):
+    pg.off()
+    pg.set_mode(Pulsegen.ASYNC)
+    for ch in range(NUM_CHANNELS):
+        pg.set_burst_state(ch, False)
+    pg.set_period(0, REP_START_SPACING_NS / NS)
+    pg.set_width(0, REP_START_WIDTH_NS / NS)
+    pg.set_delay(0, 0)
+    pg.set_burst_ncycles(0, REP_START_NCYC)
+    pg.set_burst_period(0, rep_s)
+    pg.set_burst_state(0, True)
+
+
+def repetition_metrics(records):
+    if any(ch != 0 or polarity != "+" for ch, _, polarity in records):
+        raise RuntimeError("unexpected channel or polarity in repetition capture")
+    times = by_channel(records).get(0, [])
+    # Use the within-frame cadence to split groups. rep/2 would merge the exact half-length
+    # initial interval that the unlatched TIM5 prescaler regression needs to expose.
+    bursts = group_bursts(times, 4 * REP_START_SPACING_NS)
+    if len(bursts) < 2:
+        raise RuntimeError(f"only {len(bursts)} complete burst starts; need at least two")
+    sizes = [len(burst) for burst in bursts]
+    spacing_errors = [
+        abs((b - a) - REP_START_SPACING_NS) for burst in bursts for a, b in zip(burst, burst[1:])
+    ]
+    gaps = [b[0] - a[0] for a, b in zip(bursts, bursts[1:])]
+    return sizes, max(spacing_errors, default=0), gaps
+
+
+def check_repetition_startup(records, rep_s):
+    sizes, worst_spacing, gaps = repetition_metrics(records)
+    tol_ns = round(burst_rep_tol_s(REP_START_SPACING_NS / NS) * NS)
+    bad = sum(abs(gap - round(rep_s * NS)) > tol_ns for gap in gaps)
+    ok = (
+        all(size == REP_START_NCYC for size in sizes)
+        and worst_spacing <= BURST_SPACING_TOL_NS
+        and not bad
+    )
+    print(
+        f"  repetition {rep_s:g} s: first interval {gaps[0] / NS:.6f} s; "
+        f"counts {sizes}, spacing error {worst_spacing} ns, "
+        f"wrong intervals {bad}/{len(gaps)} (tol {tol_ns / 1e6:g} ms)  "
+        f"{'PASS' if ok else 'FAIL'}"
+    )
+    return ok
+
+
+def test_rep_startup(ts, pg, duration_s):
+    print("\n=== TIM5 first repetition after prescaler changes (includes 41 s capture) ===")
+    ts.set_slope(0, "POS")
+    ts.set_divider(0, 1)
+    pg.off()
+    pg.set_mode(Pulsegen.ASYNC)
+    # Establish div=1 from observed natural intervals, independent of TIM5's old register state.
+    # Its only other supported divisor is 2, so the priming first interval can be at most 0.2 s.
+    sizes, spacing, gaps = measure_burst(
+        ts, pg, REP_START_SPACING_NS / NS, REP_START_WIDTH_NS / NS, REP_START_NCYC, 0.1, 1.0
+    )
+    if (
+        not all(size == REP_START_NCYC for size in sizes)
+        or spacing > BURST_SPACING_TOL_NS
+        or any(abs(gap - 0.1) > burst_rep_tol_s(REP_START_SPACING_NS / NS) for gap in gaps)
+    ):
+        raise RuntimeError("TIM5 never reached its 0.1 s priming cadence")
+
+    all_ok = True
+    # The first overflow in the 40 s capture latches div=2, even on the broken firmware where it
+    # arrives at 20 s. That observed overflow then primes the reverse 0.1 s transition below.
+    for rep_s, minimum_window in ((40.0, 41.0), (0.1, 1.0)):
+        stage_repetition(pg, rep_s)
+        records = collect_started(
+            ts, max(duration_s, minimum_window), lambda: pg.set_state(0, True)
+        )
+        check_pg_error(pg, "starting repetition timer")
+        ok = check_repetition_startup(records, rep_s)
+        all_ok = ok and all_ok
+    return all_ok
+
+
 # ---- Test 6: per-pin AF (every channel emits in both regimes) --------------
 
 AF_FAST_HZ = 5_000  # all four together: 20 k/s, within budget at divider 1
@@ -703,8 +1014,12 @@ TESTS = {
     "independent": test_async_independent,
     "handoff": test_handoff,
     "slow": test_long_periods,
+    "gp-startup": test_gp_startup,
+    "gp-enable": test_gp_enable,
+    "gp-wrap": test_gp_wrap,
     "sync": test_sync_stair,
     "burst": test_burst,
+    "rep-startup": test_rep_startup,
     "af": test_per_pin_af,
     "subtick": test_subtick,
 }

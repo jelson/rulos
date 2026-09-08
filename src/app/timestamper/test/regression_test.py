@@ -184,6 +184,153 @@ def phase_both(ctx):
     tstest.expect_gaps(ph, ilong, long_target, "long(fall→rise)")
 
 
+def _expect_both_divider(ph, records, divider, period_ns, width_ns):
+    """Check the selected edges, not just their aggregate count. Independent polarity batches
+    may arrive out of order, but dividing must count the original chronological edge sequence."""
+    tstest.expect_substreams_monotonic(ph, records)
+    records = tstest.trim_window(sorted(records))
+    if not ph.expect(len(records) >= 4, "enough interior divided edges for cadence analysis"):
+        return
+
+    times = [t for t, _ in records]
+    pols = [p for _, p in records]
+    half = divider // 2
+    if divider % 2 == 0:
+        # An even stride through alternating edges always lands on the same polarity. The first
+        # captured source edge is asynchronous to the clear marker, so either polarity is valid.
+        tstest.expect_polarity(ph, pols, pols[0])
+        tstest.expect_cadence(ph, times, half * period_ns, "even-divider edge spacing")
+        return
+
+    ph.expect(
+        all(a != b for a, b in zip(pols, pols[1:])),
+        "odd divider preserves strictly alternating polarity",
+    )
+    for polarity, target in (
+        ("+", half * period_ns + width_ns),
+        ("-", (half + 1) * period_ns - width_ns),
+    ):
+        gaps = [b - a for (a, pol), (b, _) in zip(records, records[1:]) if pol == polarity]
+        ph.expect(bool(gaps), f"interior divided gaps starting at '{polarity}' are present")
+        tstest.expect_gaps(ph, gaps, target, f"divider{divider} gaps after '{polarity}'")
+
+
+@phase("divider both5", divider=5)
+@phase("divider both3", divider=3)
+@phase("divider both2", divider=2)
+def phase_both_divider(ctx, divider):
+    """Every Nth chronological edge must survive BOTH-mode division. Even N keeps one polarity
+    with N/2 pulse periods between records. Odd N alternates polarity and the two corresponding
+    exact gaps. Counting rising batches and then falling batches satisfies the aggregate rate,
+    but selects different edges and fails these per-edge checks."""
+    ctx.src.periodic(ctx.channel, PULSE_HZ, PULSE_WIDTH_S)
+    tstest.configure(ctx.tic, slopes={ctx.channel: "BOTH"}, dividers={ctx.channel: divider})
+    cap = tstest.capture(ctx.tic, ctx.wire, ctx.duration)
+    expected = 2 * PULSE_HZ * ctx.duration / divider
+    tstest.report_collected(cap, ctx.channel, expected)
+
+    tol = tstest.count_tol(2 * PULSE_HZ / divider, 2)
+    ctx.ph.expect(
+        abs(len(cap.records(ctx.channel)) - expected) <= tol,
+        f"one record per {divider} edges (count within {tol} of {expected:.1f})",
+    )
+    tstest.expect_no_loss(ctx.ph, cap)
+    tstest.expect_quiet_others(ctx.ph, cap, {ctx.channel})
+    _expect_both_divider(ctx.ph, cap.records(ctx.channel), divider, PERIOD_NS, PULSE_WIDTH_NS)
+
+
+RING_PREFIX_PULSES = 16000
+RING_PROBE_PULSES = 1148
+RING_PROBE_DIVIDER = 3
+RING_SPACING_NS = 1000
+RING_SINGLE_FRAME_REP_S = 60.0
+RING_SINGLE_FRAME_DEADLINE_S = 5.0
+
+
+def _ring_input_burst(ctx, ncyc, settle_s):
+    """Emit exactly one finite HRTIM burst, then stop before any repetition can occur."""
+    started = time.monotonic()
+    try:
+        actual_ns = ctx.src.burst(ctx.channel, RING_SPACING_NS, ncyc, rep_s=RING_SINGLE_FRAME_REP_S)
+        time.sleep(settle_s)
+    finally:
+        # Every PG configuration command rebuilds its enabled outputs. A generic off() clears
+        # channels in numeric order and can re-arm an enabled higher channel before reaching it.
+        ctx.src.pg.set_state(ctx.channel, False)
+    elapsed = time.monotonic() - started
+    if elapsed >= RING_SINGLE_FRAME_DEADLINE_S:
+        raise RuntimeError(
+            f"single-burst source deadline exceeded ({elapsed:.3f} s); "
+            "cannot trust the finite input count"
+        )
+    ctx.src._check(f"stop finite burst on ch{ctx.channel}")
+    if actual_ns != RING_SPACING_NS:
+        raise RuntimeError(f"source quantized {RING_SPACING_NS} ns to {actual_ns} ns")
+
+
+def _expect_ring_backlog(ph, cap, channel):
+    """Both finite input stages are wholly inside the silenced capture window: no trimming,
+    first/last-burst exclusions, or count tolerances are appropriate."""
+    tstest.expect_no_loss(ph, cap)
+    tstest.expect_quiet_others(ph, cap, {channel})
+    tstest.expect_polarity(ph, cap.pols(channel), "+")
+    times = cap.times(channel)
+    tstest.expect_monotonic(ph, times)
+    bursts = tstest.split_bursts(times)
+    if not ph.expect(len(bursts) == 2, f"exactly two finite backlog stages ({len(bursts)} found)"):
+        return
+    for label, burst, count, stride in (
+        ("undivided prefix", bursts[0], RING_PREFIX_PULSES, 1),
+        (
+            "divided probe",
+            bursts[1],
+            RING_PROBE_PULSES // RING_PROBE_DIVIDER,
+            RING_PROBE_DIVIDER,
+        ),
+    ):
+        ph.expect(len(burst) == count, f"{label}: exactly {count} records ({len(burst)} found)")
+        tstest.expect_cadence(ph, burst, stride * RING_SPACING_NS, f"{label} cadence")
+
+
+@phase("divider ring pressure")
+def phase_divider_ring_pressure(ctx):
+    """Ring capacity must be charged after software division, without losing divider progress.
+    A 16000-record prefix leaves at least 383 ring slots; 1148 inputs at divider 3 select only 382
+    records, which all fit. The USB filling buffer can free up to 160 further slots while output
+    is off. Even then, 1148 raw captures exceed three maximal premature-clamp batches
+    (543 + 362 + 242), covering a periodic flush splitting the probe. Two DMA boundaries instead
+    enclose a full 1024-capture batch; even splitting it once exceeds 543 + 362. No DMA cursor
+    alignment is assumed. A final isolated input after draining must emit: 1148 leaves progress 2.
+    This pressure argument assumes at most one 100 ms flush during the 1.148 ms probe; the exact
+    healthy output contract does not depend on that scheduling assumption."""
+    ctx.src.off()
+    tstest.configure(ctx.tic)
+    ctx.tic.set_serial_enabled(False)
+    ctx.tic.send(f"FORM:DATA {'TEXT' if ctx.wire == 'text' else 'BIN'}")
+    ctx.tic.set_stream_enabled(False)
+    ctx.tic.discard_pending()
+
+    # These commands precede all input. From here onward, a marker sync or format-switching
+    # capture would erase the very backlog and divider progress this phase needs to observe.
+    _ring_input_burst(ctx, RING_PREFIX_PULSES, 0.75)
+    ctx.tic.set_divider(ctx.channel, RING_PROBE_DIVIDER)
+    _ring_input_burst(ctx, RING_PROBE_PULSES, 0.2)
+
+    ctx.tic.set_stream_enabled(True)
+    cap = tstest.capture(ctx.tic, ctx.wire, 3.0, discard=False)
+    _expect_ring_backlog(ctx.ph, cap, ctx.channel)
+
+    _ring_input_burst(ctx, 1, 0.2)
+    cap = tstest.capture(ctx.tic, ctx.wire, 1.0, discard=False)
+    ctx.ph.expect(
+        len(cap.records(ctx.channel)) == 1,
+        "first input after draining emits the third edge of the unfinished divider group",
+    )
+    tstest.expect_no_loss(ctx.ph, cap)
+    tstest.expect_quiet_others(ctx.ph, cap, {ctx.channel})
+    tstest.expect_polarity(ctx.ph, cap.pols(ctx.channel), "+")
+
+
 @phase("output gating")
 def phase_output_gating(ctx):
     """OUTPut:STATe OFF must silence the wire completely -- not one byte -- while capture continues

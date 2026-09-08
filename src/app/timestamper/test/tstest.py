@@ -526,10 +526,10 @@ class Source:
             self.pg.set_state(c, True)
         self._check(f"sync period {period_ns} ns")
 
-    def burst(self, channel, spacing_ns, ncyc):
-        """Repeating hardware-exact burst on one channel (1/s rep); everything else off. Returns the
-        quantized actual spacing (ns)."""
+    def burst(self, channel, spacing_ns, ncyc, rep_s=1.0):
+        """Repeating hardware-exact burst on one channel (1/s by default); everything else off.
+        Returns the quantized actual spacing (ns)."""
         self._async_base()
-        actual_ns = self.pg.pulse_burst(channel, spacing_ns, ncyc)
+        actual_ns = self.pg.pulse_burst(channel, spacing_ns, ncyc, rep_s=rep_s)
         self._check(f"burst ch{channel} {ncyc}x{spacing_ns} ns")
         return actual_ns
