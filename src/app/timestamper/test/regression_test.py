@@ -475,6 +475,52 @@ def phase_divider_ring_pressure(ctx):
     tstest.expect_polarity(ctx.ph, cap.pols(ctx.channel), "+")
 
 
+@phase("query backlog")
+def phase_query_backlog(ctx):
+    """Queries must drain unread TEXT/BIN transport data before reading an ASCII reply, without
+    clearing capture state. Keep the source running and stop host reads long enough to create
+    backpressure before every query; a quiet source would hide the synchronization bug."""
+    tic, ph = ctx.tic, ctx.ph
+    wire = "TEXT" if ctx.wire == "text" else "BIN"
+    ctx.src.off()
+    tic.set_stream_enabled(False)
+    tic.set_serial_enabled(False)
+    tstest.configure(tic)
+    tic.send(f"FORM:DATA {wire}")
+    tic.discard_pending()
+    expected_idn = tic.idn()
+    if not ph.expect(expected_idn.startswith(tsctl.IDN_PREFIX), "quiet baseline identity"):
+        return
+
+    try:
+        ctx.src.periodic(ctx.channel, 40_000, 5e-6)
+        tic.set_stream_enabled(True)
+        queries = [
+            ("*IDN?", expected_idn),
+            ("FORM:DATA?", wire),
+            (f"INP{ctx.channel}:DIV?", "1"),
+            ("OUTP:STAT?", "0"),  # query() temporarily silences the stream.
+        ]
+        for attempt, (command, expected) in enumerate(queries * 2):
+            time.sleep(0.3)
+            pending = tic._ser.in_waiting
+            ph.expect(pending >= 1024, f"query {attempt}: unread backlog present ({pending} bytes)")
+            reply = tic.query(command)
+            ph.expect(reply == expected, f"query {attempt}: {command} -> {reply!r}")
+            # Reading here also exercises a query immediately after a partial transport read.
+            resumed = tic.read_raw(0.05)
+            ph.expect(bool(resumed), f"query {attempt}: streaming resumes after the reply")
+
+        tic.set_stream_enabled(False)
+        ph.expect(tic.idn() == expected_idn, "query also drains a deliberately paused stream")
+        ph.expect(tic.query("OUTP:STAT?") == "0", "query preserves explicit output OFF")
+        ph.expect(not tic.read_raw(0.15), "explicitly paused stream stays silent after queries")
+    finally:
+        ctx.src.off()
+        tic.set_stream_enabled(False)
+        tic.discard_pending()
+
+
 @phase("output gating")
 def phase_output_gating(ctx):
     """OUTPut:STATe OFF must silence the wire completely -- not one byte -- while capture continues

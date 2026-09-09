@@ -123,6 +123,51 @@ class BothDividerTests(unittest.TestCase):
             self.assertEqual(ctx.ph.ok, defect is None)
 
 
+class QueryBacklogTests(unittest.TestCase):
+    def test_backlog_phase_checks_replies_load_and_stream_state(self):
+        for wire in regression.WIRES:
+            for defect in (None, "reply", "no backlog", "no resume", "not silent"):
+                with self.subTest(wire=wire, defect=defect):
+                    tic = Mock()
+                    tic._ser.in_waiting = 0 if defect == "no backlog" else 4096
+                    tic.idn.return_value = "Lectrobox,LectroTIC-4,test,version"
+                    tic._stream_on = False
+                    tic.set_stream_enabled.side_effect = lambda on: setattr(tic, "_stream_on", on)
+                    responses = {
+                        "*IDN?": tic.idn.return_value,
+                        "FORM:DATA?": "TEXT" if wire == "text" else "BIN",
+                        "INP1:DIV?": "1",
+                        "OUTP:STAT?": "0",
+                    }
+                    tic.query.side_effect = lambda command: (
+                        "timestamp fragment" if defect == "reply" else responses[command]
+                    )
+                    tic.read_raw.side_effect = lambda duration: (
+                        b"stream data"
+                        if (tic._stream_on and defect != "no resume") or defect == "not silent"
+                        else b""
+                    )
+                    ctx = SimpleNamespace(
+                        tic=tic, src=Mock(), ph=tstest.Phase(), channel=1, wire=wire
+                    )
+                    with patch.object(regression.time, "sleep"), redirect_stdout(io.StringIO()):
+                        regression.phase_query_backlog(ctx)
+                    self.assertEqual(ctx.ph.ok, defect is None)
+                    self.assertEqual(tic.query.call_count, 9)
+                    self.assertEqual(tic.discard_pending.call_count, 2)
+                    calls = [call[0] for call in tic.method_calls]
+                    first, last = calls.index("query"), len(calls) - 1 - calls[::-1].index("query")
+                    self.assertNotIn("discard_pending", calls[first : last + 1])
+                    self.assertFalse(tic._stream_on)
+                    self.assertEqual(ctx.src.off.call_count, 2)
+
+    def test_backlog_phase_registered_for_each_channel_and_wire(self):
+        phases = [pd for pd in regression.PHASES if pd.fn is regression.phase_query_backlog]
+        self.assertEqual(len(phases), 1)
+        self.assertTrue(phases[0].per_channel)
+        self.assertEqual(phases[0].wires, regression.WIRES)
+
+
 def finite_both_capture(pulses, divider, progress=0, channel=1, wire="binary"):
     records = []
     for cycle in range(pulses):

@@ -226,6 +226,8 @@ def autodetect_port():
             idn = ser.readline().decode(errors="replace").strip()
             if idn.startswith(IDN_PREFIX):
                 matches.append(dev)
+        except (serial.SerialException, TimeoutError) as e:
+            print(f"  {dev}: {e}", file=sys.stderr)
         finally:
             ser.close()
     if not matches:
@@ -239,19 +241,25 @@ def autodetect_port():
 
 
 def _drain_raw(ser, quiet_s=0.1, max_s=1.0):
-    """Read until the line goes quiet for quiet_s, or max_s elapses. Standalone helper used by
-    autodetect_port before a LectroTIC4
-    instance exists."""
-    deadline = time.monotonic() + max_s
-    last_rx = time.monotonic()
+    """Drain a silenced stream until quiet_s passes without data. Raise TimeoutError if max_s
+    elapses without reaching quiet; proceeding then could mistake old stream bytes for a reply.
+    The caller's serial timeout is preserved."""
+    now = time.monotonic()
+    deadline = now + max_s
+    quiet_deadline = now + quiet_s
     saved = ser.timeout
-    ser.timeout = 0.05
     try:
-        while time.monotonic() < deadline:
+        while True:
+            now = time.monotonic()
+            if now >= deadline:
+                raise TimeoutError(f"Timestamp stream did not become quiet within {max_s:g} s")
+            # A scheduling pause is not evidence of silence: poll once even if the quiet
+            # deadline has already passed, so newly queued bytes are not mistaken for a reply.
+            ser.timeout = min(0.05, max(0.0, quiet_deadline - now), deadline - now)
             data = ser.read(4096)
             if data:
-                last_rx = time.monotonic()
-            elif time.monotonic() - last_rx > quiet_s:
+                quiet_deadline = time.monotonic() + quiet_s
+            elif time.monotonic() >= quiet_deadline:
                 return
     finally:
         ser.timeout = saved
@@ -343,10 +351,9 @@ class LectroTIC4:
         self._ser.flush()
 
     def reset_input_buffer(self, settle_s=0.2):
-        """Discard whatever the device has already sent so the next read starts on fresh output.
-        Sleeps settle_s to let the device finish draining anything buffered under the previous
-        state, then drops the OS-level RX buffer. After this returns, every
-        byte that arrives is post-call."""
+        """Wait settle_s, then discard the OS-level RX buffer. This does not synchronize with the
+        device: bytes already queued in its transport can still arrive afterward. Use
+        discard_pending() when a fresh, aligned capture boundary is needed."""
         time.sleep(settle_s)
         self._ser.reset_input_buffer()
 
@@ -356,17 +363,23 @@ class LectroTIC4:
         re-enable. If the caller has explicitly silenced the stream for a series of
         queries, leave it silent."""
         toggle = self._stream_on
-        if toggle:
-            self.send("OUTP:STAT OFF")
-        # Just-sent OUTP:STAT OFF takes effect within USB latency; a short settle is enough to drop
-        # the few in-flight records.
-        self.reset_input_buffer(settle_s=0.01)
-        self.send(cmd)
-        self._ser.timeout = 0.5
-        line = self._ser.readline().decode(errors="replace").strip()
-        if toggle:
-            self.send("OUTP:STAT ON")
-        return line
+        saved_timeout = self._ser.timeout
+        try:
+            if toggle:
+                self.send("OUTP:STAT OFF")
+            # Drain bytes already queued in the transport, including delayed fragments in either
+            # wire format. Do not clear the device's capture backlog or divider phase.
+            _drain_raw(self._ser)
+            self.send(cmd)
+            self._ser.timeout = 0.5
+            line = self._ser.readline()
+            if not line.endswith(b"\n"):
+                raise TimeoutError(f"No complete response to {cmd!r} within 0.5 s")
+            return line.decode(errors="replace").strip()
+        finally:
+            self._ser.timeout = saved_timeout
+            if toggle:
+                self.send("OUTP:STAT ON")
 
     def read_raw(self, duration_s):
         """Read whatever bytes arrive for duration_s seconds and return them. Does not parse,

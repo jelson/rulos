@@ -135,6 +135,8 @@ python3 src/app/timestamper/test/regression_test.py \
   --port "$LT4" --pg-port "$PG4" --channel 0 --phase 'divider both sparse'
 python3 src/app/timestamper/test/regression_test.py \
   --port "$LT4" --pg-port "$PG4" --channel 0 --phase 'divider ring pressure'
+python3 src/app/timestamper/test/regression_test.py \
+  --port "$LT4" --pg-port "$PG4" --phase 'query backlog'
 ```
 
 - `gp-startup` primes the old prescaler with observed periods, then captures
@@ -184,6 +186,11 @@ python3 src/app/timestamper/test/regression_test.py \
   then adds 1,148 pulses at divider 3. The 382 new records fit without loss.
   After draining, one more pulse must emit a record because the divider has
   two edges of progress left over. No marker clear occurs between stages.
+- `query backlog` leaves a 40 kHz source running with no host reads for
+  300 ms before each query. It requires unread data, exact ASCII replies
+  over both wire formats, and restoration of the caller's stream state.
+  No clear occurs between queries. This is a transport stress test, not a
+  loss-free capture test; `output gating` separately checks retained backlog.
 
 LT4 phase filters match label substrings: `--phase 'divider both'` includes
 the periodic, finite-frame, and sparse tests. Use a narrower label to isolate
@@ -196,6 +203,7 @@ Hardware-free scorer and sequencing checks:
 python3 src/app/pulsegen/test/regression_test_test.py
 python3 src/app/timestamper/test/regression_test_test.py
 python3 src/app/timestamper/test/control_test_test.py
+python3 src/app/timestamper/test/tsctl_test.py
 python3 src/app/timestamper/test/util_test.py --only reader_error
 python3 src/app/timestamper/test/util_test.py --only allan_math
 python3 src/app/tests/pulsegen/run_tests.py
