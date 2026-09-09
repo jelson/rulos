@@ -152,7 +152,7 @@ def strict_interval(times, tol_ns=12):
     return sum(diffs) / len(diffs)
 
 
-def zipper_pair(ref, other, period_ns):
+def zipper_pair(ref, other, period_ns, tol_ns=12):
     """Pair two sorted edge lists index-for-index: the i-th `other` edge pairs
     with the i-th `ref` edge (each period, `other` fires gap-after `ref`, with
     0 <= gap < one period). Return the list of (other - ref) gaps.
@@ -164,8 +164,9 @@ def zipper_pair(ref, other, period_ns):
     before the window, or a `ref` whose `other` is after it) from both ends.
 
     After trimming we are strict: equal counts, every pair within one period,
-    and every period present (consecutive same-channel spacing near one period).
-    Any failing means an interior pulse was dropped or duplicated."""
+    and every same-channel spacing positive and within tol_ns of the requested
+    period. The default allows three LT4 timestamp ticks of quantization/jitter.
+    Any failing means an interior pulse was dropped, duplicated, or misplaced."""
     ref = list(ref)
     other = list(other)
     while other and ref and other[0] < ref[0]:
@@ -186,9 +187,15 @@ def zipper_pair(ref, other, period_ns):
         raise RuntimeError(
             "a channel pair does not fall within one period -- a pulse was missed or duplicated"
         )
-    for seq in (ref, other):
-        if any(seq[i + 1] - seq[i] > period_ns * 3 // 2 for i in range(len(seq) - 1)):
-            raise RuntimeError("a period is missing from the capture")
+    for label, seq in (("ref", ref), ("other", other)):
+        for a, b in zip(seq, seq[1:]):
+            gap = b - a
+            if gap <= 0 or abs(gap - period_ns) > tol_ns:
+                raise RuntimeError(
+                    f"{label} channel gap {gap} ns differs from the requested "
+                    f"{period_ns} ns period (tolerance {tol_ns} ns) -- "
+                    "a pulse was dropped, duplicated, or misplaced"
+                )
     return deltas
 
 

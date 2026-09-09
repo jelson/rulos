@@ -137,6 +137,8 @@ python3 src/app/timestamper/test/regression_test.py \
   --port "$LT4" --pg-port "$PG4" --channel 0 --phase 'divider ring pressure'
 python3 src/app/timestamper/test/regression_test.py \
   --port "$LT4" --pg-port "$PG4" --phase 'query backlog'
+python3 src/app/pulsegen/test/regression_test.py \
+  --ts-port "$LT4" --pg-port "$PG4" --only sync
 ```
 
 - `gp-startup` primes the old prescaler with observed periods, then captures
@@ -191,6 +193,10 @@ python3 src/app/timestamper/test/regression_test.py \
   over both wire formats, and restoration of the caller's stream state.
   No clear occurs between queries. This is a transport stress test, not a
   loss-free capture test; `output gating` separately checks retained backlog.
+- `sync` checks four-channel HRTIM and GP stairs. Its pairing helper checks
+  every retained same-channel gap against the requested period within 12 ns;
+  equal counts and matching relative phases cannot hide duplicate pulses or
+  a shared wrong rate. Synthetic traces cover those false-pass cases.
 
 LT4 phase filters match label substrings: `--phase 'divider both'` includes
 the periodic, finite-frame, and sparse tests. Use a narrower label to isolate

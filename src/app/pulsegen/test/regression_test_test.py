@@ -113,6 +113,59 @@ class FakePulsegen:
         return '0,"No error"'
 
 
+class ZipperPairTests(unittest.TestCase):
+    def test_regular_channels_pair_at_each_period(self):
+        ref = [i * 1000 for i in range(10)]
+        other = [t + 100 for t in ref]
+        self.assertEqual(regression.zipper_pair(ref, other, 1000), [100] * 10)
+
+    def test_independent_timestamp_jitter_within_twelve_ns_is_allowed(self):
+        ref = [i * 1000 + jitter for i, jitter in enumerate((0, 4, -4, 8, -4))]
+        other = [i * 1000 + 100 + jitter for i, jitter in enumerate((4, -4, 8, -4, 0))]
+        self.assertEqual(regression.zipper_pair(ref, other, 1000), [104, 92, 112, 88, 104])
+
+    def test_multiple_boundary_orphans_remain_trimmable_on_either_channel(self):
+        ref = [i * 1000 for i in range(10)]
+        other = [t + 100 for t in ref]
+        for first, second in ((ref[3:], other[:-2]), (ref[:-2], other[3:])):
+            with self.subTest(ref=first, other=second):
+                self.assertEqual(regression.zipper_pair(first, second, 1000), [100] * 5)
+
+    def test_matching_counts_and_phases_do_not_hide_bad_cadence(self):
+        faulty = {
+            "duplicate": [0, 1000, 1000, 2000, 3000],
+            "double rate": [0, 500, 1000, 1500, 2000, 2500, 3000],
+            "extra interior pulse": [0, 1000, 1500, 2000, 3000],
+            "missing interior pulse": [0, 1000, 3000, 4000],
+            "uniformly fast": [0, 900, 1800, 2700],
+            "uniformly slow": [0, 1100, 2200, 3300],
+            "jitter beyond tolerance": [0, 1000, 2016, 3000],
+        }
+        for name, ref in faulty.items():
+            with self.subTest(name=name):
+                with self.assertRaises(RuntimeError):
+                    regression.zipper_pair(ref, [t + 100 for t in ref], 1000)
+
+    def test_each_channel_is_checked_independently(self):
+        regular = [0, 1000, 2000, 3000]
+        misplaced = [0, 1000, 2016, 3000]
+        for ref, other in ((regular, misplaced), (misplaced, regular)):
+            with self.subTest(ref=ref, other=other):
+                with self.assertRaises(RuntimeError):
+                    regression.zipper_pair(ref, [t + 100 for t in other], 1000)
+
+    def test_configured_tolerance_is_applied_to_every_gap(self):
+        ref = [0, 1000, 2020, 3000]
+        other = [t + 100 for t in ref]
+        self.assertEqual(regression.zipper_pair(ref, other, 1000, tol_ns=20), [100] * 4)
+        with self.assertRaises(RuntimeError):
+            regression.zipper_pair(ref, other, 1000, tol_ns=19)
+
+    def test_duplicate_is_rejected_even_when_period_is_below_jitter_tolerance(self):
+        with self.assertRaises(RuntimeError):
+            regression.zipper_pair([0, 8, 8, 16], [4, 12, 12, 20], 8)
+
+
 class CaptureTests(unittest.TestCase):
     def test_real_read_for_arms_before_start_without_opening_a_port(self):
         events = []
