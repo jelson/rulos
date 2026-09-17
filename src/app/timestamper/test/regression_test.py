@@ -747,6 +747,9 @@ def phase_serial_ctl(ctx):
     tic.discard_pending()
     tic.reset()
     time.sleep(0.3)
+    # *RST turns the stream back on. Silence it again: a query on a live stream first sends
+    # OUTP:STAT OFF, and that command's success would clear the error latch checked below.
+    tic.set_stream_enabled(False)
     ph.expect(not tic.get_serial_enabled(), "serial input OFF by default after *RST")
     ph.expect(tic.get_serial_baud() == 115200, "default baud 115200")
 

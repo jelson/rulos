@@ -136,6 +136,9 @@ class SerialControlTests(unittest.TestCase):
 
                 def write(data):
                     command = data.decode().strip()
+                    # Like the device, a successful non-query command clears the error latch.
+                    if not command.endswith("?") and not command.startswith("SER:BAUD "):
+                        state.error = '0,"No error"'
                     if command == "*RST":
                         state.stream_on, state.serial_on, state.baud = True, False, 115200
                     elif command.startswith("OUTP:STAT "):
@@ -148,8 +151,9 @@ class SerialControlTests(unittest.TestCase):
                             state.error = '-222,"Data out of range"'
                         else:
                             state.baud = baud
+                            state.error = '0,"No error"'
                     elif command == "*CLS":
-                        state.error = '0,"No error"'
+                        pass  # cleared above, like every successful command
                     elif command.endswith("?"):
                         replies = {
                             "SER:STAT?": str(int(state.serial_on)),
