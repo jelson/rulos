@@ -745,7 +745,7 @@ def phase_serial_ctl(ctx):
     tic.send("FORM:DATA TEXT")
     tic.set_stream_enabled(False)
     tic.discard_pending()
-    tic.send("*RST")
+    tic.reset()
     time.sleep(0.3)
     ph.expect(not tic.get_serial_enabled(), "serial input OFF by default after *RST")
     ph.expect(tic.get_serial_baud() == 115200, "default baud 115200")
@@ -767,7 +767,7 @@ def phase_serial_ctl(ctx):
 
     tic.set_serial_baud(230400)
     tic.set_serial_enabled(True)
-    tic.send("*RST")
+    tic.reset()
     time.sleep(0.3)
     ph.expect(
         not tic.get_serial_enabled() and tic.get_serial_baud() == 115200,

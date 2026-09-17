@@ -123,6 +123,67 @@ class BothDividerTests(unittest.TestCase):
             self.assertEqual(ctx.ph.ok, defect is None)
 
 
+class SerialControlTests(unittest.TestCase):
+    def test_resets_keep_client_and_live_stream_synchronized(self):
+        for initial_stream in (False, True):
+            with self.subTest(initial_stream=initial_stream):
+                state = SimpleNamespace(
+                    stream_on=initial_stream, serial_on=False, baud=115200, error='0,"No error"'
+                )
+                tic = regression.tsctl.LectroTIC4.__new__(regression.tsctl.LectroTIC4)
+                tic._stream_on = initial_stream
+                tic._ser = Mock(timeout=0.5)
+
+                def write(data):
+                    command = data.decode().strip()
+                    if command == "*RST":
+                        state.stream_on, state.serial_on, state.baud = True, False, 115200
+                    elif command.startswith("OUTP:STAT "):
+                        state.stream_on = command.endswith("ON")
+                    elif command.startswith("SER:STAT "):
+                        state.serial_on = command.endswith("ON")
+                    elif command.startswith("SER:BAUD "):
+                        baud = int(command.split()[1])
+                        if baud < 100:
+                            state.error = '-222,"Data out of range"'
+                        else:
+                            state.baud = baud
+                    elif command == "*CLS":
+                        state.error = '0,"No error"'
+                    elif command.endswith("?"):
+                        replies = {
+                            "SER:STAT?": str(int(state.serial_on)),
+                            "SER:BAUD?": str(state.baud),
+                            "SYST:ERR?": state.error,
+                            "*IDN?": "Lectrobox,LectroTIC-4,test,version",
+                        }
+                        tic._ser.readline.return_value = (replies[command] + "\n").encode()
+                    else:
+                        self.assertEqual(command, "FORM:DATA TEXT")
+                    return len(data)
+
+                def drain(ser):
+                    self.assertIs(ser, tic._ser)
+                    # A live source never becomes quiet unless query pauses the device.
+                    if state.stream_on:
+                        raise TimeoutError("Timestamp stream did not become quiet")
+
+                tic._ser.write.side_effect = write
+                tic.discard_pending = Mock(side_effect=lambda: drain(tic._ser))
+                tic.reset = Mock(wraps=tic.reset)
+                ctx = SimpleNamespace(tic=tic, ph=tstest.Phase())
+                with patch.object(regression.tsctl, "_drain_raw", side_effect=drain), patch.object(
+                    regression.time, "sleep"
+                ), redirect_stdout(io.StringIO()):
+                    regression.phase_serial_ctl(ctx)
+
+                self.assertTrue(ctx.ph.ok)
+                self.assertEqual(tic.reset.call_count, 2)
+                self.assertTrue(tic.get_stream_enabled())
+                self.assertTrue(state.stream_on)
+                self.assertEqual((state.serial_on, state.baud), (False, 115200))
+
+
 class QueryBacklogTests(unittest.TestCase):
     def test_backlog_phase_checks_replies_load_and_stream_state(self):
         for wire in regression.WIRES:
