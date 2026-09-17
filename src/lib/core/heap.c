@@ -38,7 +38,8 @@ void heap_swap(HeapEntry *he, int off0, int off1) {
 void heap_bubble(HeapEntry *he, int ptr) {
   while (ptr > 0) {
     int parent = (ptr - 1) >> 1;
-    if (later_than(he[ptr].key, he[parent].key)) {
+    // Stopping on a tie keeps a new entry behind older ones with the same key.
+    if (later_than_or_eq(he[ptr].key, he[parent].key)) {
       return;
     }  // already correct
 
@@ -91,7 +92,10 @@ void heap_pop(Heap *heap) {
     int c0 = ptr * 2 + 1;
     int c1 = c0 + 1;
     int candidate = ptr;
-    if (c0 < hc && later_than(he[candidate].key, he[c0].key)) {
+    // Sinking past a tied first child, like stopping on a tie in heap_bubble,
+    // keeps equal keys closer to insertion order. A heap is not stable, so
+    // tie order is approximate.
+    if (c0 < hc && later_than_or_eq(he[candidate].key, he[c0].key)) {
       candidate = c0;
     }
     if (c1 < hc && later_than(he[candidate].key, he[c1].key)) {

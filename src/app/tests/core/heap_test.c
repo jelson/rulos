@@ -38,6 +38,23 @@ static void check_order(const Time *keys, int n) {
   assert(heap_peek(&heap, &prev, (ActivationRecord[]){{0}}) == -1);
 }
 
+// With nothing else queued, up to three equal keys pop in insertion order.
+// Tie order is only approximate beyond that: a heap is not stable.
+static void check_tie_order(int n) {
+  Heap heap;
+  heap_init(&heap);
+  for (int i = 0; i < n; i++) {
+    heap_insert(&heap, 5000, entry, (void *)(uintptr_t)i);
+  }
+  for (int i = 0; i < n; i++) {
+    Time key;
+    ActivationRecord act;
+    assert(heap_peek(&heap, &key, &act) == 0);
+    assert((int)(uintptr_t)act.data == i);
+    heap_pop(&heap);
+  }
+}
+
 int main(void) {
   Time sequential[SCHEDULER_CAPACITY];
   Time rollover[SCHEDULER_CAPACITY];
@@ -53,5 +70,8 @@ int main(void) {
   for (int n = 1; n <= 5; n++) {
     check_order(sequential, n);
   }
-  puts("heap: insert/pop ordering across capacity, rollover, and duplicates passed");
+  for (int n = 1; n <= 3; n++) {
+    check_tie_order(n);
+  }
+  puts("heap: insert/pop ordering across capacity, rollover, duplicates, and ties passed");
 }
