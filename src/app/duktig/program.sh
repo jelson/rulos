@@ -2,7 +2,8 @@
 #
 # Flash duktig-v2 onto the target over the Black Magic Probe.
 # Thin wrapper around the shared src/util/bmpflash.py (BMP autodetect,
-# load+verify, reset). Extra args pass through, e.g.:
+# load+verify, reset). The board has no supply of its own, so the probe
+# powers it (--tpwr). Extra args pass through, e.g.:
 #   ./program.sh             # flash + verify + reset
 #   ./program.sh --erase     # mass-erase first (unbrick a torn-flash unit)
 #   ./program.sh --reset-only
@@ -15,4 +16,4 @@ BMPFLASH="$HERE/../../util/bmpflash.py"
 PLATFORM=arm-stm32c011x6
 BIN="$HERE/../../../build/duktig-v2/$PLATFORM/duktig-v2.elf"
 
-exec "$BMPFLASH" "$BIN" "$@"
+exec "$BMPFLASH" "$BIN" --tpwr "$@"

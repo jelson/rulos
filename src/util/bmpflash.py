@@ -9,6 +9,7 @@
 #
 #   bmpflash.py firmware.elf            # flash + verify + reset into it
 #   bmpflash.py firmware.elf --erase    # mass-erase first (unbrick)
+#   bmpflash.py firmware.elf --tpwr     # power the target from the probe
 #   bmpflash.py --reset-only            # just reset the target
 #   bmpflash.py firmware.elf --port /dev/ttyACMx   # skip BMP autodetect
 #
@@ -122,11 +123,14 @@ def read_serial(uid_base, prefix="", port=None):
     return prefix + "".join(f"{w:08X}" for w in words[:3])
 
 
-def _gdb(port, elf=None, load=False, mass_erase=False):
+def _gdb(port, elf=None, load=False, mass_erase=False, target_power=False):
     """Drive the BMP: attach, optionally mass-erase, optionally
     load+verify, reset, detach. `elf` supplies symbols for `load`; a
-    reset-only run needs no file. Returns nonzero on any command or
-    verification failure. Requires Python-enabled gdb-multiarch.
+    reset-only run needs no file. `target_power` turns on the probe's
+    3.3V target supply before scanning, for boards with no supply of
+    their own; it stays on after the session so the target keeps
+    running. Returns nonzero on any command or verification failure.
+    Requires Python-enabled gdb-multiarch.
 
     The monitor command spelling is BMP-firmware-version sensitive;
     this exact vector is the known-good one -- do not "simplify" it."""
@@ -136,6 +140,7 @@ def _gdb(port, elf=None, load=False, mass_erase=False):
         commands.append(f"file {shlex.quote(os.fspath(elf))}")
     commands += [
         f"tar ext {port}",
+        *(["mon tpwr enable"] if target_power else []),
         "mon conn enable",
         "mon swd",
         "at 1",
@@ -156,19 +161,26 @@ def _gdb(port, elf=None, load=False, mass_erase=False):
         ).returncode
 
 
-def flash_elf(elf, port=None, mass_erase=False):
+def flash_elf(elf, port=None, mass_erase=False, target_power=False):
     """Flash `elf` over the BMP, verify it, and reset into it.
     Optionally mass-erase first (clears reserved/nvconfig sectors --
-    the only way to recover a unit bricked by torn flash). Returns
+    the only way to recover a unit bricked by torn flash), and
+    optionally power the target from the probe (see _gdb). Returns
     gdb's exit code (0 = success)."""
-    return _gdb(port or detect_bmp(), elf=elf, load=True, mass_erase=mass_erase)
+    return _gdb(
+        port or detect_bmp(),
+        elf=elf,
+        load=True,
+        mass_erase=mass_erase,
+        target_power=target_power,
+    )
 
 
-def reset(port=None):
+def reset(port=None, target_power=False):
     """Cold-reset the target into its existing image (no flash): clears
     SRAM and re-runs boot, so flash-persisted state can be verified to
     survive a power-loss-equivalent restart. Returns gdb's exit code."""
-    return _gdb(port or detect_bmp(), load=False)
+    return _gdb(port or detect_bmp(), load=False, target_power=target_power)
 
 
 def main():
@@ -189,13 +201,19 @@ def main():
         "(clears reserved/nvconfig sectors; recovers a "
         "unit bricked by torn flash)",
     )
+    p.add_argument(
+        "--tpwr",
+        action="store_true",
+        help="power the target from the probe's 3.3V supply "
+        "(boards with no supply of their own)",
+    )
     p.add_argument("--port", help="override BMP autodetection")
     args = p.parse_args()
     try:
         if args.reset_only:
-            rc = reset(port=args.port)
+            rc = reset(port=args.port, target_power=args.tpwr)
         elif args.elf:
-            rc = flash_elf(args.elf, port=args.port, mass_erase=args.erase)
+            rc = flash_elf(args.elf, port=args.port, mass_erase=args.erase, target_power=args.tpwr)
         else:
             p.error("give an ELF to flash, or --reset-only")
     except RuntimeError as e:

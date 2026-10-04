@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import bmpflash
 
 
-def capture_script(*, elf=None, load=False, mass_erase=False, returncode=0):
+def capture_script(*, elf=None, load=False, mass_erase=False, target_power=False, returncode=0):
     captured = {}
 
     def run(cmd, **kwargs):
@@ -29,7 +29,9 @@ def capture_script(*, elf=None, load=False, mass_erase=False, returncode=0):
         return subprocess.CompletedProcess(cmd, returncode)
 
     with patch.object(bmpflash.subprocess, "run", side_effect=run):
-        captured["status"] = bmpflash._gdb("/dev/test-probe", elf, load, mass_erase)
+        captured["status"] = bmpflash._gdb(
+            "/dev/test-probe", elf, load, mass_erase, target_power=target_power
+        )
     return captured
 
 
@@ -58,6 +60,14 @@ class BmpFlashTests(unittest.TestCase):
         script = capture_script(elf="fw.elf", load=True, mass_erase=True)["script"]
         self.assertLess(script.index("file "), script.index("at 1"))
         self.assertIn("at 1\nmon erase_mass\nload\n", script)
+
+    def test_target_power_is_explicit_and_precedes_scan(self):
+        self.assertNotIn("tpwr", capture_script(elf="fw.elf", load=True)["script"])
+        self.assertNotIn("tpwr", capture_script()["script"])
+        script = capture_script(elf="fw.elf", load=True, target_power=True)["script"]
+        self.assertIn(
+            "tar ext /dev/test-probe\nmon tpwr enable\nmon conn enable\nmon swd\n", script
+        )
 
     def test_reset_does_not_load_or_verify(self):
         script = capture_script()["script"]
