@@ -270,7 +270,9 @@ class ArmStmPlatform(ArmPlatform):
             Chip("stm32g431x6", "STM32G431xx", flashk=32, ramk=22, ccmramk=10),
             Chip("stm32g431x8", "STM32G431xx", flashk=64, ramk=22, ccmramk=10),
             Chip("stm32g431xb", "STM32G431xx", flashk=128, ramk=22, ccmramk=10),
-            Chip("stm32g474xb", "STM32G474xx", flashk=128, ramk=96, ccmramk=32),
+            # G474xB in its default dual-bank mode: bank 1 is 64 KB at 0x08000000 and bank 2 is
+            # the other 64 KB at 0x08040000 (RM0440 Table 7), so only bank 1 is contiguous.
+            Chip("stm32g474xb", "STM32G474xx", flashk=64, ramk=96, ccmramk=32),
             Chip("stm32g474xc", "STM32G474xx", flashk=256, ramk=96, ccmramk=32),
             Chip("stm32g474xe", "STM32G474xx", flashk=512, ramk=96, ccmramk=32),
             # stm32h5
