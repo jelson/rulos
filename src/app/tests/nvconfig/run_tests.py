@@ -9,6 +9,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[3]
 LIB = ROOT / "src/lib"
 APP = ROOT / "src/app/timestamper"
+PG = ROOT / "src/app/pulsegen"
 SCPI_TEST = HERE.parent / "scpi"
 USB = ROOT / "ext/stm32/STM32CubeG4/Middlewares/ST/STM32_USB_Device_Library"
 
@@ -23,6 +24,7 @@ with tempfile.TemporaryDirectory(prefix="rulos-nvconfig-") as build:
         ("backend_g4", "backend_test.c", [], 8192, [G4]),
         ("backend_g4_single_bank", "backend_test.c", [], 8192, [G4, "-DTEST_G4_SINGLE_BANK"]),
         ("backend_g4_bank1", "backend_test.c", [], 8192, [G4, "-DTEST_G4_BANK1"]),
+        ("small_reserve_g4", "backend_test.c", [], 4096, [G4]),
         (
             "config",
             "config_test.c",
@@ -37,6 +39,21 @@ with tempfile.TemporaryDirectory(prefix="rulos-nvconfig-") as build:
             ],
             16384,
             [H5, "-DGIT_COMMIT=test", "-Wno-unused-parameter"],
+        ),
+        (
+            "pg_config",
+            "pg_config_test.c",
+            [
+                PG / "config.c",
+                PG / "scpi.c",
+                SCPI_TEST / "usb_fixture.c",
+                LIB / "periph/scpi/scpi.c",
+                LIB / "periph/uart/linereader.c",
+                LIB / "core/queue.c",
+                LIB / "chip/arm/stm32/periph/usb_cdc/usb_cdc.c",
+            ],
+            8192,
+            [G4, "-DGIT_COMMIT=test", "-Wno-unused-parameter"],
         ),
     ]
     for name, test, sources, reserve, flags in cases:
@@ -58,7 +75,7 @@ with tempfile.TemporaryDirectory(prefix="rulos-nvconfig-") as build:
                 "-I" + str(HERE / "stubs"),
                 "-I" + str(SCPI_TEST / "stubs"),
                 "-I" + str(LIB),
-                "-I" + str(APP),
+                "-I" + str(PG if name == "pg_config" else APP),
                 "-I" + str(LIB / "chip/arm/stm32"),
                 *[
                     "-I" + str(p)

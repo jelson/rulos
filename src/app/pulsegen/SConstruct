@@ -31,11 +31,13 @@ from build_tools import *
 # at the finest CKPSC. PLLM/PLLN are RCC_PLLM_DIVn macros on G4 (unlike H5).
 RulosBuildTarget(
     name = "pulsegen",
-    sources = ["pulsegen.c", "scpi.c"],
-    peripherals = "uart usb-cdc-stm32 scpi",
+    sources = ["pulsegen.c", "scpi.c", "config.c"],
+    peripherals = "uart usb-cdc-stm32 scpi nvconfig",
     platforms = [
         ArmStmPlatform(
-            "stm32g474xe",   # LQFP64 RE: 512 KB flash, 96 KB SRAM
+            "stm32g474xb",   # LQFP64 RB: 128 KB flash (64 KB contiguous bank 1), 96 KB SRAM
+            # persisted config: nvconfig ping-pongs two 4 KB slots at the top of bank 1
+            flash_reserve_k = 8,
             extra_cflags = [
                 '-DHSE_VALUE=10000000',
                 '-DRULOS_USE_HSE',

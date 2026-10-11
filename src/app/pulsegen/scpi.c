@@ -28,6 +28,7 @@
  *   SOURce[n]:BURSt:STATe ON|OFF|1|0         SOURce[n]:BURSt:STATe?
  *   SOURce[n]:BURSt:NCYCles <count>          SOURce[n]:BURSt:NCYCles?
  *   SOURce[n]:BURSt:INTernal:PERiod <sec>    SOURce[n]:BURSt:INTernal:PERiod?
+ *   CONFig:SAVE
  */
 
 #include "scpi.h"
@@ -65,7 +66,24 @@ static void print_seconds_ps(uint64_t ps) {
   scpi_print(buf);
 }
 
+static void reset_all(void) {
+  scpi_report_save(pulsegen_reset_all());
+}
+
 static bool dispatch_line(const char *line) {
+  // CONFig:SAVE -- persist the current configuration for the next power-up.
+  {
+    const char *p = scpi_match_kw(line, "CONFIG", "CONF");
+    if (p && *p == ':') {
+      p++;
+      const char *q = scpi_match_kw(p, "SAVE", "SAVE");
+      if (q && *q == 0) {
+        scpi_report_save(pulsegen_config_save());
+        return true;
+      }
+    }
+  }
+
   // MODE ASYNC|SYNC  and  MODE?
   {
     const char *p = scpi_match_kw(line, "MODE", "MODE");
@@ -215,7 +233,7 @@ static bool dispatch_line(const char *line) {
 void pulsegen_scpi_init(void) {
   const scpi_config_t cfg = {
       .version = PULSEGEN_FW_VERSION,
-      .on_reset = pulsegen_reset_all,
+      .on_reset = reset_all,
       .on_line = dispatch_line,
   };
   scpi_init(&cfg);

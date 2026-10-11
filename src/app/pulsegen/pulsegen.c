@@ -1119,6 +1119,18 @@ const char *pulsegen_set_burst_period_ps(int ch, uint64_t ps) {
   return err_for_rc(validate(ch));
 }
 
+bool pulsegen_get_state(int ch) {
+  return chan[ch].on;
+}
+uint64_t pulsegen_get_period_ps(int ch) {
+  return chan[ch].period_ps;
+}
+uint64_t pulsegen_get_width_ps(int ch) {
+  return chan[ch].width_ps;
+}
+uint64_t pulsegen_get_delay_ps(int ch) {
+  return chan[ch].delay_ps;
+}
 bool pulsegen_get_burst_state(int ch) {
   return chan[ch].burst_on;
 }
@@ -1143,11 +1155,15 @@ const char *pulsegen_set_mode(bool sync) {
   return NULL;
 }
 
+bool pulsegen_get_mode_sync(void) {
+  return g_mode == MODE_SYNC;
+}
+
 const char *pulsegen_mode_str(void) {
   return (g_mode == MODE_SYNC) ? "SYNC" : "ASYNC";
 }
 
-void pulsegen_reset_all(void) {
+void pulsegen_apply_defaults(void) {
   g_mode = MODE_ASYNC;
   for (int i = 0; i < NUM_CHANNELS; i++) {
     chan[i].period_ps = 0;
@@ -1277,7 +1293,7 @@ int main(void) {
   init_hrtim();
   init_gp_timers();
 
-  pulsegen_reset_all();
+  pulsegen_config_load();
 
   schedule_us(1, periodic_task, NULL);
   scheduler_run();

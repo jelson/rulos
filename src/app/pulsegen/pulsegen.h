@@ -58,8 +58,11 @@ const char *pulsegen_set_burst_state(int ch, bool on);
 const char *pulsegen_set_burst_ncyc(int ch, uint32_t ncyc);
 const char *pulsegen_set_burst_period_ps(int ch, uint64_t ps);
 
-// Query accessors for the burst settings; each reads back the channel's
-// domain-effective value.
+// Query accessors; each reads back the channel's domain-effective value.
+bool pulsegen_get_state(int ch);
+uint64_t pulsegen_get_period_ps(int ch);
+uint64_t pulsegen_get_width_ps(int ch);
+uint64_t pulsegen_get_delay_ps(int ch);
 bool pulsegen_get_burst_state(int ch);
 uint32_t pulsegen_get_burst_ncyc(int ch);
 uint64_t pulsegen_get_burst_period_ps(int ch);
@@ -70,7 +73,25 @@ const char *pulsegen_set_mode(bool sync);
 
 // "ASYNC" or "SYNC", for the MODE? query.
 const char *pulsegen_mode_str(void);
+bool pulsegen_get_mode_sync(void);
 
-// *RST: ASYNC mode, all outputs off, all per-channel config cleared; burst
-// off, burst count 1, burst interval 1 s.
-void pulsegen_reset_all(void);
+// Power-on defaults: ASYNC mode, all outputs off, all per-channel config
+// cleared; burst off, burst count 1, burst interval 1 s.
+void pulsegen_apply_defaults(void);
+
+// *RST: apply the defaults and persist them, so the next power-up also starts
+// from defaults. Returns false if persisting fails; the defaults still apply.
+bool pulsegen_reset_all(void);
+
+// Load the saved configuration at startup, after the timers are initialized,
+// or the defaults if nothing valid is saved. Outputs that were on when saved
+// come back on.
+void pulsegen_config_load(void);
+
+// Persist the current configuration (mode, and every channel's period, width,
+// delay, output state, and burst settings) so it is restored at power-up.
+// Driven by CONFig:SAVE (and *RST, which persists defaults). A configuration
+// matching what is already stored is skipped. Returns false if the save
+// fails; the same configuration can then be retried. Outputs keep running
+// during the save; command handling pauses for its few tens of milliseconds.
+bool pulsegen_config_save(void);
