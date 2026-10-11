@@ -95,6 +95,20 @@ void rulos_dfu_enter_bootloader(void) {
   }  // unreachable
 }
 
+void rulos_dfu_app_startup(void) {
+  // On a cold boot both of these are already at their reset values. When the ROM bootloader
+  // hands control back after a DFU :leave, VTOR still points at system memory, and where
+  // DFU_REMAP_SYSMEM aliased system memory at 0x00000000 that alias is still in place. The
+  // G4 SystemInit() template restores neither, so the application's interrupts (SysTick
+  // first) would run bootloader handlers.
+  SCB->VTOR = FLASH_BASE;
+#ifdef DFU_REMAP_SYSMEM
+  RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+  (void)RCC->APB2ENR;
+  SYSCFG->MEMRMP &= ~SYSCFG_MEMRMP_MEM_MODE;
+#endif
+}
+
 void rulos_dfu_check_and_jump(void) {
   if (g_dfu_reboot_magic != DFU_REBOOT_MAGIC) {
     return;

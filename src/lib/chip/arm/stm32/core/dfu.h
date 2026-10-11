@@ -47,4 +47,9 @@ void rulos_dfu_enter_bootloader(void);
 // HAL_Init() and before any other RAM is touched. If the reboot magic
 // is set, clears it and jumps into the system ROM bootloader (does not
 // return). Otherwise returns immediately and boot proceeds normally.
+// Point the vector table and the 0x00000000 alias back at this image. Run first thing at
+// startup: a return from the ROM bootloader (DFU :leave) arrives with both still set up for
+// the bootloader, and the application's first interrupt would otherwise run its handlers.
+void rulos_dfu_app_startup(void);
+
 void rulos_dfu_check_and_jump(void);

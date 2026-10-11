@@ -494,8 +494,11 @@ void _init() {
 
 void rulos_hal_init() {
   // Before anything else (CCM copy, HAL, clocks, caches, peripherals):
-  // if a host DFU_DETACH asked us to update firmware, this jumps into
-  // the ROM bootloader and never returns. No-op on a normal boot.
+  // reclaim the vector table from the ROM bootloader in case this is a
+  // return from DFU, then, if a host DFU_DETACH asked us to update
+  // firmware, jump into that bootloader and never return. Both are no-ops
+  // on a normal boot.
+  rulos_dfu_app_startup();
   rulos_dfu_check_and_jump();
 
   // Copy .ccmram section from flash to CCM SRAM. This must happen before
