@@ -442,14 +442,25 @@ class LectroTIC4:
         # emits.
         self._ser.timeout = 0.01
         deadline = time.monotonic() + 1.0
-        while text_marker not in buf and bin_marker not in buf:
+        quiet_reads = 0
+        while True:
+            chunk = self._ser.read(4096)
+            if chunk:
+                buf += chunk
+                quiet_reads = 0
+            else:
+                quiet_reads += 1
+            # The stream was silenced before the clear, so the device emits nothing after its
+            # marker: the real marker is the one that ends the input. The same byte pattern can
+            # occur inside stale stream data at any alignment; that one is followed by more data
+            # (at least the real marker), so insisting on silence after it rejects the false
+            # match and keeps the next capture aligned to a record boundary.
+            if quiet_reads >= 2 and (buf.endswith(text_marker) or buf.endswith(bin_marker)):
+                return
             if time.monotonic() > deadline:
                 raise RuntimeError(
                     "OUTP:CLE did not produce its marker within 1 s — " "is the device responsive?"
                 )
-            chunk = self._ser.read(4096)
-            if chunk:
-                buf += chunk
 
     def discard_pending(self, settle_s=0.0):
         """Drop everything currently in flight so the next read sees only post-discard records.
