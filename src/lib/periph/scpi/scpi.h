@@ -90,6 +90,10 @@ void scpi_set_error(const char *msg);
 // Reset the latched error to `0,"No error"`.
 void scpi_clear_error(void);
 
+// Report the outcome of a configuration save: success clears the latched
+// error, failure latches -240 so the host can retry the save.
+void scpi_report_save(bool saved);
+
 // True iff the host has opened the USB CDC port (DTR asserted).
 bool scpi_usb_ready(void);
 

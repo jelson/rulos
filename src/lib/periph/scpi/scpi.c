@@ -67,6 +67,14 @@ void scpi_clear_error(void) {
   err_generation++;
 }
 
+void scpi_report_save(bool saved) {
+  if (saved) {
+    scpi_clear_error();
+  } else {
+    scpi_set_error("-240,\"Configuration save failed\"");
+  }
+}
+
 const char *scpi_match_kw(const char *s, const char *full, const char *short_) {
   size_t lf = strlen(full);
   size_t ls = strlen(short_);

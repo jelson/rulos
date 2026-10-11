@@ -31,16 +31,8 @@
 #include "periph/scpi/scpi.h"
 #include "timestamper.h"
 
-static void report_save_result(bool saved) {
-  if (saved) {
-    scpi_clear_error();
-  } else {
-    scpi_set_error("-240,\"Configuration save failed\"");
-  }
-}
-
 static void reset_all(void) {
-  report_save_result(timestamper_reset_all());
+  scpi_report_save(timestamper_reset_all());
 }
 
 static void send_uint(const char *prefix, uint32_t v) {
@@ -218,7 +210,7 @@ static bool dispatch_line(const char *line) {
       p++;
       const char *q = scpi_match_kw(p, "SAVE", "SAVE");
       if (q && *q == 0) {
-        report_save_result(timestamper_config_save());
+        scpi_report_save(timestamper_config_save());
         return true;
       }
     }
