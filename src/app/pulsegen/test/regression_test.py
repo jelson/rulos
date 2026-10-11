@@ -35,6 +35,12 @@ but need hardware, per PCB_NOTES.md bring-up checklist):
      interpolates below the tick. Working placement shows one 4 ns bin per
      sixteen 250 ps steps with crossings positioned by the analog base phase;
      a shifted second sweep must move the crossings accordingly (~4-5 min).
+  8. SAVE CONTINUITY. CONFig:SAVE erases and programs flash while a channel
+     runs; every pulse in the window must still land on its 12 ns grid (the
+     timers run from hardware, so a stalled core does not move an edge).
+  9. PERSISTENCE. A saved configuration, outputs included, survives a cold
+     reset through the Black Magic Probe (needs the probe on THIS pulsegen;
+     skipped otherwise).
 
 Caveats:
   - The two devices share the 10 MHz clock, so sub-2-tick gaps resolve only to
@@ -61,7 +67,9 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "util"))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "timestamper", "util"))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "util"))
 
+import bmpflash
 from pgctl import Pulsegen
 from tsctl import LectroTIC4, Timestamp, PulsesLost, OscillatorFailure
 
@@ -1180,6 +1188,143 @@ def test_subtick(ts, pg, duration_s):
 
 # ---- Driver ---------------------------------------------------------------
 
+PG_UID_BASE = 0x1FFF7590  # STM32G4 unique device ID register
+PG_SERIAL_PREFIX = "PG4-"
+SKIP = None  # a test's return value when its rig prerequisite is absent
+
+
+def bmp_on_this_pulsegen(pg):
+    """(ok, reason): is a Black Magic Probe attached AND wired to the pulsegen this test talks to
+    over USB? The persistence test cold-resets the device THROUGH the probe; if it is absent or
+    on another board, nothing would be reset and the test would pass vacuously."""
+    if not bmpflash.bmp_present():
+        return False, "no Black Magic Probe attached"
+    idn_serial = pg.idn().split(",")[2]
+    try:
+        bmp_serial = bmpflash.read_serial(PG_UID_BASE, PG_SERIAL_PREFIX)
+    except RuntimeError as e:
+        return False, str(e)
+    if bmp_serial != idn_serial:
+        return False, f"BMP target UID is {bmp_serial}, not this pulsegen's {idn_serial}"
+    return True, ""
+
+
+def reconnect_pg(timeout_s=45):
+    """After a BMP reset the PG-4 drops off USB and re-enumerates; autodetect afresh and retry
+    until it answers *IDN?."""
+    time.sleep(3.0)
+    deadline = time.monotonic() + timeout_s
+    last = None
+    while time.monotonic() < deadline:
+        try:
+            pg = Pulsegen(port=None)
+            pg.idn()
+            return pg
+        except (SystemExit, Exception) as e:  # autodetect raises SystemExit while unplugged
+            last = e
+            time.sleep(1.0)
+    raise RuntimeError(f"pulsegen did not come back after reset: {last}")
+
+
+def test_save_continuity(ts, pg, duration_s):
+    """CONF:SAVE must not disturb running outputs. Capture ch0 at 2 kHz with a save landing inside
+    the window and hold every gap to the strict 12 ns tolerance. Two windows cover both flash
+    slots. The setting that makes each save a real write (ch3's period) changes BEFORE its
+    window: reconfiguring any channel, even in ASYNC mode, stretches the others' running period
+    by ~40 us once (a separate, pre-existing behavior), and that must not be blamed on the save."""
+    print("\n=== Save continuity (outputs run through flash erase+program) ===")
+    period_ns = 500_000
+    pg.pulse(0, period_ns * 1e-9, 5e-6)
+    check_pg_error(pg, "after configuring ch0")
+    ok = True
+    for i in range(2):
+        pg.set_period(3, 1e-3 * (i + 1))
+        time.sleep(0.3)
+        saved = []
+
+        def save_mid_window():
+            time.sleep(duration_s / 2)
+            pg.save()
+            saved.append(pg.get_error())
+
+        records = collect_started(ts, duration_s, save_mid_window, channels=[0])
+        times = by_channel(records).get(0, [])
+        if not saved[0].startswith("0,"):
+            print(f"  FAIL: save {i + 1} reported {saved[0]}")
+            ok = False
+        try:
+            mean = strict_interval(times)
+            print(
+                f"  window {i + 1}: {len(times)} ch0 pulses through the save, mean gap {mean:.1f} ns"
+            )
+        except RuntimeError as e:
+            print(f"  FAIL: window {i + 1}: {e}")
+            ok = False
+        if len(times) < 0.9 * duration_s * 1e9 / period_ns:
+            print(f"  FAIL: window {i + 1}: only {len(times)} pulses")
+            ok = False
+    pg.reset()
+    return ok
+
+
+def test_config_persist(ts, pg, duration_s):
+    """A saved configuration (mode, channel settings, which outputs are on) is restored after a
+    cold reset, verified by measuring the restored outputs, not just by querying them."""
+    print("\n=== Persistence across a cold reset ===")
+    ok, why = bmp_on_this_pulsegen(pg)
+    if not ok:
+        print(f"  SKIP: {why}")
+        return SKIP
+    pg.pulse(0, 500e-6, 5e-6)  # 2 kHz
+    pg.pulse(1, 1e-3, 10e-6)  # 1 kHz
+    pg.burst(2, 100e-6, 1e-6, 5, rep_s=0.5)  # 5-pulse bursts twice a second
+    check_pg_error(pg, "after configuring")
+    pg.save()
+    check_pg_error(pg, "after CONF:SAVE")
+    pg.idn()  # barrier: the reply follows the completed save
+    # Release the port before the device drops off USB: a tty held open across the
+    # re-enumeration leaves the new device node unopenable (EIO) until it is re-authorized.
+    pg.close()
+    rc = bmpflash.reset()
+    if rc != 0:
+        print(f"  FAIL: BMP reset exited {rc}")
+        return False
+    pg2 = reconnect_pg()
+    try:
+        ok = True
+        if pg2.get_mode() != "ASYNC" or not pg2.get_burst_state(2) or pg2.get_burst_ncycles(2) != 5:
+            print("  FAIL: queried mode/burst settings not restored")
+            ok = False
+        records = collect(ts, duration_s)
+        per = by_channel(records)
+        for ch, period_ns in ((0, 500_000), (1, 1_000_000)):
+            times = per.get(ch, [])
+            try:
+                mean = strict_interval(times)
+                good = mean is not None and abs(mean - period_ns) <= 12
+            except RuntimeError:
+                good = False
+            print(
+                f"  ch{ch}: {len(times)} pulses, period {mean if times else 'n/a'} ns "
+                f"(want {period_ns}) {'ok' if good else 'FAIL'}"
+            )
+            ok &= good
+        bursts = group_bursts(per.get(2, []), 10_000_000)
+        sizes = sorted({len(b) for b in bursts[1:-1]})
+        good = len(bursts) >= 3 and sizes == [5]
+        print(
+            f"  ch2: {len(bursts)} bursts, interior sizes {sizes} (want [5]) {'ok' if good else 'FAIL'}"
+        )
+        ok &= good
+        if per.get(3):
+            print(f"  FAIL: ch3 was off when saved but emitted {len(per[3])} pulses")
+            ok = False
+        pg2.reset()  # leave flash at defaults
+        return ok
+    finally:
+        pg2.close()
+
+
 TESTS = {
     "independent": test_async_independent,
     "handoff": test_handoff,
@@ -1193,6 +1338,8 @@ TESTS = {
     "rep-startup": test_rep_startup,
     "af": test_per_pin_af,
     "subtick": test_subtick,
+    "save-continuity": test_save_continuity,
+    "persist": test_config_persist,
 }
 
 
@@ -1210,26 +1357,31 @@ def main():
 
     selected = [args.only] if args.only else list(TESTS)
     results = {}
-    with Pulsegen(port=args.pg_port) as pg, LectroTIC4(port=args.ts_port) as ts:
-        print(f"Pulsegen:    {pg.idn()}")
+    # The pulsegen connection is opened per test: the persistence test cold-resets the device,
+    # after which its old port is gone.
+    with LectroTIC4(port=args.ts_port) as ts:
         print(f"Timestamper: {ts.idn()}")
         try:
             for name in selected:
-                # Every test starts from silence and default capture config, so
-                # no test's leftover state (e.g. channels still emitting) can
-                # poison the next one's capture.
-                pg.reset()
-                configure_ts(ts)
-                results[name] = TESTS[name](ts, pg, args.duration)
+                with Pulsegen(port=args.pg_port) as pg:
+                    if not results:
+                        print(f"Pulsegen:    {pg.idn()}")
+                    # Every test starts from silence and default capture config, so
+                    # no test's leftover state (e.g. channels still emitting) can
+                    # poison the next one's capture.
+                    pg.reset()
+                    configure_ts(ts)
+                    results[name] = TESTS[name](ts, pg, args.duration)
         finally:
-            pg.off()
-            pg.reset()
+            with Pulsegen(port=args.pg_port) as pg:
+                pg.off()
+                pg.reset()
             ts.reset()
 
     print("\n=== Summary ===")
     for name, ok in results.items():
-        print(f"  {name:14s} {'PASS' if ok else 'FAIL'}")
-    all_ok = all(results.values())
+        print(f"  {name:16s} {'SKIP' if ok is SKIP else 'PASS' if ok else 'FAIL'}")
+    all_ok = all(ok is not False for ok in results.values())
     print(f"\n{'ALL PASS' if all_ok else 'FAILURES PRESENT'}")
     sys.exit(0 if all_ok else 1)
 

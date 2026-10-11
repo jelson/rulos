@@ -198,8 +198,14 @@ class Pulsegen:
         return self.query("*IDN?")
 
     def reset(self):
-        """*RST: disable all outputs and clear all per-channel config."""
+        """*RST: disable all outputs, clear all per-channel config, and persist those defaults."""
         self.send("*RST")
+
+    def save(self):
+        """CONFig:SAVE: persist the current configuration so it is restored at power-up,
+        including which outputs are on. Outputs keep running during the save; the device is
+        unresponsive to commands for a few tens of milliseconds while it writes."""
+        self.send("CONF:SAVE")
 
     def clear_errors(self):
         self.send("*CLS")
@@ -407,6 +413,13 @@ def cmd_reset(pg, args):
     pg.reset()
 
 
+def cmd_save(pg, args):
+    pg.save()
+    err = pg.get_error()
+    if not err.startswith("0,"):
+        sys.exit(f"save failed: {err}")
+
+
 def cmd_mode(pg, args):
     if args.value is None:
         print(pg.get_mode())
@@ -485,8 +498,11 @@ def main():
     sp = sub.add_parser("idn", help="Read *IDN? identification string")
     sp.set_defaults(func=cmd_idn)
 
-    sp = sub.add_parser("reset", help="Send *RST (ASYNC, all outputs off)")
+    sp = sub.add_parser("reset", help="Send *RST (ASYNC, all outputs off; persisted as defaults)")
     sp.set_defaults(func=cmd_reset)
+
+    sp = sub.add_parser("save", help="Persist the current configuration for the next power-up")
+    sp.set_defaults(func=cmd_save)
 
     sp = sub.add_parser("mode", help="Set or query ASYNC/SYNC mode")
     sp.add_argument(
