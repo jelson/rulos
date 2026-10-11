@@ -5,6 +5,7 @@
 #ifndef FLASH_SECTOR_SIZE
 #define FLASH_SECTOR_SIZE 8192u
 #endif
+#define TEST_SLOT_BYTES            FLASH_SECTOR_SIZE
 #define FLASH_BANK_SIZE            (2u * FLASH_SECTOR_SIZE)
 #define FLASH_BASE                 ((uint32_t)(uintptr_t)_nvconfig_base - FLASH_BANK_SIZE)
 #define FLASH_BANK_1               1u

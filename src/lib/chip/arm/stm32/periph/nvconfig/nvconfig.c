@@ -17,49 +17,132 @@
  */
 
 /*
- * STM32H5 nvconfig backend.
+ * STM32 nvconfig backend.
  *
  * Power-loss safe via A/B ping-pong: the reserved region is >= 2 flash
- * sectors; each save erase+programs the *inactive* sector while the
+ * erase units; each save erase+programs the *inactive* slot while the
  * active one keeps the last good block, and a monotonic sequence
  * number picks the newest valid block at boot. An interrupted
  * erase/program only ever damages the inactive slot.
  *
- * STM32H5 flash is ECC-protected per quad-word: reading a quad-word
- * that is unwritten, or whose program/sector-erase was interrupted,
- * raises an uncorrectable (double) ECC error that escalates to NMI --
- * so merely scanning the slots at boot could fault before USB is up.
- * Handling follows ST's own OEMiROT secure-boot reference
- * (STM32CubeH5 .../NUCLEO-H533RE/.../low_level_flash.c, same chip
- * family): there is no HAL/LL API for an ECC-tolerant read, so this
- * module claims the ECC NMI via the rulos_nmi_claimed hook (core/hse.c
- * owns NMI_Handler) -- clearing the ECCD flag and bumping a counter (the
- * faulting read completes, so the NMI returns and execution resumes);
- * the read path zeroes the counter, copies, and rejects the slot if it
- * fired. Returning false for any non-ECC NMI leaves it to the handler's
+ * Flash is ECC-protected per program unit: reading a word whose
+ * program/erase was interrupted (and, on H5, one that was never
+ * written) raises an uncorrectable (double) ECC error that escalates
+ * to NMI -- so merely scanning the slots at boot could fault before USB
+ * is up. Handling follows ST's own OEMiROT secure-boot reference
+ * (STM32CubeH5 .../NUCLEO-H533RE/.../low_level_flash.c): there is no
+ * HAL/LL API for an ECC-tolerant read, so this module claims the ECC
+ * NMI via the rulos_nmi_claimed hook (core/hse.c owns NMI_Handler) --
+ * clearing the ECCD flag and bumping a counter (the faulting read
+ * completes, so the NMI returns and execution resumes); the read path
+ * zeroes the counter, copies, and rejects the slot if it fired.
+ * Returning false for any non-ECC NMI leaves it to the handler's
  * CSS/HSE failure path.
  *
- * Flash program/erase primitives are family-specific (G4 doubleword,
- * F1 halfword, ...), so like the rulos_dma split this file is H5-only;
- * add a sibling backend when another family needs nvconfig.
+ * The slot framing, boot scan, and ping-pong sequencing are
+ * family-independent. Each family supplies the flash port below: the
+ * slot size (one erase unit), the program unit, and erase, program,
+ * and cache-flush primitives.
  */
 
 #include "periph/nvconfig/nvconfig.h"
-
-#if !defined(RULOS_ARM_stm32h5)
-#error "nvconfig currently has only an STM32H5 flash backend"
-#endif
 
 #include <string.h>
 
 #include "core/crc32.h"
 #include "core/hse.h"
-#include "stm32h5xx_hal.h"
 
 // Top-of-flash region the linker reserved (flash_reserve_k); ping-pong
-// slots are sector-sized and sector-aligned within it.
+// slots are erase-unit-sized and -aligned within it.
 extern uint8_t _nvconfig_base[];
 extern uint8_t _nvconfig_size[];
+
+// ---- Flash port ------------------------------------------------------
+
+#if defined(RULOS_ARM_stm32h5)
+#include "stm32h5xx_hal.h"
+
+#define NV_SLOT_BYTES    FLASH_SECTOR_SIZE
+#define NV_PROGRAM_BYTES 16u
+
+// STM32H523/H533 flash is DUAL-BANK (per ST: 256 KB or 512 KB dual
+// bank). HAL_FLASHEx_Erase wants the bank plus the sector index
+// *within that bank*, not a flash-global index -- erase ignores the
+// address, so a wrong bank/sector silently no-ops (HAL still returns
+// OK) while program, which uses the absolute address, appears to
+// work. FLASH_BANK_SIZE is the per-bank span (FLASH_SIZE >> 1).
+static bool nv_port_erase(const uint8_t *slot) {
+  uint32_t off = (uint32_t)(uintptr_t)slot - FLASH_BASE;
+  FLASH_EraseInitTypeDef erase = {
+      .TypeErase = FLASH_TYPEERASE_SECTORS,
+      .Banks = (off < FLASH_BANK_SIZE) ? FLASH_BANK_1 : FLASH_BANK_2,
+      .Sector = (off % FLASH_BANK_SIZE) / FLASH_SECTOR_SIZE,
+      .NbSectors = 1,
+  };
+  uint32_t error;
+  return HAL_FLASHEx_Erase(&erase, &error) == HAL_OK;
+}
+
+static bool nv_port_program(uint32_t dst, const uint8_t *src) {
+  return HAL_FLASH_Program(FLASH_TYPEPROGRAM_QUADWORD, dst, (uint32_t)(uintptr_t)src) == HAL_OK;
+}
+
+// Drop ICACHE lines for the rewritten sector so a later read sees the
+// new block, not a stale line.
+static void nv_port_flush_caches(void) {
+  HAL_ICACHE_Invalidate();
+}
+
+#elif defined(RULOS_ARM_stm32g4)
+#include "stm32g4xx_hal.h"
+
+// G4 pages are 2 KB with the DBANK option set (the default: two banks,
+// read-while-write) and 4 KB without it. A 4 KB slot is a whole number
+// of pages either way, so the layout does not depend on the option
+// byte; only the erase request does. In dual-bank mode bank 2 starts at
+// 0x08040000 on every density (RM0440 Table 7), so a 128/256 KB part has
+// a gap after bank 1: a page is addressed by its own bank's base, not by
+// a flash-global offset.
+#define NV_SLOT_BYTES    4096u
+#define NV_PROGRAM_BYTES 8u
+#define NV_G4_BANK2_BASE (FLASH_BASE + 0x40000u)
+
+static bool nv_port_erase(const uint8_t *slot) {
+  uint32_t addr = (uint32_t)(uintptr_t)slot;
+  FLASH_EraseInitTypeDef erase = {.TypeErase = FLASH_TYPEERASE_PAGES};
+  if (READ_BIT(FLASH->OPTR, FLASH_OPTR_DBANK) != 0u) {
+    bool bank2 = addr >= NV_G4_BANK2_BASE;
+    erase.Banks = bank2 ? FLASH_BANK_2 : FLASH_BANK_1;
+    erase.Page = (addr - (bank2 ? NV_G4_BANK2_BASE : FLASH_BASE)) / FLASH_PAGE_SIZE;
+    erase.NbPages = NV_SLOT_BYTES / FLASH_PAGE_SIZE;
+  } else {
+    uint32_t off = addr - FLASH_BASE;
+    erase.Banks = FLASH_BANK_1;
+    erase.Page = off / FLASH_PAGE_SIZE_128_BITS;
+    erase.NbPages = 1;
+  }
+  uint32_t error;
+  return HAL_FLASHEx_Erase(&erase, &error) == HAL_OK;
+}
+
+// The G4 HAL takes the double-word by value.
+static bool nv_port_program(uint32_t dst, const uint8_t *src) {
+  uint64_t word;
+  memcpy(&word, src, sizeof(word));
+  return HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, dst, word) == HAL_OK;
+}
+
+// The flash ART caches are reset by the HAL's own erase path; this
+// covers the program step too.
+static void nv_port_flush_caches(void) {
+  FLASH_FlushCaches();
+}
+
+#else
+#error "nvconfig has flash ports for STM32H5 and STM32G4 only"
+#endif
+
+// ---- Family-independent core -------------------------------------------
 
 // Bumped by rulos_nmi_claimed on each flash double-ECC detection. The
 // read path zeroes it, reads, then checks it (ST OEMiROT pattern).
@@ -88,14 +171,13 @@ typedef struct {
   uint16_t length;  // payload byte count; rejects a stale layout
 } nvconfig_hdr_t;
 
-// Framed block = header + payload + CRC32, padded up to the 16 B flash
-// program unit. CRC covers header + payload.
+// Framed block = header + payload + CRC32, padded to 16 B (a whole number
+// of program units on every port). CRC covers header + payload.
 #define NV_RAW(payload) (sizeof(nvconfig_hdr_t) + (payload) + sizeof(uint32_t))
 #define NV_IMG(payload) ((NV_RAW(payload) + 15u) & ~15u)
 #define NV_BUF_LEN      NV_IMG(NVCONFIG_MAX_PAYLOAD)
 
-#define NV_SLOT_BYTES FLASH_SECTOR_SIZE  // one erasable sector per slot
-#define NV_NSLOTS     2
+#define NV_NSLOTS 2
 
 static uint8_t *slot_addr(unsigned slot) {
   return _nvconfig_base + (size_t)slot * NV_SLOT_BYTES;
@@ -111,7 +193,7 @@ static bool slot_read(unsigned slot, void *buf, size_t len, uint16_t version, ui
 
   double_ecc_count = 0;
   __DSB();
-  memcpy(buf, slot_addr(slot), raw);  // torn/blank quad-word -> NMI
+  memcpy(buf, slot_addr(slot), raw);  // torn word -> NMI
   __DSB();
   __ISB();
 
@@ -149,9 +231,9 @@ static size_t nv_region(void) {
 static void nv_scan_once(void *out, size_t len, uint16_t version) {
   static uint8_t buf[NV_BUF_LEN];
 
-  // ICACHE caches flash; force the validating reads to hit the array
-  // so a torn quad-word actually triggers ECC detection.
-  HAL_ICACHE_Invalidate();
+  // Caches hold flash contents; force the validating reads to hit the
+  // array so a torn word actually triggers ECC detection.
+  nv_port_flush_caches();
 
   nv_active = -1;
   for (unsigned s = 0; s < NV_NSLOTS; s++) {
@@ -209,34 +291,15 @@ bool nvconfig_save(const void *data, size_t len, uint16_t version) {
   uint32_t crc = crc32(img, sizeof(hdr) + len);
   memcpy(img + sizeof(hdr) + len, &crc, sizeof(crc));
 
-  // STM32H523/H533 flash is DUAL-BANK (per ST: 256 KB or 512 KB dual
-  // bank). HAL_FLASHEx_Erase wants the bank plus the sector index
-  // *within that bank*, not a flash-global index -- erase ignores the
-  // address, so a wrong bank/sector silently no-ops (HAL still returns
-  // OK) while program, which uses the absolute address, appears to
-  // work. FLASH_BANK_SIZE is the per-bank span (FLASH_SIZE >> 1).
-  uint32_t off = (uint32_t)(uintptr_t)slot_addr(target) - FLASH_BASE;
-  uint32_t bank = (off < FLASH_BANK_SIZE) ? FLASH_BANK_1 : FLASH_BANK_2;
-  uint32_t sector = (off % FLASH_BANK_SIZE) / FLASH_SECTOR_SIZE;
-
   if (HAL_FLASH_Unlock() != HAL_OK) {
     return false;
   }
-  FLASH_EraseInitTypeDef erase = {
-      .TypeErase = FLASH_TYPEERASE_SECTORS,
-      .Banks = bank,
-      .Sector = sector,
-      .NbSectors = 1,
-  };
   bool ok = false;
-  uint32_t sector_error;
-  if (HAL_FLASHEx_Erase(&erase, &sector_error) == HAL_OK) {
+  if (nv_port_erase(slot_addr(target))) {
     ok = true;
     uint32_t img_len = (uint32_t)NV_IMG(len);
-    for (uint32_t i = 0; i < img_len; i += 16) {
-      uint32_t dst = (uint32_t)(uintptr_t)slot_addr(target) + i;
-      if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_QUADWORD, dst, (uint32_t)(uintptr_t)&img[i]) !=
-          HAL_OK) {
+    for (uint32_t i = 0; i < img_len; i += NV_PROGRAM_BYTES) {
+      if (!nv_port_program((uint32_t)(uintptr_t)slot_addr(target) + i, &img[i])) {
         ok = false;
         break;
       }
@@ -254,8 +317,6 @@ bool nvconfig_save(const void *data, size_t len, uint16_t version) {
     nv_active_seq = new_seq;
   }
 
-  // Drop ICACHE lines for the rewritten sector so a later read sees
-  // the new block, not a stale line.
-  HAL_ICACHE_Invalidate();
+  nv_port_flush_caches();
   return ok;
 }

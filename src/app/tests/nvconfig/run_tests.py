@@ -13,11 +13,16 @@ SCPI_TEST = HERE.parent / "scpi"
 USB = ROOT / "ext/stm32/STM32CubeG4/Middlewares/ST/STM32_USB_Device_Library"
 
 with tempfile.TemporaryDirectory(prefix="rulos-nvconfig-") as build:
+    H5 = "-DRULOS_ARM_stm32h5"
+    G4 = "-DRULOS_ARM_stm32g4"
     cases = [
-        ("backend", "backend_test.c", [], 16384, []),
-        ("no_reserve", "backend_test.c", [], 0, []),
-        ("small_reserve", "backend_test.c", [], 8192, []),
-        ("small_sector", "backend_test.c", [], 16384, ["-DFLASH_SECTOR_SIZE=16"]),
+        ("backend", "backend_test.c", [], 16384, [H5]),
+        ("no_reserve", "backend_test.c", [], 0, [H5]),
+        ("small_reserve", "backend_test.c", [], 8192, [H5]),
+        ("small_sector", "backend_test.c", [], 16384, [H5, "-DFLASH_SECTOR_SIZE=16"]),
+        ("backend_g4", "backend_test.c", [], 8192, [G4]),
+        ("backend_g4_single_bank", "backend_test.c", [], 8192, [G4, "-DTEST_G4_SINGLE_BANK"]),
+        ("backend_g4_bank1", "backend_test.c", [], 8192, [G4, "-DTEST_G4_BANK1"]),
         (
             "config",
             "config_test.c",
@@ -31,7 +36,7 @@ with tempfile.TemporaryDirectory(prefix="rulos-nvconfig-") as build:
                 LIB / "chip/arm/stm32/periph/usb_cdc/usb_cdc.c",
             ],
             16384,
-            ["-DGIT_COMMIT=test", "-Wno-unused-parameter"],
+            [H5, "-DGIT_COMMIT=test", "-Wno-unused-parameter"],
         ),
     ]
     for name, test, sources, reserve, flags in cases:
@@ -46,7 +51,6 @@ with tempfile.TemporaryDirectory(prefix="rulos-nvconfig-") as build:
                 "-Werror",
                 "-fno-pie",
                 "-no-pie",
-                "-DRULOS_ARM_stm32h5",
                 "-ffunction-sections",
                 "-fdata-sections",
                 "-Wl,--gc-sections",

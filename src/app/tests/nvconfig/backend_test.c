@@ -25,7 +25,7 @@ static void test_flash_failures(void) {
     reset_flash();
     // Save-before-load must still discover the active slot correctly.
     assert(nvconfig_save(old_data, sizeof(old_data), 1));
-    uint8_t old_slot[FLASH_SECTOR_SIZE];
+    uint8_t old_slot[NV_SLOT_BYTES];
     memcpy(old_slot, _nvconfig_base, sizeof(old_slot));
     unsigned before_program = program_calls;
     switch (failure) {
@@ -39,7 +39,7 @@ static void test_flash_failures(void) {
         fail_program_call = program_calls + 1;
         break;
       case 3:
-        fail_program_call = program_calls + NV_IMG(sizeof(new_data)) / 16;
+        fail_program_call = program_calls + NV_IMG(sizeof(new_data)) / NV_PROGRAM_BYTES;
         break;
       case 4:
         fail_lock = true;
@@ -82,7 +82,7 @@ static void test_load_validation(void) {
 
 int main(void) {
   test_invalid_requests();
-  if (nv_region() < sizeof(_nvconfig_base) || NV_IMG(sizeof(old_data)) > FLASH_SECTOR_SIZE) {
+  if (nv_region() < sizeof(_nvconfig_base) || NV_IMG(sizeof(old_data)) > NV_SLOT_BYTES) {
     uint8_t out[sizeof(old_data)] = {0};
     assert(!nvconfig_load(out, sizeof(out), 1));
     assert(!nvconfig_save(old_data, sizeof(old_data), 1));
