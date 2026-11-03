@@ -18,6 +18,7 @@
 
 #include "periph/ntp/regression.h"
 
+#include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,7 +51,7 @@ bool update_epoch_estimate(const time_observation_t *obs, char *logbuf, int *log
     }
 
     rtts[num_obs] = obs[i].rtt_usec;
-    logappend("%u,", rtts[num_obs]);
+    logappend("%" PRIu32 ",", rtts[num_obs]);
     num_obs++;
 
     if (obs[i].epoch_time_usec < min_epoch) {
@@ -68,14 +69,14 @@ bool update_epoch_estimate(const time_observation_t *obs, char *logbuf, int *log
   std::sort(rtts, rtts + num_obs);
   logappend("rtts_sorted:");
   for (int i = 0; i < num_obs; i++) {
-    logappend("%u,", rtts[i]);
+    logappend("%" PRIu32 ",", rtts[i]);
   }
 
   // Select the max rtt we're willing to accept; throw away the top
   // quartile
   int rtt_limit_idx = (num_obs * 3 / 4) - 1;
   uint32_t rtt_limit = rtts[rtt_limit_idx];
-  logappend("rtt_limit_idx=%d,rtt_limit=%u,", rtt_limit_idx, rtt_limit);
+  logappend("rtt_limit_idx=%d,rtt_limit=%" PRIu32 ",", rtt_limit_idx, rtt_limit);
 
 #if SIMULATOR
   printf("[\n");

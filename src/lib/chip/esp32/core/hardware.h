@@ -25,17 +25,23 @@
 #include "core/hal.h"
 #include "driver/gpio.h"
 #include "hal/gpio_ll.h"
-#include "soc/gpio_periph.h"
 #include "soc/gpio_struct.h"
 #include "soc/io_mux_reg.h"
+#include "soc/soc_caps.h"
 
 #define _NOP()                   \
   do {                           \
     __asm__ __volatile__("nop"); \
   } while (0)
 
-uint32_t getApbFrequency();
 static const int RULOS_ESP32_CORE_ID = 1;
+
+// RULOS uart ids 0, 1 and 2 are the hardware UARTs on their default pins.
+// On chips with a USB Serial/JTAG peripheral, this id is the virtual serial
+// port it presents to the USB host.
+#if SOC_USB_SERIAL_JTAG_SUPPORTED
+#define UART_ID_USB_SERIAL_JTAG SOC_UART_HP_NUM
+#endif
 
 //////////////// GPIO /////////////////////////////////
 
@@ -43,8 +49,8 @@ typedef uint32_t gpio_pin_t;
 
 /* configure a pin as output */
 static inline void gpio_make_output(const gpio_pin_t pin) {
-  if (pin > 33) {
-    // do nothing -- pins above 33 can only be inputs
+  if (!GPIO_IS_VALID_OUTPUT_GPIO(pin)) {
+    // input-only pin (34-39 on the original ESP32)
     return;
   }
 
@@ -52,7 +58,7 @@ static inline void gpio_make_output(const gpio_pin_t pin) {
   // this, pins that boot with a peripheral function (e.g. pins 12-15
   // are JTAG at reset) ignore the output enable bit because the mux
   // is still routing the pin to the peripheral, not the GPIO matrix.
-  PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[pin], PIN_FUNC_GPIO);
+  gpio_ll_func_sel(&GPIO, pin, PIN_FUNC_GPIO);
 
   if (pin < 32) {
     GPIO.enable_w1ts = ((uint32_t)1 << pin);
@@ -67,7 +73,7 @@ static inline void gpio_make_output(const gpio_pin_t pin) {
 static inline void gpio_set(const gpio_pin_t pin) {
   if (pin < 32) {
     GPIO.out_w1ts = ((uint32_t)1 << pin);
-  } else if (pin < 34) {
+  } else if (GPIO_IS_VALID_OUTPUT_GPIO(pin)) {
     GPIO.out1_w1ts.val = ((uint32_t)1 << (pin - 32));
   }
 }
@@ -78,7 +84,7 @@ static inline void gpio_set(const gpio_pin_t pin) {
 static inline void gpio_clr(const gpio_pin_t pin) {
   if (pin < 32) {
     GPIO.out_w1tc = ((uint32_t)1 << pin);
-  } else if (pin < 34) {
+  } else if (GPIO_IS_VALID_OUTPUT_GPIO(pin)) {
     GPIO.out1_w1tc.val = ((uint32_t)1 << (pin - 32));
   }
 }

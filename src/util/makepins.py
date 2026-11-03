@@ -51,7 +51,7 @@ def stm32():
 
 
 def esp32():
-    for i in range(32):
+    for i in range(49):
         print(f"#define GPIO_{i} {i}")
 
 

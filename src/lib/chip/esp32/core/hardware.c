@@ -31,15 +31,12 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "nvs_flash.h"
-#include "soc/rtc.h"
-#include "xtensa/xtruntime.h"
 
 // RULOS includes
 #include "core/hal.h"
 #include "core/hardware_types.h"
 
 const int RULOS_STACK_SIZE = 16 * 1024;
-const int __attribute__((used)) DRAM_ATTR uxTopUsedPriority = configMAX_PRIORITIES - 1;
 
 // when we run RULOS on core 0, we get watchdog timer timeouts unless
 // we put vTaskDelay() in hal_idle() -- I guess there are other
@@ -78,43 +75,27 @@ void app_main(void) {
 }
 }
 
-static uint32_t calculateApb(rtc_cpu_freq_config_t *conf) {
-  if (conf->freq_mhz >= 80) {
-    return 80000000;
-  }
-  return (conf->source_freq_mhz * 1000000) / conf->div;
-}
-
-uint32_t getApbFrequency() {
-  rtc_cpu_freq_config_t conf;
-  rtc_clk_cpu_freq_get_config(&conf);
-  return calculateApb(&conf);
-}
-
 // For information on how Espressif has modified FreeRTOS to work on SMP, see:
 //
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/freertos-smp.html
 //
 // In particular the section called "Critical Sections" has important
 // information on how to enter and exit critical sections in the presence of
-// SMP. In particular, merely disabling interrupts does not protect critical
-// sections because the other CPU might take an interrupt. taskENTER_CRITIAL()
-// both disables interrupts (on same-cpu) and then takes a spinlock (to protect
-// against interrupts on other-cpu).
-//
-// The old, incorrect code that was here that merely disabled interrupts was:
-// XTOS_SET_INTLEVEL(XCHAL_EXCM_LEVEL);
-// XTOS_RESTORE_JUST_INTLEVEL(old_interrupts);
+// SMP. Merely disabling interrupts does not protect critical sections because
+// the other CPU might take an interrupt. portENTER_CRITICAL() both disables
+// interrupts (on same-cpu) and then takes a spinlock (to protect against
+// interrupts on other-cpu). The _SAFE variants pick the task or ISR form
+// based on the calling context; the timer ISR takes this lock too.
 
 static portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
 rulos_irq_state_t hal_start_atomic() {
-  taskENTER_CRITICAL(&mux);
+  portENTER_CRITICAL_SAFE(&mux);
   return 0;
 }
 
 void hal_end_atomic(rulos_irq_state_t old_interrupts) {
-  taskEXIT_CRITICAL(&mux);
+  portEXIT_CRITICAL_SAFE(&mux);
 }
 
 bool hal_is_in_isr(void) {
@@ -130,9 +111,9 @@ void hal_idle_atomic() {
   // vTaskDelay cannot run inside a FreeRTOS critical section, so release it
   // around the yield. A wakeup that arrives during the yield is picked up by
   // the caller's re-check after at most one FreeRTOS tick.
-  taskEXIT_CRITICAL(&mux);
+  portEXIT_CRITICAL_SAFE(&mux);
   vTaskDelay(1);
-  taskENTER_CRITICAL(&mux);
+  portENTER_CRITICAL_SAFE(&mux);
 }
 
 void hal_delay_ms(uint16_t ms) {

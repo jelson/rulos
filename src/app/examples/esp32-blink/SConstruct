@@ -27,5 +27,5 @@ RulosBuildTarget(
     extra_cflags = [
         "-DLOG_TO_SERIAL",
     ],
-    platforms = [Esp32Platform()],
+    platforms = [Esp32Platform(), Esp32Platform(chip="esp32s3")],
 ).build()

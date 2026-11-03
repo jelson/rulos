@@ -18,6 +18,7 @@
 
 #include "periph/ntp/ntp.h"
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -189,7 +190,7 @@ void NtpClient::_try_receive() {
   }
 
   // packet successfully received!
-  LOG("[NTP] got response after %u usec", rtt_usec);
+  LOG("[NTP] got response after %" PRIu32 " usec", rtt_usec);
 
   // time at which the ntp server transmitted its response
   uint64_t server_ntp_usec = (((uint64_t)1000000) * ntohl(resp.txTime_frac)) >> 32;
@@ -232,7 +233,8 @@ void NtpClient::_try_receive() {
   logcapacity -= snprintf(logbuf, sizeof(logbuf),
                           "[NTP] stats: "
                           "sent=%llu,local_rx_time=%llu,server_delay=%llu,server_epoch_usec=%llu,"
-                          "raw_rtt_usec=%u,oneway_latency_usec=%u,epoch_time_when_received=%llu,"
+                          "raw_rtt_usec=%" PRIu32 ",oneway_latency_usec=%" PRIu32
+                          ",epoch_time_when_received=%llu,"
                           "this_offset_usec=%lld,",
                           _req_time_usec, _resp_time_usec, server_delay_usec, server_epoch_usec,
                           rtt_usec, oneway_latency_usec, epoch_time_when_received, offset_usec);

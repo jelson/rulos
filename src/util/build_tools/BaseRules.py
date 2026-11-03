@@ -27,6 +27,7 @@ class Platform:
         self.extra_cflags = extra_cflags
         self.env_to_ifdefs = []
         self.use_cpp = False
+        self.use_lto = True
 
     def configure_compiler(self, env, compiler_prefix):
         ccache = which("ccache")
@@ -113,9 +114,10 @@ class Platform:
             "-Wall",
             "-Werror",
             "-g",
-            "-flto=auto",
             f"-DGIT_COMMIT={commit_hash()}",
         ]
+        if self.use_lto:
+            retval.append("-flto=auto")
         retval.append("-std=gnu++11" if self.use_cpp else "-std=gnu99")
         for e in self.env_to_ifdefs:
             if e in os.environ:
@@ -146,7 +148,31 @@ class Platform:
             "-Wl,--gc-sections",  # garbage-collect unused functions
         ]
 
-    def build(self, target):
+    # Where a target's build products for this platform go, e.g.
+    # build/datalogger/stm32
+    def build_obj_dir(self, target):
+        return os.path.join(BUILD_ROOT, target.name, self.name())
+
+    # The binary's base name: the target name, tagged with the git commit
+    # hash when TAG_BUILD is set in the environment.
+    def program_name(self, target):
+        if "TAG_BUILD" not in os.environ:
+            return target.name
+        if repo_is_dirty():
+            raise Exception("Can't tag builds from dirty repos. Clean up!")
+        return f"{target.name}-{commit_hash()}"
+
+    # Every compiler flag for a target on this platform: the platform's,
+    # then the app's, then command-line --define KEY=VAL (repeatable) as
+    # -DKEY=VAL. The command line comes last so it overrides any
+    # SConstruct/extra_cflags default. Same quoting rules as an
+    # extra_cflags entry, e.g.
+    #   scons --define 'FOO=\"bar\"'
+    def all_cflags(self, target):
+        cli_defines = ["-D" + d for d in GetOption("rulos_defines") or []]
+        return self.cflags() + target.cflags() + cli_defines
+
+    def make_env(self):
         scons_tools = os.path.join(os.path.dirname(__file__), "scons_tools")
         env = Environment(
             ENV={"PATH": os.environ["PATH"]},
@@ -154,23 +180,20 @@ class Platform:
             toolpath=[scons_tools],
             SPINNER_DISABLE=GetOption("verbose"),
         )
+        env["SPINNER_PREFIX"] = self.name()
+        return env
+
+    def build(self, target):
+        env = self.make_env()
         env.Decider("MD5-timestamp")
 
         # We're pretending the sources appear in build_obj_dir, so they look
         # adjacent to the build output.
-        build_obj_dir = os.path.join(BUILD_ROOT, target.name, self.name())
+        build_obj_dir = self.build_obj_dir(target)
         env.VariantDir(build_obj_dir, PROJECT_ROOT, duplicate=0)
 
-        # If TAG_BUILD is set, also tag the binary name with the git commit hash
-        if "TAG_BUILD" in os.environ:
-            if repo_is_dirty():
-                raise Exception("Can't tag builds from dirty repos. Clean up!")
-            commit = "-" + commit_hash()
-        else:
-            commit = ""
-
         # e.g., /build/datalogger/stm32/datalogger
-        program_path_stem = os.path.join(build_obj_dir, target.name + commit)
+        program_path_stem = os.path.join(build_obj_dir, self.program_name(target))
 
         # e.g., /build/datalogger/stm32/datalogger.elf
         program_path = program_path_stem + self.target_suffix()
@@ -182,23 +205,13 @@ class Platform:
         env.Replace(RulosProgramPath=program_path)
         env.Replace(RulosProjectRoot=PROJECT_ROOT)
 
-        env["SPINNER_PREFIX"] = self.name()
         self.configure_env(env)
 
         platform_lib_srcs = [os.path.join(build_obj_dir, s) for s in self.common_libs(target)]
-        env.Append(CCFLAGS=self.cflags())
-        env.Append(CCFLAGS=target.cflags())
-        env.Append(LINKFLAGS=self.cflags())
-        env.Append(LINKFLAGS=target.cflags())
-
-        # Command-line --define KEY=VAL (repeatable) -> -DKEY=VAL,
-        # appended last so it overrides any SConstruct/extra_cflags
-        # default. Same quoting rules as an extra_cflags entry, e.g.
-        #   scons --define 'FOO=\"bar\"'
-        # Goes on LINKFLAGS too (LTO needs matching compile/link flags).
-        cli_defines = ["-D" + d for d in GetOption("rulos_defines") or []]
-        env.Append(CCFLAGS=cli_defines)
-        env.Append(LINKFLAGS=cli_defines)
+        # The compiler flags go on LINKFLAGS too (LTO needs matching
+        # compile/link flags).
+        env.Append(CCFLAGS=self.all_cflags(target))
+        env.Append(LINKFLAGS=self.all_cflags(target))
         env.Append(LINKFLAGS=self.ld_flags(target))
         env.Append(CPPPATH=self.include_dirs(target))
         env.Append(CPPPATH=os.path.join(build_obj_dir, "src"))

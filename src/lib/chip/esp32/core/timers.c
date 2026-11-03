@@ -16,68 +16,78 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
 
 #include "core/hal.h"
 #include "core/hardware.h"
 #include "core/rulos.h"
-#include "driver/timer.h"
+#include "driver/gptimer.h"
+#include "esp_attr.h"
+#include "esp_private/gptimer.h"
 #include "hal/timer_ll.h"
-#include "soc/soc.h"
+#include "soc/soc_caps.h"
+
+// One count per microsecond, so the alarm period and the elapsed-time
+// readback are both in the scheduler's units with no conversion.
+#define TIMER_RESOLUTION_HZ 1000000
 
 typedef struct {
   // rulos data
   clock_handler_t cb;
   void *cb_data;
-  uint64_t alarm_value;
   uint32_t us_per_period;
 
-  // pointers to underlying hardware registers
-  timer_group_t group;
-  timer_idx_t index;
-  uint32_t intr_source;
+  gptimer_handle_t timer;
+
+  // Where the timer lives in the timer-group peripheral, for reading the
+  // alarm interrupt status directly.
+  timg_dev_t *hw;
+  int index;
 } esp32_timer_t;
 
-#define NUM_TIMERS 4
+#define NUM_TIMERS (SOC_TIMER_GROUPS * SOC_TIMER_GROUP_TIMERS_PER_GROUP)
 
-static esp32_timer_t esp32_timer[NUM_TIMERS] = {
-    {
-        .group = TIMER_GROUP_0,
-        .index = TIMER_0,
-        .intr_source = ETS_TG0_T0_EDGE_INTR_SOURCE,
-    },
-    {
-        .group = TIMER_GROUP_0,
-        .index = TIMER_1,
-        .intr_source = ETS_TG0_T1_EDGE_INTR_SOURCE,
-    },
-    {
-        .group = TIMER_GROUP_1,
-        .index = TIMER_0,
-        .intr_source = ETS_TG1_T0_EDGE_INTR_SOURCE,
-    },
-    {
-        .group = TIMER_GROUP_1,
-        .index = TIMER_1,
-        .intr_source = ETS_TG1_T1_EDGE_INTR_SOURCE,
-    },
-};
+static esp32_timer_t esp32_timer[NUM_TIMERS];
 
 static esp32_timer_t *get_timer(uint8_t timer_id) {
   assert(timer_id >= 0 && timer_id < NUM_TIMERS);
   return &esp32_timer[timer_id];
 }
 
-static void IRAM_ATTR timer_isr(void *arg) {
+static bool IRAM_ATTR timer_isr(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata,
+                                void *arg) {
   esp32_timer_t *const eu = (esp32_timer_t *)arg;
   hal_start_atomic();
-  timer_ll_clear_intr_status(TIMER_LL_GET_HW(eu->group), eu->index);
-  timer_group_enable_alarm_in_isr(eu->group, eu->index);
   if (eu->cb) {
     eu->cb(eu->cb_data);
   }
   hal_end_atomic(0);
+  // no higher-priority FreeRTOS task was woken
+  return false;
+}
+
+// The gptimer driver hands out an opaque handle, but checking whether an
+// alarm interrupt is pending needs the timer's slot in the timer-group
+// register block. The group is available from the driver; the slot within
+// it is found by parking a sentinel in the counter and seeing which slot
+// reports it.
+static void locate_in_timer_group(esp32_timer_t *eu) {
+  int group;
+  ESP_ERROR_CHECK(gptimer_get_group_id(eu->timer, &group));
+  eu->hw = TIMER_LL_GET_HW(group);
+
+  const uint64_t sentinel = 0x5A5A5A5A5A5Aull;
+  ESP_ERROR_CHECK(gptimer_set_raw_count(eu->timer, sentinel));
+  for (eu->index = 0; eu->index < SOC_TIMER_GROUP_TIMERS_PER_GROUP; eu->index++) {
+    timer_ll_trigger_soft_capture(eu->hw, eu->index);
+    if (timer_ll_get_counter_value(eu->hw, eu->index) == sentinel) {
+      break;
+    }
+  }
+  assert(eu->index < SOC_TIMER_GROUP_TIMERS_PER_GROUP);
+  ESP_ERROR_CHECK(gptimer_set_raw_count(eu->timer, 0));
 }
 
 uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data, uint8_t timer_id) {
@@ -86,54 +96,44 @@ uint32_t hal_start_clock_us(uint32_t us, clock_handler_t handler, void *data, ui
   // store RULOS-specific data
   eu->cb = handler;
   eu->cb_data = data;
+  eu->us_per_period = us;
 
-  // set up timer config
-  timer_config_t config = {
-      .alarm_en = TIMER_ALARM_EN,
-      .counter_en = TIMER_PAUSE,
-      .counter_dir = TIMER_COUNT_UP,
-      .auto_reload = TIMER_AUTORELOAD_EN,
-      .divider = 2,  // minimum allowed divider
-  };
-  timer_init(eu->group, eu->index, &config);
+  gptimer_config_t config = {};
+  config.clk_src = GPTIMER_CLK_SRC_DEFAULT;
+  config.direction = GPTIMER_COUNT_UP;
+  config.resolution_hz = TIMER_RESOLUTION_HZ;
+  ESP_ERROR_CHECK(gptimer_new_timer(&config, &eu->timer));
+  locate_in_timer_group(eu);
 
-  // initialize timer to 0
-  timer_set_counter_value(eu->group, eu->index, 0);
+  // fire every period and start over from zero
+  gptimer_alarm_config_t alarm = {};
+  alarm.alarm_count = us;
+  alarm.reload_count = 0;
+  alarm.flags.auto_reload_on_alarm = true;
+  ESP_ERROR_CHECK(gptimer_set_alarm_action(eu->timer, &alarm));
 
-  // compute the period in counter ticks, set and enable the alarm
-  eu->alarm_value = (uint64_t)getApbFrequency() * (uint64_t)us;
-  eu->alarm_value /= 1000000;
-  eu->alarm_value /= config.divider;
-  timer_set_alarm_value(eu->group, eu->index, eu->alarm_value);
+  gptimer_event_callbacks_t callbacks = {};
+  callbacks.on_alarm = timer_isr;
+  ESP_ERROR_CHECK(gptimer_register_event_callbacks(eu->timer, &callbacks, eu));
 
-  // attach and enable interrupts
-  timer_enable_intr(eu->group, eu->index);
-  timer_isr_register(eu->group, eu->index, timer_isr, eu, 0, NULL);
+  ESP_ERROR_CHECK(gptimer_enable(eu->timer));
+  ESP_ERROR_CHECK(gptimer_start(eu->timer));
 
-  // enable the timer
-  timer_start(eu->group, eu->index);
+  LOG("starting timer %" PRIu8 " with a period of %" PRIu32 " us", timer_id, us);
 
-  LOG("starting timer %d with a reload value of %d", timer_id, (uint32_t)eu->alarm_value);
-
-  // return the exact timer period, in microseconds, accounting for
-  // any rouding that might have happened
-  eu->us_per_period = (eu->alarm_value * config.divider * 1000000) / getApbFrequency();
+  // The period is an integer number of microsecond counts, so no rounding
+  // happened.
   return eu->us_per_period;
 }
 
 uint32_t hal_elapsed_us_in_tick() {
-  uint8_t timer_id = 0;
-  esp32_timer_t *const eu = get_timer(timer_id);
-  uint64_t val;
-  timer_get_counter_value(eu->group, eu->index, &val);
-  // ESP32 has hardware 64-bit multiply, so no need for the split-factor
-  // dance the other families use.
-  return (uint32_t)((val * eu->us_per_period) / eu->alarm_value);
+  esp32_timer_t *const eu = get_timer(0);
+  uint64_t count;
+  ESP_ERROR_CHECK(gptimer_get_raw_count(eu->timer, &count));
+  return (uint32_t)count;
 }
 
 bool hal_clock_interrupt_is_pending() {
-  uint8_t timer_id = 0;
-  esp32_timer_t *const eu = get_timer(timer_id);
-  uint32_t intr_status = timer_group_get_intr_status_in_isr(eu->group);
-  return intr_status & (1 << eu->index);
+  esp32_timer_t *const eu = get_timer(0);
+  return timer_ll_get_intr_status(eu->hw) & TIMER_LL_EVENT_ALARM(eu->index);
 }

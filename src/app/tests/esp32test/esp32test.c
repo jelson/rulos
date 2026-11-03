@@ -25,18 +25,15 @@
 #include "../test-pin.h"
 #include "core/hardware.h"
 #include "core/rulos.h"
-#include "soc/timer_group_struct.h"
+#include "hal/timer_ll.h"
+#include "soc/soc_caps.h"
 
 void print_one_timergroup(timg_dev_t *dev, const char *label) {
-  for (int i = 0; i < 2; i++) {
-    uint32_t ena = dev->hw_timer[i].config.enable;
-    uint32_t al_en = dev->hw_timer[i].config.alarm_en;
-    dev->hw_timer[i].update = 1;
-    uint32_t val = dev->hw_timer[i].cnt_low;
-    LOG("%s, timer %d: ", label, i);
-    LOG("  enabled: %d", ena);
-    LOG("  alarm enabled: %d", al_en);
-    LOG("  value: %d", val);
+  for (int i = 0; i < SOC_TIMER_GROUP_TIMERS_PER_GROUP; i++) {
+    timer_ll_trigger_soft_capture(dev, i);
+    uint64_t val = timer_ll_get_counter_value(dev, i);
+    bool alarm_pending = timer_ll_get_intr_status(dev) & TIMER_LL_EVENT_ALARM(i);
+    LOG("%s, timer %d: value %" PRIu64 ", alarm pending %d", label, i, val, alarm_pending);
   }
 }
 
@@ -68,7 +65,7 @@ int main() {
 
   gpio_make_output(TEST_PIN);
   uint32_t period = hal_start_clock_us(1000000, tick, NULL, TIMER0);
-  LOG("Started clock, period of %d", period);
+  LOG("Started clock, period of %" PRIu32, period);
   print_timer_info();
   int ints_printed = 0;
   while (true) {

@@ -32,7 +32,7 @@ static void test_func(void *data) {
 
   gpio_set(TEST_PIN);
   gpio_clr(TEST_PIN);
-  LOG("Hello world from esp32, line %d at time %d", line++, clock_time_us());
+  LOG("Hello world from esp32, line %d at time %" PRIu32, line++, clock_time_us());
 }
 
 int main() {

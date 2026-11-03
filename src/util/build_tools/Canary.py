@@ -64,8 +64,9 @@ def canary_platforms(
     stm32_families: iterable of STM32 major family names (e.g. "STM32G4")
         to include. None means every family.
     include_atmega, include_attiny, include_nxp, include_esp32,
-    include_sim: toggle each AVR subfamily, NXP LPC, ESP32, and the host
-        simulator. Turn off the ones a particular driver doesn't support
+    include_sim: toggle each AVR subfamily, NXP LPC, the Espressif chips
+        (one build per chip RULOS supports), and the host simulator. Turn
+        off the ones a particular driver doesn't support
         (e.g. UART doesn't build on ATtiny since those chips have USI,
         not USART). include_nxp is off by default because RULOS only
         implements a subset of drivers (core, twi) on LPC; turn it on in
@@ -87,6 +88,7 @@ def canary_platforms(
             platforms.append(ArmNxpPlatform(chip_name))
     if include_esp32:
         platforms.append(Esp32Platform())
+        platforms.append(Esp32Platform(chip="esp32s3"))
     if include_sim:
         platforms.append(SimulatorPlatform())
     platforms.extend(extras)

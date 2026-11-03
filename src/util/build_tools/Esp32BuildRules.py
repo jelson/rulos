@@ -14,219 +14,345 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+# RULOS on Espressif chips is built by ESP-IDF. SCons decides what to
+# build -- the target, its sources, flags and peripherals -- and writes
+# that out as a small ESP-IDF project (RULOS as one component, the app as
+# another), then hands the compile to idf.py. IDF builds itself, the
+# bootloader and the partition table from the project's sdkconfig, so each
+# app controls the full configuration. The IDF checkout and its toolchains
+# live under build/compilers/esp-idf and are fetched on first use.
+
 import os
+import shlex
 import subprocess
-from . import BaseRules, util
+import sys
+from . import BaseRules, SpecialRules, util
 from SCons.Script import *
 
-ESP32_PLATFORM_VERSION = "2.0.2"
-KIT_DESCRIPTION_URL = (
-    "https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json"
-)
+ESP_IDF_VERSION = "v5.5.6"
+ESP_IDF_REPO = "https://github.com/espressif/esp-idf.git"
+
+# Chips RULOS has glue for. Toolchains for all of them are installed
+# together.
+CHIPS = ["esp32", "esp32s3"]
+
+# Build tools IDF needs from the host; on Linux its installer leaves them to
+# the distribution, so they are fetched explicitly to keep the build
+# self-contained.
+HOST_TOOLS = ["cmake", "ninja"]
+
+# IDF components whose headers RULOS' ESP32 code includes, by RULOS
+# peripheral. "core" covers src/lib/chip/esp32/core.
+IDF_COMPONENTS = {
+    "core": ["esp_driver_gpio", "esp_driver_gptimer", "nvs_flash"],
+    "uart": ["esp_driver_uart", "esp_driver_usb_serial_jtag"],
+    "inet": ["esp_wifi", "esp_netif", "esp_event", "esp_http_client"],
+    "ntp": ["esp_wifi", "lwip"],
+}
+
+# sdkconfig every RULOS target starts from; the SConstruct's sdkconfig
+# argument layers on top. Keys omit the CONFIG_ prefix.
+SDKCONFIG_DEFAULTS = {
+    # hal_idle() yields for one tick, so the tick is the scheduler's
+    # wakeup granularity
+    "FREERTOS_HZ": 1000,
+    "COMPILER_OPTIMIZATION_SIZE": True,
+    "ESPTOOLPY_FLASHFREQ_80M": True,
+    # a single 1.5 MB app slot; RULOS does not use OTA
+    "PARTITION_TABLE_SINGLE_APP_LARGE": True,
+}
+
+# USB serial adapters an ESP32 board might show up as: Silicon Labs and
+# WCH bridges, plus the USB-Serial/JTAG peripheral built into newer chips
+# (Espressif VID 303A, PID 1001).
+USB_SERIAL_PORT_REGEX = r"CP210|CH34|303A:1001|USB Single"
+
+# Serial rate for the run/monitor aliases; RULOS_ESP32_BAUD overrides it.
+DEFAULT_MONITOR_BAUD = "1000000"
+
+
+class EspIdf:
+    """The ESP-IDF checkout and tools under build/compilers/esp-idf, fetched
+    on first use. One instance per SCons run; see get()."""
+
+    _instance = None
+
+    @classmethod
+    def get(cls):
+        if cls._instance is None:
+            cls._instance = EspIdf()
+        return cls._instance
+
+    def __init__(self):
+        root = os.path.abspath(os.path.join(util.BUILD_ROOT, "compilers", "esp-idf"))
+        self.path = os.path.join(root, ESP_IDF_VERSION)
+        self.tools_path = os.path.join(root, "tools")
+        self.component_cache = os.path.join(root, "component-cache")
+        self.idf_tools = [sys.executable, os.path.join(self.path, "tools", "idf_tools.py")]
+
+        if not os.path.exists(self.path):
+            print(f"Cloning ESP-IDF {ESP_IDF_VERSION} into {self.path}")
+            subprocess.check_call([
+                "git",
+                "clone",
+                "--depth",
+                "1",
+                "--branch",
+                ESP_IDF_VERSION,
+                "--recurse-submodules",
+                "--shallow-submodules",
+                ESP_IDF_REPO,
+                self.path,
+            ])
+
+        self.env = self._export()
+        if self.env is None:
+            self._install()
+            self.env = self._export()
+            assert self.env is not None, "ESP-IDF tool install did not produce a usable environment"
+
+    def _base_env(self):
+        env = dict(os.environ)
+        env["IDF_PATH"] = self.path
+        env["IDF_TOOLS_PATH"] = self.tools_path
+        return env
+
+    def _install(self):
+        print(f"Installing ESP-IDF toolchains into {self.tools_path}")
+        subprocess.check_call(
+            self.idf_tools + ["install", "--targets", ",".join(CHIPS), "required"] + HOST_TOOLS,
+            env=self._base_env(),
+        )
+        subprocess.check_call(self.idf_tools + ["install-python-env"], env=self._base_env())
+
+    # The environment export.sh would set up, or None if the tools are not
+    # installed. Captured once so builds do not pay for a shell each.
+    def _export(self):
+        result = subprocess.run(
+            self.idf_tools + ["export", "--format", "key-value"],
+            env=self._base_env(),
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            return None
+        env = self._base_env()
+        for line in result.stdout.splitlines():
+            key, _, value = line.partition("=")
+            if key == "PATH":
+                value = value + os.pathsep + env["PATH"]
+            env[key] = value
+        if "IDF_PYTHON_ENV_PATH" not in env or not os.path.exists(env["IDF_PYTHON_ENV_PATH"]):
+            return None
+        env["IDF_COMPONENT_CACHE_PATH"] = self.component_cache
+        if util.which("ccache"):
+            env["IDF_CCACHE_ENABLE"] = "1"
+        return env
+
+    def idf_py(self):
+        return [
+            os.path.join(self.env["IDF_PYTHON_ENV_PATH"], "bin", "python"),
+            os.path.join(self.path, "tools", "idf.py"),
+        ]
+
+
+def _sdkconfig_line(key, value):
+    if value is True:
+        value = "y"
+    elif value is False:
+        value = "n"
+    elif isinstance(value, str):
+        value = '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    return f"CONFIG_{key}={value}"
+
+
+# Quotes one argument for a CMake command so the compiler receives it
+# verbatim.
+def _cmake_quote(arg):
+    escaped = arg.replace("\\", "\\\\").replace('"', '\\"').replace(";", "\;").replace("$", "\\$")
+    return f'"{escaped}"'
+
+
+def _cmake_list(args):
+    return " ".join(_cmake_quote(a) for a in args)
+
+
+def _write_if_changed(path, content):
+    if os.path.exists(path) and open(path).read() == content:
+        return
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        f.write(content)
 
 
 class Esp32Platform(BaseRules.Platform):
-    def __init__(self, extra_peripherals=[], extra_cflags=[]):
+    # chip: one of CHIPS.
+    # sdkconfig: ESP-IDF configuration layered over SDKCONFIG_DEFAULTS, as
+    #     {key-without-CONFIG_: value}. Values may be bool, int or str.
+    # idf_components: ESP-IDF component registry dependencies for the app,
+    #     as {name: version spec}, e.g. {"lvgl/lvgl": "^9.2"}.
+    def __init__(
+        self,
+        chip="esp32",
+        sdkconfig={},
+        idf_components={},
+        extra_peripherals=[],
+        extra_cflags=[],
+    ):
         super().__init__(extra_peripherals, extra_cflags)
+        assert chip in CHIPS, f"unknown ESP32 chip {chip}; known: {CHIPS}"
+        self.chip = chip
+        self.sdkconfig = dict(SDKCONFIG_DEFAULTS)
+        self.sdkconfig.update(sdkconfig)
+        self.idf_components = dict(idf_components)
+        # Everything compiles as C++ on this platform: the chip glue is
+        # written against IDF's C++-visible API, and RULOS' C headers carry
+        # no extern "C" guards for C++ callers.
         self.use_cpp = True
+        # ESP-IDF does not support LTO
+        self.use_lto = False
         self.env_to_ifdefs.extend([
             "RULOS_NTP_SERVER",
         ])
-        self.kit_root = os.path.join(util.BUILD_ROOT, "compilers", "esp32", ESP32_PLATFORM_VERSION)
-
-        if not os.path.exists(self.kit_root):
-            subprocess.call(
-                args=[
-                    os.path.join(os.path.dirname(__file__), "FetchArduinoPackage.py"),
-                    KIT_DESCRIPTION_URL,
-                    "esp32",
-                    ESP32_PLATFORM_VERSION,
-                    "x86_64-pc-linux-gnu",
-                    self.kit_root,
-                ]
-            )
-
-        self.tool_root = os.path.join(
-            self.kit_root, "esp32", f"esp32-{ESP32_PLATFORM_VERSION}", "tools"
-        )
-        assert os.path.exists(self.tool_root)
-
-        self.sdk_root = os.path.join(self.tool_root, "sdk", "esp32")
-        assert os.path.exists(self.sdk_root)
-
-        self.esptool_path = os.path.join(self.kit_root, "esptool_py", "esptool", "esptool.py")
+        self.idf = EspIdf.get()
 
     def name(self):
-        return "esp32"
+        return self.chip
 
     def target_suffix(self):
         return ".elf"
 
-    def configure_env(self, env):
-        self.configure_compiler(
-            env, f"{self.kit_root}/xtensa-esp32-elf-gcc/xtensa-esp32-elf/bin/xtensa-esp32-elf-"
-        )
-        env.Append(
-            LIBPATH=[
-                os.path.join(self.sdk_root, "lib"),
-                os.path.join(self.sdk_root, "ld"),
-            ]
-        )
-
-        # We add --start-group and --end-group to the link command so that the
-        # order of -l arguments is not relevant and dependencies are resolved
-        # automatically.
-        env.Replace(
-            LINKCOM="$LINK -o $TARGET -Wl,--start-group $LINKFLAGS $__RPATH $SOURCES $_LIBDIRFLAGS $_LIBFLAGS -Wl,--end-group"
-        )
-
-        arduino_cargocult = "-lesp_ringbuf -lefuse -lesp_ipc -ldriver -lesp_pm -lmbedtls -lapp_update -lbootloader_support -lspi_flash -lnvs_flash -lpthread -lesp_gdbstub -lespcoredump -lesp_phy -lesp_system -lesp_rom -lhal -lvfs -lesp_eth -ltcpip_adapter -lesp_netif -lesp_event -lwpa_supplicant -lesp_wifi -lconsole -llwip -llog -lheap -lsoc -lesp_hw_support -lxtensa -lesp_common -lesp_timer -lfreertos -lnewlib -lcxx -lapp_trace -lasio -lbt -lcbor -lunity -lcmock -lcoap -lnghttp -lesp-tls -lesp_adc_cal -lesp_hid -ltcp_transport -lesp_http_client -lesp_http_server -lesp_https_ota -lesp_lcd -lprotobuf-c -lprotocomm -lmdns -lesp_local_ctrl -lsdmmc -lesp_serial_slave_link -lesp_websocket_client -lexpat -lwear_levelling -lfatfs -lfreemodbus -ljsmn -ljson -llibsodium -lmqtt -lopenssl -lperfmon -lspiffs -lulp -lwifi_provisioning -lbutton -ljson_parser -ljson_generator -lesp_schedule -lesp_rainmaker -lqrcode -lws2812_led -lesp-dsp -lesp32-camera -lesp_littlefs -lfb_gfx -lasio -lcbor -lcmock -lunity -lcoap -lesp_lcd -lesp_local_ctrl -lesp_websocket_client -lexpat -lfreemodbus -ljsmn -llibsodium -lperfmon -lesp_adc_cal -lesp_hid -lfatfs -lwear_levelling -lopenssl -lspiffs -lesp_rainmaker -lmqtt -lwifi_provisioning -lprotocomm -lbt -lbtdm_app -lprotobuf-c -lmdns -ljson -ljson_parser -ljson_generator -lesp_schedule -lqrcode -lcat_face_detect -lhuman_face_detect -lcolor_detect -lmfn -ldl -lesp_ringbuf -lefuse -lesp_ipc -ldriver -lesp_pm -lmbedtls -lapp_update -lbootloader_support -lspi_flash -lnvs_flash -lpthread -lesp_gdbstub -lespcoredump -lesp_phy -lesp_system -lesp_rom -lhal -lvfs -lesp_eth -ltcpip_adapter -lesp_netif -lesp_event -lwpa_supplicant -lesp_wifi -lconsole -llwip -llog -lheap -lsoc -lesp_hw_support -lxtensa -lesp_common -lesp_timer -lfreertos -lnewlib -lcxx -lapp_trace -lnghttp -lesp-tls -ltcp_transport -lesp_http_client -lesp_http_server -lesp_https_ota -lsdmmc -lesp_serial_slave_link -lulp -lmbedtls -lmbedcrypto -lmbedx509 -lcoexist -lcore -lespnow -lmesh -lnet80211 -lpp -lsmartconfig -lwapi -lesp_ringbuf -lefuse -lesp_ipc -ldriver -lesp_pm -lmbedtls -lapp_update -lbootloader_support -lspi_flash -lnvs_flash -lpthread -lesp_gdbstub -lespcoredump -lesp_phy -lesp_system -lesp_rom -lhal -lvfs -lesp_eth -ltcpip_adapter -lesp_netif -lesp_event -lwpa_supplicant -lesp_wifi -lconsole -llwip -llog -lheap -lsoc -lesp_hw_support -lxtensa -lesp_common -lesp_timer -lfreertos -lnewlib -lcxx -lapp_trace -lnghttp -lesp-tls -ltcp_transport -lesp_http_client -lesp_http_server -lesp_https_ota -lsdmmc -lesp_serial_slave_link -lulp -lmbedtls -lmbedcrypto -lmbedx509 -lcoexist -lcore -lespnow -lmesh -lnet80211 -lpp -lsmartconfig -lwapi -lesp_ringbuf -lefuse -lesp_ipc -ldriver -lesp_pm -lmbedtls -lapp_update -lbootloader_support -lspi_flash -lnvs_flash -lpthread -lesp_gdbstub -lespcoredump -lesp_phy -lesp_system -lesp_rom -lhal -lvfs -lesp_eth -ltcpip_adapter -lesp_netif -lesp_event -lwpa_supplicant -lesp_wifi -lconsole -llwip -llog -lheap -lsoc -lesp_hw_support -lxtensa -lesp_common -lesp_timer -lfreertos -lnewlib -lcxx -lapp_trace -lnghttp -lesp-tls -ltcp_transport -lesp_http_client -lesp_http_server -lesp_https_ota -lsdmmc -lesp_serial_slave_link -lulp -lmbedtls -lmbedcrypto -lmbedx509 -lcoexist -lcore -lespnow -lmesh -lnet80211 -lpp -lsmartconfig -lwapi -lesp_ringbuf -lefuse -lesp_ipc -ldriver -lesp_pm -lmbedtls -lapp_update -lbootloader_support -lspi_flash -lnvs_flash -lpthread -lesp_gdbstub -lespcoredump -lesp_phy -lesp_system -lesp_rom -lhal -lvfs -lesp_eth -ltcpip_adapter -lesp_netif -lesp_event -lwpa_supplicant -lesp_wifi -lconsole -llwip -llog -lheap -lsoc -lesp_hw_support -lxtensa -lesp_common -lesp_timer -lfreertos -lnewlib -lcxx -lapp_trace -lnghttp -lesp-tls -ltcp_transport -lesp_http_client -lesp_http_server -lesp_https_ota -lsdmmc -lesp_serial_slave_link -lulp -lmbedtls -lmbedcrypto -lmbedx509 -lcoexist -lcore -lespnow -lmesh -lnet80211 -lpp -lsmartconfig -lwapi -lesp_ringbuf -lefuse -lesp_ipc -ldriver -lesp_pm -lmbedtls -lapp_update -lbootloader_support -lspi_flash -lnvs_flash -lpthread -lesp_gdbstub -lespcoredump -lesp_phy -lesp_system -lesp_rom -lhal -lvfs -lesp_eth -ltcpip_adapter -lesp_netif -lesp_event -lwpa_supplicant -lesp_wifi -lconsole -llwip -llog -lheap -lsoc -lesp_hw_support -lxtensa -lesp_common -lesp_timer -lfreertos -lnewlib -lcxx -lapp_trace -lnghttp -lesp-tls -ltcp_transport -lesp_http_client -lesp_http_server -lesp_https_ota -lsdmmc -lesp_serial_slave_link -lulp -lmbedtls -lmbedcrypto -lmbedx509 -lcoexist -lcore -lespnow -lmesh -lnet80211 -lpp -lsmartconfig -lwapi -lphy -lrtc -lesp_phy -lphy -lrtc -lesp_phy -lphy -lrtc -lxt_hal -lm -lnewlib -lstdc++ -lpthread -lgcc -lcxx -lapp_trace -lgcov -lapp_trace -lgcov -lc"
-
-        env.Append(LIBS=arduino_cargocult.split())
-
-        arduino_link_cargocult = "-T esp32.rom.redefined.ld -T memory.ld -T sections.ld -T esp32.rom.ld -T esp32.rom.api.ld -T esp32.rom.libgcc.ld -T esp32.rom.newlib-data.ld -T esp32.rom.syscalls.ld -T esp32.peripherals.ld"
-
-        for linkscript in arduino_link_cargocult.split():
-            if linkscript == "-T":
-                continue
-            env.Append(LINKFLAGS=["-T", linkscript])
-        env.Append(LINKFLAGS=["-Wl,--undefined=uxTopUsedPriority"])
-
-        genpart_path = os.path.join(self.tool_root, "gen_esp32part.py")
-        env.Append(
-            BUILDERS={
-                "MakeBin": Builder(
-                    src_suffix=".elf",
-                    suffix=".bin",
-                    action=env.SpinnerAction(
-                        f"python3 {self.esptool_path} --chip esp32 elf2image --flash_mode dio --flash_freq 80m --flash_size 4MB -o $TARGET $SOURCE",
-                        "Creating binary",
-                        use_source=False,
-                    ),
-                ),
-                "MakePartMap": Builder(
-                    src_suffix=".csv",
-                    suffix=".bin",
-                    action=env.SpinnerAction(
-                        f"python3 {genpart_path} -q $SOURCE $TARGET",
-                        "Creating partition map",
-                        use_source=False,
-                    ),
-                ),
-            }
-        )
-
     def periph_dir(self):
         return os.path.join("esp32", "periph")
-
-    def include_dirs(self, target):
-        return self.common_include_dirs(target) + [
-            # RULOS include dirs
-            os.path.join(util.SRC_ROOT, "lib", "chip", "esp32"),
-            # Espressif SDK include dirs
-            os.path.join(self.sdk_root, "include", "config"),
-            os.path.join(self.sdk_root, "include", "driver", "include"),
-            os.path.join(self.sdk_root, "include", "esp32", "include"),
-            os.path.join(self.sdk_root, "include", "esp_common", "include"),
-            os.path.join(self.sdk_root, "include", "esp_eth", "include"),
-            os.path.join(self.sdk_root, "include", "esp_event", "include"),
-            os.path.join(self.sdk_root, "include", "esp_http_client", "include"),
-            os.path.join(self.sdk_root, "include", "esp_hw_support", "include"),
-            os.path.join(self.sdk_root, "include", "esp_hw_support", "include", "soc"),
-            os.path.join(self.sdk_root, "include", "esp_ipc", "include"),
-            os.path.join(self.sdk_root, "include", "esp_netif", "include"),
-            os.path.join(self.sdk_root, "include", "esp_ringbuf", "include"),
-            os.path.join(self.sdk_root, "include", "esp_rom", "include"),
-            os.path.join(self.sdk_root, "include", "esp_system", "include"),
-            os.path.join(self.sdk_root, "include", "esp_timer", "include"),
-            os.path.join(self.sdk_root, "include", "esp_wifi", "include"),
-            os.path.join(self.sdk_root, "include", "freertos", "include"),
-            os.path.join(self.sdk_root, "include", "freertos", "include", "esp_additions"),
-            os.path.join(
-                self.sdk_root, "include", "freertos", "include", "esp_additions", "freertos"
-            ),
-            os.path.join(self.sdk_root, "include", "freertos", "port", "xtensa", "include"),
-            os.path.join(self.sdk_root, "include", "hal", "esp32", "include"),
-            os.path.join(self.sdk_root, "include", "hal", "include"),
-            os.path.join(self.sdk_root, "include", "hal", "platform_port", "include"),
-            os.path.join(self.sdk_root, "include", "heap", "include"),
-            os.path.join(self.sdk_root, "include", "lwip", "include", "apps"),
-            os.path.join(self.sdk_root, "include", "lwip", "lwip", "src", "include"),
-            os.path.join(self.sdk_root, "include", "lwip", "port", "esp32", "include"),
-            os.path.join(self.sdk_root, "include", "newlib", "platform_include"),
-            os.path.join(self.sdk_root, "include", "nghttp", "port", "include"),
-            os.path.join(self.sdk_root, "include", "nvs_flash", "include"),
-            os.path.join(self.sdk_root, "include", "soc", "esp32", "include"),
-            os.path.join(self.sdk_root, "include", "soc", "include"),
-            os.path.join(self.sdk_root, "include", "spi_flash", "include"),
-            os.path.join(self.sdk_root, "include", "tcpip_adapter", "include"),
-            os.path.join(self.sdk_root, "include", "xtensa", "esp32", "include"),
-            os.path.join(self.sdk_root, "include", "xtensa", "include"),
-        ]
-
-    def ld_flags(self, target):
-        return self.common_ld_flags(target) + [
-            "-nostdlib",
-        ]
-
-    def cflags(self):
-        return self.common_cflags() + [
-            "-DRULOS_ESP32",
-            "-DESP_PLATFORM",
-            "-DESP32",
-            "-DCORE_DEBUG_LEVEL=0",
-            "-DGCC_NOT_5_2_0=0",
-            "-Os",
-            "-g3",
-            "-Wpointer-arith",
-            "-fexceptions",
-            "-fstack-protector",
-            "-ffunction-sections",
-            "-fdata-sections",
-            "-fstrict-volatile-bitfields",
-            "-mlongcalls",
-            "-nostdlib",
-            "-gdwarf-2",
-            #            "-CC",
-        ]
 
     def platform_lib_source_files(self):
         return util.cglob(util.SRC_ROOT, "lib", "chip", "esp32", "core")
 
-    def platform_specific_app_sources(self):
+    def cflags(self):
+        return self.common_cflags() + [
+            "-DRULOS_ESP32",
+            f"-DRULOS_{self.chip.upper()}",
+            # IDF compiles with -Wextra; RULOS' warning policy is -Wall
+            # -Werror on every platform
+            "-Wno-extra",
+        ]
+
+    def _idf_components(self, target):
+        components = set(IDF_COMPONENTS["core"])
+        for periph in target.peripherals + self.extra_peripherals:
+            components.update(IDF_COMPONENTS.get(periph, []))
+        return sorted(components)
+
+    # The compiler flags, as the compiler should see them. RULOS flag lists
+    # are written for a shell command line, so shell quoting is undone
+    # here; CMake passes options verbatim.
+    def _compiler_args(self, target):
+        return [arg for flag in self.all_cflags(target) for arg in shlex.split(flag)]
+
+    def _abs_sources(self, relpaths):
+        return [os.path.abspath(os.path.join(util.PROJECT_ROOT, p)) for p in relpaths]
+
+    def _component_cmake(self, sources, include_dirs, requires, compiler_args):
+        return f"""# generated by RULOS; see src/util/build_tools/Esp32BuildRules.py
+cmake_policy(SET CMP0119 NEW)
+idf_component_register(
+    SRCS {_cmake_list(sources)}
+    INCLUDE_DIRS {_cmake_list(include_dirs)}
+    REQUIRES {" ".join(requires)}
+)
+set_source_files_properties({_cmake_list(sources)} PROPERTIES LANGUAGE CXX)
+target_compile_options(${{COMPONENT_LIB}} PRIVATE {_cmake_list(compiler_args)})
+"""
+
+    def _write_project(self, project_dir, program, target):
+        lib_sources = self._abs_sources(self.common_libs(target))
+        app_sources = self._abs_sources(target.sources)
+        for converter in SpecialRules.CONVERTERS + target.extra_converters:
+            dependent = os.path.abspath(os.path.join(util.PROJECT_ROOT, converter.dependent_source))
+            if dependent in lib_sources + app_sources:
+                util.die(
+                    f"{converter.dependent_source} needs a generated source; "
+                    "the ESP-IDF build does not run converters"
+                )
+
+        include_dirs = [os.path.abspath(d) for d in self.common_include_dirs(target)] + [
+            os.path.abspath(os.path.join(util.SRC_ROOT, "lib", "chip", "esp32")),
+        ]
+        compiler_args = self._compiler_args(target)
+
+        sdkconfig = dict(self.sdkconfig)
+        sdkconfig["IDF_TARGET"] = self.chip
+        files = {
+            "CMakeLists.txt": (
+                f"""# generated by RULOS; see src/util/build_tools/Esp32BuildRules.py
+cmake_minimum_required(VERSION 3.16)
+include($ENV{{IDF_PATH}}/tools/cmake/project.cmake)
+# build only the components the app's dependencies reach
+idf_build_set_property(MINIMAL_BUILD ON)
+project({program})
+"""
+            ),
+            "sdkconfig.defaults": "".join(
+                _sdkconfig_line(k, v) + "\n" for k, v in sorted(sdkconfig.items())
+            ),
+            os.path.join("components", "rulos", "CMakeLists.txt"): self._component_cmake(
+                lib_sources, include_dirs, self._idf_components(target), compiler_args
+            ),
+            os.path.join("main", "CMakeLists.txt"): self._component_cmake(
+                app_sources, [], ["rulos"], compiler_args
+            ),
+        }
+        if self.idf_components:
+            files[os.path.join("main", "idf_component.yml")] = "dependencies:\n" + "".join(
+                f'  {name}: "{spec}"\n' for name, spec in sorted(self.idf_components.items())
+            )
+        for relpath, content in files.items():
+            _write_if_changed(os.path.join(project_dir, relpath), content)
+
+    def _idf_cmdline(self, env, args):
+        return (
+            self.idf.idf_py()
+            + [
+                "-C",
+                env["RulosIdfProjectDir"],
+                "-B",
+                env["RulosBuildObjDir"],
+            ]
+            + args
+        )
+
+    # Runs idf.py. Its output is held back and shown only on failure, unless
+    # SCons is in --verbose mode or the command is interactive.
+    def _run_idf(self, env, args, interactive=False):
+        cmdline = self._idf_cmdline(env, args)
+        quiet = not interactive and not GetOption("verbose")
+        if not quiet:
+            print(" ".join(shlex.quote(c) for c in cmdline))
+        result = subprocess.run(cmdline, env=env["ENV"], capture_output=quiet, text=quiet)
+        if result.returncode != 0 and quiet:
+            sys.stdout.write(result.stdout)
+            sys.stderr.write(result.stderr)
+        return result.returncode
+
+    def _idf_build(self, target, source, env):
+        return self._run_idf(env, ["build"])
+
+    def _port_args(self):
+        if "RULOS_ESP32_PORT" in os.environ:
+            return ["-p", os.environ["RULOS_ESP32_PORT"]]
+        # idf.py probes the serial ports itself when none is given
         return []
 
-    def programming_cmdline(self, usbpath, binfile, partfile):
-        return [
-            "python3",
-            self.esptool_path,
-            "--chip",
-            "esp32",
-            "--port",
-            usbpath,
-            "--baud",
-            "921600",
-            "--before",
-            "default_reset",
-            "--after",
-            "hard_reset",
-            "write_flash",
-            "-z",
-            "--flash_mode",
-            "dio",
-            "--flash_freq",
-            "80m",
-            "--flash_size",
-            "detect",
-            "0xe000",
-            f"{self.tool_root}/partitions/boot_app0.bin",
-            "0x1000",
-            f"{self.sdk_root}/bin/bootloader_dio_80m.bin",
-            "0x10000",
-            binfile.get_abspath(),
-            "0x8000",
-            partfile.get_abspath(),
-        ]
+    def _monitor_baud(self):
+        return os.environ.get("RULOS_ESP32_BAUD", DEFAULT_MONITOR_BAUD)
+
+    def _idf_flash(self, target, source, env):
+        return self._run_idf(env, self._port_args() + ["flash"], interactive=True)
+
+    def _idf_monitor(self, target, source, env):
+        return self._run_idf(
+            env, self._port_args() + ["monitor", "-b", self._monitor_baud()], interactive=True
+        )
 
     def find_esp32_port(self):
         if "RULOS_ESP32_PORT" in os.environ:
@@ -237,61 +363,73 @@ class Esp32Platform(BaseRules.Platform):
         print("Port list:")
         for port in list_ports.comports():
             print(f"port {port}")
-        # port_type = "CP2104"
-        port_type = "CP2102"
-        # port_type = "USB Single"   # TTGO
-        esp32_ports = list(list_ports.grep(port_type))
+        esp32_ports = list(list_ports.grep(USB_SERIAL_PORT_REGEX))
 
         if len(esp32_ports) == 0:
-            raise Exception(f"No {port_type} USB ports found; is your ESP32 plugged in?")
+            raise Exception("No ESP32-looking USB serial ports found; is your board plugged in?")
 
         if len(esp32_ports) > 1:
             raise Exception(
-                f"Multiple {port_type} USB ports found. Unplug some, or specify with RULOS_ESP32_PORT env var"
+                "Multiple ESP32-looking USB serial ports found. Unplug some, or specify with RULOS_ESP32_PORT env var"
             )
 
         return esp32_ports[0].device
 
-    def program_esp32(self, target, source, env):
-        binfile = source[0]
-        partfile = source[1]
-        print("Programming ESP32...")
-
-        usbpath = self.find_esp32_port()
-        cmdline = self.programming_cmdline(usbpath, binfile, partfile)
-        print(cmdline)
-        subprocess.call(cmdline)
-
     def run_esp32(self, target, source, env):
         usbpath = self.find_esp32_port()
-        subprocess.call(["grabserial", "-t", "-d", usbpath, "-b", "1000000", "-o", "esp32.log"])
+        subprocess.call(
+            ["grabserial", "-t", "-d", usbpath, "-b", self._monitor_baud(), "-o", "esp32.log"]
+        )
 
     def run_esp32_epochsec(self, target, source, env):
         usbpath = self.find_esp32_port()
-        subprocess.call(
-            ["grabserial", "-T", "-F", "%s.%f", "-d", usbpath, "-b", "1000000", "-o", "esp32.log"]
-        )
+        subprocess.call([
+            "grabserial",
+            "-T",
+            "-F",
+            "%s.%f",
+            "-d",
+            usbpath,
+            "-b",
+            self._monitor_baud(),
+            "-o",
+            "esp32.log",
+        ])
 
-    def post_configure(self, env, outputs):
-        binfile = env.MakeBin(outputs[0])
-        partfile = env.MakePartMap(
-            source=os.path.join(self.tool_root, "partitions", "default.csv"),
-            target=f"{outputs[0][0].get_abspath()}.partitions.bin",
+    def build(self, target):
+        build_dir = os.path.abspath(self.build_obj_dir(target))
+        project_dir = os.path.join(build_dir, "project")
+        program = self.program_name(target)
+        self._write_project(project_dir, program, target)
+
+        env = self.make_env()
+        env["ENV"] = dict(self.idf.env)
+        env["ENV"]["IDF_TARGET"] = self.chip
+        env.Replace(RulosBuildObjDir=build_dir)
+        env.Replace(RulosIdfProjectDir=project_dir)
+
+        # Ninja tracks the sources, so the build always runs and is a no-op
+        # when nothing changed.
+        elf = os.path.join(build_dir, program + self.target_suffix())
+        app = env.Command(
+            target=elf,
+            source=[],
+            action=env.SpinnerAction(self._idf_build, "Building with ESP-IDF", use_source=False),
         )
-        Default([binfile, partfile])
+        env.AlwaysBuild(app)
+        env.Clean(app, build_dir)
+        Default(app)
 
         # Create programming aliases so a command like "scons
         # program-esp32-<progname>" works, even for SConstruct files
         # that have multiple targets
-        prog_target = f"esp32-{os.path.basename(env['RulosTargetName'])}"
-        program = env.Alias(
-            f"program-{prog_target}", [binfile, partfile] + outputs, self.program_esp32
-        )
-        env.Alias(f"run-{prog_target}", program, self.run_esp32)
-        env.Alias(f"rune-{prog_target}", program, self.run_esp32_epochsec)
+        prog_target = f"{self.name()}-{target.name}"
+        program_alias = env.Alias(f"program-{prog_target}", app, self._idf_flash)
+        env.Alias(f"run-{prog_target}", program_alias, self.run_esp32)
+        env.Alias(f"rune-{prog_target}", program_alias, self.run_esp32_epochsec)
+        env.Alias(f"monitor-{prog_target}", program_alias, self._idf_monitor)
 
         # Simpler "scons program" and "scons run" commands for simple
         # SConstruct files that have only a single target
-        env.Alias("program", f"program-{prog_target}")
-        env.Alias("run", f"run-{prog_target}")
-        env.Alias("rune", f"rune-{prog_target}")
+        for verb in ["program", "run", "rune", "monitor"]:
+            env.Alias(verb, f"{verb}-{prog_target}")

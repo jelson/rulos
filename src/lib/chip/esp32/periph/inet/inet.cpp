@@ -18,6 +18,7 @@
 
 #include "periph/inet/inet.h"
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -98,7 +99,7 @@ static char _macaddr_string[20] = {};
 const char *inet_wifi_macaddr() {
   if (!*_macaddr_string) {
     uint8_t binary_mac[6];
-    esp_wifi_get_mac((wifi_interface_t)ESP_MAC_WIFI_STA, binary_mac);
+    esp_wifi_get_mac(WIFI_IF_STA, binary_mac);
     snprintf(_macaddr_string, sizeof(_macaddr_string), "%02X:%02X:%02X:%02X:%02X:%02X",
              binary_mac[0], binary_mac[1], binary_mac[2], binary_mac[3], binary_mac[4],
              binary_mac[5]);
@@ -304,7 +305,7 @@ void HttpsClient::_perform_one_op() {
 
   if (err == ESP_OK) {
     _result_code = esp_http_client_get_status_code(_client);
-    LOG("HTTPS Client: request complete: status=%d, content_length=%d", _result_code,
+    LOG("HTTPS Client: request complete: status=%d, content_length=%" PRId64, _result_code,
         esp_http_client_get_content_length(_client));
   } else {
     _result_code = -1;
