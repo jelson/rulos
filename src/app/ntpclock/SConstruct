@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2009 Jon Howell (jonh@jonh.net) and Jeremy Elson
+# (jelson@gmail.com).
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+import glob
+import os
+import sys
+sys.path.insert(0, "../../util")
+from build_tools import *
+
+# the weather icons, embedded as PNGs
+icon_sources = LvglPngImages(
+    sorted(glob.glob("icons/*.png")), os.path.join(BUILD_ROOT, "ntpclock", "icons"), prefix="icon_"
+)
+
+RulosBuildTarget(
+    name = "ntpclock",
+    sources = ["ntpclock.cpp", "clock_ui.c", "weather_icon.c"] + icon_sources,
+    peripherals = "uart inet ntp lvgl ch422g weather openmeteo",
+    extra_cflags = [
+        "-DLOG_TO_SERIAL",
+
+        # include out-of-repo directory to get wifi credentials
+        "-I" + os.path.expanduser("~/.config/rulos"),
+    ],
+    platforms = [
+        Esp32Platform(board=Esp32Boards.WAVESHARE_ESP32_S3_TOUCH_LCD_43B, lv_conf="lv_conf.h"),
+    ],
+).build()
+
+# The same screen on the PC, fed from the system clock:
+#   build/ntpclock-host/host/ntpclock-host [--screenshot FILE.bmp]
+LvglHostProgram(
+    "ntpclock-host",
+    [
+        "clock_host.c",
+        "clock_ui.c",
+        "weather_icon.c",
+        "../../lib/periph/weather/weather.c",
+        "../../lib/periph/openmeteo/openmeteo.c",
+    ]
+    + icon_sources,
+    lv_conf_dir=".",
+)
