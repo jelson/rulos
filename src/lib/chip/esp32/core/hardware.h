@@ -23,6 +23,7 @@
 
 #include "autogen-pins-esp32.h"
 #include "core/hal.h"
+#include "driver/gpio.h"
 #include "hal/gpio_ll.h"
 #include "soc/gpio_periph.h"
 #include "soc/gpio_struct.h"
@@ -94,58 +95,35 @@ static inline void gpio_set_or_clr(const gpio_pin_t pin, uint8_t onoff) {
 }
 
 /*
- * configure a pin as input, without touching the pullup config register
- *
- * Please do not call this function directly. It's ambiguous.
+ * configure a pin as input with the given pull resistors. IDF's driver does
+ * the per-chip routing: on the original ESP32 the RTC-capable pads' pulls are
+ * in RTC_IO rather than IO_MUX, and pins 34-39 have none at all (asking for
+ * one aborts).
  */
-static inline void _gpio_make_input(const gpio_pin_t pin) {
-  if (pin < 32) {
-    GPIO.enable_w1tc = ((uint32_t)1 << pin);
-  } else {
-    GPIO.enable1_w1tc.val = ((uint32_t)1 << (pin - 32));
-  }
-}
-
-static inline void _gpio_enable_pull(const gpio_pin_t pin, const bool up) {
-  uint32_t pinFunction;
-  if (up) {
-    pinFunction = FUN_PU;
-  } else {
-    pinFunction = FUN_PD;
-  }
-
-  // set drive strength
-  pinFunction |= ((uint32_t)2 << FUN_DRV_S);
-
-  // input enable but required for output as well?
-  pinFunction |= FUN_IE;
-  pinFunction |= ((uint32_t)2 << MCU_SEL_S);
-
-  GPIO.pin[pin].val = pinFunction;
+static inline void _gpio_make_input(const gpio_pin_t pin, const gpio_pull_mode_t pull) {
+  ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)pin, GPIO_MODE_INPUT));
+  ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)pin, pull));
 }
 
 /*
  * configure a pin as input, and enable its internal pullup resistors
  */
 static inline void gpio_make_input_enable_pullup(const gpio_pin_t pin) {
-  _gpio_make_input(pin);
-  _gpio_enable_pull(pin, true);
+  _gpio_make_input(pin, GPIO_PULLUP_ONLY);
 }
 
 /*
  * configure a pin as input, and enable its internal pulldown resistors
  */
 static inline void gpio_make_input_enable_pulldown(const gpio_pin_t pin) {
-  _gpio_make_input(pin);
-  _gpio_enable_pull(pin, false);
+  _gpio_make_input(pin, GPIO_PULLDOWN_ONLY);
 }
 
 /*
- * configure a pin as input and disable its pullup resistor.
+ * configure a pin as a floating input, with no pull resistors
  */
 static inline void gpio_make_input_disable_pullup(const gpio_pin_t pin) {
-  _gpio_make_input(pin);
-  _gpio_enable_pull(pin, false);
+  _gpio_make_input(pin, GPIO_FLOATING);
 }
 
 /*
