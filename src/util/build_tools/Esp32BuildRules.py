@@ -26,7 +26,7 @@ import os
 import shlex
 import subprocess
 import sys
-from . import BaseRules, SpecialRules, util
+from . import BaseRules, Lvgl, SpecialRules, util
 from SCons.Script import *
 
 ESP_IDF_VERSION = "v5.5.6"
@@ -48,6 +48,15 @@ IDF_COMPONENTS = {
     "uart": ["esp_driver_uart", "esp_driver_usb_serial_jtag"],
     "inet": ["esp_wifi", "esp_netif", "esp_event", "esp_http_client"],
     "ntp": ["esp_wifi", "lwip"],
+    "lvgl": ["lvgl__lvgl", "esp_lcd"],
+    "ch422g": ["esp_driver_i2c"],
+}
+
+# Component-registry dependencies a RULOS peripheral brings in, as
+# {name: version}. The registry names them <namespace>__<name> inside the
+# build, which is how IDF_COMPONENTS refers to them.
+IDF_REGISTRY_COMPONENTS = {
+    "lvgl": {"lvgl/lvgl": Lvgl.VERSION},
 }
 
 # sdkconfig every RULOS target starts from; the SConstruct's sdkconfig
@@ -61,6 +70,9 @@ SDKCONFIG_DEFAULTS = {
     # a single 1.5 MB app slot; RULOS does not use OTA
     "PARTITION_TABLE_SINGLE_APP_LARGE": True,
 }
+
+# where a board's partition table is written, relative to the project
+PARTITION_TABLE_FILENAME = "partitions.csv"
 
 # USB serial adapters an ESP32 board might show up as: Silicon Labs and
 # WCH bridges, plus the USB-Serial/JTAG peripheral built into newer chips
@@ -177,34 +189,57 @@ def _cmake_list(args):
     return " ".join(_cmake_quote(a) for a in args)
 
 
+# Returns whether the file was written.
 def _write_if_changed(path, content):
     if os.path.exists(path) and open(path).read() == content:
-        return
+        return False
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
         f.write(content)
+    return True
 
 
 class Esp32Platform(BaseRules.Platform):
-    # chip: one of CHIPS.
-    # sdkconfig: ESP-IDF configuration layered over SDKCONFIG_DEFAULTS, as
-    #     {key-without-CONFIG_: value}. Values may be bool, int or str.
+    # chip: one of CHIPS; "esp32" when neither it nor a board is given.
+    # board: an Esp32Boards.Esp32Board, which supplies the chip and the
+    #     sdkconfig describing the module.
+    # sdkconfig: ESP-IDF configuration layered over SDKCONFIG_DEFAULTS and
+    #     the board's, as {key-without-CONFIG_: value}. Values may be bool,
+    #     int or str.
     # idf_components: ESP-IDF component registry dependencies for the app,
-    #     as {name: version spec}, e.g. {"lvgl/lvgl": "^9.2"}.
+    #     as {name: version spec}, e.g. {"espressif/esp_lcd_touch_gt911": "^1"}.
+    #     Peripherals add their own (IDF_REGISTRY_COMPONENTS).
+    # lv_conf: the app's lv_conf.h, for the lvgl peripheral.
     def __init__(
         self,
-        chip="esp32",
+        chip=None,
+        board=None,
         sdkconfig={},
         idf_components={},
+        lv_conf=None,
         extra_peripherals=[],
         extra_cflags=[],
     ):
         super().__init__(extra_peripherals, extra_cflags)
+        if board is not None:
+            assert chip is None or chip == board.chip, f"{board.name} is an {board.chip}"
+            chip = board.chip
+        if chip is None:
+            chip = "esp32"
         assert chip in CHIPS, f"unknown ESP32 chip {chip}; known: {CHIPS}"
         self.chip = chip
         self.sdkconfig = dict(SDKCONFIG_DEFAULTS)
+        self.partition_table = None
+        if board is not None:
+            self.sdkconfig.update(board.sdkconfig)
+            if board.partition_table is not None:
+                self.partition_table = board.partition_table
+                self.sdkconfig["PARTITION_TABLE_CUSTOM"] = True
+                self.sdkconfig["PARTITION_TABLE_SINGLE_APP_LARGE"] = False
+                self.sdkconfig["PARTITION_TABLE_CUSTOM_FILENAME"] = PARTITION_TABLE_FILENAME
         self.sdkconfig.update(sdkconfig)
         self.idf_components = dict(idf_components)
+        self.lv_conf = None if lv_conf is None else os.path.abspath(lv_conf)
         # Everything compiles as C++ on this platform: the chip glue is
         # written against IDF's C++-visible API, and RULOS' C headers carry
         # no extern "C" guards for C++ callers.
@@ -237,11 +272,32 @@ class Esp32Platform(BaseRules.Platform):
             "-Wno-extra",
         ]
 
+    def _peripherals(self, target):
+        return target.peripherals + self.extra_peripherals
+
     def _idf_components(self, target):
         components = set(IDF_COMPONENTS["core"])
-        for periph in target.peripherals + self.extra_peripherals:
+        for periph in self._peripherals(target):
             components.update(IDF_COMPONENTS.get(periph, []))
         return sorted(components)
+
+    def _registry_components(self, target):
+        components = {}
+        for periph in self._peripherals(target):
+            components.update(IDF_REGISTRY_COMPONENTS.get(periph, {}))
+        components.update(self.idf_components)
+        return components
+
+    # Preprocessor definitions for every component in the project, the
+    # SDK's included.
+    def _project_definitions(self, target):
+        definitions = {}
+        if "lvgl" in self._peripherals(target):
+            assert self.lv_conf is not None, "the lvgl peripheral needs Esp32Platform(lv_conf=...)"
+            # LVGL reads its configuration from this path instead of the
+            # sdkconfig, so the device and host builds share one file.
+            definitions["LV_CONF_PATH"] = f'"{self.lv_conf}"'
+        return definitions
 
     # The compiler flags, as the compiler should see them. RULOS flag lists
     # are written for a shell command line, so shell quoting is undone
@@ -282,6 +338,10 @@ target_compile_options(${{COMPONENT_LIB}} PRIVATE {_cmake_list(compiler_args)})
 
         sdkconfig = dict(self.sdkconfig)
         sdkconfig["IDF_TARGET"] = self.chip
+        project_options = "".join(
+            f"idf_build_set_property(COMPILE_OPTIONS {_cmake_quote(f'-D{k}={v}')} APPEND)\n"
+            for k, v in sorted(self._project_definitions(target).items())
+        )
         files = {
             "CMakeLists.txt": (
                 f"""# generated by RULOS; see src/util/build_tools/Esp32BuildRules.py
@@ -289,7 +349,7 @@ cmake_minimum_required(VERSION 3.16)
 include($ENV{{IDF_PATH}}/tools/cmake/project.cmake)
 # build only the components the app's dependencies reach
 idf_build_set_property(MINIMAL_BUILD ON)
-project({program})
+{project_options}project({program})
 """
             ),
             "sdkconfig.defaults": "".join(
@@ -302,12 +362,21 @@ project({program})
                 app_sources, [], ["rulos"], compiler_args
             ),
         }
-        if self.idf_components:
+        if self.partition_table is not None:
+            files[PARTITION_TABLE_FILENAME] = self.partition_table
+        registry_components = self._registry_components(target)
+        if registry_components:
             files[os.path.join("main", "idf_component.yml")] = "dependencies:\n" + "".join(
-                f'  {name}: "{spec}"\n' for name, spec in sorted(self.idf_components.items())
+                f'  {name}: "{spec}"\n' for name, spec in sorted(registry_components.items())
             )
         for relpath, content in files.items():
-            _write_if_changed(os.path.join(project_dir, relpath), content)
+            changed = _write_if_changed(os.path.join(project_dir, relpath), content)
+            # IDF reads sdkconfig.defaults only when it creates sdkconfig,
+            # so a changed configuration must start over from the defaults.
+            if changed and relpath == "sdkconfig.defaults":
+                sdkconfig_path = os.path.join(project_dir, "sdkconfig")
+                if os.path.exists(sdkconfig_path):
+                    os.remove(sdkconfig_path)
 
     def _idf_cmdline(self, env, args):
         return (

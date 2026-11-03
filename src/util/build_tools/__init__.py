@@ -61,6 +61,8 @@ from .ArmBuildRules import ArmPlatform, ArmStmPlatform, ArmNxpPlatform
 from .AvrBuildRules import AvrPlatform
 from .SimBuildRules import SimulatorPlatform
 from .Esp32BuildRules import Esp32Platform
+from . import Esp32Boards
+from .Lvgl import LvglHostProgram, LvglPngImages
 from .Canary import canary_platforms
 
 if not os.path.exists(BUILD_ROOT):
