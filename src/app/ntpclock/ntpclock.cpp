@@ -27,6 +27,7 @@
 #include "core/hardware.h"
 #include "core/rulos.h"
 #include "driver/i2c_master.h"
+#include "esp_partition.h"
 #include "periph/ch422g/ch422g.h"
 #include "periph/inet/inet.h"
 #include "periph/lvgl/rulos_lvgl.h"
@@ -41,6 +42,10 @@
 #define UI_REFRESH_PERIOD_US    100000
 #define WEATHER_HTTP_TIMEOUT_MS 10000
 #define WEATHER_REPLY_LEN       1024
+
+// The flash partition holding the cat's animation frames (cat_frames.bin
+// from the build), named in the SConstruct's partition table.
+#define CAT_FRAMES_PARTITION "cats"
 
 static NtpClient ntp;
 
@@ -124,6 +129,19 @@ static void refresh_ui(void *data) {
 
 //////////////// main /////////////////////
 
+// Maps the cat's frames into the address space straight from flash, where
+// they stay: unlike the app's own constants, they are not copied to PSRAM.
+static const uint8_t *map_cat_frames() {
+  const esp_partition_t *partition = esp_partition_find_first(
+      ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, CAT_FRAMES_PARTITION);
+  assert(partition != NULL);
+  const void *frames;
+  esp_partition_mmap_handle_t handle;
+  ESP_ERROR_CHECK(
+      esp_partition_mmap(partition, 0, partition->size, ESP_PARTITION_MMAP_DATA, &frames, &handle));
+  return (const uint8_t *)frames;
+}
+
 static i2c_master_bus_handle_t i2c_bus_init() {
   i2c_master_bus_config_t config = {};
   config.i2c_port = I2C_NUM_0;
@@ -153,7 +171,7 @@ int main() {
   rulos_lvgl_init();
   const esp_lcd_rgb_panel_config_t panel_config = waveshare_43b_rgb_panel_config();
   rulos_lvgl_add_rgb_panel(&panel_config);
-  clock_ui_create();
+  clock_ui_create(map_cat_frames());
   static ch422g_t expander;
   ch422g_init(&expander, i2c_bus_init());
   ch422g_set_exio(&expander, WAVESHARE_43B_EXIO_LCD_BACKLIGHT, true);

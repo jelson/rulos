@@ -27,23 +27,50 @@ icon_sources = LvglPngImages(
     sorted(glob.glob("icons/*.png")), os.path.join(BUILD_ROOT, "ntpclock", "icons"), prefix="icon_"
 )
 
+# The cat shows: cat/catrig.py renders the frames, which become LVGL
+# images packed into one blob plus tables describing each show. The device
+# keeps the blob in its own flash partition; the host embeds it.
+cat_dir = os.path.join(BUILD_ROOT, "ntpclock", "cat")
+cat_manifest = os.path.join(cat_dir, "frames", "manifest.json")
+run_if_stale(
+    [cat_manifest],
+    ["cat/catrig.py"],
+    ["python3", "cat/catrig.py", "--export", os.path.join(cat_dir, "frames")],
+)
+cat = LvglSpriteShows(cat_manifest, cat_dir, prefix="cat_")
+
+# The 16 MB flash: the app, and the cat's frames behind it.
+PARTITION_TABLE = """\
+# Name,     Type, SubType,  Offset, Size
+nvs,        data, nvs,      ,       24K
+phy_init,   data, phy,      ,       4K
+factory,    app,  factory,  ,       3M
+cats,       data, 0x40,     ,       0xCF0000
+"""
+
 RulosBuildTarget(
     name = "ntpclock",
-    sources = ["ntpclock.cpp", "clock_ui.c", "weather_icon.c"] + icon_sources,
-    peripherals = "uart inet ntp lvgl ch422g weather openmeteo",
+    sources = ["ntpclock.cpp", "clock_ui.c", "weather_icon.c", cat.source] + icon_sources,
+    peripherals = "uart inet ntp lvgl ch422g weather openmeteo sprite_show",
     extra_cflags = [
         "-DLOG_TO_SERIAL",
+        "-I" + cat.include_dir,
 
         # include out-of-repo directory to get wifi credentials
         "-I" + os.path.expanduser("~/.config/rulos"),
     ],
     platforms = [
-        Esp32Platform(board=Esp32Boards.WAVESHARE_ESP32_S3_TOUCH_LCD_43B, lv_conf="lv_conf.h"),
+        Esp32Platform(
+            board=Esp32Boards.WAVESHARE_ESP32_S3_TOUCH_LCD_43B,
+            lv_conf="lv_conf.h",
+            partition_table=PARTITION_TABLE,
+            flash_partitions={"cats": cat.blob},
+        ),
     ],
 ).build()
 
 # The same screen on the PC, fed from the system clock:
-#   build/ntpclock-host/host/ntpclock-host [--screenshot FILE.bmp]
+#   build/ntpclock-host/host/ntpclock-host [--show NAME] [--screenshot FILE.bmp]
 LvglHostProgram(
     "ntpclock-host",
     [
@@ -52,7 +79,11 @@ LvglHostProgram(
         "weather_icon.c",
         "../../lib/periph/weather/weather.c",
         "../../lib/periph/openmeteo/openmeteo.c",
+        "../../lib/periph/sprite_show/sprite_show.c",
+        cat.source,
+        cat.embed_source,
     ]
     + icon_sources,
     lv_conf_dir=".",
+    extra_cflags=["-I" + cat.include_dir],
 )

@@ -18,7 +18,8 @@
 // The clock on a PC: the same screen as the device, fed from the system
 // clock, with the weather fetched through curl. With SDL2 it opens a
 // window; with --screenshot it renders one frame to a BMP file and exits,
-// which needs no display at all.
+// which needs no display at all. --show NAME starts that cat show right
+// away, in the window or partway through for the screenshot.
 
 #include <stdint.h>
 #include <stdio.h>
@@ -26,6 +27,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "cat_shows.h"
 #include "clock_config.h"
 #include "clock_ui.h"
 #include "lvgl.h"
@@ -36,6 +38,8 @@
 #define VER_RES           480
 #define FRAME_PERIOD_US   5000
 #define WEATHER_REPLY_LEN 2048
+// how far into a show the screenshot is taken
+#define SHOW_SCREENSHOT_MS 2500
 
 static uint32_t tick_ms(void) {
   struct timespec ts;
@@ -134,12 +138,23 @@ static lv_display_t *memory_display(void) {
   return disp;
 }
 
-static int screenshot(const char *path) {
+static int screenshot(const char *path, const char *show) {
   lv_display_t *disp = memory_display();
-  clock_ui_create();
+  clock_ui_create(cat_frames_blob);
   show_local_time();
   show_weather();
   clock_ui_set_status("Rendered on the PC");
+  if (show != NULL) {
+    if (!clock_ui_play_show(show)) {
+      fprintf(stderr, "no show named %s\n", show);
+      return 1;
+    }
+    const uint32_t start = tick_ms();
+    while (tick_ms() - start < SHOW_SCREENSHOT_MS) {
+      lv_timer_handler();
+      usleep(FRAME_PERIOD_US);
+    }
+  }
   lv_refr_now(disp);
   return write_bmp(path, frame, HOR_RES, VER_RES);
 }
@@ -172,7 +187,12 @@ static int icon_gallery(const char *path) {
 //////////////// main /////////////////////
 
 static int usage(const char *argv0) {
-  fprintf(stderr, "usage: %s [--screenshot FILE.bmp | --icons FILE.bmp]\n", argv0);
+  fprintf(stderr, "usage: %s [--show NAME] [--screenshot FILE.bmp | --icons FILE.bmp]\n", argv0);
+  fprintf(stderr, "shows:");
+  for (unsigned i = 0; i < cat_show_count; i++) {
+    fprintf(stderr, " %s", cat_shows[i].name);
+  }
+  fprintf(stderr, "\n");
   return 1;
 }
 
@@ -180,21 +200,35 @@ int main(int argc, char **argv) {
   lv_init();
   lv_tick_set_cb(tick_ms);
 
-  if (argc == 3 && strcmp(argv[1], "--screenshot") == 0) {
-    return screenshot(argv[2]);
+  const char *show = NULL;
+  const char *screenshot_path = NULL;
+  const char *icons_path = NULL;
+  for (int i = 1; i < argc; i++) {
+    const char **value = strcmp(argv[i], "--show") == 0         ? &show
+                         : strcmp(argv[i], "--screenshot") == 0 ? &screenshot_path
+                         : strcmp(argv[i], "--icons") == 0      ? &icons_path
+                                                                : NULL;
+    if (value == NULL || i + 1 >= argc) {
+      return usage(argv[0]);
+    }
+    *value = argv[++i];
   }
-  if (argc == 3 && strcmp(argv[1], "--icons") == 0) {
-    return icon_gallery(argv[2]);
+  if (screenshot_path != NULL) {
+    return screenshot(screenshot_path, show);
   }
-  if (argc != 1) {
-    return usage(argv[0]);
+  if (icons_path != NULL) {
+    return icon_gallery(icons_path);
   }
 
 #if LV_USE_SDL
   lv_display_t *disp = lv_sdl_window_create(HOR_RES, VER_RES);
   lv_sdl_window_set_title(disp, "ntpclock");
-  clock_ui_create();
+  clock_ui_create(cat_frames_blob);
   clock_ui_set_status("Running on the PC");
+  if (show != NULL && !clock_ui_play_show(show)) {
+    fprintf(stderr, "no show named %s\n", show);
+    return usage(argv[0]);
+  }
   time_t next_weather_fetch = 0;
   while (1) {
     show_local_time();

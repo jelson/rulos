@@ -20,7 +20,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "cat_shows.h"
 #include "lvgl.h"
+#include "periph/sprite_show/sprite_show.h"
 #include "weather_icon.h"
 
 // montserrat_48 is the largest font LVGL ships, so the time is drawn
@@ -60,6 +62,11 @@ static lv_obj_t *status_label;
 static bool icon_valid;
 static weather_condition_t icon_condition;
 static bool icon_is_day;
+
+// the cat, and which quarter hour she last performed in
+static sprite_player_t cat;
+static int last_quarter = -1;
+static unsigned last_show;
 
 static const char *const WEEKDAYS[] = {"Sunday",   "Monday", "Tuesday", "Wednesday",
                                        "Thursday", "Friday", "Saturday"};
@@ -132,9 +139,12 @@ static void create_weather(lv_obj_t *screen) {
   low_label = label(temperatures, &lv_font_montserrat_28, COLOR_LOW);
 }
 
-void clock_ui_create(void) {
+void clock_ui_create(const uint8_t *cat_frames) {
   lv_obj_t *screen = lv_screen_active();
   lv_obj_set_style_bg_color(screen, lv_color_black(), 0);
+  // the cat walks in from beyond the edges; the screen must not scroll
+  // after her
+  lv_obj_clear_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
 
   create_time(screen);
   date_label = label(screen, &lv_font_montserrat_28, COLOR_DATE);
@@ -143,9 +153,44 @@ void clock_ui_create(void) {
   status_label = label(screen, &lv_font_montserrat_20, COLOR_STATUS);
   place(status_label, LV_ALIGN_BOTTOM_MID, -STATUS_BOTTOM_MARGIN);
 
+  // the cat is created last so she walks in front of everything
+  for (unsigned i = 0; i < cat_show_count; i++) {
+    sprite_show_bind(&cat_shows[i], cat_frames);
+  }
+  sprite_player_init(&cat, screen);
+
   clock_ui_set_time(NULL);
   clock_ui_set_weather(NULL);
   clock_ui_set_status("");
+}
+
+static void play_show(unsigned index) {
+  last_show = index;
+  sprite_player_play(&cat, &cat_shows[index]);
+}
+
+// A show at the top of each quarter hour, never the same one twice running.
+static void quarter_hour_show(const struct tm *t) {
+  const int quarter = (t->tm_yday * 24 + t->tm_hour) * 4 + t->tm_min / 15;
+  if (t->tm_min % 15 != 0 || quarter == last_quarter) {
+    return;
+  }
+  last_quarter = quarter;
+  unsigned index = lv_rand(0, cat_show_count - 1);
+  if (index == last_show) {
+    index = (index + 1) % cat_show_count;
+  }
+  play_show(index);
+}
+
+bool clock_ui_play_show(const char *name) {
+  for (unsigned i = 0; i < cat_show_count; i++) {
+    if (strcmp(cat_shows[i].name, name) == 0) {
+      play_show(i);
+      return true;
+    }
+  }
+  return false;
 }
 
 static void set_time_text(const char *text) {
@@ -166,6 +211,7 @@ void clock_ui_set_time(const struct tm *t) {
   set_time_text(text);
   snprintf(text, sizeof(text), "%s, %s %d", WEEKDAYS[t->tm_wday], MONTHS[t->tm_mon], t->tm_mday);
   set_label(date_label, text);
+  quarter_hour_show(t);
 }
 
 void clock_ui_set_weather(const weather_t *weather) {

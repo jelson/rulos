@@ -39,8 +39,15 @@
 #define LV_LOG_PRINTF 1
 
 // Weather icons are PNGs decoded on first use and kept decoded
-#define LV_USE_LODEPNG    1
-#define LV_CACHE_DEF_SIZE (256 * 1024)
+#define LV_USE_LODEPNG 1
+
+// The cat's frames are RLE-compressed indexed images, decompressed whole
+// when drawn. LVGL only draws a decoded image it can hold in its cache, and
+// a frame decodes to 300 KB, so the cache is sized for a few of them (it
+// lives in PSRAM on the ESP32-S3).
+#define LV_USE_RLE              1
+#define LV_BIN_DECODER_RAM_LOAD 1
+#define LV_CACHE_DEF_SIZE       (2 * 1024 * 1024)
 
 #define LV_FONT_MONTSERRAT_20 1
 #define LV_FONT_MONTSERRAT_28 1

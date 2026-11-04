@@ -27,12 +27,13 @@ Parts are drawn in groups. A group's shapes are outlined as one silhouette,
 so a leg made of three segments has no lines at its joints, and the head,
 muzzle and ears read as one head.
 
-    catrig.py --preview DIR      GIF and contact strip per animation
-    catrig.py --frames DIR       PNG frame sequences per animation
+    catrig.py --preview DIR      GIF and contact strip per show
+    catrig.py --export DIR       PNG frames and a manifest for the clock build
 """
 
 import argparse
 import dataclasses
+import json
 import math
 import os
 
@@ -788,6 +789,11 @@ class Anim:
             x, y = x + dx, y + dy
         return x, y, seg.flip
 
+    def sample(self, fps):
+        """The timeline frames to show when playing at fps."""
+        count = math.ceil(self.length * fps / self.fps)
+        return [min(round(i * self.fps / fps), self.length - 1) for i in range(count)]
+
 
 def tau(i, n):
     return 2 * math.pi * i / n
@@ -795,14 +801,16 @@ def tau(i, n):
 
 def hold(pose, n, **wobble):
     """A segment holding a pose, with optional sinusoidal wobble: each
-    keyword is a field name mapped to (amplitude, period in frames, phase)."""
+    keyword is a field name mapped to (amplitude, period in frames, phase).
+    The frames repeat with the wobble's period, so they render once."""
 
     def f(i):
         return add(
             pose, **{k: a * math.sin(tau(i, per) + ph) for k, (a, per, ph) in wobble.items()}
         )
 
-    return Seg(n, f)
+    periods = [per for _, per, _ in wobble.values()]
+    return Seg(n, f, cycle=math.lcm(*periods) if periods else 1)
 
 
 def tween(frames, n):
@@ -1100,30 +1108,28 @@ CROUCH = Pose(
 
 def sit_groom_show():
     x = 300
-    groom = [
-        (0.00, SIT),
-        (0.10, LICK),
-        (0.60, LICK),
-        (0.72, SIT),
-        (1.00, SIT),
-    ]
 
-    def groom_pose(i, n=120):
-        t = i / n
-        p = keyframes(groom, t)
-        if 0.10 <= t <= 0.60:
-            lick = math.sin(2 * math.pi * (t - 0.10) * 10)
-            p.head_angle += 7 * lick
-            p.head_dy += 2 * lick
-            p.fn_u += 3 * lick
-        elif t > 0.80:
-            p.pupil_dx = -1.5
-            p.pupil_dy = 1
-            blink = (t - 0.88) / 0.08
-            if 0 <= blink <= 1:
-                p.eye = 1 - math.sin(math.pi * blink)
-        p.tail1 += 6 * math.sin(2 * math.pi * t * 1.5)
-        p.tail3 += 12 * math.sin(2 * math.pi * t * 1.5 - 1)
+    def lick_pose(i, n=12):
+        lick = math.sin(tau(i, n))
+        return add(
+            LICK,
+            head_angle=7 * lick,
+            head_dy=2 * lick,
+            fn_u=3 * lick,
+            tail3=12 * math.sin(tau(i, n) - 1),
+        )
+
+    def look_pose(i, n=36):
+        p = add(
+            SIT,
+            pupil_dx=-1.5,
+            pupil_dy=1,
+            tail1=6 * math.sin(tau(i, n)),
+            tail3=12 * math.sin(tau(i, n) - 1),
+        )
+        blink = (i - 14) / 8
+        if 0 <= blink <= 1:
+            p.eye = 1 - math.sin(math.pi * blink)
         return p
 
     return Anim(
@@ -1132,7 +1138,11 @@ def sit_groom_show():
         [
             walk_in(x),
             tween([(0, walk_pose(0)), (1, SIT)], 12),
-            Seg(120, groom_pose),
+            hold(SIT, 12, tail3=(12, 12, 0)),
+            tween([(0, SIT), (1, LICK)], 10),
+            Seg(60, lick_pose, cycle=12),
+            tween([(0, LICK), (1, SIT)], 10),
+            Seg(36, look_pose),
             tween([(0, SIT), (1, walk_pose(0))], 12),
             walk_out(x),
         ],
@@ -1173,12 +1183,12 @@ def stretch_show():
 def nap_show():
     x = 320
 
-    def sleep_pose(i, n=140):
-        breath = math.sin(tau(i, 48))
+    def sleep_pose(i, n=48):
+        breath = math.sin(tau(i, n))
         p = add(ASLEEP, body_y=1.2 * breath, head_dy=1.5 * breath)
-        p.zzz = i / 48
-        twitch = (i % 70) / 6
-        if twitch < 1:
+        p.zzz = i / n
+        twitch = (i - 30) / 6
+        if 0 <= twitch < 1:
             p.ear_near = -10 + 25 * math.sin(math.pi * twitch)
         return p
 
@@ -1190,7 +1200,7 @@ def nap_show():
             tween([(0, walk_pose(0)), (0.4, REST), (1, LOAF)], 24),
             hold(LOAF, 16),
             tween([(0, LOAF), (1, ASLEEP)], 24),
-            Seg(140, sleep_pose),
+            Seg(144, sleep_pose, cycle=48),
             tween(
                 [
                     (0, ASLEEP),
@@ -1268,7 +1278,7 @@ def scared_show():
             walk_in(x),
             tween([(0, walk_pose(0)), (1, REST)], 8),
             hold(REST, 20, pupil_dx=(2, 40, 0)),
-            Seg(jump_n, lambda i: SCARED, arc=hop),
+            Seg(jump_n, lambda i: SCARED, arc=hop, cycle=1),
             hold(SCARED, 22, body_x=(2, 4, 0)),
             tween([(0, SCARED), (1, bolt_pose(0))], 6),
             Seg(int((OFF_RIGHT - x) / 15), bolt_pose, speed=15, cycle=16),
@@ -1291,16 +1301,15 @@ def peek_show():
     x = -50
     peek_n = 24
 
-    def look_pose(i, n=96):
-        t = i / n
+    def look_pose(i, n=48):
         p = add(
             REST,
-            pupil_dx=3 * math.sin(tau(i, 48)),
-            pupil_dy=1.5 * math.sin(tau(i, 36)),
-            head_angle=6 * math.sin(tau(i, 64)),
-            ear_near=15 * max(0, math.sin(tau(i, 32))),
+            pupil_dx=3 * math.sin(tau(i, n)),
+            pupil_dy=1.5 * math.sin(tau(i, n // 2)),
+            head_angle=6 * math.sin(tau(i, n)),
+            ear_near=15 * max(0, math.sin(tau(i, n // 2))),
         )
-        blink = (t - 0.5) / 0.08
+        blink = (i - 20) / 8
         if 0 <= blink <= 1:
             p.eye = 1 - math.sin(math.pi * blink)
         return p
@@ -1310,13 +1319,14 @@ def peek_show():
         "peek",
         OFF_LEFT,
         [
-            Seg(peek_n, lambda i: REST, speed=(x - OFF_LEFT) / peek_n, arc=slide),
-            Seg(96, look_pose),
+            Seg(peek_n, lambda i: REST, speed=(x - OFF_LEFT) / peek_n, arc=slide, cycle=1),
+            Seg(96, look_pose, cycle=48),
             Seg(
                 peek_n,
                 lambda i: REST,
                 speed=-(x - OFF_LEFT) / peek_n,
                 arc=lambda i: slide(peek_n - i),
+                cycle=1,
             ),
         ],
     )
@@ -1402,38 +1412,33 @@ def pounce_show():
 
 def butterfly_show():
     x = 300
-    n = 168
+    lap = 60  # one figure eight, with a swat
+    leave = 40
 
-    def bfly_at(i):
-        t = i / n
-        if t < 0.75:
-            # flutters in a lazy figure eight in front of her face
-            bx = 110 + 40 * math.sin(tau(i, 56))
-            by = -80 + 25 * math.sin(tau(i, 28))
-        else:
-            u = (t - 0.75) / 0.25
-            bx = 110 + 40 * math.sin(tau(int(0.75 * n), 56)) + 260 * u
-            by = -80 - 160 * u
-        return bx, by
+    def loop_at(i):
+        return 110 + 40 * math.sin(tau(i, lap)), -80 + 25 * math.sin(tau(i, lap // 2))
 
-    def watch_pose(i):
-        bx, by = bfly_at(i)
-        t = i / n
-        p = dataclasses.replace(SIT)
-        # swat twice while it dips close
-        for swat_start in (70, 100):
-            u = (i - swat_start) / 14
-            if 0 <= u <= 1:
-                p = blend(SIT, SWAT, math.sin(math.pi * u))
-        # the head follows the butterfly
+    def watching(p, bx, by, i):
+        """Pose p with the head and eyes on the butterfly at (bx, by)."""
         p.head_angle += -0.25 * (by + 80)
         p.pupil_dx = max(-3, min(3, (bx - 120) / 12))
         p.pupil_dy = max(-3, min(3, (by + 60) / 20))
         p.bfly = 1
         p.bfly_x, p.bfly_y = bx, by
         p.bfly_wing = i / 6
-        p.tail3 += 15 * math.sin(tau(i, 30))
-        if t > 0.92:
+        p.tail3 += 15 * math.sin(tau(i, lap // 2))
+        return p
+
+    def lap_pose(i):
+        u = (i - 36) / 14
+        p = blend(SIT, SWAT, math.sin(math.pi * u)) if 0 <= u <= 1 else dataclasses.replace(SIT)
+        return watching(p, *loop_at(i), i)
+
+    def leave_pose(i):
+        u = i / leave
+        bx, by = loop_at(0)
+        p = watching(dataclasses.replace(SIT), bx + 260 * u, by - 160 * u, i)
+        if u > 0.8:
             p.pupil_dx, p.pupil_dy = -1.5, 1
             p.bfly = 0
         return p
@@ -1444,7 +1449,8 @@ def butterfly_show():
         [
             walk_in(x),
             tween([(0, walk_pose(0)), (1, SIT)], 12),
-            Seg(n, watch_pose),
+            Seg(2 * lap, lap_pose, cycle=lap),
+            Seg(leave, leave_pose),
             hold(dataclasses.replace(SIT, pupil_dx=-1.5, pupil_dy=1), 20),
             tween([(0, SIT), (1, walk_pose(0))], 12),
             walk_out(x),
@@ -1487,36 +1493,51 @@ CANVAS_ORIGIN = (220, 200)
 
 @dataclasses.dataclass
 class Frames:
-    images: list  # the unique images
-    index: list  # image number for each frame of the show
-    # where the body origin sits in each image, in pixels
-    origin: tuple
-    # the ground line, in pixels below the top of each image
-    ground: float
+    """A show rendered: the unique images (mirrored ones included), and for
+    each played frame which image to show and where its top-left corner
+    goes on the screen, in pixels."""
+
+    images: list
+    placement: list  # (image number, left, top) per frame
+    fps: int
 
 
-def frames_of(anim, cat_scale=1.0, pad=2):
+def frames_of(anim, fps=FPS, cat_scale=1.0, pad=2):
     w, h = CANVAS
     size = (int(w * cat_scale), int(h * cat_scale))
     origin = (CANVAS_ORIGIN[0] * cat_scale, CANVAS_ORIGIN[1] * cat_scale)
-    images, index, seen = [], [], {}
-    for i in range(anim.length):
-        key = anim.key(i)
-        if key not in seen:
-            seen[key] = len(images)
-            images.append(render(anim.pose(i), size, origin, cat_scale))
-        index.append(seen[key])
-    boxes = [img.getbbox() for img in images]
+    timeline = anim.sample(fps)
+
+    # render each distinct pose once
+    rendered, by_key = [], {}
+    for t in timeline:
+        key = anim.key(t)
+        if key not in by_key:
+            by_key[key] = len(rendered)
+            rendered.append(render(anim.pose(t), size, origin, cat_scale))
+    boxes = [img.getbbox() for img in rendered]
     x0 = max(0, min(b[0] for b in boxes) - pad)
     y0 = max(0, min(b[1] for b in boxes) - pad)
     x1 = min(size[0], max(b[2] for b in boxes) + pad)
     y1 = min(size[1], max(b[3] for b in boxes) + pad)
-    return Frames(
-        [img.crop((x0, y0, x1, y1)) for img in images],
-        index,
-        (origin[0] - x0, origin[1] - y0),
-        origin[1] - y0 + GROUND_Y * cat_scale,
-    )
+    rendered = [img.crop((x0, y0, x1, y1)) for img in rendered]
+    origin_x, origin_y = origin[0] - x0, origin[1] - y0
+    width = x1 - x0
+
+    # mirrored frames get their own images, so the player never transforms
+    images, by_image, placement = [], {}, []
+    for t in timeline:
+        x, y, flip = anim.path(t)
+        k = (by_key[anim.key(t)], flip)
+        if k not in by_image:
+            by_image[k] = len(images)
+            img = rendered[k[0]]
+            images.append(img.transpose(Image.FLIP_LEFT_RIGHT) if flip else img)
+        ox = width - origin_x if flip else origin_x
+        left = round(x * cat_scale - ox)
+        top = round(GROUND_LINE - y * cat_scale - origin_y - GROUND_Y * cat_scale)
+        placement.append((by_image[k], left, top))
+    return Frames(images, placement, fps)
 
 
 def on_background(img, color=(120, 170, 220, 255)):
@@ -1547,18 +1568,12 @@ def write_strip(path, frames, count=8):
     strip.convert("RGB").save(path)
 
 
-def write_scene(path, anim, frames, cat_scale=1.0, shrink=2):
-    """The show on a screen-sized canvas, following its path. The GIF is
-    written at 1/shrink of the screen size."""
+def write_scene(path, frames, shrink=2):
+    """The show on a screen-sized canvas. The GIF is written at 1/shrink of
+    the screen size."""
     out = []
-    mirrored = [img.transpose(Image.FLIP_LEFT_RIGHT) for img in frames.images]
-    fw = frames.images[0].width
-    for i in range(anim.length):
-        x, y, flip = anim.path(i)
-        img = (mirrored if flip else frames.images)[frames.index[i]]
-        ox = fw - frames.origin[0] if flip else frames.origin[0]
-        left = int(x * cat_scale - ox)
-        top = int(GROUND_LINE - y * cat_scale - frames.ground)
+    for image, left, top in frames.placement:
+        img = frames.images[image]
         bg = Image.new("RGBA", (SCREEN_W, SCREEN_H), (30, 34, 60, 255))
         if left < SCREEN_W and top < SCREEN_H and left + img.width > 0 and top + img.height > 0:
             bg.alpha_composite(
@@ -1567,39 +1582,57 @@ def write_scene(path, anim, frames, cat_scale=1.0, shrink=2):
         out.append(
             bg.convert("RGB").resize((SCREEN_W // shrink, SCREEN_H // shrink), Image.LANCZOS)
         )
-    out[0].save(path, save_all=True, append_images=out[1:], duration=int(1000 / anim.fps), loop=0)
+    out[0].save(path, save_all=True, append_images=out[1:], duration=int(1000 / frames.fps), loop=0)
+
+
+def export(directory, shows, fps, cat_scale):
+    """Writes every show's images as PNGs under directory and a manifest.json
+    the clock build turns into frame tables."""
+    manifest = {"fps": fps, "screen": [SCREEN_W, SCREEN_H], "shows": []}
+    for anim, frames in shows:
+        os.makedirs(os.path.join(directory, anim.name), exist_ok=True)
+        paths = []
+        for i, img in enumerate(frames.images):
+            rel = os.path.join(anim.name, f"{i:03d}.png")
+            img.save(os.path.join(directory, rel))
+            paths.append(rel)
+        manifest["shows"].append({
+            "name": anim.name,
+            "images": paths,
+            "frames": [list(p) for p in frames.placement],
+        })
+    with open(os.path.join(directory, "manifest.json"), "w") as f:
+        json.dump(manifest, f, indent=1)
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--preview", metavar="DIR", help="write GIFs and contact strips")
-    ap.add_argument("--frames", metavar="DIR", help="write PNG frame sequences")
+    ap.add_argument("--export", metavar="DIR", help="write PNG frames and a manifest")
+    ap.add_argument("--fps", type=int, default=12, help="playback frame rate")
     ap.add_argument("--scale", type=float, default=1.0, help="cat scale factor")
-    ap.add_argument("--only", action="append", help="limit to these animations")
+    ap.add_argument("--only", action="append", help="limit to these shows")
     args = ap.parse_args()
 
+    shows = []
     for show in SHOWS:
         anim = show()
         if args.only and anim.name not in args.only:
             continue
-        frames = frames_of(anim, args.scale)
+        frames = frames_of(anim, args.fps, args.scale)
+        shows.append((anim, frames))
         if args.preview:
             os.makedirs(args.preview, exist_ok=True)
-            write_gif(os.path.join(args.preview, anim.name + ".gif"), frames.images, anim.fps)
+            write_gif(os.path.join(args.preview, anim.name + ".gif"), frames.images, frames.fps)
             write_strip(os.path.join(args.preview, anim.name + "_strip.png"), frames.images)
-            write_scene(
-                os.path.join(args.preview, anim.name + "_scene.gif"), anim, frames, args.scale
-            )
-        if args.frames:
-            d = os.path.join(args.frames, anim.name)
-            os.makedirs(d, exist_ok=True)
-            for i, f in enumerate(frames.images):
-                f.save(os.path.join(d, f"{i:03d}.png"))
+            write_scene(os.path.join(args.preview, anim.name + "_scene.gif"), frames)
         w, h = frames.images[0].size
         print(
-            f"{anim.name}: {anim.length} frames ({len(frames.images)} unique) @ {anim.fps} fps, "
-            f"{w}x{h}, {anim.length / anim.fps:.1f} s"
+            f"{anim.name}: {len(frames.placement)} frames ({len(frames.images)} images) "
+            f"@ {frames.fps} fps, {w}x{h}, {len(frames.placement) / frames.fps:.1f} s"
         )
+    if args.export:
+        export(args.export, shows, args.fps, args.scale)
 
 
 if __name__ == "__main__":

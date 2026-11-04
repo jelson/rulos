@@ -97,3 +97,14 @@ def commit_hash():
 @functools.cache
 def which(bin_name):
     return shutil.which(bin_name)
+
+
+def run_if_stale(outputs, inputs, command):
+    """Runs command (a list for subprocess) unless every output exists and is
+    newer than every input. For generators that are not worth a SCons
+    builder: the command runs when the SConstruct is read."""
+    newest_input = max(os.path.getmtime(i) for i in inputs)
+    if all(os.path.exists(o) and os.path.getmtime(o) >= newest_input for o in outputs):
+        return
+    print("running " + " ".join(command))
+    subprocess.check_call(command)
