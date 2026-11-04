@@ -303,6 +303,13 @@ class Pose:
     yarn_angle: float = 0
     legs_hidden: float = 0  # 1 hides the far legs (sitting, lying)
     haunch: float = 0  # 1 swells the hind thighs into a sitting haunch
+    happy: float = 0  # 1 draws closed eyes as happy arcs
+    puff: float = 1  # tail thickness multiplier
+    zzz: float = -1  # >= 0 shows sleeping z's, advancing with the value
+    bfly: float = 0  # 1 shows the butterfly
+    bfly_x: float = 120
+    bfly_y: float = -60
+    bfly_wing: float = 0  # wing flap phase, in cycles
 
 
 def lerp(a, b, t):
@@ -423,7 +430,14 @@ def build_eye(groups, N, cx, cy, r, pose, order):
     openness = max(pose.eye, 0.0)
     g = Group(order, width=1.5)
     if openness < 0.12:
-        g.stroke(apply(N, [(cx - r, cy), (cx, cy + 3), (cx + r, cy)]), width=2.0)
+        if pose.happy > 0.5:
+            arc = [
+                (cx + r * math.cos(t), cy + 2 - r * 0.8 * math.sin(t))
+                for t in (math.pi * i / 8 for i in range(9))
+            ]
+        else:
+            arc = [(cx - r, cy), (cx, cy + 3), (cx + r, cy)]
+        g.stroke(apply(N, arc), width=2.0)
         groups.append(g)
         return
     up = r * 1.15 * openness
@@ -458,12 +472,12 @@ def build(pose):
     tail = Group(20)
     T = chain(B, trans(*TAIL_BASE))
     joints = [apply(T, [(0, 0)])[0]]
-    widths = [TAIL_SEGS[0][1] + 2]
+    widths = [(TAIL_SEGS[0][1] + 2) * pose.puff]
     for (length, width), angle in zip(TAIL_SEGS, (pose.tail1, pose.tail2, pose.tail3)):
         T = chain(T, rot(-angle), trans(0, -length))
         joints.append(apply(T, [(0, 0)])[0])
-        widths.append(width)
-    s_tail = tail.shape(tube(joints, widths, tuft=3), BLACK)
+        widths.append(width * pose.puff)
+    s_tail = tail.shape(tube(joints, widths, tuft=3 * pose.puff), BLACK)
     # the orange band around the middle of the tail
     jx, jy = joints[1]
     kx, ky = joints[2]
@@ -601,6 +615,32 @@ def build(pose):
                 width=1.3,
             )
         groups.append(yarn)
+
+    # sleeping z's drifting up from the head
+    if pose.zzz >= 0:
+        zs = Group(70, width=0)
+        hx0, hy0 = head_world
+        for k in range(3):
+            t = (pose.zzz + k / 3) % 1
+            if t > 0.85:
+                continue
+            size = 5 + 9 * t
+            x, y = hx0 + 30 + 22 * t, hy0 - 45 - 50 * t
+            zs.stroke([(x, y), (x + size, y), (x, y + size), (x + size, y + size)], width=1.8)
+        groups.append(zs)
+
+    # a butterfly: two wings flapping about a small body
+    if pose.bfly > 0.5:
+        flap = abs(math.cos(2 * math.pi * pose.bfly_wing))
+        W = trans(pose.bfly_x, pose.bfly_y)
+        bf = Group(72, width=1.2)
+        for side in (-1, 1):
+            wing = bf.shape(apply(W, ellipse(side * 11 * flap, -3, 11 * flap, 9)), (250, 200, 60))
+            bf.patch(apply(W, ellipse(side * 12 * flap, -4, 5 * flap, 4)), (230, 120, 40), wing)
+        bf.shape(apply(W, capsule(0, -9, 0, 8, 4)), BLACK)
+        for side in (-1, 1):
+            bf.stroke(apply(W, [(0, -9), (side * 5, -16)]), width=1.0)
+        groups.append(bf)
     return groups
 
 
@@ -678,24 +718,102 @@ def draw_group(canvas, M, group, px):
 
 
 # ---------------------------------------------------------------- animations
+#
+# A show is a Pose for every frame plus a path: where the cat's body origin
+# sits on the screen each frame, in cat units from the screen's left edge
+# and up from the ground line, and whether she is mirrored to face left.
+# Shows are built from segments played back to back: each segment has its
+# own pose function, a horizontal speed, and optionally an arc (a jump).
+# Walk and run cycles repeat within a segment, so frames are keyed to find
+# the unique poses and render each only once.
+
+SCREEN_W = 800
+SCREEN_H = 480
+GROUND_LINE = 440  # screen y of the feet
+OFF_LEFT = -200  # body origin x when she is fully off the left edge
+OFF_RIGHT = SCREEN_W + 200
+
+WALK_SPEED = 5.6  # cat units per frame at 24 fps, matched to the stride
+RUN_SPEED = 12
+FPS = 24
+
+
+@dataclasses.dataclass
+class Seg:
+    n: int
+    pose: object  # local frame -> Pose
+    speed: float = 0  # body origin dx per frame
+    cycle: int = 0  # the pose repeats every `cycle` frames
+    arc: object = None  # local frame -> (dx, dy) on top of the linear motion
+    flip: bool = False
 
 
 @dataclasses.dataclass
 class Anim:
     name: str
-    frames: int
-    fps: int
-    pose: object  # frame index -> Pose
-    loop: bool = True
-    # horizontal speed in cat units per frame, for the scene preview
-    speed: float = 0
+    start_x: float
+    segs: list
+    fps: int = FPS
+
+    @property
+    def length(self):
+        return sum(seg.n for seg in self.segs)
+
+    def _locate(self, i):
+        x = self.start_x
+        for k, seg in enumerate(self.segs):
+            if i < seg.n:
+                return k, seg, i, x
+            i -= seg.n
+            x += seg.speed * seg.n
+            if seg.arc:
+                x += seg.arc(seg.n)[0]
+        raise IndexError(i)
+
+    def pose(self, i):
+        _, seg, local, _ = self._locate(i)
+        return seg.pose(local % seg.cycle if seg.cycle else local)
+
+    def key(self, i):
+        """Frames with equal keys have equal poses."""
+        k, seg, local, _ = self._locate(i)
+        return (k, local % seg.cycle if seg.cycle else local)
+
+    def path(self, i):
+        _, seg, local, x = self._locate(i)
+        x += seg.speed * local
+        y = 0
+        if seg.arc:
+            dx, dy = seg.arc(local)
+            x, y = x + dx, y + dy
+        return x, y, seg.flip
 
 
 def tau(i, n):
     return 2 * math.pi * i / n
 
 
+def hold(pose, n, **wobble):
+    """A segment holding a pose, with optional sinusoidal wobble: each
+    keyword is a field name mapped to (amplitude, period in frames, phase)."""
+
+    def f(i):
+        return add(
+            pose, **{k: a * math.sin(tau(i, per) + ph) for k, (a, per, ph) in wobble.items()}
+        )
+
+    return Seg(n, f)
+
+
+def tween(frames, n):
+    """A segment interpolating keyframes: list of (time 0..1, Pose)."""
+    return Seg(n, lambda i: keyframes(frames, i / max(n - 1, 1)))
+
+
 REST = Pose()
+
+
+# ---- gaits
 
 
 def walk_pose(i, n=24):
@@ -757,6 +875,38 @@ def run_pose(i, n=16):
     return p
 
 
+def walk(n, flip=False):
+    return Seg(n, walk_pose, speed=-WALK_SPEED if flip else WALK_SPEED, cycle=24, flip=flip)
+
+
+def run(n, flip=False, pose=run_pose):
+    return Seg(n, pose, speed=-RUN_SPEED if flip else RUN_SPEED, cycle=16, flip=flip)
+
+
+def walk_in(to_x):
+    """From off the left edge to x."""
+    return walk(int((to_x - OFF_LEFT) / WALK_SPEED))
+
+
+def walk_out(from_x):
+    return walk(int((OFF_RIGHT - from_x) / WALK_SPEED))
+
+
+def run_in(to_x):
+    return run(int((to_x - OFF_LEFT) / RUN_SPEED))
+
+
+def run_out(from_x):
+    return run(int((OFF_RIGHT - from_x) / RUN_SPEED))
+
+
+def end_x(start_x, segs):
+    """Where a show's body origin is after these segments."""
+    return Anim("", start_x, segs + [Seg(1, lambda i: REST)]).path(sum(s.n for s in segs))[0]
+
+
+# ---- named poses
+
 # The classic sitting pose: rear on the ground, back sloping up to the head,
 # front legs straight, hind legs folded under the haunch.
 SIT = Pose(
@@ -787,37 +937,206 @@ LICK = dataclasses.replace(
     SIT, fn_u=55, fn_l=-150, head_angle=58, head_dx=-6, head_dy=2, eye=0.3, tongue=1
 )
 
+# Sitting, swatting at something in front of the face.
+SWAT = dataclasses.replace(SIT, fn_u=100, fn_l=-50, head_angle=10, mouth=0.3)
 
-def sit_groom_pose(i, n=96):
-    t = i / n
-    p = keyframes(
-        [
-            (0.00, REST),
-            (0.12, SIT),
-            (0.22, SIT),
-            (0.30, LICK),
-            (0.64, LICK),
-            (0.72, SIT),
-            (1.00, SIT),
-        ],
-        t,
-    )
-    if 0.30 <= t <= 0.64:
-        lick = math.sin(2 * math.pi * (t - 0.30) * 10)
-        p.head_angle += 7 * lick
-        p.head_dy += 2 * lick
-        p.fn_u += 3 * lick
-    elif t > 0.80:
-        # look at the viewer, blink once
-        p.pupil_dx = -1.5
-        p.pupil_dy = 1
-        blink = (t - 0.90) / 0.06
-        if 0 <= blink <= 1:
-            p.eye = 1 - math.sin(math.pi * blink)
-    if t > 0.22:
+# The play bow: chest down, rump up, front legs stretched out ahead.
+STRETCH = Pose(
+    body_y=18,
+    body_angle=22,
+    head_angle=26,
+    head_dy=8,
+    fn_u=70,
+    fn_l=-4,
+    ff_u=64,
+    ff_l=-4,
+    bn_u=26,
+    bn_l=-14,
+    bn_f=22,
+    bf_u=30,
+    bf_l=-14,
+    bf_f=18,
+    tail1=8,
+    tail2=10,
+    tail3=10,
+    eye=0,
+)
+
+# Standing, head thrown back in a yawn.
+YAWN = Pose(head_angle=-28, head_dy=-4, mouth=1, eye=0, ear_near=-20, ear_far=-20)
+
+# Lying sphinx-style, belly on the ground, front legs out ahead.
+LOAF = Pose(
+    body_y=46,
+    head_angle=8,
+    head_dy=6,
+    fn_u=45,
+    fn_l=45,
+    ff_u=40,
+    ff_l=50,
+    bn_u=60,
+    bn_l=-150,
+    bn_f=160,
+    bf_u=56,
+    bf_l=-150,
+    bf_f=160,
+    tail1=150,
+    tail2=40,
+    tail3=50,
+    haunch=1,
+)
+ASLEEP = dataclasses.replace(LOAF, eye=0, head_angle=18, head_dy=12, ear_near=-10, ear_far=-10)
+
+# Up on the hind legs.
+DANCE = Pose(
+    body_y=-4,
+    body_angle=-75,
+    head_angle=66,
+    head_dx=4,
+    fn_u=75,
+    fn_l=-20,
+    ff_u=40,
+    ff_l=-30,
+    bn_u=-55,
+    bn_l=-50,
+    bn_f=62,
+    bf_u=-50,
+    bf_l=-50,
+    bf_f=58,
+    tail1=160,
+    tail2=20,
+    tail3=20,
+    eye=0,
+    happy=1,
+    mouth=0.4,
+)
+
+# Startled: up on tiptoe, ears back, eyes wide, tail puffed straight up.
+SCARED = Pose(
+    body_y=-14,
+    fn_u=2,
+    fn_l=0,
+    ff_u=-2,
+    ff_l=0,
+    bn_u=10,
+    bn_l=-30,
+    bn_f=52,
+    bf_u=12,
+    bf_l=-30,
+    bf_f=50,
+    tail1=0,
+    tail2=0,
+    tail3=0,
+    puff=1.9,
+    ear_near=-45,
+    ear_far=-45,
+    eye=1.3,
+    pupil=2.6,
+    mouth=0.6,
+)
+
+# Mid-leap: stretched out, nose up, front legs reaching, hind legs trailing.
+LEAP = Pose(
+    body_angle=-18,
+    head_angle=10,
+    fn_u=70,
+    fn_l=-10,
+    ff_u=60,
+    ff_l=-10,
+    bn_u=-30,
+    bn_l=-20,
+    bn_f=30,
+    bf_u=-25,
+    bf_l=-20,
+    bf_f=30,
+    tail1=95,
+    tail2=5,
+    tail3=5,
+    ear_near=-10,
+    ear_far=-10,
+)
+LAND = Pose(
+    body_angle=14,
+    head_angle=0,
+    fn_u=30,
+    fn_l=-10,
+    ff_u=22,
+    ff_l=-10,
+    bn_u=50,
+    bn_l=-95,
+    bn_f=60,
+    bf_u=46,
+    bf_l=-95,
+    bf_f=60,
+    tail1=40,
+    tail2=20,
+    tail3=20,
+)
+
+# Crouched, ready to pounce.
+CROUCH = Pose(
+    body_y=22,
+    fn_u=20,
+    fn_l=-30,
+    ff_u=16,
+    ff_l=-30,
+    bn_u=55,
+    bn_l=-120,
+    bn_f=120,
+    bf_u=50,
+    bf_l=-120,
+    bf_f=120,
+    tail1=120,
+    tail2=10,
+    tail3=10,
+    head_dy=4,
+    pupil=2,
+    haunch=0.6,
+)
+
+
+# ---- the shows
+
+
+def sit_groom_show():
+    x = 300
+    groom = [
+        (0.00, SIT),
+        (0.10, LICK),
+        (0.60, LICK),
+        (0.72, SIT),
+        (1.00, SIT),
+    ]
+
+    def groom_pose(i, n=120):
+        t = i / n
+        p = keyframes(groom, t)
+        if 0.10 <= t <= 0.60:
+            lick = math.sin(2 * math.pi * (t - 0.10) * 10)
+            p.head_angle += 7 * lick
+            p.head_dy += 2 * lick
+            p.fn_u += 3 * lick
+        elif t > 0.80:
+            p.pupil_dx = -1.5
+            p.pupil_dy = 1
+            blink = (t - 0.88) / 0.08
+            if 0 <= blink <= 1:
+                p.eye = 1 - math.sin(math.pi * blink)
         p.tail1 += 6 * math.sin(2 * math.pi * t * 1.5)
         p.tail3 += 12 * math.sin(2 * math.pi * t * 1.5 - 1)
-    return p
+        return p
+
+    return Anim(
+        "sit_groom",
+        OFF_LEFT,
+        [
+            walk_in(x),
+            tween([(0, walk_pose(0)), (1, SIT)], 12),
+            Seg(120, groom_pose),
+            tween([(0, SIT), (1, walk_pose(0))], 12),
+            walk_out(x),
+        ],
+    )
 
 
 def chase_pose(i, n=16):
@@ -829,17 +1148,338 @@ def chase_pose(i, n=16):
     return p
 
 
-ANIMS = [
-    Anim("walk", 24, 24, walk_pose, speed=5.6),
-    Anim("run", 16, 24, run_pose, speed=12),
-    Anim("sit_groom", 96, 16, sit_groom_pose, loop=False),
-    Anim("chase", 16, 24, chase_pose, speed=12),
+def chase_show():
+    n = int((OFF_RIGHT - OFF_LEFT) / RUN_SPEED)
+    return Anim("chase", OFF_LEFT, [run(n, pose=chase_pose)])
+
+
+def stretch_show():
+    x = 300
+    return Anim(
+        "stretch",
+        OFF_LEFT,
+        [
+            walk_in(x),
+            tween([(0, walk_pose(0)), (0.5, REST), (1, STRETCH)], 20),
+            hold(STRETCH, 30, tail3=(10, 30, 0)),
+            tween([(0, STRETCH), (0.6, REST), (1, YAWN)], 24),
+            hold(YAWN, 20),
+            tween([(0, YAWN), (1, walk_pose(0))], 12),
+            walk_out(x),
+        ],
+    )
+
+
+def nap_show():
+    x = 320
+
+    def sleep_pose(i, n=140):
+        breath = math.sin(tau(i, 48))
+        p = add(ASLEEP, body_y=1.2 * breath, head_dy=1.5 * breath)
+        p.zzz = i / 48
+        twitch = (i % 70) / 6
+        if twitch < 1:
+            p.ear_near = -10 + 25 * math.sin(math.pi * twitch)
+        return p
+
+    return Anim(
+        "nap",
+        OFF_LEFT,
+        [
+            walk_in(x),
+            tween([(0, walk_pose(0)), (0.4, REST), (1, LOAF)], 24),
+            hold(LOAF, 16),
+            tween([(0, LOAF), (1, ASLEEP)], 24),
+            Seg(140, sleep_pose),
+            tween(
+                [
+                    (0, ASLEEP),
+                    (0.5, LOAF),
+                    (1, dataclasses.replace(LOAF, mouth=1, eye=0, head_angle=-20)),
+                ],
+                24,
+            ),
+            tween(
+                [
+                    (0, dataclasses.replace(LOAF, mouth=1, eye=0, head_angle=-20)),
+                    (0.5, LOAF),
+                    (1, STRETCH),
+                ],
+                24,
+            ),
+            hold(STRETCH, 16),
+            tween([(0, STRETCH), (1, walk_pose(0))], 16),
+            walk_out(x),
+        ],
+    )
+
+
+def dance_show():
+    x = 360
+
+    def dance_pose(i, n=48):
+        phi = tau(i, n)
+        p = add(
+            DANCE,
+            body_angle=8 * math.sin(phi),
+            body_x=10 * math.sin(phi),
+            head_angle=-8 * math.sin(phi),
+            head_dx=3 * math.sin(2 * phi),
+            fn_u=25 * math.sin(phi),
+            ff_u=-25 * math.sin(phi),
+            tail1=25 * math.sin(phi - 0.5),
+            tail3=20 * math.sin(phi - 1.5),
+            body_y=-3 * abs(math.sin(2 * phi)),
+        )
+        return p
+
+    return Anim(
+        "dance",
+        OFF_LEFT,
+        [
+            walk_in(x),
+            tween([(0, walk_pose(0)), (0.3, REST), (1, DANCE)], 24),
+            Seg(144, dance_pose, cycle=48),
+            tween([(0, DANCE), (0.7, REST), (1, walk_pose(0))], 24),
+            walk_out(x),
+        ],
+    )
+
+
+def scared_show():
+    x = 300
+    jump_n = 10
+
+    def hop(i):
+        t = i / jump_n
+        return 0, 40 * math.sin(math.pi * t)
+
+    def bolt_pose(i):
+        p = run_pose(i)
+        p.puff = 1.5
+        p.ear_near = p.ear_far = -35
+        p.pupil = 2
+        return p
+
+    return Anim(
+        "scared",
+        OFF_LEFT,
+        [
+            walk_in(x),
+            tween([(0, walk_pose(0)), (1, REST)], 8),
+            hold(REST, 20, pupil_dx=(2, 40, 0)),
+            Seg(jump_n, lambda i: SCARED, arc=hop),
+            hold(SCARED, 22, body_x=(2, 4, 0)),
+            tween([(0, SCARED), (1, bolt_pose(0))], 6),
+            Seg(int((OFF_RIGHT - x) / 15), bolt_pose, speed=15, cycle=16),
+        ],
+    )
+
+
+def zoomies_show():
+    # a flat-out sprint: twice the run speed, strides twice as fast
+    speed = 26
+    n = int((OFF_RIGHT - OFF_LEFT) / speed)
+    fast = lambda i: add(run_pose(2 * i), ear_near=-15, ear_far=-15, pupil=1.8, mouth=0.2)
+    cross = Seg(n, fast, speed=speed, cycle=8)
+    back = Seg(n, fast, speed=-speed, cycle=8, flip=True)
+    return Anim("zoomies", OFF_LEFT, [cross, back, cross, back])
+
+
+def peek_show():
+    # only the head shows past the left edge; she looks around and ducks back
+    x = -50
+    peek_n = 24
+
+    def look_pose(i, n=96):
+        t = i / n
+        p = add(
+            REST,
+            pupil_dx=3 * math.sin(tau(i, 48)),
+            pupil_dy=1.5 * math.sin(tau(i, 36)),
+            head_angle=6 * math.sin(tau(i, 64)),
+            ear_near=15 * max(0, math.sin(tau(i, 32))),
+        )
+        blink = (t - 0.5) / 0.08
+        if 0 <= blink <= 1:
+            p.eye = 1 - math.sin(math.pi * blink)
+        return p
+
+    slide = lambda i: ((x - OFF_LEFT) * smooth(i / peek_n) - (x - OFF_LEFT) * i / peek_n, 0)
+    return Anim(
+        "peek",
+        OFF_LEFT,
+        [
+            Seg(peek_n, lambda i: REST, speed=(x - OFF_LEFT) / peek_n, arc=slide),
+            Seg(96, look_pose),
+            Seg(
+                peek_n,
+                lambda i: REST,
+                speed=-(x - OFF_LEFT) / peek_n,
+                arc=lambda i: slide(peek_n - i),
+            ),
+        ],
+    )
+
+
+def leap_show():
+    x = 200
+    air = 22
+    span = 260
+
+    def arc(i):
+        t = i / air
+        return span * t, 150 * math.sin(math.pi * t)
+
+    return Anim(
+        "leap",
+        OFF_LEFT,
+        [
+            run_in(x),
+            tween([(0, run_pose(0)), (1, CROUCH)], 6),
+            Seg(
+                air,
+                lambda i: keyframes([(0, CROUCH), (0.25, LEAP), (0.8, LEAP), (1, LAND)], i / air),
+                arc=arc,
+            ),
+            tween([(0, LAND), (1, run_pose(0))], 6),
+            run_out(x + span),
+        ],
+    )
+
+
+def pounce_show():
+    x = 280
+    wiggle_n = 48
+    air = 18
+    span = 170
+
+    def wiggle_pose(i):
+        p = add(
+            CROUCH,
+            body_angle=4 * math.sin(tau(i, 8)),
+            body_x=3 * math.sin(tau(i, 8)),
+            tail3=30 * math.sin(tau(i, 16)),
+        )
+        p.yarn = 1
+        p.yarn_x = span + 10
+        return p
+
+    def with_yarn(pose, dx):
+        q = dataclasses.replace(pose)
+        q.yarn = 1
+        q.yarn_x = span + 10 - dx
+        return q
+
+    def fly_pose(i):
+        t = i / air
+        p = keyframes([(0, CROUCH), (0.3, LEAP), (0.8, LEAP), (1, LAND)], t)
+        return with_yarn(p, span * t)
+
+    def arc(i):
+        t = i / air
+        return span * t, 90 * math.sin(math.pi * t)
+
+    caught = with_yarn(dataclasses.replace(LAND, head_angle=35, head_dy=4, eye=0, happy=1), span)
+    return Anim(
+        "pounce",
+        OFF_LEFT,
+        [
+            Seg(
+                int((x - OFF_LEFT) / WALK_SPEED),
+                lambda i: with_yarn(walk_pose(i), 0),
+                speed=WALK_SPEED,
+                cycle=24,
+            ),
+            tween([(0, with_yarn(walk_pose(0), 0)), (1, with_yarn(CROUCH, 0))], 10),
+            Seg(wiggle_n, wiggle_pose),
+            Seg(air, fly_pose, arc=arc),
+            tween([(0, with_yarn(LAND, span)), (1, caught)], 10),
+            hold(caught, 36, tail1=(15, 24, 0)),
+        ],
+    )
+
+
+def butterfly_show():
+    x = 300
+    n = 168
+
+    def bfly_at(i):
+        t = i / n
+        if t < 0.75:
+            # flutters in a lazy figure eight in front of her face
+            bx = 110 + 40 * math.sin(tau(i, 56))
+            by = -80 + 25 * math.sin(tau(i, 28))
+        else:
+            u = (t - 0.75) / 0.25
+            bx = 110 + 40 * math.sin(tau(int(0.75 * n), 56)) + 260 * u
+            by = -80 - 160 * u
+        return bx, by
+
+    def watch_pose(i):
+        bx, by = bfly_at(i)
+        t = i / n
+        p = dataclasses.replace(SIT)
+        # swat twice while it dips close
+        for swat_start in (70, 100):
+            u = (i - swat_start) / 14
+            if 0 <= u <= 1:
+                p = blend(SIT, SWAT, math.sin(math.pi * u))
+        # the head follows the butterfly
+        p.head_angle += -0.25 * (by + 80)
+        p.pupil_dx = max(-3, min(3, (bx - 120) / 12))
+        p.pupil_dy = max(-3, min(3, (by + 60) / 20))
+        p.bfly = 1
+        p.bfly_x, p.bfly_y = bx, by
+        p.bfly_wing = i / 6
+        p.tail3 += 15 * math.sin(tau(i, 30))
+        if t > 0.92:
+            p.pupil_dx, p.pupil_dy = -1.5, 1
+            p.bfly = 0
+        return p
+
+    return Anim(
+        "butterfly",
+        OFF_LEFT,
+        [
+            walk_in(x),
+            tween([(0, walk_pose(0)), (1, SIT)], 12),
+            Seg(n, watch_pose),
+            hold(dataclasses.replace(SIT, pupil_dx=-1.5, pupil_dy=1), 20),
+            tween([(0, SIT), (1, walk_pose(0))], 12),
+            walk_out(x),
+        ],
+    )
+
+
+def walk_show():
+    return Anim("walk", OFF_LEFT, [walk(int((OFF_RIGHT - OFF_LEFT) / WALK_SPEED))])
+
+
+def run_show():
+    return Anim("run", OFF_LEFT, [run(int((OFF_RIGHT - OFF_LEFT) / RUN_SPEED))])
+
+
+SHOWS = [
+    walk_show,
+    run_show,
+    chase_show,
+    sit_groom_show,
+    stretch_show,
+    nap_show,
+    dance_show,
+    scared_show,
+    zoomies_show,
+    peek_show,
+    leap_show,
+    pounce_show,
+    butterfly_show,
 ]
 
 # Frames are rendered on a canvas big enough for any pose, then cropped to
 # the union of the animation's frames. In output pixels at cat_scale 1.
-CANVAS = (420, 280)
-CANVAS_ORIGIN = (210, 140)
+CANVAS = (440, 340)
+CANVAS_ORIGIN = (220, 200)
 
 
 # ---------------------------------------------------------------- outputs
@@ -847,8 +1487,9 @@ CANVAS_ORIGIN = (210, 140)
 
 @dataclasses.dataclass
 class Frames:
-    images: list
-    # where the body center at rest sits in each image, in pixels
+    images: list  # the unique images
+    index: list  # image number for each frame of the show
+    # where the body origin sits in each image, in pixels
     origin: tuple
     # the ground line, in pixels below the top of each image
     ground: float
@@ -858,7 +1499,13 @@ def frames_of(anim, cat_scale=1.0, pad=2):
     w, h = CANVAS
     size = (int(w * cat_scale), int(h * cat_scale))
     origin = (CANVAS_ORIGIN[0] * cat_scale, CANVAS_ORIGIN[1] * cat_scale)
-    images = [render(anim.pose(i), size, origin, cat_scale) for i in range(anim.frames)]
+    images, index, seen = [], [], {}
+    for i in range(anim.length):
+        key = anim.key(i)
+        if key not in seen:
+            seen[key] = len(images)
+            images.append(render(anim.pose(i), size, origin, cat_scale))
+        index.append(seen[key])
     boxes = [img.getbbox() for img in images]
     x0 = max(0, min(b[0] for b in boxes) - pad)
     y0 = max(0, min(b[1] for b in boxes) - pad)
@@ -866,6 +1513,7 @@ def frames_of(anim, cat_scale=1.0, pad=2):
     y1 = min(size[1], max(b[3] for b in boxes) + pad)
     return Frames(
         [img.crop((x0, y0, x1, y1)) for img in images],
+        index,
         (origin[0] - x0, origin[1] - y0),
         origin[1] - y0 + GROUND_Y * cat_scale,
     )
@@ -877,14 +1525,14 @@ def on_background(img, color=(120, 170, 220, 255)):
     return bg
 
 
-def write_gif(path, frames, fps, loop=True):
+def write_gif(path, frames, fps):
     frames = [on_background(f).convert("RGB") for f in frames]
     frames[0].save(
         path,
         save_all=True,
         append_images=frames[1:],
         duration=int(1000 / fps),
-        loop=0 if loop else 1,
+        loop=0,
         optimize=False,
     )
 
@@ -899,19 +1547,26 @@ def write_strip(path, frames, count=8):
     strip.convert("RGB").save(path)
 
 
-def write_scene(path, anim, frames, width=800, height=480):
-    """The animation translating across a screen-sized canvas, feet on a
-    ground line near the bottom."""
+def write_scene(path, anim, frames, cat_scale=1.0, shrink=2):
+    """The show on a screen-sized canvas, following its path. The GIF is
+    written at 1/shrink of the screen size."""
     out = []
-    n = len(frames.images)
-    fw, fh = frames.images[0].size
-    total = int((width + fw) / anim.speed) if anim.speed else n * 2
-    top = int(height - 24 - frames.ground)
-    for k in range(total):
-        bg = Image.new("RGBA", (width, height), (30, 34, 60, 255))
-        x = int(-fw + k * anim.speed) if anim.speed else (width - fw) // 2
-        bg.alpha_composite(frames.images[k % n], dest=(x, top))
-        out.append(bg.convert("RGB"))
+    mirrored = [img.transpose(Image.FLIP_LEFT_RIGHT) for img in frames.images]
+    fw = frames.images[0].width
+    for i in range(anim.length):
+        x, y, flip = anim.path(i)
+        img = (mirrored if flip else frames.images)[frames.index[i]]
+        ox = fw - frames.origin[0] if flip else frames.origin[0]
+        left = int(x * cat_scale - ox)
+        top = int(GROUND_LINE - y * cat_scale - frames.ground)
+        bg = Image.new("RGBA", (SCREEN_W, SCREEN_H), (30, 34, 60, 255))
+        if left < SCREEN_W and top < SCREEN_H and left + img.width > 0 and top + img.height > 0:
+            bg.alpha_composite(
+                img, dest=(max(left, 0), max(top, 0)), source=(max(-left, 0), max(-top, 0))
+            )
+        out.append(
+            bg.convert("RGB").resize((SCREEN_W // shrink, SCREEN_H // shrink), Image.LANCZOS)
+        )
     out[0].save(path, save_all=True, append_images=out[1:], duration=int(1000 / anim.fps), loop=0)
 
 
@@ -923,17 +1578,18 @@ def main():
     ap.add_argument("--only", action="append", help="limit to these animations")
     args = ap.parse_args()
 
-    for anim in ANIMS:
+    for show in SHOWS:
+        anim = show()
         if args.only and anim.name not in args.only:
             continue
         frames = frames_of(anim, args.scale)
         if args.preview:
             os.makedirs(args.preview, exist_ok=True)
-            write_gif(
-                os.path.join(args.preview, anim.name + ".gif"), frames.images, anim.fps, anim.loop
-            )
+            write_gif(os.path.join(args.preview, anim.name + ".gif"), frames.images, anim.fps)
             write_strip(os.path.join(args.preview, anim.name + "_strip.png"), frames.images)
-            write_scene(os.path.join(args.preview, anim.name + "_scene.gif"), anim, frames)
+            write_scene(
+                os.path.join(args.preview, anim.name + "_scene.gif"), anim, frames, args.scale
+            )
         if args.frames:
             d = os.path.join(args.frames, anim.name)
             os.makedirs(d, exist_ok=True)
@@ -941,8 +1597,8 @@ def main():
                 f.save(os.path.join(d, f"{i:03d}.png"))
         w, h = frames.images[0].size
         print(
-            f"{anim.name}: {anim.frames} frames @ {anim.fps} fps, {w}x{h}, "
-            f"origin {frames.origin[0]:.0f},{frames.origin[1]:.0f}"
+            f"{anim.name}: {anim.length} frames ({len(frames.images)} unique) @ {anim.fps} fps, "
+            f"{w}x{h}, {anim.length / anim.fps:.1f} s"
         )
 
 
