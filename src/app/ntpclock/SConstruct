@@ -63,6 +63,15 @@ RulosBuildTarget(
         Esp32Platform(
             board=Esp32Boards.WAVESHARE_ESP32_S3_TOUCH_LCD_43B,
             lv_conf="lv_conf.h",
+            # The biggest caches the S3 has: code, constants and the frame
+            # buffers all live in PSRAM, and the panel's refresh competes
+            # with the cat's frames for its bandwidth.
+            sdkconfig={
+                "ESP32S3_INSTRUCTION_CACHE_16KB": False,
+                "ESP32S3_INSTRUCTION_CACHE_32KB": True,
+                "ESP32S3_DATA_CACHE_32KB": False,
+                "ESP32S3_DATA_CACHE_64KB": True,
+            },
             # the GT911 touch controller's driver
             idf_components={"espressif/esp_lcd_touch_gt911": "^1"},
             partition_table=PARTITION_TABLE,

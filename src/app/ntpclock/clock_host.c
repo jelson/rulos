@@ -200,6 +200,7 @@ static int usage(const char *argv0) {
 int main(int argc, char **argv) {
   lv_init();
   lv_tick_set_cb(tick_ms);
+  lv_rand_set_seed((uint32_t)time(NULL));
 
   const char *show = NULL;
   const char *screenshot_path = NULL;
