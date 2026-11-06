@@ -27,6 +27,12 @@ icon_sources = LvglPngImages(
     sorted(glob.glob("icons/*.png")), os.path.join(BUILD_ROOT, "ntpclock", "icons"), prefix="icon_"
 )
 
+# the time's font: the digits, colon and dash at the size they are shown
+time_font = LvglFont(
+    montserrat_ttf(), 144, "montserrat_144", os.path.join(BUILD_ROOT, "ntpclock", "fonts"),
+    codepoints=[ord(c) for c in "-0123456789:"],
+)
+
 # The cat shows: cat/catrig.py renders the frames, which become LVGL
 # images packed into one blob plus tables describing each show. The device
 # keeps the blob in its own flash partition; the host embeds it.
@@ -50,7 +56,8 @@ cats,       data, 0x40,     ,       0xCF0000
 
 RulosBuildTarget(
     name = "ntpclock",
-    sources = ["ntpclock.cpp", "clock_ui.c", "weather_icon.c", cat.source] + icon_sources,
+    sources = ["ntpclock.cpp", "clock_ui.c", "weather_icon.c", cat.source, time_font]
+    + icon_sources,
     peripherals = "uart inet ntp lvgl ch422g lcd_touch weather openmeteo sprite_show",
     extra_cflags = [
         "-DLOG_TO_SERIAL",
@@ -94,6 +101,7 @@ LvglHostProgram(
         "../../lib/periph/sprite_show/sprite_show.c",
         cat.source,
         cat.embed_source,
+        time_font,
     ]
     + icon_sources,
     lv_conf_dir=".",

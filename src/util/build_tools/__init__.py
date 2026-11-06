@@ -62,7 +62,7 @@ from .AvrBuildRules import AvrPlatform
 from .SimBuildRules import SimulatorPlatform
 from .Esp32BuildRules import Esp32Platform
 from . import Esp32Boards
-from .Lvgl import LvglHostProgram, LvglPngImages, LvglSpriteShows
+from .Lvgl import LvglHostProgram, LvglPngImages, LvglSpriteShows, LvglFont, montserrat_ttf
 from .util import run_if_stale
 from .Canary import canary_platforms
 

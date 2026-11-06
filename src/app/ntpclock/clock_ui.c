@@ -24,9 +24,6 @@
 #include "lvgl.h"
 #include "weather_icon.h"
 
-// montserrat_48 is the largest font LVGL ships, so the time is drawn
-// scaled up (LV_SCALE_NONE is 1:1)
-#define TIME_SCALE           (LV_SCALE_NONE * 3)
 #define TIME_Y               (-95)
 #define DATE_Y               25
 #define WEATHER_Y            135
@@ -36,8 +33,11 @@
 // doesn't shift as digits of different widths come and go.
 #define TIME_PLACEHOLDER "--:--:--"
 #define TIME_CELLS       (sizeof(TIME_PLACEHOLDER) - 1)
-#define DIGIT_CELL_WIDTH 32
-#define COLON_CELL_WIDTH 14
+#define DIGIT_CELL_WIDTH 96
+#define COLON_CELL_WIDTH 42
+
+// the time's font, rendered by the build at its size
+LV_FONT_DECLARE(montserrat_144);
 
 #define COLOR_TIME        lv_color_white()
 #define COLOR_DATE        lv_color_hex(0x89B4FA)
@@ -117,13 +117,9 @@ static void set_label(lv_obj_t *obj, const char *text) {
 static void create_time(lv_obj_t *screen) {
   lv_obj_t *row = flex_box(screen, LV_FLEX_FLOW_ROW, 0);
   place(row, LV_ALIGN_CENTER, TIME_Y);
-  lv_obj_set_style_transform_scale_x(row, TIME_SCALE, 0);
-  lv_obj_set_style_transform_scale_y(row, TIME_SCALE, 0);
-  lv_obj_set_style_transform_pivot_x(row, lv_pct(50), 0);
-  lv_obj_set_style_transform_pivot_y(row, lv_pct(50), 0);
 
   for (size_t i = 0; i < TIME_CELLS; i++) {
-    lv_obj_t *cell = label(row, &lv_font_montserrat_48, COLOR_TIME);
+    lv_obj_t *cell = label(row, &montserrat_144, COLOR_TIME);
     const bool colon = TIME_PLACEHOLDER[i] == ':';
     lv_obj_set_width(cell, colon ? COLON_CELL_WIDTH : DIGIT_CELL_WIDTH);
     lv_obj_set_style_text_align(cell, LV_TEXT_ALIGN_CENTER, 0);
