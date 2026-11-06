@@ -19,11 +19,12 @@
 
 // Pre-rendered sprite animations ("shows") for LVGL. A show is a sequence
 // of frames, each naming an image and where its top-left corner goes on
-// the screen. The images are LVGL binary images packed into one blob,
-// which the build tool LvglSpriteShows() writes along with the tables
-// below. The blob may live anywhere (a flash partition, a file, the
-// program itself): the player reads each frame's image out of it through
-// a sprite_blob_t into a buffer as the frame comes up.
+// the screen. The images are 8-bit indexed with an alpha palette, RLE
+// compressed, packed into one blob by the build tool LvglSpriteShows()
+// along with the tables below. The blob may live anywhere (a flash
+// partition, a file, the program itself): as each frame comes up the
+// player reads its image out of the blob through a sprite_blob_t and
+// decodes it into an RGB565-plus-alpha image that LVGL blends directly.
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -51,8 +52,7 @@ typedef struct {
   const sprite_frame_t *frames;
   uint16_t num_frames;
   uint16_t fps;
-  // One descriptor per image, filled in by the player. Each image needs
-  // its own because LVGL caches decoded images by descriptor address.
+  // One descriptor per image, filled in by the player.
   lv_image_dsc_t *dscs;
 } sprite_show_t;
 
@@ -71,12 +71,13 @@ typedef struct {
   lv_obj_t *image;
   lv_timer_t *timer;
   sprite_blob_t blob;
-  uint8_t *buffer;  // holds the current frame's image
+  uint8_t *input;         // the current frame's image as read from the blob
+  uint8_t *image_buffer;  // and decoded
   const sprite_show_t *show;
   uint16_t frame;
 } sprite_player_t;
 
-// Prepares the shows to play from the blob; the buffer is sized for the
+// Prepares the shows to play from the blob; the buffers are sized for the
 // largest of their images.
 void sprite_player_init(sprite_player_t *player, lv_obj_t *parent, const sprite_blob_t *blob,
                         const sprite_show_t *shows, unsigned num_shows);

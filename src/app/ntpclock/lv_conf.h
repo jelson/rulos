@@ -23,35 +23,24 @@
 
 #define LV_COLOR_DEPTH 16
 
-// The system allocator rather than LVGL's fixed pool: the scaled-up time
-// label alone needs a 70 KB layer buffer, and on the ESP32-S3 allocations
-// that size come from PSRAM.
+// The system allocator rather than LVGL's fixed pool: on the ESP32-S3
+// large allocations then come from PSRAM.
 #define LV_USE_STDLIB_MALLOC LV_STDLIB_CLIB
 
 #define LV_DEF_REFR_PERIOD 33
 #define LV_USE_OS          LV_OS_NONE
 
-// The scaled-up time label renders through a layer; room for one of its size
-#define LV_DRAW_LAYER_SIMPLE_BUF_SIZE (64 * 1024)
-
 #define LV_USE_LOG    1
 #define LV_LOG_LEVEL  LV_LOG_LEVEL_WARN
 #define LV_LOG_PRINTF 1
 
-// Weather icons are PNGs decoded on first use and kept decoded
-#define LV_USE_LODEPNG 1
-
-// The cat's frames are RLE-compressed indexed images, decompressed whole
-// when drawn. LVGL only draws a decoded image it can hold in its cache, and
-// a frame decodes to 300 KB, so the cache is sized for a few of them (it
-// lives in PSRAM on the ESP32-S3).
-#define LV_USE_RLE              1
-#define LV_BIN_DECODER_RAM_LOAD 1
-#define LV_CACHE_DEF_SIZE       (2 * 1024 * 1024)
+// Weather icons are PNGs decoded on first use and kept decoded. (The cat's
+// frames are decoded by the sprite player itself and are never cached.)
+#define LV_USE_LODEPNG    1
+#define LV_CACHE_DEF_SIZE (512 * 1024)
 
 #define LV_FONT_MONTSERRAT_20 1
 #define LV_FONT_MONTSERRAT_28 1
-#define LV_FONT_MONTSERRAT_48 1
 #define LV_FONT_DEFAULT       &lv_font_montserrat_20
 
 // The host build defines LV_USE_SDL when SDL2 is installed

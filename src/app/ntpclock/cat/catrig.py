@@ -1498,6 +1498,7 @@ class Frames:
     goes on the screen, in pixels."""
 
     images: list
+    origins: list  # where the body origin sits in each image
     placement: list  # (image number, left, top) per frame
     fps: int
 
@@ -1508,36 +1509,61 @@ def frames_of(anim, fps=FPS, cat_scale=1.0, pad=2):
     origin = (CANVAS_ORIGIN[0] * cat_scale, CANVAS_ORIGIN[1] * cat_scale)
     timeline = anim.sample(fps)
 
-    # render each distinct pose once
-    rendered, by_key = [], {}
+    # Render each distinct pose once, cropped to its own bounds: the fewer
+    # pixels in a frame, the less the device decodes and blends.
+    rendered, origins, by_key = [], [], {}
     for t in timeline:
         key = anim.key(t)
         if key not in by_key:
             by_key[key] = len(rendered)
-            rendered.append(render(anim.pose(t), size, origin, cat_scale))
-    boxes = [img.getbbox() for img in rendered]
-    x0 = max(0, min(b[0] for b in boxes) - pad)
-    y0 = max(0, min(b[1] for b in boxes) - pad)
-    x1 = min(size[0], max(b[2] for b in boxes) + pad)
-    y1 = min(size[1], max(b[3] for b in boxes) + pad)
-    rendered = [img.crop((x0, y0, x1, y1)) for img in rendered]
-    origin_x, origin_y = origin[0] - x0, origin[1] - y0
-    width = x1 - x0
+            img = render(anim.pose(t), size, origin, cat_scale)
+            x0, y0, x1, y1 = img.getbbox()
+            box = (
+                max(0, x0 - pad),
+                max(0, y0 - pad),
+                min(size[0], x1 + pad),
+                min(size[1], y1 + pad),
+            )
+            rendered.append(img.crop(box))
+            origins.append((origin[0] - box[0], origin[1] - box[1]))
 
     # mirrored frames get their own images, so the player never transforms
-    images, by_image, placement = [], {}, []
+    images, image_origins, by_image, placement = [], [], {}, []
     for t in timeline:
         x, y, flip = anim.path(t)
         k = (by_key[anim.key(t)], flip)
+        ox, oy = origins[k[0]]
+        if flip:
+            ox = rendered[k[0]].width - ox
         if k not in by_image:
             by_image[k] = len(images)
             img = rendered[k[0]]
             images.append(img.transpose(Image.FLIP_LEFT_RIGHT) if flip else img)
-        ox = width - origin_x if flip else origin_x
+            image_origins.append((ox, oy))
         left = round(x * cat_scale - ox)
-        top = round(GROUND_LINE - y * cat_scale - origin_y - GROUND_Y * cat_scale)
+        top = round(GROUND_LINE - y * cat_scale - oy - GROUND_Y * cat_scale)
         placement.append((by_image[k], left, top))
-    return Frames(images, placement, fps)
+    return Frames(images, image_origins, placement, fps)
+
+
+def on_common_canvas(frames):
+    """The show's images with their origins aligned, each on a canvas the
+    size of the union of them all, for previews."""
+    lefts, tops, rights, bottoms = [], [], [], []
+    for img, (ox, oy) in zip(frames.images, frames.origins):
+        lefts.append(-ox)
+        tops.append(-oy)
+        rights.append(img.width - ox)
+        bottoms.append(img.height - oy)
+    x0, y0 = min(lefts), min(tops)
+    w, h = math.ceil(max(rights) - x0), math.ceil(max(bottoms) - y0)
+    out = []
+    for image, _, _ in frames.placement:
+        ox, oy = frames.origins[image]
+        canvas = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        canvas.alpha_composite(frames.images[image], dest=(round(-ox - x0), round(-oy - y0)))
+        out.append(canvas)
+    return out
 
 
 def on_background(img, color=(120, 170, 220, 255)):
@@ -1623,8 +1649,9 @@ def main():
         shows.append((anim, frames))
         if args.preview:
             os.makedirs(args.preview, exist_ok=True)
-            write_gif(os.path.join(args.preview, anim.name + ".gif"), frames.images, frames.fps)
-            write_strip(os.path.join(args.preview, anim.name + "_strip.png"), frames.images)
+            on_canvas = on_common_canvas(frames)
+            write_gif(os.path.join(args.preview, anim.name + ".gif"), on_canvas, frames.fps)
+            write_strip(os.path.join(args.preview, anim.name + "_strip.png"), on_canvas)
             write_scene(os.path.join(args.preview, anim.name + "_scene.gif"), frames)
         w, h = frames.images[0].size
         print(
