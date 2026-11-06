@@ -51,6 +51,7 @@ IDF_COMPONENTS = {
     "lvgl": ["lvgl__lvgl", "esp_lcd"],
     "ch422g": ["esp_driver_i2c"],
     "sprite_show": ["lvgl__lvgl", "esp_partition"],
+    "lcd_touch": ["lvgl__lvgl", "espressif__esp_lcd_touch"],
 }
 
 # Compiler options for individual ESP-IDF components. IDF compiles
@@ -65,6 +66,7 @@ IDF_COMPONENT_COMPILE_OPTIONS = {
 # build, which is how IDF_COMPONENTS refers to them.
 IDF_REGISTRY_COMPONENTS = {
     "lvgl": {"lvgl/lvgl": Lvgl.VERSION},
+    "lcd_touch": {"espressif/esp_lcd_touch": "^1"},
 }
 
 # sdkconfig every RULOS target starts from; the SConstruct's sdkconfig

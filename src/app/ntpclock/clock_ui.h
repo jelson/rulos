@@ -21,15 +21,16 @@
 #include <stdint.h>
 #include <time.h>
 
+#include "periph/sprite_show/sprite_show.h"
 #include "periph/weather/weather.h"
 
 // The clock's screen, in LVGL alone: it knows nothing about where the time
 // or weather come from or what it is drawn on. A host creates the screen
 // once on the active LVGL display, then feeds it.
 //
-// cat_frames is the blob of the cat's animation frames (cat_frames.bin
+// cat_frames reads the blob of the cat's animation frames (cat_frames.bin
 // from the build), wherever the host keeps it.
-void clock_ui_create(const uint8_t *cat_frames);
+void clock_ui_create(const sprite_blob_t *cat_frames);
 
 // Shows a local time, or placeholders when t is NULL (time not yet known).
 // At the top of every quarter hour the cat puts on a show.

@@ -51,7 +51,7 @@ cats,       data, 0x40,     ,       0xCF0000
 RulosBuildTarget(
     name = "ntpclock",
     sources = ["ntpclock.cpp", "clock_ui.c", "weather_icon.c", cat.source] + icon_sources,
-    peripherals = "uart inet ntp lvgl ch422g weather openmeteo sprite_show",
+    peripherals = "uart inet ntp lvgl ch422g lcd_touch weather openmeteo sprite_show",
     extra_cflags = [
         "-DLOG_TO_SERIAL",
         "-I" + cat.include_dir,
@@ -63,6 +63,8 @@ RulosBuildTarget(
         Esp32Platform(
             board=Esp32Boards.WAVESHARE_ESP32_S3_TOUCH_LCD_43B,
             lv_conf="lv_conf.h",
+            # the GT911 touch controller's driver
+            idf_components={"espressif/esp_lcd_touch_gt911": "^1"},
             partition_table=PARTITION_TABLE,
             flash_partitions={"cats": cat.blob},
         ),

@@ -140,7 +140,8 @@ static lv_display_t *memory_display(void) {
 
 static int screenshot(const char *path, const char *show) {
   lv_display_t *disp = memory_display();
-  clock_ui_create(cat_frames_blob);
+  const sprite_blob_t cat_frames = sprite_blob_in_memory(cat_frames_blob);
+  clock_ui_create(&cat_frames);
   show_local_time();
   show_weather();
   clock_ui_set_status("Rendered on the PC");
@@ -223,7 +224,9 @@ int main(int argc, char **argv) {
 #if LV_USE_SDL
   lv_display_t *disp = lv_sdl_window_create(HOR_RES, VER_RES);
   lv_sdl_window_set_title(disp, "ntpclock");
-  clock_ui_create(cat_frames_blob);
+  lv_sdl_mouse_create();  // the mouse taps like the touchscreen
+  const sprite_blob_t cat_frames = sprite_blob_in_memory(cat_frames_blob);
+  clock_ui_create(&cat_frames);
   clock_ui_set_status("Running on the PC");
   if (show != NULL && !clock_ui_play_show(show)) {
     fprintf(stderr, "no show named %s\n", show);

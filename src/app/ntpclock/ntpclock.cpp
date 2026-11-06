@@ -27,9 +27,13 @@
 #include "core/hardware.h"
 #include "core/rulos.h"
 #include "driver/i2c_master.h"
+#include "esp_lcd_touch_gt911.h"
 #include "esp_partition.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "periph/ch422g/ch422g.h"
 #include "periph/inet/inet.h"
+#include "periph/lcd_touch/rulos_lvgl_touch.h"
 #include "periph/lvgl/rulos_lvgl.h"
 #include "periph/ntp/ntp.h"
 #include "periph/openmeteo/openmeteo.h"
@@ -129,17 +133,51 @@ static void refresh_ui(void *data) {
 
 //////////////// main /////////////////////
 
-// Maps the cat's frames into the address space straight from flash, where
-// they stay: unlike the app's own constants, they are not copied to PSRAM.
-static const uint8_t *map_cat_frames() {
+// The cat's frames are read out of their partition a frame at a time. They
+// are not memory-mapped: with any flash page mapped, every flash write
+// (Wi-Fi settles into NVS at startup) suspends the cache, and the panel's
+// bounce-buffer interrupt faults copying from the PSRAM frame buffer.
+static void read_cat_frames(void *ctx, uint32_t offset, uint32_t size, uint8_t *dst) {
+  ESP_ERROR_CHECK(esp_partition_read((const esp_partition_t *)ctx, offset, dst, size));
+}
+
+static sprite_blob_t cat_frames_blob() {
   const esp_partition_t *partition = esp_partition_find_first(
       ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, CAT_FRAMES_PARTITION);
   assert(partition != NULL);
-  const void *frames;
-  esp_partition_mmap_handle_t handle;
-  ESP_ERROR_CHECK(
-      esp_partition_mmap(partition, 0, partition->size, ESP_PARTITION_MMAP_DATA, &frames, &handle));
-  return (const uint8_t *)frames;
+  sprite_blob_t blob = {read_cat_frames, (void *)partition};
+  return blob;
+}
+
+// Brings up the GT911 touch controller. It picks its I2C address from
+// its interrupt pin while it comes out of reset: held low here, so the
+// address is the driver's default.
+static esp_lcd_touch_handle_t touch_init(i2c_master_bus_handle_t bus, ch422g_t *expander) {
+  gpio_make_output(WAVESHARE_43B_TOUCH_IRQ);
+  gpio_clr(WAVESHARE_43B_TOUCH_IRQ);
+  ch422g_set_exio(expander, WAVESHARE_43B_EXIO_TP_RST, false);
+  vTaskDelay(pdMS_TO_TICKS(10));
+  ch422g_set_exio(expander, WAVESHARE_43B_EXIO_TP_RST, true);
+  vTaskDelay(pdMS_TO_TICKS(50));
+
+  esp_lcd_panel_io_i2c_config_t io_config = {};
+  io_config.dev_addr = ESP_LCD_TOUCH_IO_I2C_GT911_ADDRESS;
+  io_config.scl_speed_hz = 400 * 1000;
+  io_config.control_phase_bytes = 1;
+  io_config.dc_bit_offset = 0;
+  io_config.lcd_cmd_bits = 16;
+  io_config.flags.disable_control_phase = 1;
+  esp_lcd_panel_io_handle_t io;
+  ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c_v2(bus, &io_config, &io));
+
+  esp_lcd_touch_config_t config = {};
+  config.x_max = WAVESHARE_43B_LCD_H_RES;
+  config.y_max = WAVESHARE_43B_LCD_V_RES;
+  config.rst_gpio_num = GPIO_NUM_NC;
+  config.int_gpio_num = (gpio_num_t)WAVESHARE_43B_TOUCH_IRQ;
+  esp_lcd_touch_handle_t touch;
+  ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_gt911(io, &config, &touch));
+  return touch;
 }
 
 static i2c_master_bus_handle_t i2c_bus_init() {
@@ -170,11 +208,14 @@ int main() {
   // display: panel first, then the backlight once there is a frame to show
   rulos_lvgl_init();
   const esp_lcd_rgb_panel_config_t panel_config = waveshare_43b_rgb_panel_config();
-  rulos_lvgl_add_rgb_panel(&panel_config);
-  clock_ui_create(map_cat_frames());
+  lv_display_t *display = rulos_lvgl_add_rgb_panel(&panel_config);
+  const sprite_blob_t cat_frames = cat_frames_blob();
+  clock_ui_create(&cat_frames);
+  i2c_master_bus_handle_t i2c_bus = i2c_bus_init();
   static ch422g_t expander;
-  ch422g_init(&expander, i2c_bus_init());
+  ch422g_init(&expander, i2c_bus);
   ch422g_set_exio(&expander, WAVESHARE_43B_EXIO_LCD_BACKLIGHT, true);
+  rulos_lvgl_add_touch(display, touch_init(i2c_bus, &expander));
 
   inet_wifi_client_start(wifi_creds, sizeof(wifi_creds) / sizeof(wifi_creds[0]));
   ntp.start();

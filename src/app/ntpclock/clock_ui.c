@@ -22,7 +22,6 @@
 
 #include "cat_shows.h"
 #include "lvgl.h"
-#include "periph/sprite_show/sprite_show.h"
 #include "weather_icon.h"
 
 // montserrat_48 is the largest font LVGL ships, so the time is drawn
@@ -48,6 +47,9 @@
 #define COLOR_LOW         lv_color_hex(0x7DCFFF)
 #define COLOR_STATUS      lv_color_hex(0x6C7086)
 
+// two taps this close together ask for a show
+#define DOUBLE_TAP_MS 400
+
 static lv_obj_t *time_cells[TIME_CELLS];
 static lv_obj_t *date_label;
 static lv_obj_t *weather_row;
@@ -67,6 +69,7 @@ static bool icon_is_day;
 static sprite_player_t cat;
 static int last_quarter = -1;
 static unsigned last_show;
+static uint32_t last_tap_ms;
 
 static const char *const WEEKDAYS[] = {"Sunday",   "Monday", "Tuesday", "Wednesday",
                                        "Thursday", "Friday", "Saturday"};
@@ -87,6 +90,8 @@ static lv_obj_t *flex_box(lv_obj_t *parent, lv_flex_flow_t flow, int32_t gap) {
   lv_obj_remove_style_all(box);
   lv_obj_set_size(box, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
   lv_obj_clear_flag(box, LV_OBJ_FLAG_SCROLLABLE);
+  // taps fall through to the screen
+  lv_obj_clear_flag(box, LV_OBJ_FLAG_CLICKABLE);
   lv_obj_set_flex_flow(box, flow);
   lv_obj_set_flex_align(box, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
   lv_obj_set_style_pad_column(box, gap, 0);
@@ -130,6 +135,7 @@ static void create_weather(lv_obj_t *screen) {
   weather_row = flex_box(screen, LV_FLEX_FLOW_ROW, 24);
   place(weather_row, LV_ALIGN_CENTER, WEATHER_Y);
   weather_icon = weather_icon_create(weather_row);
+  lv_obj_clear_flag(weather_icon, LV_OBJ_FLAG_CLICKABLE);
 
   lv_obj_t *text = flex_box(weather_row, LV_FLEX_FLOW_COLUMN, 6);
   condition_label = label(text, &lv_font_montserrat_28, COLOR_CONDITION);
@@ -139,12 +145,37 @@ static void create_weather(lv_obj_t *screen) {
   low_label = label(temperatures, &lv_font_montserrat_28, COLOR_LOW);
 }
 
-void clock_ui_create(const uint8_t *cat_frames) {
+static void play_show(unsigned index) {
+  last_show = index;
+  sprite_player_play(&cat, &cat_shows[index]);
+}
+
+// Any show but the last one.
+static void play_random_show(void) {
+  unsigned index = lv_rand(0, cat_show_count - 1);
+  if (index == last_show) {
+    index = (index + 1) % cat_show_count;
+  }
+  play_show(index);
+}
+
+static void on_tap(lv_event_t *e) {
+  const uint32_t now = lv_tick_get();
+  const bool double_tap = now - last_tap_ms < DOUBLE_TAP_MS;
+  last_tap_ms = now;
+  if (double_tap && !sprite_player_is_playing(&cat)) {
+    play_random_show();
+  }
+}
+
+void clock_ui_create(const sprite_blob_t *cat_frames) {
   lv_obj_t *screen = lv_screen_active();
   lv_obj_set_style_bg_color(screen, lv_color_black(), 0);
   // the cat walks in from beyond the edges; the screen must not scroll
   // after her
   lv_obj_clear_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
+  // a double tap anywhere starts a show
+  lv_obj_add_event_cb(screen, on_tap, LV_EVENT_SHORT_CLICKED, NULL);
 
   create_time(screen);
   date_label = label(screen, &lv_font_montserrat_28, COLOR_DATE);
@@ -154,33 +185,22 @@ void clock_ui_create(const uint8_t *cat_frames) {
   place(status_label, LV_ALIGN_BOTTOM_MID, -STATUS_BOTTOM_MARGIN);
 
   // the cat is created last so she walks in front of everything
-  for (unsigned i = 0; i < cat_show_count; i++) {
-    sprite_show_bind(&cat_shows[i], cat_frames);
-  }
-  sprite_player_init(&cat, screen);
+  sprite_player_init(&cat, screen, cat_frames, cat_shows, cat_show_count);
+  lv_obj_clear_flag(cat.image, LV_OBJ_FLAG_CLICKABLE);
 
   clock_ui_set_time(NULL);
   clock_ui_set_weather(NULL);
   clock_ui_set_status("");
 }
 
-static void play_show(unsigned index) {
-  last_show = index;
-  sprite_player_play(&cat, &cat_shows[index]);
-}
-
-// A show at the top of each quarter hour, never the same one twice running.
+// A show at the top of each quarter hour.
 static void quarter_hour_show(const struct tm *t) {
   const int quarter = (t->tm_yday * 24 + t->tm_hour) * 4 + t->tm_min / 15;
   if (t->tm_min % 15 != 0 || quarter == last_quarter) {
     return;
   }
   last_quarter = quarter;
-  unsigned index = lv_rand(0, cat_show_count - 1);
-  if (index == last_show) {
-    index = (index + 1) % cat_show_count;
-  }
-  play_show(index);
+  play_random_show();
 }
 
 bool clock_ui_play_show(const char *name) {
