@@ -57,19 +57,44 @@ static bool IRAM_ATTR on_frame_buf_complete(esp_lcd_panel_handle_t panel,
   return false;
 }
 
-static void flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
-  // In direct mode px_map is the frame buffer LVGL just finished drawing,
-  // so for the panel this is a buffer switch rather than a copy. LVGL
-  // draws its next frame into the other buffer, so the previous switch
-  // must have taken effect first; by the time LVGL refreshes again it
-  // almost always has.
+static bool holding;
+static lv_display_t *held_display;
+static uint8_t *held_frame;
+
+static void present(lv_display_t *disp, uint8_t *frame) {
+  // In direct mode the frame is the frame buffer LVGL just finished
+  // drawing, so for the panel this is a buffer switch rather than a copy.
+  // LVGL draws its next frame into the other buffer, so the previous
+  // switch must have taken effect first; by the time LVGL refreshes again
+  // it almost always has.
   esp_lcd_panel_handle_t panel = (esp_lcd_panel_handle_t)lv_display_get_user_data(disp);
   while (!frame_buffer_switched) {
   }
   frame_buffer_switched = false;
   ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel, 0, 0, lv_display_get_horizontal_resolution(disp),
-                                            lv_display_get_vertical_resolution(disp), px_map));
+                                            lv_display_get_vertical_resolution(disp), frame));
+}
+
+static void flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
+  if (holding) {
+    held_display = disp;
+    held_frame = px_map;
+  } else {
+    present(disp, px_map);
+  }
   lv_display_flush_ready(disp);
+}
+
+void rulos_lvgl_hold(void) {
+  holding = true;
+}
+
+void rulos_lvgl_release(void) {
+  holding = false;
+  if (held_frame != NULL) {
+    present(held_display, held_frame);
+    held_frame = NULL;
+  }
 }
 
 typedef struct {

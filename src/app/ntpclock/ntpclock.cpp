@@ -18,6 +18,7 @@
 // An NTP-synchronized clock, with the weather, on the Waveshare
 // ESP32-S3-Touch-LCD-4.3B.
 
+#include <inttypes.h>
 #include <stdlib.h>
 #include <time.h>
 
@@ -42,8 +43,17 @@
 // Wi-Fi networks to join; see wifi-credentials-example.h
 #include "wifi-credentials.h"
 
-#define JIFFY_CLOCK_US          10000
-#define UI_REFRESH_PERIOD_US    100000
+#define JIFFY_CLOCK_US 10000
+// how often to look again while there is no time to show
+#define UI_REFRESH_PERIOD_US 100000
+// how far ahead of a second's start its frame is prepared; covers the
+// scheduler's wake-up slop and the drawing
+#define SECOND_LEAD_US 25000
+// the longest a refresh waits for a second's start; woken later than this
+// before the start, it shows the second under way at once instead
+#define SECOND_WAIT_MAX_US 80000
+// a second shown later than this past its start gets logged
+#define SECOND_LATE_LOG_US      2000
 #define WEATHER_HTTP_TIMEOUT_MS 10000
 #define WEATHER_REPLY_LEN       1024
 
@@ -110,25 +120,43 @@ static WeatherFetcher weather_fetcher;
 
 //////////////// time /////////////////////
 
+// The seconds digits flip with the second. Each refresh wakes a little
+// ahead of a second's start by the NTP client's clock, draws that second
+// into the off-screen buffer, spins until the second starts, and only
+// then lets the panel switch to it.
 static void refresh_ui(void *data) {
-  schedule_us(UI_REFRESH_PERIOD_US, refresh_ui, NULL);
-
   if (!inet_wifi_is_connected()) {
     clock_ui_set_time(NULL);
     clock_ui_set_status("Connecting to Wi-Fi");
+    schedule_us(UI_REFRESH_PERIOD_US, refresh_ui, NULL);
     return;
   }
   if (!ntp.is_synced()) {
     clock_ui_set_time(NULL);
     clock_ui_set_status("Waiting for NTP");
+    schedule_us(UI_REFRESH_PERIOD_US, refresh_ui, NULL);
     return;
   }
 
-  time_t now = ntp.get_epoch_time_sec();
+  // the second about to start, or the one under way if the wake-up was late
+  uint64_t now_usec = ntp.get_epoch_time_usec();
+  const uint32_t into_second = now_usec % 1000000;
+  const bool ahead = into_second >= 1000000 - SECOND_WAIT_MAX_US;
+  const time_t shown = now_usec / 1000000 + (ahead ? 1 : 0);
+  const uint64_t start_usec = (uint64_t)shown * 1000000;
   struct tm local;
-  localtime_r(&now, &local);
+  localtime_r(&shown, &local);
   clock_ui_set_time(&local);
   clock_ui_set_status("NTP synchronized");
+  rulos_lvgl_hold();
+  lv_refr_now(NULL);
+  while ((now_usec = ntp.get_epoch_time_usec()) < start_usec) {
+  }
+  rulos_lvgl_release();
+  if (now_usec - start_usec > SECOND_LATE_LOG_US) {
+    LOG("second shown %" PRIu32 " us late", (uint32_t)(now_usec - start_usec));
+  }
+  schedule_us(start_usec + 1000000 - SECOND_LEAD_US - now_usec, refresh_ui, NULL);
 }
 
 //////////////// main /////////////////////

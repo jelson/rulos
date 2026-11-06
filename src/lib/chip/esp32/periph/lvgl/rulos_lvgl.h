@@ -30,3 +30,11 @@ void rulos_lvgl_init(void);
 // straight into them, and each flush makes the newly drawn one the one
 // being scanned out.
 lv_display_t *rulos_lvgl_add_rgb_panel(const esp_lcd_rgb_panel_config_t *config);
+
+// Between hold and release, a frame LVGL finishes is kept off the panel;
+// release shows the last one. This lets a frame be drawn ahead of the
+// moment it should appear. Nothing else may run LVGL in between (the
+// caller spins, say), since LVGL would next draw into the buffer still on
+// screen.
+void rulos_lvgl_hold(void);
+void rulos_lvgl_release(void);
