@@ -153,8 +153,10 @@ void HttpsClient::_maybeStartWorkerThread() {
   _worker_ready = xSemaphoreCreateBinary();
 
   // Create a task to perform the blocking HTTPS requests.
+  // the highest priority FreeRTOS allows (configMAX_PRIORITIES itself is
+  // one past the end), so network work preempts the RULOS main task
   xTaskCreate(HttpsClient::_worker_thread_trampoline, "https_client", 8 * 1024, this,
-              configMAX_PRIORITIES, NULL);
+              configMAX_PRIORITIES - 1, NULL);
 
   // Wait for task to start
   xSemaphoreTake(_worker_ready, portMAX_DELAY);

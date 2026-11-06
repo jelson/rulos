@@ -257,7 +257,9 @@ void hal_uart_start_rx(uint8_t uart_id, hal_uart_receive_cb rx_cb, void *buf, si
   eu->rx_cb = rx_cb;
   eu->rx_buf = (char *)buf;
   eu->rx_buflen = buflen;
-  xTaskCreate(rx_task, "uart_rx_task", 1024 * 2, eu, configMAX_PRIORITIES, NULL);
+  // the highest priority FreeRTOS allows (configMAX_PRIORITIES itself is
+  // one past the end)
+  xTaskCreate(rx_task, "uart_rx_task", 1024 * 2, eu, configMAX_PRIORITIES - 1, NULL);
 }
 
 void hal_uart_rx_cb_done(uint8_t uart_id) {
