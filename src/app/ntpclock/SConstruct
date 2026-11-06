@@ -54,6 +54,7 @@ RulosBuildTarget(
     peripherals = "uart inet ntp lvgl ch422g lcd_touch weather openmeteo sprite_show",
     extra_cflags = [
         "-DLOG_TO_SERIAL",
+        '-DRULOS_NTP_SERVER=\\"time.home.circlemud.org\\"',
         "-I" + cat.include_dir,
 
         # include out-of-repo directory to get wifi credentials
